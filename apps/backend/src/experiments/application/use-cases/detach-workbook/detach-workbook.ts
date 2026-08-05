@@ -3,18 +3,19 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { FlowRepository } from "../../../core/repositories/flow.repository";
 
 @Injectable()
 export class DetachWorkbookUseCase {
   private readonly logger = new Logger(DetachWorkbookUseCase.name);
 
-  constructor(
-    private readonly experimentRepository: ExperimentRepository,
-    private readonly flowRepository: FlowRepository,
-  ) {}
+  constructor(private readonly experimentRepository: ExperimentRepository) {}
 
-  async execute(experimentId: string, userId: string): Promise<Result<ExperimentDto>> {
+  async execute(
+    experimentId: string,
+    expectedWorkbookId: string,
+    expectedWorkbookVersionId: string,
+    userId: string,
+  ): Promise<Result<ExperimentDto>> {
     const experimentResult = await this.experimentRepository.findOne(experimentId);
 
     return experimentResult.chain(async (experiment: ExperimentDto | null) => {
@@ -25,20 +26,37 @@ export class DetachWorkbookUseCase {
       if (!experiment.workbookId) {
         return failure(AppError.badRequest("Experiment does not have an attached workbook"));
       }
+      if (
+        experiment.workbookId !== expectedWorkbookId ||
+        experiment.workbookVersionId !== expectedWorkbookVersionId
+      ) {
+        return failure(
+          AppError.conflict(
+            "The experiment's linked workbook changed. Refresh and try again.",
+            "WORKBOOK_SCOPE_CHANGED",
+          ),
+        );
+      }
 
       // Clear workbookId but keep workbookVersionId for historical reference
-      const updateResult = await this.experimentRepository.update(experimentId, {
-        workbookId: null,
-      });
+      const updateResult = await this.experimentRepository.updateWorkbookAndFlowIfExpected(
+        experimentId,
+        { workbookId: expectedWorkbookId, workbookVersionId: expectedWorkbookVersionId },
+        { workbookId: null },
+        null,
+      );
 
       if (updateResult.isFailure()) {
         return updateResult;
       }
 
-      // Drop the materialised flow row so mobile stops seeing a graph for an experiment with no workbook.
-      const flowDeleteResult = await this.flowRepository.deleteByExperimentId(experimentId);
-      if (flowDeleteResult.isFailure()) {
-        return flowDeleteResult;
+      if (!updateResult.value) {
+        return failure(
+          AppError.conflict(
+            "The experiment's linked workbook changed. Refresh and try again.",
+            "WORKBOOK_SCOPE_CHANGED",
+          ),
+        );
       }
 
       this.logger.log({
@@ -49,12 +67,7 @@ export class DetachWorkbookUseCase {
         previousWorkbookId: experiment.workbookId,
       });
 
-      return updateResult.chain((experiments: ExperimentDto[]) => {
-        if (experiments.length === 0) {
-          return failure(AppError.internal("Failed to detach workbook"));
-        }
-        return success(experiments[0]);
-      });
+      return success(updateResult.value);
     });
   }
 }

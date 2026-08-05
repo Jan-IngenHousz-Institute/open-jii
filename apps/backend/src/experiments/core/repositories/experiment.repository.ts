@@ -24,6 +24,7 @@ import {
   deleteResourceGrants,
   upsertGrant,
   resourceGrants,
+  workbooks,
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
@@ -65,6 +66,16 @@ const COLLABORATOR_GRANT_ROLE = "viewer";
 // All experiment columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _experimentSearchVector, ...experimentColumns } =
   getTableColumns(experiments);
+
+export interface ExpectedWorkbookPair {
+  workbookId: string | null;
+  workbookVersionId: string | null;
+}
+
+export interface ExpectedWorkbookRevision {
+  workbookId: string;
+  revision: number;
+}
 
 @Injectable()
 export class ExperimentRepository {
@@ -438,27 +449,56 @@ export class ExperimentRepository {
   /** Atomically change the workbook pin and materialised flow if the caller's scope is current. */
   async updateWorkbookAndFlowIfExpected(
     id: string,
-    expectedWorkbookId: string | null,
+    expectedPair: ExpectedWorkbookPair,
     updateExperimentDto: UpdateExperimentDto,
-    graph: FlowGraphDto,
+    graph: FlowGraphDto | null,
+    expectedWorkbookRevision?: ExpectedWorkbookRevision,
   ): Promise<Result<ExperimentDto | null>> {
     return tryCatch(() =>
       this.database.transaction(async (tx) => {
         const workbookPredicate =
-          expectedWorkbookId === null
+          expectedPair.workbookId === null
             ? isNull(experiments.workbookId)
-            : eq(experiments.workbookId, expectedWorkbookId);
+            : eq(experiments.workbookId, expectedPair.workbookId);
+        const workbookVersionPredicate =
+          expectedPair.workbookVersionId === null
+            ? isNull(experiments.workbookVersionId)
+            : eq(experiments.workbookVersionId, expectedPair.workbookVersionId);
+        const revisionPredicate = expectedWorkbookRevision
+          ? exists(
+              tx
+                .select({ revision: workbooks.revision })
+                .from(workbooks)
+                .where(
+                  and(
+                    eq(workbooks.id, expectedWorkbookRevision.workbookId),
+                    eq(workbooks.revision, expectedWorkbookRevision.revision),
+                  ),
+                ),
+            )
+          : undefined;
         const updated = await tx
           .update(experiments)
           .set(updateExperimentDto)
-          .where(and(eq(experiments.id, id), workbookPredicate))
+          .where(
+            and(
+              eq(experiments.id, id),
+              workbookPredicate,
+              workbookVersionPredicate,
+              revisionPredicate,
+            ),
+          )
           .returning(experimentColumns);
         if (updated.length === 0) return null;
 
-        await tx
-          .insert(flows)
-          .values({ experimentId: id, graph })
-          .onConflictDoUpdate({ target: flows.experimentId, set: { graph } });
+        if (graph) {
+          await tx
+            .insert(flows)
+            .values({ experimentId: id, graph })
+            .onConflictDoUpdate({ target: flows.experimentId, set: { graph } });
+        } else {
+          await tx.delete(flows).where(eq(flows.experimentId, id));
+        }
         return updated[0];
       }),
     );

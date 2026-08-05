@@ -7,6 +7,8 @@ import {
   zWorkbookVersionIdPathParam,
   zAttachWorkbookBody,
   zAttachWorkbookResponse,
+  zDetachWorkbookBody,
+  zSetWorkbookVersionBody,
   zUpgradeWorkbookVersionBody,
 } from "./workbook-version.schema";
 
@@ -111,7 +113,12 @@ describe("Workbook Version Schemas", () => {
   describe("zAttachWorkbookBody", () => {
     it("accepts valid workbookId", () => {
       expect(
-        zAttachWorkbookBody.safeParse({ workbookId: validUuid, expectedWorkbookId: null }).success,
+        zAttachWorkbookBody.safeParse({
+          workbookId: validUuid,
+          expectedWorkbookId: null,
+          expectedWorkbookVersionId: null,
+          expectedWorkbookRevision: 1,
+        }).success,
       ).toBe(true);
     });
 
@@ -126,11 +133,31 @@ describe("Workbook Version Schemas", () => {
 
   describe("zUpgradeWorkbookVersionBody", () => {
     it("requires the workbook scope the client read", () => {
-      expect(zUpgradeWorkbookVersionBody.safeParse({ expectedWorkbookId: validUuid }).success).toBe(
-        true,
-      );
+      expect(
+        zUpgradeWorkbookVersionBody.safeParse({
+          expectedWorkbookId: validUuid,
+          expectedWorkbookVersionId: validUuid,
+          expectedWorkbookRevision: 1,
+        }).success,
+      ).toBe(true);
       expect(zUpgradeWorkbookVersionBody.safeParse({}).success).toBe(false);
     });
+  });
+
+  it("requires the full current pair for detach and restore", () => {
+    expect(
+      zDetachWorkbookBody.safeParse({
+        expectedWorkbookId: validUuid,
+        expectedWorkbookVersionId: validUuid,
+      }).success,
+    ).toBe(true);
+    expect(
+      zSetWorkbookVersionBody.safeParse({
+        versionId: validUuid,
+        expectedWorkbookId: validUuid,
+        expectedWorkbookVersionId: validUuid,
+      }).success,
+    ).toBe(true);
   });
 
   describe("zAttachWorkbookResponse", () => {

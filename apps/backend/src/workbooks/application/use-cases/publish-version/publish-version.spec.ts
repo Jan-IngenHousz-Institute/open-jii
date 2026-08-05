@@ -68,7 +68,7 @@ describe("PublishVersionUseCase", () => {
     const v1 = await useCase.execute(workbook.id, userId);
     assertSuccess(v1);
 
-    await workbookRepo.update(workbook.id, {
+    await workbookRepo.update(workbook.id, workbook.revision, {
       cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
     });
 

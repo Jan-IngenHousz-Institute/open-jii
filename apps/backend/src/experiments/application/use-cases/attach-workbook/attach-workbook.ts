@@ -35,6 +35,8 @@ export class AttachWorkbookUseCase {
     experimentId: string,
     workbookId: string,
     expectedWorkbookId: string | null,
+    expectedWorkbookVersionId: string | null,
+    expectedWorkbookRevision: number,
     userId: string,
   ): Promise<Result<AttachWorkbookResult>> {
     const experimentResult = await this.experimentRepository.findOne(experimentId);
@@ -62,7 +64,10 @@ export class AttachWorkbookUseCase {
         );
       }
 
-      if (experiment.workbookId !== expectedWorkbookId) {
+      if (
+        experiment.workbookId !== expectedWorkbookId ||
+        experiment.workbookVersionId !== expectedWorkbookVersionId
+      ) {
         return failure(
           AppError.conflict(
             "The experiment's linked workbook changed. Refresh and try again.",
@@ -75,6 +80,14 @@ export class AttachWorkbookUseCase {
       if (workbookResult.isFailure()) return workbookResult;
       if (!workbookResult.value) {
         return failure(AppError.notFound(`Workbook with ID ${workbookId} not found`));
+      }
+      if (workbookResult.value.revision !== expectedWorkbookRevision) {
+        return failure(
+          AppError.conflict(
+            "Someone else changed this workbook. Refresh and try attaching it again.",
+            "WORKBOOK_REVISION_CONFLICT",
+          ),
+        );
       }
 
       // Pin to the latest version when nothing's drifted; otherwise mint a
@@ -104,9 +117,10 @@ export class AttachWorkbookUseCase {
       const flowGraph = cellsToFlowGraph(version.cells);
       const updateResult = await this.experimentRepository.updateWorkbookAndFlowIfExpected(
         experimentId,
-        expectedWorkbookId,
+        { workbookId: expectedWorkbookId, workbookVersionId: expectedWorkbookVersionId },
         { workbookId, workbookVersionId: version.id },
         flowGraph,
+        { workbookId, revision: expectedWorkbookRevision },
       );
 
       if (updateResult.isFailure()) {

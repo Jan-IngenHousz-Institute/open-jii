@@ -62,7 +62,12 @@ describe("ExperimentWorkbooksController", () => {
       const response = await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ workbookId, expectedWorkbookId: null })
+        .send({
+          workbookId,
+          expectedWorkbookId: null,
+          expectedWorkbookVersionId: null,
+          expectedWorkbookRevision: 1,
+        })
         .expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({
@@ -84,7 +89,12 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withoutAuth()
-        .send({ workbookId: faker.string.uuid(), expectedWorkbookId: null })
+        .send({
+          workbookId: faker.string.uuid(),
+          expectedWorkbookId: null,
+          expectedWorkbookVersionId: null,
+          expectedWorkbookRevision: 1,
+        })
         .expect(StatusCodes.UNAUTHORIZED);
     });
 
@@ -101,7 +111,12 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ workbookId: faker.string.uuid(), expectedWorkbookId: null })
+        .send({
+          workbookId: faker.string.uuid(),
+          expectedWorkbookId: null,
+          expectedWorkbookVersionId: null,
+          expectedWorkbookRevision: 1,
+        })
         .expect(StatusCodes.FORBIDDEN);
       expect(executeSpy).not.toHaveBeenCalled();
     });
@@ -116,7 +131,12 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ workbookId: faker.string.uuid(), expectedWorkbookId: null })
+        .send({
+          workbookId: faker.string.uuid(),
+          expectedWorkbookId: null,
+          expectedWorkbookVersionId: null,
+          expectedWorkbookRevision: 1,
+        })
         .expect(StatusCodes.NOT_FOUND);
     });
   });
@@ -143,7 +163,14 @@ describe("ExperimentWorkbooksController", () => {
 
       const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.detachWorkbook, { id: expId });
-      const response = await testApp.post(path).withAuth(testUserId).expect(StatusCodes.OK);
+      const response = await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({
+          expectedWorkbookId: faker.string.uuid(),
+          expectedWorkbookVersionId: faker.string.uuid(),
+        })
+        .expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({ workbookId: null });
     });
@@ -151,7 +178,14 @@ describe("ExperimentWorkbooksController", () => {
     it("should return 401 without auth", async () => {
       const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.detachWorkbook, { id: expId });
-      await testApp.post(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
+      await testApp
+        .post(path)
+        .withoutAuth()
+        .send({
+          expectedWorkbookId: faker.string.uuid(),
+          expectedWorkbookVersionId: faker.string.uuid(),
+        })
+        .expect(StatusCodes.UNAUTHORIZED);
     });
 
     it("should return 400 when no workbook is attached", async () => {
@@ -161,7 +195,14 @@ describe("ExperimentWorkbooksController", () => {
 
       const expId = manageableExperimentId;
       const path = testApp.resolveOrpcPath(contract.experiments.detachWorkbook, { id: expId });
-      await testApp.post(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({
+          expectedWorkbookId: faker.string.uuid(),
+          expectedWorkbookVersionId: faker.string.uuid(),
+        })
+        .expect(StatusCodes.BAD_REQUEST);
     });
   });
 
@@ -180,7 +221,11 @@ describe("ExperimentWorkbooksController", () => {
       const response = await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ expectedWorkbookId: workbookId })
+        .send({
+          expectedWorkbookId: workbookId,
+          expectedWorkbookVersionId: versionId,
+          expectedWorkbookRevision: 1,
+        })
         .expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({
@@ -198,7 +243,11 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withoutAuth()
-        .send({ expectedWorkbookId: faker.string.uuid() })
+        .send({
+          expectedWorkbookId: faker.string.uuid(),
+          expectedWorkbookVersionId: faker.string.uuid(),
+          expectedWorkbookRevision: 1,
+        })
         .expect(StatusCodes.UNAUTHORIZED);
     });
 
@@ -214,7 +263,11 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ expectedWorkbookId: faker.string.uuid() })
+        .send({
+          expectedWorkbookId: faker.string.uuid(),
+          expectedWorkbookVersionId: faker.string.uuid(),
+          expectedWorkbookRevision: 1,
+        })
         .expect(StatusCodes.BAD_REQUEST);
     });
   });
@@ -232,7 +285,11 @@ describe("ExperimentWorkbooksController", () => {
       const response = await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ versionId })
+        .send({
+          versionId,
+          expectedWorkbookId: workbookId,
+          expectedWorkbookVersionId: faker.string.uuid(),
+        })
         .expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({
@@ -254,7 +311,11 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ versionId: "not-a-uuid" })
+        .send({
+          versionId: "not-a-uuid",
+          expectedWorkbookId: faker.string.uuid(),
+          expectedWorkbookVersionId: faker.string.uuid(),
+        })
         .expect(StatusCodes.BAD_REQUEST);
     });
 
@@ -264,7 +325,11 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withoutAuth()
-        .send({ versionId: faker.string.uuid() })
+        .send({
+          versionId: faker.string.uuid(),
+          expectedWorkbookId: faker.string.uuid(),
+          expectedWorkbookVersionId: faker.string.uuid(),
+        })
         .expect(StatusCodes.UNAUTHORIZED);
     });
 
@@ -281,7 +346,11 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ versionId: faker.string.uuid() })
+        .send({
+          versionId: faker.string.uuid(),
+          expectedWorkbookId: faker.string.uuid(),
+          expectedWorkbookVersionId: faker.string.uuid(),
+        })
         .expect(StatusCodes.FORBIDDEN);
       expect(executeSpy).not.toHaveBeenCalled();
     });
@@ -296,7 +365,11 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ versionId: faker.string.uuid() })
+        .send({
+          versionId: faker.string.uuid(),
+          expectedWorkbookId: faker.string.uuid(),
+          expectedWorkbookVersionId: faker.string.uuid(),
+        })
         .expect(StatusCodes.NOT_FOUND);
     });
   });
@@ -314,7 +387,12 @@ describe("ExperimentWorkbooksController", () => {
               }),
             )
             .withAuth(userId)
-            .send({ workbookId: faker.string.uuid(), expectedWorkbookId: null }),
+            .send({
+              workbookId: faker.string.uuid(),
+              expectedWorkbookId: null,
+              expectedWorkbookVersionId: null,
+              expectedWorkbookRevision: 1,
+            }),
       },
       {
         name: "detach workbook",
@@ -327,7 +405,10 @@ describe("ExperimentWorkbooksController", () => {
               }),
             )
             .withAuth(userId)
-            .send({ expectedWorkbookId: faker.string.uuid() }),
+            .send({
+              expectedWorkbookId: faker.string.uuid(),
+              expectedWorkbookVersionId: faker.string.uuid(),
+            }),
       },
       {
         name: "upgrade workbook version",
@@ -339,7 +420,12 @@ describe("ExperimentWorkbooksController", () => {
                 id: experimentId,
               }),
             )
-            .withAuth(userId),
+            .withAuth(userId)
+            .send({
+              expectedWorkbookId: faker.string.uuid(),
+              expectedWorkbookVersionId: faker.string.uuid(),
+              expectedWorkbookRevision: 1,
+            }),
       },
       {
         name: "set workbook version",
@@ -352,7 +438,11 @@ describe("ExperimentWorkbooksController", () => {
               }),
             )
             .withAuth(userId)
-            .send({ versionId: faker.string.uuid() }),
+            .send({
+              versionId: faker.string.uuid(),
+              expectedWorkbookId: faker.string.uuid(),
+              expectedWorkbookVersionId: faker.string.uuid(),
+            }),
       },
     ])("requires $action access to $name", async ({ action, request }) => {
       const unrelatedUserId = await testApp.createTestUser({});

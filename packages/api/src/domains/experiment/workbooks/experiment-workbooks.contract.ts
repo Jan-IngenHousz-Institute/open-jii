@@ -3,6 +3,7 @@ import { oc } from "@orpc/contract";
 import {
   zAttachWorkbookBody,
   zAttachWorkbookResponse,
+  zDetachWorkbookBody,
   zSetWorkbookVersionBody,
   zUpgradeWorkbookVersionBody,
 } from "../../workbook/workbook-version.schema";
@@ -15,7 +16,7 @@ export const experimentWorkbooksContract = {
     .output(zAttachWorkbookResponse),
   detachWorkbook: oc
     .route({ method: "POST", path: "/api/v1/experiments/{id}/workbook/detach", successStatus: 200 })
-    .input(zExperimentIdPathParam)
+    .input(zExperimentIdPathParam.merge(zDetachWorkbookBody))
     .output(zExperiment.omit({ anonymizeContributors: true })),
   upgradeWorkbookVersion: oc
     .route({

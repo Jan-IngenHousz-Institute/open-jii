@@ -1,4 +1,4 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
@@ -18,6 +18,8 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   let adminUserId: string;
   let experimentId: string;
   let workbookId: string;
+  let workbookRevision: number;
+  let pinnedVersionId: string;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -46,8 +48,18 @@ describe("UpgradeWorkbookVersionUseCase", () => {
       createdBy: adminUserId,
     });
     workbookId = workbook.id;
+    workbookRevision = workbook.revision;
 
-    await attachUseCase.execute(experimentId, workbookId, null, adminUserId);
+    const attached = await attachUseCase.execute(
+      experimentId,
+      workbookId,
+      null,
+      null,
+      workbookRevision,
+      adminUserId,
+    );
+    assertSuccess(attached);
+    pinnedVersionId = attached.value.workbookVersionId;
   });
 
   afterEach(() => {
@@ -60,17 +72,30 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   });
 
   it("reuses version when workbook cells are unchanged", async () => {
-    const result = await upgradeUseCase.execute(experimentId, workbookId, adminUserId);
+    const result = await upgradeUseCase.execute(
+      experimentId,
+      workbookId,
+      pinnedVersionId,
+      workbookRevision,
+      adminUserId,
+    );
     assertSuccess(result);
     expect(result.value.version).toBe(1);
   });
 
   it("creates a new version when workbook cells have changed", async () => {
-    await workbookRepo.update(workbookId, {
+    const updated = await workbookRepo.update(workbookId, workbookRevision, {
       cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
     });
+    assertSuccess(updated);
 
-    const result = await upgradeUseCase.execute(experimentId, workbookId, adminUserId);
+    const result = await upgradeUseCase.execute(
+      experimentId,
+      workbookId,
+      pinnedVersionId,
+      updated.value[0].revision,
+      adminUserId,
+    );
     assertSuccess(result);
     expect(result.value.version).toBe(2);
     expect(result.value.workbookId).toBe(workbookId);
@@ -80,6 +105,8 @@ describe("UpgradeWorkbookVersionUseCase", () => {
     const result = await upgradeUseCase.execute(
       "00000000-0000-0000-0000-000000000000",
       workbookId,
+      pinnedVersionId,
+      workbookRevision,
       adminUserId,
     );
     assertFailure(result);
@@ -92,7 +119,13 @@ describe("UpgradeWorkbookVersionUseCase", () => {
       userId: adminUserId,
     });
 
-    const result = await upgradeUseCase.execute(experiment.id, workbookId, adminUserId);
+    const result = await upgradeUseCase.execute(
+      experiment.id,
+      workbookId,
+      pinnedVersionId,
+      workbookRevision,
+      adminUserId,
+    );
     assertFailure(result);
     expect(result.error.statusCode).toBe(400);
   });
@@ -130,41 +163,71 @@ describe("UpgradeWorkbookVersionUseCase", () => {
         granteeId: manager,
         role: "admin",
       });
-      assertSuccess(await attachUseCase.execute(experiment.id, privateWorkbook.id, manager));
+      const attached = await attachUseCase.execute(
+        experiment.id,
+        privateWorkbook.id,
+        null,
+        null,
+        manager,
+      );
+      assertSuccess(attached);
 
-      return { manager, experimentId: experiment.id, workbookId: privateWorkbook.id, grant };
+      return {
+        manager,
+        experimentId: experiment.id,
+        workbookId: privateWorkbook.id,
+        workbookVersionId: attached.value.workbookVersionId,
+        grant,
+      };
     }
 
     it("allows the upgrade while the manager still has workbook access", async () => {
-      const { manager, experimentId: expId, workbookId: wbId } = await setupRevokedManager();
+      const {
+        manager,
+        experimentId: expId,
+        workbookId: wbId,
+        workbookVersionId,
+      } = await setupRevokedManager();
       await workbookRepo.update(wbId, {
         cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
       });
 
-      const result = await upgradeUseCase.execute(expId, manager);
+      const result = await upgradeUseCase.execute(expId, wbId, workbookVersionId, manager);
       assertSuccess(result);
       expect(result.value.version).toBe(2);
     });
 
     it("denies minting a new version after the workbook grant is revoked", async () => {
-      const { manager, experimentId: expId, workbookId: wbId, grant } = await setupRevokedManager();
+      const {
+        manager,
+        experimentId: expId,
+        workbookId: wbId,
+        workbookVersionId,
+        grant,
+      } = await setupRevokedManager();
       await workbookRepo.update(wbId, {
         cells: [{ id: "md1", type: "markdown", content: "post-revocation", isCollapsed: false }],
       });
       await testApp.removeResourceGrant(grant.id);
 
-      const result = await upgradeUseCase.execute(expId, manager);
+      const result = await upgradeUseCase.execute(expId, wbId, workbookVersionId, manager);
       assertFailure(result);
       expect(result.error.statusCode).toBe(403);
     });
 
     it("denies pinning the existing latest version after revocation (never reaches publish)", async () => {
-      const { manager, experimentId: expId, grant } = await setupRevokedManager();
+      const {
+        manager,
+        experimentId: expId,
+        workbookId: wbId,
+        workbookVersionId,
+        grant,
+      } = await setupRevokedManager();
       // Cells unchanged → the upgrade would reuse the latest version without
       // publishing, so the check must sit before that branch too.
       await testApp.removeResourceGrant(grant.id);
 
-      const result = await upgradeUseCase.execute(expId, manager);
+      const result = await upgradeUseCase.execute(expId, wbId, workbookVersionId, manager);
       assertFailure(result);
       expect(result.error.statusCode).toBe(403);
     });
@@ -178,10 +241,17 @@ describe("UpgradeWorkbookVersionUseCase", () => {
       content: { text: "v1" },
     });
 
-    await workbookRepo.update(workbookId, {
+    const updated = await workbookRepo.update(workbookId, workbookRevision, {
       cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
     });
-    const result = await upgradeUseCase.execute(experimentId, workbookId, adminUserId);
+    assertSuccess(updated);
+    const result = await upgradeUseCase.execute(
+      experimentId,
+      workbookId,
+      pinnedVersionId,
+      updated.value[0].revision,
+      adminUserId,
+    );
     assertSuccess(result);
 
     const after = await flowRepo.getByExperimentId(experimentId);
@@ -194,9 +264,10 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   });
 
   it("cannot pin an old workbook after a concurrent attachment changes the pairing", async () => {
-    await workbookRepo.update(workbookId, {
+    const updated = await workbookRepo.update(workbookId, workbookRevision, {
       cells: [{ id: "md1", type: "markdown", content: "stale A", isCollapsed: false }],
     });
+    assertSuccess(updated);
     const otherWorkbook = await testApp.createWorkbook({
       name: "Workbook B",
       cells: [{ id: "md-b", type: "markdown", content: "current B", isCollapsed: false }],
@@ -219,12 +290,20 @@ describe("UpgradeWorkbookVersionUseCase", () => {
       return publishVersion.execute(id, userId);
     });
 
-    const staleUpgrade = upgradeUseCase.execute(experimentId, workbookId, adminUserId);
+    const staleUpgrade = upgradeUseCase.execute(
+      experimentId,
+      workbookId,
+      pinnedVersionId,
+      updated.value[0].revision,
+      adminUserId,
+    );
     await started;
     const attached = await attachUseCase.execute(
       experimentId,
       otherWorkbook.id,
       workbookId,
+      pinnedVersionId,
+      otherWorkbook.revision,
       adminUserId,
     );
     assertSuccess(attached);
@@ -244,5 +323,91 @@ describe("UpgradeWorkbookVersionUseCase", () => {
     expect(currentFlow.value?.graph.nodes).toEqual([
       expect.objectContaining({ id: "md-b", content: { text: "current B" } }),
     ]);
+  });
+
+  it("allows only one of two reverse-completing upgrades to change the pin", async () => {
+    const updated = await workbookRepo.update(workbookId, workbookRevision, {
+      cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
+    });
+    assertSuccess(updated);
+
+    let releaseFirstPublish: (() => void) | undefined;
+    let firstPublishStarted: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      firstPublishStarted = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      releaseFirstPublish = resolve;
+    });
+    const publishSpy = vi.spyOn(publishVersion, "execute");
+    publishSpy.mockImplementationOnce(async (id, userId) => {
+      firstPublishStarted?.();
+      await gate;
+      publishSpy.mockRestore();
+      return publishVersion.execute(id, userId);
+    });
+
+    const completesLast = upgradeUseCase.execute(
+      experimentId,
+      workbookId,
+      pinnedVersionId,
+      updated.value[0].revision,
+      adminUserId,
+    );
+    await started;
+    const winner = await upgradeUseCase.execute(
+      experimentId,
+      workbookId,
+      pinnedVersionId,
+      updated.value[0].revision,
+      adminUserId,
+    );
+    assertSuccess(winner);
+    releaseFirstPublish?.();
+
+    const stale = await completesLast;
+    assertFailure(stale);
+    expect(stale.error.statusCode).toBe(409);
+    const current = await experimentRepo.findOne(experimentId);
+    assertSuccess(current);
+    expect(current.value?.workbookVersionId).toBe(winner.value.workbookVersionId);
+  });
+
+  it("rejects an exact retry after a newer workbook revision lands", async () => {
+    const a1 = await workbookRepo.update(workbookId, workbookRevision, {
+      cells: [{ id: "md1", type: "markdown", content: "A1", isCollapsed: false }],
+    });
+    assertSuccess(a1);
+    vi.spyOn(experimentRepo, "updateWorkbookAndFlowIfExpected").mockResolvedValueOnce(
+      failure(AppError.internal("pin failed")),
+    );
+
+    const failedPin = await upgradeUseCase.execute(
+      experimentId,
+      workbookId,
+      pinnedVersionId,
+      a1.value[0].revision,
+      adminUserId,
+    );
+    assertFailure(failedPin);
+
+    const a2 = await workbookRepo.update(workbookId, a1.value[0].revision, {
+      cells: [{ id: "md1", type: "markdown", content: "A2", isCollapsed: false }],
+    });
+    assertSuccess(a2);
+    const retry = await upgradeUseCase.execute(
+      experimentId,
+      workbookId,
+      pinnedVersionId,
+      a1.value[0].revision,
+      adminUserId,
+    );
+    assertFailure(retry);
+    expect(retry.error.statusCode).toBe(409);
+    expect(retry.error.code).toBe("WORKBOOK_REVISION_CONFLICT");
+
+    const current = await experimentRepo.findOne(experimentId);
+    assertSuccess(current);
+    expect(current.value?.workbookVersionId).toBe(pinnedVersionId);
   });
 });

@@ -7,7 +7,6 @@ import { Result, failure, success, AppError } from "../../../../common/utils/fp-
 import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { FlowRepository } from "../../../core/repositories/flow.repository";
 
 export interface SetWorkbookVersionResult {
   workbookId: string;
@@ -27,13 +26,14 @@ export class SetWorkbookVersionUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly workbookVersionRepository: WorkbookVersionRepository,
-    private readonly flowRepository: FlowRepository,
     private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
     experimentId: string,
     versionId: string,
+    expectedWorkbookId: string,
+    expectedWorkbookVersionId: string,
     userId: string,
   ): Promise<Result<SetWorkbookVersionResult>> {
     const experimentResult = await this.experimentRepository.findOne(experimentId);
@@ -47,6 +47,17 @@ export class SetWorkbookVersionUseCase {
         return failure(
           AppError.badRequest(
             "Experiment does not have an attached workbook. Attach a workbook first.",
+          ),
+        );
+      }
+      if (
+        experiment.workbookId !== expectedWorkbookId ||
+        experiment.workbookVersionId !== expectedWorkbookVersionId
+      ) {
+        return failure(
+          AppError.conflict(
+            "The experiment's linked workbook changed. Refresh and try again.",
+            "WORKBOOK_SCOPE_CHANGED",
           ),
         );
       }
@@ -85,19 +96,21 @@ export class SetWorkbookVersionUseCase {
         );
       }
 
-      // Refresh the materialised flow row first, then re-pin. If the flow
-      // upsert fails, the experiment stays on the old (consistent) version
-      // rather than pointing at a version whose flow never updated.
-      const flowResult = await this.flowRepository.upsert(
+      const updateResult = await this.experimentRepository.updateWorkbookAndFlowIfExpected(
         experimentId,
+        { workbookId: expectedWorkbookId, workbookVersionId: expectedWorkbookVersionId },
+        { workbookVersionId: target.id },
         cellsToFlowGraph(target.cells),
       );
-      if (flowResult.isFailure()) return flowResult;
-
-      const updateResult = await this.experimentRepository.update(experimentId, {
-        workbookVersionId: target.id,
-      });
       if (updateResult.isFailure()) return updateResult;
+      if (!updateResult.value) {
+        return failure(
+          AppError.conflict(
+            "The experiment's linked workbook changed. Refresh and try again.",
+            "WORKBOOK_SCOPE_CHANGED",
+          ),
+        );
+      }
 
       this.logger.log({
         msg: "Experiment pinned to a specific workbook version",

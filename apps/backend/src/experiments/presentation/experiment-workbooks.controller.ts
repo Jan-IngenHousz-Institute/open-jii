@@ -32,6 +32,8 @@ export class ExperimentWorkbooksController {
         input.id,
         input.workbookId,
         input.expectedWorkbookId,
+        input.expectedWorkbookVersionId,
+        input.expectedWorkbookRevision,
         session.user.id,
       );
       if (result.isSuccess()) {
@@ -45,7 +47,12 @@ export class ExperimentWorkbooksController {
   @Implement(experimentWorkbooksContract.detachWorkbook)
   detachWorkbook(@Session() session: UserSession) {
     return implement(experimentWorkbooksContract.detachWorkbook).handler(async ({ input }) => {
-      const result = await this.detachWorkbookUseCase.execute(input.id, session.user.id);
+      const result = await this.detachWorkbookUseCase.execute(
+        input.id,
+        input.expectedWorkbookId,
+        input.expectedWorkbookVersionId,
+        session.user.id,
+      );
       if (result.isSuccess()) {
         return formatDates(result.value);
       }
@@ -61,6 +68,8 @@ export class ExperimentWorkbooksController {
         const result = await this.upgradeWorkbookVersionUseCase.execute(
           input.id,
           input.expectedWorkbookId,
+          input.expectedWorkbookVersionId,
+          input.expectedWorkbookRevision,
           session.user.id,
         );
         if (result.isSuccess()) {
@@ -78,6 +87,8 @@ export class ExperimentWorkbooksController {
       const result = await this.setWorkbookVersionUseCase.execute(
         input.id,
         input.versionId,
+        input.expectedWorkbookId,
+        input.expectedWorkbookVersionId,
         session.user.id,
       );
       if (result.isSuccess()) {
