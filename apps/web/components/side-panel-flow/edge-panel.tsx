@@ -105,24 +105,26 @@ export function EdgeSidePanel({
             </CardContent>
           </Card>
 
-          {/* Edge Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-jii-dark-green">{t("edgePanel.actions")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  className="rounded bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-400"
-                  onClick={handleDeleteEdge}
-                  disabled={isDisabled}
-                >
-                  {t("edgePanel.remove")}
-                </button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Sequence edges are the workbook spine and are intentionally not removable. */}
+          {onEdgeDelete && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-jii-dark-green">{t("edgePanel.actions")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    className="rounded bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+                    onClick={handleDeleteEdge}
+                    disabled={isDisabled}
+                  >
+                    {t("edgePanel.remove")}
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </>

@@ -31,6 +31,7 @@ import { cn } from "@repo/ui/lib/utils";
 import { LegendFlow } from "../legend-flow";
 import {
   connectFlowNodes,
+  getReactFlowEdgeKind,
   getWorkbookCellInsertionIndex,
   getFlowData,
   handleNodesDeleteWithReconnection,
@@ -100,6 +101,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     const [structuralError, setStructuralError] = useState<string | null>(null);
     const [pendingCell, setPendingCell] = useState<WorkbookCell | null>(null);
     const workbookCellsRef = useRef(workbookCells);
+    const writebackRequestedRef = useRef(false);
     const flowInstanceRef = useRef<ReactFlowInstance | null>(null);
     workbookCellsRef.current = workbookCells;
 
@@ -114,7 +116,8 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialData.edges);
 
     useEffect(() => {
-      if (!onWorkbookCellsChange || !workbookCellsRef.current) return;
+      if (!writebackRequestedRef.current || !onWorkbookCellsChange || !workbookCellsRef.current)
+        return;
       try {
         const graph = FlowMapper.toApiGraph(nodes, edges);
         const nextCells = flowNodesToWorkbookCells(
@@ -122,6 +125,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           graph.edges,
           workbookCellsRef.current,
         );
+        writebackRequestedRef.current = false;
         setStructuralError(null);
         if (JSON.stringify(nextCells) !== JSON.stringify(workbookCellsRef.current)) {
           workbookCellsRef.current = nextCells;
@@ -186,6 +190,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Delete logic and reconnection
     const onNodesDelete = useCallback(
       (deleted: Node[]) => {
+        writebackRequestedRef.current = true;
         setEdges((eds) => {
           const result = handleNodesDeleteWithReconnection(deleted, nodes, eds);
           setRepairIssues(result.issues);
@@ -262,7 +267,12 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Handle edge deletion
     const handleEdgeDelete = useCallback(
       (edgeId: string) => {
-        setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+        setEdges((eds) => {
+          const edge = eds.find((candidate) => candidate.id === edgeId);
+          if (!edge || getReactFlowEdgeKind(edge) !== "branch") return eds;
+          writebackRequestedRef.current = true;
+          return eds.filter((candidate) => candidate.id !== edgeId);
+        });
         setSelectedEdgeId(null);
       },
       [setEdges],
@@ -338,6 +348,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
         if (isDisabled) return; // No connections in disabled mode
         try {
           const result = connectFlowNodes(params, nodes, edges);
+          writebackRequestedRef.current = true;
           setNodes(result.nodes);
           setEdges(result.edges);
           setStructuralError(null);
@@ -457,6 +468,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
         const edgeType = isBackEdge ? "back" : pathColor ? "default" : "smoothstep";
         return {
           ...edge,
+          deletable: !isDisabled && getReactFlowEdgeKind(edge) === "branch",
           label: displayLabel,
           type: edgeType,
           pathOptions: edgeType === "smoothstep" ? { borderRadius: 16 } : undefined,
@@ -474,8 +486,12 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
 
     // Ensure exactly one start node (auto-heal) so validation passes and save button can appear
     useEffect(() => {
-      setNodes((nds) => ensureOneStartNode(nds));
-    }, [nodes.length, setNodes]);
+      setNodes((nds) => ensureOneStartNode(nds, edges));
+    }, [nodes.length, edges, setNodes]);
+
+    const selectedEdge = edges.find((edge) => edge.id === selectedEdgeId) ?? null;
+    const selectedEdgeIsDeletable =
+      !!selectedEdge && getReactFlowEdgeKind(selectedEdge) === "branch";
 
     return (
       <div>
@@ -493,9 +509,9 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           }}
           onTitleChange={isDisabled ? undefined : handleTitleChange}
           onNodeDataChange={isDisabled ? undefined : handleNodeDataChange}
-          selectedEdge={edges.find((edge) => edge.id === selectedEdgeId) ?? null}
+          selectedEdge={selectedEdge}
           onEdgeUpdate={isDisabled ? undefined : handleEdgeUpdate}
-          onEdgeDelete={isDisabled ? undefined : handleEdgeDelete}
+          onEdgeDelete={isDisabled || !selectedEdgeIsDeletable ? undefined : handleEdgeDelete}
           nodes={nodes}
           edges={edges}
           isDisabled={isDisabled}

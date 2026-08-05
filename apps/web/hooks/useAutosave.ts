@@ -8,6 +8,8 @@ interface UseAutosaveOptions<T> {
   value: T;
   toKey: (v: T) => string;
   save: (v: T) => Promise<void>;
+  /** Runs only after the latest requested value wins the serialized save queue. */
+  onSaved?: (v: T) => void | Promise<void>;
   isValid?: (v: T) => boolean;
   delayMs?: number;
   flushOnUnmount?: boolean;
@@ -32,6 +34,7 @@ export function useAutosave<T>({
   value,
   toKey,
   save,
+  onSaved,
   isValid,
   delayMs = 1000,
   flushOnUnmount = true,
@@ -48,53 +51,75 @@ export function useAutosave<T>({
   const valueRef = useRef(value);
   const keyRef = useRef(key);
   const saveRef = useRef(save);
+  const onSavedRef = useRef(onSaved);
   const isValidRef = useRef(isValid);
+  const enabledRef = useRef(enabled);
   valueRef.current = value;
   keyRef.current = key;
   saveRef.current = save;
+  onSavedRef.current = onSaved;
   isValidRef.current = isValid;
+  enabledRef.current = enabled;
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Survives the value-effect's re-render cleanup so the unmount-flush
   // effect can fire independently of cleanup ordering.
   const pendingFlushRef = useRef(false);
 
-  // Guards against a slow save's late resolve clobbering newer state.
-  const seqRef = useRef(0);
-  const latestAppliedSeqRef = useRef(0);
-
   const inFlightRef = useRef<Promise<void> | null>(null);
 
   const runSave = useCallback(async () => {
-    const v = valueRef.current;
-    const k = keyRef.current;
-
-    if (isValidRef.current && !isValidRef.current(v)) return;
-    if (k === lastSavedKeyRef.current) {
-      pendingFlushRef.current = false;
-      setStatus("idle");
+    if (inFlightRef.current) {
+      // The active request owns the queue. Mark that it must inspect the newest
+      // snapshot before settling, then join it instead of starting a race.
+      pendingFlushRef.current = true;
+      await inFlightRef.current;
       return;
     }
 
-    pendingFlushRef.current = false;
-    const seq = ++seqRef.current;
-    setStatus("saving");
-    setError(null);
+    const promise = (async () => {
+      while (enabledRef.current) {
+        const v = valueRef.current;
+        const k = keyRef.current;
 
-    const promise = saveRef.current(v).then(
-      () => {
-        if (seq < latestAppliedSeqRef.current) return;
-        latestAppliedSeqRef.current = seq;
-        lastSavedKeyRef.current = k;
-        setStatus(keyRef.current === k ? "idle" : "dirty");
-      },
-      (err: unknown) => {
-        if (seq < latestAppliedSeqRef.current) return;
-        latestAppliedSeqRef.current = seq;
-        setError(err);
-        setStatus("error");
-      },
-    );
+        if (isValidRef.current && !isValidRef.current(v)) {
+          setStatus(k === lastSavedKeyRef.current ? "idle" : "dirty");
+          return;
+        }
+        if (k === lastSavedKeyRef.current) {
+          pendingFlushRef.current = false;
+          setStatus("idle");
+          return;
+        }
+
+        pendingFlushRef.current = false;
+        setStatus("saving");
+        setError(null);
+
+        try {
+          await saveRef.current(v);
+          lastSavedKeyRef.current = k;
+        } catch (err: unknown) {
+          // If this snapshot was superseded, continue with the newest value.
+          // Otherwise surface the error and leave it retryable.
+          if (keyRef.current !== k) continue;
+          setError(err);
+          setStatus("error");
+          return;
+        }
+
+        if (keyRef.current !== k) {
+          // This response is stale. It has reached the server, but it must not
+          // drive client-side success effects (notably experiment re-pinning).
+          continue;
+        }
+
+        await onSavedRef.current?.(v);
+        pendingFlushRef.current = false;
+        setStatus("idle");
+        return;
+      }
+    })();
 
     inFlightRef.current = promise;
     try {
@@ -138,14 +163,12 @@ export function useAutosave<T>({
   }, [key, enabled, delayMs, runSave]);
 
   const flush = useCallback(async (): Promise<void> => {
-    if (timerRef.current || pendingFlushRef.current) {
+    if (timerRef.current || pendingFlushRef.current || inFlightRef.current) {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
       await runSave();
-    } else if (inFlightRef.current) {
-      await inFlightRef.current;
     }
   }, [runSave]);
 

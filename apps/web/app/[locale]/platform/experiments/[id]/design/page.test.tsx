@@ -56,11 +56,16 @@ vi.mock("@/components/workbook/workbook-draft-editor", () => ({
   WorkbookDraftEditor: ({
     initialCells,
     onSaved,
+    autosaveEnabled,
   }: {
     initialCells: unknown[];
     onSaved?: () => void;
+    autosaveEnabled?: boolean;
   }) => (
-    <div data-testid="workbook-draft-editor">
+    <div
+      data-testid="workbook-draft-editor"
+      data-autosave-enabled={String(autosaveEnabled ?? true)}
+    >
       Draft Editor ({initialCells.length} cells)
       <button data-testid="trigger-save" onClick={() => onSaved?.()}>
         save
@@ -347,6 +352,10 @@ describe("ExperimentDesignPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workbook-draft-editor")).toBeInTheDocument();
     });
+    expect(screen.getByTestId("workbook-draft-editor")).toHaveAttribute(
+      "data-autosave-enabled",
+      "false",
+    );
     // No edit/view toggle: anyone who may edit does so in place.
     expect(screen.queryByText("flow.editWorkbook")).not.toBeInTheDocument();
     expect(screen.queryByText("flow.viewPinned")).not.toBeInTheDocument();
@@ -362,7 +371,9 @@ describe("ExperimentDesignPage", () => {
     const user = userEvent.setup();
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
-    await user.click(await screen.findByText("flow.viewGraph"));
+    const graphTab = await screen.findByRole("tab", { name: "flow.viewGraph" });
+    await user.click(graphTab);
+    expect(graphTab).toHaveAttribute("data-state", "active");
     expect(await screen.findByTestId("workbook-canvas-draft-editor")).toHaveTextContent("1 cells");
     expect(screen.queryByTestId("flow-editor")).not.toBeInTheDocument();
   });

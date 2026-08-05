@@ -343,6 +343,28 @@ describe("flowNodesToWorkbookCells", () => {
     expect(flowNodesToWorkbookCells(graph.nodes, graph.edges, cells)).toEqual(cells);
   });
 
+  it("keeps a non-adjacent output at its existing index on a no-op round trip", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 3, name: "A" },
+      },
+      { id: "md1", type: "markdown", isCollapsed: false, content: "Between" },
+      {
+        id: "out1",
+        type: "output",
+        isCollapsed: false,
+        producedBy: "p1",
+        data: { value: 7 },
+      },
+    ];
+    const graph = cellsToFlowGraph(cells);
+
+    expect(flowNodesToWorkbookCells(graph.nodes, graph.edges, cells)).toEqual(cells);
+  });
+
   it("retargets and clears branch gotos without rebuilding branch payload", () => {
     const branch: WorkbookCell = {
       id: "b1",
@@ -374,9 +396,7 @@ describe("flowNodesToWorkbookCells", () => {
 
     const retargeted = flowNodesToWorkbookCells(
       graph.nodes,
-      graph.edges.map((edge) =>
-        edge.id === pathEdge?.id ? { ...edge, target: "b1" } : edge,
-      ),
+      graph.edges.map((edge) => (edge.id === pathEdge?.id ? { ...edge, target: "b1" } : edge)),
       [branch, target],
     );
     expect(retargeted[0]).toEqual({

@@ -119,4 +119,17 @@ describe("<EdgeSidePanel />", () => {
     await user.click(screen.getByLabelText("edgePanel.closeBackdrop"));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("does not offer removal when the caller protects the sequence edge", () => {
+    render(
+      <EdgeSidePanel
+        open
+        selectedEdge={makeEdge({ data: { kind: "sequence" } })}
+        onClose={() => void 0}
+        isDisabled={false}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "edgePanel.remove" })).not.toBeInTheDocument();
+  });
 });

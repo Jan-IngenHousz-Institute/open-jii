@@ -1,4 +1,4 @@
-import type { Node } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 import { Position } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import { createContext, useContext } from "react";
@@ -61,16 +61,27 @@ export function createNewNode(
 
 /**
  * Ensures exactly one start node exists in the flow by auto-healing invalid states.
- * If no start nodes or multiple start nodes exist, picks the first node as the start node.
+ * If no start nodes or multiple start nodes exist, picks the structural head of
+ * the sequence chain rather than relying on React Flow's render-array order.
  */
-export function ensureOneStartNode(nodes: Node[]): Node[] {
+export function ensureOneStartNode(nodes: Node[], edges: Edge[] = []): Node[] {
   if (nodes.length === 0) return nodes;
 
-  const startNodes = nodes.filter((n) => n.data.isStartNode === true);
-  if (startNodes.length === 1) return nodes; // already valid
+  const sequenceTargets = new Set(
+    edges
+      .filter((edge) =>
+        edge.data?.kind === "sequence"
+          ? true
+          : edge.data?.kind === "branch"
+            ? false
+            : !edge.sourceHandle,
+      )
+      .map((edge) => edge.target),
+  );
+  const firstId = nodes.find((node) => !sequenceTargets.has(node.id))?.id ?? nodes[0].id;
+  const startNodes = nodes.filter((node) => node.data.isStartNode === true);
+  if (startNodes.length === 1 && startNodes[0].id === firstId) return nodes;
 
-  // Pick the first node in list to be start
-  const firstId = nodes[0].id;
   return nodes.map((n) => ({
     ...n,
     data: {

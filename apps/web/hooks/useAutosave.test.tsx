@@ -150,9 +150,8 @@ describe("useAutosave", () => {
     expect(result.current.status).toBe("idle");
   });
 
-  it("ignores a stale save's resolution when a newer save already won", async () => {
+  it("serializes saves and applies success effects only for the winning snapshot", async () => {
     let resolveFirst: (() => void) | null = null;
-    let resolveSecond: (() => void) | null = null;
     const save = vi
       .fn<(v: string) => Promise<void>>()
       .mockImplementationOnce(
@@ -161,14 +160,11 @@ describe("useAutosave", () => {
             resolveFirst = r;
           }),
       )
-      .mockImplementationOnce(
-        () =>
-          new Promise<void>((r) => {
-            resolveSecond = r;
-          }),
-      );
+      .mockResolvedValueOnce(undefined);
+    const onSaved = vi.fn();
     const { result, rerender } = renderHook(
-      ({ value }: { value: string }) => useAutosave({ value, toKey: (v) => v, save, delayMs: 20 }),
+      ({ value }: { value: string }) =>
+        useAutosave({ value, toKey: (v) => v, save, onSaved, delayMs: 20 }),
       { initialProps: { value: "v0" } },
     );
 
@@ -182,21 +178,20 @@ describe("useAutosave", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30);
     });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenLastCalledWith("v1");
+    expect(onSaved).not.toHaveBeenCalled();
 
-    // Newer save resolves first.
-    await act(async () => {
-      resolveSecond?.();
-      await Promise.resolve();
-    });
-    await flushMicrotasks();
-    expect(result.current.status).toBe("idle");
-
-    // Older save resolves late — must NOT flip the state.
+    // The second request cannot start until the first has settled.
     await act(async () => {
       resolveFirst?.();
       await Promise.resolve();
     });
     await flushMicrotasks();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith("v2");
+    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(onSaved).toHaveBeenCalledWith("v2");
     expect(result.current.status).toBe("idle");
   });
 

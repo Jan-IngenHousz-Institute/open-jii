@@ -9,6 +9,7 @@ import { PageContainer } from "@/components/page-container";
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import {
   AutosaveStatusProvider,
+  useReportAutosaveStatus,
   useAutosaveStatus,
 } from "@/components/shared/autosave/autosave-status-context";
 import { WorkbookCanvasDraftEditor } from "@/components/workbook/workbook-canvas-draft-editor";
@@ -18,28 +19,45 @@ import { WorkbookEntitySavedProvider } from "@/components/workbook/workbook-enti
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
+import { useAutosave } from "@/hooks/useAutosave";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
+import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
+import { parseApiError } from "@/util/apiError";
 import { GitBranch, Info, List } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 
-import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import {
+  zWorkbookCellArray,
+  type WorkbookCell,
+} from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 import { useTranslation } from "@repo/i18n/client";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 interface ExperimentDesignPageProps {
   params: Promise<{ id: string; locale: string }>;
 }
+
+const AUTO_SAVE_DELAY = 1500;
 
 /** Surfaces the draft autosave status (reported by WorkbookDraftEditor) inline. */
 function EditAutosaveStatus() {
   const autosave = useAutosaveStatus();
   if (!autosave?.status) return null;
   return <AutosaveIndicator status={autosave.status} variant="compact" />;
+}
+
+function EditAutosaveReporter({
+  status,
+  error,
+}: Pick<ReturnType<typeof useAutosave>, "status" | "error">) {
+  useReportAutosaveStatus({ status, error });
+  return null;
 }
 
 export default function ExperimentDesignPage({ params }: ExperimentDesignPageProps) {
@@ -72,9 +90,8 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const [draftCells, setDraftCells] = useState<WorkbookCell[] | null>(null);
 
   useEffect(() => {
-    if (workbookDraft) setDraftCells(workbookDraft.cells);
+    if (workbookDraft) setDraftCells((current) => current ?? workbookDraft.cells);
   }, [workbookDraft]);
-  const editableCells = draftCells ?? workbookDraft?.cells ?? [];
 
   // Capability, not ownership: an `admin`/"Can edit" grantee on the
   // workbook may edit it even though they created nothing.
@@ -92,6 +109,32 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const handleDraftSaved = useCallback(() => {
     upgradeVersion.mutate({ id });
   }, [id, upgradeVersion]);
+  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(workbookId ?? "");
+  const saveDraft = useCallback(
+    async (next: WorkbookCell[]) => {
+      if (!workbookId) return;
+      try {
+        await updateWorkbook({ id: workbookId, cells: next });
+      } catch (saveError) {
+        const message = parseApiError(saveError)?.message;
+        if (message) toast({ description: message, variant: "destructive" });
+        throw saveError;
+      }
+    },
+    [updateWorkbook, workbookId],
+  );
+  const autosave = useAutosave({
+    value: draftCells ?? [],
+    toKey: useCallback((value: WorkbookCell[]) => JSON.stringify(value), []),
+    isValid: useCallback(
+      (value: WorkbookCell[]) => zWorkbookCellArray.safeParse(value).success,
+      [],
+    ),
+    save: saveDraft,
+    onSaved: handleDraftSaved,
+    delayMs: AUTO_SAVE_DELAY,
+    enabled: canEdit && draftCells !== null,
+  });
 
   const versionedCells = useMemo<WorkbookCell[]>(() => {
     if (!pinnedVersionData) return [];
@@ -164,6 +207,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   return (
     <PageContainer width="fluid" className="space-y-3">
       <AutosaveStatusProvider>
+        {canEdit && <EditAutosaveReporter status={autosave.status} error={autosave.error} />}
         {canEdit && (
           <div className="flex items-start justify-between gap-3">
             <div className="text-muted-foreground flex items-start gap-1.5 text-sm">
@@ -208,12 +252,14 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
               <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
                 <WorkbookDraftEditor
                   id={workbookId}
-                  initialCells={editableCells}
+                  initialCells={workbookDraft.cells}
+                  cells={draftCells ?? workbookDraft.cells}
                   // Same capability the branch above gated on.
                   canEdit={canUpdateWorkbook}
                   name={workbookDraft.name}
                   onCellsChange={setDraftCells}
                   onSaved={handleDraftSaved}
+                  autosaveEnabled={false}
                 />
               </WorkbookEntitySavedProvider>
             ) : (
@@ -230,11 +276,10 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
             {canEdit ? (
               <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
                 <WorkbookCanvasDraftEditor
-                  id={workbookId}
                   experimentId={id}
-                  initialCells={editableCells}
+                  initialCells={workbookDraft.cells}
+                  cells={draftCells ?? workbookDraft.cells}
                   onCellsChange={setDraftCells}
-                  onSaved={handleDraftSaved}
                 />
               </WorkbookEntitySavedProvider>
             ) : (

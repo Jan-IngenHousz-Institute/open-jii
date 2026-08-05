@@ -3,7 +3,13 @@ import type { Node } from "@xyflow/react";
 import { Position } from "@xyflow/react";
 import { describe, it, expect, vi } from "vitest";
 
-import { toPosition, createNewNode, BaseNodeWrapper, FlowContextProvider } from "../node-utils";
+import {
+  toPosition,
+  createNewNode,
+  ensureOneStartNode,
+  BaseNodeWrapper,
+  FlowContextProvider,
+} from "../node-utils";
 
 vi.mock("../base-node", () => ({
   BaseNode: (props: Node) => <div data-testid="BaseNode" data-props={JSON.stringify(props)} />,
@@ -42,6 +48,29 @@ describe("createNewNode", () => {
   it("creates an ANALYSIS node with empty spec", () => {
     const node = createNewNode("ANALYSIS", { x: 3, y: 4 });
     expect(node.data.stepSpecification).toEqual({});
+  });
+});
+
+describe("ensureOneStartNode", () => {
+  it("selects the node without a sequence predecessor after a reorder", () => {
+    const nodes: Node[] = [
+      { id: "A", position: { x: 0, y: 0 }, data: { isStartNode: false } },
+      { id: "B", position: { x: 100, y: 0 }, data: { isStartNode: false } },
+      { id: "C", position: { x: 200, y: 0 }, data: { isStartNode: false } },
+    ];
+    const result = ensureOneStartNode(nodes, [
+      { id: "C-A", source: "C", target: "A", data: { kind: "sequence" } },
+      { id: "A-B", source: "A", target: "B", data: { kind: "sequence" } },
+      {
+        id: "path",
+        source: "B",
+        target: "C",
+        sourceHandle: "path-1",
+        data: { kind: "branch" },
+      },
+    ]);
+
+    expect(result.find((node) => node.data.isStartNode)?.id).toBe("C");
   });
 });
 

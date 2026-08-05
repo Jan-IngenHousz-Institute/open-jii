@@ -43,13 +43,18 @@ function makeNode(
   return { id, type, name, content, isStart };
 }
 
+function safeNodeName(value: string | undefined, fallback: string): string {
+  const singleLine = value?.replace(/[\r\n]+/g, " ").trim() ?? "";
+  return (singleLine || fallback).slice(0, 64);
+}
+
 function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
   switch (cell.type) {
     case "protocol":
       return makeNode(
         cell.id,
         "measurement",
-        cell.payload.name ?? `Protocol ${cell.payload.protocolId.slice(0, 8)}`,
+        safeNodeName(cell.payload.name, `Protocol ${cell.payload.protocolId.slice(0, 8)}`),
         { protocolId: cell.payload.protocolId },
         isStart,
       );
@@ -57,16 +62,10 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
     case "command": {
       // Inline command rides the existing measurement node so old apps drop it
       // cleanly (unknown content) rather than choking on a new node type.
-      const source = cell.payload.name?.trim() ? cell.payload.name : cell.payload.content;
-      const label = source
-        .replace(/[\r\n]+/g, " ")
-        .trim()
-        .slice(0, 64);
       return makeNode(
         cell.id,
         "measurement",
-        // Never empty: zFlowNode.name requires a min length of 1.
-        label.length > 0 ? label : "Command",
+        safeNodeName(cell.payload.name || cell.payload.content, "Command"),
         { command: { format: cell.payload.format, content: cell.payload.content } },
         isStart,
       );
@@ -76,20 +75,26 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       return makeNode(
         cell.id,
         "analysis",
-        cell.payload.name ?? `Macro ${cell.payload.macroId.slice(0, 8)}`,
+        safeNodeName(cell.payload.name, `Macro ${cell.payload.macroId.slice(0, 8)}`),
         { macroId: cell.payload.macroId },
         isStart,
       );
 
     case "question":
       // Cell `name` is the column-key label; data pipeline canonicalises it into a column key downstream.
-      return makeNode(cell.id, "question", cell.name, cell.question, isStart);
+      return makeNode(
+        cell.id,
+        "question",
+        safeNodeName(cell.name, "Question"),
+        cell.question,
+        isStart,
+      );
 
     case "markdown":
       return makeNode(
         cell.id,
         "instruction",
-        cell.content.slice(0, 64),
+        safeNodeName(cell.content, "Instruction"),
         { text: cell.content },
         isStart,
       );

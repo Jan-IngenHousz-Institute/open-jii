@@ -117,6 +117,9 @@ const toInitialFlow = (
 
 vi.mock("../../react-flow/flow-utils", () => ({
   connectFlowNodes: flowUtilsMocks.connectFlowNodes,
+  getReactFlowEdgeKind: (edge: xyflowReact.Edge) =>
+    edge.data?.kind === "branch" || edge.sourceHandle ? "branch" : "sequence",
+  getWorkbookCellInsertionIndex: () => 0,
   getFlowData: (...args: [xyflowReact.Node[], xyflowReact.Edge[]]) => getFlowDataSpy(...args),
   handleNodesDeleteWithReconnection: (
     _deleted: xyflowReact.Node,
@@ -328,6 +331,25 @@ describe("<FlowEditor /> (stable suite)", () => {
   it("ensureOneStartNode is invoked on mount", () => {
     renderEditor();
     expect(ensureOneStartNodeSpy).toHaveBeenCalled();
+  });
+
+  it("does not write workbook cells merely by mounting the graph", () => {
+    const onWorkbookCellsChange = vi.fn();
+    renderEditor({
+      workbookCells: [{ id: "md1", type: "markdown", isCollapsed: false, content: "Untouched" }],
+      onWorkbookCellsChange,
+    });
+
+    expect(onWorkbookCellsChange).not.toHaveBeenCalled();
+  });
+
+  it("does not offer deletion for the sequence spine", async () => {
+    renderEditor();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Sim Edge Click" }));
+
+    expect(screen.queryByRole("button", { name: "edgePanel.remove" })).not.toBeInTheDocument();
   });
 
   it("updates nodes/edges when initialFlow prop changes", () => {
