@@ -22,6 +22,7 @@ import { DEVICE_CONTEXT_FIELDS, DEVICE_CONTEXT_KEY } from "@repo/api/transforms/
 import {
   isGotoBranchCell,
   resolveBranchDefaultPath,
+  resolveBranchEvaluatedPath,
   validateBranchCell,
   validateDeviceBranch,
 } from "@repo/api/transforms/evaluate-branch";
@@ -116,6 +117,9 @@ export function BranchCellComponent({
   const defaultPathResolution = useMemo(() => resolveBranchDefaultPath(cell), [cell]);
   const defaultPath =
     defaultPathResolution.status === "resolved" ? defaultPathResolution.path : undefined;
+  const evaluatedPathResolution = useMemo(() => resolveBranchEvaluatedPath(cell), [cell]);
+  const evaluatedPath =
+    evaluatedPathResolution.status === "resolved" ? evaluatedPathResolution.path : undefined;
 
   const validationErrors = useMemo(
     () => [
@@ -513,7 +517,7 @@ export function BranchCellComponent({
   const renderPath = (path: BranchPath, pathIndex: number) => {
     const pathKey = `${path.id}:${pathIndex}`;
     const isExpanded = expandedPaths[pathKey] ?? true;
-    const isEvaluated = cell.evaluatedPathId === path.id;
+    const isEvaluated = path === evaluatedPath;
     const targetExists = jumpTargets.some((target) => target.id === path.gotoCellId);
 
     return (

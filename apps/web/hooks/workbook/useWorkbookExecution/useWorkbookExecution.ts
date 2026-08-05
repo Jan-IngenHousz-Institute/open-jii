@@ -18,6 +18,7 @@ import { parseApiError } from "~/util/apiError";
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type {
   BranchCell,
+  BranchPath,
   CommandCell,
   MacroCell,
   OutputCell,
@@ -36,6 +37,7 @@ import { presentDevice } from "@repo/api/transforms/device-presentation";
 import {
   evaluateBranch,
   isDeviceScopedBranch,
+  resolveBranchEvaluatedPath,
   validateBranchCell,
   validateDeviceBranch,
 } from "@repo/api/transforms/evaluate-branch";
@@ -101,6 +103,15 @@ function insertOutputAfterCell(
   const updated = [...filtered];
   updated.splice(idx + 1, 0, outputCell);
   return updated;
+}
+
+function clearBranchEvaluation(cells: WorkbookCell[], branchCellId: string): WorkbookCell[] {
+  return cells.map((cell) => {
+    if (cell.id !== branchCellId || cell.type !== "branch") return cell;
+    const cleared = { ...cell };
+    delete cleared.evaluatedPathId;
+    return cleared;
+  });
 }
 
 function makeOutputCell(
@@ -593,13 +604,13 @@ export function useWorkbookExecution({
       if (connections.length === 0) {
         setCellState(cell.id, { status: "error", error: "No device connected" });
         return insertOutputAfterCell(
-          currentCells,
+          clearBranchEvaluation(currentCells, cell.id),
           cell.id,
           makeErrorOutputCell(cell.id, "No device connected - connect devices to dispatch"),
         );
       }
 
-      const groups = new Map<string, IotDeviceConnection[]>();
+      const groups = new Map<BranchPath, IotDeviceConnection[]>();
       const skipped: IotDeviceConnection[] = [];
       connections.forEach((connection, index) => {
         const path = evaluateBranch(cell, currentCells, {
@@ -610,9 +621,9 @@ export function useWorkbookExecution({
           ? currentCells.find((c) => c.id === path.gotoCellId)
           : undefined;
         if (path && target && (target.type === "protocol" || target.type === "command")) {
-          const group = groups.get(path.id);
+          const group = groups.get(path);
           if (group) group.push(connection);
-          else groups.set(path.id, [connection]);
+          else groups.set(path, [connection]);
         } else {
           skipped.push(connection);
         }
@@ -621,7 +632,7 @@ export function useWorkbookExecution({
       let updated = currentCells;
       const messages: string[] = [];
       for (const path of cell.paths) {
-        const group = groups.get(path.id);
+        const group = groups.get(path);
         if (!group || group.length === 0 || !path.gotoCellId) continue;
         const target = updated.find((c) => c.id === path.gotoCellId);
         if (!target) continue;
@@ -645,7 +656,7 @@ export function useWorkbookExecution({
         makeOutputCell(cell.id, undefined, 0, messages),
       );
       // A dispatcher matches several paths at once; no single ACTIVE path.
-      return updated.map((c) => (c.id === cell.id ? { ...cell, evaluatedPathId: undefined } : c));
+      return clearBranchEvaluation(updated, cell.id);
     },
     [setCellState, runProtocolCell, runCommandCell],
   );
@@ -665,7 +676,7 @@ export function useWorkbookExecution({
       if (configErrors.length > 0) {
         setCellState(cell.id, { status: "error", error: configErrors.join("; ") });
         return insertOutputAfterCell(
-          currentCells,
+          clearBranchEvaluation(currentCells, cell.id),
           cell.id,
           makeOutputCell(cell.id, undefined, 0, configErrors),
         );
@@ -678,7 +689,7 @@ export function useWorkbookExecution({
           if (!isOutputDataNormalizationError(err)) throw err;
           setCellState(cell.id, { status: "error", error: err.message });
           return insertOutputAfterCell(
-            currentCells,
+            clearBranchEvaluation(currentCells, cell.id),
             cell.id,
             makeErrorOutputCell(cell.id, err.message),
           );
@@ -692,7 +703,7 @@ export function useWorkbookExecution({
         if (!isOutputDataNormalizationError(err)) throw err;
         setCellState(cell.id, { status: "error", error: err.message });
         return insertOutputAfterCell(
-          currentCells,
+          clearBranchEvaluation(currentCells, cell.id),
           cell.id,
           makeErrorOutputCell(cell.id, err.message),
         );
@@ -709,8 +720,9 @@ export function useWorkbookExecution({
         cell.id,
         makeOutputCell(cell.id, undefined, 0, messages),
       );
+      if (!matchedPath) return clearBranchEvaluation(updated, cell.id);
       return updated.map((c) =>
-        c.id === cell.id ? { ...cell, evaluatedPathId: matchedPath?.id } : c,
+        c.id === cell.id ? { ...cell, evaluatedPathId: matchedPath.id } : c,
       );
     },
     [setCellState, runDeviceDispatchBranch],
@@ -761,10 +773,10 @@ export function useWorkbookExecution({
     const branchIndex = currentCells.findIndex((c) => c.id === branchCellId);
     if (branchIndex === -1) return -1;
     const branch = currentCells[branchIndex];
-    if (branch.type !== "branch" || !branch.evaluatedPathId) return -1;
-    const matchedPath = branch.paths.find((p) => p.id === branch.evaluatedPathId);
-    if (!matchedPath?.gotoCellId) return -1;
-    const targetIndex = currentCells.findIndex((c) => c.id === matchedPath.gotoCellId);
+    if (branch.type !== "branch") return -1;
+    const matchedPath = resolveBranchEvaluatedPath(branch);
+    if (matchedPath.status !== "resolved" || !matchedPath.path.gotoCellId) return -1;
+    const targetIndex = currentCells.findIndex((c) => c.id === matchedPath.path.gotoCellId);
     return targetIndex === branchIndex ? -1 : targetIndex;
   };
 

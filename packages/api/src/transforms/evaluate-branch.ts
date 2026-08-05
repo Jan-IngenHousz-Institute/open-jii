@@ -19,21 +19,35 @@ export interface BranchRuntimeContext {
   deviceId?: string;
 }
 
-export type BranchDefaultPathResolution<T extends { id: string }> =
+export type BranchPathResolution<T extends { id: string }> =
   | { status: "resolved"; path: T }
   | { status: "absent" }
   | { status: "ambiguous" };
 
-/** Resolve a default only when its id identifies exactly one path. */
-export function resolveBranchDefaultPath<T extends { id: string }>(cell: {
-  paths: readonly T[];
-  defaultPathId?: string;
-}): BranchDefaultPathResolution<T> {
-  if (!cell.defaultPathId) return { status: "absent" };
-  const matches = cell.paths.filter((path) => path.id === cell.defaultPathId);
+/** Resolve an id only when it identifies exactly one path. */
+export function resolveBranchPathById<T extends { id: string }>(
+  paths: readonly T[],
+  pathId?: string,
+): BranchPathResolution<T> {
+  if (!pathId) return { status: "absent" };
+  const matches = paths.filter((path) => path.id === pathId);
   if (matches.length === 0) return { status: "absent" };
   if (matches.length > 1) return { status: "ambiguous" };
   return { status: "resolved", path: matches[0] };
+}
+
+export function resolveBranchDefaultPath<T extends { id: string }>(cell: {
+  paths: readonly T[];
+  defaultPathId?: string;
+}): BranchPathResolution<T> {
+  return resolveBranchPathById(cell.paths, cell.defaultPathId);
+}
+
+export function resolveBranchEvaluatedPath<T extends { id: string }>(cell: {
+  paths: readonly T[];
+  evaluatedPathId?: string;
+}): BranchPathResolution<T> {
+  return resolveBranchPathById(cell.paths, cell.evaluatedPathId);
 }
 
 /** A schema-compatible unconditional jump authored as a one-path branch. */

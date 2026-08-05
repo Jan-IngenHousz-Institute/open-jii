@@ -9,6 +9,8 @@ import {
   isGotoBranchCell,
   isDeviceScopedBranch,
   resolveBranchDefaultPath,
+  resolveBranchEvaluatedPath,
+  resolveBranchPathById,
   resolveConditionValue,
   validateBranchCell,
   validateDeviceBranch,
@@ -426,6 +428,13 @@ describe("evaluateBranch", () => {
     expect(resolveBranchDefaultPath({ paths: [path], defaultPathId: path.id })).toEqual({
       status: "resolved",
       path,
+    });
+    expect(resolveBranchEvaluatedPath({ paths: [path], evaluatedPathId: path.id })).toEqual({
+      status: "resolved",
+      path,
+    });
+    expect(resolveBranchPathById([path, { ...path }], path.id)).toEqual({
+      status: "ambiguous",
     });
   });
 
