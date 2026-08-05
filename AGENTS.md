@@ -47,6 +47,25 @@ leaving the variable unset.
 annotations), CMS-backed public pages, and every AWS-backed feature. The example env points them at
 unreachable endpoints deliberately. Assert on page chrome, not on that data.
 
+## Skills
+
+Task guides live in `.agents/skills/<name>/SKILL.md`. They are plain markdown and tool-agnostic:
+read the file when the situation matches. `.claude/skills/` holds symlinks to the same files so
+Claude Code auto-discovers them, but the files under `.agents/` are the source.
+
+| Skill                       | Read it when                                                               |
+| --------------------------- | -------------------------------------------------------------------------- |
+| `openjii-local-stack`       | Preparing a local checkout, seeding, or getting a dev session cookie.      |
+| `openjii-web-e2e`           | Writing or running browser tests against the platform UI.                  |
+| `openjii-mobile-device`     | Getting a dev build onto a real Android phone, over cable or Wi-Fi.        |
+| `openjii-mobile-control`    | Driving a connected phone to verify or reproduce mobile behaviour.         |
+| `openjii-docs-update`       | A change alters what a user sees or does, so docs and screenshots follow.  |
+| `diagnosing-bugs`           | Chasing a hard bug or a performance regression.                            |
+| `resolving-merge-conflicts` | A merge or rebase is mid-conflict.                                         |
+| `writing-for-agents`        | Writing or editing a skill, this file, or anything else an agent consumes. |
+
+The last three are vendored from an external repo. See `.agents/skills/ATTRIBUTION.md`.
+
 ## Working on mobile
 
 `pnpm --filter mobile adb:reverse` is what lets a USB-cabled phone reach Metro and the local

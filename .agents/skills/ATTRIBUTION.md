@@ -8,7 +8,7 @@ source, and they are kept close to upstream: prefer pulling a fresh copy over ed
 - `resolving-merge-conflicts`
 - `writing-for-agents` (with `SKILL-MECHANICS.md`)
 
-Everything else under `.claude/skills` is openJII's own.
+Everything else under `.agents/skills` is openJII's own.
 
 ```
 MIT License
