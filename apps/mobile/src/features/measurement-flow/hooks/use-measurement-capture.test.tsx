@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => {
     navigateToQuestionFromOverview: vi.fn(),
     devicePlan: undefined as { deviceId: string; targetCellId: string }[] | undefined,
     completeDevicePlan: vi.fn(),
+    recordExpectedDevices: vi.fn(),
+    recordRealizedOutcomes: vi.fn(),
     flowNodes: [] as {
       id: string;
       name: string;
@@ -131,6 +133,14 @@ describe("useMeasurementCapture", () => {
     await act(async () => result.current.startScan());
 
     expect(mocks.executeScanAll).toHaveBeenCalledWith(CONTENT.protocol, [DEVICE_A, DEVICE_B]);
+    expect(mocks.flowState.recordExpectedDevices).toHaveBeenCalledWith([
+      { producerCellId: "measurement-cell", deviceId: "usb-a" },
+      { producerCellId: "measurement-cell", deviceId: "usb-b" },
+    ]);
+    expect(mocks.flowState.recordRealizedOutcomes).toHaveBeenCalledWith([
+      { producer_cell_id: "measurement-cell", device_id: "usb-b", outcome: "ok" },
+      { producer_cell_id: "measurement-cell", device_id: "usb-a", outcome: "ok" },
+    ]);
     expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
       [
         { device: { id: "usb-a", name: "Device A" }, result: { value: 1 } },

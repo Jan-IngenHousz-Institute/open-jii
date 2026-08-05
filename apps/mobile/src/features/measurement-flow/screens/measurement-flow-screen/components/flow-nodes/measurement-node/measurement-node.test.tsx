@@ -68,6 +68,8 @@ vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => (
     nextStep,
     setScanResults,
     navigateToQuestionFromOverview,
+    recordExpectedDevices: vi.fn(),
+    recordRealizedOutcomes: vi.fn(),
   }),
 }));
 

@@ -33,11 +33,15 @@ export const measurements = sqliteTable(
     // Local calendar date "YYYY-MM-DD" computed at save time from timestamp + resolved timezone.
     // Used to group the Recent list by day. Nullable for legacy rows pending backfill.
     dayKey: text("day_key"),
+    // Control records share the transactional outbox but are not user-facing
+    // measurements. Null means an ordinary/legacy measurement row.
+    recordKind: text("record_kind"),
   },
   (table) => [
     check("measurements_status_check", sql`${table.status} IN ('pending', 'failed', 'successful')`),
     index("idx_measurements_status").on(table.status),
     index("idx_measurements_status_ts").on(table.status, table.timestamp),
     index("idx_measurements_created_at").on(table.createdAt),
+    index("idx_measurements_record_kind").on(table.recordKind),
   ],
 );

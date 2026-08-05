@@ -26,6 +26,9 @@ function resetStore() {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
     workbookAttemptId: undefined,
+    workbookRunExpected: [],
+    workbookRunRealized: [],
+    pendingWorkbookRunManifests: [],
     currentStep: 0,
     flowNodes: [],
     currentFlowStep: 0,
@@ -95,6 +98,30 @@ describe("useMeasurementFlowStore", () => {
 
       useMeasurementFlowStore.getState().setFlowGraph([], [], [], "version-2");
       expect(useMeasurementFlowStore.getState().workbookAttemptId).not.toBe(first);
+    });
+
+    it("records expected devices and lets retries replace their realized outcome", () => {
+      const store = useMeasurementFlowStore.getState();
+      store.recordExpectedDevices([
+        { producerCellId: "cell-1", deviceId: "device-1" },
+        { producerCellId: "cell-1", deviceId: "device-1" },
+      ]);
+      store.recordRealizedOutcomes([
+        { producer_cell_id: "cell-1", device_id: "device-1", outcome: "failed" },
+      ]);
+      useMeasurementFlowStore
+        .getState()
+        .recordRealizedOutcomes([
+          { producer_cell_id: "cell-1", device_id: "device-1", outcome: "ok" },
+        ]);
+
+      const state = useMeasurementFlowStore.getState();
+      expect(state.workbookRunExpected).toEqual([
+        { producer_cell_id: "cell-1", device_ids: ["device-1"] },
+      ]);
+      expect(state.workbookRunRealized).toEqual([
+        { producer_cell_id: "cell-1", device_id: "device-1", outcome: "ok" },
+      ]);
     });
 
     it("setCurrentStep updates currentStep", () => {

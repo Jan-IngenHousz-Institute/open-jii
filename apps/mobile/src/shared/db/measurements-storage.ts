@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { eq, and, gte, lt, inArray, count, desc } from "drizzle-orm";
+import { eq, and, gte, lt, inArray, count, desc, isNull, ne, or } from "drizzle-orm";
 import { DateTime, Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -38,6 +38,13 @@ export interface Measurement {
   measurementResult: object;
   metadata: { experimentName: string; protocolName: string; timestamp: string };
 }
+
+export const WORKBOOK_RUN_COMPLETE_RECORD_KIND = "workbook_run_complete";
+
+const isUserFacingMeasurement = or(
+  isNull(measurements.recordKind),
+  ne(measurements.recordKind, WORKBOOK_RUN_COMPLETE_RECORD_KIND),
+);
 
 let migrationPromise: Promise<void> | null = null;
 
@@ -126,7 +133,35 @@ export async function saveMeasurement(
       questionsText: derived.questionsText,
       hasComment: derived.hasComment,
       dayKey: derived.dayKey,
+      recordKind: (upload.measurementResult as { record_kind?: string }).record_kind,
     })
+    .run();
+  return id;
+}
+
+/** Insert a durable outbox row under a caller-owned id. Replays are no-ops. */
+export async function saveMeasurementIdempotently(
+  upload: Measurement,
+  status: MeasurementStatus,
+  id: string,
+): Promise<string> {
+  await ensureMigrated();
+  const derived = deriveListColumns(upload.measurementResult, upload.metadata.timestamp);
+  db.insert(measurements)
+    .values({
+      id,
+      status,
+      topic: upload.topic,
+      measurementResult: compressForStorage(upload.measurementResult),
+      experimentName: upload.metadata.experimentName,
+      protocolName: upload.metadata.protocolName,
+      timestamp: upload.metadata.timestamp,
+      questionsText: derived.questionsText,
+      hasComment: derived.hasComment,
+      dayKey: derived.dayKey,
+      recordKind: (upload.measurementResult as { record_kind?: string }).record_kind,
+    })
+    .onConflictDoNothing()
     .run();
   return id;
 }
@@ -199,6 +234,7 @@ export async function countMeasurementsByStatus(): Promise<MeasurementCounts> {
     const rows = db
       .select({ status: measurements.status, total: count() })
       .from(measurements)
+      .where(isUserFacingMeasurement)
       .groupBy(measurements.status)
       .all();
     const out: MeasurementCounts = { pending: 0, failed: 0, successful: 0 };
@@ -226,7 +262,7 @@ export async function countRecentMeasurementsByExperiment(
     const rows = db
       .select({ name: measurements.experimentName, total: count() })
       .from(measurements)
-      .where(gte(measurements.timestamp, sinceIso))
+      .where(and(gte(measurements.timestamp, sinceIso), isUserFacingMeasurement))
       .groupBy(measurements.experimentName)
       .all();
     const out: Record<string, number> = {};
@@ -282,7 +318,7 @@ export async function getMeasurementsList(
         dayKey: measurements.dayKey,
       })
       .from(measurements)
-      .where(inArray(measurements.status, status))
+      .where(and(inArray(measurements.status, status), isUserFacingMeasurement))
       // `id` tiebreaker keeps pages stable when several rows share a timestamp;
       // otherwise OFFSET pagination can duplicate or skip rows between pages.
       .orderBy(desc(measurements.timestamp), desc(measurements.id))
@@ -444,7 +480,9 @@ export async function removeMeasurement(key: string): Promise<void> {
 export async function clearMeasurements(status: MeasurementStatus): Promise<void> {
   await ensureMigrated();
   try {
-    db.delete(measurements).where(eq(measurements.status, status)).run();
+    db.delete(measurements)
+      .where(and(eq(measurements.status, status), isUserFacingMeasurement))
+      .run();
   } catch (error) {
     log.error("Failed to clear measurements", { status, err: (error as Error)?.message });
   }
@@ -456,7 +494,13 @@ export async function pruneExpiredMeasurements(): Promise<void> {
     const cutoff = new Date(Date.now() - MAX_AGE_MS);
     const result = db
       .delete(measurements)
-      .where(and(eq(measurements.status, "successful"), lt(measurements.createdAt, cutoff)))
+      .where(
+        and(
+          eq(measurements.status, "successful"),
+          lt(measurements.createdAt, cutoff),
+          isUserFacingMeasurement,
+        ),
+      )
       .run();
     log.info("pruned successful uploads", {
       count: result.changes,

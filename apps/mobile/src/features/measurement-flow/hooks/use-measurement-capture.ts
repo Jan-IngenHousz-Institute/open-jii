@@ -74,6 +74,8 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     navigateToQuestionFromOverview,
     devicePlan,
     completeDevicePlan,
+    recordExpectedDevices,
+    recordRealizedOutcomes,
   } = useMeasurementFlowStore();
   // The dispatch plan applies only while THIS node is one of its targets;
   // otherwise it is stale routing state and the node broadcasts as before.
@@ -221,6 +223,15 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
         return;
       }
 
+      const producerFor = (deviceId: string) =>
+        activePlan?.find((entry) => entry.deviceId === deviceId)?.targetCellId ?? nodeId;
+      recordExpectedDevices(
+        pendingDevices.flatMap((device) => {
+          const producerCellId = producerFor(device.id);
+          return producerCellId ? [{ producerCellId, deviceId: device.id }] : [];
+        }),
+      );
+
       try {
         let round: MultiScanRound;
         if (activePlan) {
@@ -236,6 +247,26 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
           ),
           ...round.successes,
         ];
+        recordRealizedOutcomes([
+          ...round.successes.flatMap(({ device }) => {
+            const producerCellId = producerFor(device.id);
+            return producerCellId
+              ? [{ producer_cell_id: producerCellId, device_id: device.id, outcome: "ok" as const }]
+              : [];
+          }),
+          ...round.failures.flatMap(({ device }) => {
+            const producerCellId = producerFor(device.id);
+            return producerCellId
+              ? [
+                  {
+                    producer_cell_id: producerCellId,
+                    device_id: device.id,
+                    outcome: "failed" as const,
+                  },
+                ]
+              : [];
+          }),
+        ]);
 
         if (round.failures.length > 0 && successesRef.current.length === 0) {
           const kind = classifyScanError(round.failures[0].error);

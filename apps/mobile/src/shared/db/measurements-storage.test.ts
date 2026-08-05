@@ -13,6 +13,7 @@ const migrationFiles = [
   "0002_dashing_lenny_balinger.sql",
   "0003_drop_uploading_status.sql",
   "0004_add_day_key.sql",
+  "0005_add_record_kind.sql",
 ];
 const migrationSqls = migrationFiles.map((f) =>
   readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"),
@@ -125,6 +126,30 @@ describe("measurements-storage", () => {
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
       expect(rows[0].status).toBe("successful");
+    });
+
+    it("idempotently stores one control row and filters it from the recent list", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      const control = {
+        ...mockMeasurement,
+        measurementResult: {
+          record_kind: "workbook_run_complete",
+          workbook_attempt_id: "attempt-1",
+        },
+      };
+      await mod.saveMeasurementIdempotently(control, "pending", "manifest:attempt-1");
+      await mod.saveMeasurementIdempotently(control, "pending", "manifest:attempt-1");
+
+      const rows = sqlite.prepare("SELECT id, record_kind FROM measurements").all() as any[];
+      expect(rows).toEqual([{ id: "manifest:attempt-1", record_kind: "workbook_run_complete" }]);
+      await expect(mod.getMeasurementsList(["pending"], { limit: 50, offset: 0 })).resolves.toEqual(
+        [],
+      );
+      await expect(mod.countMeasurementsByStatus()).resolves.toEqual({
+        pending: 0,
+        failed: 0,
+        successful: 0,
+      });
     });
 
     it("rejects an unknown status at the database level (CHECK constraint)", () => {

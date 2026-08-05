@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { mountConnectionLifecycle } from "~/features/connection/services/connection-lifecycle";
+import { installWorkbookRunManifestReconcile } from "~/features/measurement-flow/services/workbook-run-manifest-reconcile";
 import { installFlowRehydrationGuard } from "~/features/measurement-flow/stores/flow-rehydration-guard";
 import { mountOutboxBridge } from "~/features/recent-measurements/services/outbox-to-query-cache-bridge";
 // Side effect: registers the auth feature on the shared fetcher's 401 seam.
@@ -23,10 +24,12 @@ export function AppBootstrap() {
     const unmountBridge = mountOutboxBridge({ outbox: getOutbox(), queryClient });
     const unmountLifecycle = mountConnectionLifecycle({ queryClient });
     const unmountGuard = installFlowRehydrationGuard();
+    const unmountManifestReconcile = installWorkbookRunManifestReconcile();
     return () => {
       unmountBridge();
       unmountLifecycle();
       unmountGuard();
+      unmountManifestReconcile();
     };
   }, [queryClient]);
 

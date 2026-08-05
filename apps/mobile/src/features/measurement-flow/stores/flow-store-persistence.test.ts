@@ -25,6 +25,9 @@ const MEASUREMENT_FIXTURE = `{
     "experimentLabel": "Greenhouse Trial B",
     "workbookVersionId": "version-17",
     "workbookAttemptId": "attempt-23",
+    "workbookRunExpected": [{ "producer_cell_id": "node-m1", "device_ids": ["1002"] }],
+    "workbookRunRealized": [{ "producer_cell_id": "node-m1", "device_id": "1002", "outcome": "ok" }],
+    "pendingWorkbookRunManifests": [],
     "protocolId": "proto-7",
     "currentStep": 1,
     "flowNodes": [
@@ -168,10 +171,13 @@ describe("measurement-flow-storage v1 wire format", () => {
       "isQuestionsSubmitPending",
       "iterationCount",
       "lastMatchedPath",
+      "pendingWorkbookRunManifests",
       "producerCellId",
       "scanResult",
       "scanResults",
       "workbookAttemptId",
+      "workbookRunExpected",
+      "workbookRunRealized",
       "workbookVersionId",
     ]);
   });
