@@ -6,7 +6,7 @@ unit tests cannot cover reliably: hydration, navigation, keyboard shortcuts, and
 
 ## Run locally
 
-Use Node 24 or newer, then prepare and start the local stack:
+Prepare and start the local stack:
 
 ```sh
 pnpm local:setup
@@ -24,10 +24,11 @@ pnpm e2e
 The default web URL is `http://localhost:3000`, the seed identity is `seed@openjii.local`, and the
 database is `postgresql://postgres:postgres@127.0.0.1:5432/openjii_local`. Override them with
 `E2E_BASE_URL`, `E2E_EMAIL`, and `E2E_DATABASE_URL` when needed. Authentication state is recreated
-under `.auth/` for every run.
+under `.auth` for every run.
 
-CI intentionally uses a production build and its standalone server while local development uses
-`next dev`; removing per-route compilation makes Playwright timing deterministic in CI.
+The manual Web E2E workflow does not run on pull requests. It intentionally uses a production build
+and its standalone server while local development uses `next dev`; removing per-route compilation
+makes Playwright timing deterministic in CI.
 
 ## Tests and artifacts
 
@@ -35,5 +36,5 @@ CI intentionally uses a production build and its standalone server while local d
 - `specs/workbook-search.spec.ts` covers server-side workbook search and attachment.
 - `scripts/record-maintenance.ts` records maintenance-mode screenshots and video but is not a test.
 
-HTML reports, traces, screenshots, and videos are written below `playwright-report/` and
-`test-results/`; both are ignored by Git.
+HTML reports are written below `playwright-report`. Failed runs retain screenshots and videos below
+`test-results`, and CI retries capture traces there; both directories are ignored by Git.

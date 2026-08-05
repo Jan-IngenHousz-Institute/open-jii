@@ -34,6 +34,7 @@ test("the authenticated navigation shell remains usable", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
   await clearOverlays(page);
 
+  // Client-side navigation avoids the known direct-load account-page hydration failure.
   await page.getByRole("button", { name: /SE|JII/ }).click();
   await page.getByRole("menuitem", { name: "Account" }).click();
   await page.waitForURL(`**/${locale}/platform/account`);
