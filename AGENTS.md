@@ -53,6 +53,16 @@ unreachable endpoints deliberately. Assert on page chrome, not on that data.
 backend. See the `openjii-mobile-device` skill for getting a build onto a phone, and
 `openjii-mobile-control` for driving and testing one.
 
+## Docs follow the feature
+
+If a change alters what a user sees or does, `apps/docs/content` changes in the same PR, and any
+screenshot showing the affected screen is re-captured rather than reused. The
+`openjii-docs-update` skill covers where things live and the privacy rules on captures.
+
+A `Stop` hook in `.claude/settings.json` prints a reminder when `apps/web` or `apps/mobile` change
+without `apps/docs/content`. It is a nudge, not a gate, and it only reaches Claude Code. Per-machine
+overrides belong in `.claude/settings.local.json`, which stays untracked.
+
 ## Conventions
 
 - Define API changes contracts-first in `packages/api`, then implement both sides against them.

@@ -3,7 +3,6 @@
 # AI artifacts
 .wolf/
 .claude/rules/openwolf.md
-.claude/settings.json
 **/ssr
 
 # Dependencies
@@ -19,6 +18,10 @@ vrn
 .claude/*
 !.claude/skills/
 !.claude/skills/**
+!.claude/hooks/
+!.claude/hooks/**
+!.claude/settings.json
+.claude/settings.local.json
 
 # Local env files
 .env
