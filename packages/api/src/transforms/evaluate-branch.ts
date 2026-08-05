@@ -19,6 +19,15 @@ export interface BranchRuntimeContext {
   deviceId?: string;
 }
 
+/** A schema-compatible unconditional jump authored as a one-path branch. */
+export function isGotoBranchCell(cell: BranchCell): boolean {
+  return (
+    cell.paths.length === 1 &&
+    cell.paths[0].conditions.length === 0 &&
+    cell.defaultPathId === cell.paths[0].id
+  );
+}
+
 /** True when any condition of the branch reads the reserved `$device` source. */
 export function isDeviceScopedBranch(cell: BranchCell): boolean {
   return cell.paths.some((path) =>

@@ -28,6 +28,7 @@ import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-versio
 import { cn } from "@repo/ui/lib/utils";
 
 import { AddCellButton } from "./add-cell-button";
+import { nextBranchPathColor } from "./branch-path-colors";
 import { CellRenderer } from "./cell-renderer";
 import { WorkbookHeader } from "./workbook-header";
 import { WorkbookSidebar } from "./workbook-sidebar";
@@ -105,7 +106,7 @@ export function createDefaultCell(
           {
             id: crypto.randomUUID(),
             label: "Path 1",
-            color: "",
+            color: nextBranchPathColor([]),
             conditions: [
               { id: crypto.randomUUID(), sourceCellId: "", field: "", operator: "eq", value: "" },
             ],

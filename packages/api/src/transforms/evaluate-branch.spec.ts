@@ -6,6 +6,7 @@ import type { BranchCell, WorkbookCell } from "../domains/workbook/workbook-cell
 import {
   evaluateBranch,
   evaluatePathConditions,
+  isGotoBranchCell,
   isDeviceScopedBranch,
   resolveConditionValue,
   validateBranchCell,
@@ -445,6 +446,26 @@ describe("evaluateBranch", () => {
 });
 
 describe("validateBranchCell", () => {
+  it("detects Go to cells structurally", () => {
+    const goto = makeBranchCell({
+      id: "b1",
+      paths: [{ id: "p1", label: "Go to", color: "", conditions: [], gotoCellId: "target" }],
+      defaultPathId: "p1",
+    });
+
+    expect(isGotoBranchCell(goto)).toBe(true);
+    expect(isGotoBranchCell({ ...goto, defaultPathId: undefined })).toBe(false);
+    expect(
+      isGotoBranchCell({
+        ...goto,
+        paths: [
+          ...goto.paths,
+          { id: "p2", label: "Other", color: "", conditions: [], gotoCellId: "target" },
+        ],
+      }),
+    ).toBe(false);
+  });
+
   it("returns error when branch has no paths", () => {
     const cell = makeBranchCell({ id: "b1", paths: [] });
     const errors = validateBranchCell(cell);

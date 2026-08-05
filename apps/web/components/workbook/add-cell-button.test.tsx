@@ -1,6 +1,8 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import type { BranchCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+
 import { AddCellButton } from "./add-cell-button";
 
 vi.mock("./macro-picker", () => ({
@@ -25,6 +27,7 @@ describe("AddCellButton", () => {
     expect(screen.getByText("Macro")).toBeInTheDocument();
     expect(screen.getByText("Question")).toBeInTheDocument();
     expect(screen.getByText("Branch")).toBeInTheDocument();
+    expect(screen.getByText("Go to")).toBeInTheDocument();
   });
 
   it("hides branch when showBranch is false", () => {
@@ -52,6 +55,20 @@ describe("AddCellButton", () => {
     render(<AddCellButton onAdd={onAdd} variant="bottom" />);
     await user.click(screen.getByText("Branch"));
     expect(onAdd).toHaveBeenCalledWith("branch");
+  });
+
+  it("creates a structurally valid Go to cell", async () => {
+    const user = userEvent.setup();
+    const onAddCell = vi.fn();
+    render(<AddCellButton onAdd={onAdd} onAddCell={onAddCell} variant="bottom" />);
+
+    await user.click(screen.getByText("Go to"));
+
+    const cell = onAddCell.mock.calls[0][0] as BranchCell;
+    expect(cell).toMatchObject({ type: "branch", defaultPathId: cell.paths[0].id });
+    expect(cell.paths).toHaveLength(1);
+    expect(cell.paths[0].conditions).toEqual([]);
+    expect(cell.paths[0].color).not.toBe("");
   });
 
   it("shows empty state when showEmptyState is true", () => {
