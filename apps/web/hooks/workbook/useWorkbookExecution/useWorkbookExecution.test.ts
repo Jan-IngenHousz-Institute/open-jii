@@ -86,6 +86,30 @@ function findOutput(cells: WorkbookCell[], producedBy?: string) {
   return output;
 }
 
+function staleDuplicateBranch(firstTargetId: string, secondTargetId: string) {
+  return createBranchCell({
+    id: "duplicate-branch",
+    paths: [
+      {
+        id: "duplicate-path",
+        label: "First duplicate",
+        color: "#22c55e",
+        conditions: [],
+        gotoCellId: firstTargetId,
+      },
+      {
+        id: "duplicate-path",
+        label: "Second duplicate",
+        color: "#0ea5e9",
+        conditions: [],
+        gotoCellId: secondTargetId,
+      },
+    ],
+    defaultPathId: "duplicate-path",
+    evaluatedPathId: "duplicate-path",
+  });
+}
+
 describe("useWorkbookExecution", () => {
   beforeEach(() => {
     mockConnections = [];
@@ -1030,6 +1054,25 @@ describe("useWorkbookExecution", () => {
   });
 
   describe("runCell - branch", () => {
+    it("clears a stale ambiguous evaluated path and runs neither duplicate target", async () => {
+      const first = createQuestionCell({ id: "first-target" });
+      const second = createQuestionCell({ id: "second-target" });
+      const branch = staleDuplicateBranch(first.id, second.id);
+      const onPrompt = vi.fn().mockResolvedValue("should not run");
+      const { result, onCellsChange } = renderExecution([branch, first, second], {
+        onPromptQuestion: onPrompt,
+      });
+
+      await act(() => result.current.runCell(branch.id));
+
+      expect(onPrompt).not.toHaveBeenCalled();
+      const updated = onCellsChange.mock.calls.at(-1)?.[0] as WorkbookCell[];
+      expect(updated.find((cell) => cell.id === branch.id)).not.toHaveProperty("evaluatedPathId");
+      expect(findOutput(updated, branch.id)?.messages).toEqual(
+        expect.arrayContaining([expect.stringContaining("duplicated")]),
+      );
+    });
+
     it("runs a conditionless default Go to and routes to its target", async () => {
       const target = createQuestionCell({ id: "target" });
       const goto = createBranchCell({
@@ -1164,6 +1207,7 @@ describe("useWorkbookExecution", () => {
           },
         ],
         defaultPathId: "path-default",
+        evaluatedPathId: "path-default",
       });
 
       const { result, onCellsChange } = renderExecution([proto, output, branch]);
@@ -1342,7 +1386,7 @@ describe("useWorkbookExecution", () => {
         "Ambit B (ambit): no measurement resolved this round",
       );
       const branchCell = updated.find((c) => c.id === branch.id);
-      expect(branchCell).toHaveProperty("evaluatedPathId", undefined);
+      expect(branchCell).not.toHaveProperty("evaluatedPathId");
     });
 
     it("runAll skips a dispatched target exactly once (no double run)", async () => {
@@ -1382,7 +1426,10 @@ describe("useWorkbookExecution", () => {
     it("errors a device-scoped branch when no device is connected", async () => {
       setMockConnected(false);
       const proto = createProtocolCell({ id: "proto-ms" });
-      const branch = deviceBranch({ multispeq: "proto-ms", other: "proto-ms" });
+      const branch = {
+        ...deviceBranch({ multispeq: "proto-ms", other: "proto-ms" }),
+        evaluatedPathId: "path-multispeq",
+      };
 
       const { result, onCellsChange } = renderExecution([branch, proto]);
       await act(() => result.current.runCell(branch.id));
@@ -1390,6 +1437,7 @@ describe("useWorkbookExecution", () => {
       const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
       const branchOutput = findOutput(updated, branch.id);
       expect(branchOutput?.messages?.join("\n")).toContain("No device connected");
+      expect(updated.find((cell) => cell.id === branch.id)).not.toHaveProperty("evaluatedPathId");
     });
 
     it("rejects a device-scoped branch whose path lacks a measurement target", async () => {
@@ -1453,6 +1501,26 @@ describe("useWorkbookExecution", () => {
   });
 
   describe("runAll", () => {
+    it("does not jump backward from a stale ambiguous evaluated path after a config error", async () => {
+      const first = createQuestionCell({ id: "first-target" });
+      const second = createQuestionCell({ id: "second-target" });
+      const branch = staleDuplicateBranch(first.id, second.id);
+      const onPrompt = vi.fn().mockResolvedValue("answered");
+      const { result, onCellsChange } = renderExecution([first, second, branch], {
+        onPromptQuestion: onPrompt,
+      });
+
+      await act(() => result.current.runAll());
+
+      expect(onPrompt).toHaveBeenCalledTimes(2);
+      expect(onPrompt.mock.calls.map(([cell]) => (cell as QuestionCell).id)).toEqual([
+        first.id,
+        second.id,
+      ]);
+      const updated = onCellsChange.mock.calls.at(-1)?.[0] as WorkbookCell[];
+      expect(updated.find((cell) => cell.id === branch.id)).not.toHaveProperty("evaluatedPathId");
+    });
+
     it("skips output and markdown cells", async () => {
       const q = createQuestionCell();
       const output = createOutputCell({ producedBy: q.id });

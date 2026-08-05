@@ -62,9 +62,9 @@ function cellLabelOf(cell: WorkbookCell): string | undefined {
 
 function duplicateConditionKey(
   cell: Extract<WorkbookCell, { type: "branch" }>,
-): Map<string, string> {
+): Map<(typeof cell.paths)[number], string> {
   const firstPathByConditions = new Map<string, string>();
-  const duplicates = new Map<string, string>();
+  const duplicates = new Map<(typeof cell.paths)[number], string>();
   for (const path of cell.paths) {
     if (path.conditions.length === 0) continue;
     const key = [
@@ -77,7 +77,7 @@ function duplicateConditionKey(
       .sort()
       .join("|");
     const firstPathId = firstPathByConditions.get(key);
-    if (firstPathId) duplicates.set(path.id, firstPathId);
+    if (firstPathId) duplicates.set(path, firstPathId);
     else firstPathByConditions.set(key, path.id);
   }
   return duplicates;
@@ -177,16 +177,15 @@ function structuralBranchIssues(cells: WorkbookCell[]): WorkbookIssue[] {
     }
 
     const duplicateConditions = duplicateConditionKey(cell);
-    for (const [pathId, firstPathId] of duplicateConditions) {
-      const path = cell.paths.find((candidate) => candidate.id === pathId);
-      let duplicateLabel = pathId;
-      if (path?.label.trim()) duplicateLabel = path.label.trim();
+    for (const [path, firstPathId] of duplicateConditions) {
+      let duplicateLabel = path.id;
+      if (path.label.trim()) duplicateLabel = path.label.trim();
       issues.push({
         level: "warning",
         code: "path-duplicate-conditions",
         cellId: cell.id,
         cellLabel: cellLabelOf(cell),
-        ref: pathId,
+        ref: path.id,
         detail: `${duplicateLabel} duplicates ${firstPathId}`,
       });
     }

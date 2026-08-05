@@ -21,6 +21,7 @@ import type {
   ExperimentFlow,
   ExperimentUpsertFlowBody,
 } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
+import { resolveBranchPathById } from "@repo/api/transforms/evaluate-branch";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
@@ -267,7 +268,13 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
         (node.data as { stepSpecification?: { paths?: { id: string; color: string }[] } })
           .stepSpecification?.paths ?? [];
       for (const path of paths) {
-        branchPathColors.set(`${node.id}:${path.id}`, resolveBranchPathColor(path.color, path.id));
+        const resolvedPath = resolveBranchPathById(paths, path.id);
+        if (resolvedPath.status === "resolved") {
+          branchPathColors.set(
+            `${node.id}:${path.id}`,
+            resolveBranchPathColor(resolvedPath.path.color, resolvedPath.path.id),
+          );
+        }
       }
     }
 

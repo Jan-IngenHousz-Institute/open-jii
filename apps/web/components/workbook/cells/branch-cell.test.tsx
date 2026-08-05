@@ -327,6 +327,28 @@ describe("BranchCellComponent", () => {
     expect(screen.getByText("ACTIVE")).toBeInTheDocument();
   });
 
+  it("leaves an ambiguous duplicate evaluated path unmarked", () => {
+    renderBranch({
+      paths: [
+        {
+          id: "duplicate",
+          label: "First",
+          color: "",
+          conditions: [{ id: "c1", sourceCellId: "", field: "", operator: "eq", value: "" }],
+        },
+        {
+          id: "duplicate",
+          label: "Second",
+          color: "",
+          conditions: [{ id: "c2", sourceCellId: "", field: "", operator: "eq", value: "" }],
+        },
+      ],
+      evaluatedPathId: "duplicate",
+    });
+
+    expect(screen.queryByText("ACTIVE")).not.toBeInTheDocument();
+  });
+
   it("renders a conditionless default path as a compact Go to card", async () => {
     const user = userEvent.setup();
     const { onUpdate } = renderBranch({
