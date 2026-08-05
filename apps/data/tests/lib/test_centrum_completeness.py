@@ -17,6 +17,9 @@ from pyspark.sql.types import (
 EXPECTED_ENTRY = StructType(
     [
         StructField("producer_cell_id", StringType(), True),
+        StructField("container_cell_id", StringType(), True),
+        StructField("lane_id", StringType(), True),
+        StructField("container_attempt_id", StringType(), True),
         StructField("device_ids", ArrayType(StringType()), True),
     ]
 )
@@ -37,6 +40,9 @@ MEASUREMENT_SCHEMA = StructType(
         StructField("workbook_attempt_id", StringType(), True),
         StructField("workbook_version_id", StringType(), True),
         StructField("producer_cell_id", StringType(), True),
+        StructField("container_cell_id", StringType(), True),
+        StructField("lane_id", StringType(), True),
+        StructField("container_attempt_id", StringType(), True),
         StructField("device_id", StringType(), True),
         StructField("processed_timestamp", TimestampType(), True),
     ]
@@ -52,7 +58,15 @@ def _manifest_rows(spark):
                 "attempt-1",
                 "version-1",
                 "partial",
-                [{"producer_cell_id": "producer-1", "device_ids": ["device-1", "device-2"]}],
+                [
+                    {
+                        "producer_cell_id": "producer-1",
+                        "container_cell_id": None,
+                        "lane_id": None,
+                        "container_attempt_id": None,
+                        "device_ids": ["device-1", "device-2"],
+                    }
+                ],
                 now,
                 "1",
             )
@@ -64,7 +78,20 @@ def _manifest_rows(spark):
 def _measurement_rows(spark, pairs):
     now = datetime(2026, 8, 5, tzinfo=timezone.utc)
     return spark.createDataFrame(
-        [("experiment-1", "attempt-1", "version-1", producer, device, now) for producer, device in pairs],
+        [
+            (
+                "experiment-1",
+                "attempt-1",
+                "version-1",
+                producer,
+                None,
+                None,
+                None,
+                device,
+                now,
+            )
+            for producer, device in pairs
+        ],
         MEASUREMENT_SCHEMA,
     )
 
@@ -127,3 +154,61 @@ def test_manifest_without_expected_membership_is_unknown(spark) -> None:
     assert result.completeness == "unknown"
     assert result.expected_count == 0
     assert result.received_count == 0
+
+
+@pytest.mark.spark
+def test_lane_with_no_rows_keeps_container_attempt_partial(spark) -> None:
+    now = datetime(2026, 8, 5, tzinfo=timezone.utc)
+    manifests = spark.createDataFrame(
+        [
+            (
+                "experiment-1",
+                "attempt-1",
+                "version-1",
+                "partial",
+                [
+                    {
+                        "producer_cell_id": None,
+                        "container_cell_id": "parallel-1",
+                        "lane_id": "failed-lane",
+                        "container_attempt_id": "parallel-1:1",
+                        "device_ids": ["device-failed"],
+                    },
+                    {
+                        "producer_cell_id": None,
+                        "container_cell_id": "parallel-1",
+                        "lane_id": "ok-lane",
+                        "container_attempt_id": "parallel-1:1",
+                        "device_ids": ["device-ok"],
+                    },
+                ],
+                now,
+                "1",
+            )
+        ],
+        MANIFEST_SCHEMA,
+    )
+    measurements = spark.createDataFrame(
+        [
+            (
+                "experiment-1",
+                "attempt-1",
+                "version-1",
+                "producer-ok",
+                "parallel-1",
+                "ok-lane",
+                "parallel-1:1",
+                "device-ok",
+                now,
+            )
+        ],
+        MEASUREMENT_SCHEMA,
+    )
+
+    result = derive_workbook_run_completeness(manifests, measurements).collect()[0]
+
+    assert result.completeness == "partial"
+    assert result.expected_count == 2
+    assert result.received_count == 1
+    assert result.missing_pairs[0].lane_id == "failed-lane"
+    assert result.missing_pairs[0].device_id == "device-failed"

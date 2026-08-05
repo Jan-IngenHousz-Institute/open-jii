@@ -26,6 +26,12 @@ export interface BuildUploadPayloadArgs {
   workbookAttemptId?: string;
   /** Workbook producer cell for this measurement row. */
   producerCellId?: string;
+  /** Parallel container that owns this row, when execution is lane-scoped. */
+  containerCellId?: string;
+  /** Stable lane id within the owning parallel container. */
+  laneId?: string;
+  /** Container-entry attempt, distinct from the enclosing workbook attempt. */
+  containerAttemptId?: string;
   /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
   macroContext?: Record<string, unknown>;
   fallbackDeviceId?: string;
@@ -47,12 +53,22 @@ export function buildUploadPayload({
   workbookVersionId,
   workbookAttemptId,
   producerCellId,
+  containerCellId,
+  laneId,
+  containerAttemptId,
   macroContext,
   fallbackDeviceId,
   location,
 }: BuildUploadPayloadArgs) {
   const macroFilenames = macro?.filename ? [macro.filename] : [];
   const measurementDeviceId = resolveMeasurementDeviceId(rawMeasurement, fallbackDeviceId);
+  const containerProvenanceParts = [containerCellId, laneId, containerAttemptId];
+  const hasContainerProvenance = containerProvenanceParts.every(Boolean);
+  if (!hasContainerProvenance && containerProvenanceParts.some(Boolean)) {
+    throw new Error(
+      "Parallel measurement provenance requires containerCellId, laneId, and containerAttemptId",
+    );
+  }
 
   let injectedSample: unknown;
   const hasInjectableSample = "sample" in rawMeasurement && rawMeasurement.sample;
@@ -79,6 +95,13 @@ export function buildUploadPayload({
     ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
     ...(workbookAttemptId ? { workbook_attempt_id: workbookAttemptId } : {}),
     ...(producerCellId ? { producer_cell_id: producerCellId } : {}),
+    ...(hasContainerProvenance
+      ? {
+          container_cell_id: containerCellId,
+          lane_id: laneId,
+          container_attempt_id: containerAttemptId,
+        }
+      : {}),
     ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
   };

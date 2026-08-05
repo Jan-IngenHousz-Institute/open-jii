@@ -127,6 +127,18 @@ def raw_data():
             F.get_json_object(F.col("payload_json"), "$.producer_cell_id"),
         )
         .withColumn(
+            "container_cell_id",
+            F.get_json_object(F.col("payload_json"), "$.container_cell_id"),
+        )
+        .withColumn(
+            "lane_id",
+            F.get_json_object(F.col("payload_json"), "$.lane_id"),
+        )
+        .withColumn(
+            "container_attempt_id",
+            F.get_json_object(F.col("payload_json"), "$.container_attempt_id"),
+        )
+        .withColumn(
             "macro_context",
             F.get_json_object(F.col("payload_json"), "$.macro_context"),
         )
@@ -136,6 +148,9 @@ def raw_data():
             "workbook_version_id",
             "workbook_attempt_id",
             "producer_cell_id",
+            "container_cell_id",
+            "lane_id",
+            "container_attempt_id",
             "macro_context",
             "parsed_data",
             "ingestion_timestamp",

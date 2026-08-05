@@ -283,6 +283,33 @@ describe("workbook run correlation", () => {
     expect(payload.producer_cell_id).toBe("producer-1");
   });
 
+  it("stamps parallel container, lane, and container-attempt provenance together", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+      containerCellId: "parallel-1",
+      laneId: "ambient",
+      containerAttemptId: "parallel-1:2",
+    });
+
+    expect(payload).toMatchObject({
+      container_cell_id: "parallel-1",
+      lane_id: "ambient",
+      container_attempt_id: "parallel-1:2",
+    });
+  });
+
+  it("rejects an incomplete parallel provenance stamp", () => {
+    expect(() =>
+      buildUploadPayload({
+        ...baseArgs,
+        rawMeasurement: { device_id: "MSPx-0001" },
+        containerCellId: "parallel-1",
+        laneId: "ambient",
+      }),
+    ).toThrow("requires containerCellId, laneId, and containerAttemptId");
+  });
+
   it("stamps workbook_run_id when given, alongside sample compression", () => {
     const payload = buildUploadPayload({
       ...baseArgs,

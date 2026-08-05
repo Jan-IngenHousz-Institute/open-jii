@@ -80,6 +80,9 @@ def clean_data():
         .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
         .withColumn("workbook_attempt_id", F.col("workbook_attempt_id"))
         .withColumn("producer_cell_id", F.col("producer_cell_id"))
+        .withColumn("container_cell_id", F.col("container_cell_id"))
+        .withColumn("lane_id", F.col("lane_id"))
+        .withColumn("container_attempt_id", F.col("container_attempt_id"))
         .withColumn("workbook_version_id", F.col("workbook_version_id"))
         .withColumn("macro_context", F.col("macro_context"))
         # GPS fix at measurement time; null on older payloads / no permission.
@@ -208,6 +211,9 @@ def clean_data():
         "workbook_run_id",
         "workbook_attempt_id",
         "producer_cell_id",
+        "container_cell_id",
+        "lane_id",
+        "container_attempt_id",
         "workbook_version_id",
         "macro_context",
         "latitude",
@@ -262,6 +268,9 @@ def clean_data():
         .withColumn("workbook_run_id", F.lit(None).cast("string"))
         .withColumn("workbook_attempt_id", F.lit(None).cast("string"))
         .withColumn("producer_cell_id", F.lit(None).cast("string"))
+        .withColumn("container_cell_id", F.lit(None).cast("string"))
+        .withColumn("lane_id", F.lit(None).cast("string"))
+        .withColumn("container_attempt_id", F.lit(None).cast("string"))
         .withColumn("workbook_version_id", F.lit(None).cast("string"))
         .withColumn("macro_context", F.lit(None).cast("string"))
         # Mark imported data to skip macro processing
@@ -286,6 +295,9 @@ def clean_data():
             "workbook_run_id",
             "workbook_attempt_id",
             "producer_cell_id",
+            "container_cell_id",
+            "lane_id",
+            "container_attempt_id",
             "workbook_version_id",
             "macro_context",
             "latitude",
@@ -396,6 +408,9 @@ def clean_data_large_iot():
             "workbook_run_id",
             "workbook_attempt_id",
             "producer_cell_id",
+            "container_cell_id",
+            "lane_id",
+            "container_attempt_id",
             "workbook_version_id",
             "macro_context",
             "latitude",

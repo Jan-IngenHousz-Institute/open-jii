@@ -19,9 +19,18 @@ def test_producer_cell_id_is_nullable_in_ingest_schemas() -> None:
         assert field.dataType.simpleString() == "string"
 
 
+def test_parallel_provenance_is_nullable_in_ingest_schemas() -> None:
+    for schema in (sensor_schema, large_iot_schema):
+        for field_name in ("container_cell_id", "lane_id", "container_attempt_id"):
+            field = schema[field_name]
+            assert field.nullable is True
+            assert field.dataType.simpleString() == "string"
+
+
 def test_terminal_control_schema_preserves_expected_membership() -> None:
     assert workbook_run_control_schema["record_kind"].dataType.simpleString() == "string"
     assert (
         workbook_run_control_schema["expected"].dataType.simpleString()
-        == "array<struct<producer_cell_id:string,device_ids:array<string>>>"
+        == "array<struct<producer_cell_id:string,container_cell_id:string,lane_id:string,container_attempt_id:string,device_ids:array<string>>>"
     )
+    assert "status:string" in workbook_run_control_schema["realized"].dataType.simpleString()

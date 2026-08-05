@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pyspark.sql.types import (
     ArrayType,
+    BooleanType,
     DoubleType,
     StringType,
     StructField,
@@ -56,16 +57,28 @@ annotation_schema = StructType(
 
 workbook_run_expected_schema = StructType(
     [
-        StructField("producer_cell_id", StringType(), False),
+        # Producer expectations and lane-assignment expectations share the
+        # existing array. Exactly one identity shape is populated per entry.
+        StructField("producer_cell_id", StringType(), True),
+        StructField("container_cell_id", StringType(), True),
+        StructField("lane_id", StringType(), True),
+        StructField("container_attempt_id", StringType(), True),
         StructField("device_ids", ArrayType(StringType()), False),
     ]
 )
 
 workbook_run_realized_schema = StructType(
     [
-        StructField("producer_cell_id", StringType(), False),
-        StructField("device_id", StringType(), False),
-        StructField("outcome", StringType(), False),
+        # Measurement outcomes and terminal lane summaries share the existing
+        # record kind and ingest path.
+        StructField("producer_cell_id", StringType(), True),
+        StructField("device_id", StringType(), True),
+        StructField("outcome", StringType(), True),
+        StructField("container_cell_id", StringType(), True),
+        StructField("lane_id", StringType(), True),
+        StructField("container_attempt_id", StringType(), True),
+        StructField("status", StringType(), True),
+        StructField("abandoned", BooleanType(), True),
     ]
 )
 
@@ -110,6 +123,9 @@ sensor_schema = StructType(
         StructField("workbook_attempt_id", StringType(), True),
         # Producer cell provenance used with device_id for attempt completeness.
         StructField("producer_cell_id", StringType(), True),
+        StructField("container_cell_id", StringType(), True),
+        StructField("lane_id", StringType(), True),
+        StructField("container_attempt_id", StringType(), True),
         # GPS fix at measurement time; absent on older payloads and when the
         # app had no location permission or fix.
         StructField("latitude", DoubleType(), True),
@@ -143,6 +159,9 @@ large_iot_schema = StructType(
         StructField("workbook_run_id", StringType(), True),
         StructField("workbook_attempt_id", StringType(), True),
         StructField("producer_cell_id", StringType(), True),
+        StructField("container_cell_id", StringType(), True),
+        StructField("lane_id", StringType(), True),
+        StructField("container_attempt_id", StringType(), True),
         StructField("workbook_version_id", StringType(), True),
         StructField("macro_context", StringType(), True),
         # GPS fix at measurement time; absent without permission or fix.

@@ -23,6 +23,9 @@ export interface ScanResultEntry {
   result: ScanResult;
   /** Workbook cell that produced this device's row; required for completeness joins. */
   producerCellId?: string;
+  containerCellId?: string;
+  laneId?: string;
+  containerAttemptId?: string;
   /** Dispatch rounds: the protocol this device actually ran (per-device upload). */
   protocolId?: string;
   protocolName?: string;

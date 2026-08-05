@@ -30,12 +30,16 @@ import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.sch
 import {
   addExpectedDevice,
   addRealizedOutcome,
+  addRealizedLaneStatus,
   addWorkbookDeviceOutcome,
   buildPendingManifest,
+  setExpectedLaneAssignment,
 } from "../domain/workbook-run-manifest";
 import type {
   WorkbookRunDeviceOutcome,
-  WorkbookRunRealized,
+  WorkbookRunLaneAssignment,
+  WorkbookRunRealizedLane,
+  WorkbookRunRealizedProducer,
 } from "../domain/workbook-run-manifest";
 
 interface MeasurementFlowStore extends FlowState {
@@ -83,7 +87,9 @@ interface MeasurementFlowStore extends FlowState {
   setIterationAnchor: (anchor: { iteration: number; nodeId?: string }) => void;
   dismissQuestionsSubmit: () => void;
   recordExpectedDevices: (entries: { producerCellId: string; deviceId: string }[]) => void;
-  recordRealizedOutcomes: (entries: WorkbookRunRealized[]) => void;
+  recordExpectedLaneAssignment: (assignment: WorkbookRunLaneAssignment) => void;
+  recordRealizedOutcomes: (entries: WorkbookRunRealizedProducer[]) => void;
+  recordRealizedLaneStatus: (lane: WorkbookRunRealizedLane) => void;
   recordWorkbookDeviceOutcomes: (entries: WorkbookRunDeviceOutcome[]) => void;
   markWorkbookRunTerminalReady: () => void;
   acknowledgeWorkbookRunManifest: (attemptId: string) => void;
@@ -232,12 +238,22 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           ),
         })),
 
+      recordExpectedLaneAssignment: (assignment) =>
+        set((state) => ({
+          workbookRunExpected: setExpectedLaneAssignment(state.workbookRunExpected, assignment),
+        })),
+
       recordRealizedOutcomes: (entries) =>
         set((state) => ({
           workbookRunRealized: entries.reduce(
             (realized, entry) => addRealizedOutcome(realized, entry),
             state.workbookRunRealized,
           ),
+        })),
+
+      recordRealizedLaneStatus: (lane) =>
+        set((state) => ({
+          workbookRunRealized: addRealizedLaneStatus(state.workbookRunRealized, lane),
         })),
 
       recordWorkbookDeviceOutcomes: (entries) =>

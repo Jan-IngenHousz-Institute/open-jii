@@ -11,7 +11,7 @@ from pyspark.sql import functions as F
 
 
 def derive_workbook_run_completeness(manifests: DataFrame, measurements: DataFrame) -> DataFrame:
-    """Compare expected producer/device pairs with rows received per attempt."""
+    """Compare expected producer and lane membership with rows received per attempt."""
     latest_manifest = (
         manifests.where(F.col("workbook_attempt_id").isNotNull())
         .withColumn(
@@ -27,7 +27,7 @@ def derive_workbook_run_completeness(manifests: DataFrame, measurements: DataFra
         .drop("_manifest_rank")
     )
 
-    expected_pairs = (
+    expected_entries = (
         latest_manifest.select(
             "workbook_attempt_id",
             F.explode_outer("expected").alias("expected_entry"),
@@ -35,27 +35,78 @@ def derive_workbook_run_completeness(manifests: DataFrame, measurements: DataFra
         .select(
             "workbook_attempt_id",
             F.col("expected_entry.producer_cell_id").alias("producer_cell_id"),
+            F.col("expected_entry.container_cell_id").alias("container_cell_id"),
+            F.col("expected_entry.lane_id").alias("lane_id"),
+            F.col("expected_entry.container_attempt_id").alias("container_attempt_id"),
             F.explode_outer("expected_entry.device_ids").alias("device_id"),
         )
-        .where(F.col("producer_cell_id").isNotNull() & F.col("device_id").isNotNull())
-        .dropDuplicates(["workbook_attempt_id", "producer_cell_id", "device_id"])
+        .where(F.col("device_id").isNotNull())
     )
 
+    expected_producers = expected_entries.where(F.col("producer_cell_id").isNotNull()).withColumn(
+        "membership_id",
+        F.concat_ws(
+            "\u0000",
+            F.lit("producer"),
+            F.coalesce(F.col("container_attempt_id"), F.lit("")),
+            F.col("producer_cell_id"),
+        ),
+    )
+    expected_lanes = expected_entries.where(
+        F.col("container_cell_id").isNotNull()
+        & F.col("lane_id").isNotNull()
+        & F.col("container_attempt_id").isNotNull()
+        & F.col("producer_cell_id").isNull()
+    ).withColumn(
+        "membership_id",
+        F.concat_ws(
+            "\u0000",
+            F.lit("lane"),
+            F.col("container_attempt_id"),
+            F.col("lane_id"),
+        ),
+    )
+    expected_pairs = expected_producers.unionByName(expected_lanes).dropDuplicates(
+        ["workbook_attempt_id", "membership_id", "device_id"]
+    )
+
+    received_rows = measurements.where(
+        F.col("workbook_attempt_id").isNotNull() & F.col("device_id").isNotNull()
+    )
+    received_producers = received_rows.where(F.col("producer_cell_id").isNotNull()).select(
+        "workbook_attempt_id",
+        F.concat_ws(
+            "\u0000",
+            F.lit("producer"),
+            F.coalesce(F.col("container_attempt_id"), F.lit("")),
+            F.col("producer_cell_id"),
+        ).alias("membership_id"),
+        "device_id",
+    )
+    received_lanes = received_rows.where(
+        F.col("container_cell_id").isNotNull()
+        & F.col("lane_id").isNotNull()
+        & F.col("container_attempt_id").isNotNull()
+    ).select(
+        "workbook_attempt_id",
+        F.concat_ws(
+            "\u0000",
+            F.lit("lane"),
+            F.col("container_attempt_id"),
+            F.col("lane_id"),
+        ).alias("membership_id"),
+        "device_id",
+    )
     received_pairs = (
-        measurements.where(
-            F.col("workbook_attempt_id").isNotNull()
-            & F.col("producer_cell_id").isNotNull()
-            & F.col("device_id").isNotNull()
-        )
-        .select("workbook_attempt_id", "producer_cell_id", "device_id")
-        .dropDuplicates(["workbook_attempt_id", "producer_cell_id", "device_id"])
+        received_producers.unionByName(received_lanes)
+        .dropDuplicates(["workbook_attempt_id", "membership_id", "device_id"])
         .withColumn("_received", F.lit(True))
     )
 
     pair_summary = (
         expected_pairs.join(
             received_pairs,
-            ["workbook_attempt_id", "producer_cell_id", "device_id"],
+            ["workbook_attempt_id", "membership_id", "device_id"],
             "left",
         )
         .groupBy("workbook_attempt_id")
@@ -65,7 +116,13 @@ def derive_workbook_run_completeness(manifests: DataFrame, measurements: DataFra
             F.collect_list(
                 F.when(
                     F.col("_received").isNull(),
-                    F.struct("producer_cell_id", "device_id"),
+                    F.struct(
+                        "producer_cell_id",
+                        "container_cell_id",
+                        "lane_id",
+                        "container_attempt_id",
+                        "device_id",
+                    ),
                 )
             ).alias("missing_pairs"),
         )
@@ -86,7 +143,10 @@ def derive_workbook_run_completeness(manifests: DataFrame, measurements: DataFra
             "missing_pairs",
             F.coalesce(
                 F.col("missing_pairs"),
-                F.from_json(F.lit("[]"), "array<struct<producer_cell_id:string,device_id:string>>"),
+                F.from_json(
+                    F.lit("[]"),
+                    "array<struct<producer_cell_id:string,container_cell_id:string,lane_id:string,container_attempt_id:string,device_id:string>>",
+                ),
             ),
         )
         .withColumn("_has_manifest", F.lit(True))

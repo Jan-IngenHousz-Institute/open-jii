@@ -390,6 +390,9 @@ describe("AnalysisNode upload with a command in the flow", () => {
           result: { sample: [{ phi2: 0.8 }] },
           measurementDeviceId: "firmware-1",
           producerCellId: "p1",
+          containerCellId: "parallel-1",
+          laneId: "ambient",
+          containerAttemptId: "parallel-1:1",
         },
         {
           device: { id: "2", name: "MultispeQ #2" },
@@ -441,6 +444,9 @@ describe("AnalysisNode upload with a command in the flow", () => {
           device: { id: "1" },
           measurementDeviceId: "firmware-1",
           producerCellId: "p1",
+          containerCellId: "parallel-1",
+          laneId: "ambient",
+          containerAttemptId: "parallel-1:1",
           macroContext: { measurement: { phi2: 0.8 } },
         },
         {

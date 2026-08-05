@@ -58,6 +58,9 @@ type SavedCall = [
       workbook_run_id?: string;
       workbook_version_id?: string;
       workbook_attempt_id?: string;
+      container_cell_id?: string;
+      lane_id?: string;
+      container_attempt_id?: string;
       macro_context?: string;
     };
     metadata: { protocolName: string };
@@ -143,5 +146,31 @@ describe("useMeasurementUpload", () => {
     expect(measurement.topic).toBe("topic/exp-1/proto-shared");
     expect(measurement.measurementResult).not.toHaveProperty("workbook_run_id");
     expect(measurement.measurementResult.workbook_attempt_id).toBe("attempt-1");
+  });
+
+  it("threads lane provenance from a result into the saved row", async () => {
+    const { result } = renderHook(() => useMeasurementUpload(), { wrapper });
+
+    await act(async () => {
+      await result.current.uploadMeasurements({
+        ...SHARED,
+        results: [
+          {
+            rawMeasurement: { device_id: "firmware-1" },
+            device: { id: "usb-1", name: "A" },
+            containerCellId: "parallel-1",
+            laneId: "ambient",
+            containerAttemptId: "parallel-1:1",
+          },
+        ],
+      });
+    });
+
+    const [measurement] = saveMeasurement.mock.calls[0] as SavedCall;
+    expect(measurement.measurementResult).toMatchObject({
+      container_cell_id: "parallel-1",
+      lane_id: "ambient",
+      container_attempt_id: "parallel-1:1",
+    });
   });
 });
