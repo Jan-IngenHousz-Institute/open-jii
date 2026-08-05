@@ -203,7 +203,6 @@ export class ProtocolRepository {
         .update(protocols)
         .set({
           ...updateProtocolDto,
-          updatedAt: new Date(),
         })
         .where(eq(protocols.id, id))
         .returning(protocolColumns);
