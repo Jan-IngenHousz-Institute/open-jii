@@ -19,6 +19,8 @@ export type ScanResult = Record<string, unknown>;
 export interface ScanResultEntry {
   device?: { id: string; name: string };
   result: ScanResult;
+  /** Workbook cell that produced this device's row; required for completeness joins. */
+  producerCellId?: string;
   /** Dispatch rounds: the protocol this device actually ran (per-device upload). */
   protocolId?: string;
   protocolName?: string;

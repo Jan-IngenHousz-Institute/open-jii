@@ -28,6 +28,7 @@
     "required": "Verplicht",
     "outputsCleared_one": "{{count}} uitvoer gewist",
     "outputsCleared_other": "{{count}} uitvoeren gewist",
+    "partialRunCompletion": "De uitvoering is voltooid met gedeeltelijke resultaten. Geslaagde apparaatgegevens blijven beschikbaar; een of meer apparaten zijn mislukt.",
     "createDescription": "Geef uw werkboek een naam. U kunt deze later wijzigen.",
     "namePlaceholder": "Naam van werkboek",
     "cancel": "Annuleren",

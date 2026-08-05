@@ -260,6 +260,11 @@ describe("useWorkbookExecution", () => {
       expect(outputCell?.messages).toEqual([
         "Mock MultispeQ 3 · MultispeQ: Mock device failure (simulated)",
       ]);
+      expect(result.current.executionStates[proto.id]).toMatchObject({
+        status: "completed",
+        isPartial: true,
+      });
+      expect(result.current.lastRunCompletion).toMatchObject({ status: "partial" });
     });
 
     it("keeps the primary single-device data shape and retains its identity", async () => {
@@ -288,6 +293,7 @@ describe("useWorkbookExecution", () => {
         },
       ]);
       expect(outputCell?.messages).toEqual([]);
+      expect(result.current.lastRunCompletion).toMatchObject({ status: "complete" });
     });
 
     it("retains a stable hardware id for an unnamed single-device result", async () => {

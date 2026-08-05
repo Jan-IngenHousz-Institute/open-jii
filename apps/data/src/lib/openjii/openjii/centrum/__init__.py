@@ -34,6 +34,8 @@ from .constants import (
     RAW_LARGE_DATA_TABLE,
     RAW_UPLOADED_DATA_TABLE,
     SILVER_TABLE_DEFAULT,
+    WORKBOOK_RUN_COMPLETENESS_TABLE,
+    WORKBOOK_RUN_CONTROL_TABLE,
 )
 from .schemas import (
     annotation_content_schema,
@@ -42,6 +44,9 @@ from .schemas import (
     macro_schema,
     question_schema,
     sensor_schema,
+    workbook_run_control_schema,
+    workbook_run_expected_schema,
+    workbook_run_realized_schema,
 )
 
 __all__ = [
@@ -65,6 +70,8 @@ __all__ = [
     "RAW_LARGE_DATA_TABLE",
     "RAW_UPLOADED_DATA_TABLE",
     "SILVER_TABLE_DEFAULT",
+    "WORKBOOK_RUN_COMPLETENESS_TABLE",
+    "WORKBOOK_RUN_CONTROL_TABLE",
     # schemas
     "annotation_content_schema",
     "annotation_schema",
@@ -72,4 +79,7 @@ __all__ = [
     "macro_schema",
     "question_schema",
     "sensor_schema",
+    "workbook_run_control_schema",
+    "workbook_run_expected_schema",
+    "workbook_run_realized_schema",
 ]

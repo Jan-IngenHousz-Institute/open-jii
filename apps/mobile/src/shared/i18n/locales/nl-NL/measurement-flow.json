@@ -123,7 +123,8 @@
       "noQuestionsAnswered": "Geen vragen beantwoord"
     },
     "workbookRun": {
-      "deviceHeading": "Apparaat {{index}}: {{name}}"
+      "deviceHeading": "Apparaat {{index}}: {{name}}",
+      "partialCompletion": "De uitvoering is voltooid met gedeeltelijke resultaten. Geslaagde metingen zijn opgeslagen; een of meer apparaten hebben geen gegevens opgeleverd."
     }
   },
   "commandNode": {

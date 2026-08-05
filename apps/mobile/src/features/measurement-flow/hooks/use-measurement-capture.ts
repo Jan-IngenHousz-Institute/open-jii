@@ -140,6 +140,8 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
       ordered.map(({ device, result }) => ({
         device: { id: device.id, name: device.name },
         result: result as ScanResult,
+        producerCellId:
+          activePlan?.find((entry) => entry.deviceId === device.id)?.targetCellId ?? nodeId,
         ...assignmentMetaRef.current[device.id],
       })),
       nodeId,

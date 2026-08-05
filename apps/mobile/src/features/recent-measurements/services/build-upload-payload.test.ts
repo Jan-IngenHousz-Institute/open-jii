@@ -245,6 +245,16 @@ describe("workbook run correlation", () => {
     expect(payload.workbook_attempt_id).toBe("attempt-1");
   });
 
+  it("stamps the producer cell used by the completeness join", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+      producerCellId: "producer-1",
+    });
+
+    expect(payload.producer_cell_id).toBe("producer-1");
+  });
+
   it("stamps workbook_run_id when given, alongside sample compression", () => {
     const payload = buildUploadPayload({
       ...baseArgs,

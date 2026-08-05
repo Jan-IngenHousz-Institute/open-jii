@@ -28,6 +28,7 @@
     "required": "Erforderlich",
     "outputsCleared_one": "{{count}} Ausgabe gelöscht",
     "outputsCleared_other": "{{count}} Ausgaben gelöscht",
+    "partialRunCompletion": "Der Lauf wurde mit Teilergebnissen abgeschlossen. Erfolgreiche Gerätedaten bleiben verfügbar; mindestens ein Gerät ist fehlgeschlagen.",
     "createDescription": "Geben Sie Ihrer Arbeitsmappe einen Namen. Sie können ihn später ändern.",
     "namePlaceholder": "Name der Arbeitsmappe",
     "cancel": "Abbrechen",

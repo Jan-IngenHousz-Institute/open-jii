@@ -23,6 +23,7 @@ const {
   getSyncedLocalISO,
   getTimeSyncState,
   scannerExecutors,
+  toastWarning,
 } = vi.hoisted(() => ({
   summaryProps: vi.fn(),
   macroResultProps: vi.fn(),
@@ -37,7 +38,10 @@ const {
   scannerExecutors: {
     current: new Map<string, { device: Device; identity: undefined }>(),
   },
+  toastWarning: vi.fn(),
 }));
+
+vi.mock("sonner-native", () => ({ toast: { warning: toastWarning } }));
 
 vi.mock("~/features/experiments/hooks/use-experiments", () => ({
   useExperiments: () => useExperiments(),
@@ -111,6 +115,8 @@ beforeEach(() => {
     experimentId: undefined,
     experimentLabel: undefined,
     workbookAttemptId: "attempt-1",
+    workbookRunExpected: [],
+    workbookRunRealized: [],
     flowNodes: [],
     currentFlowStep: 0,
     iterationCount: 0,
@@ -128,6 +134,7 @@ beforeEach(() => {
   summaryProps.mockClear();
   macroResultProps.mockClear();
   actionBarProps.mockClear();
+  toastWarning.mockClear();
   useExperiments.mockReturnValue({ experiments: [{ value: "exp-1", label: "From Query" }] });
   useSession.mockReturnValue({ session: { data: { user: { id: "user-1" } } } });
   useMeasurementUpload.mockReturnValue({
@@ -358,12 +365,28 @@ describe("AnalysisNode upload with a command in the flow", () => {
       experimentLabel: "Trial",
       workbookVersionId: "version-1",
       workbookAttemptId: "attempt-1",
+      workbookRunExpected: [
+        { producer_cell_id: "p1", device_ids: ["1"] },
+        { producer_cell_id: "p2", device_ids: ["2"] },
+      ],
+      workbookRunRealized: [
+        { producer_cell_id: "p1", device_id: "1", outcome: "ok" },
+        { producer_cell_id: "p2", device_id: "2", outcome: "failed" },
+      ],
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },
       scanResults: [
-        { device: { id: "1", name: "MultispeQ #1" }, result: { sample: [{ phi2: 0.8 }] } },
-        { device: { id: "2", name: "MultispeQ #2" }, result: { sample: [{ phi2: 0.7 }] } },
+        {
+          device: { id: "1", name: "MultispeQ #1" },
+          result: { sample: [{ phi2: 0.8 }] },
+          producerCellId: "p1",
+        },
+        {
+          device: { id: "2", name: "MultispeQ #2" },
+          result: { sample: [{ phi2: 0.7 }] },
+          producerCellId: "p2",
+        },
       ],
       producerCellId: "p1",
       cells: [
@@ -406,15 +429,20 @@ describe("AnalysisNode upload with a command in the flow", () => {
         {
           rawMeasurement: { sample: [{ phi2: 0.8 }] },
           device: { id: "1" },
+          producerCellId: "p1",
           macroContext: { measurement: { phi2: 0.8 } },
         },
         {
           rawMeasurement: { sample: [{ phi2: 0.7 }] },
           device: { id: "2" },
+          producerCellId: "p2",
           macroContext: { measurement: { phi2: 0.7 } },
         },
       ],
     });
+    expect(toastWarning).toHaveBeenCalledWith(
+      "measurementFlow:analysis.workbookRun.partialCompletion",
+    );
   });
 
   it("threads each dispatch result's own protocolId/protocolName to the upload", async () => {

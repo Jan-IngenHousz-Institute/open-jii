@@ -164,7 +164,13 @@ describe("MeasurementNode start-scan guards", () => {
 
     await waitFor(() => expect(executeScanAll).toHaveBeenCalledWith(PROTOCOL, [DEVICE]));
     expect(setScanResults).toHaveBeenCalledWith(
-      [{ device: { id: "dev-1", name: "MultispeQ #1" }, result: { result: 42 } }],
+      [
+        {
+          device: { id: "dev-1", name: "MultispeQ #1" },
+          result: { result: 42 },
+          producerCellId: "m1",
+        },
+      ],
       "m1",
     );
     expect(nextStep).toHaveBeenCalled();
@@ -232,8 +238,16 @@ describe("MeasurementNode start-scan guards", () => {
     await waitFor(() => expect(setScanResults).toHaveBeenCalled());
     expect(setScanResults).toHaveBeenCalledWith(
       [
-        { device: { id: "dev-1", name: "MultispeQ #1" }, result: { result: 1 } },
-        { device: { id: "dev-2", name: "MultispeQ #2" }, result: { result: 2 } },
+        {
+          device: { id: "dev-1", name: "MultispeQ #1" },
+          result: { result: 1 },
+          producerCellId: "m1",
+        },
+        {
+          device: { id: "dev-2", name: "MultispeQ #2" },
+          result: { result: 2 },
+          producerCellId: "m1",
+        },
       ],
       "m1",
     );
@@ -269,7 +283,13 @@ describe("MeasurementNode start-scan guards", () => {
 
     await waitFor(() => expect(setScanResults).toHaveBeenCalled());
     expect(setScanResults).toHaveBeenCalledWith(
-      [{ device: { id: "dev-1", name: "MultispeQ #1" }, result: { result: 1 } }],
+      [
+        {
+          device: { id: "dev-1", name: "MultispeQ #1" },
+          result: { result: 1 },
+          producerCellId: "m1",
+        },
+      ],
       "m1",
     );
     expect(nextStep).toHaveBeenCalled();

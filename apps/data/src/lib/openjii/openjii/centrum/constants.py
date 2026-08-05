@@ -10,6 +10,8 @@ from __future__ import annotations
 # per-environment without recompiling the wheel.
 BRONZE_TABLE_DEFAULT = "raw_data"
 SILVER_TABLE_DEFAULT = "clean_data"
+WORKBOOK_RUN_CONTROL_TABLE = "workbook_run_control"
+WORKBOOK_RUN_COMPLETENESS_TABLE = "workbook_run_completeness"
 
 # Gold layer
 EXPERIMENT_STATUS_TABLE = "experiment_status"

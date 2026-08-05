@@ -23,6 +23,8 @@ export interface BuildUploadPayloadArgs {
   workbookVersionId?: string;
   /** Stable id minted when execution enters this workbook attempt. */
   workbookAttemptId?: string;
+  /** Workbook producer cell for this measurement row. */
+  producerCellId?: string;
   /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
   macroContext?: Record<string, unknown>;
   fallbackDeviceId?: string;
@@ -43,6 +45,7 @@ export function buildUploadPayload({
   workbookRunId,
   workbookVersionId,
   workbookAttemptId,
+  producerCellId,
   macroContext,
   fallbackDeviceId,
   location,
@@ -75,6 +78,7 @@ export function buildUploadPayload({
     ...(workbookRunId ? { workbook_run_id: workbookRunId } : {}),
     ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
     ...(workbookAttemptId ? { workbook_attempt_id: workbookAttemptId } : {}),
+    ...(producerCellId ? { producer_cell_id: producerCellId } : {}),
     ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
   };

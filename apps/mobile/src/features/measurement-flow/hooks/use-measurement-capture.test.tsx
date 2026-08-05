@@ -143,8 +143,16 @@ describe("useMeasurementCapture", () => {
     ]);
     expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
       [
-        { device: { id: "usb-a", name: "Device A" }, result: { value: 1 } },
-        { device: { id: "usb-b", name: "Device B" }, result: { value: 2 } },
+        {
+          device: { id: "usb-a", name: "Device A" },
+          result: { value: 1 },
+          producerCellId: "measurement-cell",
+        },
+        {
+          device: { id: "usb-b", name: "Device B" },
+          result: { value: 2 },
+          producerCellId: "measurement-cell",
+        },
       ],
       "measurement-cell",
     );
@@ -235,12 +243,14 @@ describe("useMeasurementCapture", () => {
         {
           device: { id: "usb-a", name: "Device A" },
           result: { value: 1 },
+          producerCellId: "target-1",
           protocolId: "proto-a",
           protocolName: "Protocol A",
         },
         {
           device: { id: "usb-b", name: "Device B" },
           result: { value: 2 },
+          producerCellId: "target-2",
           protocolId: undefined,
           protocolName: "Command target",
         },

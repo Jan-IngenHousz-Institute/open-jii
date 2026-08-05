@@ -90,6 +90,7 @@ export function useMeasurementUpload() {
         // the batch-level protocolId/protocolName for this result only.
         protocolId?: string;
         protocolName?: string;
+        producerCellId?: string;
         macroContext?: Record<string, unknown>;
       }[];
     }) => {
@@ -137,6 +138,7 @@ export function useMeasurementUpload() {
           workbookRunId,
           workbookVersionId,
           workbookAttemptId,
+          producerCellId: result.producerCellId,
           macroContext,
           fallbackDeviceId: device?.id,
           location,

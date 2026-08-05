@@ -45,6 +45,8 @@ type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 interface CellExecutionState {
   status: CellExecutionStatus;
   error?: string;
+  /** Successful output exists, but at least one device in this fan-out failed. */
+  isPartial?: boolean;
   // Jupyter-style: each run appends the global counter value.
   executionOrder?: number[];
 }
@@ -162,11 +164,20 @@ export function useWorkbookExecution({
   const [executionStates, setExecutionStates] = useState<Record<string, CellExecutionState>>({});
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [workbookAttemptId, setWorkbookAttemptId] = useState<string>();
+  const [lastRunCompletion, setLastRunCompletion] = useState<{
+    attemptId: string;
+    status: "complete" | "partial";
+  }>();
   const [sensorFamily, setSensorFamilyState] = useState<SensorFamily>(() =>
     resolveSensorFamily(cells),
   );
   const [connectionType, setConnectionType] = useState<WorkbookConnectionType>("serial");
   const abortRef = useRef(false);
+  const partialAttemptRef = useRef(false);
+  const attemptCompletionStatus = useCallback(
+    (): "complete" | "partial" => (partialAttemptRef.current ? "partial" : "complete"),
+    [],
+  );
 
   const cellsRef = useRef(cells);
   cellsRef.current = cells;
@@ -257,7 +268,9 @@ export function useWorkbookExecution({
 
       // Partial failure stays "completed": the successful devices' data is
       // usable and the failed ones are called out in the output messages.
-      setCellState(cellId, { status: "completed" });
+      const isPartial = failures.length > 0;
+      if (isPartial) partialAttemptRef.current = true;
+      setCellState(cellId, { status: "completed", isPartial });
       const output = makeOutputCell(cellId, successes[0].data, executionTime, messages);
       return insertOutputAfterCell(currentCells, cellId, { ...output, deviceResults: results });
     },
@@ -475,7 +488,9 @@ export function useWorkbookExecution({
           });
         }
 
-        setCellState(cell.id, { status: "completed" });
+        const isPartial = failures.length > 0;
+        if (isPartial) partialAttemptRef.current = true;
+        setCellState(cell.id, { status: "completed", isPartial });
         return insertOutputAfterCell(currentCells, cell.id, {
           ...makeOutputCell(
             cell.id,
@@ -734,6 +749,7 @@ export function useWorkbookExecution({
           [cell.id]: {
             ...existing,
             status: "running" as const,
+            isPartial: false,
             executionOrder: [...prevOrder, order],
           },
         };
@@ -768,7 +784,10 @@ export function useWorkbookExecution({
 
   const runCell = useCallback(
     async (cellId: string) => {
-      setWorkbookAttemptId(crypto.randomUUID());
+      const attemptId = crypto.randomUUID();
+      setWorkbookAttemptId(attemptId);
+      partialAttemptRef.current = false;
+      setLastRunCompletion(undefined);
       let currentCells = cellsRef.current;
       const cell = currentCells.find((c) => c.id === cellId);
       if (!cell) return;
@@ -806,15 +825,22 @@ export function useWorkbookExecution({
           }
         }
       }
+      setLastRunCompletion({
+        attemptId,
+        status: attemptCompletionStatus(),
+      });
     },
-    [dispatchCell],
+    [dispatchCell, attemptCompletionStatus],
   );
 
   // Extracted so TS does not narrow abortRef.current to its initial value across awaits.
   const shouldAbort = () => abortRef.current;
 
   const runAll = useCallback(async () => {
-    setWorkbookAttemptId(crypto.randomUUID());
+    const attemptId = crypto.randomUUID();
+    setWorkbookAttemptId(attemptId);
+    partialAttemptRef.current = false;
+    setLastRunCompletion(undefined);
     setIsRunningAll(true);
     abortRef.current = false;
     execCounterRef.current = 0;
@@ -854,7 +880,13 @@ export function useWorkbookExecution({
     }
 
     setIsRunningAll(false);
-  }, [dispatchCell]);
+    if (!shouldAbort()) {
+      setLastRunCompletion({
+        attemptId,
+        status: attemptCompletionStatus(),
+      });
+    }
+  }, [dispatchCell, attemptCompletionStatus]);
 
   const stopExecution = useCallback(() => {
     abortRef.current = true;
@@ -866,6 +898,7 @@ export function useWorkbookExecution({
     execCounterRef.current = 0;
     setExecutionStates({});
     setWorkbookAttemptId(undefined);
+    setLastRunCompletion(undefined);
   }, []);
 
   const connectDevice = useCallback(() => connect(connectionType), [connect, connectionType]);
@@ -891,6 +924,7 @@ export function useWorkbookExecution({
 
     executionStates,
     workbookAttemptId,
+    lastRunCompletion,
     isRunningAll,
     runCell,
     runAll,
