@@ -1,6 +1,9 @@
 # Application Load Balancer - Layer 7 load balancer with advanced routing
 # Internet-facing ALB that only accepts traffic from CloudFront via custom header verification
 
+# This ALB is intentionally internet-facing — it is the public entrypoint,
+# fronted by CloudFront + WAF and header-verified. Exposure is by design.
+#trivy:ignore:AVD-AWS-0053
 resource "aws_lb" "app_alb" {
   name               = "${var.service_name}-alb"
   internal           = false

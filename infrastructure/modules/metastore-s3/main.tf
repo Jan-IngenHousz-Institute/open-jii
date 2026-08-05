@@ -46,6 +46,9 @@ resource "aws_s3_bucket_public_access_block" "public_access" {
 }
 
 # Configure server-side encryption for the S3 bucket
+# SSE-S3 (AES256) is the accepted standard here; a customer-managed KMS key
+# is not required for this bucket.
+#trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket_server_side_encryption_configuration" "encryption" {
   bucket = aws_s3_bucket.external.id
 

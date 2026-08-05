@@ -30,6 +30,9 @@ resource "aws_internet_gateway" "this" {
 # -----------------------
 # Default Security Group
 # -----------------------
+# Default-open egress is accepted for the VPC default SG; egress is not the
+# control boundary here (traffic is constrained by the app/service SGs).
+#trivy:ignore:AVD-AWS-0104
 resource "aws_security_group" "default" {
   name        = "open-jii-default-sg-${var.environment}"
   description = "Default security group for OpenJII VPC"
@@ -312,6 +315,9 @@ resource "aws_security_group_rule" "vpc_endpoint_ingress_from_migration" {
 # ---------------
 # Public Subnets
 # ---------------
+# Public subnets legitimately auto-assign public IPs — they host the ALB/NAT.
+# Application workloads run in the private subnets.
+#trivy:ignore:AVD-AWS-0164
 resource "aws_subnet" "public" {
   count                   = var.az_count
   vpc_id                  = aws_vpc.this.id

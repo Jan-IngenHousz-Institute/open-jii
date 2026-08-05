@@ -30,6 +30,9 @@ resource "aws_s3_bucket_acl" "acl" {
   depends_on = [aws_s3_bucket_ownership_controls.ownership]
 }
 
+# SSE-S3 (AES256) is the accepted encryption standard for buckets created via
+# this module; a customer-managed KMS key is not required.
+#trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket_server_side_encryption_configuration" "encryption" {
   bucket = aws_s3_bucket.bucket.bucket
 
@@ -126,6 +129,7 @@ resource "aws_s3_bucket_versioning" "dr_versioning" {
   }
 }
 
+#trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket_server_side_encryption_configuration" "dr_encryption" {
   provider = aws.dr
   count    = var.enable_crr ? 1 : 0

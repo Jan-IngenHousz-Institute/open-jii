@@ -1,5 +1,5 @@
 name: "OpenTofu Security Scan"
-description: "Static IaC misconfiguration scan of infrastructure/ with Trivy. Fails on CRITICAL/HIGH not baselined in .trivyignore.infra"
+description: "Static IaC misconfiguration scan of infrastructure/ with Trivy. Fails on CRITICAL/HIGH. Accepted findings are suppressed inline with #trivy:ignore annotations next to the resource."
 runs:
   using: "composite"
   steps:
@@ -11,5 +11,4 @@ runs:
         format: table
         exit-code: 1
         severity: CRITICAL,HIGH
-        trivyignores: .trivyignore.infra
         skip-dirs: "**/.terraform"
