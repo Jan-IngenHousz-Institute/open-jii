@@ -1,0 +1,39 @@
+# Suppressions for Docker image scans (backend + database migration images).
+# Everything below lives in the node:24-alpine base's bundled npm CLI
+# (usr/local/lib/node_modules/npm/node_modules), which the containers never
+# invoke: they only run `node dist/...`. Not fixable via pnpm overrides; each
+# clears once the base bundles an npm with the fixed version.
+#
+# Do NOT merge into the root .trivyignore: that one is read by the dependency
+# scan of our own lockfile, which must keep catching these CVEs in app code.
+
+vulnerabilities:
+  # undici@6.26.0, fixed in 6.27.0.
+  - id: CVE-2026-12151
+    statement: "undici WebSocket DoS. npm opens no WebSockets."
+    expired_at: 2026-11-05
+
+  # brace-expansion@5.0.6, three CVE ids for the same copy. Fixed in
+  # 5.0.7 / 5.0.8 / 5.0.9. App tree resolves >= 5.0.9.
+  - id: CVE-2026-13149
+    statement: "brace-expansion ReDoS. npm never invoked at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-14257
+    statement: "Same ReDoS, different CVE id."
+    expired_at: 2026-11-05
+  - id: CVE-2026-69152
+    statement: "DoS via unbounded arrays, same copy."
+    expired_at: 2026-11-05
+
+  # tar@7.5.16, fixed in 7.5.19.
+  - id: CVE-2026-59873
+    statement: "tar DoS via crafted archives. npm extracts nothing at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-59874
+    statement: "Same tar DoS family, different CVE id."
+    expired_at: 2026-11-05
+
+  # ip-address@10.2.0 (via socks), fixed in 10.3.1. Not in our lockfile at all.
+  - id: CVE-2026-69192
+    statement: "ip-address octet-parsing confusion. No SOCKS proxying."
+    expired_at: 2026-11-05

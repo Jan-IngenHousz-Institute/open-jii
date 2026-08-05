@@ -107,6 +107,7 @@ const { mockRouter } = vi.hoisted(() => ({
     forward: vi.fn(),
     refresh: vi.fn(),
     prefetch: vi.fn(),
+    bfcacheId: "test-bfcache",
   },
 }));
 

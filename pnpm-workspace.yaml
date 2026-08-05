@@ -26,11 +26,9 @@ overrides:
   lodash: "^4.18.0"
   shell-quote: "^1.8.4"
   postcss: ">=8.5.18"
-  "brace-expansion@5": ">=5.0.8"
   "serialize-javascript@6": 7.0.5
   "ws@8": 8.21.0
   "qs@6": 6.15.2
-  "js-yaml@4": 4.2.0
   "multer@2": 2.2.0
   lightningcss: 1.30.1
 
@@ -54,7 +52,7 @@ catalog:
   "@types/nodemailer": 7.0.11
   posthog-js: 1.386.8
   posthog-node: 5.28.8
-  next: 16.2.11
+  next: 16.3.0
 
 catalogs:
   orpc:
