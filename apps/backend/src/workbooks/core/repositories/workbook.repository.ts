@@ -76,11 +76,25 @@ function cellTypeCountsSql() {
   )`;
 }
 
-// Set of protocol/macro ids referenced by the workbook's cells.
+// Set of protocol/macro ids referenced by the workbook's shallow cell tree.
+// Parallel bodies are content of their root container, so SQL must project
+// both root cells and every lane body explicitly instead of expanding only the
+// top-level JSON array.
 function cellRefIds(cellType: "protocol" | "macro", idKey: "protocolId" | "macroId") {
   return sql`(
     SELECT (cell->'payload'->>${idKey})::uuid
-    FROM jsonb_array_elements(${workbooks.cells}) AS cell
+    FROM (
+      SELECT root_cell.cell
+      FROM jsonb_array_elements(${workbooks.cells}) AS root_cell(cell)
+
+      UNION ALL
+
+      SELECT body_cell.cell
+      FROM jsonb_array_elements(${workbooks.cells}) AS container_cell(cell)
+      CROSS JOIN LATERAL jsonb_array_elements(container_cell.cell->'lanes') AS lane(value)
+      CROSS JOIN LATERAL jsonb_array_elements(lane.value->'body') AS body_cell(cell)
+      WHERE container_cell.cell->>'type' = 'parallel'
+    ) AS cell_tree(cell)
     WHERE cell->>'type' = ${cellType}
   )`;
 }

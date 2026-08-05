@@ -206,6 +206,82 @@ describe("WorkbookRepository", () => {
       expect(await searchWorkbooks("voronoi")).toContain("Quill notebook");
     });
 
+    it("matches a protocol referenced only inside a parallel lane", async () => {
+      const protocol = await testApp.createProtocol({
+        name: "Nested porometry",
+        createdBy: testUserId,
+      });
+      await testApp.createWorkbook({
+        name: "Lane protocol notebook",
+        createdBy: testUserId,
+        cells: [
+          {
+            id: "parallel-1",
+            type: "parallel",
+            name: "device_lanes",
+            defaultLaneId: "lane-1",
+            isCollapsed: false,
+            lanes: [
+              {
+                id: "lane-1",
+                label: "Lane 1",
+                color: "#005E5E",
+                conditions: [],
+                body: [
+                  {
+                    id: "protocol-1",
+                    type: "protocol",
+                    isCollapsed: false,
+                    payload: { protocolId: protocol.id, version: 1 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(await searchWorkbooks("porometry")).toContain("Lane protocol notebook");
+    });
+
+    it("matches a macro referenced only inside a parallel lane", async () => {
+      const macro = await testApp.createMacro({
+        name: "Nested stomatal model",
+        createdBy: testUserId,
+      });
+      await testApp.createWorkbook({
+        name: "Lane macro notebook",
+        createdBy: testUserId,
+        cells: [
+          {
+            id: "parallel-1",
+            type: "parallel",
+            name: "device_lanes",
+            defaultLaneId: "lane-1",
+            isCollapsed: false,
+            lanes: [
+              {
+                id: "lane-1",
+                label: "Lane 1",
+                color: "#005E5E",
+                conditions: [],
+                body: [
+                  {
+                    id: "macro-1",
+                    type: "macro",
+                    isCollapsed: false,
+                    payload: { macroId: macro.id, language: "python" },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(await searchWorkbooks("stomatal")).toContain("Lane macro notebook");
+    });
+
     it("does not match a stale/label payload.name that differs from the live entity name", async () => {
       const protocol = await testApp.createProtocol({
         name: "Actual protocol name",

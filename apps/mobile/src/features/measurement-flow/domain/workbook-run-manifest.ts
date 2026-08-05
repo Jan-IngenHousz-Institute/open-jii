@@ -21,6 +21,8 @@ export interface WorkbookRunExpectedProducer {
 /** Frozen membership for a lane, including lanes that ultimately produce no rows. */
 export interface WorkbookRunExpectedLane extends WorkbookRunContainerProvenance {
   device_ids: string[];
+  /** Local-only identity ledger; stripped from the terminal wire record. */
+  device_id_by_transport?: Record<string, string>;
 }
 
 export type WorkbookRunExpected = WorkbookRunExpectedProducer | WorkbookRunExpectedLane;
@@ -146,27 +148,30 @@ function removeExpectedDevice(
   });
 }
 
-/** Replace the exact lane assignment; reassignment never accumulates stale members. */
+/**
+ * Unit-level PR-2 contract helper. PR-2b's mobile container host wires it to
+ * container entry; it is intentionally unreachable in production until then.
+ * Reassignment replaces the exact lane membership instead of accumulating it.
+ */
 export function setExpectedLaneAssignment(
   expected: WorkbookRunExpected[],
   assignment: WorkbookRunLaneAssignment,
 ): WorkbookRunExpected[] {
-  const deviceIds = [
-    ...new Set(
-      assignment.devices.map(
-        (device) =>
-          resolveMeasurementDeviceId(
-            device.raw_measurement,
-            device.handshake_device_id ?? device.transport_device_id,
-          ) ?? device.transport_device_id,
-      ),
-    ),
-  ];
+  const deviceIdByTransport = Object.fromEntries(
+    assignment.devices.map((device) => [
+      device.transport_device_id,
+      resolveMeasurementDeviceId(
+        device.raw_measurement,
+        device.handshake_device_id ?? device.transport_device_id,
+      ) ?? device.transport_device_id,
+    ]),
+  );
   const entry: WorkbookRunExpectedLane = {
     container_cell_id: assignment.container_cell_id,
     lane_id: assignment.lane_id,
     container_attempt_id: assignment.container_attempt_id,
-    device_ids: deviceIds,
+    device_ids: [...new Set(Object.values(deviceIdByTransport))],
+    device_id_by_transport: deviceIdByTransport,
   };
   const index = expected.findIndex(
     (candidate) => !isExpectedProducer(candidate) && sameContainerProvenance(candidate, entry),
@@ -194,6 +199,10 @@ export function addRealizedOutcome(
   return next;
 }
 
+/**
+ * Unit-level PR-2 contract helper. PR-2b's mobile container host wires it to
+ * terminal lane transitions; it is intentionally unreachable until then.
+ */
 export function addRealizedLaneStatus(
   realized: WorkbookRunRealized[],
   lane: WorkbookRunRealizedLane,
@@ -205,6 +214,39 @@ export function addRealizedLaneStatus(
   const next = [...realized];
   next[index] = lane;
   return next;
+}
+
+function reconcileExpectedLaneDevice(
+  expected: WorkbookRunExpected[],
+  outcome: WorkbookRunDeviceOutcome,
+  provenance: Partial<WorkbookRunContainerProvenance>,
+): WorkbookRunExpected[] {
+  if (!outcome.container_cell_id || !outcome.lane_id || !outcome.container_attempt_id) {
+    return expected;
+  }
+  return expected.map((entry) => {
+    if (isExpectedProducer(entry) || !sameContainerProvenance(entry, provenance)) return entry;
+    const priorDeviceId =
+      entry.device_id_by_transport?.[outcome.transport_device_id] ??
+      (entry.device_ids.includes(outcome.transport_device_id)
+        ? outcome.transport_device_id
+        : undefined);
+    if (!priorDeviceId || priorDeviceId === outcome.device_id) return entry;
+    return {
+      ...entry,
+      device_ids: [
+        ...new Set(
+          entry.device_ids.map((deviceId) =>
+            deviceId === priorDeviceId ? outcome.device_id : deviceId,
+          ),
+        ),
+      ],
+      device_id_by_transport: {
+        ...entry.device_id_by_transport,
+        [outcome.transport_device_id]: outcome.device_id,
+      },
+    };
+  });
 }
 
 /** Replace a retry's earlier fallback id when firmware identity becomes known. */
@@ -237,8 +279,13 @@ export function addWorkbookDeviceOutcome(
           provenance,
         )
       : expected;
-  const nextExpected = addExpectedDevice(
+  const reconciledLaneExpected = reconcileExpectedLaneDevice(
     withoutStaleExpected,
+    outcome,
+    provenance,
+  );
+  const nextExpected = addExpectedDevice(
+    reconciledLaneExpected,
     outcome.producer_cell_id,
     outcome.device_id,
     provenance,
@@ -318,7 +365,11 @@ export function buildPendingManifest(input: {
       workbook_attempt_id: input.attemptId,
       ...(input.workbookVersionId ? { workbook_version_id: input.workbookVersionId } : {}),
       terminal_status: input.terminalStatus ?? deriveTerminalStatus(input.expected, input.realized),
-      expected: input.expected,
+      expected: input.expected.map((entry) => {
+        if (isExpectedProducer(entry)) return entry;
+        const { device_id_by_transport: _deviceIdByTransport, ...wireEntry } = entry;
+        return wireEntry;
+      }),
       realized: input.realized.map((entry) => {
         if (!isRealizedProducer(entry)) return entry;
         const { transport_device_id: _transportDeviceId, ...wireEntry } = entry;

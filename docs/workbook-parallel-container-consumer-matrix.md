@@ -7,6 +7,14 @@ from root-array access patterns instead of a remembered consumer list:
 rg -n --glob '!**/*.{spec,test}.{ts,tsx}' \
   '\b(cells|liveCells|allCells|state\.cells|producer\.body|location\.body|body|lanes)\.(find|findIndex|filter|map|some|every|flatMap|reduce)\(' \
   apps packages
+
+# SQL/JSONB and non-TypeScript consumers require their own passes.
+rg -n --glob '!**/*.{spec,test}.{ts,tsx}' \
+  'jsonb_(array_elements|path_query)|workbooks\.cells|->.*(lanes|body)' \
+  apps packages
+rg -n --glob '*.{py,sql,rs,go,java,kt,rb,php}' \
+  '\b(cells|lanes|parallel|workbook)\b' \
+  apps packages
 ```
 
 Whole-workbook lookup and enumeration must go through `workbook-cell-tree.ts`. A direct array operation is sanctioned only when the array is already one resolved body, or when the operation deliberately projects/reorders root container nodes.
@@ -33,6 +41,7 @@ Whole-workbook lookup and enumeration must go through `workbook-cell-tree.ts`. A
 | Backend version publication                    | Snapshot every protocol/macro referenced anywhere in the tree               | `walkWorkbookCells`                                                                           | `publish-version.spec.ts` — lane-only protocol and macro snapshots                               |
 | Backend upgrade design comparison              | Strip runtime fields and outputs recursively; detect lane-only entity drift | `mapWorkbookCellTree`, `walkWorkbookCells`                                                    | `is-workbook-upgradable.spec.ts` — nested artifacts ignored and nested entity drift detected     |
 | Backend immutable macro lookup                 | Resolve macro metadata from any versioned lane body                         | `walkWorkbookCells`                                                                           | `macro-snapshot.repository.spec.ts` — lane-only macro resolves                                   |
+| Backend workbook search by entity name         | Protocol/macro references anywhere in the shallow tree                      | SQL projects root cells plus every container lane body before extracting live entity ids      | `workbook.repository.spec.ts` — lane-only protocol and macro names surface the workbook          |
 | Upgrade dialog design diff                     | Match backend recursive runtime/output normalization                        | `mapWorkbookCellTree`                                                                         | `workbook-diff.test.ts` — nested execution artifacts do not appear as design changes             |
 | Header protocol/macro/output gates and export  | Protocols/macros/outputs anywhere in tree                                   | `walkWorkbookCells`                                                                           | `workbook-header.test.tsx` — nested-only workbooks enable each action                            |
 | Header JSON projection                         | Preserve tree while clearing UI collapse state                              | `mapWorkbookCellTree`                                                                         | Typecheck; byte-identical converter suite                                                        |
@@ -69,6 +78,8 @@ collection operations; anything outside this list should be treated as a new aud
 | `snapshot.ts` `state.cells.find`                              | v1 snapshots predate containers and are necessarily flat; this lookup is migration-only.                                                                        |
 | `publish-version.ts` / `is-workbook-upgradable.ts` collection | No direct root lookup remains: backend publication and drift checks enumerate with `walkWorkbookCells`.                                                         |
 | `macro-snapshot.repository.ts` version cells                  | No direct root loop remains: immutable macro resolution enumerates with `walkWorkbookCells`.                                                                    |
+| `workbook.repository.ts` SQL/JSONB cell projection            | The query explicitly unions root cells with every parallel lane body before extracting protocol/macro ids; SQL cannot use the TypeScript resolver.              |
+| `0026_migrate-flows-to-workbooks.sql` root JSON expansion     | Historical one-way migration from the legacy flat flow graph. Its `v_cells` array is constructed in the same migration and cannot contain parallel containers.  |
 | `workbook-diff.ts` root design comparison                     | Root ordering is the displayed diff unit, but every root cell is first normalized recursively with `mapWorkbookCellTree`.                                       |
 | `parallel-cell.tsx` lane/body map/filter                      | List authoring is intentionally lane-local and mutations select by object/index identity, never by an ambiguous serialized id.                                  |
 | `branch-cell.tsx` lane id map and location-body output lookup | Lane fields are exposed only when ids are unique; producer output lookup is constrained to the resolved source body.                                            |
@@ -81,5 +92,9 @@ The review grep also rediscovered three whole-tree consumers that no longer appe
 matches: Clear-all now uses `mapWorkbookCellTree`, header capability gates use
 `walkWorkbookCells`, and output presentation uses `findWorkbookCell`. Their regression tests are
 listed above.
+
+The non-TypeScript pass found no additional workbook-design consumers. Python data-pipeline matches
+operate on run manifests and uploaded result columns, not workbook `cells`; the remaining SQL matches
+define JSONB columns or perform the explicitly flat historical migration listed above.
 
 The audit is expected to be rerun whenever a new cell consumer is added. A global `find` may appear correct in a single-lane fixture while reading a sibling lane at runtime, so stable-id uniqueness is enforced in addition to resolver discipline.

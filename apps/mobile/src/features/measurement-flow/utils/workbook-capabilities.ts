@@ -2,7 +2,6 @@ import type { ExperimentFlowGraph } from "@repo/api/domains/experiment/experimen
 import {
   assertContainerFreeFlowGraph,
   assertContainerFreeWorkbookCells,
-  hasParallelWorkbookCells,
 } from "@repo/api/domains/workbook/workbook-capabilities";
 import type { ContainerFreeWorkbookCell } from "@repo/api/domains/workbook/workbook-capabilities";
 import type { ContainerFreeExperimentFlowGraph } from "@repo/api/domains/workbook/workbook-capabilities";
@@ -23,11 +22,11 @@ export function guardMobileFlowContent<T extends { graph: ExperimentFlowGraph }>
 }
 
 export function hasUnsupportedMobileWorkbookContent(value: {
-  cells: WorkbookCell[];
-  flowNodes: readonly { type: string }[];
+  cells?: readonly { type?: unknown }[];
+  flowNodes?: readonly { type?: unknown }[];
 }): boolean {
   return (
-    hasParallelWorkbookCells(value.cells) ||
-    value.flowNodes.some((node) => node.type === "parallel")
+    (value.cells?.some((cell) => cell.type === "parallel") ?? false) ||
+    (value.flowNodes?.some((node) => node.type === "parallel") ?? false)
   );
 }

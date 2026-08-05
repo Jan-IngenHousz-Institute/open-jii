@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
@@ -24,26 +24,54 @@ const container: WorkbookCell = {
   ],
 };
 
+const MEASUREMENT_KEY = "measurement-flow-storage";
+const ANSWERS_KEY = "flow-answers-storage";
+
 describe("flow rehydration capability guard", () => {
   beforeEach(async () => {
-    await AsyncStorage.clear();
     useMeasurementFlowStore.getState().resetFlow();
     useFlowAnswersStore.getState().clearHistory();
+    await Promise.resolve();
+    await AsyncStorage.clear();
+  });
+
+  it("rejects a real persisted container envelope before it enters live state", async () => {
+    await AsyncStorage.setItem(
+      MEASUREMENT_KEY,
+      JSON.stringify({
+        state: {
+          experimentId: "experiment-1",
+          workbookVersionId: "version-1",
+          cells: [container],
+          flowNodes: [{ id: "parallel-1", type: "parallel" }],
+        },
+        version: 2,
+      }),
+    );
+    await AsyncStorage.setItem(
+      ANSWERS_KEY,
+      JSON.stringify({
+        state: {
+          answersHistory: [{ plot: "A-1" }],
+          autoincrementSettings: {},
+          rememberAnswerSettings: {},
+        },
+        version: 1,
+      }),
+    );
+
+    const observedTypes: string[][] = [];
+    const unsubscribeState = useMeasurementFlowStore.subscribe((state) => {
+      observedTypes.push([
+        ...state.cells.map((cell) => cell.type),
+        ...state.flowNodes.map((node) => node.type),
+      ]);
+    });
+    const uninstall = installFlowRehydrationGuard();
     await Promise.all([
       useMeasurementFlowStore.persist.rehydrate(),
       useFlowAnswersStore.persist.rehydrate(),
     ]);
-  });
-
-  it("discards a persisted container flow and its answers before resume", () => {
-    useMeasurementFlowStore.setState({
-      experimentId: "experiment-1",
-      workbookVersionId: "version-1",
-      cells: [container],
-    });
-    useFlowAnswersStore.getState().setAnswer(0, "plot", "A-1");
-
-    const uninstall = installFlowRehydrationGuard();
 
     expect(useMeasurementFlowStore.getState()).toMatchObject({
       experimentId: undefined,
@@ -51,7 +79,20 @@ describe("flow rehydration capability guard", () => {
       cells: [],
       flowNodes: [],
     });
+    expect(observedTypes.every((types) => !types.includes("parallel"))).toBe(true);
     expect(useFlowAnswersStore.getState().answersHistory).toEqual([]);
+
+    await vi.waitFor(async () => {
+      const raw = await AsyncStorage.getItem(MEASUREMENT_KEY);
+      expect(raw).not.toBeNull();
+      const envelope = JSON.parse(raw ?? "{}") as {
+        state?: { cells?: WorkbookCell[]; flowNodes?: { type?: string }[] };
+      };
+      expect(envelope.state?.cells ?? []).toEqual([]);
+      expect(envelope.state?.flowNodes ?? []).toEqual([]);
+    });
+
+    unsubscribeState();
     uninstall();
   });
 });

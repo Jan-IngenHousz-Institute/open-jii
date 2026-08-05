@@ -36,7 +36,7 @@ describe("workbook run manifest", () => {
     expect(deriveTerminalStatus([], [])).toBe("unknown");
   });
 
-  it("freezes canonical lane membership using firmware, handshake, then transport identity", () => {
+  it("unit helper (PR-2b wiring pending): freezes canonical lane membership", () => {
     const laneExpected = setExpectedLaneAssignment([], {
       container_cell_id: "parallel-1",
       lane_id: "ambient",
@@ -58,11 +58,70 @@ describe("workbook run manifest", () => {
         lane_id: "ambient",
         container_attempt_id: "parallel-1:1",
         device_ids: ["firmware-1", "handshake-2", "usb-3"],
+        device_id_by_transport: {
+          "usb-1": "firmware-1",
+          "usb-2": "handshake-2",
+          "usb-3": "usb-3",
+        },
       },
     ]);
   });
 
-  it("keeps a zero-row failed lane visible and derives a partial container attempt", () => {
+  it("unit helper (PR-2b wiring pending): reconciles fallback identity", () => {
+    const frozen = setExpectedLaneAssignment([], {
+      container_cell_id: "parallel-1",
+      lane_id: "ambient",
+      container_attempt_id: "parallel-1:1",
+      devices: [
+        { transport_device_id: "usb-1", handshake_device_id: "handshake-1" },
+        { transport_device_id: "usb-no-row", handshake_device_id: "handshake-no-row" },
+      ],
+    });
+    const reconciled = addWorkbookDeviceOutcome(frozen, [], {
+      producer_cell_id: "protocol-1",
+      transport_device_id: "usb-1",
+      device_id: "firmware-1",
+      outcome: "ok",
+      container_cell_id: "parallel-1",
+      lane_id: "ambient",
+      container_attempt_id: "parallel-1:1",
+    });
+
+    expect(reconciled.expected).toEqual([
+      {
+        container_cell_id: "parallel-1",
+        lane_id: "ambient",
+        container_attempt_id: "parallel-1:1",
+        device_ids: ["firmware-1", "handshake-no-row"],
+        device_id_by_transport: {
+          "usb-1": "firmware-1",
+          "usb-no-row": "handshake-no-row",
+        },
+      },
+      {
+        producer_cell_id: "protocol-1",
+        device_ids: ["firmware-1"],
+        container_cell_id: "parallel-1",
+        lane_id: "ambient",
+        container_attempt_id: "parallel-1:1",
+      },
+    ]);
+    expect(
+      buildPendingManifest({
+        attemptId: "attempt-1",
+        experimentId: "experiment-1",
+        expected: reconciled.expected,
+        realized: reconciled.realized,
+      })?.record.expected[0],
+    ).toEqual({
+      container_cell_id: "parallel-1",
+      lane_id: "ambient",
+      container_attempt_id: "parallel-1:1",
+      device_ids: ["firmware-1", "handshake-no-row"],
+    });
+  });
+
+  it("unit helper (PR-2b wiring pending): preserves a zero-row failed lane", () => {
     let laneExpected = setExpectedLaneAssignment([], {
       container_cell_id: "parallel-1",
       lane_id: "ambient",
@@ -109,7 +168,7 @@ describe("workbook run manifest", () => {
     });
   });
 
-  it("records researcher abandon without conflating it with an unassigned skipped lane", () => {
+  it("unit helper (PR-2b wiring pending): distinguishes abandon from unassigned", () => {
     expect(
       addRealizedLaneStatus([], {
         container_cell_id: "parallel-1",

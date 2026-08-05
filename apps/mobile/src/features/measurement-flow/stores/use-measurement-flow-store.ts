@@ -23,6 +23,7 @@ import {
   startNewIterationState,
   willNextStepRotateAttempt,
 } from "~/features/measurement-flow/domain/flow-transitions";
+import { hasUnsupportedMobileWorkbookContent } from "~/features/measurement-flow/utils/workbook-capabilities";
 import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
@@ -95,6 +96,15 @@ interface MeasurementFlowStore extends FlowState {
   acknowledgeWorkbookRunManifest: (attemptId: string) => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
+}
+
+let rejectedUnsupportedPersistedFlow = false;
+
+/** Consumed by the boot guard after both separately persisted stores hydrate. */
+export function consumeRejectedUnsupportedPersistedFlow(): boolean {
+  const rejected = rejectedUnsupportedPersistedFlow;
+  rejectedUnsupportedPersistedFlow = false;
+  return rejected;
 }
 
 // Persisted store: a mid-flow blur (background/kill/tab switch) is itself the
@@ -238,6 +248,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           ),
         })),
 
+      // Intentional PR-2b wiring seam: mobile rejects containers in this PR,
+      // so no production caller can record lane entry yet.
       recordExpectedLaneAssignment: (assignment) =>
         set((state) => ({
           workbookRunExpected: setExpectedLaneAssignment(state.workbookRunExpected, assignment),
@@ -251,6 +263,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           ),
         })),
 
+      // Intentional PR-2b wiring seam: terminal lane events do not reach the
+      // mobile manifest owner until mobile container execution lands.
       recordRealizedLaneStatus: (lane) =>
         set((state) => ({
           workbookRunRealized: addRealizedLaneStatus(state.workbookRunRealized, lane),
@@ -334,6 +348,20 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           };
         }
         return persisted;
+      },
+      // Reject unsupported content in persist's merge itself. It therefore
+      // never enters the live Zustand state or renders before AppBootstrap's
+      // later consistency cleanup can clear the stored envelope and answers.
+      merge: (persisted, current) => {
+        const persistedState =
+          persisted !== null && typeof persisted === "object"
+            ? (persisted as Partial<FlowState>)
+            : {};
+        if (hasUnsupportedMobileWorkbookContent(persistedState)) {
+          rejectedUnsupportedPersistedFlow = true;
+          return current;
+        }
+        return { ...current, ...persistedState };
       },
       // protocolId was dropped from the persisted slice (now derived from
       // flowNodes via flowProtocolId); legacy payloads carrying it merge in

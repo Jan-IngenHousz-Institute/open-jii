@@ -1,3 +1,6 @@
+import { FEATURE_FLAGS } from "@repo/analytics";
+
+import { AnalyticsAdapter } from "../../../../common/modules/analytics/analytics.adapter";
 import { assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
@@ -18,6 +21,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
   let workbookRepo: WorkbookRepository;
   let versionRepo: WorkbookVersionRepository;
   let publishVersion: PublishVersionUseCase;
+  let analyticsAdapter: AnalyticsAdapter;
   let userId: string;
 
   beforeAll(async () => {
@@ -31,6 +35,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
     workbookRepo = testApp.module.get(WorkbookRepository);
     versionRepo = testApp.module.get(WorkbookVersionRepository);
     publishVersion = testApp.module.get(PublishVersionUseCase);
+    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
   });
 
   afterEach(() => {
@@ -43,7 +48,12 @@ describe("IsWorkbookUpgradableUseCase", () => {
 
   /** Publish v1 of `workbook` so subsequent calls have something to
    *  compare the live cells against. */
-  async function publishV1(workbook: WorkbookDto) {
+  async function publishV1(workbook: WorkbookDto, options?: { enableParallel?: boolean }) {
+    if (options?.enableParallel) {
+      vi.spyOn(analyticsAdapter, "isFeatureFlagEnabled").mockImplementation((flag) =>
+        Promise.resolve(flag === FEATURE_FLAGS.WORKBOOK_PARALLEL_PUBLISH),
+      );
+    }
     const result = await publishVersion.execute(workbook.id, userId);
     assertSuccess(result);
     return result.value;
@@ -192,7 +202,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
         },
       ],
     });
-    await publishV1(workbook);
+    await publishV1(workbook, { enableParallel: true });
 
     const protocolRepo = testApp.module.get(ProtocolRepository);
     await protocolRepo.update(protocol.id, { code: [{ pulses: [10, 30] }] });
@@ -307,7 +317,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
       cells: [container],
       createdBy: userId,
     });
-    await publishV1(workbook);
+    await publishV1(workbook, { enableParallel: true });
 
     await workbookRepo.update(workbook.id, {
       cells: [
