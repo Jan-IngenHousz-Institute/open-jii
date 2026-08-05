@@ -8,7 +8,8 @@
     "check-types": "tsc --noEmit",
     "clean": "git clean -xdf .auth .cache .turbo node_modules playwright-report test-results",
     "e2e": "playwright test",
-    "lint": "eslint"
+    "lint": "eslint",
+    "record-maintenance": "tsx scripts/record-maintenance.ts"
   },
   "dependencies": {
     "@repo/devkit": "workspace:*",
@@ -20,6 +21,7 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
+    "tsx": "^4.23.0",
     "typescript": "catalog:"
   }
 }
