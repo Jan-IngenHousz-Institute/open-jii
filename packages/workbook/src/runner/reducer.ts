@@ -453,7 +453,11 @@ function handleRetry(state: RunnerState, target: RetryTarget | undefined): Trans
   if (!Object.prototype.hasOwnProperty.call(state.tracks, target.trackId))
     return ignored(state, "RETRY");
   const track = state.tracks[target.trackId];
-  if (track.cursor.cellId !== target.cellId) return ignored(state, "RETRY");
+  const pendingDispatchTarget =
+    track.dispatch?.queue.some(({ targetCellId }) => targetCellId === target.cellId) ?? false;
+  if (track.cursor.cellId !== target.cellId && !pendingDispatchTarget) {
+    return ignored(state, "RETRY");
+  }
   const run = state.cellRuns[target.cellId];
   const retryable =
     track.pendingInteraction?.kind === "error" ||
@@ -467,7 +471,7 @@ function handleRetry(state: RunnerState, target: RetryTarget | undefined): Trans
     return ignored(state, "RETRY");
   }
   const cleared = clearTrackInteraction(state, target.trackId);
-  return isDispatchTarget(cleared, target.trackId, target.cellId)
+  return pendingDispatchTarget
     ? startNextDispatchTarget(cleared, target.trackId)
     : landOn(cleared, target.cellId, "jump", target.trackId);
 }
@@ -646,7 +650,7 @@ function failEffect(
     };
   }
   if (isDispatchTarget(next, trackId, effectCellId)) {
-    return advanceDispatch(next, trackId);
+    return advanceDispatch(next, trackId, effectCellId);
   }
   if (owner !== effectCellId) {
     const prev = next.cellRuns[owner];
@@ -795,7 +799,7 @@ function handleInternal(state: RunnerState, event: WorkbookInternalEvent): Trans
       );
       next = markDownstreamStale(next, owner, lastOrder(next.cellRuns[event.cellId]));
       if (isDispatchTarget(next, owned.trackId, event.cellId)) {
-        return advanceDispatch(next, owned.trackId);
+        return advanceDispatch(next, owned.trackId, event.cellId);
       }
       return continueAfterCompletion(next, owned.trackId, owner);
     }

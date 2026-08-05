@@ -51,6 +51,25 @@ function commandDone(
   });
 }
 
+function commandDoneFor(
+  state: RunnerState,
+  cellId: string,
+  output: unknown,
+  extra: { deviceResults?: DeviceOutcome[]; messages?: string[] } = {},
+): Step {
+  const inFlight = Object.values(state.inFlight).find((entry) => entry?.cellId === cellId);
+  if (!inFlight) throw new Error(`expected an in-flight effect for ${cellId}`);
+  return transition(state, {
+    type: "COMMAND_DONE",
+    effectId: inFlight.effectId,
+    trackId: inFlight.trackId,
+    cellId: inFlight.cellId,
+    output,
+    ...extra,
+    timings: TIMINGS,
+  });
+}
+
 describe("multi-device outputs", () => {
   it("stores deviceResults and partial-failure messages on the output entry", () => {
     let step = transition(init([cmd("c1")]), { type: "RUN_CELL", cellId: "c1" });
@@ -206,26 +225,25 @@ describe("device dispatch branch", () => {
     cmd("c2", "READ"),
   ];
 
-  it("groups devices by path, runs each target once against its subset, then skips them in the walk", () => {
+  it("groups devices by path, runs every target concurrently against its subset, then skips them", () => {
     let step = transition(init(dispatchCells()), { type: "RUN_ALL" });
 
-    // First target: c1 against the two multispeq devices.
+    // Both heterogeneous targets launch in the same reducer turn.
     const first = step.effects[0];
+    const second = step.effects[1];
     if (first.kind !== "runCommand") throw new Error("expected runCommand");
+    if (second.kind !== "runCommand") throw new Error("expected runCommand");
     expect(first.cellId).toBe("c1");
     expect(first.input.deviceIds).toEqual(["dev-1", "dev-3"]);
+    expect(second.cellId).toBe("c2");
+    expect(second.input.deviceIds).toEqual(["dev-2"]);
     expect(step.state.outputs.b1?.messages).toEqual([
       "p1 -> Device #1, Device #3",
       "p2 -> Device #2",
     ]);
-    step = commandDone(step.state, { battery: 82 });
-
-    // Second target: c2 against the ambit device.
-    const second = step.effects[0];
-    if (second.kind !== "runCommand") throw new Error("expected runCommand");
-    expect(second.cellId).toBe("c2");
-    expect(second.input.deviceIds).toEqual(["dev-2"]);
-    step = commandDone(step.state, { par: 1500 });
+    step = commandDoneFor(step.state, "c1", { battery: 82 });
+    expect(step.effects).toEqual([]);
+    step = commandDoneFor(step.state, "c2", { par: 1500 });
 
     // Queue done: the walk continues after the branch and skips both consumed
     // targets exactly once instead of re-running them.
@@ -241,6 +259,55 @@ describe("device dispatch branch", () => {
       deviceResults: undefined,
       messages: undefined,
     });
+  });
+
+  it("launches heterogeneous target groups concurrently", () => {
+    const calls: { cellId: string; deviceIds: string[] }[] = [];
+    const executor: CommandExecutorPort = {
+      execute: (input) => {
+        calls.push({ cellId: input.cellId, deviceIds: input.deviceIds });
+        return new Promise<DeviceOutcome[]>(() => undefined);
+      },
+    };
+    const runner = new WorkbookRunner({
+      cells: dispatchCells(),
+      mode: "notebook",
+      devices: DEVICES,
+      ports: { commandExecutor: executor, macroRunner: createMacroRunner({}) },
+    });
+
+    runner.send({ type: "RUN_ALL" });
+
+    expect(calls).toEqual([
+      { cellId: "c1", deviceIds: ["dev-1", "dev-3"] },
+      { cellId: "c2", deviceIds: ["dev-2"] },
+    ]);
+    runner.dispose();
+  });
+
+  it("coalesces dispatch paths that converge on the same command cell", () => {
+    const cells: RunnerCell[] = [
+      branchCell("b1", [
+        {
+          id: "p1",
+          goto: "c1",
+          condition: { source: "$device", field: "family", operator: "eq", value: "multispeq" },
+        },
+        {
+          id: "p2",
+          goto: "c1",
+          condition: { source: "$device", field: "family", operator: "eq", value: "ambit" },
+        },
+      ]),
+      cmd("c1"),
+    ];
+
+    const step = transition(init(cells), { type: "RUN_ALL" });
+    expect(step.effects).toHaveLength(1);
+    const effect = step.effects[0];
+    if (effect.kind !== "runCommand") throw new Error("expected runCommand");
+    expect(effect.input.deviceIds).toEqual(["dev-1", "dev-3", "dev-2"]);
+    expect(Object.values(step.state.inFlight)).toHaveLength(1);
   });
 
   it("lists devices matching no path as skipped, never as an error", () => {
@@ -272,7 +339,8 @@ describe("device dispatch branch", () => {
 
   it("a failing target advances the queue instead of halting the other groups", () => {
     let step = transition(init(dispatchCells()), { type: "RUN_ALL" });
-    const inFlight = onlyInFlight(step.state);
+    const inFlight = Object.values(step.state.inFlight).find((entry) => entry?.cellId === "c1");
+    if (!inFlight) throw new Error("expected c1 in flight");
     step = transition(step.state, {
       type: "COMMAND_FAILED",
       effectId: inFlight.effectId,
@@ -281,11 +349,9 @@ describe("device dispatch branch", () => {
       error: "boom",
       timings: TIMINGS,
     });
-    // c1 failed; c2 still runs for its group.
-    const second = step.effects[0];
-    if (second.kind !== "runCommand") throw new Error("expected runCommand");
-    expect(second.cellId).toBe("c2");
-    step = commandDone(step.state, { par: 1500 });
+    // c1 failed; the already-running c2 group remains unaffected.
+    expect(step.effects).toEqual([]);
+    step = commandDoneFor(step.state, "c2", { par: 1500 });
     expect(step.state.cellRuns.c1?.status).toBe("error");
     expect(step.state.cellRuns.c2?.status).toBe("completed");
     expect(step.state.status).toBe("idle");
@@ -294,7 +360,9 @@ describe("device dispatch branch", () => {
   it("retries a cancelled dispatch target with its original subset and remaining queue", () => {
     let step = transition(init(dispatchCells()), { type: "RUN_ALL" });
     const first = step.effects[0];
+    const second = step.effects[1];
     if (first.kind !== "runCommand") throw new Error("expected runCommand");
+    if (second.kind !== "runCommand") throw new Error("expected runCommand");
     expect(first.input.deviceIds).toEqual(["dev-1", "dev-3"]);
 
     step = transition(step.state, { type: "CANCEL" });
@@ -304,6 +372,12 @@ describe("device dispatch branch", () => {
       trackId: first.trackId,
       cellId: first.cellId,
     });
+    step = transition(step.state, {
+      type: "EFFECT_CANCELLED",
+      effectId: second.effectId,
+      trackId: second.trackId,
+      cellId: second.cellId,
+    });
     expect(step.state.tracks.main.dispatch).toMatchObject({ index: 0 });
 
     step = transition(step.state, {
@@ -311,12 +385,10 @@ describe("device dispatch branch", () => {
       target: { kind: "postCancel", trackId: "main", cellId: "c1" },
     });
     const retried = step.effects[0];
+    const remaining = step.effects[1];
     if (retried.kind !== "runCommand") throw new Error("expected retried runCommand");
-    expect(retried.input.deviceIds).toEqual(["dev-1", "dev-3"]);
-
-    step = commandDone(step.state, { battery: 82 });
-    const remaining = step.effects[0];
     if (remaining.kind !== "runCommand") throw new Error("expected remaining runCommand");
+    expect(retried.input.deviceIds).toEqual(["dev-1", "dev-3"]);
     expect(remaining.cellId).toBe("c2");
     expect(remaining.input.deviceIds).toEqual(["dev-2"]);
   });

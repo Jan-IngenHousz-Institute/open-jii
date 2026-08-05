@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { connectionKeys } from "~/features/connection/services/connection-keys";
-import { partitionScanOutcomes } from "~/features/connection/services/scan-manager/utils/partition-scan-outcomes";
+import { executeScanAssignments } from "~/features/connection/services/scan-manager/execute-scan-assignments";
 import type {
-  DeviceScanFailure,
-  DeviceScanResult,
-} from "~/features/connection/services/scan-manager/utils/partition-scan-outcomes";
+  MultiScanRound,
+  ScanAssignment,
+} from "~/features/connection/services/scan-manager/execute-scan-assignments";
+import type { DeviceScanFailure } from "~/features/connection/services/scan-manager/utils/partition-scan-outcomes";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
-import type { DeviceCommandOutcome } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { Device } from "~/shared/types/device";
 
 import type { DeviceIdentity } from "@repo/iot";
@@ -21,19 +21,7 @@ export interface DeviceScanState {
   error?: Error;
 }
 
-export interface MultiScanRound {
-  successes: DeviceScanResult[];
-  failures: DeviceScanFailure[];
-}
-
-/** One device's payload for a scan round; devices without one sit the round out. */
-export interface ScanAssignment {
-  device: Device;
-  command: string | object;
-  /** Provenance of the payload (dispatch rounds), threaded to the upload. */
-  protocolId?: string;
-  protocolName?: string;
-}
+export type { MultiScanRound, ScanAssignment };
 
 /**
  * Multi-scan (see CONTEXT.md): run each assignment's command on its device in
@@ -57,28 +45,10 @@ export function useMultiScanner() {
       /** Entries that failed before reaching the device (e.g. unresolvable payload). */
       prefailed?: DeviceScanFailure[];
     }): Promise<MultiScanRound> => {
-      if (assignments.length === 0) {
-        return { successes: [], failures: [...prefailed] };
-      }
-
-      const { executeCommandOn } = useScannerCommandExecutorStore.getState();
-      const settled = await Promise.allSettled(
-        assignments.map(({ device, command }) => executeCommandOn(device.id, command)),
-      );
-      const outcomes = assignments.map(({ device }, i): DeviceCommandOutcome => {
-        const result = settled[i];
-        return result.status === "fulfilled"
-          ? { device, status: "fulfilled", result: result.value }
-          : {
-              device,
-              status: "rejected",
-              error:
-                result.reason instanceof Error ? result.reason : new Error(String(result.reason)),
-            };
+      const round = await executeScanAssignments(assignments, {
+        prefailed,
+        executeCommandOn: useScannerCommandExecutorStore.getState().executeCommandOn,
       });
-
-      const round = partitionScanOutcomes(outcomes);
-      round.failures.push(...prefailed);
 
       // Scan replies embed the battery level; patch each device's battery
       // cache so consumers stay fresh without re-firing the battery command.

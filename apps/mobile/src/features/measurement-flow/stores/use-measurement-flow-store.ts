@@ -42,8 +42,10 @@ import type {
   WorkbookRunRealizedLane,
   WorkbookRunRealizedProducer,
 } from "../domain/workbook-run-manifest";
+import { workbookRunnerEnabled } from "../services/workbook-runner-enabled";
+import { useRunnerMeasurementFlowStore } from "./use-runner-measurement-flow-store";
 
-interface MeasurementFlowStore extends FlowState {
+export interface MeasurementFlowStore extends FlowState {
   // AutoProceededSummary anchor: first manual question at the start of the
   // current iteration (set by useIterationStateSync). Deliberately NOT
   // persisted; on relaunch it is recomputed by the resume-path sync.
@@ -111,7 +113,7 @@ export function consumeRejectedUnsupportedPersistedFlow(): boolean {
 // "pause"; relaunch rehydrates the active flow, incl. workbook cells/edges and
 // branch state so a resumed branching flow keeps routing offline. Progression
 // rules live in ../domain/flow-transitions.ts; the actions here just delegate.
-export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
+export const useLegacyMeasurementFlowStore = create<MeasurementFlowStore>()(
   persist(
     (set, get) => ({
       ...initialFlowState,
@@ -395,3 +397,11 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
     },
   ),
 );
+
+/**
+ * Short-lived migration seam: production remains on the behavioral oracle by
+ * default, while qualification builds can opt into the fresh runner store.
+ */
+export const useMeasurementFlowStore = workbookRunnerEnabled
+  ? (useRunnerMeasurementFlowStore as typeof useLegacyMeasurementFlowStore)
+  : useLegacyMeasurementFlowStore;

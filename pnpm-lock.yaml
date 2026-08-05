@@ -532,6 +532,9 @@ importers:
       '@repo/iot':
         specifier: workspace:*
         version: link:../../packages/iot
+      '@repo/workbook':
+        specifier: workspace:*
+        version: link:../../packages/workbook
       '@shopify/flash-list':
         specifier: 2.0.2
         version: 2.0.2(@babel/runtime@7.29.7)(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)

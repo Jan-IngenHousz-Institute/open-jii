@@ -15,6 +15,7 @@ import type {
   ScanResult,
 } from "~/features/measurement-flow/domain/flow-transitions";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import type { RunnerMeasurementFlowStore } from "~/features/measurement-flow/stores/use-runner-measurement-flow-store";
 import { playSound } from "~/features/measurement-flow/utils/play-sound";
 import { useTranslation } from "~/shared/i18n";
 import type { FlowNode, MeasurementContent } from "~/shared/measurements/flow-node";
@@ -77,6 +78,19 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     completeDevicePlan,
     recordWorkbookDeviceOutcomes,
   } = useMeasurementFlowStore();
+  const runnerSlice = useMeasurementFlowStore((state) => {
+    const runnerState = state as unknown as Partial<RunnerMeasurementFlowStore>;
+    return {
+      runnerBacked: runnerState.runnerBacked === true,
+      runnerState: runnerState.runnerState,
+      awaitingScanStart: runnerState.awaitingScanStart,
+      runnerScanRound: runnerState.runnerScanRound,
+      runnerSucceededCount: runnerState.runnerSucceededCount ?? 0,
+      startRunnerScan: runnerState.startRunnerScan,
+      continueRunnerWithSuccesses: runnerState.continueRunnerWithSuccesses,
+      cancelRunnerScan: runnerState.cancelRunnerScan,
+    };
+  });
   // The dispatch plan applies only while THIS node is one of its targets;
   // otherwise it is stale routing state and the node broadcasts as before.
   const activePlan =
@@ -127,6 +141,10 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
   }, [devices.length, isScanning]);
 
   const completeWithSuccesses = () => {
+    if (runnerSlice.runnerBacked) {
+      runnerSlice.continueRunnerWithSuccesses?.();
+      return;
+    }
     // Order results by connect order so the round reads consistently everywhere.
     const orderOf = (id: string) => {
       const i = devices.findIndex((d) => d.id === id);
@@ -193,7 +211,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
       }
       // A dispatch round resolves each device's payload from ITS target cell,
       // so the current node's own protocol guards only apply to broadcast.
-      if (!activePlan) {
+      if (!activePlan && !runnerSlice.runnerBacked) {
         if (!content.protocolId) {
           toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
           return;
@@ -210,6 +228,11 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
       if (!liveDevices || liveDevices.length === 0) {
         log.warn("scan blocked: no device connected");
         toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
+        return;
+      }
+
+      if (runnerSlice.runnerBacked) {
+        if (nodeId) runnerSlice.startRunnerScan?.(nodeId);
         return;
       }
 
@@ -320,6 +343,10 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
   };
 
   const cancelScan = () => {
+    if (runnerSlice.runnerBacked) {
+      runnerSlice.cancelRunnerScan?.();
+      return;
+    }
     successesRef.current = [];
     assignmentMetaRef.current = {};
     // Await the cancel before resetting so the commands settle as
@@ -337,10 +364,15 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     device: devices[0] ?? null,
     devices,
     protocol,
-    isScanning,
+    isScanning:
+      runnerSlice.runnerBacked && runnerSlice.runnerState
+        ? runnerSlice.runnerState.status === "running" && !runnerSlice.awaitingScanStart
+        : isScanning,
     deviceStates,
-    lastRound,
-    succeededCount: successesRef.current.length,
+    lastRound: runnerSlice.runnerBacked ? runnerSlice.runnerScanRound : lastRound,
+    succeededCount: runnerSlice.runnerBacked
+      ? runnerSlice.runnerSucceededCount
+      : successesRef.current.length,
     startScan,
     cancelScan,
     completeWithSuccesses,

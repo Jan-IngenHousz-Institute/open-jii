@@ -93,7 +93,8 @@ export interface PendingInteraction {
 
 /**
  * An in-progress device-scoped dispatch: the branch grouped devices by matched
- * path and its targets run one at a time against their device subset.
+ * path and its pending targets run concurrently against their device subsets.
+ * `index` is retained at zero for version-2 snapshot compatibility.
  */
 export interface DispatchRun {
   branchCellId: string;

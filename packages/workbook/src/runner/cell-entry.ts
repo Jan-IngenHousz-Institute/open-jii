@@ -426,7 +426,8 @@ export function startResolvedProtocolCommand(
   const cell = cellById(state.cells, cellId, track.cursor.body);
   if (cell?.type !== "protocol") return fatal(state, `resolved code for non-protocol ${cellId}`);
   const deviceIds = isDispatchTarget(state, trackId, cellId)
-    ? (track.dispatch?.queue[track.dispatch.index]?.deviceIds ?? track.deviceIds)
+    ? (track.dispatch?.queue.find(({ targetCellId }) => targetCellId === cellId)?.deviceIds ??
+      track.deviceIds)
     : track.deviceIds;
   return emitRunCommand(
     state,
@@ -568,10 +569,12 @@ function resolveBranch(
 /**
  * Device-scoped branch = dispatcher (web parity): every connected device
  * evaluates the branch with ITS identity, devices group by resolved path, and
- * each path's protocol/command target runs against only its group, one
- * target at a time (single in-flight effect). Devices matching no path are
- * skipped with a message, never an error. No jump: execution continues after
- * the branch, and consumed targets are skipped once by the linear walk.
+ * each path's protocol/command target runs against only its group. Every
+ * target group launches in the same reducer turn so heterogeneous mobile
+ * assignments keep their shipped concurrent execution semantics. Devices
+ * matching no path are skipped with a message, never an error. No jump:
+ * execution continues after the branch, and consumed targets are skipped once
+ * by the linear walk.
  */
 function startDeviceDispatch(
   state: RunnerState,
@@ -629,7 +632,9 @@ function startDeviceDispatch(
     const group = groups.get(path.id);
     if (!group || group.length === 0 || !path.gotoCellId) continue;
     messages.push(`${path.label || "Unnamed path"} -> ${group.map((g) => g.label).join(", ")}`);
-    queue.push({ targetCellId: path.gotoCellId, deviceIds: group.map((g) => g.id) });
+    const existing = queue.find(({ targetCellId }) => targetCellId === path.gotoCellId);
+    if (existing) existing.deviceIds.push(...group.map((device) => device.id));
+    else queue.push({ targetCellId: path.gotoCellId, deviceIds: group.map((device) => device.id) });
     dispatchConsumed[path.gotoCellId] = true;
   }
   for (const s of skipped) {
@@ -655,7 +660,11 @@ function startDeviceDispatch(
   return startNextDispatchTarget(next, trackId);
 }
 
-/** Start the current dispatch target, or finish the branch when the queue is done. */
+/**
+ * Start every pending dispatch target together, or finish the branch when all
+ * target groups have settled. The historical name is retained for the retry
+ * seam and snapshot compatibility; `dispatch.index` remains pinned at zero.
+ */
 export function startNextDispatchTarget(state: RunnerState, trackId: string): TransitionResult {
   const track = getTrack(state, trackId);
   const dispatch = track.dispatch;
@@ -671,65 +680,105 @@ export function startNextDispatchTarget(state: RunnerState, trackId: string): Tr
       effects: [],
     };
   }
-  if (dispatch.index >= dispatch.queue.length) {
+  if (dispatch.queue.length === 0) {
     const done = setTrack(state, { ...track, dispatch: null });
     return landOn(done, nextTrackCellId(done, trackId, dispatch.branchCellId), "forward", trackId);
   }
 
-  const { targetCellId, deviceIds } = dispatch.queue[dispatch.index];
-  const cell = cellById(state.cells, targetCellId, track.cursor.body);
-  if (!cell) return fatal(state, `dispatch target ${targetCellId} not found`);
-
-  let next = stampRun(state, targetCellId);
-  next = setTrack(next, { ...getTrack(next, trackId), status: "active", progress: null });
-
-  if (cell.type === "protocol") {
-    return emitEffect(next, trackId, targetCellId, "resolveProtocolCode", (effectId) => ({
-      kind: "resolveProtocolCode",
-      effectId,
-      trackId,
-      cellId: targetCellId,
-      protocolId: cell.payload.protocolId,
-      version: cell.payload.version,
-    }));
-  }
-  if (isCommandCell(cell)) {
-    const resolved = validateInlineCommand(cell.payload);
-    if (!resolved.ok) {
-      return advanceDispatch(failRun(next, targetCellId, resolved.error), trackId);
-    }
-    return emitRunCommand(
-      next,
-      trackId,
-      targetCellId,
-      resolved.value,
-      producerFamily(next),
-      { kind: "inlineCell", format: cell.payload.format },
-      deviceIds,
+  let next = state;
+  const effects: Effect[] = [];
+  const rejected = new Set<string>();
+  for (const { targetCellId, deviceIds } of dispatch.queue) {
+    const alreadyInFlight = Object.values(next.inFlight).some(
+      (effect) => effect?.trackId === trackId && effect.cellId === targetCellId,
     );
+    if (alreadyInFlight) continue;
+
+    const currentTrack = getTrack(next, trackId);
+    const cell = cellById(next.cells, targetCellId, currentTrack.cursor.body);
+    if (!cell) return fatal(next, `dispatch target ${targetCellId} not found`);
+
+    next = stampRun(next, targetCellId);
+    next = setTrack(next, { ...getTrack(next, trackId), status: "active", progress: null });
+
+    let started: TransitionResult;
+    if (cell.type === "protocol") {
+      started = emitEffect(next, trackId, targetCellId, "resolveProtocolCode", (effectId) => ({
+        kind: "resolveProtocolCode",
+        effectId,
+        trackId,
+        cellId: targetCellId,
+        protocolId: cell.payload.protocolId,
+        version: cell.payload.version,
+      }));
+    } else if (isCommandCell(cell)) {
+      const resolved = validateInlineCommand(cell.payload);
+      if (!resolved.ok) {
+        next = failRun(next, targetCellId, resolved.error);
+        rejected.add(targetCellId);
+        continue;
+      }
+      started = emitRunCommand(
+        next,
+        trackId,
+        targetCellId,
+        resolved.value,
+        producerFamily(next),
+        { kind: "inlineCell", format: cell.payload.format },
+        deviceIds,
+      );
+    } else {
+      return fatal(next, `dispatch target ${targetCellId} is not a protocol or command cell`);
+    }
+    next = started.state;
+    effects.push(...started.effects);
   }
-  return fatal(state, `dispatch target ${targetCellId} is not a protocol or command cell`);
+
+  if (rejected.size > 0) {
+    const latestTrack = getTrack(next, trackId);
+    next = setTrack(next, {
+      ...latestTrack,
+      dispatch: latestTrack.dispatch
+        ? {
+            ...latestTrack.dispatch,
+            queue: latestTrack.dispatch.queue.filter(
+              ({ targetCellId }) => !rejected.has(targetCellId),
+            ),
+          }
+        : null,
+    });
+  }
+
+  const remaining = getTrack(next, trackId).dispatch?.queue.length ?? 0;
+  if (remaining === 0 && effects.length === 0) {
+    return startNextDispatchTarget(next, trackId);
+  }
+  return { state: next, effects };
 }
 
-/** Move an active dispatch past its current target (after completion or failure). */
-export function advanceDispatch(state: RunnerState, trackId: string): TransitionResult {
+/** Mark one concurrently-running dispatch target settled and release the branch at zero pending. */
+export function advanceDispatch(
+  state: RunnerState,
+  trackId: string,
+  settledCellId: string,
+): TransitionResult {
   const track = getTrack(state, trackId);
   const dispatch = track.dispatch;
   if (!dispatch) return fatal(state, "advanceDispatch without an active dispatch");
-  return startNextDispatchTarget(
-    setTrack(state, { ...track, dispatch: { ...dispatch, index: dispatch.index + 1 } }),
-    trackId,
-  );
+  const queue = dispatch.queue.filter(({ targetCellId }) => targetCellId !== settledCellId);
+  const next = setTrack(state, { ...track, dispatch: { ...dispatch, queue, index: 0 } });
+  if (queue.length > 0) return { state: next, effects: [] };
+  return startNextDispatchTarget(next, trackId);
 }
 
-/** True when the in-flight effect cell is the active dispatch target. */
+/** True when the in-flight effect cell belongs to any pending dispatch target. */
 export function isDispatchTarget(
   state: RunnerState,
   trackId: string,
   effectCellId: string,
 ): boolean {
   const dispatch = getTrack(state, trackId).dispatch;
-  return dispatch !== null && dispatch.queue[dispatch.index]?.targetCellId === effectCellId;
+  return dispatch?.queue.some(({ targetCellId }) => targetCellId === effectCellId) ?? false;
 }
 
 const TERMINAL_TRACK_STATUSES = new Set<Track["status"]>(["done", "partial", "failed", "skipped"]);
