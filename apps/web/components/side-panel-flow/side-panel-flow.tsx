@@ -130,9 +130,6 @@ export function ExperimentSidePanel({
     if (isDisabled) return;
     const newTitle = e.target.value;
     setCurrentTitle(newTitle);
-    // Question names are required by the workbook schema. Keep a transiently
-    // empty input local instead of invalidating the controlled draft.
-    if (displayNodeType === "QUESTION" && newTitle.length === 0) return;
     if (onTitleChange) {
       onTitleChange(newTitle);
     }
@@ -223,11 +220,17 @@ export function ExperimentSidePanel({
                 disabled={isDisabled}
                 required={displayNodeType === "QUESTION"}
                 aria-required={displayNodeType === "QUESTION"}
+                aria-invalid={displayNodeType === "QUESTION" && currentTitle.length === 0}
                 className="focus:border-jii-dark-green focus:ring-jii-dark-green/50 focus:outline-hidden w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
-              {displayNodeType === "QUESTION" && (
-                <p className="mt-1.5 text-xs text-gray-500">{t("sidePanelFlow.labelHint")}</p>
-              )}
+              {displayNodeType === "QUESTION" &&
+                (currentTitle.length === 0 ? (
+                  <p role="alert" className="text-destructive mt-1.5 text-xs">
+                    {t("sidePanelFlow.labelRequired")}
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-gray-500">{t("sidePanelFlow.labelHint")}</p>
+                ))}
             </CardContent>
           </Card>
 

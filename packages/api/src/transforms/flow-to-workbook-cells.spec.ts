@@ -494,7 +494,7 @@ describe("flowNodesToWorkbookCells", () => {
     });
   });
 
-  it("refuses structural write-back when legacy branch path ids are ambiguous", () => {
+  it("allows unrelated reordering when legacy branch path ids are ambiguous", () => {
     const branch: WorkbookCell = {
       id: "b1",
       type: "branch",
@@ -525,9 +525,58 @@ describe("flowNodesToWorkbookCells", () => {
       isAnswered: false,
     };
     const graph = cellsToFlowGraph([branch, target]);
+    const reorderedNodes = graph.nodes.map((node) => ({
+      ...node,
+      isStart: node.id === "q1",
+    }));
+    const reorderedEdges = [
+      ...graph.edges.filter((edge) => edge.data?.kind === "branch"),
+      makeEdge("q1", "b1"),
+    ];
 
-    expect(() => flowNodesToWorkbookCells(graph.nodes, graph.edges, [branch, target])).toThrow(
-      /ambiguous/,
+    const reordered = flowNodesToWorkbookCells(reorderedNodes, reorderedEdges, [branch, target]);
+
+    expect(reordered.map((cell) => cell.id)).toEqual(["q1", "b1"]);
+    expect(reordered[1]).toEqual(branch);
+  });
+
+  it("refuses only a target edit that must resolve an ambiguous legacy handle", () => {
+    const branch: WorkbookCell = {
+      id: "b1",
+      type: "branch",
+      isCollapsed: false,
+      paths: [
+        {
+          id: "duplicate",
+          label: "First",
+          color: "#10b981",
+          conditions: [],
+          gotoCellId: "q1",
+        },
+        {
+          id: "duplicate",
+          label: "Second",
+          color: "#f59e0b",
+          conditions: [],
+          gotoCellId: "b1",
+        },
+      ],
+    };
+    const target: WorkbookCell = {
+      id: "q1",
+      type: "question",
+      isCollapsed: false,
+      name: "answer",
+      question: { kind: "yes_no", text: "Continue?", required: false },
+      isAnswered: false,
+    };
+    const graph = cellsToFlowGraph([branch, target]);
+    const changedEdges = graph.edges.map((edge) =>
+      edge.data?.kind === "branch" && edge.target === "q1" ? { ...edge, target: "b1" } : edge,
+    );
+
+    expect(() => flowNodesToWorkbookCells(graph.nodes, changedEdges, [branch, target])).toThrow(
+      /Open the branch node settings/,
     );
   });
 });

@@ -9,6 +9,7 @@ import {
   or,
   ne,
   experiments,
+  flows,
   experimentMembers,
   experimentLocations,
   exists,
@@ -46,6 +47,7 @@ import {
   UpdateExperimentDto,
   ExperimentDto,
 } from "../models/experiment.model";
+import type { FlowGraphDto } from "../models/flow.model";
 
 /**
  * Contributors plus the experiment's anonymization setting, so no caller can publish
@@ -430,6 +432,35 @@ export class ExperimentRepository {
         .set(updateExperimentDto)
         .where(eq(experiments.id, id))
         .returning(experimentColumns),
+    );
+  }
+
+  /** Atomically change the workbook pin and materialised flow if the caller's scope is current. */
+  async updateWorkbookAndFlowIfExpected(
+    id: string,
+    expectedWorkbookId: string | null,
+    updateExperimentDto: UpdateExperimentDto,
+    graph: FlowGraphDto,
+  ): Promise<Result<ExperimentDto | null>> {
+    return tryCatch(() =>
+      this.database.transaction(async (tx) => {
+        const workbookPredicate =
+          expectedWorkbookId === null
+            ? isNull(experiments.workbookId)
+            : eq(experiments.workbookId, expectedWorkbookId);
+        const updated = await tx
+          .update(experiments)
+          .set(updateExperimentDto)
+          .where(and(eq(experiments.id, id), workbookPredicate))
+          .returning(experimentColumns);
+        if (updated.length === 0) return null;
+
+        await tx
+          .insert(flows)
+          .values({ experimentId: id, graph })
+          .onConflictDoUpdate({ target: flows.experimentId, set: { graph } });
+        return updated[0];
+      }),
     );
   }
 

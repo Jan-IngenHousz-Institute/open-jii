@@ -4,6 +4,7 @@ import {
   zAttachWorkbookBody,
   zAttachWorkbookResponse,
   zSetWorkbookVersionBody,
+  zUpgradeWorkbookVersionBody,
 } from "../../workbook/workbook-version.schema";
 import { zExperiment, zExperimentIdPathParam } from "../experiment.schema";
 
@@ -22,7 +23,7 @@ export const experimentWorkbooksContract = {
       path: "/api/v1/experiments/{id}/workbook/upgrade",
       successStatus: 200,
     })
-    .input(zExperimentIdPathParam)
+    .input(zExperimentIdPathParam.merge(zUpgradeWorkbookVersionBody))
     .output(zAttachWorkbookResponse),
   setWorkbookVersion: oc
     .route({

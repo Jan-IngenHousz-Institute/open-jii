@@ -520,7 +520,9 @@ describe("<ExperimentSidePanel />", () => {
 
     expect(input).toHaveAttribute("maxlength", "64");
     await user.clear(input);
-    expect(props.onTitleChange).not.toHaveBeenCalledWith("");
+    expect(props.onTitleChange).toHaveBeenCalledWith("");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent("sidePanelFlow.labelRequired");
     await user.type(input, "x".repeat(65));
 
     expect(input).toHaveValue("x".repeat(64));

@@ -7,6 +7,7 @@ import {
   zWorkbookVersionIdPathParam,
   zAttachWorkbookBody,
   zAttachWorkbookResponse,
+  zUpgradeWorkbookVersionBody,
 } from "./workbook-version.schema";
 
 const validUuid = "11111111-1111-1111-1111-111111111111";
@@ -109,7 +110,9 @@ describe("Workbook Version Schemas", () => {
 
   describe("zAttachWorkbookBody", () => {
     it("accepts valid workbookId", () => {
-      expect(zAttachWorkbookBody.safeParse({ workbookId: validUuid }).success).toBe(true);
+      expect(
+        zAttachWorkbookBody.safeParse({ workbookId: validUuid, expectedWorkbookId: null }).success,
+      ).toBe(true);
     });
 
     it("rejects non-uuid workbookId", () => {
@@ -118,6 +121,15 @@ describe("Workbook Version Schemas", () => {
 
     it("rejects empty object", () => {
       expect(zAttachWorkbookBody.safeParse({}).success).toBe(false);
+    });
+  });
+
+  describe("zUpgradeWorkbookVersionBody", () => {
+    it("requires the workbook scope the client read", () => {
+      expect(zUpgradeWorkbookVersionBody.safeParse({ expectedWorkbookId: validUuid }).success).toBe(
+        true,
+      );
+      expect(zUpgradeWorkbookVersionBody.safeParse({}).success).toBe(false);
     });
   });
 

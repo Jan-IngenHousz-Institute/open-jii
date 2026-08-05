@@ -30,11 +30,7 @@ export function EdgeSidePanel({
     if (displayEdge) {
       const updatedEdge = { ...displayEdge, data: { ...displayEdge.data, label: newLabel } };
       setDisplayEdge(updatedEdge);
-      // Empty is a useful transient input state, but is not a schema-valid
-      // branch-path label and therefore never enters the controlled draft.
-      if (newLabel.length > 0) {
-        onEdgeUpdate?.(displayEdge.id, { data: { ...displayEdge.data, label: newLabel } });
-      }
+      onEdgeUpdate?.(displayEdge.id, { data: { ...displayEdge.data, label: newLabel } });
     }
   };
 

@@ -281,6 +281,7 @@
     "label": "Label",
     "labelPlaceholder": "Enter node title...",
     "labelHint": "Must be unique within this flow.",
+    "labelRequired": "Question labels cannot be empty. This change is not saved yet.",
     "nodeProperties": "Node Properties",
     "startNode": "Start Node",
     "startNodeLimit": "Limited to one per flow",

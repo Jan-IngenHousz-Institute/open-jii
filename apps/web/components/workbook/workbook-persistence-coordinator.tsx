@@ -27,7 +27,9 @@ interface PersistenceOperation {
   scope: string;
   generation: number;
   fingerprint?: string;
-  run: (isCurrent: () => boolean) => Promise<void>;
+  scopeTransition?: boolean;
+  resultScope?: string;
+  run: (assertCurrent: () => void) => Promise<void>;
 }
 
 interface FailedPersistenceOperation {
@@ -58,13 +60,20 @@ interface CoordinatorOptions {
 
 const WorkbookPersistenceContext = createContext<WorkbookPersistenceCoordinator | null>(null);
 
+export class PersistenceScopeChangedError extends Error {
+  constructor() {
+    super("The workbook changed before this operation could complete");
+    this.name = "PersistenceScopeChangedError";
+  }
+}
+
 /**
  * Persistence invariant for the experiment workbook editor:
  *
  * Every cells write, entity-triggered pin, manual pin, and workbook scope
  * transition enters this one workbook-keyed queue. Operations check the scope
- * generation after each awaited write; a completion from an older workbook is
- * inert and cannot start another write or rebase the new workbook's autosave.
+ * generation after each awaited write; work from an older workbook rejects as
+ * stale and cannot start another write or rebase the new workbook's autosave.
  */
 export function useWorkbookPersistenceCoordinator({
   experimentId,
@@ -85,6 +94,7 @@ export function useWorkbookPersistenceCoordinator({
   const tailRef = useRef<Promise<void>>(Promise.resolve());
   const pendingCountRef = useRef(0);
   const failedOperationRef = useRef<FailedPersistenceOperation | null>(null);
+  const writtenCellsRef = useRef(new Set<string>());
 
   if (scopeRef.current.workbookId !== workbookId) {
     scopeRef.current = {
@@ -96,6 +106,7 @@ export function useWorkbookPersistenceCoordinator({
     tailRef.current = Promise.resolve();
     pendingCountRef.current = 0;
     failedOperationRef.current = null;
+    writtenCellsRef.current.clear();
   }
 
   useEffect(() => {
@@ -110,53 +121,70 @@ export function useWorkbookPersistenceCoordinator({
     [],
   );
 
+  const assertOperationCurrent = useCallback(
+    (operation: PersistenceOperation) => {
+      if (!isOperationCurrent(operation)) throw new PersistenceScopeChangedError();
+    },
+    [isOperationCurrent],
+  );
+
+  const isSameOperation = useCallback(
+    (left: PersistenceOperation, right: PersistenceOperation) =>
+      left.kind === right.kind &&
+      left.scope === right.scope &&
+      left.generation === right.generation &&
+      left.fingerprint === right.fingerprint,
+    [],
+  );
+
   const enqueue = useCallback(
     (candidate: PersistenceOperation): Promise<void> => {
-      if (!isOperationCurrent(candidate)) return Promise.resolve();
-      // Capture the barrier as it exists when this request is made. Work that
-      // was already queued before a failure may not silently retry past it;
-      // an explicit retry/new edit first replays the retained failed unit.
-      const failedAtEnqueue = failedOperationRef.current;
+      if (!isOperationCurrent(candidate)) {
+        return Promise.reject(new PersistenceScopeChangedError());
+      }
       pendingCountRef.current += 1;
       setIsPending(true);
       setError(null);
 
       const previous = tailRef.current.catch(() => undefined);
       const promise = previous.then(async () => {
-        if (!isOperationCurrent(candidate)) return;
+        assertOperationCurrent(candidate);
 
         const runOperation = async (operation: PersistenceOperation) => {
-          if (!isOperationCurrent(operation)) return;
+          assertOperationCurrent(operation);
           try {
-            await operation.run(() => isOperationCurrent(operation));
-            if (!isOperationCurrent(operation)) return;
+            await operation.run(() => assertOperationCurrent(operation));
+            if (!operation.scopeTransition) {
+              assertOperationCurrent(operation);
+            } else if (
+              !isOperationCurrent(operation) &&
+              scopeRef.current.workbookId !== operation.resultScope
+            ) {
+              throw new PersistenceScopeChangedError();
+            }
             if (failedOperationRef.current?.operation === operation) {
               failedOperationRef.current = null;
             }
           } catch (operationError) {
-            if (!isOperationCurrent(operation)) return;
-            failedOperationRef.current = { operation, error: operationError };
-            setError(operationError);
+            if (isOperationCurrent(operation)) {
+              failedOperationRef.current = { operation, error: operationError };
+              setError(operationError);
+            }
             throw operationError;
           }
         };
 
         try {
           const currentFailure = failedOperationRef.current;
-          if (failedAtEnqueue && currentFailure === failedAtEnqueue) {
-            await runOperation(failedAtEnqueue.operation);
-            const failedOperation = failedAtEnqueue.operation;
-            const candidateIsRetry =
-              failedOperation.kind === candidate.kind &&
-              failedOperation.scope === candidate.scope &&
-              failedOperation.generation === candidate.generation &&
-              failedOperation.fingerprint === candidate.fingerprint;
-            if (candidateIsRetry) return;
-          } else if (currentFailure) {
-            // This operation was queued before another unit failed. Preserve
-            // ordering and the original retryable failure instead of crossing it.
-            setError(currentFailure.error);
-            throw currentFailure.error;
+          if (currentFailure && isSameOperation(currentFailure.operation, candidate)) {
+            // Repeating the exact failed request is the explicit retry path.
+            await runOperation(currentFailure.operation);
+            return;
+          }
+          if (currentFailure) {
+            // Different work supersedes the failed request. Never replay a
+            // stale attach/detach in front of the operation the user just chose.
+            failedOperationRef.current = null;
           }
 
           await runOperation(candidate);
@@ -170,7 +198,7 @@ export function useWorkbookPersistenceCoordinator({
       tailRef.current = promise.catch(() => undefined);
       return promise;
     },
-    [isOperationCurrent],
+    [assertOperationCurrent, isOperationCurrent, isSameOperation],
   );
 
   const makeOperation = useCallback(
@@ -178,11 +206,15 @@ export function useWorkbookPersistenceCoordinator({
       kind: OperationKind,
       run: PersistenceOperation["run"],
       fingerprint?: string,
+      scopeTransition = false,
+      resultScope?: string,
     ): PersistenceOperation => ({
       kind,
       scope: workbookId,
       generation: scopeRef.current.generation,
       fingerprint,
+      scopeTransition,
+      resultScope,
       run,
     }),
     [workbookId],
@@ -190,18 +222,21 @@ export function useWorkbookPersistenceCoordinator({
 
   const persistCells = useCallback(
     async (nextCells: WorkbookCell[]) => {
-      let workbookWritten = false;
       const fingerprint = JSON.stringify(nextCells);
       await enqueue(
         makeOperation(
           "cells",
-          async (isCurrent) => {
-            if (!workbookWritten) {
+          async (assertCurrent) => {
+            if (!writtenCellsRef.current.has(fingerprint)) {
+              assertCurrent();
               await updateWorkbook({ id: workbookId, cells: nextCells });
-              if (!isCurrent()) return;
-              workbookWritten = true;
+              assertCurrent();
+              writtenCellsRef.current.clear();
+              writtenCellsRef.current.add(fingerprint);
             }
-            await upgradeWorkbook({ id: experimentId });
+            await upgradeWorkbook({ id: experimentId, expectedWorkbookId: workbookId });
+            assertCurrent();
+            writtenCellsRef.current.delete(fingerprint);
           },
           fingerprint,
         ),
@@ -213,12 +248,13 @@ export function useWorkbookPersistenceCoordinator({
   const enqueuePin = useCallback(
     (kind: "entity" | "manual-upgrade") =>
       enqueue(
-        makeOperation(kind, async (isCurrent) => {
-          if (!isCurrent()) return;
-          await upgradeWorkbook({ id: experimentId });
+        makeOperation(kind, async (assertCurrent) => {
+          assertCurrent();
+          await upgradeWorkbook({ id: experimentId, expectedWorkbookId: workbookId });
+          assertCurrent();
         }),
       ),
-    [enqueue, experimentId, makeOperation, upgradeWorkbook],
+    [enqueue, experimentId, makeOperation, upgradeWorkbook, workbookId],
   );
 
   const entitySaved = useCallback(() => enqueuePin("entity"), [enqueuePin]);
@@ -229,9 +265,10 @@ export function useWorkbookPersistenceCoordinator({
       enqueue(
         makeOperation(
           "rename",
-          async (isCurrent) => {
-            if (!isCurrent()) return;
+          async (assertCurrent) => {
+            assertCurrent();
             await updateWorkbook({ id: workbookId, name });
+            assertCurrent();
           },
           name,
         ),
@@ -244,23 +281,35 @@ export function useWorkbookPersistenceCoordinator({
       enqueue(
         makeOperation(
           "attach",
-          async (isCurrent) => {
-            if (!isCurrent()) return;
-            await attachWorkbookMutation({ id: experimentId, workbookId: nextWorkbookId });
+          async (assertCurrent) => {
+            assertCurrent();
+            await attachWorkbookMutation({
+              id: experimentId,
+              workbookId: nextWorkbookId,
+              expectedWorkbookId: workbookId || null,
+            });
           },
+          nextWorkbookId,
+          true,
           nextWorkbookId,
         ),
       ),
-    [attachWorkbookMutation, enqueue, experimentId, makeOperation],
+    [attachWorkbookMutation, enqueue, experimentId, makeOperation, workbookId],
   );
 
   const detachWorkbook = useCallback(
     () =>
       enqueue(
-        makeOperation("detach", async (isCurrent) => {
-          if (!isCurrent()) return;
-          await detachWorkbookMutation({ id: experimentId });
-        }),
+        makeOperation(
+          "detach",
+          async (assertCurrent) => {
+            assertCurrent();
+            await detachWorkbookMutation({ id: experimentId });
+          },
+          undefined,
+          true,
+          "",
+        ),
       ),
     [detachWorkbookMutation, enqueue, experimentId, makeOperation],
   );
@@ -270,9 +319,10 @@ export function useWorkbookPersistenceCoordinator({
       enqueue(
         makeOperation(
           "set-version",
-          async (isCurrent) => {
-            if (!isCurrent()) return;
+          async (assertCurrent) => {
+            assertCurrent();
             await setWorkbookVersionMutation({ id: experimentId, versionId });
+            assertCurrent();
           },
           versionId,
         ),

@@ -1,6 +1,8 @@
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { AttachWorkbookUseCase } from "../attach-workbook/attach-workbook";
 import { UpgradeWorkbookVersionUseCase } from "./upgrade-workbook-version";
@@ -10,7 +12,9 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   let attachUseCase: AttachWorkbookUseCase;
   let upgradeUseCase: UpgradeWorkbookVersionUseCase;
   let workbookRepo: WorkbookRepository;
+  let experimentRepo: ExperimentRepository;
   let flowRepo: FlowRepository;
+  let publishVersion: PublishVersionUseCase;
   let adminUserId: string;
   let experimentId: string;
   let workbookId: string;
@@ -26,7 +30,9 @@ describe("UpgradeWorkbookVersionUseCase", () => {
     attachUseCase = testApp.module.get(AttachWorkbookUseCase);
     upgradeUseCase = testApp.module.get(UpgradeWorkbookVersionUseCase);
     workbookRepo = testApp.module.get(WorkbookRepository);
+    experimentRepo = testApp.module.get(ExperimentRepository);
     flowRepo = testApp.module.get(FlowRepository);
+    publishVersion = testApp.module.get(PublishVersionUseCase);
 
     const { experiment } = await testApp.createExperiment({
       name: "Test Experiment",
@@ -41,10 +47,11 @@ describe("UpgradeWorkbookVersionUseCase", () => {
     });
     workbookId = workbook.id;
 
-    await attachUseCase.execute(experimentId, workbookId, adminUserId);
+    await attachUseCase.execute(experimentId, workbookId, null, adminUserId);
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     testApp.afterEach();
   });
 
@@ -53,7 +60,7 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   });
 
   it("reuses version when workbook cells are unchanged", async () => {
-    const result = await upgradeUseCase.execute(experimentId, adminUserId);
+    const result = await upgradeUseCase.execute(experimentId, workbookId, adminUserId);
     assertSuccess(result);
     expect(result.value.version).toBe(1);
   });
@@ -63,7 +70,7 @@ describe("UpgradeWorkbookVersionUseCase", () => {
       cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
     });
 
-    const result = await upgradeUseCase.execute(experimentId, adminUserId);
+    const result = await upgradeUseCase.execute(experimentId, workbookId, adminUserId);
     assertSuccess(result);
     expect(result.value.version).toBe(2);
     expect(result.value.workbookId).toBe(workbookId);
@@ -72,6 +79,7 @@ describe("UpgradeWorkbookVersionUseCase", () => {
   it("returns failure when experiment not found", async () => {
     const result = await upgradeUseCase.execute(
       "00000000-0000-0000-0000-000000000000",
+      workbookId,
       adminUserId,
     );
     assertFailure(result);
@@ -84,7 +92,7 @@ describe("UpgradeWorkbookVersionUseCase", () => {
       userId: adminUserId,
     });
 
-    const result = await upgradeUseCase.execute(experiment.id, adminUserId);
+    const result = await upgradeUseCase.execute(experiment.id, workbookId, adminUserId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(400);
   });
@@ -173,7 +181,7 @@ describe("UpgradeWorkbookVersionUseCase", () => {
     await workbookRepo.update(workbookId, {
       cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
     });
-    const result = await upgradeUseCase.execute(experimentId, adminUserId);
+    const result = await upgradeUseCase.execute(experimentId, workbookId, adminUserId);
     assertSuccess(result);
 
     const after = await flowRepo.getByExperimentId(experimentId);
@@ -183,5 +191,58 @@ describe("UpgradeWorkbookVersionUseCase", () => {
       id: "md1",
       content: { text: "v2" },
     });
+  });
+
+  it("cannot pin an old workbook after a concurrent attachment changes the pairing", async () => {
+    await workbookRepo.update(workbookId, {
+      cells: [{ id: "md1", type: "markdown", content: "stale A", isCollapsed: false }],
+    });
+    const otherWorkbook = await testApp.createWorkbook({
+      name: "Workbook B",
+      cells: [{ id: "md-b", type: "markdown", content: "current B", isCollapsed: false }],
+      createdBy: adminUserId,
+    });
+
+    let releasePublish: (() => void) | undefined;
+    let publishStarted: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      publishStarted = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      releasePublish = resolve;
+    });
+    const publishSpy = vi.spyOn(publishVersion, "execute");
+    publishSpy.mockImplementationOnce(async (id, userId) => {
+      publishStarted?.();
+      await gate;
+      publishSpy.mockRestore();
+      return publishVersion.execute(id, userId);
+    });
+
+    const staleUpgrade = upgradeUseCase.execute(experimentId, workbookId, adminUserId);
+    await started;
+    const attached = await attachUseCase.execute(
+      experimentId,
+      otherWorkbook.id,
+      workbookId,
+      adminUserId,
+    );
+    assertSuccess(attached);
+    releasePublish?.();
+
+    const staleResult = await staleUpgrade;
+    assertFailure(staleResult);
+    expect(staleResult.error.statusCode).toBe(409);
+
+    const currentExperiment = await experimentRepo.findOne(experimentId);
+    assertSuccess(currentExperiment);
+    expect(currentExperiment.value?.workbookId).toBe(otherWorkbook.id);
+    expect(currentExperiment.value?.workbookVersionId).toBe(attached.value.workbookVersionId);
+
+    const currentFlow = await flowRepo.getByExperimentId(experimentId);
+    assertSuccess(currentFlow);
+    expect(currentFlow.value?.graph.nodes).toEqual([
+      expect.objectContaining({ id: "md-b", content: { text: "current B" } }),
+    ]);
   });
 });

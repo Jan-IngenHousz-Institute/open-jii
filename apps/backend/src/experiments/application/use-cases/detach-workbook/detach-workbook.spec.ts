@@ -37,7 +37,7 @@ describe("DetachWorkbookUseCase", () => {
     });
     workbookId = workbook.id;
 
-    await attachUseCase.execute(experimentId, workbookId, adminUserId);
+    await attachUseCase.execute(experimentId, workbookId, null, adminUserId);
   });
 
   afterEach(() => {

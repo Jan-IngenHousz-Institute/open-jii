@@ -53,7 +53,7 @@ describe("SetWorkbookVersionUseCase", () => {
     workbookId = workbook.id;
 
     // Attach publishes + pins v1.
-    const attach = await attachUseCase.execute(experimentId, workbookId, adminUserId);
+    const attach = await attachUseCase.execute(experimentId, workbookId, null, adminUserId);
     assertSuccess(attach);
     v1Id = attach.value.workbookVersionId;
 
@@ -61,7 +61,7 @@ describe("SetWorkbookVersionUseCase", () => {
     await workbookRepo.update(workbookId, {
       cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
     });
-    const upgrade = await upgradeUseCase.execute(experimentId, adminUserId);
+    const upgrade = await upgradeUseCase.execute(experimentId, workbookId, adminUserId);
     assertSuccess(upgrade);
     v2Id = upgrade.value.workbookVersionId;
   });

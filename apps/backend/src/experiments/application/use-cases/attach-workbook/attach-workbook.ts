@@ -11,7 +11,6 @@ import { WorkbookVersionRepository } from "../../../../workbooks/core/repositori
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
-import { FlowRepository } from "../../../core/repositories/flow.repository";
 
 export interface AttachWorkbookResult {
   workbookId: string;
@@ -29,13 +28,13 @@ export class AttachWorkbookUseCase {
     private readonly workbookVersionRepository: WorkbookVersionRepository,
     private readonly isWorkbookUpgradableUseCase: IsWorkbookUpgradableUseCase,
     private readonly publishVersionUseCase: PublishVersionUseCase,
-    private readonly flowRepository: FlowRepository,
     private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
     experimentId: string,
     workbookId: string,
+    expectedWorkbookId: string | null,
     userId: string,
   ): Promise<Result<AttachWorkbookResult>> {
     const experimentResult = await this.experimentRepository.findOne(experimentId);
@@ -60,6 +59,15 @@ export class AttachWorkbookUseCase {
           workbookAccess.reason === "not-found"
             ? AppError.notFound(`Workbook with ID ${workbookId} not found`)
             : AppError.forbidden("You do not have access to this workbook"),
+        );
+      }
+
+      if (experiment.workbookId !== expectedWorkbookId) {
+        return failure(
+          AppError.conflict(
+            "The experiment's linked workbook changed. Refresh and try again.",
+            "WORKBOOK_SCOPE_CHANGED",
+          ),
         );
       }
 
@@ -93,20 +101,24 @@ export class AttachWorkbookUseCase {
         );
       }
 
-      const updateResult = await this.experimentRepository.update(experimentId, {
-        workbookId,
-        workbookVersionId: version.id,
-      });
+      const flowGraph = cellsToFlowGraph(version.cells);
+      const updateResult = await this.experimentRepository.updateWorkbookAndFlowIfExpected(
+        experimentId,
+        expectedWorkbookId,
+        { workbookId, workbookVersionId: version.id },
+        flowGraph,
+      );
 
       if (updateResult.isFailure()) {
         return updateResult;
       }
-
-      // Materialise a flow row from the version's cells; mobile still reads from `flows`.
-      const flowGraph = cellsToFlowGraph(version.cells);
-      const flowResult = await this.flowRepository.upsert(experimentId, flowGraph);
-      if (flowResult.isFailure()) {
-        return flowResult;
+      if (!updateResult.value) {
+        return failure(
+          AppError.conflict(
+            "The experiment's linked workbook changed. Refresh and try again.",
+            "WORKBOOK_SCOPE_CHANGED",
+          ),
+        );
       }
 
       this.logger.log({

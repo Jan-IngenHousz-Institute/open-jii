@@ -41,6 +41,9 @@ describe("<EdgeSidePanel />", () => {
     const user = userEvent.setup();
     // Update label
     await user.clear(input);
+    expect(onUpdate).toHaveBeenCalledWith("e1", {
+      data: { kind: "branch", label: "", extra: "x" },
+    });
     await user.type(input, "updated");
     expect(onUpdate).toHaveBeenCalledWith("e1", {
       data: { kind: "branch", label: "updated", extra: "x" },

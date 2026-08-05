@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
-import { useWorkbookPersistenceCoordinator } from "./workbook-persistence-coordinator";
+import {
+  PersistenceScopeChangedError,
+  useWorkbookPersistenceCoordinator,
+} from "./workbook-persistence-coordinator";
 
 const mutations = vi.hoisted(() => ({
   update: vi.fn(),
@@ -84,6 +87,10 @@ describe("useWorkbookPersistenceCoordinator", () => {
     await act(async () => vi.advanceTimersByTimeAsync(30));
     const entityPromise = result.current.entitySaved();
     const attachPromise = result.current.attachWorkbook("workbook-b");
+    mutations.attach.mockImplementationOnce(() => {
+      rerender({ workbookId: "workbook-b", cells: [cell("b0")] });
+      return Promise.resolve();
+    });
 
     expect(mutations.update).toHaveBeenCalledTimes(1);
     expect(mutations.upgrade).not.toHaveBeenCalled();
@@ -96,6 +103,11 @@ describe("useWorkbookPersistenceCoordinator", () => {
 
     expect(mutations.upgrade).toHaveBeenCalledTimes(2);
     expect(mutations.attach).toHaveBeenCalledTimes(1);
+    expect(mutations.attach).toHaveBeenCalledWith({
+      id: "experiment-1",
+      workbookId: "workbook-b",
+      expectedWorkbookId: "workbook-a",
+    });
     expect(mutations.update.mock.invocationCallOrder[0]).toBeLessThan(
       mutations.upgrade.mock.invocationCallOrder[0],
     );
@@ -163,7 +175,7 @@ describe("useWorkbookPersistenceCoordinator", () => {
     expect(mutations.upgrade).toHaveBeenCalledTimes(1);
   });
 
-  it("does not let work queued before a failed pin cross the retry barrier", async () => {
+  it("does not replay a failed pin ahead of different queued work", async () => {
     let rejectPin: ((error: Error) => void) | undefined;
     const failure = new Error("pin failed");
     mutations.upgrade.mockImplementationOnce(
@@ -182,12 +194,103 @@ describe("useWorkbookPersistenceCoordinator", () => {
     const queuedEntity = result.current.entitySaved();
     act(() => rejectPin?.(failure));
 
-    await expect(queuedEntity).rejects.toBe(failure);
-    expect(mutations.upgrade).toHaveBeenCalledTimes(1);
+    await expect(queuedEntity).resolves.toBeUndefined();
+    expect(mutations.upgrade).toHaveBeenCalledTimes(2);
 
     mutations.upgrade.mockResolvedValue(undefined);
     await act(async () => result.current.autosave.flush());
     expect(mutations.update).toHaveBeenCalledTimes(1);
-    expect(mutations.upgrade).toHaveBeenCalledTimes(2);
+    expect(mutations.upgrade).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not replay a failed attachment before a later cells edit", async () => {
+    const failure = new Error("attach failed");
+    mutations.attach.mockRejectedValueOnce(failure);
+    const { result, rerender } = renderCoordinator({
+      workbookId: "workbook-a",
+      cells: [cell("a0")],
+    });
+
+    await expect(result.current.attachWorkbook("workbook-b")).rejects.toBe(failure);
+
+    rerender({ workbookId: "workbook-a", cells: [cell("a1")] });
+    await act(async () => vi.advanceTimersByTimeAsync(30));
+
+    expect(mutations.attach).toHaveBeenCalledTimes(1);
+    expect(mutations.update).toHaveBeenCalledWith({
+      id: "workbook-a",
+      cells: [cell("a1")],
+    });
+    expect(mutations.upgrade).toHaveBeenCalledWith({
+      id: "experiment-1",
+      expectedWorkbookId: "workbook-a",
+    });
+  });
+
+  it("lets a different attachment supersede a failed one and follows the successful rerender", async () => {
+    const failure = new Error("attach B failed");
+    mutations.attach.mockRejectedValueOnce(failure);
+    const { result, rerender } = renderCoordinator({
+      workbookId: "workbook-a",
+      cells: [cell("a0")],
+    });
+
+    await expect(result.current.attachWorkbook("workbook-b")).rejects.toBe(failure);
+    mutations.attach.mockImplementationOnce(() => {
+      rerender({ workbookId: "workbook-c", cells: [cell("c0")] });
+      return Promise.resolve();
+    });
+
+    await expect(result.current.attachWorkbook("workbook-c")).resolves.toBeUndefined();
+
+    expect(mutations.attach).toHaveBeenCalledTimes(2);
+    expect(mutations.attach).toHaveBeenLastCalledWith({
+      id: "experiment-1",
+      workbookId: "workbook-c",
+      expectedWorkbookId: "workbook-a",
+    });
+    expect(result.current.error).toBeNull();
+  });
+
+  it("rejects an attachment completion when the rerender lands on a different workbook", async () => {
+    const { result, rerender } = renderCoordinator({
+      workbookId: "workbook-a",
+      cells: [cell("a0")],
+    });
+    mutations.attach.mockImplementationOnce(() => {
+      rerender({ workbookId: "workbook-c", cells: [cell("c0")] });
+      return Promise.resolve();
+    });
+
+    await expect(result.current.attachWorkbook("workbook-b")).rejects.toBeInstanceOf(
+      PersistenceScopeChangedError,
+    );
+  });
+
+  it("rejects queued work when an external scope change makes it stale", async () => {
+    let releaseUpdate: (() => void) | undefined;
+    mutations.update.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseUpdate = resolve;
+        }),
+    );
+    const { result, rerender } = renderCoordinator({
+      workbookId: "workbook-a",
+      cells: [cell("a0")],
+    });
+
+    rerender({ workbookId: "workbook-a", cells: [cell("a1")] });
+    await act(async () => vi.advanceTimersByTimeAsync(30));
+    const attachPromise = result.current.attachWorkbook("workbook-b");
+    const staleAssertion = expect(attachPromise).rejects.toBeInstanceOf(
+      PersistenceScopeChangedError,
+    );
+
+    rerender({ workbookId: "workbook-c", cells: [cell("c0")] });
+    act(() => releaseUpdate?.());
+
+    await staleAssertion;
+    expect(mutations.attach).not.toHaveBeenCalled();
   });
 });

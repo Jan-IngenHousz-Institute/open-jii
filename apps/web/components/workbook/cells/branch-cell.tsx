@@ -534,10 +534,7 @@ export function BranchCellComponent({
 
                 <Input
                   value={path.label}
-                  onChange={(e) => {
-                    if (e.target.value.length === 0) return;
-                    handleUpdatePath(pathIndex, { label: e.target.value });
-                  }}
+                  onChange={(e) => handleUpdatePath(pathIndex, { label: e.target.value })}
                   onClick={(e) => e.stopPropagation()}
                   maxLength={64}
                   className="hover:border-border focus:border-border h-6 flex-1 border-transparent bg-transparent px-1.5 text-sm font-medium"

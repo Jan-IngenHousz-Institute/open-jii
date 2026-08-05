@@ -22,6 +22,7 @@ describe("useAttachWorkbook", () => {
       result.current.mutate({
         id: experimentId,
         workbookId,
+        expectedWorkbookId: null,
       });
     });
 
@@ -30,7 +31,7 @@ describe("useAttachWorkbook", () => {
     });
 
     expect(spy.called).toBe(true);
-    expect(spy.body).toEqual({ workbookId });
+    expect(spy.body).toEqual({ workbookId, expectedWorkbookId: null });
   });
 
   it("handles error state", async () => {
@@ -42,6 +43,7 @@ describe("useAttachWorkbook", () => {
       result.current.mutate({
         id: experimentId,
         workbookId,
+        expectedWorkbookId: null,
       });
     });
 

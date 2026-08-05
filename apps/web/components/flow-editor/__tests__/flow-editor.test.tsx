@@ -477,7 +477,9 @@ describe("<FlowEditor /> (stable suite)", () => {
     await user.type(input, "Changed");
 
     expect(onWorkbookCellsChange).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toHaveTextContent(/ambiguous/);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/branch node settings/);
+    expect(alert).toHaveClass("z-[100]");
   });
 
   it("updates nodes/edges when initialFlow prop changes", () => {

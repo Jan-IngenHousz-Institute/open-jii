@@ -62,7 +62,7 @@ describe("ExperimentWorkbooksController", () => {
       const response = await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ workbookId })
+        .send({ workbookId, expectedWorkbookId: null })
         .expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({
@@ -84,7 +84,7 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withoutAuth()
-        .send({ workbookId: faker.string.uuid() })
+        .send({ workbookId: faker.string.uuid(), expectedWorkbookId: null })
         .expect(StatusCodes.UNAUTHORIZED);
     });
 
@@ -101,7 +101,7 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ workbookId: faker.string.uuid() })
+        .send({ workbookId: faker.string.uuid(), expectedWorkbookId: null })
         .expect(StatusCodes.FORBIDDEN);
       expect(executeSpy).not.toHaveBeenCalled();
     });
@@ -116,7 +116,7 @@ describe("ExperimentWorkbooksController", () => {
       await testApp
         .post(path)
         .withAuth(testUserId)
-        .send({ workbookId: faker.string.uuid() })
+        .send({ workbookId: faker.string.uuid(), expectedWorkbookId: null })
         .expect(StatusCodes.NOT_FOUND);
     });
   });
@@ -177,7 +177,11 @@ describe("ExperimentWorkbooksController", () => {
       const path = testApp.resolveOrpcPath(contract.experiments.upgradeWorkbookVersion, {
         id: expId,
       });
-      const response = await testApp.post(path).withAuth(testUserId).expect(StatusCodes.OK);
+      const response = await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ expectedWorkbookId: workbookId })
+        .expect(StatusCodes.OK);
 
       expect(response.body).toMatchObject({
         workbookId,
@@ -191,7 +195,11 @@ describe("ExperimentWorkbooksController", () => {
       const path = testApp.resolveOrpcPath(contract.experiments.upgradeWorkbookVersion, {
         id: expId,
       });
-      await testApp.post(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
+      await testApp
+        .post(path)
+        .withoutAuth()
+        .send({ expectedWorkbookId: faker.string.uuid() })
+        .expect(StatusCodes.UNAUTHORIZED);
     });
 
     it("should return 400 when no workbook is attached", async () => {
@@ -203,7 +211,11 @@ describe("ExperimentWorkbooksController", () => {
       const path = testApp.resolveOrpcPath(contract.experiments.upgradeWorkbookVersion, {
         id: expId,
       });
-      await testApp.post(path).withAuth(testUserId).expect(StatusCodes.BAD_REQUEST);
+      await testApp
+        .post(path)
+        .withAuth(testUserId)
+        .send({ expectedWorkbookId: faker.string.uuid() })
+        .expect(StatusCodes.BAD_REQUEST);
     });
   });
 
@@ -302,7 +314,7 @@ describe("ExperimentWorkbooksController", () => {
               }),
             )
             .withAuth(userId)
-            .send({ workbookId: faker.string.uuid() }),
+            .send({ workbookId: faker.string.uuid(), expectedWorkbookId: null }),
       },
       {
         name: "detach workbook",
@@ -314,7 +326,8 @@ describe("ExperimentWorkbooksController", () => {
                 id: experimentId,
               }),
             )
-            .withAuth(userId),
+            .withAuth(userId)
+            .send({ expectedWorkbookId: faker.string.uuid() }),
       },
       {
         name: "upgrade workbook version",

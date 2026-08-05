@@ -180,22 +180,40 @@ function mergeBranchTargets(
   branchNode: FlowNode,
   edges: FlowEdge[],
 ): BranchCell {
-  // A React Flow handle contains only the path id. When legacy/imported data
-  // contains duplicates, even the absence of an edge is ambiguous: clearing
-  // it could erase either path's goto. Refuse the whole structural merge.
-  for (const path of branch.paths) {
-    if (resolveBranchPathById(branch.paths, path.id).status === "ambiguous") {
+  const branchEdges = edges.filter(
+    (edge) => getFlowEdgeKind(edge) === "branch" && edge.source === branchNode.id,
+  );
+  const duplicateIds = new Set(
+    branch.paths
+      .filter((path) => resolveBranchPathById(branch.paths, path.id).status === "ambiguous")
+      .map((path) => path.id),
+  );
+
+  // Handles cannot identify one member of a duplicate-id group. Preserve such
+  // paths byte-for-byte when their target multiset is untouched, so unrelated
+  // reorders/additions/deletions remain saveable. Refuse only an operation that
+  // actually changes the ambiguous group's targets.
+  for (const pathId of duplicateIds) {
+    const existingTargets = branch.paths
+      .flatMap((path) => (path.id === pathId && path.gotoCellId ? [path.gotoCellId] : []))
+      .sort();
+    const projectedTargets = branchEdges
+      .filter((edge) => edge.sourceHandle === pathId)
+      .map((edge) => edge.target)
+      .sort();
+    if (JSON.stringify(existingTargets) !== JSON.stringify(projectedTargets)) {
       throw new Error(
-        `Branch path "${path.id}" is ambiguous. Repair its path id before saving the canvas.`,
+        `Path id "${pathId}" belongs to multiple branch paths. Open the branch node settings and edit the intended path there.`,
       );
     }
   }
+
   const targets = new Map<BranchPath, string>();
-  for (const edge of edges) {
-    if (getFlowEdgeKind(edge) !== "branch" || edge.source !== branchNode.id) continue;
+  for (const edge of branchEdges) {
     if (!edge.sourceHandle) {
       throw new Error(`Branch edge "${edge.id}" is missing its path handle.`);
     }
+    if (duplicateIds.has(edge.sourceHandle)) continue;
     const pathResolution = resolveBranchPathById(branch.paths, edge.sourceHandle);
     if (pathResolution.status !== "resolved") {
       throw new Error(
@@ -211,6 +229,7 @@ function mergeBranchTargets(
   return {
     ...branch,
     paths: branch.paths.map((path) => {
+      if (duplicateIds.has(path.id)) return path;
       const gotoCellId = targets.get(path);
       if (gotoCellId) return { ...path, gotoCellId };
       const { gotoCellId: _removed, ...withoutTarget } = path;

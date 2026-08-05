@@ -134,6 +134,20 @@ describe("BranchCellComponent", () => {
     expect(onUpdate).toHaveBeenCalled();
   });
 
+  it("persists an empty path label because the workbook schema permits it", async () => {
+    const user = userEvent.setup();
+    const { onUpdate } = renderBranch();
+    const input = screen.getByDisplayValue("Path 1");
+
+    await user.clear(input);
+
+    expect(onUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        paths: [expect.objectContaining({ id: "path-1", label: "" })],
+      }),
+    );
+  });
+
   it("updates only the selected path when duplicate ids are being repaired", async () => {
     const user = userEvent.setup();
     const duplicatePaths: BranchCell["paths"] = [

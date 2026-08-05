@@ -294,7 +294,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                 nodePathResolution.status === "ambiguous"
                   ? "ambiguous"
                   : "missing"
-              }. Repair its path id before editing the canvas.`,
+              }. Open the branch node settings and edit the intended path there.`,
             );
             return;
           }
@@ -646,17 +646,25 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                     onDrop={isDisabled || workbookCellsRef.current ? undefined : handleDrop}
                   >
                     {/* Fullscreen controls overlay */}
-                    {(repairIssues.length > 0 || structuralError) && (
+                    {structuralError && (
+                      <div
+                        role="alert"
+                        className="border-destructive/30 bg-background text-destructive fixed left-1/2 top-4 z-[100] flex max-w-md -translate-x-1/2 gap-2 rounded-md border px-3 py-2 text-xs shadow-md"
+                      >
+                        <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+                        <span>{structuralError}</span>
+                      </div>
+                    )}
+                    {repairIssues.length > 0 && (
                       <div
                         role="alert"
                         className="border-destructive/30 bg-background text-destructive absolute left-4 top-4 z-10 flex max-w-md gap-2 rounded-md border px-3 py-2 text-xs shadow-sm"
                       >
                         <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
                         <span>
-                          {structuralError ??
-                            (repairIssues.length === 1
-                              ? "A branch target was deleted and cleared. You can choose a new target."
-                              : `${repairIssues.length} branch targets were deleted and cleared. You can choose new targets.`)}
+                          {repairIssues.length === 1
+                            ? "A branch target was deleted and cleared. You can choose a new target."
+                            : `${repairIssues.length} branch targets were deleted and cleared. You can choose new targets.`}
                         </span>
                       </div>
                     )}
