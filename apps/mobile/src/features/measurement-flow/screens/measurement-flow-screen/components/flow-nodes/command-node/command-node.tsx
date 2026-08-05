@@ -5,10 +5,12 @@ import { ScrollView, Text, View } from "react-native";
 import { toast } from "sonner-native";
 import { useConnectedDevice } from "~/features/connection/hooks/use-device-connection";
 import { useScanner } from "~/features/connection/hooks/use-scan-manager";
+import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { ScanResult } from "~/features/measurement-flow/domain/flow-transitions";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import type { InlineCommandContent } from "~/shared/measurements/flow-node";
+import { resolveMeasurementDeviceId } from "~/shared/measurements/measurement-device-id";
 import { createLogger } from "~/shared/observability/logger";
 import { Button } from "~/shared/ui/Button";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
@@ -37,7 +39,10 @@ export function CommandNode({ content, nodeId }: CommandNodeProps) {
   const { t } = useTranslation("measurementFlow");
   const { executeCommand } = useScanner();
   const { data: device } = useConnectedDevice();
-  const { nextStep, setScanResult } = useMeasurementFlowStore();
+  const executorEntry = useScannerCommandExecutorStore((state) =>
+    device ? state.executors.get(device.id) : undefined,
+  );
+  const { nextStep, setScanResults, recordWorkbookDeviceOutcomes } = useMeasurementFlowStore();
 
   const [isRunning, setIsRunning] = useState(false);
   const [response, setResponse] = useState<string>();
@@ -50,13 +55,46 @@ export function CommandNode({ content, nodeId }: CommandNodeProps) {
     }
     setError(undefined);
     setIsRunning(true);
+    const fallbackDeviceId = executorEntry?.identity?.deviceId ?? device.id;
     try {
       const result = await executeCommand(resolveInlineCommand(content));
       setResponse(formatResponse(result));
+      const scanResult =
+        result !== null && typeof result === "object"
+          ? (result as ScanResult)
+          : ({ response: result } as ScanResult);
+      const measurementDeviceId =
+        resolveMeasurementDeviceId(scanResult, fallbackDeviceId) ?? fallbackDeviceId;
       // Persist so a downstream branch can read this command's output and it
       // uploads as a measurement, mirroring MeasurementNode.
-      setScanResult(result as ScanResult | undefined, nodeId);
+      setScanResults(
+        [
+          {
+            device: { id: device.id, name: device.name },
+            measurementDeviceId,
+            producerCellId: nodeId,
+            result: scanResult,
+          },
+        ],
+        nodeId,
+      );
+      recordWorkbookDeviceOutcomes([
+        {
+          producer_cell_id: nodeId,
+          transport_device_id: device.id,
+          device_id: measurementDeviceId,
+          outcome: "ok",
+        },
+      ]);
     } catch (err) {
+      recordWorkbookDeviceOutcomes([
+        {
+          producer_cell_id: nodeId,
+          transport_device_id: device.id,
+          device_id: fallbackDeviceId,
+          outcome: "failed",
+        },
+      ]);
       log.error("command error", { err: (err as Error)?.message });
       setError((err as Error)?.message);
       toast.error(t("measurementFlow:commandNode.toast.error"));

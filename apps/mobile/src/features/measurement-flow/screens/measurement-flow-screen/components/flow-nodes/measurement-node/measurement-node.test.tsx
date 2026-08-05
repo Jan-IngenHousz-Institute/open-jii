@@ -14,6 +14,7 @@ const {
   refetchConnectedDevices,
   nextStep,
   setScanResults,
+  recordWorkbookDeviceOutcomes,
   navigateToQuestionFromOverview,
   openDeviceSheet,
   toastError,
@@ -27,6 +28,7 @@ const {
   refetchConnectedDevices: vi.fn(),
   nextStep: vi.fn(),
   setScanResults: vi.fn(),
+  recordWorkbookDeviceOutcomes: vi.fn(),
   navigateToQuestionFromOverview: vi.fn(),
   openDeviceSheet: vi.fn(),
   toastError: vi.fn(),
@@ -54,8 +56,11 @@ vi.mock("~/features/connection/hooks/use-device-connection", () => ({
 
 // The capture hook reads the Primary device's live progress off the store.
 vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
-  useScannerCommandExecutorStore: (selector: (s: object) => unknown) =>
-    selector({ progress: undefined, scanStartedAt: undefined, estimatedMs: undefined }),
+  useScannerCommandExecutorStore: Object.assign(
+    (selector: (s: object) => unknown) =>
+      selector({ progress: undefined, scanStartedAt: undefined, estimatedMs: undefined }),
+    { getState: () => ({ executors: new Map() }) },
+  ),
 }));
 
 vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({
@@ -68,8 +73,7 @@ vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => (
     nextStep,
     setScanResults,
     navigateToQuestionFromOverview,
-    recordExpectedDevices: vi.fn(),
-    recordRealizedOutcomes: vi.fn(),
+    recordWorkbookDeviceOutcomes,
   }),
 }));
 
@@ -168,6 +172,7 @@ describe("MeasurementNode start-scan guards", () => {
         {
           device: { id: "dev-1", name: "MultispeQ #1" },
           result: { result: 42 },
+          measurementDeviceId: "dev-1",
           producerCellId: "m1",
         },
       ],
@@ -241,11 +246,13 @@ describe("MeasurementNode start-scan guards", () => {
         {
           device: { id: "dev-1", name: "MultispeQ #1" },
           result: { result: 1 },
+          measurementDeviceId: "dev-1",
           producerCellId: "m1",
         },
         {
           device: { id: "dev-2", name: "MultispeQ #2" },
           result: { result: 2 },
+          measurementDeviceId: "dev-2",
           producerCellId: "m1",
         },
       ],
@@ -287,6 +294,7 @@ describe("MeasurementNode start-scan guards", () => {
         {
           device: { id: "dev-1", name: "MultispeQ #1" },
           result: { result: 1 },
+          measurementDeviceId: "dev-1",
           producerCellId: "m1",
         },
       ],

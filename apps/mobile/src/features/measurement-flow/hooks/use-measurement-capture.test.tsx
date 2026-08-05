@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => {
     completeDevicePlan: vi.fn(),
     recordExpectedDevices: vi.fn(),
     recordRealizedOutcomes: vi.fn(),
+    recordWorkbookDeviceOutcomes: vi.fn(),
     flowNodes: [] as {
       id: string;
       name: string;
@@ -67,9 +68,16 @@ vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({
     selector({ open: mocks.openDeviceSheet }),
 }));
 vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
-  useScannerCommandExecutorStore: (
-    selector: (state: { progress: number; scanStartedAt: number; estimatedMs: number }) => unknown,
-  ) => selector({ progress: 0, scanStartedAt: 0, estimatedMs: 0 }),
+  useScannerCommandExecutorStore: Object.assign(
+    (
+      selector: (state: {
+        progress: number;
+        scanStartedAt: number;
+        estimatedMs: number;
+      }) => unknown,
+    ) => selector({ progress: 0, scanStartedAt: 0, estimatedMs: 0 }),
+    { getState: () => ({ executors: new Map() }) },
+  ),
 }));
 vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
   useMeasurementFlowStore: mocks.useMeasurementFlowStore,
@@ -123,8 +131,8 @@ describe("useMeasurementCapture", () => {
   it("records a successful broadcast round in connection order and advances", async () => {
     mocks.executeScanAll.mockResolvedValue({
       successes: [
-        { device: DEVICE_B, result: { value: 2 } },
-        { device: DEVICE_A, result: { value: 1 } },
+        { device: DEVICE_B, result: { device_id: "firmware-b", value: 2 } },
+        { device: DEVICE_A, result: { device_id: "firmware-a", value: 1 } },
       ],
       failures: [],
     });
@@ -133,24 +141,32 @@ describe("useMeasurementCapture", () => {
     await act(async () => result.current.startScan());
 
     expect(mocks.executeScanAll).toHaveBeenCalledWith(CONTENT.protocol, [DEVICE_A, DEVICE_B]);
-    expect(mocks.flowState.recordExpectedDevices).toHaveBeenCalledWith([
-      { producerCellId: "measurement-cell", deviceId: "usb-a" },
-      { producerCellId: "measurement-cell", deviceId: "usb-b" },
-    ]);
-    expect(mocks.flowState.recordRealizedOutcomes).toHaveBeenCalledWith([
-      { producer_cell_id: "measurement-cell", device_id: "usb-b", outcome: "ok" },
-      { producer_cell_id: "measurement-cell", device_id: "usb-a", outcome: "ok" },
+    expect(mocks.flowState.recordWorkbookDeviceOutcomes).toHaveBeenCalledWith([
+      {
+        producer_cell_id: "measurement-cell",
+        transport_device_id: "usb-b",
+        device_id: "firmware-b",
+        outcome: "ok",
+      },
+      {
+        producer_cell_id: "measurement-cell",
+        transport_device_id: "usb-a",
+        device_id: "firmware-a",
+        outcome: "ok",
+      },
     ]);
     expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
       [
         {
           device: { id: "usb-a", name: "Device A" },
-          result: { value: 1 },
+          result: { device_id: "firmware-a", value: 1 },
+          measurementDeviceId: "firmware-a",
           producerCellId: "measurement-cell",
         },
         {
           device: { id: "usb-b", name: "Device B" },
-          result: { value: 2 },
+          result: { device_id: "firmware-b", value: 2 },
+          measurementDeviceId: "firmware-b",
           producerCellId: "measurement-cell",
         },
       ],
@@ -243,6 +259,7 @@ describe("useMeasurementCapture", () => {
         {
           device: { id: "usb-a", name: "Device A" },
           result: { value: 1 },
+          measurementDeviceId: "usb-a",
           producerCellId: "target-1",
           protocolId: "proto-a",
           protocolName: "Protocol A",
@@ -250,6 +267,7 @@ describe("useMeasurementCapture", () => {
         {
           device: { id: "usb-b", name: "Device B" },
           result: { value: 2 },
+          measurementDeviceId: "usb-b",
           producerCellId: "target-2",
           protocolId: undefined,
           protocolName: "Command target",

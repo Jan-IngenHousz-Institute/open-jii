@@ -29,9 +29,13 @@ import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.sch
 import {
   addExpectedDevice,
   addRealizedOutcome,
+  addWorkbookDeviceOutcome,
   buildPendingManifest,
 } from "../domain/workbook-run-manifest";
-import type { WorkbookRunRealized } from "../domain/workbook-run-manifest";
+import type {
+  WorkbookRunDeviceOutcome,
+  WorkbookRunRealized,
+} from "../domain/workbook-run-manifest";
 
 interface MeasurementFlowStore extends FlowState {
   // AutoProceededSummary anchor: first manual question at the start of the
@@ -79,6 +83,7 @@ interface MeasurementFlowStore extends FlowState {
   dismissQuestionsSubmit: () => void;
   recordExpectedDevices: (entries: { producerCellId: string; deviceId: string }[]) => void;
   recordRealizedOutcomes: (entries: WorkbookRunRealized[]) => void;
+  recordWorkbookDeviceOutcomes: (entries: WorkbookRunDeviceOutcome[]) => void;
   acknowledgeWorkbookRunManifest: (attemptId: string) => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
@@ -231,6 +236,21 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           ),
         })),
 
+      recordWorkbookDeviceOutcomes: (entries) =>
+        set((state) => {
+          const next = entries.reduce(
+            (ledger, entry) => addWorkbookDeviceOutcome(ledger.expected, ledger.realized, entry),
+            {
+              expected: state.workbookRunExpected,
+              realized: state.workbookRunRealized,
+            },
+          );
+          return {
+            workbookRunExpected: next.expected,
+            workbookRunRealized: next.realized,
+          };
+        }),
+
       acknowledgeWorkbookRunManifest: (attemptId) =>
         set((state) => ({
           pendingWorkbookRunManifests: state.pendingWorkbookRunManifests.filter(
@@ -246,12 +266,25 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
     {
       name: "measurement-flow-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // v1 wire format, pinned by flow-store-persistence.test.ts. v1 discards
-      // flows persisted by pre-fix (v0) builds, which can hold a mis-seeded
-      // plot or a stale "Experiment" name; the upgrade starts them clean.
-      version: 1,
-      migrate: (persisted, version) =>
-        (version < 1 ? initialFlowState : persisted) as MeasurementFlowStore,
+      // v2 adds attempt/manifest state to the already-shipped v1 wire format.
+      // Active v1 flows mint an attempt during hydration so resume can upload.
+      version: 2,
+      migrate: (persisted, version) => {
+        if (version < 1) return initialFlowState;
+        if (version < 2) {
+          const legacy: Partial<FlowState> =
+            persisted !== null && typeof persisted === "object" ? { ...persisted } : {};
+          return {
+            ...legacy,
+            workbookAttemptId:
+              legacy.workbookAttemptId ?? (legacy.experimentId ? uuidv4() : undefined),
+            workbookRunExpected: legacy.workbookRunExpected ?? [],
+            workbookRunRealized: legacy.workbookRunRealized ?? [],
+            pendingWorkbookRunManifests: legacy.pendingWorkbookRunManifests ?? [],
+          };
+        }
+        return persisted;
+      },
       // protocolId was dropped from the persisted slice (now derived from
       // flowNodes via flowProtocolId); legacy payloads carrying it merge in
       // as an ignored extra key.

@@ -138,20 +138,6 @@ describe("useWorkbookExecution", () => {
     const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
     expect(updated.every((c) => c.type !== "output")).toBe(true);
     expect(updated).toHaveLength(2);
-    expect(result.current.workbookAttemptId).toBeUndefined();
-  });
-
-  it("mints a fresh attempt id at each execution entry", async () => {
-    const cell = createMarkdownCell();
-    const { result } = renderExecution([cell]);
-
-    await act(() => result.current.runCell(cell.id));
-    const first = result.current.workbookAttemptId;
-
-    await act(() => result.current.runAll());
-    expect(first).toBeTruthy();
-    expect(result.current.workbookAttemptId).toBeTruthy();
-    expect(result.current.workbookAttemptId).not.toBe(first);
   });
 
   describe("runCell - protocol", () => {

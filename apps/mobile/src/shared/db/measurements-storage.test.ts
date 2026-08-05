@@ -137,8 +137,8 @@ describe("measurements-storage", () => {
           workbook_attempt_id: "attempt-1",
         },
       };
-      await mod.saveMeasurementIdempotently(control, "pending", "manifest:attempt-1");
-      await mod.saveMeasurementIdempotently(control, "pending", "manifest:attempt-1");
+      await mod.saveMeasurementLatest(control, "pending", "manifest:attempt-1");
+      await mod.saveMeasurementLatest(control, "pending", "manifest:attempt-1");
 
       const rows = sqlite.prepare("SELECT id, record_kind FROM measurements").all() as any[];
       expect(rows).toEqual([{ id: "manifest:attempt-1", record_kind: "workbook_run_complete" }]);
@@ -150,6 +150,71 @@ describe("measurements-storage", () => {
         failed: 0,
         successful: 0,
       });
+    });
+
+    it("keeps identical replays settled but makes a divergent latest manifest pending", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      const first = {
+        ...mockMeasurement,
+        measurementResult: {
+          record_kind: "workbook_run_complete",
+          workbook_attempt_id: "attempt-1",
+          terminal_status: "partial",
+        },
+      };
+      await mod.saveMeasurementLatest(first, "pending", "manifest:attempt-1");
+      await mod.markAsSuccessful("manifest:attempt-1");
+      await mod.saveMeasurementLatest(first, "pending", "manifest:attempt-1");
+      expect(
+        (sqlite.prepare("SELECT status FROM measurements").get() as { status: string }).status,
+      ).toBe("successful");
+
+      await mod.saveMeasurementLatest(
+        {
+          ...first,
+          measurementResult: { ...first.measurementResult, terminal_status: "complete" },
+        },
+        "pending",
+        "manifest:attempt-1",
+      );
+      const latest = await mod.getMeasurement("manifest:attempt-1");
+      expect(latest?.status).toBe("pending");
+      expect(latest?.data.measurementResult).toMatchObject({ terminal_status: "complete" });
+    });
+
+    it("finds saved workbook attempts that have no terminal row", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.saveMeasurementLatest(
+        {
+          ...mockMeasurement,
+          measurementResult: { workbook_attempt_id: "attempt-missing", value: 42 },
+        },
+        "pending",
+        "measurement:attempt-missing",
+      );
+      await mod.saveMeasurementLatest(
+        {
+          ...mockMeasurement,
+          measurementResult: {
+            record_kind: "workbook_run_complete",
+            workbook_attempt_id: "attempt-complete",
+          },
+        },
+        "pending",
+        "manifest:attempt-complete",
+      );
+      await mod.saveMeasurementLatest(
+        {
+          ...mockMeasurement,
+          measurementResult: { workbook_attempt_id: "attempt-complete", value: 7 },
+        },
+        "pending",
+        "measurement:attempt-complete",
+      );
+
+      await expect(mod.getWorkbookAttemptIdsMissingTerminal()).resolves.toEqual([
+        "attempt-missing",
+      ]);
     });
 
     it("rejects an unknown status at the database level (CHECK constraint)", () => {

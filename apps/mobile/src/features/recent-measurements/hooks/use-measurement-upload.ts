@@ -91,6 +91,7 @@ export function useMeasurementUpload() {
         protocolId?: string;
         protocolName?: string;
         producerCellId?: string;
+        measurementDeviceId?: string;
         macroContext?: Record<string, unknown>;
       }[];
     }) => {
@@ -140,7 +141,7 @@ export function useMeasurementUpload() {
           workbookAttemptId,
           producerCellId: result.producerCellId,
           macroContext,
-          fallbackDeviceId: device?.id,
+          fallbackDeviceId: result.measurementDeviceId ?? device?.id,
           location,
         });
 

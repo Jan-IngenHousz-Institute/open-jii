@@ -366,12 +366,12 @@ describe("AnalysisNode upload with a command in the flow", () => {
       workbookVersionId: "version-1",
       workbookAttemptId: "attempt-1",
       workbookRunExpected: [
-        { producer_cell_id: "p1", device_ids: ["1"] },
-        { producer_cell_id: "p2", device_ids: ["2"] },
+        { producer_cell_id: "p1", device_ids: ["firmware-1"] },
+        { producer_cell_id: "p2", device_ids: ["firmware-2"] },
       ],
       workbookRunRealized: [
-        { producer_cell_id: "p1", device_id: "1", outcome: "ok" },
-        { producer_cell_id: "p2", device_id: "2", outcome: "failed" },
+        { producer_cell_id: "p1", device_id: "firmware-1", outcome: "ok" },
+        { producer_cell_id: "p2", device_id: "firmware-2", outcome: "failed" },
       ],
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
@@ -380,11 +380,13 @@ describe("AnalysisNode upload with a command in the flow", () => {
         {
           device: { id: "1", name: "MultispeQ #1" },
           result: { sample: [{ phi2: 0.8 }] },
+          measurementDeviceId: "firmware-1",
           producerCellId: "p1",
         },
         {
           device: { id: "2", name: "MultispeQ #2" },
           result: { sample: [{ phi2: 0.7 }] },
+          measurementDeviceId: "firmware-2",
           producerCellId: "p2",
         },
       ],
@@ -429,12 +431,14 @@ describe("AnalysisNode upload with a command in the flow", () => {
         {
           rawMeasurement: { sample: [{ phi2: 0.8 }] },
           device: { id: "1" },
+          measurementDeviceId: "firmware-1",
           producerCellId: "p1",
           macroContext: { measurement: { phi2: 0.8 } },
         },
         {
           rawMeasurement: { sample: [{ phi2: 0.7 }] },
           device: { id: "2" },
+          measurementDeviceId: "firmware-2",
           producerCellId: "p2",
           macroContext: { measurement: { phi2: 0.7 } },
         },

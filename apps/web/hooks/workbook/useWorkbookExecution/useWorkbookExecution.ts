@@ -163,9 +163,8 @@ export function useWorkbookExecution({
 }: UseWorkbookExecutionOptions) {
   const [executionStates, setExecutionStates] = useState<Record<string, CellExecutionState>>({});
   const [isRunningAll, setIsRunningAll] = useState(false);
-  const [workbookAttemptId, setWorkbookAttemptId] = useState<string>();
   const [lastRunCompletion, setLastRunCompletion] = useState<{
-    attemptId: string;
+    sequence: number;
     status: "complete" | "partial";
   }>();
   const [sensorFamily, setSensorFamilyState] = useState<SensorFamily>(() =>
@@ -174,6 +173,7 @@ export function useWorkbookExecution({
   const [connectionType, setConnectionType] = useState<WorkbookConnectionType>("serial");
   const abortRef = useRef(false);
   const partialAttemptRef = useRef(false);
+  const completionSequenceRef = useRef(0);
   const attemptCompletionStatus = useCallback(
     (): "complete" | "partial" => (partialAttemptRef.current ? "partial" : "complete"),
     [],
@@ -784,8 +784,6 @@ export function useWorkbookExecution({
 
   const runCell = useCallback(
     async (cellId: string) => {
-      const attemptId = crypto.randomUUID();
-      setWorkbookAttemptId(attemptId);
       partialAttemptRef.current = false;
       setLastRunCompletion(undefined);
       let currentCells = cellsRef.current;
@@ -826,7 +824,7 @@ export function useWorkbookExecution({
         }
       }
       setLastRunCompletion({
-        attemptId,
+        sequence: ++completionSequenceRef.current,
         status: attemptCompletionStatus(),
       });
     },
@@ -837,8 +835,6 @@ export function useWorkbookExecution({
   const shouldAbort = () => abortRef.current;
 
   const runAll = useCallback(async () => {
-    const attemptId = crypto.randomUUID();
-    setWorkbookAttemptId(attemptId);
     partialAttemptRef.current = false;
     setLastRunCompletion(undefined);
     setIsRunningAll(true);
@@ -882,7 +878,7 @@ export function useWorkbookExecution({
     setIsRunningAll(false);
     if (!shouldAbort()) {
       setLastRunCompletion({
-        attemptId,
+        sequence: ++completionSequenceRef.current,
         status: attemptCompletionStatus(),
       });
     }
@@ -897,7 +893,6 @@ export function useWorkbookExecution({
     onCellsChangeRef.current(filtered);
     execCounterRef.current = 0;
     setExecutionStates({});
-    setWorkbookAttemptId(undefined);
     setLastRunCompletion(undefined);
   }, []);
 
@@ -923,7 +918,6 @@ export function useWorkbookExecution({
     disconnectDevice,
 
     executionStates,
-    workbookAttemptId,
     lastRunCompletion,
     isRunningAll,
     runCell,

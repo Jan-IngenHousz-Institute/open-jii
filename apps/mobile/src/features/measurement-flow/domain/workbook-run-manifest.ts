@@ -1,4 +1,4 @@
-export type WorkbookRunTerminalStatus = "complete" | "partial" | "failed" | "abandoned";
+export type WorkbookRunTerminalStatus = "complete" | "partial" | "failed" | "abandoned" | "unknown";
 
 export interface WorkbookRunExpected {
   producer_cell_id: string;
@@ -7,6 +7,15 @@ export interface WorkbookRunExpected {
 
 export interface WorkbookRunRealized {
   producer_cell_id: string;
+  device_id: string;
+  outcome: "ok" | "failed";
+  /** Local-only logical member key; stripped from the terminal wire record. */
+  transport_device_id?: string;
+}
+
+export interface WorkbookRunDeviceOutcome {
+  producer_cell_id: string;
+  transport_device_id: string;
   device_id: string;
   outcome: "ok" | "failed";
 }
@@ -45,6 +54,18 @@ export function addExpectedDevice(
   );
 }
 
+function removeExpectedDevice(
+  expected: WorkbookRunExpected[],
+  producerCellId: string,
+  deviceId: string,
+): WorkbookRunExpected[] {
+  return expected.flatMap((entry) => {
+    if (entry.producer_cell_id !== producerCellId) return [entry];
+    const deviceIds = entry.device_ids.filter((id) => id !== deviceId);
+    return deviceIds.length > 0 ? [{ ...entry, device_ids: deviceIds }] : [];
+  });
+}
+
 export function addRealizedOutcome(
   realized: WorkbookRunRealized[],
   outcome: WorkbookRunRealized,
@@ -59,6 +80,35 @@ export function addRealizedOutcome(
   return next;
 }
 
+/** Replace a retry's earlier fallback id when firmware identity becomes known. */
+export function addWorkbookDeviceOutcome(
+  expected: WorkbookRunExpected[],
+  realized: WorkbookRunRealized[],
+  outcome: WorkbookRunDeviceOutcome,
+): { expected: WorkbookRunExpected[]; realized: WorkbookRunRealized[] } {
+  const priorIndex = realized.findIndex(
+    (entry) =>
+      entry.producer_cell_id === outcome.producer_cell_id &&
+      (entry.transport_device_id === outcome.transport_device_id ||
+        (entry.transport_device_id === undefined && entry.device_id === outcome.device_id)),
+  );
+  const prior = priorIndex >= 0 ? realized[priorIndex] : undefined;
+  const withoutStaleExpected =
+    prior && prior.device_id !== outcome.device_id
+      ? removeExpectedDevice(expected, outcome.producer_cell_id, prior.device_id)
+      : expected;
+  const nextExpected = addExpectedDevice(
+    withoutStaleExpected,
+    outcome.producer_cell_id,
+    outcome.device_id,
+  );
+  const nextOutcome: WorkbookRunRealized = { ...outcome };
+  if (priorIndex < 0) return { expected: nextExpected, realized: [...realized, nextOutcome] };
+  const nextRealized = [...realized];
+  nextRealized[priorIndex] = nextOutcome;
+  return { expected: nextExpected, realized: nextRealized };
+}
+
 export function deriveTerminalStatus(
   expected: WorkbookRunExpected[],
   realized: WorkbookRunRealized[],
@@ -66,7 +116,7 @@ export function deriveTerminalStatus(
   const expectedPairs = expected.flatMap((entry) =>
     entry.device_ids.map((deviceId) => `${entry.producer_cell_id}\u0000${deviceId}`),
   );
-  if (expectedPairs.length === 0) return "complete";
+  if (expectedPairs.length === 0) return "unknown";
 
   const realizedByPair = new Map<string, WorkbookRunRealized["outcome"]>(
     realized.map(
@@ -100,7 +150,11 @@ export function buildPendingManifest(input: {
       ...(input.workbookVersionId ? { workbook_version_id: input.workbookVersionId } : {}),
       terminal_status: input.terminalStatus ?? deriveTerminalStatus(input.expected, input.realized),
       expected: input.expected,
-      realized: input.realized,
+      realized: input.realized.map(({ producer_cell_id, device_id, outcome }) => ({
+        producer_cell_id,
+        device_id,
+        outcome,
+      })),
     },
   };
 }

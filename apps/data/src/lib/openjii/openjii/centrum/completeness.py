@@ -119,6 +119,7 @@ def derive_workbook_run_completeness(manifests: DataFrame, measurements: DataFra
             F.col("manifest.received_count").alias("received_count"),
             F.col("manifest.missing_pairs").alias("missing_pairs"),
             F.when(F.col("manifest._has_manifest").isNull(), F.lit("unknown"))
+            .when(F.col("manifest.expected_count") == F.lit(0), F.lit("unknown"))
             .when(F.col("manifest.expected_count") == F.col("manifest.received_count"), F.lit("complete"))
             .otherwise(F.lit("partial"))
             .alias("completeness"),

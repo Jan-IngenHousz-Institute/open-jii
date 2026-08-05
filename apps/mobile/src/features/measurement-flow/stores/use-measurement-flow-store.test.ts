@@ -124,6 +124,39 @@ describe("useMeasurementFlowStore", () => {
       ]);
     });
 
+    it("replaces a failed transport fallback when retry learns firmware identity", () => {
+      const store = useMeasurementFlowStore.getState();
+      store.recordWorkbookDeviceOutcomes([
+        {
+          producer_cell_id: "cell-1",
+          transport_device_id: "usb-42",
+          device_id: "usb-42",
+          outcome: "failed",
+        },
+      ]);
+      useMeasurementFlowStore.getState().recordWorkbookDeviceOutcomes([
+        {
+          producer_cell_id: "cell-1",
+          transport_device_id: "usb-42",
+          device_id: "MSPx-0001",
+          outcome: "ok",
+        },
+      ]);
+
+      const state = useMeasurementFlowStore.getState();
+      expect(state.workbookRunExpected).toEqual([
+        { producer_cell_id: "cell-1", device_ids: ["MSPx-0001"] },
+      ]);
+      expect(state.workbookRunRealized).toEqual([
+        {
+          producer_cell_id: "cell-1",
+          transport_device_id: "usb-42",
+          device_id: "MSPx-0001",
+          outcome: "ok",
+        },
+      ]);
+    });
+
     it("setCurrentStep updates currentStep", () => {
       useMeasurementFlowStore.getState().setCurrentStep(3);
       expect(useMeasurementFlowStore.getState().currentStep).toBe(3);

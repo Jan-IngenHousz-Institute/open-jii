@@ -2,7 +2,12 @@
 // construction (including quirks) so refactors can prove equivalence.
 // Pure since Stage 1: input mutation assertions flipped deliberately.
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  addWorkbookDeviceOutcome,
+  deriveTerminalStatus,
+} from "~/features/measurement-flow/domain/workbook-run-manifest";
 import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
+import { resolveMeasurementDeviceId } from "~/shared/measurements/measurement-device-id";
 
 // Deterministic compression stand-in; records exactly what was compressed.
 const mockCompressSample = vi.fn((sample: unknown) => `compressed:${JSON.stringify(sample)}`);
@@ -235,6 +240,29 @@ describe("input purity", () => {
 });
 
 describe("workbook run correlation", () => {
+  it("uses one canonical id when firmware identity differs from transport identity", () => {
+    const rawMeasurement = { device_id: "MSPx-0001" };
+    const measurementDeviceId = resolveMeasurementDeviceId(rawMeasurement, "usb-42");
+    if (!measurementDeviceId) throw new Error("fixture did not resolve a device id");
+    const ledger = addWorkbookDeviceOutcome([], [], {
+      producer_cell_id: "producer-1",
+      transport_device_id: "usb-42",
+      device_id: measurementDeviceId,
+      outcome: "ok",
+    });
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement,
+      fallbackDeviceId: measurementDeviceId,
+    });
+
+    expect(payload.device_id).toBe("MSPx-0001");
+    expect(ledger.expected).toEqual([
+      { producer_cell_id: "producer-1", device_ids: [payload.device_id] },
+    ]);
+    expect(deriveTerminalStatus(ledger.expected, ledger.realized)).toBe("complete");
+  });
+
   it("stamps the execution-entry attempt id on every payload", () => {
     const payload = buildUploadPayload({
       ...baseArgs,

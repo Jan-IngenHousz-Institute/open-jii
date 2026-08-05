@@ -18,6 +18,7 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { playSound } from "~/features/measurement-flow/utils/play-sound";
 import { useTranslation } from "~/shared/i18n";
 import type { FlowNode, MeasurementContent } from "~/shared/measurements/flow-node";
+import { resolveMeasurementDeviceId } from "~/shared/measurements/measurement-device-id";
 import { createLogger } from "~/shared/observability/logger";
 import type { Device } from "~/shared/types/device";
 
@@ -74,8 +75,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     navigateToQuestionFromOverview,
     devicePlan,
     completeDevicePlan,
-    recordExpectedDevices,
-    recordRealizedOutcomes,
+    recordWorkbookDeviceOutcomes,
   } = useMeasurementFlowStore();
   // The dispatch plan applies only while THIS node is one of its targets;
   // otherwise it is stale routing state and the node broadcasts as before.
@@ -95,9 +95,9 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
 
   // Per-device payload provenance of the dispatch round (deviceId keyed),
   // stamped onto each result so its upload carries its own protocolId.
-  const assignmentMetaRef = useRef<Record<string, { protocolId?: string; protocolName?: string }>>(
-    {},
-  );
+  const assignmentMetaRef = useRef<
+    Record<string, { protocolId?: string; protocolName?: string; measurementDeviceId?: string }>
+  >({});
 
   // Keep stable refs so the disconnect-cleanup effect below doesn't need to
   // list these as dependencies (avoids any memoisation concerns).
@@ -227,12 +227,6 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
 
       const producerFor = (deviceId: string) =>
         activePlan?.find((entry) => entry.deviceId === deviceId)?.targetCellId ?? nodeId;
-      recordExpectedDevices(
-        pendingDevices.flatMap((device) => {
-          const producerCellId = producerFor(device.id);
-          return producerCellId ? [{ producerCellId, deviceId: device.id }] : [];
-        }),
-      );
 
       try {
         let round: MultiScanRound;
@@ -249,26 +243,50 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
           ),
           ...round.successes,
         ];
-        recordRealizedOutcomes([
-          ...round.successes.flatMap(({ device }) => {
+        const fallbackDeviceIdFor = (deviceId: string) =>
+          useScannerCommandExecutorStore.getState().executors.get(deviceId)?.identity?.deviceId ??
+          deviceId;
+        const deviceOutcomes = [
+          ...round.successes.flatMap(({ device, result }) => {
             const producerCellId = producerFor(device.id);
-            return producerCellId
-              ? [{ producer_cell_id: producerCellId, device_id: device.id, outcome: "ok" as const }]
-              : [];
-          }),
-          ...round.failures.flatMap(({ device }) => {
-            const producerCellId = producerFor(device.id);
+            const measurementDeviceId = resolveMeasurementDeviceId(
+              result,
+              fallbackDeviceIdFor(device.id),
+            );
+            assignmentMetaRef.current[device.id] = {
+              ...assignmentMetaRef.current[device.id],
+              measurementDeviceId,
+            };
             return producerCellId
               ? [
                   {
                     producer_cell_id: producerCellId,
-                    device_id: device.id,
+                    transport_device_id: device.id,
+                    device_id: measurementDeviceId ?? device.id,
+                    outcome: "ok" as const,
+                  },
+                ]
+              : [];
+          }),
+          ...round.failures.flatMap(({ device }) => {
+            const producerCellId = producerFor(device.id);
+            const measurementDeviceId = resolveMeasurementDeviceId(
+              undefined,
+              fallbackDeviceIdFor(device.id),
+            );
+            return producerCellId
+              ? [
+                  {
+                    producer_cell_id: producerCellId,
+                    transport_device_id: device.id,
+                    device_id: measurementDeviceId ?? device.id,
                     outcome: "failed" as const,
                   },
                 ]
               : [];
           }),
-        ]);
+        ];
+        recordWorkbookDeviceOutcomes(deviceOutcomes);
 
         if (round.failures.length > 0 && successesRef.current.length === 0) {
           const kind = classifyScanError(round.failures[0].error);

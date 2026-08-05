@@ -139,14 +139,49 @@ export async function saveMeasurement(
   return id;
 }
 
-/** Insert a durable outbox row under a caller-owned id. Replays are no-ops. */
-export async function saveMeasurementIdempotently(
+/**
+ * Store the latest authoritative body under a caller-owned id. Identical
+ * replays are no-ops; a divergent later body resets delivery to pending.
+ */
+export async function saveMeasurementLatest(
   upload: Measurement,
   status: MeasurementStatus,
   id: string,
-): Promise<string> {
+): Promise<{ id: string; changed: boolean }> {
   await ensureMigrated();
   const derived = deriveListColumns(upload.measurementResult, upload.metadata.timestamp);
+  const existing = db
+    .select({ measurementResult: measurements.measurementResult })
+    .from(measurements)
+    .where(eq(measurements.id, id))
+    .get();
+  if (existing) {
+    let isIdentical = false;
+    try {
+      isIdentical =
+        JSON.stringify(decompressFromStorage(existing.measurementResult)) ===
+        JSON.stringify(upload.measurementResult);
+    } catch {
+      // A corrupt earlier body is replaced by the recoverable latest snapshot.
+    }
+    if (isIdentical) return { id, changed: false };
+    db.update(measurements)
+      .set({
+        status,
+        topic: upload.topic,
+        measurementResult: compressForStorage(upload.measurementResult),
+        experimentName: upload.metadata.experimentName,
+        protocolName: upload.metadata.protocolName,
+        timestamp: upload.metadata.timestamp,
+        questionsText: derived.questionsText,
+        hasComment: derived.hasComment,
+        dayKey: derived.dayKey,
+        recordKind: (upload.measurementResult as { record_kind?: string }).record_kind,
+      })
+      .where(eq(measurements.id, id))
+      .run();
+    return { id, changed: true };
+  }
   db.insert(measurements)
     .values({
       id,
@@ -161,9 +196,36 @@ export async function saveMeasurementIdempotently(
       dayKey: derived.dayKey,
       recordKind: (upload.measurementResult as { record_kind?: string }).record_kind,
     })
-    .onConflictDoNothing()
     .run();
-  return id;
+  return { id, changed: true };
+}
+
+/** Attempts with locally saved rows but no locally durable terminal record. */
+export async function getWorkbookAttemptIdsMissingTerminal(): Promise<string[]> {
+  await ensureMigrated();
+  const rows = db
+    .select({
+      recordKind: measurements.recordKind,
+      measurementResult: measurements.measurementResult,
+    })
+    .from(measurements)
+    .all();
+  const measurementAttempts = new Set<string>();
+  const terminalAttempts = new Set<string>();
+  for (const row of rows) {
+    try {
+      const payload = decompressFromStorage<{ workbook_attempt_id?: unknown }>(
+        row.measurementResult,
+      );
+      const attemptId = payload.workbook_attempt_id;
+      if (typeof attemptId !== "string" || attemptId.length === 0) continue;
+      if (row.recordKind === WORKBOOK_RUN_COMPLETE_RECORD_KIND) terminalAttempts.add(attemptId);
+      else measurementAttempts.add(attemptId);
+    } catch {
+      // A corrupt unrelated row cannot prove either side of completeness.
+    }
+  }
+  return [...measurementAttempts].filter((attemptId) => !terminalAttempts.has(attemptId));
 }
 
 // Computed at save/update time so the list query never decompresses
@@ -452,6 +514,12 @@ export async function markAsFailed(key: string): Promise<void> {
   } catch (error) {
     log.error("Failed to mark measurement as failed", { key, err: (error as Error)?.message });
   }
+}
+
+/** Re-arm a latest-authoritative row after an older in-flight body settles. */
+export async function markAsPending(key: string): Promise<void> {
+  await ensureMigrated();
+  db.update(measurements).set({ status: "pending" }).where(eq(measurements.id, key)).run();
 }
 
 export async function markAsSuccessful(key: string): Promise<void> {

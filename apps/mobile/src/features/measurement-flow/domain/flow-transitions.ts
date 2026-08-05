@@ -18,6 +18,8 @@ export type ScanResult = Record<string, unknown>;
 /** One device's scan output; device is absent for legacy single-device results. */
 export interface ScanResultEntry {
   device?: { id: string; name: string };
+  /** Canonical firmware/handshake/transport identity stamped on the row and manifest. */
+  measurementDeviceId?: string;
   result: ScanResult;
   /** Workbook cell that produced this device's row; required for completeness joins. */
   producerCellId?: string;

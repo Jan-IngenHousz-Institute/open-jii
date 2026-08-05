@@ -111,3 +111,19 @@ def test_rows_without_manifest_are_unknown(spark) -> None:
 
     after_manifest = derive_workbook_run_completeness(_manifest_rows(spark), measurements).collect()[0]
     assert after_manifest.completeness == "complete"
+
+
+@pytest.mark.spark
+def test_manifest_without_expected_membership_is_unknown(spark) -> None:
+    now = datetime(2026, 8, 5, tzinfo=timezone.utc)
+    manifests = spark.createDataFrame(
+        [("experiment-1", "attempt-empty", "version-1", "unknown", [], now, "1")],
+        MANIFEST_SCHEMA,
+    )
+    measurements = spark.createDataFrame([], MEASUREMENT_SCHEMA)
+
+    result = derive_workbook_run_completeness(manifests, measurements).collect()[0]
+
+    assert result.completeness == "unknown"
+    assert result.expected_count == 0
+    assert result.received_count == 0
