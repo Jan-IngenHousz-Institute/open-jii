@@ -190,6 +190,24 @@ describe("evaluateAndRoute", () => {
     expect(mockRecordBranchJump).toHaveBeenCalledWith(1);
   });
 
+  it("fails closed when duplicate path ids make the default ambiguous", () => {
+    flowState.cells = [
+      branch("b1", [path("duplicate", [], "first"), path("duplicate", [], "second")], "duplicate"),
+    ];
+    flowState.flowNodes = [
+      branchFlowNode("b1"),
+      plainFlowNode("next"),
+      plainFlowNode("first"),
+      plainFlowNode("second"),
+    ];
+    flowState.currentFlowStep = 0;
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetLastMatchedPath).toHaveBeenCalledWith(undefined);
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1);
+  });
+
   it("jumps to the matched path's gotoCellId target (simple branch)", () => {
     mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
     flowState.cells = [

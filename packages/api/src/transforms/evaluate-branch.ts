@@ -19,12 +19,31 @@ export interface BranchRuntimeContext {
   deviceId?: string;
 }
 
+export type BranchDefaultPathResolution<T extends { id: string }> =
+  | { status: "resolved"; path: T }
+  | { status: "absent" }
+  | { status: "ambiguous" };
+
+/** Resolve a default only when its id identifies exactly one path. */
+export function resolveBranchDefaultPath<T extends { id: string }>(cell: {
+  paths: readonly T[];
+  defaultPathId?: string;
+}): BranchDefaultPathResolution<T> {
+  if (!cell.defaultPathId) return { status: "absent" };
+  const matches = cell.paths.filter((path) => path.id === cell.defaultPathId);
+  if (matches.length === 0) return { status: "absent" };
+  if (matches.length > 1) return { status: "ambiguous" };
+  return { status: "resolved", path: matches[0] };
+}
+
 /** A schema-compatible unconditional jump authored as a one-path branch. */
 export function isGotoBranchCell(cell: BranchCell): boolean {
+  const defaultPath = resolveBranchDefaultPath(cell);
   return (
     cell.paths.length === 1 &&
     cell.paths[0].conditions.length === 0 &&
-    cell.defaultPathId === cell.paths[0].id
+    defaultPath.status === "resolved" &&
+    defaultPath.path === cell.paths[0]
   );
 }
 
@@ -81,15 +100,16 @@ export function validateBranchCell(
     if (count > 1) errors.push(`Branch path id ${pathId} is duplicated`);
   }
 
-  const defaultPaths = cell.defaultPathId
-    ? cell.paths.filter((path) => path.id === cell.defaultPathId)
-    : [];
-  if (options.requireDefault !== false && defaultPaths.length === 0) {
-    errors.push("Branch Otherwise path is missing");
-  } else if (defaultPaths.length > 1) {
-    errors.push("Branch Otherwise path is ambiguous");
+  const defaultPathResolution = resolveBranchDefaultPath(cell);
+  if (options.requireDefault !== false) {
+    if (defaultPathResolution.status === "absent") {
+      errors.push("Branch Otherwise path is missing");
+    } else if (defaultPathResolution.status === "ambiguous") {
+      errors.push("Branch Otherwise path is ambiguous");
+    }
   }
-  const defaultPath = defaultPaths.length === 1 ? defaultPaths[0] : undefined;
+  const defaultPath =
+    defaultPathResolution.status === "resolved" ? defaultPathResolution.path : undefined;
 
   for (const path of cell.paths) {
     const label = path.label || "Unnamed path";
@@ -199,9 +219,6 @@ export function evaluateBranch(
     }
   }
 
-  if (cell.defaultPathId) {
-    return cell.paths.find((p) => p.id === cell.defaultPathId);
-  }
-
-  return undefined;
+  const defaultPath = resolveBranchDefaultPath(cell);
+  return defaultPath.status === "resolved" ? defaultPath.path : undefined;
 }

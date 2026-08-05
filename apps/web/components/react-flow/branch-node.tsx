@@ -3,6 +3,7 @@ import { Handle, Position } from "@xyflow/react";
 import { GitBranch } from "lucide-react";
 import React from "react";
 
+import { resolveBranchDefaultPath } from "@repo/api/transforms/evaluate-branch";
 import { cn } from "@repo/ui/lib/utils";
 
 import { resolveBranchPathColor } from "../workbook/branch-path-colors";
@@ -34,6 +35,9 @@ export function BranchNode(props: BranchNodeProps) {
   const title = data.title ?? "Branch";
   const paths = data.stepSpecification?.paths ?? [];
   const defaultPathId = data.stepSpecification?.defaultPathId;
+  const defaultPathResolution = resolveBranchDefaultPath({ paths, defaultPathId });
+  const defaultPath =
+    defaultPathResolution.status === "resolved" ? defaultPathResolution.path : undefined;
   const accent = nodeTypeColorMap.BRANCH.accent;
   const isActive = nodeProps.selected || nodeProps.dragging;
 
@@ -141,10 +145,10 @@ export function BranchNode(props: BranchNodeProps) {
           ) : (
             <div className="py-1.5">
               {paths.map((path, idx) => {
-                const isDefault = defaultPathId === path.id;
+                const isDefault = path === defaultPath;
                 return (
                   <div
-                    key={path.id}
+                    key={`${path.id}:${idx}`}
                     className="relative flex items-center gap-2 px-3 pl-4 pr-5 transition-colors hover:bg-slate-50"
                     style={{ height: PATH_ROW_HEIGHT }}
                   >

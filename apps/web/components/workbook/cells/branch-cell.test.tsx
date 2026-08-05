@@ -82,6 +82,32 @@ describe("BranchCellComponent", () => {
     expect(alert).toHaveTextContent("no value specified");
   });
 
+  it("presents intentional default-less fall-through as a warning, not an error", () => {
+    renderBranch({
+      paths: [
+        {
+          id: "path-1",
+          label: "Path 1",
+          color: "",
+          conditions: [
+            {
+              id: "cond-1",
+              sourceCellId: questionCell.id,
+              field: "answer",
+              operator: "eq",
+              value: "yes",
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "workbooks.problems.issue.branchNoDefault",
+    );
+  });
+
   it("lets the user rename a path inline", async () => {
     const user = userEvent.setup();
     const { onUpdate } = renderBranch();
@@ -92,6 +118,63 @@ describe("BranchCellComponent", () => {
     const lastCall = onUpdate.mock.calls[onUpdate.mock.calls.length - 1][0] as BranchCell;
     expect(lastCall.paths[0].label).toContain("Path 1");
     expect(onUpdate).toHaveBeenCalled();
+  });
+
+  it("updates only the selected path when duplicate ids are being repaired", async () => {
+    const user = userEvent.setup();
+    const duplicatePaths: BranchCell["paths"] = [
+      {
+        id: "duplicate",
+        label: "First",
+        color: "",
+        conditions: [{ id: "c1", sourceCellId: "", field: "", operator: "eq", value: "" }],
+      },
+      {
+        id: "duplicate",
+        label: "Second",
+        color: "",
+        conditions: [{ id: "c2", sourceCellId: "", field: "", operator: "eq", value: "" }],
+      },
+    ];
+    const { onUpdate } = renderBranch({
+      paths: duplicatePaths,
+      defaultPathId: "duplicate",
+    });
+
+    await user.type(screen.getByDisplayValue("Second"), "!");
+
+    const updated = onUpdate.mock.calls.at(-1)?.[0] as BranchCell;
+    expect(updated.paths[0].label).toBe("First");
+    expect(updated.paths[1].label).toContain("Second");
+    expect(updated.paths[1].label).toContain("!");
+  });
+
+  it("removes only the selected duplicate path and preserves the now-resolved default", async () => {
+    const user = userEvent.setup();
+    const { onUpdate } = renderBranch({
+      paths: [
+        {
+          id: "duplicate",
+          label: "First",
+          color: "",
+          conditions: [{ id: "c1", sourceCellId: "", field: "", operator: "eq", value: "" }],
+        },
+        {
+          id: "duplicate",
+          label: "Second",
+          color: "",
+          conditions: [{ id: "c2", sourceCellId: "", field: "", operator: "eq", value: "" }],
+        },
+      ],
+      defaultPathId: "duplicate",
+    });
+
+    await user.click(screen.getByRole("button", { name: "Remove Second" }));
+
+    const updated = onUpdate.mock.calls[0][0] as BranchCell;
+    expect(updated.paths).toHaveLength(1);
+    expect(updated.paths[0].label).toBe("First");
+    expect(updated.defaultPathId).toBe("duplicate");
   });
 
   it("lets the user type a value into the condition row", async () => {
@@ -143,6 +226,33 @@ describe("BranchCellComponent", () => {
     await user.click(screen.getByRole("combobox", { name: "Otherwise path" }));
 
     expect(screen.getByRole("option", { name: "Missing path (deleted-path)" })).toBeInTheDocument();
+  });
+
+  it("preserves an ambiguous Otherwise path without collapsing duplicate options", async () => {
+    const user = userEvent.setup();
+    renderBranch({
+      paths: [
+        {
+          id: "duplicate",
+          label: "First",
+          color: "",
+          conditions: [{ id: "c1", sourceCellId: "", field: "", operator: "eq", value: "" }],
+        },
+        {
+          id: "duplicate",
+          label: "Second",
+          color: "",
+          conditions: [{ id: "c2", sourceCellId: "", field: "", operator: "eq", value: "" }],
+        },
+      ],
+      defaultPathId: "duplicate",
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "Otherwise path" }));
+
+    expect(screen.getByRole("option", { name: "Ambiguous path (duplicate)" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "First" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Second" })).toBeInTheDocument();
   });
 
   it("adds a condition when the user clicks '+ condition'", async () => {

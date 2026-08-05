@@ -1,6 +1,15 @@
 "use client";
 
-import { AlertCircle, ArrowRight, ChevronRight, GitBranch, Plus, Route, X } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowRight,
+  ChevronRight,
+  GitBranch,
+  Plus,
+  Route,
+  X,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import type {
@@ -12,9 +21,11 @@ import type {
 import { DEVICE_CONTEXT_FIELDS, DEVICE_CONTEXT_KEY } from "@repo/api/transforms/device-context";
 import {
   isGotoBranchCell,
+  resolveBranchDefaultPath,
   validateBranchCell,
   validateDeviceBranch,
 } from "@repo/api/transforms/evaluate-branch";
+import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
   Collapsible,
@@ -48,6 +59,8 @@ interface BranchCellProps {
 type BranchOperator = BranchCondition["operator"];
 
 const NO_DEFAULT_PATH = "__no_default_path__";
+const INVALID_DEFAULT_PATH = "__invalid_default_path__";
+const pathOptionValue = (pathIndex: number) => `path:${pathIndex}`;
 
 const operatorLabels: Record<BranchOperator, string> = {
   eq: "=",
@@ -68,6 +81,7 @@ export function BranchCellComponent({
   executionError,
   readOnly,
 }: BranchCellProps) {
+  const { t } = useTranslation("workbook");
   const cell = useMemo(
     () => (Array.isArray(rawCell.paths) ? rawCell : { ...rawCell, paths: [] as BranchPath[] }),
     [rawCell],
@@ -75,8 +89,8 @@ export function BranchCellComponent({
 
   const [expandedPaths, setExpandedPaths] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
-    cell.paths.forEach((p) => {
-      initial[p.id] = true;
+    cell.paths.forEach((p, index) => {
+      initial[`${p.id}:${index}`] = true;
     });
     return initial;
   });
@@ -99,8 +113,15 @@ export function BranchCellComponent({
     [allCells, cell.id],
   );
 
+  const defaultPathResolution = useMemo(() => resolveBranchDefaultPath(cell), [cell]);
+  const defaultPath =
+    defaultPathResolution.status === "resolved" ? defaultPathResolution.path : undefined;
+
   const validationErrors = useMemo(
-    () => [...validateBranchCell(cell), ...validateDeviceBranch(cell, allCells ?? [])],
+    () => [
+      ...validateBranchCell(cell, { requireDefault: false }),
+      ...validateDeviceBranch(cell, allCells ?? []),
+    ],
     [allCells, cell],
   );
 
@@ -116,6 +137,17 @@ export function BranchCellComponent({
             <li key={error}>{error}</li>
           ))}
         </ul>
+      </div>
+    ) : null;
+
+  const defaultWarning =
+    cell.paths.length > 0 && defaultPathResolution.status !== "resolved" ? (
+      <div
+        role="status"
+        className="flex gap-2 rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+      >
+        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+        <span>{t("workbooks.problems.issue.branchNoDefault")}</span>
       </div>
     ) : null;
 
@@ -196,35 +228,38 @@ export function BranchCellComponent({
   }, [cell, onUpdate]);
 
   const handleRemovePath = useCallback(
-    (pathId: string) => {
+    (pathIndex: number) => {
+      const removedPath = cell.paths[pathIndex];
       onUpdate({
         ...cell,
-        paths: cell.paths.filter((p) => p.id !== pathId),
-        defaultPathId: cell.defaultPathId === pathId ? undefined : cell.defaultPathId,
+        paths: cell.paths.filter((_, index) => index !== pathIndex),
+        defaultPathId: removedPath === defaultPath ? undefined : cell.defaultPathId,
       });
     },
-    [cell, onUpdate],
+    [cell, defaultPath, onUpdate],
   );
 
   const handleUpdatePath = useCallback(
-    (pathId: string, updates: Partial<BranchPath>) => {
+    (pathIndex: number, updates: Partial<BranchPath>) => {
       onUpdate({
         ...cell,
-        paths: cell.paths.map((p) => (p.id === pathId ? { ...p, ...updates } : p)),
+        paths: cell.paths.map((path, index) =>
+          index === pathIndex ? { ...path, ...updates } : path,
+        ),
       });
     },
     [cell, onUpdate],
   );
 
   const handleConditionUpdate = useCallback(
-    (pathId: string, condId: string, field: keyof BranchCondition, value: string) => {
+    (pathIndex: number, condId: string, field: keyof BranchCondition, value: string) => {
       onUpdate({
         ...cell,
-        paths: cell.paths.map((p) =>
-          p.id === pathId
+        paths: cell.paths.map((path, index) =>
+          index === pathIndex
             ? {
-                ...p,
-                conditions: p.conditions.map((c) => {
+                ...path,
+                conditions: path.conditions.map((c) => {
                   if (c.id !== condId) return c;
                   const updated = { ...c, [field]: value };
                   if (field === "sourceCellId") {
@@ -243,7 +278,7 @@ export function BranchCellComponent({
                   return updated;
                 }),
               }
-            : p,
+            : path,
         ),
       });
     },
@@ -251,7 +286,7 @@ export function BranchCellComponent({
   );
 
   const handleAddCondition = useCallback(
-    (pathId: string) => {
+    (pathIndex: number) => {
       const newCond: BranchCondition = {
         id: crypto.randomUUID(),
         sourceCellId: "",
@@ -261,8 +296,8 @@ export function BranchCellComponent({
       };
       onUpdate({
         ...cell,
-        paths: cell.paths.map((p) =>
-          p.id === pathId ? { ...p, conditions: [...p.conditions, newCond] } : p,
+        paths: cell.paths.map((path, index) =>
+          index === pathIndex ? { ...path, conditions: [...path.conditions, newCond] } : path,
         ),
       });
     },
@@ -270,19 +305,21 @@ export function BranchCellComponent({
   );
 
   const handleRemoveCondition = useCallback(
-    (pathId: string, condId: string) => {
+    (pathIndex: number, condId: string) => {
       onUpdate({
         ...cell,
-        paths: cell.paths.map((p) =>
-          p.id === pathId ? { ...p, conditions: p.conditions.filter((c) => c.id !== condId) } : p,
+        paths: cell.paths.map((path, index) =>
+          index === pathIndex
+            ? { ...path, conditions: path.conditions.filter((c) => c.id !== condId) }
+            : path,
         ),
       });
     },
     [cell, onUpdate],
   );
 
-  const togglePathExpanded = (pathId: string) => {
-    setExpandedPaths((prev) => ({ ...prev, [pathId]: !prev[pathId] }));
+  const togglePathExpanded = (pathKey: string) => {
+    setExpandedPaths((prev) => ({ ...prev, [pathKey]: !prev[pathKey] }));
   };
 
   if (isGotoBranchCell(cell)) {
@@ -308,7 +345,7 @@ export function BranchCellComponent({
             <ArrowRight className="text-muted-foreground size-4 shrink-0" />
             <Select
               value={path.gotoCellId ?? undefined}
-              onValueChange={(gotoCellId) => handleUpdatePath(path.id, { gotoCellId })}
+              onValueChange={(gotoCellId) => handleUpdatePath(0, { gotoCellId })}
               disabled={readOnly}
             >
               <SelectTrigger aria-label="Go to target" className="h-8 flex-1 text-xs">
@@ -334,7 +371,7 @@ export function BranchCellComponent({
                 size="sm"
                 className="h-8 shrink-0 text-xs"
                 onClick={() =>
-                  handleUpdatePath(path.id, {
+                  handleUpdatePath(0, {
                     conditions: [
                       {
                         id: crypto.randomUUID(),
@@ -356,7 +393,12 @@ export function BranchCellComponent({
     );
   }
 
-  const renderCondition = (path: BranchPath, cond: BranchCondition, index: number) => {
+  const renderCondition = (
+    path: BranchPath,
+    pathIndex: number,
+    cond: BranchCondition,
+    conditionIndex: number,
+  ) => {
     const fields = getFieldsForSource(cond.sourceCellId);
     const sourceCell = (allCells ?? []).find((c) => c.id === cond.sourceCellId);
     const isQuestionSource = sourceCell?.type === "question";
@@ -367,12 +409,12 @@ export function BranchCellComponent({
     return (
       <div key={cond.id} className="group/cond flex items-center gap-1.5">
         <span className="w-7 shrink-0 text-right text-xs font-semibold uppercase text-orange-600/80 dark:text-orange-400/80">
-          {index === 0 ? "If" : "And"}
+          {conditionIndex === 0 ? "If" : "And"}
         </span>
 
         <Select
           value={cond.sourceCellId || undefined}
-          onValueChange={(v) => handleConditionUpdate(path.id, cond.id, "sourceCellId", v)}
+          onValueChange={(v) => handleConditionUpdate(pathIndex, cond.id, "sourceCellId", v)}
           disabled={readOnly}
         >
           <SelectTrigger aria-label="Source cell" className="h-7 min-w-[100px] flex-1 text-xs">
@@ -402,7 +444,7 @@ export function BranchCellComponent({
         ) : fields.length > 0 ? (
           <Select
             value={cond.field || undefined}
-            onValueChange={(v) => handleConditionUpdate(path.id, cond.id, "field", v)}
+            onValueChange={(v) => handleConditionUpdate(pathIndex, cond.id, "field", v)}
             disabled={readOnly}
           >
             <SelectTrigger className="h-7 min-w-[80px] flex-1 text-xs">
@@ -419,7 +461,7 @@ export function BranchCellComponent({
         ) : (
           <Input
             value={cond.field}
-            onChange={(e) => handleConditionUpdate(path.id, cond.id, "field", e.target.value)}
+            onChange={(e) => handleConditionUpdate(pathIndex, cond.id, "field", e.target.value)}
             placeholder="field"
             className="h-7 min-w-[80px] flex-1 border-dashed bg-transparent text-xs"
             disabled={readOnly}
@@ -428,7 +470,7 @@ export function BranchCellComponent({
 
         <Select
           value={cond.operator}
-          onValueChange={(v) => handleConditionUpdate(path.id, cond.id, "operator", v)}
+          onValueChange={(v) => handleConditionUpdate(pathIndex, cond.id, "operator", v)}
           disabled={readOnly}
         >
           <SelectTrigger className="h-7 w-16 text-xs">
@@ -445,19 +487,19 @@ export function BranchCellComponent({
 
         <Input
           value={cond.value}
-          onChange={(e) => handleConditionUpdate(path.id, cond.id, "value", e.target.value)}
+          onChange={(e) => handleConditionUpdate(pathIndex, cond.id, "value", e.target.value)}
           placeholder="value"
           className="h-7 min-w-[60px] flex-1 border-dashed bg-transparent text-xs"
           disabled={readOnly}
         />
 
-        {!readOnly && (path.conditions.length > 1 || path.id === cell.defaultPathId) ? (
+        {!readOnly && (path.conditions.length > 1 || path === defaultPath) ? (
           <Button
             variant="ghost"
             size="sm"
             aria-label="Remove condition"
             className="text-muted-foreground hover:text-destructive h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover/cond:opacity-100"
-            onClick={() => handleRemoveCondition(path.id, cond.id)}
+            onClick={() => handleRemoveCondition(pathIndex, cond.id)}
           >
             <X className="h-3 w-3" />
           </Button>
@@ -468,14 +510,15 @@ export function BranchCellComponent({
     );
   };
 
-  const renderPath = (path: BranchPath) => {
-    const isExpanded = expandedPaths[path.id] ?? true;
+  const renderPath = (path: BranchPath, pathIndex: number) => {
+    const pathKey = `${path.id}:${pathIndex}`;
+    const isExpanded = expandedPaths[pathKey] ?? true;
     const isEvaluated = cell.evaluatedPathId === path.id;
     const targetExists = jumpTargets.some((target) => target.id === path.gotoCellId);
 
     return (
-      <div key={path.id} className="relative">
-        <Collapsible open={isExpanded} onOpenChange={() => togglePathExpanded(path.id)}>
+      <div className="relative">
+        <Collapsible open={isExpanded} onOpenChange={() => togglePathExpanded(pathKey)}>
           <div className="flex items-center gap-1">
             <CollapsibleTrigger asChild>
               <button
@@ -487,7 +530,7 @@ export function BranchCellComponent({
 
                 <Input
                   value={path.label}
-                  onChange={(e) => handleUpdatePath(path.id, { label: e.target.value })}
+                  onChange={(e) => handleUpdatePath(pathIndex, { label: e.target.value })}
                   onClick={(e) => e.stopPropagation()}
                   className="hover:border-border focus:border-border h-6 flex-1 border-transparent bg-transparent px-1.5 text-sm font-medium"
                   disabled={readOnly}
@@ -511,8 +554,9 @@ export function BranchCellComponent({
               <Button
                 variant="ghost"
                 size="sm"
+                aria-label={`Remove ${path.label || `Path ${pathIndex + 1}`}`}
                 className="text-muted-foreground hover:text-destructive h-6 w-6 p-0 opacity-0 transition-opacity group-hover/path:opacity-100"
-                onClick={() => handleRemovePath(path.id)}
+                onClick={() => handleRemovePath(pathIndex)}
               >
                 <X className="size-3.5" />
               </Button>
@@ -523,13 +567,15 @@ export function BranchCellComponent({
             <div className="border-border/60 ml-6 border-l pl-4 pt-2">
               <div className="border-border/60 overflow-hidden rounded-md border bg-orange-50/30 dark:bg-orange-950/10">
                 <div className="space-y-1.5 p-2.5">
-                  {path.conditions.map((cond, index) => renderCondition(path, cond, index))}
+                  {path.conditions.map((cond, conditionIndex) =>
+                    renderCondition(path, pathIndex, cond, conditionIndex),
+                  )}
                   {!readOnly && (
                     <div className="pl-[34px]">
                       <button
                         type="button"
                         className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
-                        onClick={() => handleAddCondition(path.id)}
+                        onClick={() => handleAddCondition(pathIndex)}
                       >
                         <Plus className="size-3" /> condition
                       </button>
@@ -544,7 +590,7 @@ export function BranchCellComponent({
                   <ArrowRight className="text-muted-foreground size-3 shrink-0" />
                   <Select
                     value={path.gotoCellId ?? undefined}
-                    onValueChange={(v) => handleUpdatePath(path.id, { gotoCellId: v })}
+                    onValueChange={(v) => handleUpdatePath(pathIndex, { gotoCellId: v })}
                     disabled={readOnly}
                   >
                     <SelectTrigger aria-label="Jump to cell" className="h-7 text-xs">
@@ -592,16 +638,25 @@ export function BranchCellComponent({
     >
       <div className="space-y-2">
         {validationNotice}
+        {defaultWarning}
         <div className="border-border/60 bg-muted/20 flex items-center gap-2 rounded-md border px-2.5 py-2">
           <span className="text-muted-foreground shrink-0 text-xs font-semibold">Otherwise</span>
           <Select
-            value={cell.defaultPathId ?? NO_DEFAULT_PATH}
-            onValueChange={(value) =>
+            value={
+              defaultPath
+                ? pathOptionValue(cell.paths.indexOf(defaultPath))
+                : cell.defaultPathId
+                  ? INVALID_DEFAULT_PATH
+                  : NO_DEFAULT_PATH
+            }
+            onValueChange={(value) => {
+              if (value === INVALID_DEFAULT_PATH) return;
+              const pathIndex = Number(value.slice("path:".length));
               onUpdate({
                 ...cell,
-                defaultPathId: value === NO_DEFAULT_PATH ? undefined : value,
-              })
-            }
+                defaultPathId: value === NO_DEFAULT_PATH ? undefined : cell.paths[pathIndex]?.id,
+              });
+            }}
             disabled={readOnly}
           >
             <SelectTrigger aria-label="Otherwise path" className="h-7 text-xs">
@@ -611,13 +666,18 @@ export function BranchCellComponent({
               <SelectItem value={NO_DEFAULT_PATH} className="text-xs">
                 No default (fall through)
               </SelectItem>
-              {cell.defaultPathId && !cell.paths.some((path) => path.id === cell.defaultPathId) && (
-                <SelectItem value={cell.defaultPathId} className="text-xs">
-                  Missing path ({cell.defaultPathId})
+              {cell.defaultPathId && defaultPathResolution.status !== "resolved" && (
+                <SelectItem value={INVALID_DEFAULT_PATH} className="text-xs">
+                  {defaultPathResolution.status === "ambiguous" ? "Ambiguous" : "Missing"} path (
+                  {cell.defaultPathId})
                 </SelectItem>
               )}
               {cell.paths.map((path, index) => (
-                <SelectItem key={path.id} value={path.id} className="text-xs">
+                <SelectItem
+                  key={`${path.id}:${index}`}
+                  value={pathOptionValue(index)}
+                  className="text-xs"
+                >
                   {path.label || `Path ${index + 1}`}
                 </SelectItem>
               ))}
@@ -626,9 +686,9 @@ export function BranchCellComponent({
         </div>
 
         <div className="space-y-1">
-          {cell.paths.map((path) => (
-            <div key={path.id} className="group/path">
-              {renderPath(path)}
+          {cell.paths.map((path, index) => (
+            <div key={`${path.id}:${index}`} className="group/path">
+              {renderPath(path, index)}
             </div>
           ))}
 
