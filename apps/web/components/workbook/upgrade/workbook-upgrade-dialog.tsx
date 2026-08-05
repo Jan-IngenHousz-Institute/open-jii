@@ -56,6 +56,16 @@ function issueMessage(
       return t("flow.upgradeDiff.issue.macroWithoutInput", { label });
     case "mixed-sensor-families":
       return t("flow.upgradeDiff.issue.mixedFamilies", { detail: issue.detail ?? "" });
+    case "unreachable-cell":
+      return t("flow.upgradeDiff.issue.unreachableCell", {
+        label: issue.cellLabel ?? issue.cellId,
+      });
+    case "backward-goto-loop":
+      return t("flow.upgradeDiff.issue.backwardGotoLoop", { ref: issue.ref ?? "" });
+    case "branch-no-default":
+      return t("flow.upgradeDiff.issue.branchNoDefault");
+    case "path-duplicate-conditions":
+      return t("flow.upgradeDiff.issue.duplicatePathConditions", { detail: issue.detail ?? "" });
   }
 }
 

@@ -136,7 +136,11 @@
         "danglingSource": "Eine Verzweigungsbedingung verweist auf eine nicht mehr vorhandene Zelle ({{ref}})",
         "danglingGoto": "Eine Verzweigung springt zu einer nicht mehr vorhandenen Zelle ({{ref}})",
         "macroWithoutInput": "Makro \"{{label}}\" hat keine vorangehende Messung zum Ausführen",
-        "mixedFamilies": "Dieses Arbeitsbuch mischt Sensorfamilien ({{detail}}); ein Durchlauf zielt auf ein einzelnes Gerät"
+        "mixedFamilies": "Dieses Arbeitsbuch mischt Sensorfamilien ({{detail}}); ein Durchlauf zielt auf ein einzelnes Gerät",
+        "unreachableCell": "Zelle \"{{label}}\" ist nicht erreichbar",
+        "backwardGotoLoop": "Ein Gehe zu springt zurück zu {{ref}}",
+        "branchNoDefault": "Eine Verzweigung hat keinen Sonst-Pfad und kann durchfallen",
+        "duplicatePathConditions": "Ein späterer Pfad wiederholt frühere Bedingungen ({{detail}})"
       }
     }
   },
