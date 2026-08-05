@@ -198,6 +198,7 @@ export function useAutosave<T>({
   useEffect(() => {
     if (enabled && !wasEnabledRef.current) {
       lastSavedKeyRef.current = keyRef.current;
+      savedKeyByScopeRef.current.set(scopeIdentityRef.current.key, keyRef.current);
       pendingFlushRef.current = false;
       errorRef.current = null;
       setStatus("idle");
@@ -265,9 +266,12 @@ export function useAutosave<T>({
     isDirty: status === "dirty",
     isSaving: status === "saving",
     hasError: status === "error",
-    hasUnsavedChanges: [...latestKeyByScopeRef.current].some(
-      ([savedScope, latestKey]) => savedKeyByScopeRef.current.get(savedScope) !== latestKey,
-    ),
+    hasUnsavedChanges:
+      enabled &&
+      wasEnabledRef.current &&
+      [...latestKeyByScopeRef.current].some(
+        ([savedScope, latestKey]) => savedKeyByScopeRef.current.get(savedScope) !== latestKey,
+      ),
     error,
     flush,
   };

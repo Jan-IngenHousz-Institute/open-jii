@@ -261,6 +261,7 @@ describe("useAutosave", () => {
     });
     expect(save).not.toHaveBeenCalled();
     expect(result.current.status).toBe("idle");
+    expect(result.current.hasUnsavedChanges).toBe(false);
 
     // Now an edit fires.
     rerender({ value: "v2", enabled: true });
