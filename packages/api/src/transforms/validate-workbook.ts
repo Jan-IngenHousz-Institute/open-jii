@@ -15,6 +15,7 @@ export type WorkbookIssueCode =
   | "unreachable-cell"
   | "backward-goto-loop"
   | "branch-no-default"
+  | "duplicate-branch-path-id"
   | "path-duplicate-conditions";
 
 export interface WorkbookIssue {
@@ -62,10 +63,13 @@ function duplicateConditionKey(
   const duplicates = new Map<string, string>();
   for (const path of cell.paths) {
     if (path.conditions.length === 0) continue;
-    const key = path.conditions
-      .map(({ sourceCellId, field, operator, value }) =>
-        JSON.stringify({ sourceCellId, field, operator, value }),
-      )
+    const key = [
+      ...new Set(
+        path.conditions.map(({ sourceCellId, field, operator, value }) =>
+          JSON.stringify({ sourceCellId, field, operator, value }),
+        ),
+      ),
+    ]
       .sort()
       .join("|");
     const firstPathId = firstPathByConditions.get(key);
@@ -104,13 +108,17 @@ function structuralBranchIssues(cells: WorkbookCell[]): WorkbookIssue[] {
       if (path.gotoCellId) enqueue(indexById.get(path.gotoCellId));
     }
 
-    const defaultPath = cell.defaultPathId
-      ? cell.paths.find((path) => path.id === cell.defaultPathId)
-      : undefined;
-    const canFallThrough =
-      isDeviceScopedBranch(cell) ||
-      !defaultPath?.gotoCellId ||
-      cell.paths.some((path) => !path.gotoCellId);
+    const defaultPaths = cell.defaultPathId
+      ? cell.paths.filter((path) => path.id === cell.defaultPathId)
+      : [];
+    const defaultPath = defaultPaths.length === 1 ? defaultPaths[0] : undefined;
+    const allPathsJumpStrictlyForward =
+      defaultPath !== undefined &&
+      cell.paths.every((path) => {
+        const targetIndex = path.gotoCellId ? indexById.get(path.gotoCellId) : undefined;
+        return targetIndex !== undefined && targetIndex > index;
+      });
+    const canFallThrough = isDeviceScopedBranch(cell) || !allPathsJumpStrictlyForward;
     if (canFallThrough) enqueue(index + 1);
   }
 
@@ -126,12 +134,31 @@ function structuralBranchIssues(cells: WorkbookCell[]): WorkbookIssue[] {
 
     if (cell.type !== "branch") continue;
 
-    if (!cell.defaultPathId) {
+    const defaultPathCount = cell.defaultPathId
+      ? cell.paths.filter((path) => path.id === cell.defaultPathId).length
+      : 0;
+    if (defaultPathCount !== 1) {
       issues.push({
         level: "warning",
         code: "branch-no-default",
         cellId: cell.id,
         cellLabel: cellLabelOf(cell),
+      });
+    }
+
+    const seenPathIds = new Set<string>();
+    const duplicatePathIds = new Set<string>();
+    for (const path of cell.paths) {
+      if (seenPathIds.has(path.id)) duplicatePathIds.add(path.id);
+      seenPathIds.add(path.id);
+    }
+    for (const pathId of duplicatePathIds) {
+      issues.push({
+        level: "error",
+        code: "duplicate-branch-path-id",
+        cellId: cell.id,
+        cellLabel: cellLabelOf(cell),
+        ref: pathId,
       });
     }
 

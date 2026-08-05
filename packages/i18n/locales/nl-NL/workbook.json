@@ -26,6 +26,23 @@
     "allChangesSaved": "Alle wijzigingen opgeslagen",
     "viewWorkbook": "Werkboek bekijken",
     "required": "Verplicht",
+    "problems": {
+      "title": "Problemen",
+      "none": "Geen problemen gevonden",
+      "issue": {
+        "missingProtocol": "Protocol {{ref}} ontbreekt",
+        "missingMacro": "Macro {{ref}} ontbreekt",
+        "danglingBranchSource": "Branchbron {{ref}} ontbreekt",
+        "danglingBranchGoto": "Sprongdoel {{ref}} ontbreekt",
+        "mixedSensorFamilies": "Werkboek combineert sensorfamilies: {{detail}}",
+        "macroWithoutInput": "Macro heeft geen voorafgaande meting",
+        "unreachableCell": "{{label}} is onbereikbaar",
+        "backwardGotoLoop": "Ga naar springt terug naar {{ref}}",
+        "branchNoDefault": "Branch heeft geen uniek Anders-pad en kan doorlopen",
+        "duplicateBranchPathId": "Branchpad-id {{ref}} komt dubbel voor",
+        "duplicatePathConditions": "Dubbele padvoorwaarden: {{detail}}"
+      }
+    },
     "outputsCleared_one": "{{count}} uitvoer gewist",
     "outputsCleared_other": "{{count}} uitvoeren gewist",
     "createDescription": "Geef uw werkboek een naam. U kunt deze later wijzigen.",

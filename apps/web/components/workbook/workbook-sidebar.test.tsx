@@ -9,6 +9,9 @@ import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import deWorkbook from "@repo/i18n/locales/de-DE/workbook.json";
+import enWorkbook from "@repo/i18n/locales/en-US/workbook.json";
+import nlWorkbook from "@repo/i18n/locales/nl-NL/workbook.json";
 
 import { WorkbookSidebar } from "./workbook-sidebar";
 
@@ -150,16 +153,18 @@ describe("WorkbookSidebar", () => {
     });
     render(<WorkbookSidebar cells={[questionCell, branch]} onCellClick={onCellClick} />);
 
-    expect(screen.getByRole("region", { name: "Problems" })).toHaveTextContent(
-      "Jump target deleted-target is missing",
+    expect(screen.getByRole("region", { name: "workbooks.problems.title" })).toHaveTextContent(
+      "workbooks.problems.issue.danglingBranchGoto",
     );
-    await user.click(screen.getByText("Jump target deleted-target is missing"));
+    await user.click(screen.getByText("workbooks.problems.issue.danglingBranchGoto"));
     expect(onCellClick).toHaveBeenCalledWith("branch-1");
   });
 
   it("shows an empty Problems state for a structurally valid workbook", () => {
     render(<WorkbookSidebar cells={[markdownCell]} onCellClick={onCellClick} />);
-    expect(screen.getByRole("region", { name: "Problems" })).toHaveTextContent("No problems found");
+    expect(screen.getByRole("region", { name: "workbooks.problems.title" })).toHaveTextContent(
+      "workbooks.problems.none",
+    );
   });
 
   it("lists an unreachable cell warning and selects the unreachable cell", async () => {
@@ -181,8 +186,26 @@ describe("WorkbookSidebar", () => {
     const target = createMarkdownCell({ id: "target", content: "Target" });
     render(<WorkbookSidebar cells={[goto, orphan, target]} onCellClick={onCellClick} />);
 
-    expect(screen.getByText("orphan is unreachable")).toBeInTheDocument();
-    await user.click(screen.getByText("orphan is unreachable"));
+    expect(screen.getByText("workbooks.problems.issue.unreachableCell")).toBeInTheDocument();
+    await user.click(screen.getByText("workbooks.problems.issue.unreachableCell"));
     expect(onCellClick).toHaveBeenCalledWith("orphan");
+  });
+
+  it("provides EN, NL, and DE Problems translations for every structural branch issue", () => {
+    const issueKeys = [
+      "unreachableCell",
+      "backwardGotoLoop",
+      "branchNoDefault",
+      "duplicateBranchPathId",
+      "duplicatePathConditions",
+    ] as const;
+
+    for (const locale of [enWorkbook, nlWorkbook, deWorkbook]) {
+      expect(locale.workbooks.problems.title).toBeTruthy();
+      expect(locale.workbooks.problems.none).toBeTruthy();
+      for (const key of issueKeys) {
+        expect(locale.workbooks.problems.issue[key]).toBeTruthy();
+      }
+    }
   });
 });

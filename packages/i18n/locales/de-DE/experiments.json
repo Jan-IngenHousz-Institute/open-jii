@@ -139,7 +139,8 @@
         "mixedFamilies": "Dieses Arbeitsbuch mischt Sensorfamilien ({{detail}}); ein Durchlauf zielt auf ein einzelnes Gerät",
         "unreachableCell": "Zelle \"{{label}}\" ist nicht erreichbar",
         "backwardGotoLoop": "Ein Gehe zu springt zurück zu {{ref}}",
-        "branchNoDefault": "Eine Verzweigung hat keinen Sonst-Pfad und kann durchfallen",
+        "branchNoDefault": "Eine Verzweigung hat keinen eindeutigen Sonst-Pfad und kann durchfallen",
+        "duplicateBranchPathId": "Eine Verzweigungspfad-ID ist doppelt vorhanden ({{ref}})",
         "duplicatePathConditions": "Ein späterer Pfad wiederholt frühere Bedingungen ({{detail}})"
       }
     }

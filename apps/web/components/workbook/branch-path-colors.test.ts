@@ -8,17 +8,30 @@ import {
 
 describe("branch path colors", () => {
   it("chooses a distinct unassigned accent when possible", () => {
-    expect(nextBranchPathColor([BRANCH_PATH_COLORS[0], BRANCH_PATH_COLORS[1]])).toBe(
-      BRANCH_PATH_COLORS[2],
-    );
+    expect(
+      nextBranchPathColor([
+        { id: "a", color: BRANCH_PATH_COLORS[0] },
+        { id: "b", color: BRANCH_PATH_COLORS[1] },
+      ]),
+    ).toBe(BRANCH_PATH_COLORS[2]);
   });
 
   it("cycles the accent palette once every color is assigned", () => {
-    expect(nextBranchPathColor([...BRANCH_PATH_COLORS])).toBe(BRANCH_PATH_COLORS[0]);
+    expect(
+      nextBranchPathColor(BRANCH_PATH_COLORS.map((color, index) => ({ id: `${index}`, color }))),
+    ).toBe(BRANCH_PATH_COLORS[0]);
   });
 
-  it("renders legacy empty colors with a deterministic accent without rewriting them", () => {
-    expect(resolveBranchPathColor("", 1)).toBe(BRANCH_PATH_COLORS[1]);
-    expect(resolveBranchPathColor("#abcdef", 1)).toBe("#abcdef");
+  it("keeps a legacy path's fallback color stable across reordering", () => {
+    const color = resolveBranchPathColor("", "legacy-path");
+    expect(color).toBe(resolveBranchPathColor("", "legacy-path"));
+    expect(resolveBranchPathColor("#abcdef", "legacy-path")).toBe("#abcdef");
+  });
+
+  it("does not reuse a legacy path's effective fallback when adding a path", () => {
+    const legacyPath = { id: "legacy-path", color: "" };
+    expect(nextBranchPathColor([legacyPath])).not.toBe(
+      resolveBranchPathColor(legacyPath.color, legacyPath.id),
+    );
   });
 });

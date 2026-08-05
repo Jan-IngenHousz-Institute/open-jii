@@ -176,10 +176,11 @@ export function BranchCellComponent({
   }, []);
 
   const handleAddPath = useCallback(() => {
+    const pathId = crypto.randomUUID();
     const newPath: BranchPath = {
-      id: crypto.randomUUID(),
+      id: pathId,
       label: `Path ${cell.paths.length + 1}`,
-      color: nextBranchPathColor(cell.paths.map((path) => path.color)),
+      color: nextBranchPathColor(cell.paths),
       conditions: [
         {
           id: crypto.randomUUID(),

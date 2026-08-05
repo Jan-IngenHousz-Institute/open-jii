@@ -150,7 +150,7 @@ export function BranchNode(props: BranchNodeProps) {
                   >
                     <div
                       className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: resolveBranchPathColor(path.color, idx) }}
+                      style={{ backgroundColor: resolveBranchPathColor(path.color, path.id) }}
                     />
                     <span
                       className="truncate text-[12.5px] font-medium text-slate-700"
@@ -176,7 +176,7 @@ export function BranchNode(props: BranchNodeProps) {
                       className="!h-2.5 !w-2.5 !rounded-full !border-2 transition-colors duration-150"
                       style={{
                         backgroundColor: "#FFFFFF",
-                        borderColor: resolveBranchPathColor(path.color, idx),
+                        borderColor: resolveBranchPathColor(path.color, path.id),
                         top: "50%",
                       }}
                     />

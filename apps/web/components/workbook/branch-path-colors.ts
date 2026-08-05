@@ -11,16 +11,32 @@ export const BRANCH_PATH_COLORS = [
   "#D08A3C",
 ] as const;
 
-export function nextBranchPathColor(existingColors: string[]): string {
-  const assigned = new Set(existingColors.filter(Boolean).map((color) => color.toLowerCase()));
+interface BranchPathColorSource {
+  id: string;
+  color?: string;
+}
+
+function pathColorIndex(pathId: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < pathId.length; index++) {
+    hash ^= pathId.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % BRANCH_PATH_COLORS.length;
+}
+
+export function nextBranchPathColor(existingPaths: BranchPathColorSource[]): string {
+  const assigned = new Set(
+    existingPaths.map((path) => resolveBranchPathColor(path.color, path.id).toLowerCase()),
+  );
   return (
     BRANCH_PATH_COLORS.find((color) => !assigned.has(color.toLowerCase())) ??
-    BRANCH_PATH_COLORS[existingColors.length % BRANCH_PATH_COLORS.length]
+    BRANCH_PATH_COLORS[existingPaths.length % BRANCH_PATH_COLORS.length]
   );
 }
 
-export function resolveBranchPathColor(color: string | undefined, pathIndex: number): string {
+export function resolveBranchPathColor(color: string | undefined, pathId: string): string {
   const assignedColor = color?.trim();
   if (assignedColor) return assignedColor;
-  return BRANCH_PATH_COLORS[pathIndex % BRANCH_PATH_COLORS.length];
+  return BRANCH_PATH_COLORS[pathColorIndex(pathId)];
 }

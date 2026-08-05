@@ -266,11 +266,8 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
       const paths =
         (node.data as { stepSpecification?: { paths?: { id: string; color: string }[] } })
           .stepSpecification?.paths ?? [];
-      for (const [pathIndex, path] of paths.entries()) {
-        branchPathColors.set(
-          `${node.id}:${path.id}`,
-          resolveBranchPathColor(path.color, pathIndex),
-        );
+      for (const path of paths) {
+        branchPathColors.set(`${node.id}:${path.id}`, resolveBranchPathColor(path.color, path.id));
       }
     }
 
