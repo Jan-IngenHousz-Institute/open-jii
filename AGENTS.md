@@ -1,33 +1,63 @@
 # Agent context
 
-This file is a router, not a snapshot of the repository. Verify architectural claims against the
-code because this file cannot guard them.
+A router, not a snapshot. Commands and paths below are checked; architectural claims are not, so
+verify them against the code.
 
-## Workspace map
+## What lives where
 
-| Area              | Purpose                                                        |
-| ----------------- | -------------------------------------------------------------- |
-| `apps/`           | Product applications and documentation                         |
-| `packages/`       | Shared contracts, domain code, and components                  |
-| `tooling/`        | Repository-wide development and validation tools               |
-| `infrastructure/` | Deployment configuration; change only when explicitly in scope |
+| Path                 | What it is                                                                                                                   | Read first                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `apps/web`           | Platform UI. Auth-gated; talks to the backend through the shared contracts.                                                  | `apps/web/README.md`, `apps/web/TESTING.md`                         |
+| `apps/backend`       | The API on `:3020`. Boots through a long `getOrThrow` config list.                                                           | `apps/backend/README.md`, `apps/backend/.env.example`               |
+| `apps/mobile`        | Field companion. Android is the only published platform — USB serial and Bluetooth Classic rule out iOS for data collection. | `apps/mobile/CONTEXT.md` (domain glossary), `apps/mobile/README.md` |
+| `apps/e2e`           | Browser tests driving the real running stack.                                                                                | `apps/e2e/README.md`                                                |
+| `apps/data`          | Databricks pipelines and notebooks. Separate Python toolchain, outside the pnpm dev loop.                                    | `apps/data/README.md`                                               |
+| `apps/macro-sandbox` | Sandboxed runtimes that execute user-authored macros.                                                                        | `apps/macro-sandbox/README.md`                                      |
+| `apps/docs`          | The public documentation site.                                                                                               | `apps/docs/README.md`                                               |
+| `apps/tools`         | Standalone device utilities, e.g. the MultispeQ MQTT interface.                                                              | `apps/tools/multispeq_mqtt_interface/README.md`                     |
 
-Read the [mobile domain context](apps/mobile/CONTEXT.md) before changing mobile concepts. Follow
-the [web testing guide](apps/web/TESTING.md) for web tests.
+| Package                                                           | Owns                                                                |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `packages/api`                                                    | The contract layer. API shapes live here; both sides import them.   |
+| `packages/auth`                                                   | Sessions, email OTP, OAuth, passkeys, API keys.                     |
+| `packages/database`                                               | Schema, migrations, seed script.                                    |
+| `packages/iot`                                                    | Device connectivity and payload handling.                           |
+| `packages/ui`                                                     | Shared components, consumed from source.                            |
+| `packages/cms`                                                    | Contentful client and generated types.                              |
+| `packages/i18n` · `packages/analytics` · `packages/transactional` | Translations · logging and product analytics · transactional email. |
 
-## Local workflow
+`tooling/*` holds shared eslint, tailwind, tsconfig and vitest config, plus release scripting and
+the devkit. `infrastructure/` is OpenTofu — change it only when that is explicitly the task.
 
-- `pnpm db:setup` starts Postgres, resets the local database, and applies migrations.
-- `pnpm --filter database db:seed` seeds local users and development data.
-- `pnpm local:login` obtains a local development session without browser automation or email.
-- `pnpm dev:fb` starts the web and backend applications.
-- `pnpm lint`, `pnpm test`, and `pnpm format:check` are the repository validation commands.
+## Running things locally
 
-## Repository conventions
+The platform UI is auth-gated, so a real check needs Postgres and the backend, not just the web app.
 
-- Define API changes contracts-first in `packages/api/`.
-- Consumers load the API package from built output, so rebuild workspace packages after contract or
-  schema changes. Shared UI is consumed from source and does not require that rebuild.
-- Do not add barrel files. Import from the owning module's explicit public path.
-- Use conventional commit subjects and keep each commit focused.
-- Keep comments rare and explain only constraints that code cannot express.
+- `pnpm db:setup` — starts Postgres, **resets** the local database, applies migrations.
+- `pnpm --filter database db:seed` — seeds the local user and development data.
+- `pnpm local:login` — a session cookie with no browser and no email; reads the OTP from Postgres.
+- `pnpm dev:fb` — runs backend and web together.
+- `pnpm lint`, `pnpm test`, `pnpm format:check` — validation.
+
+Copy `apps/backend/.env.example` to `apps/backend/.env` before first boot. It is generated and
+boot-tested, and its comments mark the variables where a plausible dummy value is **worse** than
+leaving the variable unset.
+
+**Expect these to be dead locally**: anything reading the lakehouse (data tables, exports,
+annotations), CMS-backed public pages, and every AWS-backed feature. The example env points them at
+unreachable endpoints deliberately. Assert on page chrome, not on that data.
+
+## Working on mobile
+
+`pnpm --filter mobile adb:reverse` is what lets a USB-cabled phone reach Metro and the local
+backend. See the `openjii-mobile-device` skill for getting a build onto a phone, and
+`openjii-mobile-control` for driving and testing one.
+
+## Conventions
+
+- Define API changes contracts-first in `packages/api`, then implement both sides against them.
+- `@repo/api` is consumed from build output, so rebuild workspace packages after contract or schema
+  changes. `@repo/ui` is consumed from source and needs no rebuild.
+- No barrel files. Import from the owning module's explicit path.
+- Conventional commit subjects; keep each commit focused.
+- Comments are rare here. Explain constraints the code cannot express, nothing else.
