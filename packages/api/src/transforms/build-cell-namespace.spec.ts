@@ -79,6 +79,24 @@ describe("buildCellNamespace", () => {
     expect(ns.names.baseline).toBe("p1");
   });
 
+  it("treats a parallel container summary as an ordinary named producer", () => {
+    const container: WorkbookCell = {
+      id: "container",
+      type: "parallel",
+      isCollapsed: false,
+      name: "Device lanes",
+      defaultLaneId: "lane-a",
+      lanes: [{ id: "lane-a", label: "A", color: "#000", conditions: [], body: [] }],
+    };
+    const summary = {
+      "lane-a": "partial",
+      lanes: { "lane-a": { label: "A", status: "partial", devices: [] } },
+    };
+    const ns = buildCellNamespace([container, output("container", summary)]);
+    expect(ns.byId.container).toEqual(summary);
+    expect(ns.ctx.device_lanes).toEqual(summary);
+  });
+
   it("exposes an answered question as { answer }", () => {
     const cells = [question("q1", "Soil moisture", "wet")];
     const ns = buildCellNamespace(cells);

@@ -92,6 +92,13 @@ describe("createDefaultCell", () => {
     });
   });
 
+  it("creates a parallel cell whose exact first lane is the default", () => {
+    const cell = createDefaultCell("parallel");
+    if (cell.type !== "parallel") throw new Error("unexpected");
+    expect(cell.lanes).toHaveLength(1);
+    expect(cell.defaultLaneId).toBe(cell.lanes[0].id);
+  });
+
   it("generates unique IDs for each cell", () => {
     expect(createDefaultCell("markdown").id).not.toBe(createDefaultCell("markdown").id);
   });

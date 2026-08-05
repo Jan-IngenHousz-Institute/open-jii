@@ -19,6 +19,8 @@ export type WorkbookPublicEvent =
   | { type: "STOP" }
   /** Abort the in-flight effect now. */
   | { type: "CANCEL" }
+  /** Researcher resolution for a lane blocked on human or device work. */
+  | { type: "ABANDON_LANE"; trackId: string }
   | { type: "RETRY"; target: RetryTarget }
   /** Explicit new iteration: cycle wrap + outputs cleared (mobile parity). */
   | { type: "START_CYCLE" }

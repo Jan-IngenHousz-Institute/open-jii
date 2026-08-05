@@ -35,6 +35,16 @@ describe("flow-utils", () => {
     expect(isExecutable(cells[2])).toBe(false);
     expect(isProducer(cells[3])).toBe(true);
     expect(isProducer(cells[0])).toBe(false);
+    expect(
+      isProducer({
+        id: "parallel",
+        type: "parallel",
+        isCollapsed: false,
+        name: "lanes",
+        defaultLaneId: "lane",
+        lanes: [{ id: "lane", label: "Lane", color: "#000", conditions: [], body: [] }],
+      }),
+    ).toBe(true);
   });
 
   it("next/prev walk executable order, skipping output cells", () => {

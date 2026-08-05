@@ -89,6 +89,11 @@ export function carryOverState(
     cellRuns,
     execCounter: prev.execCounter,
     effectSeq: prev.effectSeq,
+    containerAttemptSeq: prev.containerAttemptSeq,
+    parallelAttempts: Object.fromEntries(
+      Object.entries(prev.parallelAttempts).filter(([, attempt]) => attempt?.status === "complete"),
+    ),
+    parallelContexts: prev.parallelContexts,
   };
 }
 

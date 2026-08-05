@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { SENSOR_FAMILIES } from "@repo/iot";
 
-import { ownerCellId } from "./cell-entry";
+import { ownerCellId, parkParallelAttemptForRestart } from "./cell-entry";
 import type { PendingInteraction, RunnerState, Track } from "./state";
 import { MAIN_TRACK_ID, withDerivedStatus } from "./state";
 
@@ -121,7 +121,7 @@ const zWorkbookSnapshotV1 = z.object({
 const zCellPath = z.array(z.object({ containerCellId: z.string(), laneId: z.string() }));
 const zPendingInteraction = z
   .object({
-    kind: z.enum(["question", "instruction", "error", "resume"]),
+    kind: z.enum(["question", "instruction", "error", "resume", "restart"]),
     cellId: z.string(),
   })
   .nullable();
@@ -157,6 +157,38 @@ const zInFlight = z.object({
   cellId: z.string(),
   phase: z.enum(["runMacro", "runCommand", "resolveProtocolCode"]),
 });
+const zParallelDeviceOutcome = z.object({
+  deviceId: z.string(),
+  outcome: z.enum(["ok", "failed"]),
+});
+const zParallelLaneAttempt = z.object({
+  laneId: z.string(),
+  label: z.string(),
+  trackId: z.string().nullable(),
+  deviceIds: z.array(z.string()),
+  status: z.enum(["active", "awaitingHuman", "done", "failed", "partial", "skipped"]),
+  devices: z.array(zParallelDeviceOutcome),
+  terminalReason: z.string().optional(),
+});
+const zParallelAttempt = z.object({
+  attemptId: z.string(),
+  containerCellId: z.string(),
+  containerName: z.string(),
+  status: z.enum(["running", "awaitingRestart", "complete"]),
+  lanes: z.record(zParallelLaneAttempt),
+});
+const zParallelContext = z
+  .object({
+    attemptId: z.string(),
+    lanes: z.record(
+      z.object({
+        label: z.string(),
+        status: z.enum(["done", "partial", "failed", "skipped"]),
+        devices: z.array(zParallelDeviceOutcome),
+      }),
+    ),
+  })
+  .passthrough();
 
 const zSnapshotStateV2 = z.object({
   schemaVersion: z.literal(2),
@@ -184,6 +216,11 @@ const zSnapshotStateV2 = z.object({
   cancellingEffectIds: z
     .record(z.literal(true))
     .refine((entries) => Object.keys(entries).length === 0),
+  containerAttemptSeq: z.number().int().nonnegative().default(0),
+  parallelAttempts: z.record(zParallelAttempt).default({}),
+  activeContainerAttemptId: z.string().nullable().default(null),
+  parallelContexts: z.record(zParallelContext).default({}),
+  abandoningTrackIds: z.record(z.literal(true)).default({}),
   devices: z.array(zDevice),
   fatalReason: z.string().nullable(),
   trace: z.array(z.string()),
@@ -262,6 +299,9 @@ export function toSnapshot(state: RunnerState, savedAt: number): WorkbookSnapsho
     };
   }
   frozen.inFlight = {};
+  if (frozen.activeContainerAttemptId !== null) {
+    frozen = parkParallelAttemptForRestart(frozen as RunnerState) as WorkbookSnapshot["state"];
+  }
   frozen = withDerivedStatus(frozen as RunnerState) as WorkbookSnapshot["state"];
 
   return {
@@ -332,6 +372,11 @@ function migrateV1(raw: Record<string, unknown>): Record<string, unknown> {
     effectSeq: s.effectSeq,
     inFlight: {},
     cancellingEffectIds: {},
+    containerAttemptSeq: 0,
+    parallelAttempts: {},
+    activeContainerAttemptId: null,
+    parallelContexts: {},
+    abandoningTrackIds: {},
     devices: s.devices,
     fatalReason: s.fatalReason,
     trace: [...s.trace, "migrated snapshot v1 to tracks.main"],
@@ -375,6 +420,11 @@ export function parseSnapshot(raw: unknown): WorkbookSnapshot {
     throw new SnapshotError("invalid", `Snapshot failed validation: ${parsed.error.message}`);
   }
   const snapshot = parsed.data as unknown as WorkbookSnapshot;
+  if (snapshot.state.activeContainerAttemptId !== null) {
+    snapshot.state = parkParallelAttemptForRestart(
+      snapshot.state as RunnerState,
+    ) as WorkbookSnapshot["state"];
+  }
   snapshot.state = withDerivedStatus(snapshot.state as RunnerState) as WorkbookSnapshot["state"];
   return snapshot;
 }

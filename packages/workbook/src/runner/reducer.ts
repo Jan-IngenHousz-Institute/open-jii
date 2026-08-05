@@ -12,6 +12,7 @@ import {
   advanceDispatch,
   afterCellFailure,
   completeRun,
+  discardParkedParallelAttempt,
   failRun,
   ignored,
   isDispatchTarget,
@@ -21,6 +22,7 @@ import {
   ownerCellId,
   recordAnswer,
   setCellRun,
+  settleParallelBarrier,
   stackTop,
   startArtifactDispatch,
   startResolvedProtocolCommand,
@@ -28,10 +30,9 @@ import {
 import type { Effect, TransitionResult } from "./effects";
 import type { RetryTarget, WorkbookEvent, WorkbookInternalEvent } from "./events";
 import { isInternalEvent } from "./events";
-import type { CellPath, EnteredVia, RunnerState, TrackCursor } from "./state";
+import type { RunnerState } from "./state";
 import {
   createInitialState,
-  createTrack,
   currentAnswers,
   getTrack,
   MAIN_TRACK_ID,
@@ -39,6 +40,8 @@ import {
   trace,
   withDerivedStatus,
 } from "./state";
+
+export { spawnTracks } from "./state";
 
 function noop(state: RunnerState, line?: string): TransitionResult {
   return { state: line ? trace(state, line) : state, effects: [] };
@@ -48,40 +51,6 @@ function noop(state: RunnerState, line?: string): TransitionResult {
 // two gates alone. Flow owns the cursor vocabulary, notebook owns passes.
 const FLOW_ONLY = new Set<WorkbookEvent["type"]>(["START", "NEXT", "BACK", "START_CYCLE"]);
 const NOTEBOOK_ONLY = new Set<WorkbookEvent["type"]>(["RUN_ALL", "CLEAR_OUTPUTS"]);
-
-export interface SpawnTrackSpec {
-  id: string;
-  laneId?: string;
-  deviceIds: string[];
-  body?: CellPath;
-  cellId: string | null;
-  enteredVia?: EnteredVia;
-}
-
-/**
- * Internal production primitive used by future container entry. It only
- * allocates track-local state; scheduling remains a separate pure fold so
- * callers can establish every lane before any effect launches.
- */
-export function spawnTracks(state: RunnerState, specs: readonly SpawnTrackSpec[]): RunnerState {
-  let next = state;
-  for (const spec of [...specs].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))) {
-    if (Object.prototype.hasOwnProperty.call(next.tracks, spec.id)) {
-      return withDerivedStatus({
-        ...trace(next, `fatal: duplicate workbook track ${spec.id}`),
-        fatalReason: `duplicate workbook track ${spec.id}`,
-      });
-    }
-    const cursor: Partial<TrackCursor> = {
-      body: spec.body ?? [],
-      cellId: spec.cellId,
-      enteredVia: spec.enteredVia ?? "forward",
-      atStart: false,
-    };
-    next = setTrack(next, createTrack(spec.id, spec.deviceIds, cursor, spec.laneId));
-  }
-  return withDerivedStatus(next);
-}
 
 /** Launch active tracks in deterministic id order, folding effectSeq globally. */
 export function scheduleTracks(state: RunnerState, trackIds: readonly string[]): TransitionResult {
@@ -254,6 +223,50 @@ function handleCancel(state: RunnerState): TransitionResult {
   return ignored(state, "CANCEL");
 }
 
+function handleAbandonLane(state: RunnerState, trackId: string): TransitionResult {
+  const attempt = state.activeContainerAttemptId
+    ? state.parallelAttempts[state.activeContainerAttemptId]
+    : undefined;
+  const lane = attempt
+    ? Object.values(attempt.lanes).find((candidate) => candidate.trackId === trackId)
+    : undefined;
+  const track = state.tracks[trackId];
+  if (!lane) return ignored(state, "ABANDON_LANE");
+  if (["done", "partial", "failed", "skipped"].includes(track.status)) {
+    return ignored(state, "ABANDON_LANE terminal");
+  }
+
+  const effectIds = Object.values(state.inFlight)
+    .filter((effect): effect is NonNullable<typeof effect> => effect?.trackId === trackId)
+    .map((effect) => effect.effectId)
+    .sort();
+  if (effectIds.length > 0) {
+    return {
+      state: {
+        ...trace(state, `abandon lane ${lane.laneId}: cancelling ${effectIds.join(",")}`),
+        cancellingEffectIds: {
+          ...state.cancellingEffectIds,
+          ...Object.fromEntries(effectIds.map((effectId) => [effectId, true] as const)),
+        },
+        abandoningTrackIds: { ...state.abandoningTrackIds, [trackId]: true },
+      },
+      effects: [{ kind: "cancelEffects", effectIds }],
+    };
+  }
+
+  return settleParallelBarrier(
+    setTrack(trace(state, `abandon lane ${lane.laneId}`), {
+      ...track,
+      status: "skipped",
+      terminalReason: "Abandoned by researcher",
+      pendingInteraction: null,
+      progress: null,
+      dispatch: null,
+      dispatchConsumed: {},
+    }),
+  );
+}
+
 function handleReset(state: RunnerState): TransitionResult {
   const effectIds = Object.keys(state.inFlight).sort();
   const effects: Effect[] = effectIds.length > 0 ? [{ kind: "cancelEffects", effectIds }] : [];
@@ -367,10 +380,23 @@ function handleBack(state: RunnerState): TransitionResult {
 function handleRetry(state: RunnerState, target: RetryTarget | undefined): TransitionResult {
   if (Object.keys(state.cancellingEffectIds).length > 0) return ignored(state, "RETRY");
   if (!target) return ignored(state, "RETRY missing target");
+  if (target.kind === "containerAttempt") {
+    const attempt = state.parallelAttempts[target.attemptId];
+    const main = mainTrack(state);
+    const confirmed =
+      state.activeContainerAttemptId === target.attemptId &&
+      attempt?.containerCellId === target.containerCellId &&
+      attempt.status === "awaitingRestart" &&
+      main.pendingInteraction?.kind === "restart" &&
+      main.pendingInteraction.cellId === target.containerCellId;
+    if (!confirmed) return ignored(state, "RETRY containerAttempt");
+    const next = discardParkedParallelAttempt(state);
+    return landOn(next, target.containerCellId, "jump", MAIN_TRACK_ID);
+  }
   if (target.kind !== "postCancel") {
     return noop(
       state,
-      `unsupported RETRY target ${target.kind}; scheduler spine only supports postCancel`,
+      `unsupported RETRY target ${target.kind}; lane retry requires an active attempt`,
     );
   }
   if (!Object.prototype.hasOwnProperty.call(state.tracks, target.trackId))
@@ -579,6 +605,23 @@ function acknowledgeCancel(
   const cancellingEffectIds = { ...next.cancellingEffectIds };
   delete cancellingEffectIds[event.effectId];
   next = markCancelledTrack({ ...next, cancellingEffectIds }, trackId, event.cellId);
+  if (next.abandoningTrackIds[trackId]) {
+    const abandoningTrackIds = { ...next.abandoningTrackIds };
+    delete abandoningTrackIds[trackId];
+    next = setTrack(
+      { ...next, abandoningTrackIds },
+      {
+        ...getTrack(next, trackId),
+        status: "skipped",
+        terminalReason: "Abandoned by researcher",
+        pendingInteraction: null,
+        progress: null,
+        dispatch: null,
+        dispatchConsumed: {},
+      },
+    );
+    return settleParallelBarrier(next);
+  }
   if (Object.keys(cancellingEffectIds).length === 0) {
     next = { ...next, runAllActive: false, stopRequested: false };
   }
@@ -709,6 +752,9 @@ export function transition(state: RunnerState, event: WorkbookEvent): Transition
       break;
     case "CANCEL":
       result = handleCancel(state);
+      break;
+    case "ABANDON_LANE":
+      result = handleAbandonLane(state, event.trackId);
       break;
     case "RESET":
       result = handleReset(state);

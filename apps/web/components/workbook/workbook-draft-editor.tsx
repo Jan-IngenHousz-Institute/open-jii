@@ -1,6 +1,7 @@
 "use client";
 
 import { useReportAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
+import { ParallelTrackBoard } from "@/components/workbook/parallel-track-board";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useWorkbookExecution } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
@@ -123,7 +124,10 @@ export function WorkbookDraftEditor({
     runCell,
     runAll,
     stopExecution,
+    abandonLane,
+    restartContainerAttempt,
     clearOutputs,
+    runnerState,
   } = useWorkbookExecution({
     cells,
     onCellsChange: handleCellsChange,
@@ -161,29 +165,38 @@ export function WorkbookDraftEditor({
   }, [cells, clearOutputs, t]);
 
   return (
-    <WorkbookEditor
-      cells={cells}
-      onCellsChange={handleCellsChange}
-      readOnly={!canEdit}
-      title={name}
-      executionStates={executionStates}
-      isConnected={isConnected}
-      isConnecting={isConnecting}
-      connectedDevices={connectedDevices}
-      sensorFamily={sensorFamily}
-      onSensorFamilyChange={setSensorFamily}
-      connectionType={connectionType}
-      onConnectionTypeChange={setConnectionType}
-      isRunningAll={isRunningAll}
-      onConnect={connect}
-      onDisconnect={disconnect}
-      onDisconnectDevice={disconnectDevice}
-      onRunAll={runAll}
-      onStopExecution={stopExecution}
-      onClearOutputs={handleClearOutputs}
-      onRunCell={handleRunCell}
-      promptedQuestionId={promptedQuestionId}
-      onQuestionAnswered={handleQuestionAnswered}
-    />
+    <>
+      <ParallelTrackBoard
+        state={runnerState}
+        onAbandon={(trackId) => void abandonLane(trackId)}
+        onRestart={(containerCellId, attemptId) =>
+          void restartContainerAttempt(containerCellId, attemptId)
+        }
+      />
+      <WorkbookEditor
+        cells={cells}
+        onCellsChange={handleCellsChange}
+        readOnly={!canEdit}
+        title={name}
+        executionStates={executionStates}
+        isConnected={isConnected}
+        isConnecting={isConnecting}
+        connectedDevices={connectedDevices}
+        sensorFamily={sensorFamily}
+        onSensorFamilyChange={setSensorFamily}
+        connectionType={connectionType}
+        onConnectionTypeChange={setConnectionType}
+        isRunningAll={isRunningAll}
+        onConnect={connect}
+        onDisconnect={disconnect}
+        onDisconnectDevice={disconnectDevice}
+        onRunAll={runAll}
+        onStopExecution={stopExecution}
+        onClearOutputs={handleClearOutputs}
+        onRunCell={handleRunCell}
+        promptedQuestionId={promptedQuestionId}
+        onQuestionAnswered={handleQuestionAnswered}
+      />
+    </>
   );
 }

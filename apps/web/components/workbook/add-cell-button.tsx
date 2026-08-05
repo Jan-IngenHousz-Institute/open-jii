@@ -8,6 +8,7 @@ import {
   HelpCircle,
   Milestone,
   Microscope,
+  Layers3,
   Terminal,
 } from "lucide-react";
 
@@ -36,6 +37,7 @@ interface AddCellButtonProps {
   sensorFamily?: SensorFamily;
   variant?: "inline" | "bottom";
   showBranch?: boolean;
+  showParallel?: boolean;
   accentColor?: string;
   showEmptyState?: boolean;
 }
@@ -54,6 +56,7 @@ const cellOptions: {
   { type: "question", label: "Question", icon: HelpCircle, color: "#C58AAE" },
   { type: "branch", label: "Branch", icon: GitBranch, color: "#F29D38" },
   { type: "branch", label: "Go to", icon: Milestone, color: "#F29D38", kind: "goto" },
+  { type: "parallel", label: "Parallel", icon: Layers3, color: "#119DA4" },
 ];
 
 export function createGotoCell(): WorkbookCell {
@@ -81,10 +84,14 @@ export function AddCellButton({
   sensorFamily = "multispeq",
   variant = "inline",
   showBranch = true,
+  showParallel = true,
   accentColor,
   showEmptyState,
 }: AddCellButtonProps) {
-  const options = showBranch ? cellOptions : cellOptions.filter((o) => o.type !== "branch");
+  const options = cellOptions.filter(
+    (option) =>
+      (showBranch || option.type !== "branch") && (showParallel || option.type !== "parallel"),
+  );
 
   const handleClick = (option: (typeof cellOptions)[number]) => {
     if (option.kind === "goto" && onAddCell) {

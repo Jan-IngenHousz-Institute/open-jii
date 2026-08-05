@@ -1,4 +1,4 @@
-import type { BranchCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { BranchCell, ParallelCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import {
   buildCellNamespace,
   isOutputDataNormalizationError,
@@ -8,11 +8,13 @@ import type { DeviceContext } from "@repo/api/transforms/device-context";
 import { toDeviceContext } from "@repo/api/transforms/device-context";
 import {
   evaluateBranch,
+  assignParallelLanes,
   isDeviceScopedBranch,
   validateBranchCell,
   validateDeviceBranch,
 } from "@repo/api/transforms/evaluate-branch";
-import { findWorkbookCell } from "@repo/api/transforms/workbook-cell-tree";
+import { sanitizeQuestionLabel } from "@repo/api/transforms/label-sanitization";
+import { findWorkbookCell, workbookBodyAtPath } from "@repo/api/transforms/workbook-cell-tree";
 import { validateCommandArtifact } from "@repo/iot";
 import type { SensorFamily } from "@repo/iot";
 
@@ -33,8 +35,19 @@ import {
 import { asWorkbookCells, hydrateCells } from "../flow/hydrate";
 import type { CommandSource, ResolvedCommandValue } from "../ports";
 import type { Effect, MacroLeg, TransitionResult } from "./effects";
-import type { CellRunState, DeviceRef, EffectPhase, EnteredVia, RunnerState, Track } from "./state";
-import { currentAnswers, getTrack, MAIN_TRACK_ID, setTrack, trace } from "./state";
+import type {
+  CellRunState,
+  DeviceRef,
+  EffectPhase,
+  EnteredVia,
+  ParallelContainerAttempt,
+  ParallelLaneAttempt,
+  ParallelLaneDeviceOutcome,
+  ParallelLaneTerminalStatus,
+  RunnerState,
+  Track,
+} from "./state";
+import { currentAnswers, getTrack, MAIN_TRACK_ID, setTrack, spawnTracks, trace } from "./state";
 
 export function setCellRun(state: RunnerState, cellId: string, run: CellRunState): RunnerState {
   return { ...state, cellRuns: { ...state.cellRuns, [cellId]: run } };
@@ -346,6 +359,7 @@ export function startProducer(
             deviceId: r.deviceId,
             device: deviceContextOf(devices, r.deviceId),
             consumer: { path: track.cursor.body, cellId },
+            parallel: next.parallelContexts,
           });
           return { kind: "run", input: { ...base, ...identity, json: r.data, ctx } };
         } catch (error) {
@@ -368,6 +382,7 @@ export function startProducer(
       ctx = buildCellNamespace(hydrated, idx, {
         device: deviceContextOf(devices),
         consumer: { path: track.cursor.body, cellId },
+        parallel: next.parallelContexts,
       });
     } catch (error) {
       if (!isOutputDataNormalizationError(error)) throw error;
@@ -699,6 +714,333 @@ export function isDispatchTarget(
   return dispatch !== null && dispatch.queue[dispatch.index]?.targetCellId === effectCellId;
 }
 
+const TERMINAL_TRACK_STATUSES = new Set<Track["status"]>(["done", "partial", "failed", "skipped"]);
+
+function activeParallelAttempt(state: RunnerState): ParallelContainerAttempt | undefined {
+  return state.activeContainerAttemptId
+    ? state.parallelAttempts[state.activeContainerAttemptId]
+    : undefined;
+}
+
+function laneDeviceOutcomes(
+  state: RunnerState,
+  lane: ParallelLaneAttempt,
+): ParallelLaneDeviceOutcome[] {
+  if (lane.trackId === null) return [];
+  const track = state.tracks[lane.trackId];
+  const body = workbookBodyAtPath(state.cells, track.cursor.body) ?? [];
+  const producerIds = new Set(body.filter(isProducer).map((cell) => cell.id));
+  const results = [...producerIds].flatMap((producerId) => {
+    const ordinary = state.outputs[producerId]?.deviceResults ?? [];
+    const dispatch = state.outputs[dispatchStepId(producerId)]?.deviceResults ?? [];
+    return [...ordinary, ...dispatch];
+  });
+
+  return lane.deviceIds.map((deviceId) => {
+    const matching = results.filter((result) => result.deviceId === deviceId);
+    const failed = matching.some((result) => result.error !== undefined);
+    return { deviceId, outcome: failed ? "failed" : "ok" };
+  });
+}
+
+function terminalLaneStatus(
+  track: Track,
+  devices: ParallelLaneDeviceOutcome[],
+): ParallelLaneTerminalStatus {
+  if (track.status === "failed" || track.status === "skipped") return track.status;
+  const failed = devices.some((device) => device.outcome === "failed");
+  const succeeded = devices.some((device) => device.outcome === "ok");
+  return failed && succeeded ? "partial" : failed ? "failed" : "done";
+}
+
+function syncParallelAttempt(state: RunnerState): RunnerState {
+  const attempt = activeParallelAttempt(state);
+  if (!attempt) return state;
+  let tracks = state.tracks;
+  const lanes = Object.fromEntries(
+    Object.entries(attempt.lanes).map(([laneId, lane]) => {
+      if (lane.trackId === null) return [laneId, lane];
+      const track = state.tracks[lane.trackId];
+      const devices = laneDeviceOutcomes(state, lane);
+      const status = TERMINAL_TRACK_STATUSES.has(track.status)
+        ? terminalLaneStatus(track, devices)
+        : track.status;
+      if (status !== track.status) {
+        tracks = { ...tracks, [track.id]: { ...track, status } };
+      }
+      return [
+        laneId,
+        {
+          ...lane,
+          status,
+          devices,
+          terminalReason: track.terminalReason,
+        } satisfies ParallelLaneAttempt,
+      ];
+    }),
+  );
+  return {
+    ...state,
+    tracks,
+    parallelAttempts: { ...state.parallelAttempts, [attempt.attemptId]: { ...attempt, lanes } },
+  };
+}
+
+/**
+ * Snapshot-safe normalization for an interrupted attempt. Nested values and
+ * run records are attempt-local even though their maps are keyed only by cell
+ * id, so they must be removed before a fresh attempt can be confirmed.
+ */
+export function parkParallelAttemptForRestart(state: RunnerState): RunnerState {
+  const attempt = activeParallelAttempt(state);
+  if (!attempt || attempt.status === "complete") return state;
+  const nestedIds = new Set<string>();
+  for (const lane of Object.values(attempt.lanes)) {
+    const track = lane.trackId ? state.tracks[lane.trackId] : undefined;
+    const body = track ? workbookBodyAtPath(state.cells, track.cursor.body) : undefined;
+    for (const cell of body ?? []) nestedIds.add(cell.id);
+  }
+
+  const outputs = { ...state.outputs };
+  const cellRuns = { ...state.cellRuns };
+  for (const cellId of nestedIds) {
+    delete outputs[cellId];
+    delete outputs[dispatchStepId(cellId)];
+    delete cellRuns[cellId];
+    delete cellRuns[dispatchStepId(cellId)];
+  }
+  delete cellRuns[attempt.containerCellId];
+
+  const answersByCycle = state.answersByCycle.map((answers, cycle) => {
+    if (cycle !== state.cycle) return answers;
+    const next = { ...answers };
+    for (const cellId of nestedIds) delete next[cellId];
+    return next;
+  });
+  const tracks = Object.fromEntries(
+    Object.entries(state.tracks).filter(
+      ([trackId]) =>
+        trackId === MAIN_TRACK_ID ||
+        !Object.values(attempt.lanes).some((lane) => lane.trackId === trackId),
+    ),
+  );
+  const main = tracks[MAIN_TRACK_ID];
+  tracks[MAIN_TRACK_ID] = {
+    ...main,
+    status: "awaitingHuman",
+    terminalReason: undefined,
+    progress: null,
+    dispatch: null,
+    dispatchConsumed: {},
+    pendingInteraction: { kind: "restart", cellId: attempt.containerCellId },
+    cursor: {
+      body: main.cursor.body,
+      cellId: attempt.containerCellId,
+      enteredVia: "jump",
+      atStart: false,
+    },
+  };
+
+  return {
+    ...trace(state, `parallel attempt ${attempt.attemptId} parked for restart confirmation`),
+    outputs,
+    cellRuns,
+    answersByCycle,
+    tracks,
+    inFlight: {},
+    cancellingEffectIds: {},
+    abandoningTrackIds: {},
+    runAllActive: false,
+    stopRequested: false,
+    parallelAttempts: {
+      ...state.parallelAttempts,
+      [attempt.attemptId]: { ...attempt, status: "awaitingRestart" },
+    },
+  };
+}
+
+/** Remove the parked attempt shell immediately before confirmed re-entry. */
+export function discardParkedParallelAttempt(state: RunnerState): RunnerState {
+  const attempt = activeParallelAttempt(state);
+  if (attempt?.status !== "awaitingRestart") return state;
+  const parallelAttempts = { ...state.parallelAttempts };
+  delete parallelAttempts[attempt.attemptId];
+  const main = getTrack(state, MAIN_TRACK_ID);
+  return setTrack(
+    {
+      ...state,
+      parallelAttempts,
+      activeContainerAttemptId: null,
+    },
+    {
+      ...main,
+      status: "active",
+      pendingInteraction: null,
+      terminalReason: undefined,
+    },
+  );
+}
+
+/**
+ * Resolve the named wait-all barrier after a lane becomes terminal. Failures,
+ * partial outcomes and researcher skips all count as terminal; only then does
+ * the main track advance past the container.
+ */
+export function settleParallelBarrier(state: RunnerState): TransitionResult {
+  let next = syncParallelAttempt(state);
+  const attempt = activeParallelAttempt(next);
+  if (!attempt) return { state: next, effects: [] };
+  const lanes = Object.values(attempt.lanes);
+  if (!lanes.every((lane) => TERMINAL_TRACK_STATUSES.has(lane.status))) {
+    return { state: next, effects: [] };
+  }
+
+  const contextLanes = Object.fromEntries(
+    lanes.map((lane) => [
+      lane.laneId,
+      {
+        label: lane.label,
+        status: lane.status as ParallelLaneTerminalStatus,
+        devices: lane.devices,
+      },
+    ]),
+  );
+  const statusFields = Object.fromEntries(
+    lanes.map((lane) => [lane.laneId, lane.status as ParallelLaneTerminalStatus]),
+  );
+  const context = {
+    attemptId: attempt.attemptId,
+    ...statusFields,
+    lanes: contextLanes,
+  };
+  const completed = { ...attempt, status: "complete" as const };
+  next = completeRun(
+    {
+      ...trace(next, `parallel barrier ${attempt.containerCellId} released`),
+      outputs: {
+        ...next.outputs,
+        [attempt.containerCellId]: { v: context },
+      },
+      parallelAttempts: { ...next.parallelAttempts, [attempt.attemptId]: completed },
+      activeContainerAttemptId: null,
+      parallelContexts: {
+        ...next.parallelContexts,
+        [attempt.containerName]: context,
+      },
+    },
+    attempt.containerCellId,
+  );
+  const main = getTrack(next, MAIN_TRACK_ID);
+  next = setTrack(next, {
+    ...main,
+    status: "active",
+    pendingInteraction: null,
+    terminalReason: undefined,
+  });
+  if (next.mode === "notebook" && !next.runAllActive) {
+    return { state: next, effects: [] };
+  }
+  return landOn(next, nextCellId(next.cells, attempt.containerCellId), "forward", MAIN_TRACK_ID);
+}
+
+function enterParallelContainer(state: RunnerState, container: ParallelCell): TransitionResult {
+  if (activeParallelAttempt(state)) {
+    return fatal(
+      state,
+      `parallel container ${container.id} entered while another attempt is active`,
+    );
+  }
+  const main = getTrack(state, MAIN_TRACK_ID);
+  const devices = scopedDevices(state, main);
+  let assignment;
+  try {
+    assignment = assignParallelLanes(
+      container,
+      state.cells,
+      devices.map((device) => ({
+        deviceId: device.id,
+        device: deviceContextOf(devices, device.id) ?? { family: device.family, index: 0 },
+      })),
+    );
+  } catch (error) {
+    return fatal(
+      state,
+      error instanceof Error ? error.message : `invalid container ${container.id}`,
+    );
+  }
+
+  const containerAttemptSeq = state.containerAttemptSeq + 1;
+  const attemptId = `${container.id}:${containerAttemptSeq}`;
+  const lanes = Object.fromEntries(
+    container.lanes.map((lane) => {
+      const deviceIds = assignment.lanes[lane.id] ?? [];
+      const trackId = deviceIds.length > 0 ? `${container.id}#${attemptId}:${lane.id}` : null;
+      return [
+        lane.id,
+        {
+          laneId: lane.id,
+          label: lane.label,
+          trackId,
+          deviceIds,
+          status: trackId === null ? "skipped" : "active",
+          devices:
+            trackId === null ? [] : deviceIds.map((deviceId) => ({ deviceId, outcome: "ok" })),
+          ...(trackId === null ? { terminalReason: "No devices assigned" } : {}),
+        } satisfies ParallelLaneAttempt,
+      ];
+    }),
+  );
+  const attempt: ParallelContainerAttempt = {
+    attemptId,
+    containerCellId: container.id,
+    containerName: sanitizeQuestionLabel(container.name),
+    status: "running",
+    lanes,
+  };
+  let next = stampRun(
+    {
+      ...state,
+      containerAttemptSeq,
+      activeContainerAttemptId: attemptId,
+      parallelAttempts: { ...state.parallelAttempts, [attemptId]: attempt },
+    },
+    container.id,
+  );
+  next = setTrack(next, {
+    ...main,
+    status: "active",
+    pendingInteraction: null,
+    cursor: { ...main.cursor, cellId: container.id, enteredVia: "forward", atStart: false },
+  });
+
+  const specs = container.lanes.flatMap((lane) => {
+    const laneAttempt = lanes[lane.id];
+    if (laneAttempt.trackId === null) return [];
+    const body = [...main.cursor.body, { containerCellId: container.id, laneId: lane.id }];
+    return [
+      {
+        id: laneAttempt.trackId,
+        laneId: lane.id,
+        deviceIds: laneAttempt.deviceIds,
+        body,
+        cellId: firstExecutableCellId(next.cells, body),
+      },
+    ];
+  });
+  next = spawnTracks(next, specs);
+  if (next.fatalReason !== null) return { state: next, effects: [] };
+
+  const effects: Effect[] = [];
+  for (const spec of [...specs].sort((a, b) => a.id.localeCompare(b.id))) {
+    const launched = landOn(next, spec.cellId, "forward", spec.id);
+    next = launched.state;
+    effects.push(...launched.effects);
+    if (next.fatalReason !== null) break;
+  }
+  if (specs.length === 0) return settleParallelBarrier(next);
+  return { state: next, effects };
+}
+
 function endOfFlow(
   state: RunnerState,
   trackId: string,
@@ -710,7 +1052,7 @@ function endOfFlow(
         trackId === MAIN_TRACK_ID ? { ...state, runAllActive: false, stopRequested: false } : state,
         {
           ...track,
-          status: state.mode === "flow" ? "done" : "active",
+          status: trackId !== MAIN_TRACK_ID || state.mode === "flow" ? "done" : "active",
           pendingInteraction: null,
           cursor: { body: track.cursor.body, cellId: null, enteredVia: "forward", atStart: false },
         },
@@ -782,6 +1124,7 @@ export function landOn(
 
     if (current === null) {
       const ended = endOfFlow(s, trackId);
+      if (trackId !== MAIN_TRACK_ID) return settleParallelBarrier(ended.state);
       if (ended.continueAt === null) return { state: ended.state, effects: [] };
       s = ended.state;
       current = ended.continueAt;
@@ -789,7 +1132,8 @@ export function landOn(
       continue;
     }
 
-    const cell = cellById(s.cells, current);
+    const currentTrack = getTrack(s, trackId);
+    const cell = cellById(s.cells, current, currentTrack.cursor.body);
     if (!cell) return fatal(s, `unknown cell ${current}`);
 
     const track = getTrack(s, trackId);
@@ -881,6 +1225,32 @@ export function landOn(
       continue;
     }
 
+    if (cell.type === "parallel") {
+      if (trackId !== MAIN_TRACK_ID) {
+        return fatal(s, `nested parallel container ${cell.id} is unsupported`);
+      }
+      if (entryVia === "back") {
+        return {
+          state: setTrack(s, {
+            ...getTrack(s, trackId),
+            status: "awaitingHuman",
+            pendingInteraction: { kind: "resume", cellId: cell.id },
+          }),
+          effects: [],
+        };
+      }
+      if (
+        s.mode === "flow" &&
+        entryVia === "forward" &&
+        s.cellRuns[cell.id]?.status === "completed"
+      ) {
+        current = nextCellId(s.cells, cell.id);
+        entryVia = "forward";
+        continue;
+      }
+      return enterParallelContainer(s, cell);
+    }
+
     if (isProducer(cell)) {
       if (entryVia === "back") {
         return {
@@ -935,16 +1305,15 @@ export function afterCellFailure(
   let cleared = setTrack(state, { ...track, progress: null });
   if (trackId !== MAIN_TRACK_ID) {
     const error = cleared.cellRuns[cellId]?.error ?? "Cell failed";
-    return {
-      state: setTrack(cleared, {
+    return settleParallelBarrier(
+      setTrack(cleared, {
         ...getTrack(cleared, trackId),
         status: "failed",
         terminalReason: error,
         pendingInteraction: null,
         cursor: { ...getTrack(cleared, trackId).cursor, cellId },
       }),
-      effects: [],
-    };
+    );
   }
   if (cleared.mode === "flow") {
     const error = cleared.cellRuns[cellId]?.error ?? "Cell failed";

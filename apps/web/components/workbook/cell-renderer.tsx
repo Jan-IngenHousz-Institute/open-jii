@@ -8,6 +8,7 @@ import { CommandCellComponent } from "./cells/command-cell";
 import { MacroCellComponent } from "./cells/macro-cell";
 import { MarkdownCellComponent } from "./cells/markdown-cell";
 import { OutputCellComponent } from "./cells/output-cell";
+import { ParallelCellComponent } from "./cells/parallel-cell";
 import { ProtocolCellComponent } from "./cells/protocol-cell";
 import { QuestionCellComponent } from "./cells/question-cell";
 
@@ -128,7 +129,18 @@ export function CellRenderer({
           readOnly={readOnly}
         />
       );
-    default:
-      return null;
+    case "parallel":
+      return (
+        <ParallelCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onRun={onRun}
+          allCells={allCells}
+          executionStatus={executionStatus}
+          executionError={executionError}
+          readOnly={readOnly}
+        />
+      );
   }
 }

@@ -91,7 +91,12 @@ function cellValue(cells: WorkbookCell[], location: CellLocation, deviceId?: str
   if (cell.type === "question") {
     return cell.answer != null ? { answer: cell.answer } : undefined;
   }
-  if (cell.type === "protocol" || cell.type === "macro" || cell.type === "command") {
+  if (
+    cell.type === "protocol" ||
+    cell.type === "macro" ||
+    cell.type === "command" ||
+    cell.type === "parallel"
+  ) {
     return resolveOutputData(cells, cell.id, deviceId, location.path);
   }
   return undefined;
@@ -132,7 +137,7 @@ export function buildCellNamespace(
   if (options?.device) {
     ctx[DEVICE_CONTEXT_KEY] = options.device;
   }
-  if (options?.parallel) {
+  if (options?.parallel && Object.keys(options.parallel).length > 0) {
     ctx.$parallel = options.parallel;
   }
 

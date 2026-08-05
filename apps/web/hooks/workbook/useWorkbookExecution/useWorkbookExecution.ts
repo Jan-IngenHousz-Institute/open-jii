@@ -388,6 +388,29 @@ export function useWorkbookExecution({
     runnerRef.current?.send({ type: "STOP" });
   }, []);
 
+  const abandonLane = useCallback(
+    async (trackId: string) => {
+      const runner = runnerRef.current;
+      if (!runner) return;
+      runner.send({ type: "ABANDON_LANE", trackId });
+      await settle(runner);
+    },
+    [settle],
+  );
+
+  const restartContainerAttempt = useCallback(
+    async (containerCellId: string, attemptId: string) => {
+      const runner = runnerRef.current;
+      if (!runner) return;
+      runner.send({
+        type: "RETRY",
+        target: { kind: "containerAttempt", containerCellId, attemptId },
+      });
+      await settle(runner);
+    },
+    [settle],
+  );
+
   const clearOutputs = useCallback(() => {
     disposeRunner();
     setRunnerState(null);
@@ -433,6 +456,8 @@ export function useWorkbookExecution({
     runCell,
     runAll,
     stopExecution,
+    abandonLane,
+    restartContainerAttempt,
     clearOutputs,
 
     /** Live runner state for the Variables / Flow panes; null before any run. */

@@ -60,6 +60,8 @@ interface BranchCellProps {
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
   readOnly?: boolean;
+  /** Reuse the shared condition mutation/selectors without branch path routing UI. */
+  conditionsOnly?: boolean;
 }
 
 type BranchOperator = BranchCondition["operator"];
@@ -86,6 +88,7 @@ export function BranchCellComponent({
   executionStatus,
   executionError,
   readOnly,
+  conditionsOnly,
 }: BranchCellProps) {
   const { t } = useTranslation("workbook");
   const cell = useMemo(
@@ -347,7 +350,7 @@ export function BranchCellComponent({
     setExpandedPaths((prev) => ({ ...prev, [pathKey]: !prev[pathKey] }));
   };
 
-  if (isGotoBranchCell(cell)) {
+  if (!conditionsOnly && isGotoBranchCell(cell)) {
     const path = cell.paths[0];
     const targetExists = jumpTargets.some((target) => target.id === path.gotoCellId);
 
@@ -518,7 +521,7 @@ export function BranchCellComponent({
           disabled={readOnly}
         />
 
-        {!readOnly && (path.conditions.length > 1 || path === defaultPath) ? (
+        {!readOnly && (conditionsOnly || path.conditions.length > 1 || path === defaultPath) ? (
           <Button
             variant="ghost"
             size="sm"
@@ -534,6 +537,28 @@ export function BranchCellComponent({
       </div>
     );
   };
+
+  if (conditionsOnly) {
+    const path = cell.paths[0];
+    return (
+      <div className="space-y-1.5 rounded-md border bg-orange-50/30 p-2.5 dark:bg-orange-950/10">
+        {path.conditions.map((cond, conditionIndex) =>
+          renderCondition(path, 0, cond, conditionIndex),
+        )}
+        {!readOnly && (
+          <div className="pl-[34px]">
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
+              onClick={() => handleAddCondition(0)}
+            >
+              <Plus className="size-3" /> condition
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const renderPath = (path: BranchPath, pathIndex: number) => {
     const pathKey = `${path.id}:${pathIndex}`;

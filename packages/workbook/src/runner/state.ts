@@ -85,7 +85,7 @@ export interface DeviceRef {
  * a sibling effect remains in flight.
  */
 export interface PendingInteraction {
-  kind: "question" | "instruction" | "error" | "resume";
+  kind: "question" | "instruction" | "error" | "resume" | "restart";
   cellId: string;
 }
 
@@ -125,6 +125,53 @@ export interface Track {
   pendingInteraction: PendingInteraction | null;
 }
 
+export type ParallelLaneTerminalStatus = "done" | "partial" | "failed" | "skipped";
+
+export interface ParallelLaneDeviceOutcome {
+  deviceId: string;
+  outcome: "ok" | "failed";
+}
+
+export interface ParallelLaneAttempt {
+  laneId: string;
+  label: string;
+  trackId: string | null;
+  /** Frozen transport identities for this attempt. */
+  deviceIds: string[];
+  status: TrackStatus;
+  devices: ParallelLaneDeviceOutcome[];
+  terminalReason?: string;
+}
+
+export interface ParallelContainerAttempt {
+  attemptId: string;
+  containerCellId: string;
+  containerName: string;
+  status: "running" | "awaitingRestart" | "complete";
+  lanes: Record<string, ParallelLaneAttempt>;
+}
+
+export interface ParallelContextEntry extends Record<string, unknown> {
+  attemptId: string;
+  lanes: Record<
+    string,
+    {
+      label: string;
+      status: ParallelLaneTerminalStatus;
+      devices: ParallelLaneDeviceOutcome[];
+    }
+  >;
+}
+
+export interface SpawnTrackSpec {
+  id: string;
+  laneId?: string;
+  deviceIds: string[];
+  body?: CellPath;
+  cellId: string | null;
+  enteredVia?: EnteredVia;
+}
+
 export interface RunnerState {
   schemaVersion: 2;
   mode: RunnerMode;
@@ -151,6 +198,16 @@ export interface RunnerState {
   inFlight: Partial<Record<string, InFlightEffect>>;
   /** Effect ids requested for cancellation but not yet acknowledged. */
   cancellingEffectIds: Partial<Record<string, true>>;
+
+  /** Monotonic, snapshot-stable source for deterministic container attempt ids. */
+  containerAttemptSeq: number;
+  /** Completed attempts remain available to the track board and provenance. */
+  parallelAttempts: Partial<Record<string, ParallelContainerAttempt>>;
+  activeContainerAttemptId: string | null;
+  /** Latest completed context per canonical container name for macro `ctx.$parallel`. */
+  parallelContexts: Partial<Record<string, ParallelContextEntry>>;
+  /** Lane abandons wait for their owned effects to acknowledge cancellation. */
+  abandoningTrackIds: Partial<Record<string, true>>;
 
   /** Connected devices; each track freezes the ids it may target. */
   devices: DeviceRef[];
@@ -227,10 +284,47 @@ export function createInitialState(opts: CreateStateOptions): RunnerState {
     effectSeq: 0,
     inFlight: {},
     cancellingEffectIds: {},
+    containerAttemptSeq: 0,
+    parallelAttempts: {},
+    activeContainerAttemptId: null,
+    parallelContexts: {},
+    abandoningTrackIds: {},
     devices,
     fatalReason: null,
     trace: [],
   };
+}
+
+/**
+ * Allocate track-local state without launching work. Container entry is the
+ * production caller; scheduling stays separate so every lane exists before
+ * the first effect is emitted.
+ */
+export function spawnTracks(state: RunnerState, specs: readonly SpawnTrackSpec[]): RunnerState {
+  let next = state;
+  for (const spec of [...specs].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))) {
+    if (Object.prototype.hasOwnProperty.call(next.tracks, spec.id)) {
+      return withDerivedStatus({
+        ...trace(next, `fatal: duplicate workbook track ${spec.id}`),
+        fatalReason: `duplicate workbook track ${spec.id}`,
+      });
+    }
+    next = setTrack(
+      next,
+      createTrack(
+        spec.id,
+        spec.deviceIds,
+        {
+          body: spec.body ?? [],
+          cellId: spec.cellId,
+          enteredVia: spec.enteredVia ?? "forward",
+          atStart: false,
+        },
+        spec.laneId,
+      ),
+    );
+  }
+  return withDerivedStatus(next);
 }
 
 export function getTrack(state: RunnerState, trackId: string): Track {

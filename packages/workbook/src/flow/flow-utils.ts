@@ -104,5 +104,10 @@ export function nearestUpstreamProducerId(cells: RunnerCell[], cellId: string): 
 
 /** Producer cells write `outputs` and are subject to stale marking. */
 export function isProducer(cell: RunnerCell): boolean {
-  return cell.type === "protocol" || cell.type === "command" || cell.type === "macro";
+  return (
+    cell.type === "protocol" ||
+    cell.type === "command" ||
+    cell.type === "macro" ||
+    cell.type === "parallel"
+  );
 }
