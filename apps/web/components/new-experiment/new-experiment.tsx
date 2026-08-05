@@ -42,6 +42,7 @@ export function NewExperimentForm() {
   const locale = useLocale();
   const [hasFormData, setHasFormData] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdExperimentId, setCreatedExperimentId] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
@@ -85,43 +86,49 @@ export function NewExperimentForm() {
   );
 
   const { data: workbooks = [] } = useWorkbookList();
-  const pendingWorkbook = useRef<{ id: string; revision: number } | undefined>(undefined);
+  const pendingWorkbookId = useRef<string | undefined>(undefined);
   const attachWorkbook = useAttachWorkbook();
+
+  const finishCreation = (experimentId: string) => {
+    setIsSubmitting(true);
+    setCreatedExperimentId(null);
+    toast({ description: t("experiments.experimentCreated") });
+    router.push(`/${locale}/platform/experiments/${experimentId}`);
+  };
+
+  const attachPendingWorkbook = (experimentId: string) => {
+    if (!pendingWorkbookId.current) {
+      finishCreation(experimentId);
+      return;
+    }
+    attachWorkbook.mutate(
+      {
+        id: experimentId,
+        workbookId: pendingWorkbookId.current,
+        expectedWorkbookId: null,
+        expectedWorkbookVersionId: null,
+      },
+      {
+        onSuccess: () => finishCreation(experimentId),
+        onError: (error) => {
+          setIsSubmitting(false);
+          toast({
+            description:
+              parseApiError(error)?.message ??
+              "The experiment was created, but its workbook could not be attached. Try again.",
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  };
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
     onSuccess: (experimentId: string) => {
-      // If a workbook was selected, attach it to create a version snapshot
-      if (pendingWorkbook.current) {
-        attachWorkbook.mutate(
-          {
-            id: experimentId,
-            workbookId: pendingWorkbook.current.id,
-            expectedWorkbookId: null,
-            expectedWorkbookVersionId: null,
-            expectedWorkbookRevision: pendingWorkbook.current.revision,
-          },
-          {
-            onSuccess: () => {
-              setIsSubmitting(true);
-              toast({ description: t("experiments.experimentCreated") });
-              router.push(`/${locale}/platform/experiments/${experimentId}`);
-            },
-            onError: (error) => {
-              setIsSubmitting(false);
-              toast({
-                description:
-                  parseApiError(error)?.message ??
-                  "The experiment was created, but its workbook could not be attached. Refresh and try again.",
-                variant: "destructive",
-              });
-            },
-          },
-        );
-      } else {
-        setIsSubmitting(true);
-        toast({ description: t("experiments.experimentCreated") });
-        router.push(`/${locale}/platform/experiments/${experimentId}`);
-      }
+      // Keep the created id until attachment succeeds. A retry must attach to
+      // this experiment instead of creating a duplicate experiment.
+      setCreatedExperimentId(experimentId);
+      attachPendingWorkbook(experimentId);
     },
   });
 
@@ -135,9 +142,11 @@ export function NewExperimentForm() {
       return;
     }
     setIsSubmitting(true);
-    pendingWorkbook.current = selectedWorkbook
-      ? { id: selectedWorkbook.id, revision: selectedWorkbook.revision }
-      : undefined;
+    pendingWorkbookId.current = selectedWorkbook?.id;
+    if (createdExperimentId) {
+      attachPendingWorkbook(createdExperimentId);
+      return;
+    }
     // Embargo is private-only: never send it on a public experiment (visibility
     // defaults to public), otherwise the create body validation rejects it.
     // The card only surfaces the embargo editor in the private branch, but its
@@ -214,7 +223,7 @@ export function NewExperimentForm() {
             locations: [],
           }}
           onSubmit={onSubmit}
-          isSubmitting={isPending}
+          isSubmitting={isPending || attachWorkbook.isPending || isSubmitting}
           showStepIndicator={true}
           showStepTitles={true}
         />

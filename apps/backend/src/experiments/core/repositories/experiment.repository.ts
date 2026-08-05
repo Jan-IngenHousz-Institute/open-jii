@@ -24,7 +24,6 @@ import {
   deleteResourceGrants,
   upsertGrant,
   resourceGrants,
-  workbooks,
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
@@ -70,11 +69,6 @@ const { searchVector: _experimentSearchVector, ...experimentColumns } =
 export interface ExpectedWorkbookPair {
   workbookId: string | null;
   workbookVersionId: string | null;
-}
-
-export interface ExpectedWorkbookRevision {
-  workbookId: string;
-  revision: number;
 }
 
 @Injectable()
@@ -452,7 +446,6 @@ export class ExperimentRepository {
     expectedPair: ExpectedWorkbookPair,
     updateExperimentDto: UpdateExperimentDto,
     graph: FlowGraphDto | null,
-    expectedWorkbookRevision?: ExpectedWorkbookRevision,
   ): Promise<Result<ExperimentDto | null>> {
     return tryCatch(() =>
       this.database.transaction(async (tx) => {
@@ -464,30 +457,10 @@ export class ExperimentRepository {
           expectedPair.workbookVersionId === null
             ? isNull(experiments.workbookVersionId)
             : eq(experiments.workbookVersionId, expectedPair.workbookVersionId);
-        const revisionPredicate = expectedWorkbookRevision
-          ? exists(
-              tx
-                .select({ revision: workbooks.revision })
-                .from(workbooks)
-                .where(
-                  and(
-                    eq(workbooks.id, expectedWorkbookRevision.workbookId),
-                    eq(workbooks.revision, expectedWorkbookRevision.revision),
-                  ),
-                ),
-            )
-          : undefined;
         const updated = await tx
           .update(experiments)
           .set(updateExperimentDto)
-          .where(
-            and(
-              eq(experiments.id, id),
-              workbookPredicate,
-              workbookVersionPredicate,
-              revisionPredicate,
-            ),
-          )
+          .where(and(eq(experiments.id, id), workbookPredicate, workbookVersionPredicate))
           .returning(experimentColumns);
         if (updated.length === 0) return null;
 

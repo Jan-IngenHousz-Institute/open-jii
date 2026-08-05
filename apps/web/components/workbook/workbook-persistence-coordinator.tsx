@@ -39,7 +39,6 @@ interface FailedPersistenceOperation {
 
 interface PendingCellPin {
   fingerprint: string;
-  revision: number;
   expectedVersionId: string;
 }
 
@@ -48,7 +47,7 @@ export interface WorkbookPersistenceCoordinator {
   entitySaved: () => Promise<void>;
   manualUpgrade: () => Promise<void>;
   renameWorkbook: (name: string) => Promise<void>;
-  attachWorkbook: (nextWorkbook: { id: string; revision: number }) => Promise<void>;
+  attachWorkbook: (nextWorkbookId: string) => Promise<void>;
   detachWorkbook: () => Promise<void>;
   setWorkbookVersion: (versionId: string) => Promise<void>;
   retryFailed: () => Promise<void>;
@@ -60,8 +59,8 @@ interface CoordinatorOptions {
   experimentId: string;
   workbookId: string;
   workbookVersionId: string;
-  workbookRevision: number;
   cells: WorkbookCell[];
+  persistedCells: WorkbookCell[];
   enabled: boolean;
   delayMs?: number;
 }
@@ -87,14 +86,12 @@ export function useWorkbookPersistenceCoordinator({
   experimentId,
   workbookId,
   workbookVersionId,
-  workbookRevision,
   cells,
+  persistedCells,
   enabled,
   delayMs = 1500,
 }: CoordinatorOptions): WorkbookPersistenceCoordinator {
-  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(workbookId, {
-    revision: workbookRevision,
-  });
+  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(workbookId);
   const { mutateAsync: upgradeWorkbook } = useUpgradeWorkbookVersion(experimentId);
   const { mutateAsync: attachWorkbookMutation } = useAttachWorkbook();
   const { mutateAsync: detachWorkbookMutation } = useDetachWorkbook();
@@ -106,7 +103,6 @@ export function useWorkbookPersistenceCoordinator({
   const tailRef = useRef<Promise<void>>(Promise.resolve());
   const pendingCountRef = useRef(0);
   const failedOperationRef = useRef<FailedPersistenceOperation | null>(null);
-  const revisionRef = useRef({ workbookId, revision: workbookRevision });
   const versionRef = useRef({ workbookId, versionId: workbookVersionId });
   const versionPropRef = useRef({ workbookId, versionId: workbookVersionId });
   const pendingCellPinRef = useRef<PendingCellPin | null>(null);
@@ -124,16 +120,10 @@ export function useWorkbookPersistenceCoordinator({
     tailRef.current = Promise.resolve();
     pendingCountRef.current = 0;
     failedOperationRef.current = null;
-    revisionRef.current = { workbookId, revision: workbookRevision };
     versionRef.current = { workbookId, versionId: workbookVersionId };
     versionPropRef.current = { workbookId, versionId: workbookVersionId };
     pendingCellPinRef.current = null;
   } else {
-    // Same-workbook refetches may carry a newer token written in another
-    // surface. Never move the monotonic revision backwards after a local save.
-    if (workbookRevision > revisionRef.current.revision) {
-      revisionRef.current = { workbookId, revision: workbookRevision };
-    }
     // Pairing versions are UUIDs, so observe prop transitions instead of
     // trying to order them. An unchanged stale prop cannot undo a local pin.
     if (versionPropRef.current.versionId !== workbookVersionId) {
@@ -260,12 +250,10 @@ export function useWorkbookPersistenceCoordinator({
             let pendingPin = pendingCellPinRef.current;
             if (pendingPin?.fingerprint !== fingerprint) {
               assertCurrent();
-              const saved = await updateWorkbook({ id: workbookId, cells: nextCells });
+              await updateWorkbook({ id: workbookId, cells: nextCells });
               assertCurrent();
-              revisionRef.current = { workbookId, revision: saved.revision };
               pendingPin = {
                 fingerprint,
-                revision: saved.revision,
                 expectedVersionId: versionRef.current.versionId,
               };
               pendingCellPinRef.current = pendingPin;
@@ -274,7 +262,6 @@ export function useWorkbookPersistenceCoordinator({
               id: experimentId,
               expectedWorkbookId: workbookId,
               expectedWorkbookVersionId: pendingPin.expectedVersionId,
-              expectedWorkbookRevision: pendingPin.revision,
             });
             assertCurrent();
             versionRef.current = { workbookId, versionId: pinned.workbookVersionId };
@@ -289,18 +276,15 @@ export function useWorkbookPersistenceCoordinator({
 
   const enqueuePin = useCallback(
     (kind: "entity" | "manual-upgrade") => {
-      let expectedRevision: number | undefined;
       let expectedVersionId: string | undefined;
       return enqueue(
         makeOperation(kind, async (assertCurrent) => {
           assertCurrent();
-          expectedRevision ??= revisionRef.current.revision;
           expectedVersionId ??= versionRef.current.versionId;
           const pinned = await upgradeWorkbook({
             id: experimentId,
             expectedWorkbookId: workbookId,
             expectedWorkbookVersionId: expectedVersionId,
-            expectedWorkbookRevision: expectedRevision,
           });
           assertCurrent();
           versionRef.current = { workbookId, versionId: pinned.workbookVersionId };
@@ -320,9 +304,8 @@ export function useWorkbookPersistenceCoordinator({
           "rename",
           async (assertCurrent) => {
             assertCurrent();
-            const saved = await updateWorkbook({ id: workbookId, name });
+            await updateWorkbook({ id: workbookId, name });
             assertCurrent();
-            revisionRef.current = { workbookId, revision: saved.revision };
           },
           name,
         ),
@@ -331,7 +314,7 @@ export function useWorkbookPersistenceCoordinator({
   );
 
   const attachWorkbook = useCallback(
-    async (nextWorkbook: { id: string; revision: number }) => {
+    async (nextWorkbookId: string) => {
       await flushForTransitionRef.current();
       return enqueue(
         makeOperation(
@@ -340,15 +323,14 @@ export function useWorkbookPersistenceCoordinator({
             assertCurrent();
             await attachWorkbookMutation({
               id: experimentId,
-              workbookId: nextWorkbook.id,
+              workbookId: nextWorkbookId,
               expectedWorkbookId: workbookId || null,
               expectedWorkbookVersionId: versionRef.current.versionId || null,
-              expectedWorkbookRevision: nextWorkbook.revision,
             });
           },
-          nextWorkbook.id,
+          nextWorkbookId,
           true,
-          nextWorkbook.id,
+          nextWorkbookId,
         ),
       );
     },
@@ -413,6 +395,7 @@ export function useWorkbookPersistenceCoordinator({
     delayMs,
     enabled,
     scopeKey: workbookId,
+    initialSavedKey: JSON.stringify(persistedCells),
   });
   flushForTransitionRef.current = async () => {
     await autosave.flush();

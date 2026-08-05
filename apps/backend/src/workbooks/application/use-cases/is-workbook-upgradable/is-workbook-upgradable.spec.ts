@@ -86,7 +86,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
     });
     await publishV1(workbook);
 
-    await workbookRepo.update(workbook.id, workbook.revision, {
+    await workbookRepo.update(workbook.id, {
       cells: [
         { id: "md1", type: "markdown", content: "hi", isCollapsed: false },
         { id: "md2", type: "markdown", content: "added", isCollapsed: false },
@@ -108,7 +108,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
     });
     await publishV1(workbook);
 
-    await workbookRepo.update(workbook.id, workbook.revision, {
+    await workbookRepo.update(workbook.id, {
       cells: [{ id: "md1", type: "markdown", content: "edited", isCollapsed: false }],
     });
     const fresh = await workbookRepo.findById(workbook.id);
@@ -165,7 +165,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
     });
     await publishV1(workbook);
 
-    await workbookRepo.update(workbook.id, workbook.revision, {
+    await workbookRepo.update(workbook.id, {
       cells: [{ id: "md1", type: "markdown", content: "hi", isCollapsed: true }],
     });
     const fresh = await workbookRepo.findById(workbook.id);
@@ -192,7 +192,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
     });
     await publishV1(workbook);
 
-    await workbookRepo.update(workbook.id, workbook.revision, {
+    await workbookRepo.update(workbook.id, {
       cells: [{ ...original, isAnswered: true, answer: "very" }],
     });
     const fresh = await workbookRepo.findById(workbook.id);
@@ -212,7 +212,7 @@ describe("IsWorkbookUpgradableUseCase", () => {
     });
     await publishV1(workbook);
 
-    await workbookRepo.update(workbook.id, workbook.revision, {
+    await workbookRepo.update(workbook.id, {
       cells: [
         source,
         {

@@ -32,15 +32,14 @@ function PersistenceHarness({ children }: { children: ReactElement }) {
     entitySaved: () => Promise.resolve(),
     manualUpgrade: () => Promise.resolve(),
     renameWorkbook: () => Promise.resolve(),
-    attachWorkbook: async (nextWorkbook: { id: string; revision: number }) => {
+    attachWorkbook: async (nextWorkbookId: string) => {
       await orpcClient.experiments.attachWorkbook({
         id: "exp-1",
-        workbookId: nextWorkbook.id,
+        workbookId: nextWorkbookId,
         expectedWorkbookId: workbookId || null,
         expectedWorkbookVersionId: null,
-        expectedWorkbookRevision: nextWorkbook.revision,
       });
-      setWorkbookId(nextWorkbook.id);
+      setWorkbookId(nextWorkbookId);
     },
     detachWorkbook: () => Promise.resolve(),
     setWorkbookVersion: () => Promise.resolve(),

@@ -66,7 +66,6 @@ describe("ExperimentWorkbooksController", () => {
           workbookId,
           expectedWorkbookId: null,
           expectedWorkbookVersionId: null,
-          expectedWorkbookRevision: 1,
         })
         .expect(StatusCodes.OK);
 
@@ -93,7 +92,6 @@ describe("ExperimentWorkbooksController", () => {
           workbookId: faker.string.uuid(),
           expectedWorkbookId: null,
           expectedWorkbookVersionId: null,
-          expectedWorkbookRevision: 1,
         })
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -115,7 +113,6 @@ describe("ExperimentWorkbooksController", () => {
           workbookId: faker.string.uuid(),
           expectedWorkbookId: null,
           expectedWorkbookVersionId: null,
-          expectedWorkbookRevision: 1,
         })
         .expect(StatusCodes.FORBIDDEN);
       expect(executeSpy).not.toHaveBeenCalled();
@@ -135,7 +132,6 @@ describe("ExperimentWorkbooksController", () => {
           workbookId: faker.string.uuid(),
           expectedWorkbookId: null,
           expectedWorkbookVersionId: null,
-          expectedWorkbookRevision: 1,
         })
         .expect(StatusCodes.NOT_FOUND);
     });
@@ -224,7 +220,6 @@ describe("ExperimentWorkbooksController", () => {
         .send({
           expectedWorkbookId: workbookId,
           expectedWorkbookVersionId: versionId,
-          expectedWorkbookRevision: 1,
         })
         .expect(StatusCodes.OK);
 
@@ -246,7 +241,6 @@ describe("ExperimentWorkbooksController", () => {
         .send({
           expectedWorkbookId: faker.string.uuid(),
           expectedWorkbookVersionId: faker.string.uuid(),
-          expectedWorkbookRevision: 1,
         })
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -266,7 +260,6 @@ describe("ExperimentWorkbooksController", () => {
         .send({
           expectedWorkbookId: faker.string.uuid(),
           expectedWorkbookVersionId: faker.string.uuid(),
-          expectedWorkbookRevision: 1,
         })
         .expect(StatusCodes.BAD_REQUEST);
     });
@@ -391,7 +384,6 @@ describe("ExperimentWorkbooksController", () => {
               workbookId: faker.string.uuid(),
               expectedWorkbookId: null,
               expectedWorkbookVersionId: null,
-              expectedWorkbookRevision: 1,
             }),
       },
       {
@@ -424,7 +416,6 @@ describe("ExperimentWorkbooksController", () => {
             .send({
               expectedWorkbookId: faker.string.uuid(),
               expectedWorkbookVersionId: faker.string.uuid(),
-              expectedWorkbookRevision: 1,
             }),
       },
       {

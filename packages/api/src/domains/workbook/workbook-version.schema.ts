@@ -49,13 +49,11 @@ export const zAttachWorkbookBody = z.object({
   workbookId: z.string().uuid(),
   expectedWorkbookId: z.string().uuid().nullable(),
   expectedWorkbookVersionId: z.string().uuid().nullable(),
-  expectedWorkbookRevision: z.number().int().positive(),
 });
 
 export const zUpgradeWorkbookVersionBody = z.object({
   expectedWorkbookId: z.string().uuid(),
   expectedWorkbookVersionId: z.string().uuid(),
-  expectedWorkbookRevision: z.number().int().positive(),
 });
 
 export const zDetachWorkbookBody = z.object({

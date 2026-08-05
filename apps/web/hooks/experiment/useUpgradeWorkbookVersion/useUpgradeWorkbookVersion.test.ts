@@ -23,7 +23,6 @@ describe("useUpgradeWorkbookVersion", () => {
         id: experimentId,
         expectedWorkbookId: workbookId,
         expectedWorkbookVersionId: versionId,
-        expectedWorkbookRevision: 1,
       });
     });
 
@@ -44,7 +43,6 @@ describe("useUpgradeWorkbookVersion", () => {
         id: experimentId,
         expectedWorkbookId: workbookId,
         expectedWorkbookVersionId: versionId,
-        expectedWorkbookRevision: 1,
       });
     });
 

@@ -21,7 +21,6 @@ describe("SetWorkbookVersionUseCase", () => {
   let workbookId: string;
   let v1Id: string;
   let v2Id: string;
-  let workbookRevision: number;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -51,30 +50,16 @@ describe("SetWorkbookVersionUseCase", () => {
     workbookId = workbook.id;
 
     // Attach publishes + pins v1.
-    const attach = await attachUseCase.execute(
-      experimentId,
-      workbookId,
-      null,
-      null,
-      workbook.revision,
-      adminUserId,
-    );
+    const attach = await attachUseCase.execute(experimentId, workbookId, null, null, adminUserId);
     assertSuccess(attach);
     v1Id = attach.value.workbookVersionId;
 
     // Change cells and upgrade to mint + pin v2.
-    const updated = await workbookRepo.update(workbookId, workbook.revision, {
+    const updated = await workbookRepo.update(workbookId, {
       cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
     });
     assertSuccess(updated);
-    workbookRevision = updated.value[0].revision;
-    const upgrade = await upgradeUseCase.execute(
-      experimentId,
-      workbookId,
-      v1Id,
-      workbookRevision,
-      adminUserId,
-    );
+    const upgrade = await upgradeUseCase.execute(experimentId, workbookId, v1Id, adminUserId);
     assertSuccess(upgrade);
     v2Id = upgrade.value.workbookVersionId;
   });
@@ -307,7 +292,6 @@ describe("SetWorkbookVersionUseCase", () => {
       otherWorkbook.id,
       workbookId,
       v2Id,
-      otherWorkbook.revision,
       adminUserId,
     );
     assertSuccess(replacement);

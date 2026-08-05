@@ -1,13 +1,15 @@
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { NewExperimentForm } from "../new-experiment";
+
+const wizardState = vi.hoisted(() => ({ workbookId: undefined as string | undefined }));
 
 vi.mock("@repo/ui/components/wizard-form", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
@@ -33,6 +35,7 @@ vi.mock("@repo/ui/components/wizard-form", async (importOriginal) => {
             embargoUntil: "2099-12-31T23:59:59.999Z",
             members: [],
             locations: [],
+            workbookId: wizardState.workbookId,
           });
         }}
       >
@@ -45,6 +48,9 @@ vi.mock("@repo/ui/components/wizard-form", async (importOriginal) => {
 });
 
 describe("NewExperimentForm", () => {
+  beforeEach(() => {
+    wizardState.workbookId = undefined;
+  });
   it("renders the wizard form and unsaved changes dialog", () => {
     render(<NewExperimentForm />);
     expect(screen.getByRole("form", { name: "wizard form" })).toBeInTheDocument();
@@ -86,5 +92,52 @@ describe("NewExperimentForm", () => {
         "/en-US/platform/experiments/exp-123",
       );
     });
+  });
+
+  it("retries a failed workbook attachment without creating a duplicate experiment", async () => {
+    wizardState.workbookId = "11111111-1111-1111-1111-111111111111";
+    server.mount(contract.workbooks.listWorkbooks, {
+      body: [
+        {
+          id: wizardState.workbookId,
+          name: "Workbook",
+          description: null,
+          cells: [],
+          metadata: {},
+          organizationId: null,
+          visibility: "public",
+          createdBy: "22222222-2222-2222-2222-222222222222",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+    const create = server.mount(contract.experiments.createExperiment, {
+      body: { id: "exp-123" },
+    });
+    server.mount(contract.experiments.attachWorkbook, { status: 500 });
+    const user = userEvent.setup();
+    render(<NewExperimentForm />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled());
+
+    const retryAttach = server.mount(contract.experiments.attachWorkbook, {
+      body: {
+        workbookId: wizardState.workbookId,
+        workbookVersionId: "33333333-3333-3333-3333-333333333333",
+        version: 1,
+      },
+    });
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => expect(retryAttach.called).toBe(true));
+    expect(create.callCount).toBe(1);
+    await waitFor(() =>
+      expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith(
+        "/en-US/platform/experiments/exp-123",
+      ),
+    );
   });
 });

@@ -98,7 +98,7 @@ describe("WorkbookLayoutContent", () => {
     await user.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
-      expect(updateSpy.body).toEqual({ name: "Soil Analysis", expectedRevision: 1 });
+      expect(updateSpy.body).toEqual({ name: "Soil Analysis" });
     });
   });
 });

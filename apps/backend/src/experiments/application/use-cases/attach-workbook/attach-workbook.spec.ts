@@ -10,7 +10,6 @@ describe("AttachWorkbookUseCase", () => {
   let adminUserId: string;
   let experimentId: string;
   let workbookId: string;
-  let workbookRevision: number;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -34,7 +33,6 @@ describe("AttachWorkbookUseCase", () => {
       createdBy: adminUserId,
     });
     workbookId = workbook.id;
-    workbookRevision = workbook.revision;
   });
 
   afterEach(() => {
@@ -46,14 +44,7 @@ describe("AttachWorkbookUseCase", () => {
   });
 
   it("attaches a workbook and creates version 1", async () => {
-    const result = await useCase.execute(
-      experimentId,
-      workbookId,
-      null,
-      null,
-      workbookRevision,
-      adminUserId,
-    );
+    const result = await useCase.execute(experimentId, workbookId, null, null, adminUserId);
     assertSuccess(result);
     expect(result.value.workbookId).toBe(workbookId);
     expect(result.value.version).toBe(1);
@@ -66,7 +57,6 @@ describe("AttachWorkbookUseCase", () => {
       workbookId,
       null,
       null,
-      workbookRevision,
       adminUserId,
     );
     assertFailure(result);
@@ -79,7 +69,6 @@ describe("AttachWorkbookUseCase", () => {
       "00000000-0000-0000-0000-000000000000",
       null,
       null,
-      workbookRevision,
       adminUserId,
     );
     assertFailure(result);
@@ -87,14 +76,7 @@ describe("AttachWorkbookUseCase", () => {
   });
 
   it("reuses version when attaching same workbook again with unchanged cells", async () => {
-    const first = await useCase.execute(
-      experimentId,
-      workbookId,
-      null,
-      null,
-      workbookRevision,
-      adminUserId,
-    );
+    const first = await useCase.execute(experimentId, workbookId, null, null, adminUserId);
     assertSuccess(first);
 
     const second = await useCase.execute(
@@ -102,7 +84,6 @@ describe("AttachWorkbookUseCase", () => {
       workbookId,
       workbookId,
       first.value.workbookVersionId,
-      workbookRevision,
       adminUserId,
     );
     assertSuccess(second);
@@ -131,14 +112,7 @@ describe("AttachWorkbookUseCase", () => {
   });
 
   it("materialises a flow row from the version's cells (mobile backward compat)", async () => {
-    const result = await useCase.execute(
-      experimentId,
-      workbookId,
-      null,
-      null,
-      workbookRevision,
-      adminUserId,
-    );
+    const result = await useCase.execute(experimentId, workbookId, null, null, adminUserId);
     assertSuccess(result);
 
     const flow = await flowRepo.getByExperimentId(experimentId);
@@ -155,7 +129,6 @@ describe("AttachWorkbookUseCase", () => {
       workbookId,
       null,
       null,
-      workbookRevision,
       adminUserId,
     );
     assertSuccess(first);
@@ -164,14 +137,7 @@ describe("AttachWorkbookUseCase", () => {
       createdBy: adminUserId,
     });
 
-    const stale = await useCase.execute(
-      experimentId,
-      otherWorkbook.id,
-      null,
-      null,
-      otherWorkbook.revision,
-      adminUserId,
-    );
+    const stale = await useCase.execute(experimentId, otherWorkbook.id, null, null, adminUserId);
 
     assertFailure(stale);
     expect(stale.error.statusCode).toBe(409);

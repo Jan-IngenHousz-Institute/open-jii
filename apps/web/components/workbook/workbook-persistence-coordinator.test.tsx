@@ -44,28 +44,34 @@ interface HarnessProps {
   cells: WorkbookCell[];
 }
 
-const renderCoordinator = (initialProps: HarnessProps) =>
-  renderHook(
+const renderCoordinator = (initialProps: HarnessProps) => {
+  const persistedByWorkbook = new Map([[initialProps.workbookId, initialProps.cells]]);
+  const persistedCells = (workbookId: string, cells: WorkbookCell[]) => {
+    const existing = persistedByWorkbook.get(workbookId);
+    if (existing) return existing;
+    persistedByWorkbook.set(workbookId, cells);
+    return cells;
+  };
+  return renderHook(
     ({ workbookId, cells }: HarnessProps) =>
       useWorkbookPersistenceCoordinator({
         experimentId: "experiment-1",
         workbookId,
         workbookVersionId: workbookId ? `version-${workbookId}` : "",
-        workbookRevision: workbookId ? 1 : 0,
         cells,
+        persistedCells: persistedCells(workbookId, cells),
         enabled: true,
         delayMs: 20,
       }),
     { initialProps },
   );
+};
 
 describe("useWorkbookPersistenceCoordinator", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    mutations.update.mockImplementation(({ id }: { id: string }) =>
-      Promise.resolve({ id, revision: 2 }),
-    );
+    mutations.update.mockImplementation(({ id }: { id: string }) => Promise.resolve({ id }));
     mutations.upgrade.mockResolvedValue({ workbookVersionId: "version-next" });
     mutations.attach.mockResolvedValue({ workbookVersionId: "version-attached" });
     mutations.detach.mockResolvedValue(undefined);
@@ -79,7 +85,7 @@ describe("useWorkbookPersistenceCoordinator", () => {
     mutations.update.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          releaseUpdate = () => resolve({ id: "workbook-a", revision: 2 });
+          releaseUpdate = () => resolve({ id: "workbook-a" });
         }),
     );
     const { result, rerender } = renderCoordinator({
@@ -97,7 +103,7 @@ describe("useWorkbookPersistenceCoordinator", () => {
           releaseAttach = () => resolve({ workbookVersionId: "version-attached" });
         }),
     );
-    const attachPromise = result.current.attachWorkbook({ id: "workbook-b", revision: 1 });
+    const attachPromise = result.current.attachWorkbook("workbook-b");
 
     expect(mutations.update).toHaveBeenCalledTimes(1);
     expect(mutations.upgrade).not.toHaveBeenCalled();
@@ -120,7 +126,6 @@ describe("useWorkbookPersistenceCoordinator", () => {
       workbookId: "workbook-b",
       expectedWorkbookId: "workbook-a",
       expectedWorkbookVersionId: "version-next",
-      expectedWorkbookRevision: 1,
     });
     expect(mutations.update.mock.invocationCallOrder[0]).toBeLessThan(
       mutations.upgrade.mock.invocationCallOrder[0],
@@ -157,7 +162,7 @@ describe("useWorkbookPersistenceCoordinator", () => {
     mutations.update.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          releaseOldUpdate = () => resolve({ id: "workbook-a", revision: 2 });
+          releaseOldUpdate = () => resolve({ id: "workbook-a" });
         }),
     );
     const { result, rerender } = renderCoordinator({
@@ -227,9 +232,7 @@ describe("useWorkbookPersistenceCoordinator", () => {
       cells: [cell("a0")],
     });
 
-    await expect(result.current.attachWorkbook({ id: "workbook-b", revision: 1 })).rejects.toBe(
-      failure,
-    );
+    await expect(result.current.attachWorkbook("workbook-b")).rejects.toBe(failure);
 
     rerender({ workbookId: "workbook-a", cells: [cell("a1")] });
     await act(async () => vi.advanceTimersByTimeAsync(30));
@@ -243,7 +246,6 @@ describe("useWorkbookPersistenceCoordinator", () => {
       id: "experiment-1",
       expectedWorkbookId: "workbook-a",
       expectedWorkbookVersionId: "version-workbook-a",
-      expectedWorkbookRevision: 2,
     });
   });
 
@@ -255,17 +257,13 @@ describe("useWorkbookPersistenceCoordinator", () => {
       cells: [cell("a0")],
     });
 
-    await expect(result.current.attachWorkbook({ id: "workbook-b", revision: 1 })).rejects.toBe(
-      failure,
-    );
+    await expect(result.current.attachWorkbook("workbook-b")).rejects.toBe(failure);
     mutations.attach.mockImplementationOnce(() => {
       rerender({ workbookId: "workbook-c", cells: [cell("c0")] });
       return Promise.resolve();
     });
 
-    await expect(
-      result.current.attachWorkbook({ id: "workbook-c", revision: 1 }),
-    ).resolves.toBeUndefined();
+    await expect(result.current.attachWorkbook("workbook-c")).resolves.toBeUndefined();
 
     expect(mutations.attach).toHaveBeenCalledTimes(2);
     expect(mutations.attach).toHaveBeenLastCalledWith({
@@ -273,7 +271,6 @@ describe("useWorkbookPersistenceCoordinator", () => {
       workbookId: "workbook-c",
       expectedWorkbookId: "workbook-a",
       expectedWorkbookVersionId: "version-workbook-a",
-      expectedWorkbookRevision: 1,
     });
     expect(result.current.error).toBeNull();
   });
@@ -288,9 +285,9 @@ describe("useWorkbookPersistenceCoordinator", () => {
       return Promise.resolve();
     });
 
-    await expect(
-      result.current.attachWorkbook({ id: "workbook-b", revision: 1 }),
-    ).rejects.toBeInstanceOf(PersistenceScopeChangedError);
+    await expect(result.current.attachWorkbook("workbook-b")).rejects.toBeInstanceOf(
+      PersistenceScopeChangedError,
+    );
   });
 
   it("rejects an attachment completion when refetch leaves the rendered workbook unchanged", async () => {
@@ -299,9 +296,9 @@ describe("useWorkbookPersistenceCoordinator", () => {
       cells: [cell("a0")],
     });
 
-    await expect(
-      result.current.attachWorkbook({ id: "workbook-b", revision: 1 }),
-    ).rejects.toBeInstanceOf(PersistenceScopeChangedError);
+    await expect(result.current.attachWorkbook("workbook-b")).rejects.toBeInstanceOf(
+      PersistenceScopeChangedError,
+    );
   });
 
   it("rejects queued work when an external scope change makes it stale", async () => {
@@ -309,7 +306,7 @@ describe("useWorkbookPersistenceCoordinator", () => {
     mutations.update.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          releaseUpdate = () => resolve({ id: "workbook-a", revision: 2 });
+          releaseUpdate = () => resolve({ id: "workbook-a" });
         }),
     );
     const { result, rerender } = renderCoordinator({
@@ -319,7 +316,7 @@ describe("useWorkbookPersistenceCoordinator", () => {
 
     rerender({ workbookId: "workbook-a", cells: [cell("a1")] });
     await act(async () => vi.advanceTimersByTimeAsync(30));
-    const attachPromise = result.current.attachWorkbook({ id: "workbook-b", revision: 1 });
+    const attachPromise = result.current.attachWorkbook("workbook-b");
     const staleAssertion = expect(attachPromise).rejects.toBeInstanceOf(
       PersistenceScopeChangedError,
     );

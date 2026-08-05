@@ -43,25 +43,22 @@ function PersistenceHarness({ children }: { children: ReactElement }) {
         id: defaultProps.experimentId,
         expectedWorkbookId: workbookId,
         expectedWorkbookVersionId: defaultProps.workbookVersionId,
-        expectedWorkbookRevision: workbook.revision,
       });
     },
     renameWorkbook: async (name: string) => {
       await orpcClient.workbooks.updateWorkbook({
         id: workbookId,
         name,
-        expectedRevision: workbook.revision,
       });
     },
-    attachWorkbook: async (nextWorkbook: { id: string; revision: number }) => {
+    attachWorkbook: async (nextWorkbookId: string) => {
       await orpcClient.experiments.attachWorkbook({
         id: defaultProps.experimentId,
-        workbookId: nextWorkbook.id,
+        workbookId: nextWorkbookId,
         expectedWorkbookId: workbookId,
         expectedWorkbookVersionId: defaultProps.workbookVersionId,
-        expectedWorkbookRevision: nextWorkbook.revision,
       });
-      setWorkbookId(nextWorkbook.id);
+      setWorkbookId(nextWorkbookId);
     },
     detachWorkbook: async () => {
       await orpcClient.experiments.detachWorkbook({

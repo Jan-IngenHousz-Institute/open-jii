@@ -117,7 +117,6 @@ describe("Workbook Version Schemas", () => {
           workbookId: validUuid,
           expectedWorkbookId: null,
           expectedWorkbookVersionId: null,
-          expectedWorkbookRevision: 1,
         }).success,
       ).toBe(true);
     });
@@ -137,7 +136,6 @@ describe("Workbook Version Schemas", () => {
         zUpgradeWorkbookVersionBody.safeParse({
           expectedWorkbookId: validUuid,
           expectedWorkbookVersionId: validUuid,
-          expectedWorkbookRevision: 1,
         }).success,
       ).toBe(true);
       expect(zUpgradeWorkbookVersionBody.safeParse({}).success).toBe(false);

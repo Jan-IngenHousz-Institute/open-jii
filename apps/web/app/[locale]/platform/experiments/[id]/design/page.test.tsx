@@ -471,12 +471,21 @@ describe("ExperimentDesignPage", () => {
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
     await user.click(await screen.findByTestId("trigger-cell-edit"));
+    expect(window.sessionStorage.getItem(`openjii:workbook-draft:${WB_ID}`)).toContain(
+      "edited-cell",
+    );
     const beforeUnload = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(beforeUnload);
     expect(beforeUnload.defaultPrevented).toBe(true);
 
     await user.click(screen.getByText("flow.editOpenWorkbookLink"));
     expect(confirm).toHaveBeenCalledWith(
+      "This workbook still has changes that have not been saved.",
+    );
+
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(confirm).toHaveBeenCalledTimes(2);
+    expect(confirm).toHaveBeenLastCalledWith(
       "This workbook still has changes that have not been saved.",
     );
     confirm.mockRestore();

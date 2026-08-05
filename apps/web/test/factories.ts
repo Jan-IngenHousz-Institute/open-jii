@@ -227,7 +227,6 @@ export function createWorkbook(overrides: Partial<Workbook> = {}): Workbook {
     forkedFrom: null,
     organizationId: null,
     visibility: "public",
-    revision: 1,
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
     ...overrides,

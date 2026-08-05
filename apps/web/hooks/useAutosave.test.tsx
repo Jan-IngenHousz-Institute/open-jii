@@ -273,6 +273,31 @@ describe("useAutosave", () => {
     expect(save).toHaveBeenCalledWith("v2");
   });
 
+  it("does not rebase an existing scope's dirty anchor when editing reactivates", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const { result, rerender } = renderHook(
+      ({ value, enabled }: { value: string; enabled: boolean }) =>
+        useAutosave({ value, toKey: (v) => v, save, delayMs: 50, enabled }),
+      { initialProps: { value: "v0", enabled: true } },
+    );
+
+    rerender({ value: "v1", enabled: true });
+    expect(result.current.status).toBe("dirty");
+
+    // Permission/data initialization can briefly disable an already visited
+    // scope. Reactivating it must keep v0 as the saved anchor and persist v1.
+    rerender({ value: "v1", enabled: false });
+    rerender({ value: "v1", enabled: true });
+    expect(result.current.status).toBe("dirty");
+    expect(result.current.hasUnsavedChanges).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(save).toHaveBeenCalledWith("v1");
+    expect(result.current.status).toBe("idle");
+  });
+
   it("surfaces an invalid draft instead of reporting it saved", async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const { result, rerender } = renderHook(

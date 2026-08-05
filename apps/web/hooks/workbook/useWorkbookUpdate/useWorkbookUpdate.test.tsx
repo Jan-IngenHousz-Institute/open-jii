@@ -14,14 +14,14 @@ describe("useWorkbookUpdate", () => {
       body: createWorkbook({ id: "wb-1", name: "Updated" }),
     });
 
-    const { result } = renderHook(() => useWorkbookUpdate("wb-1", { revision: 1 }));
+    const { result } = renderHook(() => useWorkbookUpdate("wb-1"));
 
     act(() => {
       result.current.mutate({ id: "wb-1", name: "Updated" });
     });
 
     await waitFor(() => {
-      expect(spy.body).toMatchObject({ name: "Updated", expectedRevision: 1 });
+      expect(spy.body).toMatchObject({ name: "Updated" });
     });
   });
 
@@ -31,7 +31,7 @@ describe("useWorkbookUpdate", () => {
     });
 
     const onSuccess = vi.fn();
-    const { result } = renderHook(() => useWorkbookUpdate("wb-1", { onSuccess, revision: 1 }));
+    const { result } = renderHook(() => useWorkbookUpdate("wb-1", { onSuccess }));
 
     act(() => {
       result.current.mutate({ id: "wb-1", name: "Updated" });
@@ -83,16 +83,14 @@ describe("useWorkbookUpdate", () => {
     });
   });
 
-  it("serializes separate writers and rebases the next request to the returned revision", async () => {
-    const detailKey = orpc.workbooks.getWorkbook.queryKey({ input: { id: "wb-1" } });
+  it("serializes separate writers for the same workbook", async () => {
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(detailKey, createWorkbook({ id: "wb-1", revision: 1 }));
     let releaseFirst: (() => void) | undefined;
     const firstBlocked = new Promise<void>((resolve) => {
       releaseFirst = resolve;
     });
     const request = server.mount(contract.workbooks.updateWorkbook, {
-      body: createWorkbook({ id: "wb-1", revision: 2 }),
+      body: createWorkbook({ id: "wb-1" }),
       unblock: firstBlocked,
     });
     const { result } = renderHook(
@@ -113,8 +111,6 @@ describe("useWorkbookUpdate", () => {
     releaseFirst?.();
     await Promise.all([first, second]);
 
-    expect(request.calls[1]?.body).toEqual(
-      expect.objectContaining({ expectedRevision: 2, description: "Second" }),
-    );
+    expect(request.calls[1]?.body).toEqual(expect.objectContaining({ description: "Second" }));
   });
 });

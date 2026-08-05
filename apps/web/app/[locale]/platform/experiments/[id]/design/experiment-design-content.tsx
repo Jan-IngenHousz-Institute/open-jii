@@ -43,6 +43,19 @@ interface ExperimentDesignPageProps {
 
 const AUTO_SAVE_DELAY = 1500;
 const UNSAVED_CHANGES_MESSAGE = "This workbook still has changes that have not been saved.";
+const RETAINED_DRAFT_PREFIX = "openjii:workbook-draft:";
+const HISTORY_GUARD_KEY = "__openJiiWorkbookDraftGuard";
+
+function readRetainedDraft(workbookId: string): WorkbookCell[] | null {
+  try {
+    const value: unknown = JSON.parse(
+      window.sessionStorage.getItem(`${RETAINED_DRAFT_PREFIX}${workbookId}`) ?? "null",
+    );
+    return Array.isArray(value) ? (value as WorkbookCell[]) : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Surfaces the draft autosave status (reported by WorkbookDraftEditor) inline. */
 function EditAutosaveStatus({ onRetry }: { onRetry: () => Promise<void> }) {
@@ -102,7 +115,10 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
     setControlledDrafts((current) =>
       Object.hasOwn(current, workbookId)
         ? current
-        : { ...current, [workbookId]: workbookDraft.cells },
+        : {
+            ...current,
+            [workbookId]: readRetainedDraft(workbookId) ?? workbookDraft.cells,
+          },
     );
   }, [workbookDraft, workbookId]);
 
@@ -111,6 +127,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
     (cells: WorkbookCell[]) => {
       if (!workbookId) return;
       setControlledDrafts((current) => ({ ...current, [workbookId]: cells }));
+      window.sessionStorage.setItem(`${RETAINED_DRAFT_PREFIX}${workbookId}`, JSON.stringify(cells));
     },
     [workbookId],
   );
@@ -130,12 +147,30 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
     experimentId: id,
     workbookId: workbookId ?? "",
     workbookVersionId: workbookVersionId ?? "",
-    workbookRevision: workbookDraft?.revision ?? 0,
     cells: draftCells ?? [],
+    persistedCells: workbookDraft?.cells ?? [],
     enabled: canEdit && draftCells !== null,
     delayMs: AUTO_SAVE_DELAY,
   });
   const { autosave } = persistence;
+
+  useEffect(() => {
+    if (
+      workbookId &&
+      autosave.status === "idle" &&
+      !autosave.hasUnsavedChanges &&
+      !persistence.isPending &&
+      persistence.error === null
+    ) {
+      window.sessionStorage.removeItem(`${RETAINED_DRAFT_PREFIX}${workbookId}`);
+    }
+  }, [
+    autosave.hasUnsavedChanges,
+    autosave.status,
+    persistence.error,
+    persistence.isPending,
+    workbookId,
+  ]);
 
   const hasUnsavedWork =
     canEdit &&
@@ -145,6 +180,14 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
       persistence.error !== null);
   useEffect(() => {
     if (!hasUnsavedWork) return;
+
+    // A same-URL sentinel makes Back land on this document first, before Next
+    // can unmount it. Cancelling restores the sentinel; confirming performs
+    // the real traversal. The session copy above remains recoverable even if
+    // the user deliberately leaves with an invalid draft.
+    const guardedState = { ...window.history.state, [HISTORY_GUARD_KEY]: true };
+    window.history.pushState(guardedState, "", window.location.href);
+    let leaveThroughHistory = false;
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
@@ -158,14 +201,30 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
       if (!window.confirm(UNSAVED_CHANGES_MESSAGE)) {
         event.preventDefault();
         event.stopPropagation();
+      } else {
+        leaveThroughHistory = true;
+      }
+    };
+    const handlePopState = () => {
+      if (leaveThroughHistory) return;
+      if (window.confirm(UNSAVED_CHANGES_MESSAGE)) {
+        leaveThroughHistory = true;
+        window.history.back();
+      } else {
+        window.history.pushState(guardedState, "", window.location.href);
       }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("popstate", handlePopState);
     document.addEventListener("click", handleLinkClick, true);
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState);
       document.removeEventListener("click", handleLinkClick, true);
+      if (!leaveThroughHistory && window.history.state?.[HISTORY_GUARD_KEY]) {
+        window.history.back();
+      }
     };
   }, [hasUnsavedWork]);
 
@@ -291,7 +350,6 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
                       // Same capability the branch above gated on.
                       canEdit={canUpdateWorkbook}
                       name={workbookDraft.name}
-                      revision={workbookDraft.revision}
                       onCellsChange={handleDraftCellsChange}
                       autosaveEnabled={false}
                     />

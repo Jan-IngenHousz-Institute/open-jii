@@ -35,7 +35,6 @@ export class UpgradeWorkbookVersionUseCase {
     experimentId: string,
     expectedWorkbookId: string,
     expectedWorkbookVersionId: string,
-    expectedWorkbookRevision: number,
     userId: string,
   ): Promise<Result<UpgradeWorkbookVersionResult>> {
     const experimentResult = await this.experimentRepository.findOne(experimentId);
@@ -87,15 +86,6 @@ export class UpgradeWorkbookVersionUseCase {
       if (!workbookResult.value) {
         return failure(AppError.notFound(`Workbook with ID ${experiment.workbookId} not found`));
       }
-      if (workbookResult.value.revision !== expectedWorkbookRevision) {
-        return failure(
-          AppError.conflict(
-            "Someone else changed this workbook. Refresh to review their changes before publishing.",
-            "WORKBOOK_REVISION_CONFLICT",
-          ),
-        );
-      }
-
       // Pin to the latest version when nothing's drifted; otherwise mint a
       // new version capturing the current cells.
       const latestResult = await this.workbookVersionRepository.getLatestVersion(
@@ -133,7 +123,6 @@ export class UpgradeWorkbookVersionUseCase {
         { workbookId: expectedWorkbookId, workbookVersionId: expectedWorkbookVersionId },
         { workbookVersionId: version.id },
         flowGraph,
-        { workbookId: expectedWorkbookId, revision: expectedWorkbookRevision },
       );
 
       if (updateResult.isFailure()) {

@@ -41,14 +41,7 @@ describe("DetachWorkbookUseCase", () => {
     });
     workbookId = workbook.id;
 
-    const attached = await attachUseCase.execute(
-      experimentId,
-      workbookId,
-      null,
-      null,
-      workbook.revision,
-      adminUserId,
-    );
+    const attached = await attachUseCase.execute(experimentId, workbookId, null, null, adminUserId);
     assertSuccess(attached);
     pinnedVersionId = attached.value.workbookVersionId;
   });
@@ -164,7 +157,6 @@ describe("DetachWorkbookUseCase", () => {
       otherWorkbook.id,
       workbookId,
       pinnedVersionId,
-      otherWorkbook.revision,
       adminUserId,
     );
     assertSuccess(replacement);

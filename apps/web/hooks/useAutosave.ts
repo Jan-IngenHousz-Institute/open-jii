@@ -20,13 +20,15 @@ interface UseAutosaveOptions<T> {
   isValid?: (v: T) => boolean;
   delayMs?: number;
   flushOnUnmount?: boolean;
-  /** Flipping false -> true rebases the saved anchor to the current value. */
+  /** The first false -> true activation establishes the current value as persisted. */
   enabled?: boolean;
   /**
    * Persistence scope fence. Changing it rebases the current value and makes
    * every completion that started in the prior scope inert.
    */
   scopeKey?: string;
+  /** Persisted anchor for a scope whose editable value may be a retained local draft. */
+  initialSavedKey?: string;
 }
 
 export interface UseAutosaveReturn {
@@ -54,6 +56,7 @@ export function useAutosave<T>({
   flushOnUnmount = true,
   enabled = true,
   scopeKey = "default",
+  initialSavedKey,
 }: UseAutosaveOptions<T>): UseAutosaveReturn {
   const key = useMemo(() => toKey(value), [value, toKey]);
 
@@ -61,9 +64,11 @@ export function useAutosave<T>({
   const [error, setError] = useState<unknown>(null);
   const errorRef = useRef<unknown>(null);
 
-  const lastSavedKeyRef = useRef(key);
-  const savedKeyByScopeRef = useRef(new Map([[scopeKey, key]]));
+  const firstSavedKey = initialSavedKey ?? key;
+  const lastSavedKeyRef = useRef(firstSavedKey);
+  const savedKeyByScopeRef = useRef(new Map([[scopeKey, firstSavedKey]]));
   const latestKeyByScopeRef = useRef(new Map([[scopeKey, key]]));
+  const activatedScopesRef = useRef(new Set(enabled ? [scopeKey] : []));
   latestKeyByScopeRef.current.set(scopeKey, key);
   const wasEnabledRef = useRef(enabled);
   const scopeIdentityRef = useRef({ key: scopeKey, generation: 0 });
@@ -73,8 +78,10 @@ export function useAutosave<T>({
       generation: scopeIdentityRef.current.generation + 1,
     };
     const savedKey = savedKeyByScopeRef.current.get(scopeKey);
-    if (savedKey === undefined) savedKeyByScopeRef.current.set(scopeKey, key);
-    lastSavedKeyRef.current = savedKey ?? key;
+    const scopeSavedKey = savedKey ?? initialSavedKey ?? key;
+    if (savedKey === undefined) savedKeyByScopeRef.current.set(scopeKey, scopeSavedKey);
+    lastSavedKeyRef.current = scopeSavedKey;
+    if (enabled) activatedScopesRef.current.add(scopeKey);
   }
 
   const valueRef = useRef(value);
@@ -197,15 +204,28 @@ export function useAutosave<T>({
 
   useEffect(() => {
     if (enabled && !wasEnabledRef.current) {
-      lastSavedKeyRef.current = keyRef.current;
-      savedKeyByScopeRef.current.set(scopeIdentityRef.current.key, keyRef.current);
-      pendingFlushRef.current = false;
-      errorRef.current = null;
-      setStatus("idle");
-      setError(null);
+      const activeScope = scopeIdentityRef.current.key;
+      if (!activatedScopesRef.current.has(activeScope) && initialSavedKey === undefined) {
+        // First activation initializes a scope whose disabled value may merely
+        // have been loading. Later activations must retain that scope's saved
+        // anchor so a real draft cannot be rebased away as "already saved".
+        activatedScopesRef.current.add(activeScope);
+        lastSavedKeyRef.current = keyRef.current;
+        savedKeyByScopeRef.current.set(activeScope, keyRef.current);
+        pendingFlushRef.current = false;
+        errorRef.current = null;
+        setStatus("idle");
+        setError(null);
+      } else {
+        activatedScopesRef.current.add(activeScope);
+        const savedKey = savedKeyByScopeRef.current.get(activeScope) ?? keyRef.current;
+        lastSavedKeyRef.current = savedKey;
+        pendingFlushRef.current = keyRef.current !== savedKey;
+        setStatus(pendingFlushRef.current ? "dirty" : "idle");
+      }
     }
     wasEnabledRef.current = enabled;
-  }, [enabled]);
+  }, [enabled, initialSavedKey]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -266,12 +286,11 @@ export function useAutosave<T>({
     isDirty: status === "dirty",
     isSaving: status === "saving",
     hasError: status === "error",
-    hasUnsavedChanges:
-      enabled &&
-      wasEnabledRef.current &&
-      [...latestKeyByScopeRef.current].some(
-        ([savedScope, latestKey]) => savedKeyByScopeRef.current.get(savedScope) !== latestKey,
-      ),
+    hasUnsavedChanges: [...latestKeyByScopeRef.current].some(
+      ([savedScope, latestKey]) =>
+        activatedScopesRef.current.has(savedScope) &&
+        savedKeyByScopeRef.current.get(savedScope) !== latestKey,
+    ),
     error,
     flush,
   };

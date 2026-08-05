@@ -228,7 +228,7 @@ describe("shared entity propagation across workbooks (integration)", () => {
     // Mirror exactly what a run leaves in `cells`: an appended output cell and
     // per-run runtime fields on the question. designOf() strips both, so this
     // must NOT register as an upgrade (OJD-1626).
-    await workbookRepo.update(wb.id, wb.revision, {
+    await workbookRepo.update(wb.id, {
       cells: [
         protocolCell(protocol.id),
         { ...question, isAnswered: true, answer: "42" },

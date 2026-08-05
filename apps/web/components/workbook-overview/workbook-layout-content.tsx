@@ -20,9 +20,7 @@ interface WorkbookLayoutContentProps {
 
 export function WorkbookLayoutContent({ id, workbook, children }: WorkbookLayoutContentProps) {
   const { t } = useTranslation(["workbook", "common"]);
-  const { mutateAsync: updateWorkbook, isPending: isUpdating } = useWorkbookUpdate(id, {
-    revision: workbook.revision,
-  });
+  const { mutateAsync: updateWorkbook, isPending: isUpdating } = useWorkbookUpdate(id);
   const autosave = useAutosaveStatus();
 
   // Capability, not ownership: a "Can edit" grantee renames and edits.

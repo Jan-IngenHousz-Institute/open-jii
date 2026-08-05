@@ -33,7 +33,6 @@ export class ExperimentWorkbooksController {
         input.workbookId,
         input.expectedWorkbookId,
         input.expectedWorkbookVersionId,
-        input.expectedWorkbookRevision,
         session.user.id,
       );
       if (result.isSuccess()) {
@@ -69,7 +68,6 @@ export class ExperimentWorkbooksController {
           input.id,
           input.expectedWorkbookId,
           input.expectedWorkbookVersionId,
-          input.expectedWorkbookRevision,
           session.user.id,
         );
         if (result.isSuccess()) {

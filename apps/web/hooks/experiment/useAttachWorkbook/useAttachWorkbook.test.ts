@@ -24,7 +24,6 @@ describe("useAttachWorkbook", () => {
         workbookId,
         expectedWorkbookId: null,
         expectedWorkbookVersionId: null,
-        expectedWorkbookRevision: 1,
       });
     });
 
@@ -37,7 +36,6 @@ describe("useAttachWorkbook", () => {
       workbookId,
       expectedWorkbookId: null,
       expectedWorkbookVersionId: null,
-      expectedWorkbookRevision: 1,
     });
   });
 
@@ -52,7 +50,6 @@ describe("useAttachWorkbook", () => {
         workbookId,
         expectedWorkbookId: null,
         expectedWorkbookVersionId: null,
-        expectedWorkbookRevision: 1,
       });
     });
 

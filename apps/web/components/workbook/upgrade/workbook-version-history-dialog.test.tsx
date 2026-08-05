@@ -30,8 +30,8 @@ function PersistenceHarness({ children }: { children: ReactElement }) {
     experimentId: baseProps.experimentId,
     workbookId: baseProps.workbookId,
     workbookVersionId: baseProps.currentVersionId,
-    workbookRevision: 1,
     cells: [],
+    persistedCells: [],
     enabled: false,
   });
   return (
