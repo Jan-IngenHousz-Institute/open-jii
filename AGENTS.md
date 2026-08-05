@@ -63,6 +63,12 @@ A `Stop` hook in `.claude/settings.json` prints a reminder when `apps/web` or `a
 without `apps/docs/content`. It is a nudge, not a gate, and it only reaches Claude Code. Per-machine
 overrides belong in `.claude/settings.local.json`, which stays untracked.
 
+## main is protected
+
+A `PreToolUse` hook blocks destructive git while you are on `main`, and blocks pushing to `main`
+from anywhere. Work on a branch and open a PR. On your own branches nothing is restricted:
+force-push, reset and clean as you like.
+
 ## Conventions
 
 - Define API changes contracts-first in `packages/api`, then implement both sides against them.
