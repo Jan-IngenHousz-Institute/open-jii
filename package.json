@@ -30,7 +30,8 @@
     "db:setup": "turbo db:setup",
     "typecheck": "turbo run typecheck",
     "ui-add": "turbo run ui-add",
-    "dev:fb": "turbo run dev --filter=backend --filter=web"
+    "dev:fb": "turbo run dev --filter=backend --filter=web",
+    "local:login": "pnpm --filter @repo/devkit login --"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
