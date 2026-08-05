@@ -5,6 +5,7 @@ import { FlowNode } from "~/shared/measurements/flow-node";
 import { AnalysisNode } from "../flow-nodes/analysis-node/analysis-node";
 import { InstructionNode } from "../flow-nodes/instruction-node";
 import { MeasurementNode } from "../flow-nodes/measurement-node/measurement-node";
+import { ParallelContainerNode } from "../flow-nodes/parallel-container-node";
 import { QuestionNode } from "../flow-nodes/question-node/question-node";
 
 interface ActiveStateProps {
@@ -31,6 +32,8 @@ function renderNode(currentNode: FlowNode) {
     case "branch":
       // Branches are transparent runner cells and never become host interactions.
       return null;
+    case "parallel":
+      return <ParallelContainerNode node={currentNode} />;
     case "instruction":
       return (
         <ScrollableNode>

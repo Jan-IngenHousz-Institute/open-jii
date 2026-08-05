@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
-import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type {
+  ParallelBodyCell,
+  WorkbookCell,
+} from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
+import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 import { deriveMacroFilename } from "./derive-macro-filename";
 import { hydrateFlowNodes } from "./hydrate-flow-nodes";
@@ -96,6 +100,38 @@ describe("hydrateFlowNodes", () => {
       filename: deriveMacroFilename("mx"),
       language: "",
       code: "",
+    });
+  });
+
+  it("hydrates protocol and macro projections nested inside parallel lanes", () => {
+    const container: WorkbookCell = {
+      id: "parallel-1",
+      type: "parallel",
+      name: "device_lanes",
+      isCollapsed: false,
+      defaultLaneId: "lane-a",
+      lanes: [
+        {
+          id: "lane-a",
+          label: "A",
+          color: "#005e5e",
+          conditions: [],
+          body: cells as ParallelBodyCell[],
+        },
+      ],
+    };
+    const graph = cellsToFlowGraph([container]);
+    const [parallelNode] = hydrateFlowNodes(graph.nodes, [container], snapshots);
+    const laneNodes = parallelNode.content.laneNodes["lane-a"] as FlowNode[];
+
+    expect(laneNodes[0].content.protocol).toMatchObject({
+      code: [{ x: 1 }],
+      name: "My Protocol",
+    });
+    expect(laneNodes[1].content.macro).toMatchObject({
+      code: "print(1)",
+      name: "My Macro",
+      language: "python",
     });
   });
 });

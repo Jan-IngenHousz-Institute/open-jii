@@ -50,6 +50,7 @@
       "question": "Vraag",
       "measurement": "Meting",
       "analysis": "Analyse",
+      "parallel": "Parallelle uitvoering",
       "review": "Antwoorden controleren",
       "completed": "Afgerond"
     },
@@ -71,6 +72,22 @@
   "navigation": {
     "next": "Volgende",
     "backToOverview": "Terug naar overzicht"
+  },
+  "parallel": {
+    "title": "Parallelle uitvoering",
+    "attempt": "Poging {{attempt}}",
+    "noDevices": "Geen apparaten toegewezen",
+    "abandon": "Baan afbreken",
+    "restart": "Banen opnieuw starten",
+    "waiting": "Wachten tot het werk in de banen is afgerond.",
+    "status": {
+      "active": "Actief",
+      "awaitingHuman": "Wacht op invoer",
+      "done": "Klaar",
+      "failed": "Mislukt",
+      "partial": "Gedeeltelijk",
+      "skipped": "Overgeslagen"
+    }
   },
   "cameraPermission": {
     "deniedTitle": "Toestemming uitgeschakeld",

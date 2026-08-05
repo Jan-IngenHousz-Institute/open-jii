@@ -11,11 +11,18 @@ import type {
   ScanResultEntry,
 } from "~/features/measurement-flow/domain/flow-state";
 import { initialFlowState } from "~/features/measurement-flow/domain/flow-state";
-import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
+import { flattenFlowNodes, isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 import { resolveMeasurementDeviceId } from "~/shared/measurements/measurement-device-id";
 import { createLogger } from "~/shared/observability/logger";
 
-import type { DeviceOutcome, DeviceRef, RunnerState, WorkbookSnapshot } from "@repo/workbook";
+import type {
+  DeviceOutcome,
+  DeviceRef,
+  ParallelContainerAttempt,
+  ParallelLaneAttempt,
+  RunnerState,
+  WorkbookSnapshot,
+} from "@repo/workbook";
 import { MAIN_TRACK_ID, WorkbookRunner } from "@repo/workbook";
 
 import {
@@ -26,6 +33,7 @@ import {
 } from "../domain/workbook-run-manifest";
 import type {
   WorkbookRunDeviceOutcome,
+  WorkbookRunContainerProvenance,
   WorkbookRunLaneAssignment,
   WorkbookRunRealizedLane,
 } from "../domain/workbook-run-manifest";
@@ -74,11 +82,38 @@ function protocolMetadata(input: {
   source: { kind: string; protocolId?: string };
 }): { protocolId?: string; protocolName?: string } {
   const state = useRunnerMeasurementFlowStore.getState();
-  const node = state.flowNodes.find((candidate) => candidate.id === input.cellId);
+  const node = flattenFlowNodes(state.flowNodes).find((candidate) => candidate.id === input.cellId);
   return {
     protocolId: input.source.kind === "protocolCell" ? input.source.protocolId : undefined,
     protocolName: node?.name,
   };
+}
+
+function containerLaneForTrack(
+  state: Readonly<RunnerState> | null | undefined,
+  trackId: string,
+): { attempt: ParallelContainerAttempt; lane: ParallelLaneAttempt } | undefined {
+  if (!state || trackId === MAIN_TRACK_ID) return undefined;
+  for (const attempt of Object.values(state.parallelAttempts)) {
+    if (!attempt) continue;
+    const lane = Object.values(attempt.lanes).find((candidate) => candidate.trackId === trackId);
+    if (lane) return { attempt, lane };
+  }
+  return undefined;
+}
+
+function containerProvenance(
+  state: Readonly<RunnerState> | null | undefined,
+  trackId: string,
+): WorkbookRunContainerProvenance | undefined {
+  const owner = containerLaneForTrack(state, trackId);
+  return owner
+    ? {
+        container_cell_id: owner.attempt.containerCellId,
+        lane_id: owner.lane.laneId,
+        container_attempt_id: owner.attempt.attemptId,
+      }
+    : undefined;
 }
 
 function mergeRound(
@@ -117,6 +152,7 @@ function recordPortRound(
         ? Number.MAX_SAFE_INTEGER
         : (connectionOrder.get(deviceId) ?? Number.MAX_SAFE_INTEGER);
     const targeted = new Set(input.deviceIds);
+    const provenance = containerProvenance(state.runnerState, input.trackId);
     const successes: ScanResultEntry[] = round.successes.map(({ device, result }) => {
       const identity = executorEntries.get(device.id);
       const measurementDeviceId =
@@ -128,6 +164,13 @@ function recordPortRound(
         measurementDeviceId,
         producerCellId: input.cellId,
         result: result as ScanResult,
+        ...(provenance
+          ? {
+              containerCellId: provenance.container_cell_id,
+              laneId: provenance.lane_id,
+              containerAttemptId: provenance.container_attempt_id,
+            }
+          : {}),
         ...metadata,
       };
     });
@@ -143,10 +186,34 @@ function recordPortRound(
         executorEntries.get(outcome.deviceId)?.deviceId ??
         outcome.deviceId,
       outcome: outcome.error === undefined ? "ok" : "failed",
+      ...provenance,
     }));
+    let expected = state.workbookRunExpected;
+    if (provenance) {
+      const owner = containerLaneForTrack(state.runnerState, input.trackId);
+      if (owner) {
+        expected = setExpectedLaneAssignment(expected, {
+          ...provenance,
+          devices: owner.lane.deviceIds.map((deviceId) => {
+            const device = executorEntries.get(deviceId);
+            const result = scanResults.find(
+              (entry) =>
+                entry.device?.id === deviceId &&
+                entry.containerAttemptId === provenance.container_attempt_id &&
+                entry.laneId === provenance.lane_id,
+            )?.result;
+            return {
+              transport_device_id: deviceId,
+              handshake_device_id: device?.deviceId,
+              ...(result ? { raw_measurement: result } : {}),
+            };
+          }),
+        });
+      }
+    }
     const ledger = ledgerEntries.reduce(
       (next, entry) => addWorkbookDeviceOutcome(next.expected, next.realized, entry),
-      { expected: state.workbookRunExpected, realized: state.workbookRunRealized },
+      { expected, realized: state.workbookRunRealized },
     );
     const mergedRound = mergeRound(state.runnerScanRound, round, input.deviceIds);
     const runnerScanRound: MultiScanRound = {
@@ -173,21 +240,17 @@ const ports = createMobileRunnerPorts({
   scanGate,
   analysisGate,
   getProtocolCode: (protocolId) => {
-    const node = useRunnerMeasurementFlowStore
-      .getState()
-      .flowNodes.find(
-        (candidate) =>
-          candidate.type === "measurement" && candidate.content?.protocolId === protocolId,
-      );
+    const node = flattenFlowNodes(useRunnerMeasurementFlowStore.getState().flowNodes).find(
+      (candidate) =>
+        candidate.type === "measurement" && candidate.content?.protocolId === protocolId,
+    );
     const code = node?.content?.protocol?.code;
     return Array.isArray(code) ? (code as Record<string, unknown>[]) : null;
   },
   getMacroMeta: (macroId) => {
-    const node = useRunnerMeasurementFlowStore
-      .getState()
-      .flowNodes.find(
-        (candidate) => candidate.type === "analysis" && candidate.content?.macroId === macroId,
-      );
+    const node = flattenFlowNodes(useRunnerMeasurementFlowStore.getState().flowNodes).find(
+      (candidate) => candidate.type === "analysis" && candidate.content?.macroId === macroId,
+    );
     const macro = node?.content?.macro;
     return macro?.code ? { code: macro.code, language: macro.language ?? "javascript" } : null;
   },
@@ -325,12 +388,13 @@ function driveAutoFollow(state: Readonly<RunnerState>): void {
 }
 
 function mirrorRunnerState(state: Readonly<RunnerState>): void {
-  const store = useRunnerMeasurementFlowStore.getState();
+  let store = useRunnerMeasurementFlowStore.getState();
   const main = state.tracks[MAIN_TRACK_ID];
   if (!main) return;
   if (state.cycle !== lastCycle) {
     lastCycle = state.cycle;
     rotateAttemptForCycle();
+    store = useRunnerMeasurementFlowStore.getState();
   }
   driveAutoFollow(state);
   const matched = detectMatchedPath(state);
@@ -354,6 +418,62 @@ function mirrorRunnerState(state: Readonly<RunnerState>): void {
   const hasCommandInFlight = Object.values(state.inFlight).some(
     (effect) => effect?.phase === "runCommand",
   );
+  const attempts = Object.values(state.parallelAttempts).filter(
+    (attempt): attempt is NonNullable<typeof attempt> => attempt !== undefined,
+  );
+  const ledgerAttemptIds = new Set(
+    [...store.workbookRunExpected, ...store.workbookRunRealized].flatMap((entry) =>
+      entry.container_attempt_id ? [entry.container_attempt_id] : [],
+    ),
+  );
+  const latestAttempt = attempts.find(
+    (attempt) => attempt.attemptId === `${attempt.containerCellId}:${state.containerAttemptSeq}`,
+  );
+  const relevantAttemptIds = new Set([
+    ...ledgerAttemptIds,
+    ...(state.activeContainerAttemptId ? [state.activeContainerAttemptId] : []),
+    ...(latestAttempt && state.cellRuns[latestAttempt.containerCellId]
+      ? [latestAttempt.attemptId]
+      : []),
+  ]);
+  for (const attempt of attempts) {
+    if (!relevantAttemptIds.has(attempt.attemptId)) continue;
+    for (const lane of Object.values(attempt.lanes)) {
+      const provenance = {
+        container_cell_id: attempt.containerCellId,
+        lane_id: lane.laneId,
+        container_attempt_id: attempt.attemptId,
+      };
+      const hasAssignment = useRunnerMeasurementFlowStore
+        .getState()
+        .workbookRunExpected.some(
+          (entry) =>
+            !("producer_cell_id" in entry) &&
+            entry.container_cell_id === provenance.container_cell_id &&
+            entry.lane_id === provenance.lane_id &&
+            entry.container_attempt_id === provenance.container_attempt_id,
+        );
+      if (!hasAssignment) {
+        store.recordExpectedLaneAssignment({
+          ...provenance,
+          devices: lane.deviceIds.map((deviceId) => {
+            const device = state.devices.find((candidate) => candidate.id === deviceId);
+            return {
+              transport_device_id: deviceId,
+              handshake_device_id: device?.deviceId,
+            };
+          }),
+        });
+      }
+      if (["done", "partial", "failed", "skipped"].includes(lane.status)) {
+        store.recordRealizedLaneStatus({
+          ...provenance,
+          status: lane.status as "done" | "partial" | "failed" | "skipped",
+          ...(lane.terminalReason === "Abandoned by researcher" ? { abandoned: true } : {}),
+        });
+      }
+    }
+  }
   useRunnerMeasurementFlowStore.setState({
     runnerState: state,
     currentFlowStep,
@@ -578,15 +698,15 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
           get().returnToOverview();
           return;
         }
+        if (analysisGate.pending) {
+          analysisGate.arm();
+          return;
+        }
         const node = state.flowNodes[state.currentFlowStep];
         if (node?.type === "question") {
           const value =
             useFlowAnswersStore.getState().getAnswer(state.iterationCount, node.id) ?? "";
           runner?.send({ type: "ANSWER", trackId: MAIN_TRACK_ID, cellId: node.id, value });
-          return;
-        }
-        if (node?.type === "analysis" && analysisGate.pending) {
-          analysisGate.arm();
           return;
         }
         runner?.send({ type: "NEXT" });
@@ -712,6 +832,7 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
           }
           if (
             nextFlowStep < state.flowNodes.length ||
+            !!state.runnerState?.activeContainerAttemptId ||
             !state.workbookAttemptId ||
             state.workbookTerminalReadyAttemptId === state.workbookAttemptId
           ) {
@@ -749,6 +870,21 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
       returnToOverview: () => {
         void syncOverviewAnswerAndReturn();
       },
+      continueRunnerTrackInteraction: (trackId, cellId, value) => {
+        const interaction = runner?.getState().tracks[trackId]?.pendingInteraction;
+        if (!runner || interaction?.cellId !== cellId) return;
+        if (interaction.kind === "question") {
+          runner.send({ type: "ANSWER", trackId, cellId, value: value ?? "" });
+        } else if (interaction.kind === "instruction") {
+          runner.send({ type: "CONTINUE_TRACK", trackId, cellId });
+        }
+      },
+      abandonRunnerLane: (trackId) => runner?.send({ type: "ABANDON_LANE", trackId }),
+      restartRunnerContainer: (containerCellId, attemptId) =>
+        runner?.send({
+          type: "RETRY",
+          target: { kind: "containerAttempt", containerCellId, attemptId },
+        }),
       startRunnerScan: (cellId) => {
         continuePartialScan = false;
         set((state) => ({

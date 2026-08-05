@@ -2,11 +2,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow-nodes";
-import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
+import {
+  reconcileWorkbookRunManifests,
+  workbookRunManifestRowId,
+} from "../services/workbook-run-manifest-reconcile";
 import { useFlowAnswersStore } from "./use-flow-answers-store";
 import {
   flushRunnerMeasurementFlowSnapshot,
@@ -63,14 +66,33 @@ const scanner = vi.hoisted(() => {
   return { state, entry, hook, listeners };
 });
 
+const manifestSink = vi.hoisted(() => ({
+  saveMeasurementLatest: vi.fn(),
+  enqueue: vi.fn(),
+}));
+
 vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
   useScannerCommandExecutorStore: scanner.hook,
 }));
 vi.mock("~/features/measurement-flow/utils/play-sound", () => ({
   playSound: () => Promise.resolve(),
 }));
+vi.mock("~/shared/db/measurements-storage", () => ({
+  saveMeasurementLatest: manifestSink.saveMeasurementLatest,
+}));
+vi.mock("~/shared/composition/upload", () => ({
+  getOutbox: () => ({
+    enqueue: manifestSink.enqueue,
+    isProcessing: () => false,
+    subscribeProcessing: vi.fn(),
+  }),
+}));
+vi.mock("~/shared/measurements/measurement-topic", () => ({
+  getMeasurementMqttTopic: ({ experimentId, protocolId }: Record<string, string>) =>
+    `topic/${experimentId}/${protocolId}`,
+}));
 
-const question = (id: string): WorkbookCell => ({
+const question = (id: string): Extract<WorkbookCell, { type: "question" }> => ({
   id,
   type: "question",
   isCollapsed: false,
@@ -78,23 +100,34 @@ const question = (id: string): WorkbookCell => ({
   question: { kind: "open_ended", text: `${id}?`, required: false },
   isAnswered: false,
 });
-const instruction = (id: string): WorkbookCell => ({
+const instruction = (id: string): Extract<WorkbookCell, { type: "markdown" }> => ({
   id,
   type: "markdown",
   isCollapsed: false,
   content: id,
 });
-const command = (id: string, content = id): WorkbookCell => ({
+const command = (id: string, content = id): Extract<WorkbookCell, { type: "command" }> => ({
   id,
   type: "command",
   isCollapsed: false,
   payload: { format: "string", content },
 });
-const protocol = (id: string, protocolId = `protocol-${id}`): WorkbookCell => ({
+const protocol = (
+  id: string,
+  protocolId = `protocol-${id}`,
+): Extract<WorkbookCell, { type: "protocol" }> => ({
   id,
   type: "protocol",
   isCollapsed: false,
   payload: { protocolId, version: 1, name: id },
+});
+
+const familyCondition = (id: string, family: "multispeq" | "ambit") => ({
+  id,
+  sourceCellId: "$device",
+  field: "family",
+  operator: "eq" as const,
+  value: family,
 });
 
 function connect(...devices: [string, "multispeq" | "ambit"][]) {
@@ -105,7 +138,7 @@ function connect(...devices: [string, "multispeq" | "ambit"][]) {
 
 async function start(cells: WorkbookCell[], protocolCodes: Record<string, object[]> = {}) {
   const graph = cellsToFlowGraph(cells);
-  const nodes = hydrateFlowNodes(graph.nodes as FlowNode[], cells, {
+  const nodes = hydrateFlowNodes(graph.nodes, cells, {
     protocols: Object.fromEntries(
       Object.entries(protocolCodes).map(([id, code]) => [id, { code, family: "multispeq" }]),
     ),
@@ -142,6 +175,12 @@ beforeEach(async () => {
   vi.clearAllMocks();
   scanner.state.executeCommandOn.mockReset();
   scanner.state.cancelCommandOn.mockReset().mockResolvedValue(undefined);
+  manifestSink.saveMeasurementLatest.mockReset().mockResolvedValue({
+    id: "manifest-row",
+    changed: true,
+    generation: 1,
+  });
+  manifestSink.enqueue.mockReset();
   await AsyncStorage.clear();
   resetRunnerMeasurementFlowForTest();
   useFlowAnswersStore.getState().clearHistory();
@@ -404,6 +443,55 @@ describe("runner-backed mobile qualification matrix", () => {
     expect(scanner.state.executeCommandOn).not.toHaveBeenCalled();
   });
 
+  it("parks an offline container attempt until the researcher restarts its lanes", async () => {
+    connect(["a", "multispeq"]);
+    const container: WorkbookCell = {
+      id: "parallel-offline",
+      type: "parallel",
+      name: "offline_lanes",
+      isCollapsed: false,
+      defaultLaneId: "lane-a",
+      lanes: [
+        {
+          id: "lane-a",
+          label: "A",
+          color: "#0a0",
+          conditions: [],
+          body: [command("measure-a", "A")],
+        },
+      ],
+    };
+    await start([container, instruction("done")]);
+    flushRunnerMeasurementFlowSnapshot();
+    const persisted = await waitForMicrotasks(async () => {
+      const value = await AsyncStorage.getItem("measurement-flow-storage");
+      if (!value) throw new Error("container snapshot not persisted yet");
+      return value;
+    });
+
+    resetRunnerMeasurementFlowForTest();
+    await AsyncStorage.setItem("measurement-flow-storage", persisted);
+    await useMeasurementFlowStore.persist.rehydrate();
+    await waitForMicrotasks(() =>
+      expect(
+        useMeasurementFlowStore.getState().runnerState?.parallelAttempts["parallel-offline:1"]
+          ?.status,
+      ).toBe("awaitingRestart"),
+    );
+    expect(scanner.state.executeCommandOn).not.toHaveBeenCalled();
+
+    useMeasurementFlowStore
+      .getState()
+      .restartRunnerContainer("parallel-offline", "parallel-offline:1");
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().awaitingScanStart).toBe(true),
+    );
+    expect(useMeasurementFlowStore.getState().runnerState?.activeContainerAttemptId).toBe(
+      "parallel-offline:2",
+    );
+    expect(scanner.state.executeCommandOn).not.toHaveBeenCalled();
+  });
+
   it("maps questions-only completion to review, Back, and the next cycle", async () => {
     await start([question("q1")]);
     setAnswer("q1", "Alice", 1);
@@ -425,5 +513,183 @@ describe("runner-backed mobile qualification matrix", () => {
     useMeasurementFlowStore.getState().dismissQuestionsSubmit();
     expect(useMeasurementFlowStore.getState().iterationCount).toBe(1);
     expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(0);
+  });
+
+  it("serializes a lane instruction and question while sibling tracks remain runnable", async () => {
+    connect(["a", "multispeq"], ["b", "ambit"]);
+    const container: WorkbookCell = {
+      id: "parallel-questions",
+      type: "parallel",
+      name: "lane_questions",
+      isCollapsed: false,
+      defaultLaneId: "lane-b",
+      lanes: [
+        {
+          id: "lane-a",
+          label: "A",
+          color: "#0a0",
+          conditions: [familyCondition("multi", "multispeq")],
+          body: [instruction("instruction-a")],
+        },
+        {
+          id: "lane-b",
+          label: "B",
+          color: "#00a",
+          conditions: [familyCondition("ambit", "ambit")],
+          body: [question("question-b")],
+        },
+      ],
+    };
+    await start([container, instruction("done")]);
+    const laneTracks = Object.values(useMeasurementFlowStore.getState().runnerState?.tracks ?? {})
+      .filter((track) => track.id !== "main")
+      .sort((left, right) => left.id.localeCompare(right.id));
+    expect(laneTracks.map((track) => track.pendingInteraction?.cellId)).toEqual([
+      "instruction-a",
+      "question-b",
+    ]);
+
+    useMeasurementFlowStore
+      .getState()
+      .continueRunnerTrackInteraction(laneTracks[0].id, "instruction-a");
+    expect(useMeasurementFlowStore.getState().runnerState?.tracks[laneTracks[1].id]).toMatchObject({
+      status: "awaitingHuman",
+      pendingInteraction: { kind: "question", cellId: "question-b" },
+    });
+    expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(0);
+
+    useMeasurementFlowStore
+      .getState()
+      .continueRunnerTrackInteraction(laneTracks[1].id, "question-b", "ready");
+    expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(1);
+  });
+
+  it("emits an unmet zero-row lane expectation with live row provenance", async () => {
+    connect(["transport-a", "multispeq"], ["transport-b", "ambit"]);
+    scanner.state.executeCommandOn.mockImplementation((deviceId: string) =>
+      deviceId === "transport-a"
+        ? Promise.resolve({ device_id: "row-a", value: 1 })
+        : Promise.reject(new Error("sensor unavailable")),
+    );
+    const container: WorkbookCell = {
+      id: "parallel-1",
+      type: "parallel",
+      name: "device_lanes",
+      isCollapsed: false,
+      defaultLaneId: "lane-b",
+      lanes: [
+        {
+          id: "lane-a",
+          label: "A",
+          color: "#0a0",
+          conditions: [familyCondition("multi", "multispeq")],
+          body: [command("measure-a", "A")],
+        },
+        {
+          id: "lane-b",
+          label: "B",
+          color: "#00a",
+          conditions: [familyCondition("ambit", "ambit")],
+          body: [command("measure-b", "B")],
+        },
+      ],
+    };
+    await start([container, instruction("done")]);
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().workbookRunExpected).toHaveLength(2),
+    );
+    useMeasurementFlowStore.getState().startRunnerScan("measure-a");
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().runnerScanRound?.failures).toHaveLength(1),
+    );
+
+    const failedLane = Object.values(
+      useMeasurementFlowStore.getState().runnerState?.parallelAttempts["parallel-1:1"]?.lanes ?? {},
+    ).find((lane) => lane.laneId === "lane-b");
+    if (!failedLane?.trackId) throw new Error("expected failed lane track");
+    useMeasurementFlowStore.getState().abandonRunnerLane(failedLane.trackId);
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(1),
+    );
+
+    const beforeManifest = useMeasurementFlowStore.getState();
+    const workbookAttemptId = beforeManifest.workbookAttemptId;
+    if (!workbookAttemptId) throw new Error("expected workbook attempt id");
+    expect(beforeManifest.scanResults).toEqual([
+      expect.objectContaining({
+        measurementDeviceId: "row-a",
+        producerCellId: "measure-a",
+        containerCellId: "parallel-1",
+        laneId: "lane-a",
+        containerAttemptId: "parallel-1:1",
+      }),
+    ]);
+    expect(beforeManifest.workbookRunExpected).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          container_cell_id: "parallel-1",
+          lane_id: "lane-a",
+          container_attempt_id: "parallel-1:1",
+          device_ids: ["row-a"],
+        }),
+        expect.objectContaining({
+          container_cell_id: "parallel-1",
+          lane_id: "lane-b",
+          container_attempt_id: "parallel-1:1",
+          device_ids: ["firmware-transport-b"],
+        }),
+      ]),
+    );
+    expect(beforeManifest.workbookRunRealized).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ lane_id: "lane-a", status: "done" }),
+        expect.objectContaining({ lane_id: "lane-b", status: "skipped", abandoned: true }),
+      ]),
+    );
+    expect(
+      beforeManifest.workbookRunRealized.filter(
+        (entry) =>
+          "producer_cell_id" in entry && entry.lane_id === "lane-b" && entry.outcome === "ok",
+      ),
+    ).toEqual([]);
+
+    beforeManifest.markWorkbookRunTerminalReady();
+    const manifest = useMeasurementFlowStore.getState().pendingWorkbookRunManifests.at(-1)?.record;
+    expect(manifest).toMatchObject({ terminal_status: "partial" });
+    expect(manifest?.expected).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ lane_id: "lane-b", device_ids: ["firmware-transport-b"] }),
+      ]),
+    );
+    await reconcileWorkbookRunManifests();
+    expect(manifestSink.saveMeasurementLatest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        measurementResult: expect.objectContaining({
+          terminal_status: "partial",
+          expected: expect.arrayContaining([
+            expect.objectContaining({
+              lane_id: "lane-b",
+              device_ids: ["firmware-transport-b"],
+            }),
+          ]),
+        }),
+      }),
+      "pending",
+      workbookRunManifestRowId(workbookAttemptId),
+    );
+    expect(manifestSink.enqueue).toHaveBeenCalledWith(workbookRunManifestRowId(workbookAttemptId));
+    expect(useMeasurementFlowStore.getState().pendingWorkbookRunManifests).toEqual([]);
+
+    beforeManifest.nextStep();
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().iterationCount).toBe(1),
+    );
+    expect(
+      useMeasurementFlowStore
+        .getState()
+        .workbookRunExpected.flatMap((entry) =>
+          entry.container_attempt_id ? [entry.container_attempt_id] : [],
+        ),
+    ).toEqual(["parallel-1:2", "parallel-1:2"]);
   });
 });

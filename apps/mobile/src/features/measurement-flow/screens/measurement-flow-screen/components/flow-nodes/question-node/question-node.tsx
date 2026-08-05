@@ -21,9 +21,10 @@ import { YesNoQuestion } from "./question-types/yes-no-question";
 
 interface QuestionNodeProps {
   node: FlowNode;
+  onAnswerAndAdvance?: (value: string) => void;
 }
 
-export function QuestionNode({ node }: QuestionNodeProps) {
+export function QuestionNode({ node, onAnswerAndAdvance }: QuestionNodeProps) {
   const { iterationCount } = useMeasurementFlowStore();
   const themeColors = useThemeColors();
   const { t } = useTranslation("measurementFlow");
@@ -55,7 +56,8 @@ export function QuestionNode({ node }: QuestionNodeProps) {
   const handleAnswerChangeAndAdvance = (value: string) => {
     Keyboard.dismiss();
     setAnswer(iterationCount, node.id, value);
-    advanceWithAnswer(node, value);
+    if (onAnswerAndAdvance) onAnswerAndAdvance(value);
+    else advanceWithAnswer(node, value);
   };
 
   const handleQRScanned = (data: string) => {

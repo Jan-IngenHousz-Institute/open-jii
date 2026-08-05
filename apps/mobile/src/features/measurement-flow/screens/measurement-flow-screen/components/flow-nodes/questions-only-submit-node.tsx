@@ -6,11 +6,13 @@ import { useSession } from "~/features/auth/hooks/use-session";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
 import { useFinishFlow } from "~/features/measurement-flow/hooks/use-finish-flow";
+import { reconcileWorkbookRunManifests } from "~/features/measurement-flow/services/workbook-run-manifest-reconcile";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useQuestionsUpload } from "~/features/recent-measurements/hooks/use-questions-upload";
 import { useTranslation } from "~/shared/i18n";
 import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { flattenFlowNodes } from "~/shared/measurements/flow-node";
 import { FLAG_TYPE_LABELS } from "~/shared/measurements/measurement-annotations";
 import { createLogger } from "~/shared/observability/logger";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/time/time-sync";
@@ -33,6 +35,7 @@ export function QuestionsOnlySubmitNode() {
     flowNodes,
     dismissQuestionsSubmit,
     navigateToQuestionFromOverview,
+    markWorkbookRunTerminalReady,
   } = useMeasurementFlowStore();
   const finishAndExit = useFinishFlow();
   const { classes, colors } = useTheme();
@@ -59,7 +62,7 @@ export function QuestionsOnlySubmitNode() {
   });
 
   const cycleAnswers = getCycleAnswers(iterationCount);
-  const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
+  const questions = convertCycleAnswersToArray(cycleAnswers, flattenFlowNodes(flowNodes));
 
   const canUpload = Boolean(experimentId && session?.data?.user?.id);
 
@@ -91,6 +94,8 @@ export function QuestionsOnlySubmitNode() {
       commentText: trimmedComment || undefined,
       flagType,
     });
+    markWorkbookRunTerminalReady();
+    await reconcileWorkbookRunManifests();
 
     log.info("handleUpload returned");
     return true;

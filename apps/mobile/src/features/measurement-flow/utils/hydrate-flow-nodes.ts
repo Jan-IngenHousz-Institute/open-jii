@@ -7,6 +7,8 @@ import type {
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
+import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
+import { findWorkbookCell, walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 
 /**
  * Hydrates each measurement/analysis node with its protocol/macro (snapshot code
@@ -21,9 +23,16 @@ export function hydrateFlowNodes(
     if (node.type === "measurement" && node.content?.protocolId) {
       const id = node.content.protocolId as string;
       const snapshot = snapshots?.protocols[id];
-      const cell = cells.find(
-        (c): c is ProtocolCell => c.type === "protocol" && c.payload.protocolId === id,
-      );
+      const found = findWorkbookCell(cells, node.id)?.cell;
+      const cell =
+        found?.type === "protocol"
+          ? found
+          : walkWorkbookCells(cells)
+              .map(({ cell }) => cell)
+              .find(
+                (candidate): candidate is ProtocolCell =>
+                  candidate.type === "protocol" && candidate.payload.protocolId === id,
+              );
       return {
         ...node,
         content: {
@@ -39,9 +48,16 @@ export function hydrateFlowNodes(
 
     if (node.type === "analysis" && node.content?.macroId) {
       const id = node.content.macroId as string;
-      const cell = cells.find(
-        (c): c is MacroCell => c.type === "macro" && c.payload.macroId === id,
-      );
+      const found = findWorkbookCell(cells, node.id)?.cell;
+      const cell =
+        found?.type === "macro"
+          ? found
+          : walkWorkbookCells(cells)
+              .map(({ cell }) => cell)
+              .find(
+                (candidate): candidate is MacroCell =>
+                  candidate.type === "macro" && candidate.payload.macroId === id,
+              );
       return {
         ...node,
         content: {
@@ -53,6 +69,23 @@ export function hydrateFlowNodes(
             language: cell?.payload.language ?? "",
             code: snapshots?.macros[id]?.code ?? "",
           },
+        },
+      };
+    }
+
+    if (node.type === "parallel") {
+      const container = findWorkbookCell(cells, node.id)?.cell;
+      if (container?.type !== "parallel") return node;
+      return {
+        ...node,
+        content: {
+          ...node.content,
+          laneNodes: Object.fromEntries(
+            container.lanes.map((lane) => {
+              const graph = cellsToFlowGraph(lane.body);
+              return [lane.id, hydrateFlowNodes(graph.nodes, cells, snapshots)] as const;
+            }),
+          ),
         },
       };
     }

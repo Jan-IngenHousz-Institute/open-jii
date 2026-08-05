@@ -37,4 +37,7 @@ export interface MeasurementFlowStore extends FlowState {
   acknowledgeWorkbookRunManifest: (attemptId: string) => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
+  continueRunnerTrackInteraction: (trackId: string, cellId: string, value?: string) => void;
+  abandonRunnerLane: (trackId: string) => void;
+  restartRunnerContainer: (containerCellId: string, attemptId: string) => void;
 }

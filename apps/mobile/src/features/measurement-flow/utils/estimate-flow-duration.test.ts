@@ -50,4 +50,18 @@ describe("estimateFlowDuration", () => {
     // a lone command still floors at 1 minute
     expect(estimateFlowDuration([commandNode()])).toBe(1);
   });
+
+  it("uses the longest parallel lane rather than serializing lane estimates", () => {
+    const parallel: FlowNode = {
+      ...node("parallel"),
+      content: {
+        laneNodes: {
+          fast: [node("measurement")],
+          slow: [node("measurement"), node("measurement")],
+        },
+      },
+    };
+    // instruction 0.5 + longest lane 3.0 = 3.5, rounded to 4.
+    expect(estimateFlowDuration([node("instruction"), parallel])).toBe(4);
+  });
 });

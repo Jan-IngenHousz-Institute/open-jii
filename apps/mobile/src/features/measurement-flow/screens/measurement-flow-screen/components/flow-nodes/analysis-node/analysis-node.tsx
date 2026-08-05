@@ -19,6 +19,7 @@ import { useMeasurements } from "~/features/recent-measurements/hooks/use-measur
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { convertCycleAnswersToArray } from "~/shared/measurements/convert-cycle-answers-to-array";
+import { flattenFlowNodes } from "~/shared/measurements/flow-node";
 import type { AnalysisContent } from "~/shared/measurements/flow-node";
 import { createLogger } from "~/shared/observability/logger";
 import { getSyncedLocalISO, getSyncedUtcISO, getTimeSyncState } from "~/shared/time/time-sync";
@@ -70,12 +71,13 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     markWorkbookRunTerminalReady,
   } = useMeasurementFlowStore();
   const protocolId = flowProtocolId(flowNodes);
+  const allFlowNodes = useMemo(() => flattenFlowNodes(flowNodes), [flowNodes]);
   const { experiments } = useExperiments();
   const { session } = useSession();
   const executors = useScannerCommandExecutorStore((s) => s.executors);
 
   // Name of the active measurement's protocol, read off its hydrated flow node.
-  const activeProtocolName = flowNodes.find(
+  const activeProtocolName = allFlowNodes.find(
     (n) => n.type === "measurement" && n.content?.protocolId === protocolId,
   )?.content?.protocol?.name as string | undefined;
 
@@ -103,7 +105,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
   const { updateMeasurementComment } = useMeasurements();
 
   const cycleAnswers = getCycleAnswers(iterationCount);
-  const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
+  const questions = convertCycleAnswersToArray(cycleAnswers, allFlowNodes);
 
   // Upstream outputs this macro reads as `ctx.<name>`: question answers, the
   // live scan and prior macro outputs. beforeIndex stops at this cell, so the

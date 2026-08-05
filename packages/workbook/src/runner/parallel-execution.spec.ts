@@ -414,6 +414,60 @@ describe("parallel container execution", () => {
     expect(step.state.parallelContexts.device_lanes?.lanes["lane-a"].status).toBe("skipped");
   });
 
+  it("continues one lane instruction without consuming a sibling interaction", () => {
+    const container = parallel([
+      {
+        id: "lane-a",
+        label: "Instruction lane",
+        color: "#f00",
+        conditions: [condition("is-multi", "multispeq")],
+        body: [
+          { id: "lane-instruction", type: "markdown", isCollapsed: false, content: "Prepare A" },
+          commandCell("command-a"),
+        ],
+      },
+      {
+        id: "lane-b",
+        label: "Question lane",
+        color: "#00f",
+        conditions: [condition("is-ambit", "ambit")],
+        body: [questionCell("lane-question", "Prepare B?") as ParallelBodyCell],
+      },
+    ]);
+    let step = transition(
+      createInitialState({ cells: [container, commandCell("after")], mode: "flow", devices }),
+      { type: "START" },
+    );
+    const instructionTrack = Object.values(step.state.tracks).find(
+      (track) => track.pendingInteraction?.cellId === "lane-instruction",
+    );
+    const questionTrack = Object.values(step.state.tracks).find(
+      (track) => track.pendingInteraction?.cellId === "lane-question",
+    );
+    if (!instructionTrack || !questionTrack) throw new Error("expected both lane interactions");
+
+    const stale = transition(step.state, {
+      type: "CONTINUE_TRACK",
+      trackId: instructionTrack.id,
+      cellId: "another-cell",
+    });
+    expect(stale.effects).toEqual([]);
+    expect(stale.state.tracks[instructionTrack.id].pendingInteraction?.cellId).toBe(
+      "lane-instruction",
+    );
+
+    step = transition(step.state, {
+      type: "CONTINUE_TRACK",
+      trackId: instructionTrack.id,
+      cellId: "lane-instruction",
+    });
+    expect(commandEffects(step.effects).map((effect) => effect.cellId)).toEqual(["command-a"]);
+    expect(step.state.tracks[questionTrack.id]).toMatchObject({
+      status: "awaitingHuman",
+      pendingInteraction: { kind: "question", cellId: "lane-question" },
+    });
+  });
+
   it("STOP terminalizes an idle attempt waiting on a lane question", () => {
     const container = parallel([
       {

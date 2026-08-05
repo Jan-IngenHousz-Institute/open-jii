@@ -11,6 +11,8 @@ export type RetryTarget =
 export type WorkbookPublicEvent =
   | { type: "START" }
   | { type: "NEXT" }
+  /** Continue one non-main instruction without disturbing sibling tracks. */
+  | { type: "CONTINUE_TRACK"; trackId: string; cellId: string }
   | { type: "BACK" }
   | { type: "ANSWER"; trackId: string; cellId: string; value: string }
   | { type: "RUN_CELL"; cellId: string }

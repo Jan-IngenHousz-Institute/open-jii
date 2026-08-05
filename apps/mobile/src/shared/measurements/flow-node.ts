@@ -1,4 +1,12 @@
-export type FlowNodeType = "instruction" | "question" | "measurement" | "analysis" | "branch";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+
+export type FlowNodeType =
+  | "instruction"
+  | "question"
+  | "measurement"
+  | "analysis"
+  | "branch"
+  | "parallel";
 
 export type QuestionKind =
   | "text"
@@ -14,7 +22,12 @@ export function isQuestionsOnlyFlow(flowNodes: FlowNode[]): boolean {
   // screen rather than wrapping to a new iteration.
   return (
     flowNodes.length > 0 &&
-    flowNodes.every((n) => n.type === "question" || n.type === "instruction" || n.type === "branch")
+    flowNodes.every((n) => {
+      if (n.type === "question" || n.type === "instruction" || n.type === "branch") return true;
+      if (n.type !== "parallel") return false;
+      const lanes = Object.values((n.content as ParallelContent).laneNodes ?? {});
+      return lanes.length > 0 && lanes.every(isQuestionsOnlyFlow);
+    })
   );
 }
 
@@ -28,6 +41,23 @@ export interface FlowNode {
     x: number;
     y: number;
   };
+}
+
+export interface ParallelContent {
+  name: string;
+  defaultLaneId: string;
+  lanes: Extract<WorkbookCell, { type: "parallel" }>["lanes"];
+  /** Hydrated mobile projections of each nested lane body. */
+  laneNodes: Record<string, FlowNode[]>;
+}
+
+export function flattenFlowNodes(nodes: readonly FlowNode[]): FlowNode[] {
+  return nodes.flatMap((node) => [
+    node,
+    ...(node.type === "parallel"
+      ? Object.values((node.content as ParallelContent).laneNodes ?? {}).flatMap(flattenFlowNodes)
+      : []),
+  ]);
 }
 
 export interface InstructionContent {

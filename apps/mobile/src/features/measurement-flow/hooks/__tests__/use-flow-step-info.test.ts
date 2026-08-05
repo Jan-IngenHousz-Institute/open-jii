@@ -59,4 +59,14 @@ describe("deriveStepInfo — branch nodes are excluded from progress", () => {
       expect(progress).toBeLessThanOrEqual(1);
     }
   });
+
+  it("presents a parallel container as one visible parallel step", () => {
+    const parallel = {
+      ...node("parallel", "parallel"),
+      content: { laneNodes: { lane: [node("measure", "measurement")] } },
+    };
+    const flow = [parallel, node("done", "instruction")];
+    const info = deriveStepInfo(flow, 0, "exp", false, false);
+    expect(info).toMatchObject({ currentStep: 1, totalSteps: 2, stepTypeKey: "parallel" });
+  });
 });

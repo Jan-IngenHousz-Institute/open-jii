@@ -5,12 +5,19 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { getEnvVar } from "~/shared/stores/environment-store";
 
 import { contract } from "@repo/api/contract";
+import {
+  WORKBOOK_CAPABILITIES_HEADER,
+  WORKBOOK_PARALLEL_CAPABILITY,
+} from "@repo/api/domains/workbook/workbook-capabilities";
 
 import { orpcFetch } from "./orpc-fetch";
 
 const link = new OpenAPILink(contract, {
   url: () => getEnvVar("BACKEND_URI"),
-  headers: () => ({ "x-app-source": "orpc" }),
+  headers: () => ({
+    "x-app-source": "orpc",
+    [WORKBOOK_CAPABILITIES_HEADER]: WORKBOOK_PARALLEL_CAPABILITY,
+  }),
   fetch: orpcFetch,
 });
 

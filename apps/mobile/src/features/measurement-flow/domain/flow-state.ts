@@ -1,3 +1,4 @@
+import { flattenFlowNodes } from "~/shared/measurements/flow-node";
 import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
@@ -107,7 +108,7 @@ export const initialFlowState: FlowState = {
 
 /** Protocol used for the upload topic; command-only measurement nodes do not qualify. */
 export function flowProtocolId(flowNodes: FlowNode[]): string | undefined {
-  const node = flowNodes.find(
+  const node = flattenFlowNodes(flowNodes).find(
     (candidate) =>
       candidate.type === "measurement" &&
       (candidate.content as { protocolId?: string } | undefined)?.protocolId,

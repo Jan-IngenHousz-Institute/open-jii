@@ -1,4 +1,4 @@
-import type { FlowNode } from "~/shared/measurements/flow-node";
+import type { FlowNode, ParallelContent } from "~/shared/measurements/flow-node";
 
 /**
  * Rough duration estimate for a measurement flow, in minutes. The numbers
@@ -11,16 +11,24 @@ const NODE_MINUTES: Record<FlowNode["type"], number> = {
   question: 0.5,
   measurement: 1.5,
   analysis: 0.5,
+  parallel: 0,
   branch: 0,
 };
 
+function estimatedMinutes(nodes: FlowNode[]): number {
+  return nodes.reduce((acc, node) => {
+    if (node.type === "measurement" && node.content?.command) return acc;
+    if (node.type === "parallel") {
+      const lanes = Object.values((node.content as ParallelContent).laneNodes ?? {});
+      return acc + Math.max(0, ...lanes.map(estimatedMinutes));
+    }
+    return acc + NODE_MINUTES[node.type];
+  }, 0);
+}
+
 export function estimateFlowDuration(nodes: FlowNode[]): number {
   if (nodes.length === 0) return 0;
-  const sum = nodes.reduce((acc, n) => {
-    // An inline command rides the measurement node but runs in seconds, not the
-    // ~1.5 min a protocol scan takes.
-    if (n.type === "measurement" && n.content?.command) return acc;
-    return acc + (NODE_MINUTES[n.type] ?? 0);
-  }, 0);
+  // Parallel lanes run together, so the longest lane—not their sum—sets the estimate.
+  const sum = estimatedMinutes(nodes);
   return Math.max(1, Math.round(sum));
 }

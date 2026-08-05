@@ -5,7 +5,6 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow-nodes";
 import { orpc } from "~/shared/api/orpc";
 
-import { assertContainerFreeFlowGraph } from "@repo/api/domains/workbook/workbook-capabilities";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 // Loads an experiment's workbook flow into the store: fetch the workbook version
@@ -50,7 +49,6 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
     const cells = body?.cells;
     if (!cells) return;
     const graph = cellsToFlowGraph(cells);
-    assertContainerFreeFlowGraph(graph);
     const { nodes, edges } = graph;
     setFlowGraph(
       hydrateFlowNodes(nodes, cells, body?.entitySnapshots),

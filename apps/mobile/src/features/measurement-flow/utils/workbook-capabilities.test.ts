@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
-import {
-  guardMobileFlowContent,
-  guardMobileWorkbookContent,
-  hasUnsupportedMobileWorkbookContent,
-} from "./workbook-capabilities";
+import { guardMobileFlowContent, guardMobileWorkbookContent } from "./workbook-capabilities";
 
 const cells: WorkbookCell[] = [
   {
@@ -28,14 +24,12 @@ const cells: WorkbookCell[] = [
 ];
 
 describe("mobile workbook capability guard", () => {
-  it("rejects a cached container version before it can be converted or executed", () => {
-    expect(() => guardMobileWorkbookContent({ id: "cached", cells })).toThrow(
-      "workbook-parallel-v1",
-    );
+  it("accepts a cached container version under the mobile parallel capability", () => {
+    expect(guardMobileWorkbookContent({ id: "cached", cells }).cells).toBe(cells);
   });
 
-  it("rejects a cached legacy flow graph containing a container node", () => {
-    expect(() =>
+  it("accepts a projected flow graph containing a container node", () => {
+    expect(
       guardMobileFlowContent({
         graph: {
           nodes: [
@@ -53,17 +47,7 @@ describe("mobile workbook capability guard", () => {
           ],
           edges: [],
         },
-      }),
-    ).toThrow("workbook-parallel-v1");
-  });
-
-  it("detects unsupported persisted cells or projected nodes during rehydration", () => {
-    expect(hasUnsupportedMobileWorkbookContent({ cells, flowNodes: [] })).toBe(true);
-    expect(
-      hasUnsupportedMobileWorkbookContent({ cells: [], flowNodes: [{ type: "parallel" }] }),
-    ).toBe(true);
-    expect(
-      hasUnsupportedMobileWorkbookContent({ cells: [], flowNodes: [{ type: "measurement" }] }),
-    ).toBe(false);
+      }).graph.nodes[0]?.type,
+    ).toBe("parallel");
   });
 });

@@ -51,7 +51,13 @@ function noop(state: RunnerState, line?: string): TransitionResult {
 
 // Most events behave identically in both modes; the mode split lives in these
 // two gates alone. Flow owns the cursor vocabulary, notebook owns passes.
-const FLOW_ONLY = new Set<WorkbookEvent["type"]>(["START", "NEXT", "BACK", "START_CYCLE"]);
+const FLOW_ONLY = new Set<WorkbookEvent["type"]>([
+  "START",
+  "NEXT",
+  "CONTINUE_TRACK",
+  "BACK",
+  "START_CYCLE",
+]);
 const NOTEBOOK_ONLY = new Set<WorkbookEvent["type"]>(["CLEAR_OUTPUTS"]);
 
 /** Launch active tracks in deterministic id order, folding effectSeq globally. */
@@ -390,6 +396,33 @@ function handleNext(state: RunnerState): TransitionResult {
     );
   }
   return ignored(state, "NEXT");
+}
+
+function handleContinueTrack(
+  state: RunnerState,
+  trackId: string,
+  cellId: string,
+): TransitionResult {
+  if (Object.keys(state.cancellingEffectIds).length > 0) {
+    return ignored(state, "CONTINUE_TRACK");
+  }
+  if (trackId === MAIN_TRACK_ID || !Object.prototype.hasOwnProperty.call(state.tracks, trackId)) {
+    return ignored(state, "CONTINUE_TRACK unknown lane");
+  }
+  const track = state.tracks[trackId];
+  if (
+    track.cursor.cellId !== cellId ||
+    track.pendingInteraction?.kind !== "instruction" ||
+    track.pendingInteraction.cellId !== cellId
+  ) {
+    return ignored(state, "CONTINUE_TRACK stale interaction");
+  }
+  return landOn(
+    clearTrackInteraction(state, trackId),
+    nextTrackCellId(state, trackId, cellId),
+    "forward",
+    trackId,
+  );
 }
 
 function handleBack(state: RunnerState): TransitionResult {
@@ -842,6 +875,9 @@ export function transition(state: RunnerState, event: WorkbookEvent): Transition
       break;
     case "NEXT":
       result = handleNext(state);
+      break;
+    case "CONTINUE_TRACK":
+      result = handleContinueTrack(state, event.trackId, event.cellId);
       break;
     case "BACK":
       result = handleBack(state);

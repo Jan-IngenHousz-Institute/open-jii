@@ -50,6 +50,7 @@
       "question": "Question",
       "measurement": "Measurement",
       "analysis": "Analysis",
+      "parallel": "Parallel run",
       "review": "Review answers",
       "completed": "Completed"
     },
@@ -71,6 +72,22 @@
   "navigation": {
     "next": "Next",
     "backToOverview": "Back to overview"
+  },
+  "parallel": {
+    "title": "Parallel run",
+    "attempt": "Attempt {{attempt}}",
+    "noDevices": "No devices assigned",
+    "abandon": "Abandon lane",
+    "restart": "Restart lanes",
+    "waiting": "Waiting for lane work to finish.",
+    "status": {
+      "active": "Active",
+      "awaitingHuman": "Awaiting input",
+      "done": "Done",
+      "failed": "Failed",
+      "partial": "Partial",
+      "skipped": "Skipped"
+    }
   },
   "cameraPermission": {
     "deniedTitle": "Permission disabled",
