@@ -66,6 +66,10 @@ def raw_data():
             F.get_json_object(F.col("data").cast("string"), "$.workbook_version_id"),
         )
         .withColumn(
+            "workbook_attempt_id",
+            F.get_json_object(F.col("data").cast("string"), "$.workbook_attempt_id"),
+        )
+        .withColumn(
             "macro_context",
             F.get_json_object(F.col("data").cast("string"), "$.macro_context"),
         )
@@ -73,6 +77,7 @@ def raw_data():
             "experiment_id",
             "client_id",
             "workbook_version_id",
+            "workbook_attempt_id",
             "macro_context",
             "parsed_data",
             "ingestion_timestamp",

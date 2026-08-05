@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type {
@@ -83,12 +84,13 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       ...initialFlowState,
       iterationAnchor: undefined,
 
-      setExperimentId: (experimentId, experimentLabel) => set({ experimentId, experimentLabel }),
+      setExperimentId: (experimentId, experimentLabel) =>
+        set({ experimentId, experimentLabel, workbookAttemptId: uuidv4() }),
 
       setCurrentStep: (step) => set({ currentStep: step }),
       setCurrentFlowStep: (step) => set({ currentFlowStep: step }),
 
-      nextStep: () => set(nextStepState),
+      nextStep: () => set((state) => nextStepState(state, uuidv4())),
       previousStep: () => set(previousStepState),
 
       // Route through resetFlow so the persisted slice is cleared too.
@@ -106,16 +108,19 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         }),
 
       setFlowGraph: (nodes, edges, cells, workbookVersionId) =>
-        set({
+        set((state) => ({
           flowNodes: nodes,
           edges,
           cells,
           workbookVersionId,
+          ...(state.workbookVersionId !== undefined && state.workbookVersionId !== workbookVersionId
+            ? { workbookAttemptId: uuidv4() }
+            : {}),
           currentFlowStep: 0,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
           branchReturnStack: [],
-        }),
+        })),
 
       setLastMatchedPath: (path) => set({ lastMatchedPath: path }),
 
@@ -131,9 +136,9 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       resetFlow: () => set({ ...resetFlowState(), iterationAnchor: undefined }),
 
-      startNewIteration: () => set(startNewIterationState),
+      startNewIteration: () => set((state) => startNewIterationState(state, uuidv4())),
 
-      retryCurrentIteration: () => set(retryIterationState()),
+      retryCurrentIteration: () => set(retryIterationState(uuidv4())),
 
       finishFlow: () => set(finishFlowState),
 
@@ -156,7 +161,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       setIterationAnchor: (anchor) => set({ iterationAnchor: anchor }),
 
-      dismissQuestionsSubmit: () => set(dismissQuestionsSubmitState),
+      dismissQuestionsSubmit: () => set((state) => dismissQuestionsSubmitState(state, uuidv4())),
 
       navigateToQuestionFromOverview: (questionIndex) =>
         set(navigateToQuestionFromOverviewState(questionIndex)),
@@ -179,6 +184,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
         workbookVersionId: state.workbookVersionId,
+        workbookAttemptId: state.workbookAttemptId,
         currentStep: state.currentStep,
         flowNodes: state.flowNodes,
         currentFlowStep: state.currentFlowStep,

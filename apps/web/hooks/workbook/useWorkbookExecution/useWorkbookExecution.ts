@@ -161,6 +161,7 @@ export function useWorkbookExecution({
 }: UseWorkbookExecutionOptions) {
   const [executionStates, setExecutionStates] = useState<Record<string, CellExecutionState>>({});
   const [isRunningAll, setIsRunningAll] = useState(false);
+  const [workbookAttemptId, setWorkbookAttemptId] = useState<string>();
   const [sensorFamily, setSensorFamilyState] = useState<SensorFamily>(() =>
     resolveSensorFamily(cells),
   );
@@ -767,6 +768,7 @@ export function useWorkbookExecution({
 
   const runCell = useCallback(
     async (cellId: string) => {
+      setWorkbookAttemptId(crypto.randomUUID());
       let currentCells = cellsRef.current;
       const cell = currentCells.find((c) => c.id === cellId);
       if (!cell) return;
@@ -812,6 +814,7 @@ export function useWorkbookExecution({
   const shouldAbort = () => abortRef.current;
 
   const runAll = useCallback(async () => {
+    setWorkbookAttemptId(crypto.randomUUID());
     setIsRunningAll(true);
     abortRef.current = false;
     execCounterRef.current = 0;
@@ -862,6 +865,7 @@ export function useWorkbookExecution({
     onCellsChangeRef.current(filtered);
     execCounterRef.current = 0;
     setExecutionStates({});
+    setWorkbookAttemptId(undefined);
   }, []);
 
   const connectDevice = useCallback(() => connect(connectionType), [connect, connectionType]);
@@ -886,6 +890,7 @@ export function useWorkbookExecution({
     disconnectDevice,
 
     executionStates,
+    workbookAttemptId,
     isRunningAll,
     runCell,
     runAll,

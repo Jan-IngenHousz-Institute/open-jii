@@ -75,6 +75,8 @@ sensor_schema = StructType(
         # One uuid per multi-device workbook run; the round's rows share it.
         # Nullable: absent on single-device uploads and all older payloads.
         StructField("workbook_run_id", StringType(), True),
+        # Stable execution-attempt identity. Nullable for older payloads.
+        StructField("workbook_attempt_id", StringType(), True),
         # GPS fix at measurement time; absent on older payloads and when the
         # app had no location permission or fix.
         StructField("latitude", DoubleType(), True),
@@ -106,6 +108,7 @@ large_iot_schema = StructType(
         # Workbook execution metadata; absent on single-device uploads.
         # macro_context stays a JSON string because its keys are dynamic.
         StructField("workbook_run_id", StringType(), True),
+        StructField("workbook_attempt_id", StringType(), True),
         StructField("workbook_version_id", StringType(), True),
         StructField("macro_context", StringType(), True),
         # GPS fix at measurement time; absent without permission or fix.

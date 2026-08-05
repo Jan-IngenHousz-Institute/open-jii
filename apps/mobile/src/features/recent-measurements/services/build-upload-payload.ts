@@ -21,6 +21,8 @@ export interface BuildUploadPayloadArgs {
   workbookRunId?: string;
   /** Immutable workbook version that owns the macro snapshot. */
   workbookVersionId?: string;
+  /** Stable id minted when execution enters this workbook attempt. */
+  workbookAttemptId?: string;
   /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
   macroContext?: Record<string, unknown>;
   fallbackDeviceId?: string;
@@ -40,6 +42,7 @@ export function buildUploadPayload({
   commentText,
   workbookRunId,
   workbookVersionId,
+  workbookAttemptId,
   macroContext,
   fallbackDeviceId,
   location,
@@ -71,6 +74,7 @@ export function buildUploadPayload({
       : {}),
     ...(workbookRunId ? { workbook_run_id: workbookRunId } : {}),
     ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
+    ...(workbookAttemptId ? { workbook_attempt_id: workbookAttemptId } : {}),
     ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
   };

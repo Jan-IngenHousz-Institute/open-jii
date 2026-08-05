@@ -57,6 +57,7 @@ interface SharedUploadArgs {
   questions: AnswerData[];
   commentText?: string;
   workbookVersionId?: string;
+  workbookAttemptId: string;
 }
 
 export function useMeasurementUpload() {
@@ -80,6 +81,7 @@ export function useMeasurementUpload() {
       questions,
       commentText,
       workbookVersionId,
+      workbookAttemptId,
     }: SharedUploadArgs & {
       results: {
         rawMeasurement: any;
@@ -134,6 +136,7 @@ export function useMeasurementUpload() {
           commentText,
           workbookRunId,
           workbookVersionId,
+          workbookAttemptId,
           macroContext,
           fallbackDeviceId: device?.id,
           location,

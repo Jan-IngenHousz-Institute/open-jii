@@ -110,6 +110,7 @@ beforeEach(() => {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
     experimentLabel: undefined,
+    workbookAttemptId: "attempt-1",
     flowNodes: [],
     currentFlowStep: 0,
     iterationCount: 0,
@@ -344,6 +345,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
     expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
       protocolId: "proto-1",
       workbookVersionId: "version-1",
+      workbookAttemptId: "attempt-1",
       results: [{ rawMeasurement: { sample: [{ phi2: 0.8 }] } }],
     });
   });
@@ -355,6 +357,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
       experimentId: "exp-1",
       experimentLabel: "Trial",
       workbookVersionId: "version-1",
+      workbookAttemptId: "attempt-1",
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },

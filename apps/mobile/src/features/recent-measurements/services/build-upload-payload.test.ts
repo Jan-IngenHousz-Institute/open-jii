@@ -235,6 +235,16 @@ describe("input purity", () => {
 });
 
 describe("workbook run correlation", () => {
+  it("stamps the execution-entry attempt id on every payload", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "MSPx-0001" },
+      workbookAttemptId: "attempt-1",
+    });
+
+    expect(payload.workbook_attempt_id).toBe("attempt-1");
+  });
+
   it("stamps workbook_run_id when given, alongside sample compression", () => {
     const payload = buildUploadPayload({
       ...baseArgs,

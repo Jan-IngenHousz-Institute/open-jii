@@ -43,6 +43,9 @@ export interface FlowState {
   // Immutable workbook version whose protocol/macro snapshots this run uses.
   // Uploaded with measurements so cloud macro execution resolves the same code.
   workbookVersionId?: string;
+  // Stable identity for one execution attempt. Minted when an experiment is
+  // entered and rotated only when execution starts over.
+  workbookAttemptId?: string;
   currentStep: number;
   flowNodes: FlowNode[];
   currentFlowStep: number;
@@ -79,6 +82,7 @@ export const initialFlowState: FlowState = {
   experimentId: undefined,
   experimentLabel: undefined,
   workbookVersionId: undefined,
+  workbookAttemptId: undefined,
   currentStep: 0,
   flowNodes: [],
   currentFlowStep: 0,
@@ -139,7 +143,7 @@ export function flowProtocolId(flowNodes: FlowNode[]): string | undefined {
   return (node?.content as { protocolId?: string } | undefined)?.protocolId;
 }
 
-export function nextStepState(state: FlowState): Partial<FlowState> {
+export function nextStepState(state: FlowState, nextAttemptId?: string): Partial<FlowState> {
   if (state.isFromOverview) {
     return { currentFlowStep: firstMeasurementStep(state.flowNodes), isFromOverview: false };
   }
@@ -162,6 +166,7 @@ export function nextStepState(state: FlowState): Partial<FlowState> {
       return {
         currentFlowStep: 0,
         iterationCount: state.iterationCount + 1,
+        ...(nextAttemptId ? { workbookAttemptId: nextAttemptId } : {}),
         ...clearedBranchIteration,
       };
     }
@@ -225,7 +230,10 @@ export function resetFlowState(): Partial<FlowState> {
   return { ...initialFlowState };
 }
 
-export function startNewIterationState(state: FlowState): Partial<FlowState> {
+export function startNewIterationState(
+  state: FlowState,
+  nextAttemptId?: string,
+): Partial<FlowState> {
   return {
     currentFlowStep: 0,
     iterationCount: state.iterationCount + 1,
@@ -235,11 +243,12 @@ export function startNewIterationState(state: FlowState): Partial<FlowState> {
     producerCellId: undefined,
     cellOutputs: {},
     isFromOverview: false,
+    ...(nextAttemptId ? { workbookAttemptId: nextAttemptId } : {}),
     ...clearedBranchIteration,
   };
 }
 
-export function retryIterationState(): Partial<FlowState> {
+export function retryIterationState(nextAttemptId?: string): Partial<FlowState> {
   return {
     currentFlowStep: 0,
     isQuestionsSubmitPending: false,
@@ -248,6 +257,7 @@ export function retryIterationState(): Partial<FlowState> {
     producerCellId: undefined,
     cellOutputs: {},
     isFromOverview: false,
+    ...(nextAttemptId ? { workbookAttemptId: nextAttemptId } : {}),
     ...clearedBranchIteration,
   };
 }
@@ -261,7 +271,10 @@ export function finishFlowState(state: FlowState): Partial<FlowState> {
   };
 }
 
-export function dismissQuestionsSubmitState(state: FlowState): Partial<FlowState> {
+export function dismissQuestionsSubmitState(
+  state: FlowState,
+  nextAttemptId?: string,
+): Partial<FlowState> {
   return {
     isQuestionsSubmitPending: false,
     currentFlowStep: 0,
@@ -270,6 +283,7 @@ export function dismissQuestionsSubmitState(state: FlowState): Partial<FlowState
     scanResults: undefined,
     producerCellId: undefined,
     cellOutputs: {},
+    ...(nextAttemptId ? { workbookAttemptId: nextAttemptId } : {}),
     ...clearedBranchIteration,
   };
 }

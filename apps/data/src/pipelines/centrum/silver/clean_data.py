@@ -78,6 +78,7 @@ def clean_data():
         # Null on single-device uploads; rows of one multi-device workbook
         # run share it and can be joined back on it.
         .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
+        .withColumn("workbook_attempt_id", F.col("workbook_attempt_id"))
         .withColumn("workbook_version_id", F.col("workbook_version_id"))
         .withColumn("macro_context", F.col("macro_context"))
         # GPS fix at measurement time; null on older payloads / no permission.
@@ -204,6 +205,7 @@ def clean_data():
         "experiment_id",
         "protocol_id",
         "workbook_run_id",
+        "workbook_attempt_id",
         "workbook_version_id",
         "macro_context",
         "latitude",
@@ -256,6 +258,7 @@ def clean_data():
         # Imported/legacy data has no topic and no workbook-run concept.
         .withColumn("protocol_id", F.lit(None).cast("string"))
         .withColumn("workbook_run_id", F.lit(None).cast("string"))
+        .withColumn("workbook_attempt_id", F.lit(None).cast("string"))
         .withColumn("workbook_version_id", F.lit(None).cast("string"))
         .withColumn("macro_context", F.lit(None).cast("string"))
         # Mark imported data to skip macro processing
@@ -278,6 +281,7 @@ def clean_data():
             "experiment_id",
             "protocol_id",
             "workbook_run_id",
+            "workbook_attempt_id",
             "workbook_version_id",
             "macro_context",
             "latitude",
@@ -386,6 +390,7 @@ def clean_data_large_iot():
             "experiment_id",
             "protocol_id",
             "workbook_run_id",
+            "workbook_attempt_id",
             "workbook_version_id",
             "macro_context",
             "latitude",

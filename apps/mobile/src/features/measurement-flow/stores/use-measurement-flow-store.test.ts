@@ -25,6 +25,7 @@ const makeBranch = (id: string): FlowNode =>
 function resetStore() {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
+    workbookAttemptId: undefined,
     currentStep: 0,
     flowNodes: [],
     currentFlowStep: 0,
@@ -67,7 +68,33 @@ describe("useMeasurementFlowStore", () => {
   describe("simple setters", () => {
     it("setExperimentId updates experimentId", () => {
       useMeasurementFlowStore.getState().setExperimentId("exp-1");
-      expect(useMeasurementFlowStore.getState().experimentId).toBe("exp-1");
+      const state = useMeasurementFlowStore.getState();
+      expect(state.experimentId).toBe("exp-1");
+      expect(state.workbookAttemptId).toBeTruthy();
+    });
+
+    it("keeps an attempt id through ordinary steps and rotates it on an iteration wrap", () => {
+      useMeasurementFlowStore.getState().setExperimentId("exp-1");
+      useMeasurementFlowStore.setState({
+        flowNodes: [makeMeasurement("m1"), makeAnalysis("a1")],
+        currentFlowStep: 0,
+      });
+      const first = useMeasurementFlowStore.getState().workbookAttemptId;
+
+      useMeasurementFlowStore.getState().nextStep();
+      expect(useMeasurementFlowStore.getState().workbookAttemptId).toBe(first);
+
+      useMeasurementFlowStore.getState().nextStep();
+      expect(useMeasurementFlowStore.getState().workbookAttemptId).not.toBe(first);
+    });
+
+    it("rotates the attempt id when the pinned workbook version changes", () => {
+      useMeasurementFlowStore.getState().setExperimentId("exp-1");
+      useMeasurementFlowStore.getState().setFlowGraph([], [], [], "version-1");
+      const first = useMeasurementFlowStore.getState().workbookAttemptId;
+
+      useMeasurementFlowStore.getState().setFlowGraph([], [], [], "version-2");
+      expect(useMeasurementFlowStore.getState().workbookAttemptId).not.toBe(first);
     });
 
     it("setCurrentStep updates currentStep", () => {

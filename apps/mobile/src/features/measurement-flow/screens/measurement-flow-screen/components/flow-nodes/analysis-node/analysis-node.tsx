@@ -60,6 +60,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     producerCellId,
     cellOutputs,
     workbookVersionId,
+    workbookAttemptId,
     setCellOutput,
   } = useMeasurementFlowStore();
   const protocolId = flowProtocolId(flowNodes);
@@ -209,6 +210,10 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       throw new Error("Missing user id");
     }
 
+    if (!workbookAttemptId) {
+      throw new Error("Missing workbook attempt id");
+    }
+
     if (!macro?.id || !macro?.name || !macro?.filename) {
       throw new Error("Missing macro information");
     }
@@ -242,6 +247,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         filename: macro.filename,
       },
       workbookVersionId,
+      workbookAttemptId,
       questions,
       commentText: measurementComment.trim() || undefined,
       protocolName: activeProtocolName ?? protocolId,
