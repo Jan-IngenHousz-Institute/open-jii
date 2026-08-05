@@ -207,4 +207,73 @@ describe("BranchCellComponent", () => {
     renderBranch({ evaluatedPathId: "path-1" });
     expect(screen.getByText("ACTIVE")).toBeInTheDocument();
   });
+
+  it("renders a conditionless default path as a compact Go to card", async () => {
+    const user = userEvent.setup();
+    const { onUpdate } = renderBranch({
+      paths: [
+        {
+          id: "goto-path",
+          label: "Go to",
+          color: "#005E5E",
+          conditions: [],
+          gotoCellId: questionCell.id,
+        },
+      ],
+      defaultPathId: "goto-path",
+    });
+
+    expect(screen.getByText("Go to")).toBeInTheDocument();
+    expect(screen.queryByText("If")).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Go to target" })).toHaveTextContent(
+      "Q: How are you?",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Convert to branch" }));
+    const updated = onUpdate.mock.calls[0][0] as BranchCell;
+    expect(updated.paths[0].gotoCellId).toBe(questionCell.id);
+    expect(updated.paths[0].conditions).toHaveLength(1);
+  });
+
+  it("turns a one-path branch back into Go to without losing its target", async () => {
+    const user = userEvent.setup();
+    const { onUpdate } = renderBranch({
+      paths: [
+        {
+          id: "path-1",
+          label: "Path 1",
+          color: "#005E5E",
+          conditions: [{ id: "cond-1", sourceCellId: "", field: "", operator: "eq", value: "" }],
+          gotoCellId: questionCell.id,
+        },
+      ],
+      defaultPathId: "path-1",
+    });
+
+    await user.click(screen.getByRole("button", { name: "Remove condition" }));
+
+    const updated = onUpdate.mock.calls[0][0] as BranchCell;
+    expect(updated.defaultPathId).toBe("path-1");
+    expect(updated.paths[0].gotoCellId).toBe(questionCell.id);
+    expect(updated.paths[0].conditions).toEqual([]);
+  });
+
+  it("keeps a missing Go to target visible so it can be repaired", async () => {
+    const user = userEvent.setup();
+    renderBranch({
+      paths: [
+        {
+          id: "goto-path",
+          label: "Go to",
+          color: "#005E5E",
+          conditions: [],
+          gotoCellId: "deleted-cell",
+        },
+      ],
+      defaultPathId: "goto-path",
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "Go to target" }));
+    expect(screen.getByRole("option", { name: "Missing cell (deleted-cell)" })).toBeInTheDocument();
+  });
 });

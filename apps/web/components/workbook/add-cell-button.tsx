@@ -6,6 +6,7 @@ import {
   FileText,
   GitBranch,
   HelpCircle,
+  Milestone,
   Microscope,
   Terminal,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import {
 } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
+import { nextBranchPathColor } from "./branch-path-colors";
 import { MacroPicker } from "./macro-picker";
 import { ProtocolPicker } from "./protocol-picker";
 import { QuestionPicker } from "./question-picker";
@@ -43,6 +45,7 @@ const cellOptions: {
   label: string;
   icon: typeof FileText;
   color: string;
+  kind?: "goto";
 }[] = [
   { type: "markdown", label: "Markdown", icon: FileText, color: "#6F8596" },
   { type: "protocol", label: "Protocol", icon: Microscope, color: "#2D3142" },
@@ -50,7 +53,26 @@ const cellOptions: {
   { type: "command", label: "Command", icon: Terminal, color: "#119DA4" },
   { type: "question", label: "Question", icon: HelpCircle, color: "#C58AAE" },
   { type: "branch", label: "Branch", icon: GitBranch, color: "#F29D38" },
+  { type: "branch", label: "Go to", icon: Milestone, color: "#F29D38", kind: "goto" },
 ];
+
+export function createGotoCell(): WorkbookCell {
+  const pathId = crypto.randomUUID();
+  return {
+    id: crypto.randomUUID(),
+    type: "branch",
+    isCollapsed: false,
+    paths: [
+      {
+        id: pathId,
+        label: "Go to",
+        color: nextBranchPathColor([]),
+        conditions: [],
+      },
+    ],
+    defaultPathId: pathId,
+  };
+}
 
 export function AddCellButton({
   onAdd,
@@ -64,10 +86,18 @@ export function AddCellButton({
 }: AddCellButtonProps) {
   const options = showBranch ? cellOptions : cellOptions.filter((o) => o.type !== "branch");
 
-  const handleClick = (type: CellType) => {
+  const handleClick = (option: (typeof cellOptions)[number]) => {
+    if (option.kind === "goto" && onAddCell) {
+      onAddCell(createGotoCell());
+      return;
+    }
     // protocol/macro/question are picker-driven; their popovers fire onAddCell.
-    if (onAddCell && (type === "protocol" || type === "macro" || type === "question")) return;
-    onAdd(type);
+    if (
+      onAddCell &&
+      (option.type === "protocol" || option.type === "macro" || option.type === "question")
+    )
+      return;
+    onAdd(option.type);
   };
 
   const wrapWithPicker = (type: CellType, key: string, button: React.ReactNode) => {
@@ -122,7 +152,7 @@ export function AddCellButton({
               <button
                 key={opt.label}
                 className="inline-flex h-[38px] items-center justify-center gap-1 rounded-lg bg-[#EDF2F6] px-4 text-[13px] font-semibold leading-[18px] text-[#011111] transition-colors hover:bg-[#E5EBF0]"
-                onClick={() => handleClick(opt.type)}
+                onClick={() => handleClick(opt)}
               >
                 <opt.icon className="size-4" style={{ color: opt.color }} />
                 {opt.label}
@@ -153,7 +183,7 @@ export function AddCellButton({
                       variant="ghost"
                       size="sm"
                       className="h-7 w-7 rounded-full p-0 hover:bg-[#EDF2F6]"
-                      onClick={() => handleClick(opt.type)}
+                      onClick={() => handleClick(opt)}
                     >
                       <opt.icon className="h-3.5 w-3.5" style={{ color: opt.color }} />
                     </Button>

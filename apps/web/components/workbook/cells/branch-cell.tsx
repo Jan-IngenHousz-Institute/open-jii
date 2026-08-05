@@ -10,6 +10,7 @@ import type {
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { DEVICE_CONTEXT_FIELDS, DEVICE_CONTEXT_KEY } from "@repo/api/transforms/device-context";
+import { isGotoBranchCell } from "@repo/api/transforms/evaluate-branch";
 import { Button } from "@repo/ui/components/button";
 import {
   Collapsible,
@@ -259,6 +260,74 @@ export function BranchCellComponent({
     setExpandedPaths((prev) => ({ ...prev, [pathId]: !prev[pathId] }));
   };
 
+  if (isGotoBranchCell(cell)) {
+    const path = cell.paths[0];
+    const targetExists = jumpTargets.some((target) => target.id === path.gotoCellId);
+
+    return (
+      <CellWrapper
+        icon={<ArrowRight className="h-3.5 w-3.5" />}
+        label="Go to"
+        accentColor="#F29D38"
+        isCollapsed={cell.isCollapsed}
+        onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
+        onDelete={onDelete}
+        executionStatus={executionStatus}
+        executionError={executionError}
+        readOnly={readOnly}
+        onRun={() => onRun?.()}
+      >
+        <div className="flex items-center gap-2">
+          <ArrowRight className="text-muted-foreground size-4 shrink-0" />
+          <Select
+            value={path.gotoCellId ?? undefined}
+            onValueChange={(gotoCellId) => handleUpdatePath(path.id, { gotoCellId })}
+            disabled={readOnly}
+          >
+            <SelectTrigger aria-label="Go to target" className="h-8 flex-1 text-xs">
+              <SelectValue placeholder="Choose target cell..." />
+            </SelectTrigger>
+            <SelectContent>
+              {path.gotoCellId && !targetExists && (
+                <SelectItem value={path.gotoCellId} className="text-xs">
+                  Missing cell ({path.gotoCellId})
+                </SelectItem>
+              )}
+              {jumpTargets.map((target) => (
+                <SelectItem key={target.id} value={target.id} className="text-xs">
+                  {getCellLabel(target)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!readOnly && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 shrink-0 text-xs"
+              onClick={() =>
+                handleUpdatePath(path.id, {
+                  conditions: [
+                    {
+                      id: crypto.randomUUID(),
+                      sourceCellId: "",
+                      field: "",
+                      operator: "eq",
+                      value: "",
+                    },
+                  ],
+                })
+              }
+            >
+              Convert to branch
+            </Button>
+          )}
+        </div>
+      </CellWrapper>
+    );
+  }
+
   const renderCondition = (path: BranchPath, cond: BranchCondition, index: number) => {
     const fields = getFieldsForSource(cond.sourceCellId);
     const sourceCell = (allCells ?? []).find((c) => c.id === cond.sourceCellId);
@@ -346,10 +415,11 @@ export function BranchCellComponent({
           disabled={readOnly}
         />
 
-        {!readOnly && path.conditions.length > 1 ? (
+        {!readOnly && (path.conditions.length > 1 || path.id === cell.defaultPathId) ? (
           <Button
             variant="ghost"
             size="sm"
+            aria-label="Remove condition"
             className="text-muted-foreground hover:text-destructive h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover/cond:opacity-100"
             onClick={() => handleRemoveCondition(path.id, cond.id)}
           >
