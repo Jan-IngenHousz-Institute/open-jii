@@ -1,0 +1,85 @@
+name: Web E2E
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: openjii_local
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d openjii_local"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "24"
+
+      - name: Install Chromium
+        run: pnpm --filter @repo/e2e exec playwright install --with-deps chromium
+
+      - name: Build Packages
+        run: pnpm build:packages
+
+      - name: Materialize Local Environment
+        run: |
+          pnpm --filter @repo/devkit env:generate
+          cp apps/backend/.env.example apps/backend/.env
+          cp apps/web/.env.example apps/web/.env.local
+
+      - name: Migrate and Seed Database
+        run: |
+          pnpm --filter database db:migrate
+          pnpm --filter database db:seed
+
+      - name: Build Applications
+        run: |
+          pnpm --filter backend build
+          pnpm --filter web build
+          cp -R apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
+
+      # Production output removes per-route compilation from Playwright timing.
+      - name: Start Applications
+        run: |
+          NODE_ENV=production pnpm --filter backend start:prod > /tmp/openjii-backend.log 2>&1 &
+          HOSTNAME=127.0.0.1 PORT=3000 node apps/web/.next/standalone/apps/web/server.js > /tmp/openjii-web.log 2>&1 &
+
+      - name: Wait for Applications
+        run: pnpm local:doctor --wait
+
+      - name: Run Playwright
+        run: pnpm e2e
+
+      - name: Upload Playwright Failure Artifacts
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: web-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/e2e/playwright-report/
+            apps/e2e/test-results/
+          if-no-files-found: warn
+          retention-days: 7

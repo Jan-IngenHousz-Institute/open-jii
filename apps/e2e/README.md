@@ -17,7 +17,7 @@ In another terminal, wait for both applications and run the suite:
 
 ```sh
 pnpm local:doctor --wait
-pnpm exec playwright install chromium
+pnpm --filter @repo/e2e exec playwright install chromium
 pnpm e2e
 ```
 
