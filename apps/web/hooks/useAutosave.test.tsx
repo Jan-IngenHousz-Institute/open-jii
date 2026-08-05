@@ -302,6 +302,21 @@ describe("useAutosave", () => {
     expect(result.current.status).toBe("idle");
   });
 
+  it("rejects an explicit flush while the latest draft is invalid", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const { result, rerender } = renderHook(
+      ({ value }: { value: string }) =>
+        useAutosave({ value, toKey: (v) => v, save, isValid: (v) => v.length > 0 }),
+      { initialProps: { value: "valid" } },
+    );
+
+    rerender({ value: "" });
+
+    await expect(result.current.flush()).rejects.toBeInstanceOf(AutosaveValidationError);
+    expect(save).not.toHaveBeenCalled();
+    expect(result.current.status).toBe("error");
+  });
+
   it("keeps a failed success effect retryable through flush", async () => {
     const failure = new Error("pin failed");
     const save = vi.fn().mockResolvedValue(undefined);
@@ -357,11 +372,20 @@ describe("useAutosave", () => {
     });
     expect(onSaved).not.toHaveBeenCalled();
     expect(result.current.status).toBe("idle");
+    expect(result.current.hasUnsavedChanges).toBe(true);
 
     rerender({ value: "b1", scopeKey: "workbook-b" });
     await act(async () => vi.advanceTimersByTimeAsync(30));
     expect(save).toHaveBeenLastCalledWith("b1");
     expect(onSaved).toHaveBeenCalledWith("b1");
+
+    // Returning to A restores A's own persisted anchor. Its interrupted edit
+    // is dirty again rather than being silently rebased as though it saved.
+    rerender({ value: "a1", scopeKey: "workbook-a" });
+    expect(result.current.status).toBe("dirty");
+    await act(async () => vi.advanceTimersByTimeAsync(30));
+    expect(save).toHaveBeenLastCalledWith("a1");
+    expect(result.current.hasUnsavedChanges).toBe(false);
   });
 
   it("flush() fires the pending save and resolves once it settles", async () => {

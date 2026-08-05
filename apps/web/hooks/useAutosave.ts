@@ -34,6 +34,8 @@ export interface UseAutosaveReturn {
   isDirty: boolean;
   isSaving: boolean;
   hasError: boolean;
+  /** True when this or a previously visited persistence scope has unsaved work. */
+  hasUnsavedChanges: boolean;
   error: unknown;
   flush: () => Promise<void>;
 }
@@ -57,8 +59,12 @@ export function useAutosave<T>({
 
   const [status, setStatus] = useState<AutosaveStatus>("idle");
   const [error, setError] = useState<unknown>(null);
+  const errorRef = useRef<unknown>(null);
 
   const lastSavedKeyRef = useRef(key);
+  const savedKeyByScopeRef = useRef(new Map([[scopeKey, key]]));
+  const latestKeyByScopeRef = useRef(new Map([[scopeKey, key]]));
+  latestKeyByScopeRef.current.set(scopeKey, key);
   const wasEnabledRef = useRef(enabled);
   const scopeIdentityRef = useRef({ key: scopeKey, generation: 0 });
   if (scopeIdentityRef.current.key !== scopeKey) {
@@ -66,6 +72,9 @@ export function useAutosave<T>({
       key: scopeKey,
       generation: scopeIdentityRef.current.generation + 1,
     };
+    const savedKey = savedKeyByScopeRef.current.get(scopeKey);
+    if (savedKey === undefined) savedKeyByScopeRef.current.set(scopeKey, key);
+    lastSavedKeyRef.current = savedKey ?? key;
   }
 
   const valueRef = useRef(value);
@@ -103,10 +112,13 @@ export function useAutosave<T>({
         const v = valueRef.current;
         const k = keyRef.current;
         const scopeGeneration = scopeIdentityRef.current.generation;
+        const activeScopeKey = scopeIdentityRef.current.key;
 
         if (isValidRef.current && !isValidRef.current(v)) {
+          const validationError = new AutosaveValidationError();
           pendingFlushRef.current = true;
-          setError(new AutosaveValidationError());
+          errorRef.current = validationError;
+          setError(validationError);
           setStatus("error");
           return;
         }
@@ -118,6 +130,7 @@ export function useAutosave<T>({
 
         pendingFlushRef.current = false;
         setStatus("saving");
+        errorRef.current = null;
         setError(null);
 
         try {
@@ -129,6 +142,7 @@ export function useAutosave<T>({
             // The write reached the server, but only the latest snapshot may
             // run its success side effect. Continue directly with that value.
             lastSavedKeyRef.current = k;
+            savedKeyByScopeRef.current.set(activeScopeKey, k);
             continue;
           }
 
@@ -140,21 +154,25 @@ export function useAutosave<T>({
             // An edit can arrive while the success side effect is awaited. It
             // must remain queued instead of being cleared as though k won.
             lastSavedKeyRef.current = k;
+            savedKeyByScopeRef.current.set(activeScopeKey, k);
             continue;
           }
 
           lastSavedKeyRef.current = k;
+          savedKeyByScopeRef.current.set(activeScopeKey, k);
         } catch (err: unknown) {
           if (scopeIdentityRef.current.generation !== scopeGeneration) continue;
           // If this snapshot was superseded, continue with the newest value.
           // Otherwise surface the error and leave it retryable.
           if (keyRef.current !== k) continue;
           pendingFlushRef.current = true;
+          errorRef.current = err;
           setError(err);
           setStatus("error");
           return;
         }
         pendingFlushRef.current = false;
+        errorRef.current = null;
         setStatus("idle");
         return;
       }
@@ -169,9 +187,11 @@ export function useAutosave<T>({
   }, []);
 
   useEffect(() => {
-    lastSavedKeyRef.current = keyRef.current;
-    pendingFlushRef.current = false;
-    setStatus("idle");
+    const savedKey = savedKeyByScopeRef.current.get(scopeKey) ?? keyRef.current;
+    lastSavedKeyRef.current = savedKey;
+    pendingFlushRef.current = keyRef.current !== savedKey;
+    errorRef.current = null;
+    setStatus(pendingFlushRef.current ? "dirty" : "idle");
     setError(null);
   }, [scopeKey]);
 
@@ -179,6 +199,7 @@ export function useAutosave<T>({
     if (enabled && !wasEnabledRef.current) {
       lastSavedKeyRef.current = keyRef.current;
       pendingFlushRef.current = false;
+      errorRef.current = null;
       setStatus("idle");
       setError(null);
     }
@@ -188,8 +209,10 @@ export function useAutosave<T>({
   useEffect(() => {
     if (!enabled) return;
     if (isValidRef.current && !isValidRef.current(valueRef.current)) {
+      const validationError = new AutosaveValidationError();
       pendingFlushRef.current = true;
-      setError(new AutosaveValidationError());
+      errorRef.current = validationError;
+      setError(validationError);
       setStatus("error");
       return;
     }
@@ -211,7 +234,7 @@ export function useAutosave<T>({
         timerRef.current = null;
       }
     };
-  }, [key, enabled, delayMs, runSave]);
+  }, [key, enabled, delayMs, runSave, scopeKey]);
 
   const flush = useCallback(async (): Promise<void> => {
     if (timerRef.current || pendingFlushRef.current || inFlightRef.current) {
@@ -221,6 +244,7 @@ export function useAutosave<T>({
       }
       await runSave();
     }
+    if (pendingFlushRef.current && errorRef.current) throw errorRef.current;
   }, [runSave]);
 
   useEffect(() => {
@@ -238,6 +262,9 @@ export function useAutosave<T>({
     isDirty: status === "dirty",
     isSaving: status === "saving",
     hasError: status === "error",
+    hasUnsavedChanges: [...latestKeyByScopeRef.current].some(
+      ([savedScope, latestKey]) => savedKeyByScopeRef.current.get(savedScope) !== latestKey,
+    ),
     error,
     flush,
   };
