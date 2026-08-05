@@ -1,5 +1,6 @@
 import type { SensorFamily } from "../domains/protocol/protocol.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
+import { DEVICE_CONTEXT_KEY } from "./device-context";
 
 export type WorkbookIssueLevel = "error" | "warning";
 
@@ -112,7 +113,12 @@ export function validateWorkbook(
       for (const path of cell.paths) {
         for (const cond of path.conditions) {
           const key = `s:${cell.id}:${cond.sourceCellId}`;
-          if (cond.sourceCellId && !cellIds.has(cond.sourceCellId) && !seenBranchRefs.has(key)) {
+          if (
+            cond.sourceCellId &&
+            cond.sourceCellId !== DEVICE_CONTEXT_KEY &&
+            !cellIds.has(cond.sourceCellId) &&
+            !seenBranchRefs.has(key)
+          ) {
             seenBranchRefs.add(key);
             issues.push({
               level: "error",

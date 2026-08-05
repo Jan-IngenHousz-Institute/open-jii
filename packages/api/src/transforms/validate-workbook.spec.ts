@@ -107,6 +107,12 @@ describe("validateWorkbook", () => {
     expect(result.issues).toEqual([]);
   });
 
+  it("does not treat the reserved device context as a dangling cell source", () => {
+    const cells = [branchCell("b1", "$device")];
+    const result = validateWorkbook(cells, ctx({}));
+    expect(result.issues).toEqual([]);
+  });
+
   it("warns (not errors) when a macro has no upstream measurement", () => {
     const cells = [macroCell("m1", "mac-1"), protocolCell("p1", "prot-1")];
     const result = validateWorkbook(

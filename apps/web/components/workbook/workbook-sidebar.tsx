@@ -20,6 +20,8 @@ import { CSS } from "@dnd-kit/utilities";
 import type { LucideIcon } from "lucide-react";
 import {
   Asterisk,
+  AlertCircle,
+  AlertTriangle,
   Code,
   FileText,
   GitBranch,
@@ -29,10 +31,15 @@ import {
   Microscope,
   PanelRightClose,
 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { stripHtml } from "~/util/strip-html";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { validateWorkbook } from "@repo/api/transforms/validate-workbook";
+import type {
+  WorkbookIssue,
+  WorkbookValidationContext,
+} from "@repo/api/transforms/validate-workbook";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -111,6 +118,34 @@ interface WorkbookSidebarProps {
   onReorder?: (activeId: string, overId: string) => void;
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
+  validationContext?: WorkbookValidationContext;
+}
+
+function optimisticValidationContext(cells: WorkbookCell[]): WorkbookValidationContext {
+  const protocols: WorkbookValidationContext["protocols"] = {};
+  const macros: WorkbookValidationContext["macros"] = {};
+  for (const cell of cells) {
+    if (cell.type === "protocol") protocols[cell.payload.protocolId] = {};
+    if (cell.type === "macro") macros[cell.payload.macroId] = {};
+  }
+  return { protocols, macros };
+}
+
+export function workbookIssueMessage(issue: WorkbookIssue): string {
+  switch (issue.code) {
+    case "missing-protocol":
+      return `Protocol ${issue.ref ?? "reference"} is missing`;
+    case "missing-macro":
+      return `Macro ${issue.ref ?? "reference"} is missing`;
+    case "dangling-branch-source":
+      return `Branch source ${issue.ref ?? "reference"} is missing`;
+    case "dangling-branch-goto":
+      return `Jump target ${issue.ref ?? "reference"} is missing`;
+    case "mixed-sensor-families":
+      return `Workbook mixes sensor families${issue.detail ? `: ${issue.detail}` : ""}`;
+    case "macro-without-input":
+      return "Macro has no upstream measurement";
+  }
 }
 
 interface SidebarRowProps {
@@ -223,6 +258,7 @@ export function WorkbookSidebar({
   onReorder,
   collapsed,
   onToggleCollapsed,
+  validationContext,
 }: WorkbookSidebarProps) {
   const { t } = useTranslation("workbook");
 
@@ -238,6 +274,11 @@ export function WorkbookSidebar({
   const requiredCount = visibleCells.filter(
     (cell) => cell.type === "question" && cell.question.required,
   ).length;
+
+  const validation = useMemo(
+    () => validateWorkbook(cells, validationContext ?? optimisticValidationContext(cells)),
+    [cells, validationContext],
+  );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -288,7 +329,9 @@ export function WorkbookSidebar({
       {/* Cell list */}
       <div
         className="mt-4 flex flex-col gap-2 overflow-y-auto"
-        style={{ maxHeight: "calc(100vh - 200px)" }}
+        style={{
+          maxHeight: validation.issues.length > 0 ? "calc(100vh - 380px)" : "calc(100vh - 260px)",
+        }}
       >
         <DndContext
           sensors={sensors}
@@ -311,6 +354,41 @@ export function WorkbookSidebar({
           </SortableContext>
         </DndContext>
       </div>
+
+      <section className="mt-5 border-t border-[#EDF2F6] pt-4" aria-label="Problems">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[13px] font-semibold text-[#011111]">Problems</span>
+          <span className="rounded-full bg-[#EDF2F6] px-2 py-0.5 text-[11px] text-[#68737B]">
+            {validation.issues.length}
+          </span>
+        </div>
+        {validation.issues.length === 0 ? (
+          <p className="text-xs text-[#68737B]">No problems found</p>
+        ) : (
+          <div className="flex max-h-48 flex-col gap-1 overflow-y-auto">
+            {validation.issues.map((issue, index) => {
+              const Icon = issue.level === "error" ? AlertCircle : AlertTriangle;
+              return (
+                <button
+                  key={`${issue.code}:${issue.cellId ?? "workbook"}:${issue.ref ?? index}`}
+                  type="button"
+                  className="flex items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-[#F6F8FA] disabled:cursor-default"
+                  onClick={() => issue.cellId && onCellClick?.(issue.cellId)}
+                  disabled={!issue.cellId}
+                >
+                  <Icon
+                    className={cn(
+                      "mt-0.5 size-3.5 shrink-0",
+                      issue.level === "error" ? "text-red-600" : "text-amber-600",
+                    )}
+                  />
+                  <span className="text-[#374151]">{workbookIssueMessage(issue)}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

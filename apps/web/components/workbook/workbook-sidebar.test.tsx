@@ -1,4 +1,5 @@
 import {
+  createBranchCell,
   createCommandCell,
   createMarkdownCell,
   createProtocolCell,
@@ -123,5 +124,41 @@ describe("WorkbookSidebar", () => {
       .getAllByRole("button")
       .filter((el) => el.getAttribute("aria-roledescription") === "sortable");
     expect(sortable).toHaveLength(0);
+  });
+
+  it("lists dangling branch references in Problems and selects the branch", async () => {
+    const user = userEvent.setup();
+    const branch = createBranchCell({
+      id: "branch-1",
+      paths: [
+        {
+          id: "path-1",
+          label: "Broken",
+          color: "#005E5E",
+          conditions: [
+            {
+              id: "cond-1",
+              sourceCellId: questionCell.id,
+              field: "answer",
+              operator: "eq",
+              value: "yes",
+            },
+          ],
+          gotoCellId: "deleted-target",
+        },
+      ],
+    });
+    render(<WorkbookSidebar cells={[questionCell, branch]} onCellClick={onCellClick} />);
+
+    expect(screen.getByRole("region", { name: "Problems" })).toHaveTextContent(
+      "Jump target deleted-target is missing",
+    );
+    await user.click(screen.getByText("Jump target deleted-target is missing"));
+    expect(onCellClick).toHaveBeenCalledWith("branch-1");
+  });
+
+  it("shows an empty Problems state for a structurally valid workbook", () => {
+    render(<WorkbookSidebar cells={[markdownCell]} onCellClick={onCellClick} />);
+    expect(screen.getByRole("region", { name: "Problems" })).toHaveTextContent("No problems found");
   });
 });
