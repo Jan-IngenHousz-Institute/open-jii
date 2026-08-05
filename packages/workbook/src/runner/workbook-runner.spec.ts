@@ -44,8 +44,8 @@ async function runSampleToDone(sample: SampleRunner): Promise<Readonly<RunnerSta
   const { runner } = sample;
   runner.start();
   runner.send({ type: "NEXT" });
-  runner.send({ type: "ANSWER", cellId: "q_sunlight", value: "yes" });
-  await waitFor(runner, (s) => s.position.cellId === "md_done", "md_done");
+  runner.send({ type: "ANSWER", trackId: "main", cellId: "q_sunlight", value: "yes" });
+  await waitFor(runner, (s) => s.tracks.main.cursor.cellId === "md_done", "md_done");
   runner.send({ type: "NEXT" });
   return waitFor(runner, (s) => s.status === "done", "done");
 }
@@ -54,7 +54,7 @@ describe("WorkbookRunner: spike scenarios", () => {
   it("runs a good reading to done: outputs, macro ctx, tagged artifact, answers", async () => {
     const sample = makeSampleRunner([scanAttempts[1]]);
     const state = await runSampleToDone(sample);
-    expect(state.branchVisits.branch_quality).toBe(1);
+    expect(state.tracks.main.branchVisits.branch_quality).toBe(1);
     expect(sample.allCalls.filter((c) => c.source.kind === "protocolCell")).toHaveLength(1);
     expect(Object.keys(state.outputs).sort()).toEqual([
       "cmd_battery",
@@ -85,7 +85,7 @@ describe("WorkbookRunner: spike scenarios", () => {
   it("loops back and remeasures on a noisy first reading", async () => {
     const sample = makeSampleRunner();
     const state = await runSampleToDone(sample);
-    expect(state.branchVisits.branch_quality).toBe(2);
+    expect(state.tracks.main.branchVisits.branch_quality).toBe(2);
     expect(sample.allCalls.filter((c) => c.source.kind === "protocolCell")).toHaveLength(2);
     expect(state.cellRuns.macro_phi2?.executionOrder).toHaveLength(2);
     expect(state.outputs.macro_phi2?.v).toEqual({ Phi2: 0.747, sunlit: true, samples: 3 });
@@ -95,10 +95,10 @@ describe("WorkbookRunner: spike scenarios", () => {
     const sample = makeSampleRunner([scanAttempts[1]]);
     sample.runner.start();
     sample.runner.send({ type: "NEXT" });
-    expect(sample.runner.getState().position.cellId).toBe("q_sunlight");
+    expect(sample.runner.getState().tracks.main.cursor.cellId).toBe("q_sunlight");
     // An ANSWER targeting a different cell is ignored outright.
-    sample.runner.send({ type: "ANSWER", cellId: "md_done", value: "nope" });
-    expect(sample.runner.getState().position.cellId).toBe("q_sunlight");
+    sample.runner.send({ type: "ANSWER", trackId: "main", cellId: "md_done", value: "nope" });
+    expect(sample.runner.getState().tracks.main.cursor.cellId).toBe("q_sunlight");
     expect(sample.runner.getState().answersByCycle[0]).toEqual({});
 
     const snapshot: unknown = JSON.parse(JSON.stringify(sample.runner.snapshot()));
@@ -107,9 +107,9 @@ describe("WorkbookRunner: spike scenarios", () => {
       snapshot,
       createSamplePorts([scanAttempts[1]], { clock: revived.clock }).ports,
     );
-    expect(restored.getState().position.cellId).toBe("q_sunlight");
-    restored.send({ type: "ANSWER", cellId: "q_sunlight", value: "yes" });
-    await waitFor(restored, (s) => s.position.cellId === "md_done", "md_done");
+    expect(restored.getState().tracks.main.cursor.cellId).toBe("q_sunlight");
+    restored.send({ type: "ANSWER", trackId: "main", cellId: "q_sunlight", value: "yes" });
+    await waitFor(restored, (s) => s.tracks.main.cursor.cellId === "md_done", "md_done");
     restored.send({ type: "NEXT" });
     const state = await waitFor(restored, (s) => s.status === "done", "done");
     expect(state.answersByCycle[0]).toEqual({ q_sunlight: "yes" });
@@ -146,13 +146,13 @@ describe("WorkbookRunner: driver behavior", () => {
     });
     const seen: CommandProgress[] = [];
     runner.subscribe((s) => {
-      if (s.progress) seen.push(s.progress);
+      if (s.tracks.main.progress) seen.push(s.tracks.main.progress);
     });
     runner.start();
-    await waitFor(runner, (s) => s.position.cellId === "m1", "m1");
+    await waitFor(runner, (s) => s.tracks.main.cursor.cellId === "m1", "m1");
     expect(seen.map((p) => p.phase)).toEqual(["sent", "receiving", "receiving", "receiving"]);
     expect(seen[3].chunks).toBe(3);
-    expect(runner.getState().progress).toBeNull();
+    expect(runner.getState().tracks.main.progress).toBeNull();
   });
 
   it("cancel aborts the signal, discards the late result, and RETRY recovers", async () => {
@@ -171,7 +171,10 @@ describe("WorkbookRunner: driver behavior", () => {
     ]);
     await new Promise((r) => setTimeout(r, 0));
     expect(runner.getState().outputs).toEqual({});
-    runner.send({ type: "RETRY" });
+    runner.send({
+      type: "RETRY",
+      target: { kind: "postCancel", trackId: "main", cellId: "c1" },
+    });
     await waitFor(runner, (s) => s.status === "running", "running again");
     manual.settle("82%");
     const done = await waitFor(runner, (s) => s.cellRuns.c1?.status === "completed", "completed");
@@ -185,14 +188,17 @@ describe("WorkbookRunner: driver behavior", () => {
     const snapshot = runner.snapshot();
     expect(snapshot.state.status).toBe("awaitingInput");
     expect(snapshot.state.cellRuns.c1?.status).toBe("interrupted");
-    expect(snapshot.state.inFlight).toBeNull();
+    expect(snapshot.state.inFlight).toEqual({});
 
     const restored = await WorkbookRunner.restore(
       JSON.parse(JSON.stringify(snapshot)),
       basePorts(),
     );
     expect(restored.getState().status).toBe("awaitingInput");
-    restored.send({ type: "RETRY" });
+    restored.send({
+      type: "RETRY",
+      target: { kind: "postCancel", trackId: "main", cellId: "c1" },
+    });
     const done = await waitFor(restored, (s) => s.cellRuns.c1?.status === "completed", "done");
     expect(done.outputs.c1?.v).toEqual({ echoed: "battery" });
   });
@@ -208,7 +214,7 @@ describe("WorkbookRunner: driver behavior", () => {
       }),
     });
     runner.start();
-    await waitFor(runner, (s) => s.position.cellId === "m1", "m1");
+    await waitFor(runner, (s) => s.tracks.main.cursor.cellId === "m1", "m1");
 
     const snapshot = await runner.snapshotOffloaded();
     const entry = snapshot.state.outputs.c1;
@@ -219,7 +225,8 @@ describe("WorkbookRunner: driver behavior", () => {
       ...basePorts(),
       outputStore: store,
     });
-    expect(restored.getState().outputs.c1).toEqual({ v: big });
+    expect(restored.getState().outputs.c1?.v).toEqual(big);
+    expect(restored.getState().outputs.c1?.deviceResults?.[0]?.data).toEqual(big);
   });
 
   it("restore rejects tampered cells, storeless offloads, corrupt and future snapshots", async () => {
@@ -232,7 +239,7 @@ describe("WorkbookRunner: driver behavior", () => {
 
     const runner = new WorkbookRunner({ cells: battery, ports: basePorts() });
     runner.start();
-    await waitFor(runner, (s) => s.position.cellId === "m1", "m1");
+    await waitFor(runner, (s) => s.tracks.main.cursor.cellId === "m1", "m1");
 
     const tampered = JSON.parse(JSON.stringify(runner.snapshot())) as {
       state: { cells: { content?: string }[] };
@@ -253,7 +260,7 @@ describe("WorkbookRunner: driver behavior", () => {
       }),
     });
     withStore.start();
-    await waitFor(withStore, (s) => s.position.cellId === "m1", "m1");
+    await waitFor(withStore, (s) => s.tracks.main.cursor.cellId === "m1", "m1");
     const offloaded = await withStore.snapshotOffloaded();
     await expect(WorkbookRunner.restore(offloaded, basePorts())).rejects.toMatchObject({
       code: "missingStore",

@@ -32,8 +32,8 @@ import {
 import { asWorkbookCells, hydrateCells } from "../flow/hydrate";
 import type { CommandSource, ResolvedCommandValue } from "../ports";
 import type { Effect, MacroLeg, TransitionResult } from "./effects";
-import type { CellRunState, DeviceRef, EffectKind, EnteredVia, RunnerState } from "./state";
-import { currentAnswers, trace } from "./state";
+import type { CellRunState, DeviceRef, EffectPhase, EnteredVia, RunnerState, Track } from "./state";
+import { currentAnswers, getTrack, MAIN_TRACK_ID, setTrack, trace } from "./state";
 
 export function setCellRun(state: RunnerState, cellId: string, run: CellRunState): RunnerState {
   return { ...state, cellRuns: { ...state.cellRuns, [cellId]: run } };
@@ -64,8 +64,10 @@ export function stampRun(state: RunnerState, cellId: string): RunnerState {
   };
 }
 
-export function isAtStart(state: RunnerState, cellId: string): boolean {
-  return prevCellId(state.cells, cellId) === null && state.returnStack.length === 0;
+export function isAtStart(state: RunnerState, trackId: string, cellId: string): boolean {
+  return (
+    prevCellId(state.cells, cellId) === null && getTrack(state, trackId).returnStack.length === 0
+  );
 }
 
 /** The flow cell a synthetic dispatch step belongs to (identity otherwise). */
@@ -120,32 +122,47 @@ export function markDownstreamStale(
 /** Mint the next effect id, set inFlight, and emit the effect built from it. */
 function emitEffect(
   state: RunnerState,
+  trackId: string,
   cellId: string,
-  kind: EffectKind,
+  phase: EffectPhase,
   build: (effectId: string) => Effect,
 ): TransitionResult {
   const effectSeq = state.effectSeq + 1;
   const effectId = `e${effectSeq}`;
   return {
-    state: { ...state, effectSeq, inFlight: { effectId, cellId, kind } },
+    state: {
+      ...state,
+      effectSeq,
+      inFlight: {
+        ...state.inFlight,
+        [effectId]: { effectId, trackId, cellId, phase },
+      },
+    },
     effects: [build(effectId)],
   };
 }
 
 function emitRunCommand(
   state: RunnerState,
+  trackId: string,
   cellId: string,
   command: ResolvedCommandValue,
   family: SensorFamily,
   source: CommandSource,
-  deviceIds?: string[],
+  deviceIds: string[],
 ): TransitionResult {
-  return emitEffect(state, cellId, "runCommand", (effectId) => ({
+  return emitEffect(state, trackId, cellId, "runCommand", (effectId) => ({
     kind: "runCommand",
     effectId,
+    trackId,
     cellId,
-    input: { cellId, command, family, source, deviceIds },
+    input: { trackId, cellId, command, family, source, deviceIds },
   }));
+}
+
+function scopedDevices(state: RunnerState, track: Track): DeviceRef[] {
+  const allowed = new Set(track.deviceIds);
+  return state.devices.filter((device) => allowed.has(device.id));
 }
 
 /** The `$device` context for a connection id (first device when unspecified). */
@@ -239,17 +256,24 @@ function producerFamily(state: RunnerState): SensorFamily {
  * code resolution; inline command cells validate synchronously; macros get the
  * verbatim upstream `json` plus the normalized ctx namespace.
  */
-export function startProducer(state: RunnerState, cellId: string): TransitionResult {
+export function startProducer(
+  state: RunnerState,
+  trackId: string,
+  cellId: string,
+): TransitionResult {
   const cell = cellById(state.cells, cellId);
   if (!cell) return fatal(state, `startProducer: unknown cell ${cellId}`);
 
   let next = stampRun(state, cellId);
-  next = { ...next, status: "running", progress: null };
+  next = setTrack(next, { ...getTrack(next, trackId), progress: null, status: "active" });
+  const track = getTrack(next, trackId);
+  const devices = scopedDevices(next, track);
 
   if (cell.type === "protocol") {
-    return emitEffect(next, cellId, "resolveProtocolCode", (effectId) => ({
+    return emitEffect(next, trackId, cellId, "resolveProtocolCode", (effectId) => ({
       kind: "resolveProtocolCode",
       effectId,
+      trackId,
       cellId,
       protocolId: cell.payload.protocolId,
       version: cell.payload.version,
@@ -261,10 +285,15 @@ export function startProducer(state: RunnerState, cellId: string): TransitionRes
     if (!resolved.ok) {
       return { state: failRun(next, cellId, resolved.error), effects: [] };
     }
-    return emitRunCommand(next, cellId, resolved.value, producerFamily(next), {
-      kind: "inlineCell",
-      format: cell.payload.format,
-    });
+    return emitRunCommand(
+      next,
+      trackId,
+      cellId,
+      resolved.value,
+      producerFamily(next),
+      { kind: "inlineCell", format: cell.payload.format },
+      track.deviceIds,
+    );
   }
 
   if (cell.type === "macro") {
@@ -272,12 +301,22 @@ export function startProducer(state: RunnerState, cellId: string): TransitionRes
     const upstream = upstreamId ? next.outputs[upstreamId] : undefined;
     const hydrated = asWorkbookCells(hydrateCells(next.cells, currentAnswers(next), next.outputs));
     const idx = cellIndex(next.cells, cellId);
-    const base = { cellId, macroId: cell.payload.macroId, language: cell.payload.language };
+    const base = {
+      trackId,
+      cellId,
+      macroId: cell.payload.macroId,
+      language: cell.payload.language,
+      deviceIds: track.deviceIds,
+    };
 
     // Multi-device upstream: the macro runs once per device's measurement,
     // each leg reading a ctx scoped to ITS results plus its own $device entry.
     // Devices whose measurement failed carry their error through untouched.
-    const inputResults = upstream?.deviceResults;
+    const allowed = new Set(track.deviceIds);
+    const inputResults = upstream?.deviceResults?.filter(
+      (result) =>
+        (trackId === MAIN_TRACK_ID && state.devices.length === 0) || allowed.has(result.deviceId),
+    );
     if (inputResults && inputResults.length > 0) {
       const legs: MacroLeg[] = inputResults.map((r) => {
         const identity = {
@@ -297,7 +336,7 @@ export function startProducer(state: RunnerState, cellId: string): TransitionRes
         try {
           const ctx = buildCellNamespace(hydrated, idx, {
             deviceId: r.deviceId,
-            device: deviceContextOf(next.devices, r.deviceId),
+            device: deviceContextOf(devices, r.deviceId),
           });
           return { kind: "run", input: { ...base, ...identity, json: r.data, ctx } };
         } catch (error) {
@@ -305,9 +344,10 @@ export function startProducer(state: RunnerState, cellId: string): TransitionRes
           return { kind: "carriedFailure", outcome: { ...identity, error: error.message } };
         }
       });
-      return emitEffect(next, cellId, "runMacro", (effectId) => ({
+      return emitEffect(next, trackId, cellId, "runMacro", (effectId) => ({
         kind: "runMacro",
         effectId,
+        trackId,
         cellId,
         legs,
       }));
@@ -316,14 +356,15 @@ export function startProducer(state: RunnerState, cellId: string): TransitionRes
     const json = upstream?.v ?? null;
     let ctx;
     try {
-      ctx = buildCellNamespace(hydrated, idx, { device: deviceContextOf(next.devices) });
+      ctx = buildCellNamespace(hydrated, idx, { device: deviceContextOf(devices) });
     } catch (error) {
       if (!isOutputDataNormalizationError(error)) throw error;
       return { state: failRun(next, cellId, error.message), effects: [] };
     }
-    return emitEffect(next, cellId, "runMacro", (effectId) => ({
+    return emitEffect(next, trackId, cellId, "runMacro", (effectId) => ({
       kind: "runMacro",
       effectId,
+      trackId,
       cellId,
       legs: [{ kind: "run", input: { ...base, json, ctx } }],
     }));
@@ -335,16 +376,19 @@ export function startProducer(state: RunnerState, cellId: string): TransitionRes
 /** Second step of a protocol cell: run the resolved code as a command. */
 export function startResolvedProtocolCommand(
   state: RunnerState,
+  trackId: string,
   cellId: string,
   code: Record<string, unknown>[],
 ): TransitionResult {
   const cell = cellById(state.cells, cellId);
   if (cell?.type !== "protocol") return fatal(state, `resolved code for non-protocol ${cellId}`);
-  const deviceIds = isDispatchTarget(state, cellId)
-    ? state.dispatch?.queue[state.dispatch.index]?.deviceIds
-    : undefined;
+  const track = getTrack(state, trackId);
+  const deviceIds = isDispatchTarget(state, trackId, cellId)
+    ? (track.dispatch?.queue[track.dispatch.index]?.deviceIds ?? track.deviceIds)
+    : track.deviceIds;
   return emitRunCommand(
     state,
+    trackId,
     cellId,
     code,
     producerFamily(state),
@@ -363,6 +407,7 @@ export function startResolvedProtocolCommand(
  */
 export function startArtifactDispatch(
   state: RunnerState,
+  trackId: string,
   macroCellId: string,
   artifact: MacroArtifact,
 ): TransitionResult {
@@ -376,21 +421,29 @@ export function startArtifactDispatch(
 
   const stepId = dispatchStepId(macroCellId);
   let next = stampRun(state, stepId);
-  next = {
-    ...trace(next, `dispatch ${artifact.__ojArtifact} constructed by ${macroCellId}`),
-    status: "running",
+  next = setTrack(trace(next, `dispatch ${artifact.__ojArtifact} constructed by ${macroCellId}`), {
+    ...getTrack(next, trackId),
     progress: null,
-  };
-  return emitRunCommand(next, stepId, validated.command, validated.family, {
-    kind: "artifact",
-    artifact: artifact.__ojArtifact,
-    producedBy: macroCellId,
+    status: "active",
   });
+  return emitRunCommand(
+    next,
+    trackId,
+    stepId,
+    validated.command,
+    validated.family,
+    {
+      kind: "artifact",
+      artifact: artifact.__ojArtifact,
+      producedBy: macroCellId,
+    },
+    getTrack(next, trackId).deviceIds,
+  );
 }
 
 function fatal(state: RunnerState, reason: string): TransitionResult {
   return {
-    state: { ...trace(state, `fatal: ${reason}`), status: "fatal", fatalReason: reason },
+    state: { ...trace(state, `fatal: ${reason}`), fatalReason: reason },
     effects: [],
   };
 }
@@ -410,19 +463,21 @@ interface BranchResolution {
  */
 function resolveBranch(
   state: RunnerState,
+  trackId: string,
   cell: BranchCell,
   enteredVia: EnteredVia,
 ): BranchResolution {
-  const visits = state.branchVisits[cell.id] ?? 0;
+  const track = getTrack(state, trackId);
+  const visits = track.branchVisits[cell.id] ?? 0;
   if (visits >= state.options.maxBranchVisits) {
     const next = trace(state, `branch ${cell.id} capped`);
     return { state: next, nextCellId: nextCellId(next.cells, cell.id), jumped: false };
   }
 
-  let next: RunnerState = {
-    ...state,
-    branchVisits: { ...state.branchVisits, [cell.id]: visits + 1 },
-  };
+  let next = setTrack(state, {
+    ...track,
+    branchVisits: { ...track.branchVisits, [cell.id]: visits + 1 },
+  });
 
   const hydrated = hydrateCells(next.cells, currentAnswers(next), next.outputs);
   const matched = evaluateBranch(cell, asWorkbookCells(hydrated));
@@ -450,15 +505,16 @@ function resolveBranch(
     const backward = jumped && targetIdx < branchIdx;
     if (!backward) {
       const returnTo = prevCellId(next.cells, cell.id);
-      const top = stackTop(next.returnStack);
+      const nextTrack = getTrack(next, trackId);
+      const top = stackTop(nextTrack.returnStack);
       const chained = enteredVia === "jump" && top?.landingCellId === cell.id;
       const entry = chained
         ? { landingCellId: target, returnToCellId: top.returnToCellId }
         : { landingCellId: target, returnToCellId: returnTo };
       const returnStack = chained
-        ? [...next.returnStack.slice(0, -1), entry]
-        : [...next.returnStack, entry];
-      next = { ...next, returnStack };
+        ? [...nextTrack.returnStack.slice(0, -1), entry]
+        : [...nextTrack.returnStack, entry];
+      next = setTrack(next, { ...nextTrack, returnStack });
     }
   }
 
@@ -473,28 +529,34 @@ function resolveBranch(
  * skipped with a message, never an error. No jump: execution continues after
  * the branch, and consumed targets are skipped once by the linear walk.
  */
-function startDeviceDispatch(state: RunnerState, cell: BranchCell): TransitionResult {
-  const visits = state.branchVisits[cell.id] ?? 0;
+function startDeviceDispatch(
+  state: RunnerState,
+  trackId: string,
+  cell: BranchCell,
+): TransitionResult {
+  const track = getTrack(state, trackId);
+  const visits = track.branchVisits[cell.id] ?? 0;
   if (visits >= state.options.maxBranchVisits) {
     const capped = trace(state, `branch ${cell.id} capped`);
-    return landOn(capped, nextCellId(capped.cells, cell.id), "forward");
+    return landOn(capped, nextCellId(capped.cells, cell.id), "forward", trackId);
   }
-  let next: RunnerState = {
-    ...state,
-    branchVisits: { ...state.branchVisits, [cell.id]: visits + 1 },
-  };
+  let next = setTrack(state, {
+    ...track,
+    branchVisits: { ...track.branchVisits, [cell.id]: visits + 1 },
+  });
+  const devices = scopedDevices(next, getTrack(next, trackId));
 
-  if (next.devices.length === 0) {
+  if (devices.length === 0) {
     const failed = failRun(next, cell.id, "No device connected - connect devices to dispatch");
-    return afterCellFailure(failed, cell.id);
+    return afterCellFailure(failed, trackId, cell.id);
   }
 
   const hydrated = asWorkbookCells(hydrateCells(next.cells, currentAnswers(next), next.outputs));
   const groups = new Map<string, DeviceRef[]>();
   const skipped: DeviceRef[] = [];
-  next.devices.forEach((device, index) => {
+  devices.forEach((device, index) => {
     const path = evaluateBranch(cell, hydrated, {
-      device: deviceContextOf(next.devices, device.id) ?? {
+      device: deviceContextOf(devices, device.id) ?? {
         family: device.family,
         index,
       },
@@ -512,7 +574,7 @@ function startDeviceDispatch(state: RunnerState, cell: BranchCell): TransitionRe
 
   const messages: string[] = [];
   const queue: { targetCellId: string; deviceIds: string[] }[] = [];
-  const dispatchConsumed = { ...next.dispatchConsumed };
+  const dispatchConsumed = { ...getTrack(next, trackId).dispatchConsumed };
   for (const path of cell.paths) {
     const group = groups.get(path.id);
     if (!group || group.length === 0 || !path.gotoCellId) continue;
@@ -530,22 +592,38 @@ function startDeviceDispatch(state: RunnerState, cell: BranchCell): TransitionRe
     executionOrder: next.cellRuns[cell.id]?.executionOrder ?? [],
     lastMatchedPathId: undefined,
   });
+  next = trace(next, `dispatch branch ${cell.id}: ${queue.length} target(s)`);
   next = {
-    ...trace(next, `dispatch branch ${cell.id}: ${queue.length} target(s)`),
+    ...next,
     outputs: { ...next.outputs, [cell.id]: { v: undefined, messages } },
+  };
+  next = setTrack(next, {
+    ...getTrack(next, trackId),
     dispatch: { branchCellId: cell.id, queue, index: 0 },
     dispatchConsumed,
-  };
-  return startNextDispatchTarget(next);
+  });
+  return startNextDispatchTarget(next, trackId);
 }
 
 /** Start the current dispatch target, or finish the branch when the queue is done. */
-export function startNextDispatchTarget(state: RunnerState): TransitionResult {
-  const dispatch = state.dispatch;
+export function startNextDispatchTarget(state: RunnerState, trackId: string): TransitionResult {
+  const track = getTrack(state, trackId);
+  const dispatch = track.dispatch;
   if (!dispatch) return fatal(state, "startNextDispatchTarget without an active dispatch");
+  if (state.stopRequested) {
+    return {
+      state: setTrack(trace(state, `dispatch on ${trackId} stopped before next target`), {
+        ...track,
+        dispatch: null,
+        dispatchConsumed: {},
+        progress: null,
+      }),
+      effects: [],
+    };
+  }
   if (dispatch.index >= dispatch.queue.length) {
-    const done: RunnerState = { ...state, dispatch: null };
-    return landOn(done, nextCellId(done.cells, dispatch.branchCellId), "forward");
+    const done = setTrack(state, { ...track, dispatch: null });
+    return landOn(done, nextCellId(done.cells, dispatch.branchCellId), "forward", trackId);
   }
 
   const { targetCellId, deviceIds } = dispatch.queue[dispatch.index];
@@ -553,12 +631,13 @@ export function startNextDispatchTarget(state: RunnerState): TransitionResult {
   if (!cell) return fatal(state, `dispatch target ${targetCellId} not found`);
 
   let next = stampRun(state, targetCellId);
-  next = { ...next, status: "running", progress: null };
+  next = setTrack(next, { ...getTrack(next, trackId), status: "active", progress: null });
 
   if (cell.type === "protocol") {
-    return emitEffect(next, targetCellId, "resolveProtocolCode", (effectId) => ({
+    return emitEffect(next, trackId, targetCellId, "resolveProtocolCode", (effectId) => ({
       kind: "resolveProtocolCode",
       effectId,
+      trackId,
       cellId: targetCellId,
       protocolId: cell.payload.protocolId,
       version: cell.payload.version,
@@ -567,10 +646,11 @@ export function startNextDispatchTarget(state: RunnerState): TransitionResult {
   if (isCommandCell(cell)) {
     const resolved = validateInlineCommand(cell.payload);
     if (!resolved.ok) {
-      return advanceDispatch(failRun(next, targetCellId, resolved.error));
+      return advanceDispatch(failRun(next, targetCellId, resolved.error), trackId);
     }
     return emitRunCommand(
       next,
+      trackId,
       targetCellId,
       resolved.value,
       producerFamily(next),
@@ -582,47 +662,63 @@ export function startNextDispatchTarget(state: RunnerState): TransitionResult {
 }
 
 /** Move an active dispatch past its current target (after completion or failure). */
-export function advanceDispatch(state: RunnerState): TransitionResult {
-  const dispatch = state.dispatch;
+export function advanceDispatch(state: RunnerState, trackId: string): TransitionResult {
+  const track = getTrack(state, trackId);
+  const dispatch = track.dispatch;
   if (!dispatch) return fatal(state, "advanceDispatch without an active dispatch");
-  return startNextDispatchTarget({
-    ...state,
-    dispatch: { ...dispatch, index: dispatch.index + 1 },
-  });
+  return startNextDispatchTarget(
+    setTrack(state, { ...track, dispatch: { ...dispatch, index: dispatch.index + 1 } }),
+    trackId,
+  );
 }
 
 /** True when the in-flight effect cell is the active dispatch target. */
-export function isDispatchTarget(state: RunnerState, effectCellId: string): boolean {
-  const dispatch = state.dispatch;
+export function isDispatchTarget(
+  state: RunnerState,
+  trackId: string,
+  effectCellId: string,
+): boolean {
+  const dispatch = getTrack(state, trackId).dispatch;
   return dispatch !== null && dispatch.queue[dispatch.index]?.targetCellId === effectCellId;
 }
 
-function endOfFlow(state: RunnerState): { state: RunnerState; continueAt: string | null } {
-  if (state.mode === "notebook" || !state.options.loop) {
-    const done = state.mode === "flow";
+function endOfFlow(
+  state: RunnerState,
+  trackId: string,
+): { state: RunnerState; continueAt: string | null } {
+  const track = getTrack(state, trackId);
+  if (state.mode === "notebook" || !state.options.loop || trackId !== MAIN_TRACK_ID) {
     return {
-      state: {
-        ...state,
-        status: done ? "done" : "idle",
-        runAllActive: false,
-        stopRequested: false,
-        position: { cellId: null, enteredVia: "forward", atStart: false },
-      },
+      state: setTrack(
+        trackId === MAIN_TRACK_ID ? { ...state, runAllActive: false, stopRequested: false } : state,
+        {
+          ...track,
+          status: state.mode === "flow" ? "done" : "active",
+          pendingInteraction: null,
+          cursor: { body: track.cursor.body, cellId: null, enteredVia: "forward", atStart: false },
+        },
+      ),
       continueAt: null,
     };
   }
   // Cycle wrap: fresh answers map and run records; outputs and the Jupyter
   // counter survive (mobile keeps scanResult across the wrap).
-  const wrapped: RunnerState = {
+  let wrapped: RunnerState = {
     ...trace(state, `cycle ${state.cycle + 1} start`),
     cycle: state.cycle + 1,
     answersByCycle: [...state.answersByCycle, {}],
+    cellRuns: {},
+  };
+  wrapped = setTrack(wrapped, {
+    ...track,
+    status: "active",
     branchVisits: {},
     returnStack: [],
-    cellRuns: {},
     dispatch: null,
     dispatchConsumed: {},
-  };
+    progress: null,
+    pendingInteraction: null,
+  });
   return { state: wrapped, continueAt: firstExecutableCellId(wrapped.cells) };
 }
 
@@ -639,27 +735,36 @@ export function landOn(
   state: RunnerState,
   cellId: string | null,
   via: EnteredVia,
+  trackId: string = MAIN_TRACK_ID,
 ): TransitionResult {
   let current = cellId;
   let entryVia = via;
   let s = state;
 
   for (;;) {
-    if (s.runAllActive && s.stopRequested) {
+    if (s.stopRequested) {
+      const track = getTrack(s, trackId);
+      const drained =
+        Object.keys(s.inFlight).length === 0 && Object.keys(s.cancellingEffectIds).length === 0;
+      const stopped = drained ? { ...s, runAllActive: false, stopRequested: false } : s;
       return {
-        state: {
-          ...trace(s, "pass stopped"),
-          status: "idle",
-          runAllActive: false,
-          stopRequested: false,
-          position: { cellId: current, enteredVia: entryVia, atStart: false },
-        },
+        state: setTrack(trace(stopped, `track ${trackId} stopped`), {
+          ...track,
+          status: "active",
+          pendingInteraction: null,
+          cursor: {
+            body: track.cursor.body,
+            cellId: current,
+            enteredVia: entryVia,
+            atStart: false,
+          },
+        }),
         effects: [],
       };
     }
 
     if (current === null) {
-      const ended = endOfFlow(s);
+      const ended = endOfFlow(s, trackId);
       if (ended.continueAt === null) return { state: ended.state, effects: [] };
       s = ended.state;
       current = ended.continueAt;
@@ -670,10 +775,18 @@ export function landOn(
     const cell = cellById(s.cells, current);
     if (!cell) return fatal(s, `unknown cell ${current}`);
 
-    s = {
-      ...s,
-      position: { cellId: current, enteredVia: entryVia, atStart: isAtStart(s, current) },
-    };
+    const track = getTrack(s, trackId);
+    s = setTrack(s, {
+      ...track,
+      status: "active",
+      pendingInteraction: null,
+      cursor: {
+        body: track.cursor.body,
+        cellId: current,
+        enteredVia: entryVia,
+        atStart: isAtStart(s, trackId, current),
+      },
+    });
 
     if (cell.type === "markdown") {
       if (s.mode === "notebook") {
@@ -681,7 +794,14 @@ export function landOn(
         entryVia = "forward";
         continue;
       }
-      return { state: { ...s, status: "awaitingInput" }, effects: [] };
+      return {
+        state: setTrack(s, {
+          ...getTrack(s, trackId),
+          status: "awaitingHuman",
+          pendingInteraction: { kind: "instruction", cellId: cell.id },
+        }),
+        effects: [],
+      };
     }
 
     if (cell.type === "question") {
@@ -689,15 +809,30 @@ export function landOn(
       if (s.mode === "notebook" && cell.question.text.trim() === "") {
         return afterCellFailure(
           failRun(s, cell.id, "Question text is required: add a question before running"),
+          trackId,
           cell.id,
         );
       }
-      return { state: { ...s, status: "awaitingInput" }, effects: [] };
+      return {
+        state: setTrack(s, {
+          ...getTrack(s, trackId),
+          status: "awaitingHuman",
+          pendingInteraction: { kind: "question", cellId: cell.id },
+        }),
+        effects: [],
+      };
     }
 
     if (cell.type === "branch") {
       if (entryVia === "back") {
-        return { state: { ...s, status: "awaitingInput" }, effects: [] };
+        return {
+          state: setTrack(s, {
+            ...getTrack(s, trackId),
+            status: "awaitingHuman",
+            pendingInteraction: { kind: "resume", cellId: cell.id },
+          }),
+          effects: [],
+        };
       }
       // Web parity: notebook validates every branch config; flow validates
       // only device-scoped ones (field flows legitimately use default-only paths).
@@ -708,22 +843,22 @@ export function landOn(
           ...(deviceScoped ? validateDeviceBranch(cell, asWorkbookCells(s.cells)) : []),
         ];
         if (errors.length > 0) {
-          return afterCellFailure(failRun(s, cell.id, errors.join("; ")), cell.id);
+          return afterCellFailure(failRun(s, cell.id, errors.join("; ")), trackId, cell.id);
         }
       }
       let dispatch: TransitionResult | undefined;
       let resolved: BranchResolution | undefined;
       try {
-        if (deviceScoped) dispatch = startDeviceDispatch(s, cell);
-        else resolved = resolveBranch(s, cell, entryVia);
+        if (deviceScoped) dispatch = startDeviceDispatch(s, trackId, cell);
+        else resolved = resolveBranch(s, trackId, cell, entryVia);
       } catch (error) {
         if (!isOutputDataNormalizationError(error)) throw error;
-        return afterCellFailure(failRun(s, cell.id, error.message), cell.id);
+        return afterCellFailure(failRun(s, cell.id, error.message), trackId, cell.id);
       }
       if (dispatch) return dispatch;
       if (!resolved) return fatal(s, `branch ${cell.id} did not resolve`);
       s = resolved.state;
-      if (s.status === "fatal") return { state: s, effects: [] };
+      if (s.fatalReason !== null) return { state: s, effects: [] };
       current = resolved.nextCellId;
       entryVia = resolved.jumped ? "jump" : "forward";
       continue;
@@ -731,14 +866,25 @@ export function landOn(
 
     if (isProducer(cell)) {
       if (entryVia === "back") {
-        return { state: { ...s, status: "awaitingInput" }, effects: [] };
+        return {
+          state: setTrack(s, {
+            ...getTrack(s, trackId),
+            status: "awaitingHuman",
+            pendingInteraction: { kind: "resume", cellId: cell.id },
+          }),
+          effects: [],
+        };
       }
       // A dispatch already ran this target against its device group; the
       // linear walk skips it exactly once instead of re-running it.
-      if (entryVia === "forward" && s.dispatchConsumed[cell.id]) {
-        const dispatchConsumed = { ...s.dispatchConsumed };
+      if (entryVia === "forward" && getTrack(s, trackId).dispatchConsumed[cell.id]) {
+        const currentTrack = getTrack(s, trackId);
+        const dispatchConsumed = { ...currentTrack.dispatchConsumed };
         delete dispatchConsumed[cell.id];
-        s = { ...trace(s, `skip ${cell.id}: dispatched`), dispatchConsumed };
+        s = setTrack(trace(s, `skip ${cell.id}: dispatched`), {
+          ...currentTrack,
+          dispatchConsumed,
+        });
         current = nextCellId(s.cells, cell.id);
         entryVia = "forward";
         continue;
@@ -750,10 +896,10 @@ export function landOn(
         entryVia = "forward";
         continue;
       }
-      const started = startProducer(s, cell.id);
+      const started = startProducer(s, trackId, cell.id);
       if (started.state.cellRuns[cell.id]?.status === "error") {
         // Synchronous validation failure (bad inline command payload).
-        return afterCellFailure(started.state, cell.id);
+        return afterCellFailure(started.state, trackId, cell.id);
       }
       return started;
     }
@@ -763,23 +909,50 @@ export function landOn(
 }
 
 /** Mode-specific continuation after a per-cell failure was recorded. */
-export function afterCellFailure(state: RunnerState, cellId: string): TransitionResult {
-  const cleared: RunnerState = { ...state, inFlight: null, progress: null };
-  if (cleared.mode === "flow") {
+export function afterCellFailure(
+  state: RunnerState,
+  trackId: string,
+  cellId: string,
+): TransitionResult {
+  const track = getTrack(state, trackId);
+  let cleared = setTrack(state, { ...track, progress: null });
+  if (trackId !== MAIN_TRACK_ID) {
+    const error = cleared.cellRuns[cellId]?.error ?? "Cell failed";
     return {
-      state: {
-        ...cleared,
-        status: "pausedError",
-        runAllActive: false,
-        stopRequested: false,
-        position: { ...cleared.position, cellId, enteredVia: cleared.position.enteredVia },
-      },
+      state: setTrack(cleared, {
+        ...getTrack(cleared, trackId),
+        status: "failed",
+        terminalReason: error,
+        pendingInteraction: null,
+        cursor: { ...getTrack(cleared, trackId).cursor, cellId },
+      }),
+      effects: [],
+    };
+  }
+  if (cleared.mode === "flow") {
+    const error = cleared.cellRuns[cellId]?.error ?? "Cell failed";
+    cleared = setTrack(cleared, {
+      ...getTrack(cleared, trackId),
+      status: "failed",
+      terminalReason: error,
+      pendingInteraction: { kind: "error", cellId },
+      cursor: { ...getTrack(cleared, trackId).cursor, cellId },
+    });
+    return {
+      state: { ...cleared, runAllActive: false, stopRequested: false },
       effects: [],
     };
   }
   if (cleared.runAllActive) {
     // Notebook passes record the error and keep going (web parity).
-    return landOn(cleared, nextCellId(cleared.cells, cellId), "forward");
+    return landOn(cleared, nextCellId(cleared.cells, cellId), "forward", trackId);
   }
-  return { state: { ...cleared, status: "idle" }, effects: [] };
+  return {
+    state: setTrack(cleared, {
+      ...getTrack(cleared, trackId),
+      status: "active",
+      pendingInteraction: null,
+    }),
+    effects: [],
+  };
 }

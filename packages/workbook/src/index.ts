@@ -26,18 +26,30 @@ export { noopLogger, systemClock } from "./ports";
 
 export type {
   BranchReturnEntry,
+  CellPath,
   CellRunState,
   CellRunStatus,
   DeviceRef,
   DispatchRun,
+  EffectPhase,
   EnteredVia,
   InFlightEffect,
+  PendingInteraction,
   RunnerMode,
-  RunnerPosition,
   RunnerState,
   RunnerStatus,
+  Track,
+  TrackCursor,
+  TrackInteraction,
+  TrackStatus,
 } from "./runner/state";
-export { createInitialState, MAX_BRANCH_VISITS } from "./runner/state";
+export {
+  createInitialState,
+  deriveRunnerStatus,
+  MAIN_TRACK_ID,
+  MAX_BRANCH_VISITS,
+  pendingTrackInteractions,
+} from "./runner/state";
 
 export type { OutputEntry } from "./flow/hydrate";
 export { hydrateCells } from "./flow/hydrate";
@@ -46,6 +58,7 @@ export { collapseOutcomes } from "./runner/fan-out";
 
 export type {
   EffectTimings,
+  RetryTarget,
   WorkbookEvent,
   WorkbookInternalEvent,
   WorkbookPublicEvent,

@@ -25,7 +25,13 @@ import type {
   RunnerState,
   WorkbookRunnerPorts,
 } from "@repo/workbook";
-import { carryOverState, effectiveCellRuns, mergeCellsView, WorkbookRunner } from "@repo/workbook";
+import {
+  carryOverState,
+  effectiveCellRuns,
+  mergeCellsView,
+  pendingTrackInteractions,
+  WorkbookRunner,
+} from "@repo/workbook";
 
 type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 
@@ -159,9 +165,7 @@ export function useWorkbookExecution({
       commandExecutor: {
         execute: async (input, { signal }) => {
           const all = connectionsRef.current;
-          const devices = input.deviceIds
-            ? all.filter((c) => input.deviceIds?.includes(c.id))
-            : all;
+          const devices = all.filter((connection) => input.deviceIds.includes(connection.id));
           if (devices.length === 0) {
             throw new Error(
               input.source.kind === "inlineCell"
@@ -278,7 +282,7 @@ export function useWorkbookExecution({
       const busy =
         st.status === "running" ||
         st.status === "cancelling" ||
-        (st.status === "awaitingInput" && st.runAllActive);
+        (pendingTrackInteractions(st).length > 0 && st.runAllActive);
       const fresh =
         st.cells === current &&
         st.options.deviceFamily === sensorFamilyToDeviceType(sensorFamilyRef.current);
@@ -315,7 +319,11 @@ export function useWorkbookExecution({
     for (;;) {
       if (runnerRef.current !== runner) return;
       const st = runner.getState();
-      if (st.status === "running" || st.status === "cancelling") {
+      // Aggregate `running` may hide a question waiting on another track, so
+      // presentation is driven from track-local interactions first.
+      const pending = pendingTrackInteractions(st).shift();
+      if (!pending) {
+        if (st.status !== "running" && st.status !== "cancelling") return;
         await new Promise<void>((resolve) => {
           const unsubscribe = runner.subscribe(() => {
             unsubscribe();
@@ -324,8 +332,9 @@ export function useWorkbookExecution({
         });
         continue;
       }
-      if (st.status !== "awaitingInput" || st.position.cellId === null) return;
-      const cellId = st.position.cellId;
+      if (pending.interaction.kind !== "question") return;
+      const { trackId, interaction } = pending;
+      const cellId = interaction.cellId;
       const cell =
         cellsRef.current.find((c) => c.id === cellId) ?? st.cells.find((c) => c.id === cellId);
       if (cell?.type !== "question") return;
@@ -347,7 +356,7 @@ export function useWorkbookExecution({
         runner.send({ type: "CANCEL" });
         return;
       }
-      runner.send({ type: "ANSWER", cellId, value: answer });
+      runner.send({ type: "ANSWER", trackId, cellId, value: answer });
     }
   }, []);
 

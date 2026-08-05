@@ -3,18 +3,23 @@ import type { OutputDeviceResult } from "@repo/api/domains/workbook/workbook-cel
 import type { CommandProgress } from "../ports";
 import type { DeviceRef } from "./state";
 
+export type RetryTarget =
+  | { kind: "postCancel"; trackId: string; cellId: string }
+  | { kind: "lane"; trackId: string }
+  | { kind: "containerAttempt"; containerCellId: string; attemptId: string };
+
 export type WorkbookPublicEvent =
   | { type: "START" }
   | { type: "NEXT" }
   | { type: "BACK" }
-  | { type: "ANSWER"; cellId: string; value: string }
+  | { type: "ANSWER"; trackId: string; cellId: string; value: string }
   | { type: "RUN_CELL"; cellId: string }
   | { type: "RUN_ALL" }
   /** End the active pass between cells (graceful). */
   | { type: "STOP" }
   /** Abort the in-flight effect now. */
   | { type: "CANCEL" }
-  | { type: "RETRY" }
+  | { type: "RETRY"; target: RetryTarget }
   /** Explicit new iteration: cycle wrap + outputs cleared (mobile parity). */
   | { type: "START_CYCLE" }
   | { type: "CLEAR_OUTPUTS" }
@@ -27,11 +32,12 @@ export interface EffectTimings {
   endedAt: number;
 }
 
-/** Driver-fed completions; every one is gated on effectId matching inFlight. */
+/** Driver-fed completions; every one is gated on effectId membership in inFlight. */
 export type WorkbookInternalEvent =
   | {
       type: "MACRO_DONE";
       effectId: string;
+      trackId: string;
       cellId: string;
       output: Record<string, unknown>;
       /** Per-device results when the macro fanned out over several devices. */
@@ -42,6 +48,7 @@ export type WorkbookInternalEvent =
   | {
       type: "MACRO_FAILED";
       effectId: string;
+      trackId: string;
       cellId: string;
       error: string;
       deviceResults?: OutputDeviceResult[];
@@ -51,6 +58,7 @@ export type WorkbookInternalEvent =
   | {
       type: "COMMAND_DONE";
       effectId: string;
+      trackId: string;
       cellId: string;
       output: unknown;
       /** Per-device results when the command fanned out over several devices. */
@@ -61,16 +69,24 @@ export type WorkbookInternalEvent =
   | {
       type: "COMMAND_FAILED";
       effectId: string;
+      trackId: string;
       cellId: string;
       error: string;
       deviceResults?: OutputDeviceResult[];
       messages?: string[];
       timings: EffectTimings;
     }
-  | { type: "COMMAND_PROGRESS"; effectId: string; cellId: string; progress: CommandProgress }
+  | {
+      type: "COMMAND_PROGRESS";
+      effectId: string;
+      trackId: string;
+      cellId: string;
+      progress: CommandProgress;
+    }
   | {
       type: "CODE_RESOLVED";
       effectId: string;
+      trackId: string;
       cellId: string;
       code: Record<string, unknown>[] | null;
       timings: EffectTimings;
@@ -78,11 +94,12 @@ export type WorkbookInternalEvent =
   | {
       type: "CODE_RESOLVE_FAILED";
       effectId: string;
+      trackId: string;
       cellId: string;
       error: string;
       timings: EffectTimings;
     }
-  | { type: "EFFECT_CANCELLED"; effectId: string; cellId: string };
+  | { type: "EFFECT_CANCELLED"; effectId: string; trackId: string; cellId: string };
 
 export type WorkbookEvent = WorkbookPublicEvent | WorkbookInternalEvent;
 

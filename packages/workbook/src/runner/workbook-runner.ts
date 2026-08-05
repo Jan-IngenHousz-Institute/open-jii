@@ -42,6 +42,7 @@ export interface WorkbookRunnerOptions {
 }
 
 const DEFAULT_OFFLOAD_BYTES = 256 * 1024;
+const OFFLOADED_ENTRY_MARKER = "__workbookOutputEntryV2";
 
 function validateCells(cells: RunnerCell[]): void {
   const seen = new Set<string>();
@@ -108,9 +109,26 @@ export class WorkbookRunner {
             "Snapshot has offloaded outputs but no outputStore port",
           );
         }
-        outputs[key] = { v: await ports.outputStore.get(entry.ref) };
+        const stored = await ports.outputStore.get(entry.ref);
+        if (
+          stored !== null &&
+          typeof stored === "object" &&
+          (stored as Record<string, unknown>)[OFFLOADED_ENTRY_MARKER] === true
+        ) {
+          outputs[key] = (stored as { entry: RunnerState["outputs"][string] }).entry;
+        } else {
+          outputs[key] = {
+            v: stored,
+            ...(entry.deviceResults ? { deviceResults: entry.deviceResults } : {}),
+            ...(entry.messages ? { messages: entry.messages } : {}),
+          };
+        }
       } else {
-        outputs[key] = { v: entry.v };
+        outputs[key] = {
+          v: entry.v,
+          ...(entry.deviceResults ? { deviceResults: entry.deviceResults } : {}),
+          ...(entry.messages ? { messages: entry.messages } : {}),
+        };
       }
     }
     const state = { ...parsed.state, outputs };
@@ -158,9 +176,12 @@ export class WorkbookRunner {
     const snapshot = this.snapshot();
     for (const [key, entry] of Object.entries(snapshot.state.outputs)) {
       if ("ref" in entry) continue;
-      const size = entry.v === undefined ? 0 : JSON.stringify(entry.v).length;
+      const size = JSON.stringify(entry).length;
       if (size <= offloadOverBytes) continue;
-      const ref = await store.put(`${key}:${snapshot.savedAt}`, entry.v);
+      const ref = await store.put(`${key}:${snapshot.savedAt}`, {
+        [OFFLOADED_ENTRY_MARKER]: true,
+        entry,
+      });
       snapshot.state.outputs[key] = { ref };
     }
     return snapshot;
@@ -213,10 +234,14 @@ export class WorkbookRunner {
           this.controllers.get(effectId)?.abort();
           this.controllers.delete(effectId);
           // Snappy finalize; a late settle is dropped by the effectId gate.
-          const cellId =
-            this.state.inFlight?.effectId === effectId ? this.state.inFlight.cellId : null;
-          if (cellId !== null) {
-            this.dispatch({ type: "EFFECT_CANCELLED", effectId, cellId });
+          const owned = this.state.inFlight[effectId];
+          if (owned) {
+            this.dispatch({
+              type: "EFFECT_CANCELLED",
+              effectId,
+              trackId: owned.trackId,
+              cellId: owned.cellId,
+            });
           }
         }
         return;
@@ -233,13 +258,14 @@ export class WorkbookRunner {
           this.dispatch({
             type: "CODE_RESOLVE_FAILED",
             effectId: effect.effectId,
+            trackId: effect.trackId,
             cellId: effect.cellId,
             error: "No protocol code resolver configured",
             timings: { startedAt: this.clock.now(), endedAt: this.clock.now() },
           });
           return;
         }
-        this.runAsync(effect.effectId, effect.cellId, () =>
+        this.runAsync(effect.effectId, effect.trackId, effect.cellId, () =>
           resolver.resolveProtocolCode(effect.protocolId, effect.version),
         );
         return;
@@ -248,14 +274,14 @@ export class WorkbookRunner {
   }
 
   /** Register an AbortController and return a settle guard for one effect. */
-  private armEffect(effectId: string, cellId: string) {
+  private armEffect(effectId: string, trackId: string, cellId: string) {
     const controller = new AbortController();
     this.controllers.set(effectId, controller);
     const startedAt = this.clock.now();
     const settle = (dispatchDone: (timings: { startedAt: number; endedAt: number }) => void) => {
       const timings = { startedAt, endedAt: this.clock.now() };
       if (controller.signal.aborted) {
-        this.dispatch({ type: "EFFECT_CANCELLED", effectId, cellId });
+        this.dispatch({ type: "EFFECT_CANCELLED", effectId, trackId, cellId });
         return;
       }
       dispatchDone(timings);
@@ -270,8 +296,8 @@ export class WorkbookRunner {
    * single-device run keeps the exact legacy MACRO_DONE/MACRO_FAILED shape.
    */
   private runMacroEffect(effect: Extract<Effect, { kind: "runMacro" }>): void {
-    const { effectId, cellId } = effect;
-    const { controller, settle } = this.armEffect(effectId, cellId);
+    const { effectId, trackId, cellId } = effect;
+    const { controller, settle } = this.armEffect(effectId, trackId, cellId);
     const firstLeg = effect.legs[0];
     const singleLeg =
       effect.legs.length === 1 && firstLeg.kind === "run" && firstLeg.input.deviceId === undefined
@@ -289,6 +315,7 @@ export class WorkbookRunner {
           this.dispatch({
             type: "MACRO_FAILED",
             effectId,
+            trackId,
             cellId,
             ...result,
             error: result.error,
@@ -298,6 +325,7 @@ export class WorkbookRunner {
           this.dispatch({
             type: "MACRO_DONE",
             effectId,
+            trackId,
             cellId,
             ...result,
             output: result.output ?? {},
@@ -361,14 +389,14 @@ export class WorkbookRunner {
 
   /** Execute a command effect; the port returns one outcome per targeted device. */
   private runCommandEffect(effect: Extract<Effect, { kind: "runCommand" }>): void {
-    const { effectId, cellId } = effect;
-    const { controller, settle } = this.armEffect(effectId, cellId);
+    const { effectId, trackId, cellId } = effect;
+    const { controller, settle } = this.armEffect(effectId, trackId, cellId);
 
     void this.ports.commandExecutor
       .execute(effect.input, {
         signal: controller.signal,
         onProgress: (progress) =>
-          this.dispatch({ type: "COMMAND_PROGRESS", effectId, cellId, progress }),
+          this.dispatch({ type: "COMMAND_PROGRESS", effectId, trackId, cellId, progress }),
       })
       .then((outcomes) => {
         const collapsed = collapseOutcomes(outcomes, "Command execution failed");
@@ -377,6 +405,7 @@ export class WorkbookRunner {
             this.dispatch({
               type: "COMMAND_DONE",
               effectId,
+              trackId,
               cellId,
               output: collapsed.v,
               deviceResults: collapsed.deviceResults,
@@ -387,6 +416,7 @@ export class WorkbookRunner {
             this.dispatch({
               type: "COMMAND_FAILED",
               effectId,
+              trackId,
               cellId,
               error: collapsed.error,
               deviceResults: collapsed.deviceResults,
@@ -401,6 +431,7 @@ export class WorkbookRunner {
           this.dispatch({
             type: "COMMAND_FAILED",
             effectId,
+            trackId,
             cellId,
             error: errorMessage(error),
             timings,
@@ -412,16 +443,18 @@ export class WorkbookRunner {
 
   private runAsync(
     effectId: string,
+    trackId: string,
     cellId: string,
     run: (signal: AbortSignal) => Promise<unknown>,
   ): void {
-    const { controller, settle } = this.armEffect(effectId, cellId);
+    const { controller, settle } = this.armEffect(effectId, trackId, cellId);
     void run(controller.signal)
       .then((output) =>
         settle((timings) =>
           this.dispatch({
             type: "CODE_RESOLVED",
             effectId,
+            trackId,
             cellId,
             code: output as Record<string, unknown>[] | null,
             timings,
@@ -433,6 +466,7 @@ export class WorkbookRunner {
           this.dispatch({
             type: "CODE_RESOLVE_FAILED",
             effectId,
+            trackId,
             cellId,
             error: errorMessage(error),
             timings,

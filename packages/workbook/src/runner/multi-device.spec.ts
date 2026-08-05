@@ -28,16 +28,22 @@ interface Step {
   effects: Effect[];
 }
 
+function onlyInFlight(state: RunnerState) {
+  const entries = Object.values(state.inFlight).filter((entry) => entry !== undefined);
+  if (entries.length !== 1) throw new Error(`expected one in-flight effect, got ${entries.length}`);
+  return entries[0];
+}
+
 function commandDone(
   state: RunnerState,
   output: unknown,
   extra: { deviceResults?: DeviceOutcome[]; messages?: string[] } = {},
 ): Step {
-  const inFlight = state.inFlight;
-  if (!inFlight) throw new Error("nothing in flight");
+  const inFlight = onlyInFlight(state);
   return transition(state, {
     type: "COMMAND_DONE",
     effectId: inFlight.effectId,
+    trackId: inFlight.trackId,
     cellId: inFlight.cellId,
     output,
     ...extra,
@@ -74,11 +80,11 @@ describe("multi-device outputs", () => {
       { deviceId: "dev-1", deviceLabel: "Device #1", error: "boom-1" },
       { deviceId: "dev-2", deviceLabel: "Device #2", error: "boom-2" },
     ];
-    const inFlight = step.state.inFlight;
-    if (!inFlight) throw new Error("nothing in flight");
+    const inFlight = onlyInFlight(step.state);
     step = transition(step.state, {
       type: "COMMAND_FAILED",
       effectId: inFlight.effectId,
+      trackId: inFlight.trackId,
       cellId: "c1",
       error: "boom-1",
       deviceResults,
@@ -224,8 +230,8 @@ describe("device dispatch branch", () => {
     // Queue done: the walk continues after the branch and skips both consumed
     // targets exactly once instead of re-running them.
     expect(step.state.status).toBe("idle");
-    expect(step.state.dispatch).toBeNull();
-    expect(step.state.dispatchConsumed).toEqual({});
+    expect(step.state.tracks.main.dispatch).toBeNull();
+    expect(step.state.tracks.main.dispatchConsumed).toEqual({});
     expect(step.state.cellRuns.c1?.status).toBe("completed");
     expect(step.state.cellRuns.c2?.status).toBe("completed");
     expect(step.state.cellRuns.b1?.status).toBe("completed");
@@ -266,11 +272,11 @@ describe("device dispatch branch", () => {
 
   it("a failing target advances the queue instead of halting the other groups", () => {
     let step = transition(init(dispatchCells()), { type: "RUN_ALL" });
-    const inFlight = step.state.inFlight;
-    if (!inFlight) throw new Error("nothing in flight");
+    const inFlight = onlyInFlight(step.state);
     step = transition(step.state, {
       type: "COMMAND_FAILED",
       effectId: inFlight.effectId,
+      trackId: inFlight.trackId,
       cellId: "c1",
       error: "boom",
       timings: TIMINGS,

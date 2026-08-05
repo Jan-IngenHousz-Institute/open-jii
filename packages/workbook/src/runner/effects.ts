@@ -14,14 +14,22 @@ export type Effect =
   | {
       kind: "runMacro";
       effectId: string;
+      trackId: string;
       cellId: string;
       /** A plain single-device run is one "run" leg without a deviceId. */
       legs: MacroLeg[];
     }
-  | { kind: "runCommand"; effectId: string; cellId: string; input: CommandRunInput }
+  | {
+      kind: "runCommand";
+      effectId: string;
+      trackId: string;
+      cellId: string;
+      input: CommandRunInput;
+    }
   | {
       kind: "resolveProtocolCode";
       effectId: string;
+      trackId: string;
       cellId: string;
       protocolId: string;
       version: number;

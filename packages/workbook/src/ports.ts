@@ -55,6 +55,7 @@ export interface DeviceOutcome {
 }
 
 export interface MacroRunInput {
+  trackId: string;
   cellId: string;
   macroId: string;
   language: MacroLanguage;
@@ -66,6 +67,8 @@ export interface MacroRunInput {
   deviceLabel?: string;
   family?: OutputDeviceResult["family"];
   deviceName?: string;
+  /** Frozen device-connection subset owned by this track. */
+  deviceIds: string[];
   /**
    * Verbatim (raw, NOT normalized) output of the nearest upstream producer
    * cell (protocol or command) in the current cycle, or null. This is the
@@ -91,17 +94,15 @@ export type CommandSource =
   | { kind: "artifact"; artifact: "command" | "protocol"; producedBy: string };
 
 export interface CommandRunInput {
+  trackId: string;
   cellId: string;
   /** Validated/resolved value, exactly what goes on the wire. */
   command: ResolvedCommandValue;
   family: SensorFamily;
   source: CommandSource;
   timeoutMs?: number;
-  /**
-   * Device-connection subset to run against (set by a dispatch branch);
-   * undefined means every connected device.
-   */
-  deviceIds?: string[];
+  /** Required device-connection subset; an empty list targets no devices. */
+  deviceIds: string[];
 }
 
 export interface CommandExecutorPort {

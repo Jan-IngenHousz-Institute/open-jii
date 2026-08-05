@@ -34,12 +34,22 @@ function apply(state: RunnerState, ...events: WorkbookEvent[]): Step {
   return step;
 }
 
+function onlyInFlight(state: RunnerState) {
+  const entries = Object.values(state.inFlight).filter((entry) => entry !== undefined);
+  if (entries.length !== 1) throw new Error(`expected one in-flight effect, got ${entries.length}`);
+  return entries[0];
+}
+
 /** The completion event for the in-flight effect (command or macro). */
 function doneEvent(state: RunnerState, output: unknown): WorkbookEvent {
-  const inFlight = state.inFlight;
-  if (!inFlight) throw new Error("nothing in flight");
-  const base = { effectId: inFlight.effectId, cellId: inFlight.cellId, timings: TIMINGS };
-  return inFlight.kind === "runMacro"
+  const inFlight = onlyInFlight(state);
+  const base = {
+    effectId: inFlight.effectId,
+    trackId: inFlight.trackId,
+    cellId: inFlight.cellId,
+    timings: TIMINGS,
+  };
+  return inFlight.phase === "runMacro"
     ? { type: "MACRO_DONE", ...base, output: output as Record<string, unknown> }
     : { type: "COMMAND_DONE", ...base, output };
 }
@@ -50,10 +60,12 @@ function finish(state: RunnerState, output: unknown): Step {
 }
 
 function failCommand(state: RunnerState, error: string): Step {
+  const inFlight = onlyInFlight(state);
   return transition(state, {
     type: "COMMAND_FAILED",
-    effectId: state.inFlight?.effectId ?? "",
-    cellId: state.inFlight?.cellId ?? "",
+    effectId: inFlight.effectId,
+    trackId: inFlight.trackId,
+    cellId: inFlight.cellId,
     error,
     timings: TIMINGS,
   });
@@ -61,14 +73,23 @@ function failCommand(state: RunnerState, error: string): Step {
 
 /** A COMMAND_DONE for a given effect id, regardless of what is in flight. */
 function commandDone(state: RunnerState, effectId: string, cellId: string, output: unknown): Step {
-  return transition(state, { type: "COMMAND_DONE", effectId, cellId, output, timings: TIMINGS });
+  return transition(state, {
+    type: "COMMAND_DONE",
+    effectId,
+    trackId: state.inFlight[effectId]?.trackId ?? "main",
+    cellId,
+    output,
+    timings: TIMINGS,
+  });
 }
 
 function resolveCode(state: RunnerState, code: Record<string, unknown>[] | null): Step {
+  const inFlight = onlyInFlight(state);
   return transition(state, {
     type: "CODE_RESOLVED",
-    effectId: state.inFlight?.effectId ?? "",
-    cellId: state.inFlight?.cellId ?? "",
+    effectId: inFlight.effectId,
+    trackId: inFlight.trackId,
+    cellId: inFlight.cellId,
     code,
     timings: TIMINGS,
   });
@@ -88,6 +109,7 @@ const artifact = (content: string, extra: Record<string, unknown> = {}) => ({
 
 const answer = (value: string, cellId = "q1"): WorkbookEvent => ({
   type: "ANSWER",
+  trackId: "main",
   cellId,
   value,
 });
@@ -138,7 +160,7 @@ describe("transition: event/status matrix", () => {
       type: "START",
     });
     expect(step.state.status).toBe("awaitingInput");
-    expect(step.state.position.cellId).toBe("m1");
+    expect(step.state.tracks.main.cursor.cellId).toBe("m1");
     const corrupted: RunnerState = { ...init([md("m1")]), status: "fatal", fatalReason: "test" };
     const after = transition(corrupted, { type: "RESET" });
     expect(after.state.status).toBe("fatal");
@@ -152,31 +174,31 @@ describe("transition: flow basics", () => {
       type: "START",
     });
     expect(step.state.status).toBe("awaitingInput");
-    expect(step.state.position.cellId).toBe("m1");
-    expect(step.state.position.atStart).toBe(true);
+    expect(step.state.tracks.main.cursor.cellId).toBe("m1");
+    expect(step.state.tracks.main.cursor.atStart).toBe(true);
     step = apply(step.state, { type: "NEXT" });
-    expect(step.state.position.cellId).toBe("q1");
+    expect(step.state.tracks.main.cursor.cellId).toBe("q1");
     // Off-target answers record without moving the cursor (mode-free rule).
     const offTarget = apply(step.state, answer("later", "q2"));
-    expect(offTarget.state.position.cellId).toBe("q1");
+    expect(offTarget.state.tracks.main.cursor.cellId).toBe("q1");
     expect(offTarget.state.answersByCycle[0]).toEqual({ q2: "later" });
     // Answering a non-question id is fully ignored.
     const bogus = apply(step.state, answer("x", "nope"));
     expect(bogus.state.answersByCycle[0]).toEqual({});
     const onTarget = apply(step.state, answer("yes"));
     expect(onTarget.state.answersByCycle[0]).toEqual({ q1: "yes" });
-    expect(onTarget.state.position.cellId).toBe("q2");
+    expect(onTarget.state.tracks.main.cursor.cellId).toBe("q2");
   });
 
   it("blank answers: required questions reject and block NEXT, optional ones clear the key", () => {
     const step = apply(init([question("q1", "Q One", true), md("m1")]), { type: "START" });
     const blank = apply(step.state, answer("  "));
-    expect(blank.state.position.cellId).toBe("q1");
+    expect(blank.state.tracks.main.cursor.cellId).toBe("q1");
     expect(blank.state.cellRuns.q1?.status).toBe("error");
-    expect(apply(blank.state, { type: "NEXT" }).state.position.cellId).toBe("q1");
+    expect(apply(blank.state, { type: "NEXT" }).state.tracks.main.cursor.cellId).toBe("q1");
     const ok = apply(blank.state, answer("yes"));
     expect(ok.state.cellRuns.q1?.status).toBe("completed");
-    expect(ok.state.position.cellId).toBe("m1");
+    expect(ok.state.tracks.main.cursor.cellId).toBe("m1");
     // A blank answer on an optional question deletes the stored key.
     const optional = apply(
       init([question("q1", "Q One"), md("m1")]),
@@ -201,7 +223,7 @@ describe("transition: producers and effects", () => {
     const done = finish(step.state, { level: 82 });
     expect(done.state.cellRuns.c1?.status).toBe("completed");
     expect(done.state.cellRuns.c1?.executionTimeMs).toBe(5);
-    expect(done.state.position.cellId).toBe("m1");
+    expect(done.state.tracks.main.cursor.cellId).toBe("m1");
     // A malformed inline command fails without emitting an effect.
     const bad = apply(init([cmd("c1", "{nope", "json"), md("m1")]), { type: "START" });
     expect(bad.effects).toEqual([]);
@@ -270,7 +292,7 @@ describe("transition: macro artifacts", () => {
     expect(effect.input.command).toBe("battery");
     const done = finish(step.state, "82%");
     expect(done.state.outputs.a1__dispatch).toEqual({ v: "82%" });
-    expect(done.state.position.cellId).toBe("m1");
+    expect(done.state.tracks.main.cursor.cellId).toBe("m1");
   });
 
   it("invalid artifacts fail the macro without dispatching", () => {
@@ -314,15 +336,17 @@ describe("transition: branches", () => {
     const step = apply(
       init(cells),
       { type: "START" },
-      { type: "ANSWER", cellId: "q1", value: answer },
+      { type: "ANSWER", trackId: "main", cellId: "q1", value: answer },
     );
-    expect(step.state.position.cellId).toBe(pos);
+    expect(step.state.tracks.main.cursor.cellId).toBe(pos);
     if (landing) {
-      expect(step.state.returnStack).toEqual([{ landingCellId: landing, returnToCellId: "q1" }]);
+      expect(step.state.tracks.main.returnStack).toEqual([
+        { landingCellId: landing, returnToCellId: "q1" },
+      ]);
     }
     if (matched) {
       expect(step.state.cellRuns.b1?.lastMatchedPathId).toBe(matched);
-      expect(step.state.branchVisits.b1).toBe(1);
+      expect(step.state.tracks.main.branchVisits.b1).toBe(1);
     }
   });
 
@@ -344,12 +368,12 @@ describe("transition: branches", () => {
     step = finish(step.state, { Phi2: 0.4 });
     // Branch looped back; the command must be running again despite completed.
     expect(step.state.status).toBe("running");
-    expect(step.state.inFlight?.cellId).toBe("c1");
+    expect(onlyInFlight(step.state).cellId).toBe("c1");
     step = finish(step.state, { raw: 2 });
     // Fresh command output marks the macro stale, so it re-runs on pass-through.
     step = finish(step.state, { Phi2: 0.8 });
-    expect(step.state.position.cellId).toBe("m_end");
-    expect(step.state.branchVisits.b1).toBe(2);
+    expect(step.state.tracks.main.cursor.cellId).toBe("m_end");
+    expect(step.state.tracks.main.branchVisits.b1).toBe(2);
     expect(step.state.cellRuns.a1?.executionOrder).toHaveLength(2);
   });
 
@@ -362,14 +386,14 @@ describe("transition: branches", () => {
     ];
     let step = apply(init(cells, { maxBranchVisits: 3 }), { type: "START" }, answer("go"));
     // The answer advances to m1 first; each NEXT then routes through the branch.
-    expect(step.state.position.cellId).toBe("m1");
+    expect(step.state.tracks.main.cursor.cellId).toBe("m1");
     let routed = 0;
-    for (let i = 0; i < 10 && step.state.position.cellId === "m1"; i++) {
+    for (let i = 0; i < 10 && step.state.tracks.main.cursor.cellId === "m1"; i++) {
       step = apply(step.state, { type: "NEXT" });
-      if (step.state.position.cellId === "m1") routed += 1;
+      if (step.state.tracks.main.cursor.cellId === "m1") routed += 1;
     }
     expect(routed).toBe(3);
-    expect(step.state.position.cellId).toBe("m2");
+    expect(step.state.tracks.main.cursor.cellId).toBe("m2");
   });
 });
 
@@ -378,14 +402,14 @@ describe("transition: back navigation", () => {
     const cells = [question("q1", "Pick"), branch("b1", "p1", "m2"), cmd("c1"), md("m2")];
     let step = apply(init(cells), { type: "START" });
     const atStart = apply(step.state, { type: "BACK" });
-    expect(atStart.state.position.cellId).toBe("q1");
-    expect(atStart.state.position.atStart).toBe(true);
+    expect(atStart.state.tracks.main.cursor.cellId).toBe("q1");
+    expect(atStart.state.tracks.main.cursor.atStart).toBe(true);
     step = apply(step.state, answer("yes"));
-    expect(step.state.position.cellId).toBe("m2");
+    expect(step.state.tracks.main.cursor.cellId).toBe("m2");
     step = apply(step.state, { type: "BACK" });
-    expect(step.state.position.cellId).toBe("q1");
-    expect(step.state.position.enteredVia).toBe("back");
-    expect(step.state.returnStack).toEqual([]);
+    expect(step.state.tracks.main.cursor.cellId).toBe("q1");
+    expect(step.state.tracks.main.cursor.enteredVia).toBe("back");
+    expect(step.state.tracks.main.returnStack).toEqual([]);
   });
 
   it("BACK discards nothing; re-entry skips completed producers and re-runs stale ones", () => {
@@ -395,21 +419,21 @@ describe("transition: back navigation", () => {
       answer("yes"),
     );
     step = finish(step.state, { ok: 1 });
-    expect(step.state.position.cellId).toBe("m1");
+    expect(step.state.tracks.main.cursor.cellId).toBe("m1");
     step = apply(step.state, { type: "BACK" });
-    expect(step.state.position.cellId).toBe("c1");
+    expect(step.state.tracks.main.cursor.cellId).toBe("c1");
     expect(step.state.outputs.c1).toEqual({ v: { ok: 1 } });
     step = apply(step.state, { type: "BACK" });
-    expect(step.state.position.cellId).toBe("q1");
+    expect(step.state.tracks.main.cursor.cellId).toBe("q1");
     expect(step.state.answersByCycle[0]).toEqual({ q1: "yes" });
     // Same answer: nothing stale, command passes through on the walk forward.
     const same = apply(step.state, answer("yes"));
-    expect(same.state.position.cellId).toBe("m1");
+    expect(same.state.tracks.main.cursor.cellId).toBe("m1");
     expect(same.state.cellRuns.c1?.executionOrder).toHaveLength(1);
     // A changed answer marks downstream stale and forces the re-run.
     const changed = apply(step.state, answer("no"));
     expect(changed.state.status).toBe("running");
-    expect(changed.state.inFlight?.cellId).toBe("c1");
+    expect(onlyInFlight(changed.state).cellId).toBe("c1");
     const rerun = finish(changed.state, { ok: 2 });
     expect(rerun.state.outputs.c1).toEqual({ v: { ok: 2 } });
     expect(rerun.state.cellRuns.c1?.executionOrder).toHaveLength(2);
@@ -428,14 +452,14 @@ describe("transition: cycles", () => {
   it("loop mode wraps: answers and runs reset, outputs survive", () => {
     let step = ranOnce({ loop: true });
     expect(step.state.cycle).toBe(1);
-    expect(step.state.position.cellId).toBe("q1");
+    expect(step.state.tracks.main.cursor.cellId).toBe("q1");
     expect(step.state.answersByCycle[1]).toEqual({});
     expect(step.state.answersByCycle[0]).toEqual({ q1: "yes" });
     expect(step.state.outputs.c1).toEqual({ v: { ok: 1 } });
     expect(step.state.cellRuns).toEqual({});
     // Cycle 1 runs the command again (fresh run records).
     step = apply(step.state, answer("no"));
-    expect(step.state.inFlight?.cellId).toBe("c1");
+    expect(onlyInFlight(step.state).cellId).toBe("c1");
   });
 
   it("branch visit caps reset on wrap", () => {
@@ -445,12 +469,12 @@ describe("transition: cycles", () => {
       { type: "START" },
       answer("yes"),
     );
-    expect(step.state.branchVisits.b1).toBe(1);
+    expect(step.state.tracks.main.branchVisits.b1).toBe(1);
     step = apply(step.state, { type: "NEXT" });
     expect(step.state.cycle).toBe(1);
-    expect(step.state.branchVisits).toEqual({});
+    expect(step.state.tracks.main.branchVisits).toEqual({});
     step = apply(step.state, answer("yes"));
-    expect(step.state.position.cellId).toBe("m2");
+    expect(step.state.tracks.main.cursor.cellId).toBe("m2");
   });
 
   it("START_CYCLE wraps explicitly and clears outputs", () => {
@@ -459,14 +483,14 @@ describe("transition: cycles", () => {
     step = apply(step.state, { type: "START_CYCLE" });
     expect(step.state.cycle).toBe(1);
     expect(step.state.outputs).toEqual({});
-    expect(step.state.position.cellId).toBe("q1");
+    expect(step.state.tracks.main.cursor.cellId).toBe("q1");
   });
 });
 
 describe("transition: cancellation and errors", () => {
   it("CANCEL discards the in-flight command and re-arms the cell", () => {
     let step = apply(init([cmd("c1"), md("m1")]), { type: "START" });
-    const effectId = step.state.inFlight?.effectId ?? "";
+    const effectId = onlyInFlight(step.state).effectId;
     step = apply(step.state, { type: "CANCEL" });
     expect(step.state.status).toBe("cancelling");
     expect(step.effects).toEqual([{ kind: "cancelEffects", effectIds: [effectId] }]);
@@ -474,15 +498,23 @@ describe("transition: cancellation and errors", () => {
     const folded = commandDone(step.state, effectId, "c1", { phantom: true });
     expect(folded.state.outputs).toEqual({});
     expect(folded.state.cellRuns.c1?.status).toBe("cancelled");
-    step = apply(step.state, { type: "EFFECT_CANCELLED", effectId, cellId: "c1" });
+    step = apply(step.state, {
+      type: "EFFECT_CANCELLED",
+      effectId,
+      trackId: "main",
+      cellId: "c1",
+    });
     expect(step.state.status).toBe("awaitingInput");
     expect(step.state.cellRuns.c1?.status).toBe("cancelled");
     // The late device result must never record.
     const late = commandDone(step.state, effectId, "c1", { phantom: true });
     expect(late.state.outputs).toEqual({});
     // RETRY re-runs it cleanly.
-    const retried = apply(late.state, { type: "RETRY" });
-    expect(retried.state.inFlight?.cellId).toBe("c1");
+    const retried = apply(late.state, {
+      type: "RETRY",
+      target: { kind: "postCancel", trackId: "main", cellId: "c1" },
+    });
+    expect(onlyInFlight(retried.state).cellId).toBe("c1");
     const done = finish(retried.state, { ok: 1 });
     expect(done.state.outputs.c1).toEqual({ v: { ok: 1 } });
   });
@@ -495,8 +527,11 @@ describe("transition: cancellation and errors", () => {
     const rearmed = apply(step.state, { type: "CANCEL" });
     expect(rearmed.state.status).toBe("awaitingInput");
     expect(rearmed.state.cellRuns.c1).toBeUndefined();
-    const retried = apply(step.state, { type: "RETRY" });
-    expect(retried.state.inFlight?.cellId).toBe("c1");
+    const retried = apply(step.state, {
+      type: "RETRY",
+      target: { kind: "postCancel", trackId: "main", cellId: "c1" },
+    });
+    expect(onlyInFlight(retried.state).cellId).toBe("c1");
     // RESET returns to the initial state without resetting the effect counter.
     const reset = apply(started.state, { type: "RESET" });
     expect(reset.effects[0]?.kind).toBe("cancelEffects");
@@ -510,8 +545,8 @@ describe("transition: notebook mode", () => {
 
   function runAllToEnd(state: RunnerState): RunnerState {
     let step = apply(state, { type: "RUN_ALL" });
-    while (step.state.inFlight) {
-      const output = step.state.inFlight.kind === "runMacro" ? { Phi2: 0.7 } : { ok: true };
+    while (Object.keys(step.state.inFlight).length > 0) {
+      const output = onlyInFlight(step.state).phase === "runMacro" ? { Phi2: 0.7 } : { ok: true };
       step = finish(step.state, output);
     }
     return step.state;
@@ -551,7 +586,7 @@ describe("transition: notebook mode", () => {
     const failed = failCommand(started.state, "boom");
     // The pass moved on to the macro.
     expect(failed.state.cellRuns.cA?.status).toBe("error");
-    expect(failed.state.inFlight?.cellId).toBe("aB");
+    expect(onlyInFlight(failed.state).cellId).toBe("aB");
     const stopped = finish(apply(started.state, { type: "STOP" }).state, { ok: 1 });
     expect(stopped.state.status).toBe("idle");
     expect(stopped.state.runAllActive).toBe(false);
@@ -567,13 +602,13 @@ describe("transition: notebook mode", () => {
     );
     step = finish(step.state, { ok: 1 });
     expect(step.state.status).toBe("awaitingInput");
-    expect(step.state.position.cellId).toBe("q1");
+    expect(step.state.tracks.main.cursor.cellId).toBe("q1");
     step = apply(step.state, answer("b", "q0"));
     expect(step.state.status).toBe("awaitingInput");
     expect(step.state.runAllActive).toBe(true);
-    expect(step.state.position.cellId).toBe("q1");
+    expect(step.state.tracks.main.cursor.cellId).toBe("q1");
     step = apply(step.state, answer("yes"));
-    expect(step.state.inFlight?.cellId).toBe("cC");
+    expect(onlyInFlight(step.state).cellId).toBe("cC");
   });
 
   it("RUN_CELL on a markdown cell is a no-op in notebook mode", () => {
@@ -583,7 +618,7 @@ describe("transition: notebook mode", () => {
     });
     expect(step.effects).toEqual([]);
     expect(step.state.status).toBe("idle");
-    expect(step.state.inFlight).toBeNull();
+    expect(step.state.inFlight).toEqual({});
   });
 });
 
