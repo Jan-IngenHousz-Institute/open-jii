@@ -215,6 +215,21 @@ describe("validateWorkbook", () => {
     );
   });
 
+  it("keeps fall-through reachable for self, dangling, and backward Go to targets", () => {
+    const cases: WorkbookCell[][] = [
+      [gotoCell("goto", "goto"), questionCell("after")],
+      [gotoCell("goto", "missing"), questionCell("after")],
+      [questionCell("target"), gotoCell("goto", "target"), questionCell("after")],
+    ];
+
+    for (const cells of cases) {
+      const issues = validateWorkbook(cells, ctx({})).issues;
+      expect(
+        issues.filter((issue) => issue.code === "unreachable-cell" && issue.cellId === "after"),
+      ).toEqual([]);
+    }
+  });
+
   it("warns when a branch has no default", () => {
     const branch = branchCell("branch", "source");
     if (branch.type !== "branch") throw new Error("expected branch");
@@ -226,6 +241,37 @@ describe("validateWorkbook", () => {
     expect(result.ok).toBe(true);
     expect(result.issues).toContainEqual(
       expect.objectContaining({ code: "branch-no-default", cellId: "branch" }),
+    );
+  });
+
+  it("warns when Otherwise is dangling or ambiguous", () => {
+    const branch = branchCell("branch", "source");
+    if (branch.type !== "branch") throw new Error("expected branch");
+    const duplicatePath = { ...branch.paths[0], label: "Duplicate" };
+
+    const dangling = validateWorkbook(
+      [questionCell("source"), { ...branch, defaultPathId: "missing" }],
+      ctx({}),
+    );
+    expect(dangling.issues).toContainEqual(
+      expect.objectContaining({ code: "branch-no-default", cellId: "branch" }),
+    );
+
+    const ambiguous = validateWorkbook(
+      [questionCell("source"), { ...branch, paths: [...branch.paths, duplicatePath] }],
+      ctx({}),
+    );
+    expect(ambiguous.ok).toBe(false);
+    expect(ambiguous.issues).toContainEqual(
+      expect.objectContaining({ code: "branch-no-default", cellId: "branch" }),
+    );
+    expect(ambiguous.issues).toContainEqual(
+      expect.objectContaining({
+        level: "error",
+        code: "duplicate-branch-path-id",
+        cellId: "branch",
+        ref: "path-1",
+      }),
     );
   });
 
@@ -241,6 +287,30 @@ describe("validateWorkbook", () => {
         id: "different-condition-id",
       })),
     };
+    const result = validateWorkbook(
+      [questionCell("source"), { ...branch, paths: [...branch.paths, duplicate] }],
+      ctx({}),
+    );
+
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "path-duplicate-conditions",
+        cellId: "branch",
+        ref: "path-2",
+      }),
+    );
+  });
+
+  it("deduplicates repeated conditions before comparing paths", () => {
+    const branch = branchCell("branch", "source");
+    if (branch.type !== "branch") throw new Error("expected branch");
+    const condition = branch.paths[0].conditions[0];
+    const duplicate = {
+      ...branch.paths[0],
+      id: "path-2",
+      conditions: [condition, { ...condition, id: "repeated-condition" }],
+    };
+
     const result = validateWorkbook(
       [questionCell("source"), { ...branch, paths: [...branch.paths, duplicate] }],
       ctx({}),

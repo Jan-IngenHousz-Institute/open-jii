@@ -57,7 +57,15 @@ export function validateDeviceBranch(cell: BranchCell, cells: WorkbookCell[]): s
   return errors;
 }
 
-export function validateBranchCell(cell: BranchCell): string[] {
+/**
+ * Validates an authored branch. Runtime callers may preserve the historical
+ * conditioned-branch fall-through by disabling the author-only default check;
+ * conditionless paths still require one uniquely resolved default either way.
+ */
+export function validateBranchCell(
+  cell: BranchCell,
+  options: { requireDefault?: boolean } = {},
+): string[] {
   const errors: string[] = [];
 
   if (cell.paths.length === 0) {
@@ -65,10 +73,28 @@ export function validateBranchCell(cell: BranchCell): string[] {
     return errors;
   }
 
+  const pathCounts = new Map<string, number>();
+  for (const path of cell.paths) {
+    pathCounts.set(path.id, (pathCounts.get(path.id) ?? 0) + 1);
+  }
+  for (const [pathId, count] of pathCounts) {
+    if (count > 1) errors.push(`Branch path id ${pathId} is duplicated`);
+  }
+
+  const defaultPaths = cell.defaultPathId
+    ? cell.paths.filter((path) => path.id === cell.defaultPathId)
+    : [];
+  if (options.requireDefault !== false && defaultPaths.length === 0) {
+    errors.push("Branch Otherwise path is missing");
+  } else if (defaultPaths.length > 1) {
+    errors.push("Branch Otherwise path is ambiguous");
+  }
+  const defaultPath = defaultPaths.length === 1 ? defaultPaths[0] : undefined;
+
   for (const path of cell.paths) {
     const label = path.label || "Unnamed path";
 
-    if (path.conditions.length === 0 && path.id !== cell.defaultPathId) {
+    if (path.conditions.length === 0 && path !== defaultPath) {
       errors.push(`${label}: no conditions defined`);
       continue;
     }

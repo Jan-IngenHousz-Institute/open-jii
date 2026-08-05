@@ -659,7 +659,7 @@ export function useWorkbookExecution({
       setCellState(cell.id, { status: "running" });
 
       const configErrors = [
-        ...validateBranchCell(cell),
+        ...validateBranchCell(cell, { requireDefault: false }),
         ...validateDeviceBranch(cell, currentCells),
       ];
       if (configErrors.length > 0) {

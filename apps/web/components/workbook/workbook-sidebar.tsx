@@ -131,28 +131,37 @@ function optimisticValidationContext(cells: WorkbookCell[]): WorkbookValidationC
   return { protocols, macros };
 }
 
-export function workbookIssueMessage(issue: WorkbookIssue): string {
+export function workbookIssueMessage(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  issue: WorkbookIssue,
+): string {
   switch (issue.code) {
     case "missing-protocol":
-      return `Protocol ${issue.ref ?? "reference"} is missing`;
+      return t("workbooks.problems.issue.missingProtocol", { ref: issue.ref ?? "" });
     case "missing-macro":
-      return `Macro ${issue.ref ?? "reference"} is missing`;
+      return t("workbooks.problems.issue.missingMacro", { ref: issue.ref ?? "" });
     case "dangling-branch-source":
-      return `Branch source ${issue.ref ?? "reference"} is missing`;
+      return t("workbooks.problems.issue.danglingBranchSource", { ref: issue.ref ?? "" });
     case "dangling-branch-goto":
-      return `Jump target ${issue.ref ?? "reference"} is missing`;
+      return t("workbooks.problems.issue.danglingBranchGoto", { ref: issue.ref ?? "" });
     case "mixed-sensor-families":
-      return `Workbook mixes sensor families${issue.detail ? `: ${issue.detail}` : ""}`;
+      return t("workbooks.problems.issue.mixedSensorFamilies", { detail: issue.detail ?? "" });
     case "macro-without-input":
-      return "Macro has no upstream measurement";
+      return t("workbooks.problems.issue.macroWithoutInput");
     case "unreachable-cell":
-      return `${issue.cellLabel ?? issue.cellId ?? "Cell"} is unreachable`;
+      return t("workbooks.problems.issue.unreachableCell", {
+        label: issue.cellLabel ?? issue.cellId ?? "",
+      });
     case "backward-goto-loop":
-      return `Go to loops backward to ${issue.ref ?? "an earlier cell"}`;
+      return t("workbooks.problems.issue.backwardGotoLoop", { ref: issue.ref ?? "" });
     case "branch-no-default":
-      return "Branch has no Otherwise path and may fall through";
+      return t("workbooks.problems.issue.branchNoDefault");
+    case "duplicate-branch-path-id":
+      return t("workbooks.problems.issue.duplicateBranchPathId", { ref: issue.ref ?? "" });
     case "path-duplicate-conditions":
-      return `Duplicate path conditions${issue.detail ? `: ${issue.detail}` : ""}`;
+      return t("workbooks.problems.issue.duplicatePathConditions", {
+        detail: issue.detail ?? "",
+      });
   }
 }
 
@@ -363,15 +372,20 @@ export function WorkbookSidebar({
         </DndContext>
       </div>
 
-      <section className="mt-5 border-t border-[#EDF2F6] pt-4" aria-label="Problems">
+      <section
+        className="mt-5 border-t border-[#EDF2F6] pt-4"
+        aria-label={t("workbooks.problems.title")}
+      >
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-[13px] font-semibold text-[#011111]">Problems</span>
+          <span className="text-[13px] font-semibold text-[#011111]">
+            {t("workbooks.problems.title")}
+          </span>
           <span className="rounded-full bg-[#EDF2F6] px-2 py-0.5 text-[11px] text-[#68737B]">
             {validation.issues.length}
           </span>
         </div>
         {validation.issues.length === 0 ? (
-          <p className="text-xs text-[#68737B]">No problems found</p>
+          <p className="text-xs text-[#68737B]">{t("workbooks.problems.none")}</p>
         ) : (
           <div className="flex max-h-48 flex-col gap-1 overflow-y-auto">
             {validation.issues.map((issue, index) => {
@@ -390,7 +404,7 @@ export function WorkbookSidebar({
                       issue.level === "error" ? "text-red-600" : "text-amber-600",
                     )}
                   />
-                  <span className="text-[#374151]">{workbookIssueMessage(issue)}</span>
+                  <span className="text-[#374151]">{workbookIssueMessage(t, issue)}</span>
                 </button>
               );
             })}

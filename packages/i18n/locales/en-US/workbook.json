@@ -37,6 +37,23 @@
     "allChangesSaved": "All changes saved",
     "viewWorkbook": "View Workbook",
     "required": "Required",
+    "problems": {
+      "title": "Problems",
+      "none": "No problems found",
+      "issue": {
+        "missingProtocol": "Protocol {{ref}} is missing",
+        "missingMacro": "Macro {{ref}} is missing",
+        "danglingBranchSource": "Branch source {{ref}} is missing",
+        "danglingBranchGoto": "Jump target {{ref}} is missing",
+        "mixedSensorFamilies": "Workbook mixes sensor families: {{detail}}",
+        "macroWithoutInput": "Macro has no upstream measurement",
+        "unreachableCell": "{{label}} is unreachable",
+        "backwardGotoLoop": "Go to loops backward to {{ref}}",
+        "branchNoDefault": "Branch has no unique Otherwise path and may fall through",
+        "duplicateBranchPathId": "Branch path id {{ref}} is duplicated",
+        "duplicatePathConditions": "Duplicate path conditions: {{detail}}"
+      }
+    },
     "outputsCleared_one": "Cleared {{count}} output",
     "outputsCleared_other": "Cleared {{count}} outputs",
     "notUsed": "Not used",

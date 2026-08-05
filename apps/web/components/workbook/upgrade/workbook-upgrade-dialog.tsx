@@ -64,6 +64,8 @@ function issueMessage(
       return t("flow.upgradeDiff.issue.backwardGotoLoop", { ref: issue.ref ?? "" });
     case "branch-no-default":
       return t("flow.upgradeDiff.issue.branchNoDefault");
+    case "duplicate-branch-path-id":
+      return t("flow.upgradeDiff.issue.duplicateBranchPathId", { ref: issue.ref ?? "" });
     case "path-duplicate-conditions":
       return t("flow.upgradeDiff.issue.duplicatePathConditions", { detail: issue.detail ?? "" });
   }

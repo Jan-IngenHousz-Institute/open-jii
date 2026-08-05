@@ -162,7 +162,8 @@
         "mixedFamilies": "This workbook mixes sensor families ({{detail}}); one run targets a single device",
         "unreachableCell": "Cell \"{{label}}\" cannot be reached",
         "backwardGotoLoop": "A Go to loops backward to {{ref}}",
-        "branchNoDefault": "A branch has no Otherwise path and may fall through",
+        "branchNoDefault": "A branch has no unique Otherwise path and may fall through",
+        "duplicateBranchPathId": "A branch path id is duplicated ({{ref}})",
         "duplicatePathConditions": "A later path repeats earlier conditions ({{detail}})"
       }
     }
