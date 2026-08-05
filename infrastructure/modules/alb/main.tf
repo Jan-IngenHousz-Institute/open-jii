@@ -11,6 +11,10 @@ resource "aws_lb" "app_alb" {
   # 60s default is good for APIs; increase for long-running connections
   idle_timeout = var.idle_timeout
 
+  # Strip malformed/non-conforming HTTP headers before they reach the target,
+  # reducing request-smuggling surface.
+  drop_invalid_header_fields = true
+
   # Deletion protection prevents accidental ALB deletion in production
   # Disabled in dev/staging for easier teardown
   enable_deletion_protection = var.environment == "prod" ? true : false

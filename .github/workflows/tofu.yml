@@ -97,6 +97,9 @@ jobs:
       - name: OpenTofu Format Check
         uses: ./.github/actions/tofu/tofu-fmt-check
 
+      - name: Trivy IaC Misconfiguration Scan
+        uses: ./.github/actions/tofu/tofu-scan
+
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate
 

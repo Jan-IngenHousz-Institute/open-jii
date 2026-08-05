@@ -2,9 +2,14 @@ resource "aws_kinesis_stream" "this" {
   name             = var.stream_name
   shard_count      = var.shard_count
   retention_period = var.retention_period_hours
+
+  # Encrypt data at rest with the AWS-managed Kinesis key (no key infra to run).
+  encryption_type = "KMS"
+  kms_key_id      = "alias/aws/kinesis"
 }
 
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 # Create IAM role for Unity Catalog to assume
 resource "aws_iam_role" "unity_catalog_kinesis_role" {
@@ -58,6 +63,19 @@ resource "aws_iam_policy" "kinesis_access_policy" {
           aws_kinesis_stream.this.arn,
           "${aws_kinesis_stream.this.arn}/*"
         ]
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
+        ],
+        Resource = ["*"],
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "kinesis.${data.aws_region.current.name}.amazonaws.com"
+          }
+        }
       },
       {
         Effect = "Allow",
