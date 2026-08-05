@@ -9,14 +9,16 @@ unit tests cannot cover reliably: hydration, navigation, keyboard shortcuts, and
 Prepare and start the local stack:
 
 ```sh
-pnpm local:setup
+pnpm db:setup
+pnpm --filter database db:seed
 pnpm dev:fb
 ```
 
 In another terminal, wait for both applications and run the suite:
 
 ```sh
-pnpm local:doctor --wait
+until curl -fsS http://127.0.0.1:3020/health >/dev/null && \
+  curl -fsS http://127.0.0.1:3000 >/dev/null; do sleep 1; done
 pnpm --filter @repo/e2e exec playwright install chromium
 pnpm e2e
 ```

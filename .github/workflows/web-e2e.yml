@@ -14,21 +14,6 @@ jobs:
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: openjii_local
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d openjii_local"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -42,7 +27,11 @@ jobs:
         run: pnpm --filter @repo/e2e exec playwright install --with-deps chromium
 
       - name: Prepare Local Environment
-        run: pnpm local:setup --skip-containers
+        run: |
+          cp apps/backend/.env.example apps/backend/.env
+          cp apps/web/.env.example apps/web/.env.local
+          pnpm db:setup
+          pnpm --filter database db:seed
 
       - name: Build Applications
         run: |
@@ -59,7 +48,17 @@ jobs:
           HOSTNAME=127.0.0.1 PORT=3000 node apps/web/.next/standalone/apps/web/server.js > /tmp/openjii-web.log 2>&1 &
 
       - name: Wait for Applications
-        run: pnpm local:doctor --wait
+        run: |
+          for url in http://127.0.0.1:3020/health http://127.0.0.1:3000; do
+            for attempt in {1..60}; do
+              if curl --fail --silent "$url" > /dev/null; then break; fi
+              if [ "$attempt" -eq 60 ]; then
+                echo "::error::Timed out waiting for $url"
+                exit 1
+              fi
+              sleep 1
+            done
+          done
 
       - name: Run Playwright
         run: pnpm e2e
