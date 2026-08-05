@@ -1030,6 +1030,63 @@ describe("useWorkbookExecution", () => {
   });
 
   describe("runCell - branch", () => {
+    it("runs a conditionless default Go to and routes to its target", async () => {
+      const target = createQuestionCell({ id: "target" });
+      const goto = createBranchCell({
+        id: "goto",
+        paths: [
+          {
+            id: "goto-path",
+            label: "Go to",
+            color: "#22c55e",
+            conditions: [],
+            gotoCellId: target.id,
+          },
+        ],
+        defaultPathId: "goto-path",
+      });
+      const onPrompt = vi.fn().mockResolvedValue("arrived");
+      const { result, onCellsChange } = renderExecution([goto, target], {
+        onPromptQuestion: onPrompt,
+      });
+
+      await act(() => result.current.runCell(goto.id));
+
+      expect(onPrompt).toHaveBeenCalledWith(target);
+      const updated = onCellsChange.mock.calls.at(-1)?.[0] as WorkbookCell[];
+      expect(updated.find((cell) => cell.id === goto.id)).toHaveProperty(
+        "evaluatedPathId",
+        "goto-path",
+      );
+      expect(findOutput(updated, goto.id)?.messages).toEqual([expect.stringContaining("Go to")]);
+    });
+
+    it("falls through for a Go to that targets itself", async () => {
+      const goto = createBranchCell({
+        id: "goto",
+        paths: [
+          {
+            id: "goto-path",
+            label: "Go to",
+            color: "#22c55e",
+            conditions: [],
+            gotoCellId: "goto",
+          },
+        ],
+        defaultPathId: "goto-path",
+      });
+      const { result, onCellsChange } = renderExecution([goto]);
+
+      await act(() => result.current.runCell(goto.id));
+
+      expect(onCellsChange).toHaveBeenCalledTimes(1);
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(updated.find((cell) => cell.id === goto.id)).toHaveProperty(
+        "evaluatedPathId",
+        "goto-path",
+      );
+    });
+
     it("evaluates branch and records matched path", async () => {
       const q = createQuestionCell({
         id: "q-1",

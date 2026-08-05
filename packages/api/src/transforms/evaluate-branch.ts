@@ -59,7 +59,7 @@ export function validateBranchCell(cell: BranchCell): string[] {
   for (const path of cell.paths) {
     const label = path.label || "Unnamed path";
 
-    if (path.conditions.length === 0) {
+    if (path.conditions.length === 0 && path.id !== cell.defaultPathId) {
       errors.push(`${label}: no conditions defined`);
       continue;
     }
