@@ -35,3 +35,31 @@ vulnerabilities:
       against the same bundled copy. Bundled inside @aws-sdk's own dependency
       tree, not invoked by sandbox code; sandbox has no outbound HTTP and no
       IAM creds, so no attacker-controlled string ever reaches it.
+
+  # gawk in Amazon Linux 2023 base image (installed 5.1.0-3.amzn2023.0.3, fixed
+  # in .0.4; awaiting AWS base image republish). All three require awk to parse
+  # attacker-controlled programs or input. The handler invokes no awk, and macro
+  # code runs in a vm context that cannot spawn processes.
+  - id: CVE-2026-40467
+    statement: "gawk use-after-free DoS. No awk invoked at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-40468
+    statement: "gawk integer-overflow memory corruption. No awk invoked at runtime."
+    expired_at: 2026-11-05
+  - id: CVE-2026-40553
+    statement: "gawk ftype() buffer overflow. No awk invoked at runtime."
+    expired_at: 2026-11-05
+
+  # glib2 in Amazon Linux 2023 base image (installed 2.82.2-770, fixed in -771;
+  # awaiting AWS base image republish). glib2 ships unused: no installed package
+  # requires it and the sandbox performs no xdgmime MIME sniffing.
+  - id: CVE-2026-16118
+    statement: "xdgmime magic-line heap overflow in glib2. glib2 unused; no MIME sniffing."
+    expired_at: 2026-11-05
+
+  # rpm/rpm-libs in Amazon Linux 2023 base image (installed 4.16.1.3-29.amzn2023.0.6,
+  # fixed in .0.7; awaiting AWS base image republish). Reachable only when rpm
+  # parses a crafted NDB database; no package-manager operations happen at runtime.
+  - id: CVE-2026-44605
+    statement: "rpm NDB slot-table heap overflow. No rpm operations at runtime."
+    expired_at: 2026-11-05
