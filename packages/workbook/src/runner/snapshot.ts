@@ -53,6 +53,7 @@ const zOptions = z.object({
   loop: z.boolean(),
   maxBranchVisits: z.number(),
   allowDeviceWrites: z.boolean(),
+  allowMacroArtifactDispatch: z.boolean().default(false),
   deviceFamily: z.enum(SENSOR_FAMILIES).optional(),
 });
 

@@ -22,6 +22,7 @@ import type {
   OutputDeviceResult,
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { findWorkbookCell } from "@repo/api/transforms/workbook-cell-tree";
 import { useTranslation } from "@repo/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
@@ -301,7 +302,7 @@ export function OutputCellComponent({
     if (tab !== "table") setPinnedChart(null);
   };
 
-  const sourceCell = allCells?.find((c) => c.id === cell.producedBy);
+  const sourceCell = allCells ? findWorkbookCell(allCells, cell.producedBy)?.cell : undefined;
   const sourceProtocolId =
     sourceCell?.type === "protocol" ? sourceCell.payload.protocolId : undefined;
   const { data: protocolResponse, isLoading: protocolLoading } = useProtocol(

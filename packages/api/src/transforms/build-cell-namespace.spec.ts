@@ -157,7 +157,8 @@ describe("buildCellNamespace", () => {
     expect(ns.ctx.note).toEqual({ answer: "ok" });
   });
 
-  it("uses the shared lane scope and exposes stable parallel context", () => {
+  it("uses lane scope and exposes parallel context only after its producer", () => {
+    const parallelContext = { lanes: { a: { status: "done" } } };
     const cells: WorkbookCell[] = [
       protocol("root", "Root"),
       output("root", { value: "root" }),
@@ -191,19 +192,24 @@ describe("buildCellNamespace", () => {
           },
         ],
       },
+      output("parallel", parallelContext),
+      macro("after", "After"),
     ];
-    const parallel = { lanes: { a: { status: "running" } } };
-    const ns = buildCellNamespace(cells, 0, {
+    const laneNs = buildCellNamespace(cells, 0, {
       consumer: {
         path: [{ containerCellId: "parallel", laneId: "a" }],
         cellId: "a-consumer",
       },
-      parallel,
     });
 
-    expect(ns.byId).toEqual({ root: { value: "root" }, "a-source": { value: "a" } });
-    expect(ns.byId["b-source"]).toBeUndefined();
-    expect(ns.ctx.$parallel).toBe(parallel);
+    expect(laneNs.byId).toEqual({ root: { value: "root" }, "a-source": { value: "a" } });
+    expect(laneNs.byId["b-source"]).toBeUndefined();
+    expect(laneNs.ctx.$parallel).toBeUndefined();
+
+    const downstreamNs = buildCellNamespace(cells, 0, {
+      consumer: { path: [], cellId: "after" },
+    });
+    expect(downstreamNs.ctx.$parallel).toEqual({ lanes: parallelContext });
   });
 });
 

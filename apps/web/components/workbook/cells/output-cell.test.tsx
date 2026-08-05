@@ -549,6 +549,43 @@ describe("OutputCellComponent", () => {
       expect(screen.queryByRole("tab", { name: "output.tabTimeseries" })).not.toBeInTheDocument();
     });
 
+    it("resolves a source protocol inside a parallel lane", () => {
+      const proto = createProtocolCell();
+      const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });
+      useProtocolMock.mockReturnValue({
+        data: { family: "multispeq", code: multispeqProtocolCode() },
+        isLoading: false,
+      });
+      const container = {
+        id: "container",
+        type: "parallel" as const,
+        isCollapsed: false,
+        name: "measurements",
+        defaultLaneId: "lane-a",
+        lanes: [
+          {
+            id: "lane-a",
+            label: "A",
+            color: "#123456",
+            conditions: [],
+            body: [proto, cell],
+          },
+        ],
+      };
+
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[container]}
+        />,
+      );
+
+      expect(useProtocolMock).toHaveBeenCalledWith(proto.payload.protocolId, true);
+      expect(screen.getByRole("tab", { name: "output.tabTimeseries" })).toBeInTheDocument();
+    });
+
     it("does not show the Timeseries tab when the source protocol family is not multispeq", () => {
       const proto = createProtocolCell();
       const cell = createOutputCell({ data: multispeqOutput(), producedBy: proto.id });

@@ -10,6 +10,7 @@ import {
 import type { OutputEntry } from "../flow/hydrate";
 import {
   advanceDispatch,
+  abortActiveParallelAttempt,
   afterCellFailure,
   completeRun,
   discardParkedParallelAttempt,
@@ -25,6 +26,7 @@ import {
   settleParallelBarrier,
   stackTop,
   startArtifactDispatch,
+  startNextDispatchTarget,
   startResolvedProtocolCommand,
 } from "./cell-entry";
 import type { Effect, TransitionResult } from "./effects";
@@ -50,7 +52,7 @@ function noop(state: RunnerState, line?: string): TransitionResult {
 // Most events behave identically in both modes; the mode split lives in these
 // two gates alone. Flow owns the cursor vocabulary, notebook owns passes.
 const FLOW_ONLY = new Set<WorkbookEvent["type"]>(["START", "NEXT", "BACK", "START_CYCLE"]);
-const NOTEBOOK_ONLY = new Set<WorkbookEvent["type"]>(["RUN_ALL", "CLEAR_OUTPUTS"]);
+const NOTEBOOK_ONLY = new Set<WorkbookEvent["type"]>(["CLEAR_OUTPUTS"]);
 
 /** Launch active tracks in deterministic id order, folding effectSeq globally. */
 export function scheduleTracks(state: RunnerState, trackIds: readonly string[]): TransitionResult {
@@ -92,6 +94,10 @@ function mainTrack(state: RunnerState) {
   return getTrack(state, MAIN_TRACK_ID);
 }
 
+function nextTrackCellId(state: RunnerState, trackId: string, cellId: string): string | null {
+  return nextCellId(state.cells, cellId, getTrack(state, trackId).cursor.body);
+}
+
 function clearTrackInteraction(state: RunnerState, trackId: string): RunnerState {
   const track = getTrack(state, trackId);
   return setTrack(state, {
@@ -118,13 +124,13 @@ function handleAnswer(
     track.pendingInteraction?.kind === "question" &&
     track.pendingInteraction.cellId === cellId &&
     track.cursor.cellId === cellId;
-  const recording = recordAnswer(state, cellId, value);
+  const recording = recordAnswer(state, cellId, value, track.cursor.body);
   if (recording.kind === "rejected") return { state: recording.state, effects: [] };
 
   let next = recording.state;
   if (awaitedHere) {
     next = clearTrackInteraction(next, trackId);
-    return landOn(next, nextCellId(next.cells, cellId), "forward", trackId);
+    return landOn(next, nextTrackCellId(next, trackId, cellId), "forward", trackId);
   }
   return { state: next, effects: [] };
 }
@@ -155,8 +161,40 @@ function handleRunCell(state: RunnerState, cellId: string): TransitionResult {
 
 function handleStop(state: RunnerState): TransitionResult {
   const hasActiveWork = Object.keys(state.inFlight).length > 0;
-  if (!state.runAllActive && !hasActiveWork) return ignored(state, "STOP");
-  return { state: { ...state, stopRequested: true }, effects: [] };
+  if (!hasActiveWork && state.activeContainerAttemptId) {
+    return { state: abortActiveParallelAttempt(state, "Stopped by researcher"), effects: [] };
+  }
+  const hasLiveHumanInteraction = Object.values(state.tracks).some(
+    (track) =>
+      track.pendingInteraction?.kind === "question" ||
+      track.pendingInteraction?.kind === "instruction",
+  );
+  if (!state.runAllActive && !hasActiveWork && !hasLiveHumanInteraction) {
+    return ignored(state, "STOP");
+  }
+  const tracks = Object.fromEntries(
+    Object.entries(state.tracks).map(([trackId, track]) => {
+      const interaction = track.pendingInteraction;
+      return [
+        trackId,
+        interaction?.kind === "question" || interaction?.kind === "instruction"
+          ? {
+              ...track,
+              pendingInteraction: { kind: "resume" as const, cellId: interaction.cellId },
+            }
+          : track,
+      ];
+    }),
+  );
+  return {
+    state: {
+      ...trace(state, "all human interactions parked for STOP"),
+      tracks,
+      runAllActive: hasActiveWork ? state.runAllActive : false,
+      stopRequested: hasActiveWork,
+    },
+    effects: [],
+  };
 }
 
 function markCancelledTrack(
@@ -176,12 +214,13 @@ function markCancelledTrack(
   mark(effectCellId);
   if (owner !== effectCellId) mark(owner);
   const track = getTrack(next, trackId);
+  const preserveDispatch = isDispatchTarget(next, trackId, effectCellId);
   return setTrack(trace(next, `cancelled ${effectCellId} on ${trackId}`), {
     ...track,
     status: state.mode === "flow" ? "awaitingHuman" : "active",
     progress: null,
-    dispatch: null,
-    dispatchConsumed: {},
+    dispatch: preserveDispatch ? track.dispatch : null,
+    dispatchConsumed: preserveDispatch ? track.dispatchConsumed : {},
     pendingInteraction: state.mode === "flow" ? { kind: "resume", cellId: owner } : null,
     cursor: { ...track.cursor, cellId: owner },
   });
@@ -195,6 +234,10 @@ function handleCancel(state: RunnerState): TransitionResult {
       state: { ...state, cancellingEffectIds },
       effects: [{ kind: "cancelEffects", effectIds }],
     };
+  }
+
+  if (state.activeContainerAttemptId) {
+    return { state: abortActiveParallelAttempt(state, "Cancelled by researcher"), effects: [] };
   }
 
   const main = mainTrack(state);
@@ -276,6 +319,7 @@ function handleReset(state: RunnerState): TransitionResult {
     loop: state.options.loop,
     maxBranchVisits: state.options.maxBranchVisits,
     allowDeviceWrites: state.options.allowDeviceWrites,
+    allowMacroArtifactDispatch: state.options.allowMacroArtifactDispatch,
     deviceFamily: state.options.deviceFamily,
     devices: state.devices,
   });
@@ -311,7 +355,7 @@ function handleNext(state: RunnerState): TransitionResult {
   if (cell.type === "markdown") {
     return landOn(
       clearTrackInteraction(state, MAIN_TRACK_ID),
-      nextCellId(state.cells, cur),
+      nextCellId(state.cells, cur, main.cursor.body),
       "forward",
     );
   }
@@ -324,7 +368,7 @@ function handleNext(state: RunnerState): TransitionResult {
     }
     return landOn(
       clearTrackInteraction(state, MAIN_TRACK_ID),
-      nextCellId(state.cells, cur),
+      nextCellId(state.cells, cur, main.cursor.body),
       "forward",
     );
   }
@@ -334,7 +378,7 @@ function handleNext(state: RunnerState): TransitionResult {
   if (state.cellRuns[cur]?.status === "completed") {
     return landOn(
       clearTrackInteraction(state, MAIN_TRACK_ID),
-      nextCellId(state.cells, cur),
+      nextCellId(state.cells, cur, main.cursor.body),
       "forward",
     );
   }
@@ -357,10 +401,10 @@ function handleBack(state: RunnerState): TransitionResult {
     next = setTrack(next, track);
     target = top.returnToCellId;
   } else {
-    target = prevCellId(next.cells, cur);
+    target = prevCellId(next.cells, cur, track.cursor.body);
   }
-  while (target !== null && cellById(next.cells, target)?.type === "branch") {
-    target = prevCellId(next.cells, target);
+  while (target !== null && cellById(next.cells, target, track.cursor.body)?.type === "branch") {
+    target = prevCellId(next.cells, target, track.cursor.body);
   }
 
   if (target === null) {
@@ -411,16 +455,14 @@ function handleRetry(state: RunnerState, target: RetryTarget | undefined): Trans
     run?.status === "interrupted" ||
     run?.status === "error";
   if (!retryable) return ignored(state, "RETRY");
-  const cell = cellById(state.cells, target.cellId);
+  const cell = cellById(state.cells, target.cellId, track.cursor.body);
   if (!cell || cell.type === "markdown" || cell.type === "question") {
     return ignored(state, "RETRY");
   }
-  return landOn(
-    clearTrackInteraction(state, target.trackId),
-    target.cellId,
-    "jump",
-    target.trackId,
-  );
+  const cleared = clearTrackInteraction(state, target.trackId);
+  return isDispatchTarget(cleared, target.trackId, target.cellId)
+    ? startNextDispatchTarget(cleared, target.trackId)
+    : landOn(cleared, target.cellId, "jump", target.trackId);
 }
 
 function handleStartCycle(state: RunnerState): TransitionResult {
@@ -539,7 +581,7 @@ function continueAfterCompletion(
   flowCellId: string,
 ): TransitionResult {
   if (state.mode === "flow" || state.runAllActive) {
-    return landOn(state, nextCellId(state.cells, flowCellId), "forward", trackId);
+    return landOn(state, nextTrackCellId(state, trackId, flowCellId), "forward", trackId);
   }
   return { state, effects: [] };
 }
@@ -623,7 +665,9 @@ function acknowledgeCancel(
     return settleParallelBarrier(next);
   }
   if (Object.keys(cancellingEffectIds).length === 0) {
-    next = { ...next, runAllActive: false, stopRequested: false };
+    next = next.activeContainerAttemptId
+      ? abortActiveParallelAttempt(next, "Cancelled by researcher")
+      : { ...next, runAllActive: false, stopRequested: false };
   }
   return { state: next, effects: [] };
 }
@@ -696,12 +740,18 @@ function handleInternal(state: RunnerState, event: WorkbookInternalEvent): Trans
       );
       next = markDownstreamStale(next, event.cellId);
       if (next.stopRequested) {
-        return landOn(next, nextCellId(next.cells, event.cellId), "forward", owned.trackId);
+        return landOn(
+          next,
+          nextTrackCellId(next, owned.trackId, event.cellId),
+          "forward",
+          owned.trackId,
+        );
       }
-      // Keep amber's artifact parser for #1718, but current-main provenance
-      // always supplies deviceResults. Absence is not a valid single-device
-      // predicate and must become an explicit device-count check when #1718 lands.
-      const artifact = event.deviceResults ? null : parseMacroArtifact(event.output);
+      // Macro-as-command construction (#1718) is host policy, never inferred
+      // from result shape. Web constructs the runner with this capability off.
+      const artifact = next.options.allowMacroArtifactDispatch
+        ? parseMacroArtifact(event.output)
+        : null;
       if (artifact !== null) {
         const dispatch = startArtifactDispatch(next, owned.trackId, event.cellId, artifact);
         if (dispatch.state.cellRuns[event.cellId]?.status === "error") {

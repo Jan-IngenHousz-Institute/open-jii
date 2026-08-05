@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import type { ParallelBodyCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+
 import type { RunnerCell } from "../cells";
 import { branchCell, commandCell, protocolCell, questionCell } from "../demo/fixtures";
 import type { Effect } from "./effects";
@@ -9,6 +11,30 @@ import type { DeviceRef } from "./state";
 import { createInitialState, pendingTrackInteractions } from "./state";
 
 const TIMINGS = { startedAt: 10, endedAt: 15 };
+const CONTAINER_ID = "spine-container";
+
+function lanePath(laneId: string) {
+  return [{ containerCellId: CONTAINER_ID, laneId }];
+}
+
+function laneWorkbook(lanes: { id: string; body: RunnerCell[] }[]): RunnerCell[] {
+  return [
+    {
+      id: CONTAINER_ID,
+      type: "parallel",
+      name: "spine lanes",
+      isCollapsed: false,
+      defaultLaneId: lanes[0]?.id ?? "missing",
+      lanes: lanes.map((lane) => ({
+        id: lane.id,
+        label: lane.id,
+        color: "#123456",
+        conditions: [],
+        body: lane.body as ParallelBodyCell[],
+      })),
+    },
+  ];
+}
 
 function commandCompletion(
   effect: Extract<Effect, { kind: "runCommand" }>,
@@ -25,11 +51,26 @@ function commandCompletion(
 }
 
 function twoCommands(mode: "flow" | "notebook" = "notebook") {
-  const cells = [commandCell("cA"), commandCell("cB")];
+  const cells = laneWorkbook([
+    { id: "A", body: [commandCell("cA")] },
+    { id: "B", body: [commandCell("cB")] },
+  ]);
   let state = createInitialState({ cells, mode });
   state = spawnTracks(state, [
-    { id: "lane-B", laneId: "B", deviceIds: ["dev-B"], cellId: "cB" },
-    { id: "lane-A", laneId: "A", deviceIds: ["dev-A"], cellId: "cA" },
+    {
+      id: "lane-B",
+      laneId: "B",
+      deviceIds: ["dev-B"],
+      body: lanePath("B"),
+      cellId: "cB",
+    },
+    {
+      id: "lane-A",
+      laneId: "A",
+      deviceIds: ["dev-A"],
+      body: lanePath("A"),
+      cellId: "cA",
+    },
   ]);
   const started = scheduleTracks(state, ["lane-B", "lane-A"]);
   const effects = started.effects.filter(
@@ -101,10 +142,29 @@ describe("scheduler spine: two-effect lifecycle matrix", () => {
 });
 
 describe("scheduler spine: ownership and routing", () => {
+  it("never advances a completed track into a foreign lane body", () => {
+    const { started, effects } = twoCommands("flow");
+    const step = transition(started.state, commandCompletion(effects[0]));
+
+    expect(step.effects).toEqual([]);
+    expect(step.state.tracks["lane-A"].status).toBe("done");
+    expect(Object.values(step.state.inFlight)).toEqual([
+      expect.objectContaining({ trackId: "lane-B", cellId: "cB" }),
+    ]);
+  });
+
   it("chains protocol resolution to a command on the same track and subset", () => {
-    const cells = [protocolCell("pA")];
+    const cells = laneWorkbook([{ id: "A", body: [protocolCell("pA")] }]);
     let state = createInitialState({ cells, mode: "notebook" });
-    state = spawnTracks(state, [{ id: "lane-A", laneId: "A", deviceIds: ["dev-A"], cellId: "pA" }]);
+    state = spawnTracks(state, [
+      {
+        id: "lane-A",
+        laneId: "A",
+        deviceIds: ["dev-A"],
+        body: lanePath("A"),
+        cellId: "pA",
+      },
+    ]);
     let step = scheduleTracks(state, ["lane-A"]);
     const resolver = step.effects[0];
     if (resolver.kind !== "resolveProtocolCode") throw new Error("expected resolver");
@@ -129,9 +189,17 @@ describe("scheduler spine: ownership and routing", () => {
   });
 
   it("STOP does not turn a completed protocol resolution into a new command effect", () => {
-    const cells = [protocolCell("pA")];
+    const cells = laneWorkbook([{ id: "A", body: [protocolCell("pA")] }]);
     let state = createInitialState({ cells, mode: "flow" });
-    state = spawnTracks(state, [{ id: "lane-A", laneId: "A", deviceIds: ["dev-A"], cellId: "pA" }]);
+    state = spawnTracks(state, [
+      {
+        id: "lane-A",
+        laneId: "A",
+        deviceIds: ["dev-A"],
+        body: lanePath("A"),
+        cellId: "pA",
+      },
+    ]);
     const started = scheduleTracks(state, ["lane-A"]);
     const resolver = started.effects[0];
     if (resolver.kind !== "resolveProtocolCode") throw new Error("expected resolver");
@@ -189,11 +257,26 @@ describe("scheduler spine: ownership and routing", () => {
   });
 
   it("tracks two human interactions independently while running masks one", () => {
-    const cells = [questionCell("qA", "A?"), commandCell("cA"), questionCell("qB", "B?")];
+    const cells = laneWorkbook([
+      { id: "A", body: [questionCell("qA", "A?"), commandCell("cA")] },
+      { id: "B", body: [questionCell("qB", "B?")] },
+    ]);
     let state = createInitialState({ cells, mode: "flow" });
     state = spawnTracks(state, [
-      { id: "lane-A", laneId: "A", deviceIds: ["dev-A"], cellId: "qA" },
-      { id: "lane-B", laneId: "B", deviceIds: ["dev-B"], cellId: "qB" },
+      {
+        id: "lane-A",
+        laneId: "A",
+        deviceIds: ["dev-A"],
+        body: lanePath("A"),
+        cellId: "qA",
+      },
+      {
+        id: "lane-B",
+        laneId: "B",
+        deviceIds: ["dev-B"],
+        body: lanePath("B"),
+        cellId: "qB",
+      },
     ]);
     let step = scheduleTracks(state, ["lane-B", "lane-A"]);
     expect(pendingTrackInteractions(step.state)).toEqual([
@@ -214,6 +297,99 @@ describe("scheduler spine: ownership and routing", () => {
     ]);
   });
 
+  it("stamps questions by stable launch order, independent of answer order", () => {
+    const cells = laneWorkbook([
+      { id: "A", body: [questionCell("qA", "A?")] },
+      { id: "B", body: [questionCell("qB", "B?")] },
+    ]);
+    let state = createInitialState({ cells, mode: "flow" });
+    state = spawnTracks(state, [
+      {
+        id: "lane-B",
+        laneId: "B",
+        deviceIds: ["dev-B"],
+        body: lanePath("B"),
+        cellId: "qB",
+      },
+      {
+        id: "lane-A",
+        laneId: "A",
+        deviceIds: ["dev-A"],
+        body: lanePath("A"),
+        cellId: "qA",
+      },
+    ]);
+    let step = scheduleTracks(state, ["lane-B", "lane-A"]);
+    expect(step.state.execCounter).toBe(2);
+    expect(step.state.cellRuns.qA?.executionOrder).toEqual([1]);
+    expect(step.state.cellRuns.qB?.executionOrder).toEqual([2]);
+
+    step = transition(step.state, {
+      type: "ANSWER",
+      trackId: "lane-B",
+      cellId: "qB",
+      value: "B first",
+    });
+    step = transition(step.state, {
+      type: "ANSWER",
+      trackId: "lane-A",
+      cellId: "qA",
+      value: "A second",
+    });
+
+    expect(step.state.execCounter).toBe(2);
+    expect(step.state.cellRuns.qA?.executionOrder).toEqual([1]);
+    expect(step.state.cellRuns.qB?.executionOrder).toEqual([2]);
+  });
+
+  it("parks a waiting-human sibling so a late answer cannot launch work after STOP", () => {
+    const cells = laneWorkbook([
+      { id: "A", body: [commandCell("cA")] },
+      { id: "B", body: [questionCell("qB", "B?"), commandCell("cB")] },
+    ]);
+    let state = createInitialState({ cells, mode: "flow" });
+    state = spawnTracks(state, [
+      {
+        id: "lane-A",
+        laneId: "A",
+        deviceIds: ["dev-A"],
+        body: lanePath("A"),
+        cellId: "cA",
+      },
+      {
+        id: "lane-B",
+        laneId: "B",
+        deviceIds: ["dev-B"],
+        body: lanePath("B"),
+        cellId: "qB",
+      },
+    ]);
+    let step = scheduleTracks(state, ["lane-A", "lane-B"]);
+    const effect = step.effects[0];
+    if (effect.kind !== "runCommand") throw new Error("expected command");
+
+    step = transition(step.state, { type: "STOP" });
+    expect(step.state.tracks["lane-B"].pendingInteraction).toEqual({
+      kind: "resume",
+      cellId: "qB",
+    });
+    step = transition(step.state, commandCompletion(effect));
+    expect(step.state.stopRequested).toBe(false);
+
+    step = transition(step.state, {
+      type: "ANSWER",
+      trackId: "lane-B",
+      cellId: "qB",
+      value: "too late",
+    });
+    expect(step.effects).toEqual([]);
+    expect(step.state.cellRuns.cB).toBeUndefined();
+    expect(step.state.tracks["lane-B"].pendingInteraction).toEqual({
+      kind: "resume",
+      cellId: "qB",
+    });
+  });
+
   it("reserves lane/container retry targets noisily", () => {
     const state = createInitialState({ cells: [commandCell("cA")], mode: "flow" });
     const result = transition(state, {
@@ -232,30 +408,57 @@ describe("scheduler spine: device subsets", () => {
     { id: "dev-A", label: "A", family: "multispeq" },
     { id: "dev-B", label: "B", family: "ambit" },
   ];
-  const cells: RunnerCell[] = [
-    branchCell("bA", [
-      {
-        id: "path-A",
-        goto: "cA",
-        condition: { source: "$device", field: "family", operator: "eq", value: "multispeq" },
-      },
-    ]),
-    commandCell("cA"),
-    branchCell("bB", [
-      {
-        id: "path-B",
-        goto: "cB",
-        condition: { source: "$device", field: "family", operator: "eq", value: "ambit" },
-      },
-    ]),
-    commandCell("cB"),
-  ];
+  const cells = laneWorkbook([
+    {
+      id: "A",
+      body: [
+        branchCell("bA", [
+          {
+            id: "path-A",
+            goto: "cA",
+            condition: {
+              source: "$device",
+              field: "family",
+              operator: "eq",
+              value: "multispeq",
+            },
+          },
+        ]),
+        commandCell("cA"),
+      ],
+    },
+    {
+      id: "B",
+      body: [
+        branchCell("bB", [
+          {
+            id: "path-B",
+            goto: "cB",
+            condition: { source: "$device", field: "family", operator: "eq", value: "ambit" },
+          },
+        ]),
+        commandCell("cB"),
+      ],
+    },
+  ]);
 
   it("scopes a device branch inside each track to that track's frozen subset", () => {
     let state = createInitialState({ cells, mode: "flow", devices });
     state = spawnTracks(state, [
-      { id: "lane-B", laneId: "B", deviceIds: ["dev-B"], cellId: "bB" },
-      { id: "lane-A", laneId: "A", deviceIds: ["dev-A"], cellId: "bA" },
+      {
+        id: "lane-B",
+        laneId: "B",
+        deviceIds: ["dev-B"],
+        body: lanePath("B"),
+        cellId: "bB",
+      },
+      {
+        id: "lane-A",
+        laneId: "A",
+        deviceIds: ["dev-A"],
+        body: lanePath("A"),
+        cellId: "bA",
+      },
     ]);
     const step = scheduleTracks(state, ["lane-B", "lane-A"]);
     const commands = step.effects.filter(

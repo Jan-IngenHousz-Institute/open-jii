@@ -31,8 +31,6 @@ export interface BuildCellNamespaceOptions {
   device?: DeviceContext;
   /** Tree-aware consumer. When present, `beforeIndex` is ignored. */
   consumer?: CellAddress;
-  /** Container attempt context, injected as `ctx["$parallel"]`. */
-  parallel?: Record<string, unknown>;
 }
 
 export class OutputDataNormalizationError extends Error {
@@ -114,6 +112,7 @@ export function buildCellNamespace(
   const byId: Record<string, unknown> = {};
   const ctx: Record<string, unknown> = {};
   const names: Record<string, string> = {};
+  const parallel: Record<string, unknown> = {};
 
   const scope: CellLocation[] = options?.consumer
     ? resolveCellScope(cells, options.consumer)
@@ -131,14 +130,15 @@ export function buildCellNamespace(
       const canonical = sanitizeQuestionLabel(name);
       ctx[canonical] = value;
       names[canonical] = cell.id;
+      if (cell.type === "parallel") parallel[canonical] = value;
     }
   }
 
   if (options?.device) {
     ctx[DEVICE_CONTEXT_KEY] = options.device;
   }
-  if (options?.parallel && Object.keys(options.parallel).length > 0) {
-    ctx.$parallel = options.parallel;
+  if (Object.keys(parallel).length > 0) {
+    ctx.$parallel = parallel;
   }
 
   return { ctx, byId, names };

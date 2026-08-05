@@ -135,10 +135,7 @@ describe("transition: event/status matrix", () => {
 
   it("unaccepted events are no-ops that only touch the trace (never queued)", () => {
     const idle = init([md("m1"), question("q1", "Q One"), cmd("c1")]);
-    expectIgnored(
-      idle,
-      noop(["NEXT", "BACK", "RETRY", "CANCEL", "STOP", "RUN_ALL", "START_CYCLE"]),
-    );
+    expectIgnored(idle, noop(["NEXT", "BACK", "RETRY", "CANCEL", "STOP", "START_CYCLE"]));
     // While running, navigation and run events are ignored too.
     const running = apply(init([cmd("c1"), md("m1")]), { type: "START" });
     expect(running.state.status).toBe("running");
@@ -278,8 +275,18 @@ describe("transition: producers and effects", () => {
 describe("transition: macro artifacts", () => {
   const cells = [macro("a1"), md("m1")];
 
-  it("a validated artifact dispatches through the synthetic step", () => {
+  it("preserves a command-shaped macro result as ordinary output when dispatch is disabled", () => {
     let step = apply(init(cells), { type: "START" });
+    const output = artifact("battery");
+    step = finish(step.state, output);
+
+    expect(step.effects).toEqual([]);
+    expect(step.state.outputs.a1?.v).toEqual(output);
+    expect(step.state.cellRuns.a1?.status).toBe("completed");
+  });
+
+  it("a validated artifact dispatches through the synthetic step", () => {
+    let step = apply(init(cells, { allowMacroArtifactDispatch: true }), { type: "START" });
     step = finish(step.state, artifact("battery"));
     const effect = step.effects[0];
     if (effect.kind !== "runCommand") throw new Error("expected dispatch runCommand");
@@ -310,14 +317,19 @@ describe("transition: macro artifacts", () => {
       },
     ];
     for (const { output, opts, err } of rejected) {
-      let step = apply(init(cells, opts), { type: "START" });
+      let step = apply(init(cells, { allowMacroArtifactDispatch: true, ...opts }), {
+        type: "START",
+      });
       step = finish(step.state, output);
       expect(step.effects).toEqual([]);
       expect(step.state.status).toBe("pausedError");
       expect(step.state.cellRuns.a1?.error).toMatch(err);
     }
     // The dangerous writer goes through once allowDeviceWrites is set.
-    let allowed = apply(init(cells, { allowDeviceWrites: true }), { type: "START" });
+    let allowed = apply(
+      init(cells, { allowDeviceWrites: true, allowMacroArtifactDispatch: true }),
+      { type: "START" },
+    );
     allowed = finish(allowed.state, artifact("set_dac+1+128"));
     expect(allowed.effects[0]?.kind).toBe("runCommand");
   });
@@ -456,8 +468,10 @@ describe("transition: cycles", () => {
     expect(step.state.answersByCycle[1]).toEqual({});
     expect(step.state.answersByCycle[0]).toEqual({ q1: "yes" });
     expect(step.state.outputs.c1).toEqual({ v: { ok: 1 } });
-    expect(step.state.cellRuns).toEqual({});
-    // Cycle 1 runs the command again (fresh run records).
+    expect(step.state.cellRuns).toEqual({
+      q1: { status: "running", executionOrder: [3] },
+    });
+    // Cycle 1 has launched the question with a fresh run record and runs the command again.
     step = apply(step.state, answer("no"));
     expect(onlyInFlight(step.state).cellId).toBe("c1");
   });

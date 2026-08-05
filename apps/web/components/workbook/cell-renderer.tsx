@@ -20,6 +20,14 @@ interface CellRendererProps {
   allCells?: WorkbookCell[];
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
+  executionStates?: Record<
+    string,
+    {
+      status: "idle" | "running" | "completed" | "error";
+      error?: string;
+      executionOrder?: number[];
+    }
+  >;
   promptedQuestionId?: string;
   onQuestionAnswered?: (answer: string) => void;
   readOnly?: boolean;
@@ -36,6 +44,7 @@ export function CellRenderer({
   allCells,
   executionStatus,
   executionError,
+  executionStates,
   promptedQuestionId,
   onQuestionAnswered,
   readOnly,
@@ -139,7 +148,11 @@ export function CellRenderer({
           allCells={allCells}
           executionStatus={executionStatus}
           executionError={executionError}
+          executionStates={executionStates}
+          promptedQuestionId={promptedQuestionId}
+          onQuestionAnswered={onQuestionAnswered}
           readOnly={readOnly}
+          entitySnapshots={entitySnapshots}
         />
       );
   }

@@ -4,6 +4,7 @@ import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
 import {
   branchTargetCells,
   findWorkbookCell,
+  mapWorkbookCellTree,
   resolveCellScope,
   walkWorkbookCells,
 } from "./workbook-cell-tree";
@@ -93,5 +94,29 @@ describe("workbook cell tree", () => {
     expect(() => walkWorkbookCells(duplicate)).toThrow(/Duplicate workbook cell id "b-only"/);
     expect(() => findWorkbookCell(duplicate, "root-before")).toThrow(/Duplicate workbook cell id/);
     expect(walkWorkbookCells(duplicate, { allowDuplicateIds: true })).toHaveLength(8);
+  });
+
+  it("filters matching cells recursively without flattening lane bodies", () => {
+    const withOutput = structuredClone(cells);
+    const container = withOutput[1];
+    if (container.type !== "parallel") throw new Error("expected parallel fixture");
+    container.lanes[0].body.push({
+      id: "nested-output",
+      type: "output",
+      isCollapsed: false,
+      producedBy: "a-before",
+    });
+
+    const filtered = mapWorkbookCellTree(withOutput, ({ cell }) =>
+      cell.type === "output" ? null : cell,
+    );
+    const filteredContainer = filtered[1];
+    if (filteredContainer.type !== "parallel") throw new Error("expected parallel result");
+    expect(filteredContainer.lanes[0].body.map((cell) => cell.id)).toEqual([
+      "a-before",
+      "a-branch",
+      "a-after",
+    ]);
+    expect(filtered.map((cell) => cell.id)).toEqual(["root-before", "container", "root-after"]);
   });
 });

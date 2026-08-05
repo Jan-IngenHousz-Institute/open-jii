@@ -39,6 +39,7 @@ export interface WorkbookRunnerOptions {
   loop?: boolean;
   maxBranchVisits?: number;
   allowDeviceWrites?: boolean;
+  allowMacroArtifactDispatch?: boolean;
   deviceFamily?: SensorFamily;
   devices?: DeviceRef[];
   initialAnswers?: Record<string, string>;
@@ -108,6 +109,7 @@ export class WorkbookRunner {
         loop: options.loop,
         maxBranchVisits: options.maxBranchVisits,
         allowDeviceWrites: options.allowDeviceWrites,
+        allowMacroArtifactDispatch: options.allowMacroArtifactDispatch,
         deviceFamily: options.deviceFamily,
         devices: options.devices,
         initialAnswers: options.initialAnswers,

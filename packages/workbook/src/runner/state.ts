@@ -62,6 +62,8 @@ export interface RunnerOptionsState {
   loop: boolean;
   maxBranchVisits: number;
   allowDeviceWrites: boolean;
+  /** Explicit host policy; web keeps macro-as-command construction disabled. */
+  allowMacroArtifactDispatch: boolean;
   /** Fallback family when the device roster is empty (single-device hosts). */
   deviceFamily?: SensorFamily;
 }
@@ -222,6 +224,7 @@ export interface CreateStateOptions {
   loop?: boolean;
   maxBranchVisits?: number;
   allowDeviceWrites?: boolean;
+  allowMacroArtifactDispatch?: boolean;
   deviceFamily?: SensorFamily;
   devices?: DeviceRef[];
   initialAnswers?: Record<string, string>;
@@ -269,6 +272,7 @@ export function createInitialState(opts: CreateStateOptions): RunnerState {
       loop: opts.loop ?? false,
       maxBranchVisits: opts.maxBranchVisits ?? MAX_BRANCH_VISITS,
       allowDeviceWrites: opts.allowDeviceWrites ?? false,
+      allowMacroArtifactDispatch: opts.allowMacroArtifactDispatch ?? false,
       deviceFamily: opts.deviceFamily,
     },
     cells: opts.cells,
@@ -303,6 +307,12 @@ export function createInitialState(opts: CreateStateOptions): RunnerState {
 export function spawnTracks(state: RunnerState, specs: readonly SpawnTrackSpec[]): RunnerState {
   let next = state;
   for (const spec of [...specs].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))) {
+    if (spec.id !== MAIN_TRACK_ID && (!spec.body || spec.body.length === 0)) {
+      return withDerivedStatus({
+        ...trace(next, `fatal: non-main track ${spec.id} requires a non-root body`),
+        fatalReason: `non-main track ${spec.id} requires a non-root body`,
+      });
+    }
     if (Object.prototype.hasOwnProperty.call(next.tracks, spec.id)) {
       return withDerivedStatus({
         ...trace(next, `fatal: duplicate workbook track ${spec.id}`),

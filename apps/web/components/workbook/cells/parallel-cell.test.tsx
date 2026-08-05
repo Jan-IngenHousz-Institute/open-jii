@@ -83,4 +83,34 @@ describe("ParallelCellComponent", () => {
     expect(update.lanes).toHaveLength(3);
     expect(update.lanes[2]?.id).not.toBe("");
   });
+
+  it("threads a pending lane question through the recursive cell renderer", async () => {
+    const cell = container();
+    cell.lanes[0].body = [
+      {
+        id: "lane-question",
+        type: "question",
+        name: "manual_reading",
+        isCollapsed: false,
+        isAnswered: false,
+        question: { kind: "open_ended", text: "Enter the manual reading", required: true },
+      },
+    ];
+    const onQuestionAnswered = vi.fn();
+    render(
+      <ParallelCellComponent
+        cell={cell}
+        onUpdate={vi.fn()}
+        allCells={[cell]}
+        promptedQuestionId="lane-question"
+        onQuestionAnswered={onQuestionAnswered}
+        executionStates={{ "lane-question": { status: "running" } }}
+      />,
+    );
+
+    expect(screen.getByText("Enter the manual reading")).toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText("Type your answer..."), "42");
+    await userEvent.click(screen.getByRole("button", { name: /submit/i }));
+    expect(onQuestionAnswered).toHaveBeenCalledWith("42");
+  });
 });

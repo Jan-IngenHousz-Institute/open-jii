@@ -37,10 +37,12 @@ import type { CommandSource, ResolvedCommandValue } from "../ports";
 import type { Effect, MacroLeg, TransitionResult } from "./effects";
 import type {
   CellRunState,
+  CellPath,
   DeviceRef,
   EffectPhase,
   EnteredVia,
   ParallelContainerAttempt,
+  ParallelContextEntry,
   ParallelLaneAttempt,
   ParallelLaneDeviceOutcome,
   ParallelLaneTerminalStatus,
@@ -79,9 +81,18 @@ export function stampRun(state: RunnerState, cellId: string): RunnerState {
 }
 
 export function isAtStart(state: RunnerState, trackId: string, cellId: string): boolean {
+  const track = getTrack(state, trackId);
   return (
-    prevCellId(state.cells, cellId) === null && getTrack(state, trackId).returnStack.length === 0
+    prevCellId(state.cells, cellId, track.cursor.body) === null && track.returnStack.length === 0
   );
+}
+
+function nextTrackCellId(state: RunnerState, trackId: string, cellId: string): string | null {
+  return nextCellId(state.cells, cellId, getTrack(state, trackId).cursor.body);
+}
+
+function previousTrackCellId(state: RunnerState, trackId: string, cellId: string): string | null {
+  return prevCellId(state.cells, cellId, getTrack(state, trackId).cursor.body);
 }
 
 /** The flow cell a synthetic dispatch step belongs to (identity otherwise). */
@@ -203,11 +214,16 @@ export type AnswerRecording =
 /**
  * Validate and record an answer on the current cycle (shared by both modes):
  * required questions reject blank values, blank optional answers delete the
- * key, the question gets a run stamp, and a CHANGED value marks downstream
- * producers stale.
+ * key, the already-launched question run completes, and a CHANGED value marks
+ * downstream producers stale.
  */
-export function recordAnswer(state: RunnerState, cellId: string, value: string): AnswerRecording {
-  const cell = cellById(state.cells, cellId);
+export function recordAnswer(
+  state: RunnerState,
+  cellId: string,
+  value: string,
+  path?: CellPath,
+): AnswerRecording {
+  const cell = cellById(state.cells, cellId, path);
   if (cell?.type !== "question") {
     return { kind: "rejected", state: ignored(state, "ANSWER").state };
   }
@@ -238,7 +254,7 @@ export function recordAnswer(state: RunnerState, cellId: string, value: string):
     ...state,
     answersByCycle: state.answersByCycle.map((m, i) => (i === state.cycle ? answers : m)),
   };
-  next = completeRun(stampRun(next, cellId), cellId);
+  next = completeRun(next, cellId);
   if (changed) next = markDownstreamStale(next, cellId);
   return { kind: "recorded", state: next };
 }
@@ -275,7 +291,8 @@ export function startProducer(
   trackId: string,
   cellId: string,
 ): TransitionResult {
-  const cell = cellById(state.cells, cellId);
+  const trackPath = getTrack(state, trackId).cursor.body;
+  const cell = cellById(state.cells, cellId, trackPath);
   if (!cell) return fatal(state, `startProducer: unknown cell ${cellId}`);
 
   let next = stampRun(state, cellId);
@@ -321,7 +338,7 @@ export function startProducer(
         normalizeDeviceOutputs: false,
       }),
     );
-    const idx = cellIndex(next.cells, cellId);
+    const idx = cellIndex(next.cells, cellId, track.cursor.body);
     const base = {
       trackId,
       cellId,
@@ -359,7 +376,6 @@ export function startProducer(
             deviceId: r.deviceId,
             device: deviceContextOf(devices, r.deviceId),
             consumer: { path: track.cursor.body, cellId },
-            parallel: next.parallelContexts,
           });
           return { kind: "run", input: { ...base, ...identity, json: r.data, ctx } };
         } catch (error) {
@@ -382,7 +398,6 @@ export function startProducer(
       ctx = buildCellNamespace(hydrated, idx, {
         device: deviceContextOf(devices),
         consumer: { path: track.cursor.body, cellId },
-        parallel: next.parallelContexts,
       });
     } catch (error) {
       if (!isOutputDataNormalizationError(error)) throw error;
@@ -407,9 +422,9 @@ export function startResolvedProtocolCommand(
   cellId: string,
   code: Record<string, unknown>[],
 ): TransitionResult {
-  const cell = cellById(state.cells, cellId);
-  if (cell?.type !== "protocol") return fatal(state, `resolved code for non-protocol ${cellId}`);
   const track = getTrack(state, trackId);
+  const cell = cellById(state.cells, cellId, track.cursor.body);
+  if (cell?.type !== "protocol") return fatal(state, `resolved code for non-protocol ${cellId}`);
   const deviceIds = isDispatchTarget(state, trackId, cellId)
     ? (track.dispatch?.queue[track.dispatch.index]?.deviceIds ?? track.deviceIds)
     : track.deviceIds;
@@ -498,7 +513,7 @@ function resolveBranch(
   const visits = track.branchVisits[cell.id] ?? 0;
   if (visits >= state.options.maxBranchVisits) {
     const next = trace(state, `branch ${cell.id} capped`);
-    return { state: next, nextCellId: nextCellId(next.cells, cell.id), jumped: false };
+    return { state: next, nextCellId: nextTrackCellId(next, trackId, cell.id), jumped: false };
   }
 
   let next = setTrack(state, {
@@ -517,23 +532,23 @@ function resolveBranch(
     lastMatchedPathId: matched?.id,
   });
 
-  const branchIdx = cellIndex(next.cells, cell.id);
+  const branchIdx = cellIndex(next.cells, cell.id, track.cursor.body);
   let target: string | null = null;
   let jumped = false;
   if (matched?.gotoCellId && matched.gotoCellId !== cell.id) {
-    const resolved = resolveGotoCellId(next.cells, matched.gotoCellId, cell.id);
+    const resolved = resolveGotoCellId(next.cells, matched.gotoCellId, cell.id, track.cursor.body);
     if (resolved !== null) {
       target = resolved;
       jumped = true;
     }
   }
-  target ??= nextCellId(next.cells, cell.id);
+  target ??= nextTrackCellId(next, trackId, cell.id);
 
   if (next.mode === "flow" && target !== null) {
-    const targetIdx = cellIndex(next.cells, target);
+    const targetIdx = cellIndex(next.cells, target, track.cursor.body);
     const backward = jumped && targetIdx < branchIdx;
     if (!backward) {
-      const returnTo = prevCellId(next.cells, cell.id);
+      const returnTo = previousTrackCellId(next, trackId, cell.id);
       const nextTrack = getTrack(next, trackId);
       const top = stackTop(nextTrack.returnStack);
       const chained = enteredVia === "jump" && top?.landingCellId === cell.id;
@@ -567,7 +582,7 @@ function startDeviceDispatch(
   const visits = track.branchVisits[cell.id] ?? 0;
   if (visits >= state.options.maxBranchVisits) {
     const capped = trace(state, `branch ${cell.id} capped`);
-    return landOn(capped, nextCellId(capped.cells, cell.id), "forward", trackId);
+    return landOn(capped, nextTrackCellId(capped, trackId, cell.id), "forward", trackId);
   }
   let next = setTrack(state, {
     ...track,
@@ -576,7 +591,10 @@ function startDeviceDispatch(
   const devices = scopedDevices(next, getTrack(next, trackId));
 
   if (devices.length === 0) {
-    const failed = failRun(next, cell.id, "No device connected - connect devices to dispatch");
+    const failed = {
+      ...failRun(next, cell.id, "No device connected - connect devices to dispatch"),
+      runAllActive: false,
+    };
     return afterCellFailure(failed, trackId, cell.id);
   }
 
@@ -655,11 +673,11 @@ export function startNextDispatchTarget(state: RunnerState, trackId: string): Tr
   }
   if (dispatch.index >= dispatch.queue.length) {
     const done = setTrack(state, { ...track, dispatch: null });
-    return landOn(done, nextCellId(done.cells, dispatch.branchCellId), "forward", trackId);
+    return landOn(done, nextTrackCellId(done, trackId, dispatch.branchCellId), "forward", trackId);
   }
 
   const { targetCellId, deviceIds } = dispatch.queue[dispatch.index];
-  const cell = cellById(state.cells, targetCellId);
+  const cell = cellById(state.cells, targetCellId, track.cursor.body);
   if (!cell) return fatal(state, `dispatch target ${targetCellId} not found`);
 
   let next = stampRun(state, targetCellId);
@@ -720,6 +738,52 @@ function activeParallelAttempt(state: RunnerState): ParallelContainerAttempt | u
   return state.activeContainerAttemptId
     ? state.parallelAttempts[state.activeContainerAttemptId]
     : undefined;
+}
+
+function parallelAttemptContext(attempt: ParallelContainerAttempt): ParallelContextEntry {
+  const lanes = Object.fromEntries(
+    Object.values(attempt.lanes).map((lane) => [
+      lane.laneId,
+      {
+        label: lane.label,
+        status: lane.status as ParallelLaneTerminalStatus,
+        devices: lane.devices,
+      },
+    ]),
+  );
+  return {
+    attemptId: attempt.attemptId,
+    ...Object.fromEntries(
+      Object.values(attempt.lanes).map((lane) => [
+        lane.laneId,
+        lane.status as ParallelLaneTerminalStatus,
+      ]),
+    ),
+    lanes,
+  };
+}
+
+/** One attempt-isolation boundary shared by fresh entry, loop re-entry, and restart. */
+function purgeParallelContainerState(state: RunnerState, container: ParallelCell): RunnerState {
+  const nestedIds = new Set(container.lanes.flatMap((lane) => lane.body.map((cell) => cell.id)));
+  const outputs = { ...state.outputs };
+  const cellRuns = { ...state.cellRuns };
+  delete outputs[container.id];
+  delete cellRuns[container.id];
+  for (const cellId of nestedIds) {
+    delete outputs[cellId];
+    delete outputs[dispatchStepId(cellId)];
+    delete cellRuns[cellId];
+    delete cellRuns[dispatchStepId(cellId)];
+  }
+  const answersByCycle = state.answersByCycle.map((answers) => {
+    const next = { ...answers };
+    for (const cellId of nestedIds) delete next[cellId];
+    return next;
+  });
+  const parallelContexts = { ...state.parallelContexts };
+  delete parallelContexts[sanitizeQuestionLabel(container.name)];
+  return { ...state, outputs, cellRuns, answersByCycle, parallelContexts };
 }
 
 function laneDeviceOutcomes(
@@ -794,31 +858,11 @@ function syncParallelAttempt(state: RunnerState): RunnerState {
 export function parkParallelAttemptForRestart(state: RunnerState): RunnerState {
   const attempt = activeParallelAttempt(state);
   if (!attempt || attempt.status === "complete") return state;
-  const nestedIds = new Set<string>();
-  for (const lane of Object.values(attempt.lanes)) {
-    const track = lane.trackId ? state.tracks[lane.trackId] : undefined;
-    const body = track ? workbookBodyAtPath(state.cells, track.cursor.body) : undefined;
-    for (const cell of body ?? []) nestedIds.add(cell.id);
-  }
-
-  const outputs = { ...state.outputs };
-  const cellRuns = { ...state.cellRuns };
-  for (const cellId of nestedIds) {
-    delete outputs[cellId];
-    delete outputs[dispatchStepId(cellId)];
-    delete cellRuns[cellId];
-    delete cellRuns[dispatchStepId(cellId)];
-  }
-  delete cellRuns[attempt.containerCellId];
-
-  const answersByCycle = state.answersByCycle.map((answers, cycle) => {
-    if (cycle !== state.cycle) return answers;
-    const next = { ...answers };
-    for (const cellId of nestedIds) delete next[cellId];
-    return next;
-  });
+  const container = cellById(state.cells, attempt.containerCellId);
+  if (container?.type !== "parallel") return state;
+  const purged = purgeParallelContainerState(state, container);
   const tracks = Object.fromEntries(
-    Object.entries(state.tracks).filter(
+    Object.entries(purged.tracks).filter(
       ([trackId]) =>
         trackId === MAIN_TRACK_ID ||
         !Object.values(attempt.lanes).some((lane) => lane.trackId === trackId),
@@ -842,10 +886,7 @@ export function parkParallelAttemptForRestart(state: RunnerState): RunnerState {
   };
 
   return {
-    ...trace(state, `parallel attempt ${attempt.attemptId} parked for restart confirmation`),
-    outputs,
-    cellRuns,
-    answersByCycle,
+    ...trace(purged, `parallel attempt ${attempt.attemptId} parked for restart confirmation`),
     tracks,
     inFlight: {},
     cancellingEffectIds: {},
@@ -857,6 +898,76 @@ export function parkParallelAttemptForRestart(state: RunnerState): RunnerState {
       [attempt.attemptId]: { ...attempt, status: "awaitingRestart" },
     },
   };
+}
+
+/** Finish an explicitly stopped/cancelled attempt without releasing work past its barrier. */
+export function abortActiveParallelAttempt(state: RunnerState, reason: string): RunnerState {
+  if (Object.keys(state.inFlight).length > 0 || Object.keys(state.cancellingEffectIds).length > 0) {
+    return state;
+  }
+  const synced = syncParallelAttempt(state);
+  const attempt = activeParallelAttempt(synced);
+  if (!attempt) return synced;
+  const laneTrackIds = new Set(
+    Object.values(attempt.lanes)
+      .map((lane) => lane.trackId)
+      .filter((trackId): trackId is string => trackId !== null),
+  );
+  const lanes = Object.fromEntries(
+    Object.entries(attempt.lanes).map(([laneId, lane]) => {
+      const track = lane.trackId ? synced.tracks[lane.trackId] : undefined;
+      const terminal = track && TERMINAL_TRACK_STATUSES.has(track.status);
+      return [
+        laneId,
+        terminal
+          ? lane
+          : {
+              ...lane,
+              status: "skipped" as const,
+              terminalReason: reason,
+              devices: laneDeviceOutcomes(synced, lane),
+            },
+      ];
+    }),
+  );
+  const completed = { ...attempt, status: "complete" as const, lanes };
+  const context = parallelAttemptContext(completed);
+  const tracks = Object.fromEntries(
+    Object.entries(synced.tracks).filter(([trackId]) => !laneTrackIds.has(trackId)),
+  );
+  const main = tracks[MAIN_TRACK_ID];
+  tracks[MAIN_TRACK_ID] = {
+    ...main,
+    status: "active",
+    terminalReason: undefined,
+    pendingInteraction: null,
+    progress: null,
+    dispatch: null,
+    dispatchConsumed: {},
+    cursor: { ...main.cursor, cellId: attempt.containerCellId, enteredVia: "jump" },
+  };
+  const previousRun = synced.cellRuns[attempt.containerCellId];
+  return trace(
+    {
+      ...synced,
+      tracks,
+      runAllActive: false,
+      stopRequested: false,
+      abandoningTrackIds: {},
+      activeContainerAttemptId: null,
+      parallelAttempts: { ...synced.parallelAttempts, [attempt.attemptId]: completed },
+      parallelContexts: { ...synced.parallelContexts, [attempt.containerName]: context },
+      outputs: { ...synced.outputs, [attempt.containerCellId]: { v: context } },
+      cellRuns: {
+        ...synced.cellRuns,
+        [attempt.containerCellId]: {
+          status: "cancelled",
+          executionOrder: previousRun?.executionOrder ?? [],
+        },
+      },
+    },
+    `parallel attempt ${attempt.attemptId} ${reason.toLowerCase()}`,
+  );
 }
 
 /** Remove the parked attempt shell immediately before confirmed re-entry. */
@@ -895,25 +1006,8 @@ export function settleParallelBarrier(state: RunnerState): TransitionResult {
     return { state: next, effects: [] };
   }
 
-  const contextLanes = Object.fromEntries(
-    lanes.map((lane) => [
-      lane.laneId,
-      {
-        label: lane.label,
-        status: lane.status as ParallelLaneTerminalStatus,
-        devices: lane.devices,
-      },
-    ]),
-  );
-  const statusFields = Object.fromEntries(
-    lanes.map((lane) => [lane.laneId, lane.status as ParallelLaneTerminalStatus]),
-  );
-  const context = {
-    attemptId: attempt.attemptId,
-    ...statusFields,
-    lanes: contextLanes,
-  };
   const completed = { ...attempt, status: "complete" as const };
+  const context = parallelAttemptContext(completed);
   next = completeRun(
     {
       ...trace(next, `parallel barrier ${attempt.containerCellId} released`),
@@ -940,7 +1034,12 @@ export function settleParallelBarrier(state: RunnerState): TransitionResult {
   if (next.mode === "notebook" && !next.runAllActive) {
     return { state: next, effects: [] };
   }
-  return landOn(next, nextCellId(next.cells, attempt.containerCellId), "forward", MAIN_TRACK_ID);
+  return landOn(
+    next,
+    nextTrackCellId(next, MAIN_TRACK_ID, attempt.containerCellId),
+    "forward",
+    MAIN_TRACK_ID,
+  );
 }
 
 function enterParallelContainer(state: RunnerState, container: ParallelCell): TransitionResult {
@@ -950,13 +1049,14 @@ function enterParallelContainer(state: RunnerState, container: ParallelCell): Tr
       `parallel container ${container.id} entered while another attempt is active`,
     );
   }
-  const main = getTrack(state, MAIN_TRACK_ID);
-  const devices = scopedDevices(state, main);
+  const prepared = purgeParallelContainerState(state, container);
+  const main = getTrack(prepared, MAIN_TRACK_ID);
+  const devices = scopedDevices(prepared, main);
   let assignment;
   try {
     assignment = assignParallelLanes(
       container,
-      state.cells,
+      prepared.cells,
       devices.map((device) => ({
         deviceId: device.id,
         device: deviceContextOf(devices, device.id) ?? { family: device.family, index: 0 },
@@ -969,7 +1069,7 @@ function enterParallelContainer(state: RunnerState, container: ParallelCell): Tr
     );
   }
 
-  const containerAttemptSeq = state.containerAttemptSeq + 1;
+  const containerAttemptSeq = prepared.containerAttemptSeq + 1;
   const attemptId = `${container.id}:${containerAttemptSeq}`;
   const lanes = Object.fromEntries(
     container.lanes.map((lane) => {
@@ -999,10 +1099,10 @@ function enterParallelContainer(state: RunnerState, container: ParallelCell): Tr
   };
   let next = stampRun(
     {
-      ...state,
+      ...prepared,
       containerAttemptSeq,
       activeContainerAttemptId: attemptId,
-      parallelAttempts: { ...state.parallelAttempts, [attemptId]: attempt },
+      parallelAttempts: { ...prepared.parallelAttempts, [attemptId]: attempt },
     },
     container.id,
   );
@@ -1078,7 +1178,10 @@ function endOfFlow(
     progress: null,
     pendingInteraction: null,
   });
-  return { state: wrapped, continueAt: firstExecutableCellId(wrapped.cells) };
+  return {
+    state: wrapped,
+    continueAt: firstExecutableCellId(wrapped.cells, getTrack(wrapped, trackId).cursor.body),
+  };
 }
 
 /**
@@ -1105,6 +1208,9 @@ export function landOn(
       const track = getTrack(s, trackId);
       const drained =
         Object.keys(s.inFlight).length === 0 && Object.keys(s.cancellingEffectIds).length === 0;
+      if (drained && activeParallelAttempt(s)) {
+        return { state: abortActiveParallelAttempt(s, "Stopped by researcher"), effects: [] };
+      }
       const stopped = drained ? { ...s, runAllActive: false, stopRequested: false } : s;
       return {
         state: setTrack(trace(stopped, `track ${trackId} stopped`), {
@@ -1151,7 +1257,7 @@ export function landOn(
 
     if (cell.type === "markdown") {
       if (s.mode === "notebook") {
-        current = nextCellId(s.cells, current);
+        current = nextTrackCellId(s, trackId, current);
         entryVia = "forward";
         continue;
       }
@@ -1174,9 +1280,10 @@ export function landOn(
           cell.id,
         );
       }
+      const stamped = stampRun(s, cell.id);
       return {
-        state: setTrack(s, {
-          ...getTrack(s, trackId),
+        state: setTrack(stamped, {
+          ...getTrack(stamped, trackId),
           status: "awaitingHuman",
           pendingInteraction: { kind: "question", cellId: cell.id },
         }),
@@ -1204,7 +1311,11 @@ export function landOn(
           ...(deviceScoped ? validateDeviceBranch(cell, asWorkbookCells(s.cells)) : []),
         ];
         if (errors.length > 0) {
-          return afterCellFailure(failRun(s, cell.id, errors.join("; ")), trackId, cell.id);
+          return afterCellFailure(
+            { ...failRun(s, cell.id, errors.join("; ")), runAllActive: false },
+            trackId,
+            cell.id,
+          );
         }
       }
       let dispatch: TransitionResult | undefined;
@@ -1214,7 +1325,11 @@ export function landOn(
         else resolved = resolveBranch(s, trackId, cell, entryVia);
       } catch (error) {
         if (!isOutputDataNormalizationError(error)) throw error;
-        return afterCellFailure(failRun(s, cell.id, error.message), trackId, cell.id);
+        return afterCellFailure(
+          { ...failRun(s, cell.id, error.message), runAllActive: false },
+          trackId,
+          cell.id,
+        );
       }
       if (dispatch) return dispatch;
       if (!resolved) return fatal(s, `branch ${cell.id} did not resolve`);
@@ -1244,7 +1359,7 @@ export function landOn(
         entryVia === "forward" &&
         s.cellRuns[cell.id]?.status === "completed"
       ) {
-        current = nextCellId(s.cells, cell.id);
+        current = nextTrackCellId(s, trackId, cell.id);
         entryVia = "forward";
         continue;
       }
@@ -1272,14 +1387,14 @@ export function landOn(
           ...currentTrack,
           dispatchConsumed,
         });
-        current = nextCellId(s.cells, cell.id);
+        current = nextTrackCellId(s, trackId, cell.id);
         entryVia = "forward";
         continue;
       }
       const run = s.cellRuns[cell.id];
       const skip = s.mode === "flow" && entryVia === "forward" && run?.status === "completed";
       if (skip) {
-        current = nextCellId(s.cells, current);
+        current = nextTrackCellId(s, trackId, current);
         entryVia = "forward";
         continue;
       }
@@ -1331,7 +1446,7 @@ export function afterCellFailure(
   }
   if (cleared.runAllActive) {
     // Notebook passes record the error and keep going (web parity).
-    return landOn(cleared, nextCellId(cleared.cells, cellId), "forward", trackId);
+    return landOn(cleared, nextTrackCellId(cleared, trackId, cellId), "forward", trackId);
   }
   return {
     state: setTrack(cleared, {

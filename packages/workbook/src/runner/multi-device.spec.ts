@@ -290,6 +290,36 @@ describe("device dispatch branch", () => {
     expect(step.state.cellRuns.c2?.status).toBe("completed");
     expect(step.state.status).toBe("idle");
   });
+
+  it("retries a cancelled dispatch target with its original subset and remaining queue", () => {
+    let step = transition(init(dispatchCells()), { type: "RUN_ALL" });
+    const first = step.effects[0];
+    if (first.kind !== "runCommand") throw new Error("expected runCommand");
+    expect(first.input.deviceIds).toEqual(["dev-1", "dev-3"]);
+
+    step = transition(step.state, { type: "CANCEL" });
+    step = transition(step.state, {
+      type: "EFFECT_CANCELLED",
+      effectId: first.effectId,
+      trackId: first.trackId,
+      cellId: first.cellId,
+    });
+    expect(step.state.tracks.main.dispatch).toMatchObject({ index: 0 });
+
+    step = transition(step.state, {
+      type: "RETRY",
+      target: { kind: "postCancel", trackId: "main", cellId: "c1" },
+    });
+    const retried = step.effects[0];
+    if (retried.kind !== "runCommand") throw new Error("expected retried runCommand");
+    expect(retried.input.deviceIds).toEqual(["dev-1", "dev-3"]);
+
+    step = commandDone(step.state, { battery: 82 });
+    const remaining = step.effects[0];
+    if (remaining.kind !== "runCommand") throw new Error("expected remaining runCommand");
+    expect(remaining.cellId).toBe("c2");
+    expect(remaining.input.deviceIds).toEqual(["dev-2"]);
+  });
 });
 
 describe("SET_DEVICES", () => {

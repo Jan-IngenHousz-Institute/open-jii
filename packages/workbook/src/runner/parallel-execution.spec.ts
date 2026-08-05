@@ -66,6 +66,31 @@ function completeCommand(
 }
 
 describe("parallel container execution", () => {
+  it("enters a container from flow RUN_ALL", () => {
+    const container = parallel([
+      {
+        id: "lane-a",
+        label: "A",
+        color: "#f00",
+        conditions: [condition("is-multi", "multispeq")],
+        body: [commandCell("measure")],
+      },
+      {
+        id: "fallback",
+        label: "Fallback",
+        color: "#999",
+        conditions: [],
+        body: [commandCell("unused")],
+      },
+    ]);
+    const step = transition(
+      createInitialState({ cells: [container], mode: "flow", devices: [devices[0]] }),
+      { type: "RUN_ALL" },
+    );
+    expect(commandEffects(step.effects).map((effect) => effect.cellId)).toEqual(["measure"]);
+    expect(step.state.activeContainerAttemptId).toBe("container:1");
+  });
+
   it("runs assigned lane bodies concurrently and releases the wait-all barrier", () => {
     const container = parallel([
       {
@@ -298,6 +323,38 @@ describe("parallel container execution", () => {
     expect(step.state.parallelContexts.device_lanes?.lanes["lane-a"].status).toBe("skipped");
   });
 
+  it("STOP terminalizes an idle attempt waiting on a lane question", () => {
+    const container = parallel([
+      {
+        id: "lane-a",
+        label: "Needs input",
+        color: "#f00",
+        conditions: [condition("is-multi", "multispeq")],
+        body: [questionCell("lane-question", "Continue?") as ParallelBodyCell],
+      },
+      {
+        id: "fallback",
+        label: "Fallback",
+        color: "#999",
+        conditions: [],
+        body: [commandCell("unused")],
+      },
+    ]);
+    let step = transition(
+      createInitialState({ cells: [container], mode: "flow", devices: [devices[0]] }),
+      { type: "START" },
+    );
+    expect(
+      Object.values(step.state.tracks).map((track) => track.pendingInteraction),
+    ).toContainEqual({ kind: "question", cellId: "lane-question" });
+
+    step = transition(step.state, { type: "STOP" });
+
+    expect(step.state.activeContainerAttemptId).toBeNull();
+    expect(step.state.cellRuns.container?.status).toBe("cancelled");
+    expect(step.state.parallelContexts.device_lanes?.lanes["lane-a"].status).toBe("skipped");
+  });
+
   it("cancels owned device work before an in-flight lane becomes skipped", () => {
     const container = parallel([
       {
@@ -385,6 +442,98 @@ describe("parallel container execution", () => {
     ]);
     expect(resumed.state.outputs["command-a"]).toBeUndefined();
   });
+
+  it("purges attempt one before a backward branch re-enters the container", () => {
+    const container = parallel([
+      {
+        id: "lane-a",
+        label: "A",
+        color: "#f00",
+        conditions: [condition("is-multi", "multispeq")],
+        body: [commandCell("measure")],
+      },
+      {
+        id: "fallback",
+        label: "Fallback",
+        color: "#999",
+        conditions: [],
+        body: [commandCell("unused")],
+      },
+    ]);
+    const loop = {
+      id: "loop",
+      type: "branch" as const,
+      isCollapsed: false,
+      defaultPathId: "again",
+      paths: [
+        {
+          id: "again",
+          label: "Again",
+          color: "#f00",
+          conditions: [],
+          gotoCellId: "container",
+        },
+      ],
+    };
+    let step = transition(
+      createInitialState({ cells: [container, loop], mode: "flow", devices: [devices[0]] }),
+      { type: "START" },
+    );
+    const first = commandEffects(step.effects)[0];
+    step = completeCommand(step.state, first, [{ deviceId: "connection-a", data: { attempt: 1 } }]);
+
+    const second = commandEffects(step.effects)[0];
+    expect(second.cellId).toBe("measure");
+    expect(second.effectId).not.toBe(first.effectId);
+    expect(step.state.containerAttemptSeq).toBe(2);
+    expect(step.state.outputs.measure).toBeUndefined();
+    expect(step.state.cellRuns.measure?.status).toBe("running");
+  });
+
+  it.each(["STOP", "CANCEL"] as const)(
+    "%s terminalizes an active attempt so the next RUN_ALL starts fresh",
+    (verb) => {
+      const container = parallel([
+        {
+          id: "lane-a",
+          label: "A",
+          color: "#f00",
+          conditions: [condition("is-multi", "multispeq")],
+          body: [commandCell("measure"), commandCell("later")],
+        },
+        {
+          id: "fallback",
+          label: "Fallback",
+          color: "#999",
+          conditions: [],
+          body: [commandCell("unused")],
+        },
+      ]);
+      let step = transition(
+        createInitialState({ cells: [container], mode: "notebook", devices: [devices[0]] }),
+        { type: "RUN_ALL" },
+      );
+      const first = commandEffects(step.effects)[0];
+      step = transition(step.state, { type: verb });
+      step =
+        verb === "CANCEL"
+          ? transition(step.state, {
+              type: "EFFECT_CANCELLED",
+              effectId: first.effectId,
+              trackId: first.trackId,
+              cellId: first.cellId,
+            })
+          : completeCommand(step.state, first, [
+              { deviceId: "connection-a", data: { attempt: 1 } },
+            ]);
+      expect(step.state.activeContainerAttemptId).toBeNull();
+      expect(step.state.status).not.toBe("fatal");
+
+      const restarted = transition(step.state, { type: "RUN_ALL" });
+      expect(commandEffects(restarted.effects).map((effect) => effect.cellId)).toEqual(["measure"]);
+      expect(restarted.state.status).not.toBe("fatal");
+    },
+  );
 
   it("regroups a device branch against only its lane's frozen subset", () => {
     const laneABranch = branchCell("branch-a", [

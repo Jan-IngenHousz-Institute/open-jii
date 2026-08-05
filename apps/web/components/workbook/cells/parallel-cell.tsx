@@ -10,6 +10,7 @@ import type {
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { resolveParallelDefaultLane } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import {
@@ -34,7 +35,18 @@ interface ParallelCellProps {
   allCells?: WorkbookCell[];
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
+  executionStates?: Record<
+    string,
+    {
+      status: "idle" | "running" | "completed" | "error";
+      error?: string;
+      executionOrder?: number[];
+    }
+  >;
+  promptedQuestionId?: string;
+  onQuestionAnswered?: (answer: string) => void;
   readOnly?: boolean;
+  entitySnapshots?: EntitySnapshots;
 }
 
 const NO_DEFAULT = "__no_default_lane__";
@@ -91,7 +103,11 @@ export function ParallelCellComponent({
   allCells = [],
   executionStatus,
   executionError,
+  executionStates,
+  promptedQuestionId,
+  onQuestionAnswered,
   readOnly,
+  entitySnapshots,
 }: ParallelCellProps) {
   const defaultResolution = resolveParallelDefaultLane(cell);
   const defaultLane = defaultResolution.kind === "resolved" ? defaultResolution.lane : undefined;
@@ -326,7 +342,13 @@ export function ParallelCellComponent({
                         }))
                       }
                       allCells={allCells}
+                      executionStatus={executionStates?.[bodyCell.id]?.status}
+                      executionError={executionStates?.[bodyCell.id]?.error}
+                      executionStates={executionStates}
+                      promptedQuestionId={promptedQuestionId}
+                      onQuestionAnswered={onQuestionAnswered}
                       readOnly={readOnly}
+                      entitySnapshots={entitySnapshots}
                     />
                   </div>
                 ))}

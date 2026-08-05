@@ -18,7 +18,7 @@ import { parseApiError } from "~/util/apiError";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
-import { findWorkbookCell } from "@repo/api/transforms/workbook-cell-tree";
+import { findWorkbookCell, mapWorkbookCellTree } from "@repo/api/transforms/workbook-cell-tree";
 import type {
   CellRunStatus,
   DeviceOutcome,
@@ -30,6 +30,7 @@ import {
   carryOverState,
   effectiveCellRuns,
   mergeCellsView,
+  ownerCellId,
   pendingTrackInteractions,
   WorkbookRunner,
 } from "@repo/workbook";
@@ -39,6 +40,8 @@ type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 interface CellExecutionState {
   status: CellExecutionStatus;
   error?: string;
+  /** Successful output exists, but at least one device in this fan-out failed. */
+  isPartial?: boolean;
   // Jupyter-style: each run appends the global counter value.
   executionOrder?: number[];
 }
@@ -61,6 +64,32 @@ function toExecutionStatus(status: CellRunStatus): CellExecutionStatus {
       // stale / cancelled / interrupted re-arm the cell.
       return "idle";
   }
+}
+
+function outputHasPartialDeviceResults(entry: Readonly<RunnerState>["outputs"][string]): boolean {
+  const results = entry?.deviceResults;
+  return Boolean(
+    results?.some((result) => result.error !== undefined) &&
+      results.some((result) => result.error === undefined),
+  );
+}
+
+function attemptCompletionStatus(
+  state: Readonly<RunnerState>,
+  executedCellIds?: ReadonlySet<string>,
+): "complete" | "partial" {
+  const includesCell = (cellId: string) => !executedCellIds || executedCellIds.has(cellId);
+  const hasPartialOutput = Object.entries(state.outputs).some(
+    ([outputId, entry]) =>
+      includesCell(ownerCellId(outputId)) && outputHasPartialDeviceResults(entry),
+  );
+  const hasIncompleteLane = Object.values(state.parallelAttempts).some(
+    (attempt) =>
+      attempt?.status === "complete" &&
+      includesCell(attempt.containerCellId) &&
+      Object.values(attempt.lanes).some((lane) => lane.status !== "done"),
+  );
+  return hasPartialOutput || hasIncompleteLane ? "partial" : "complete";
 }
 
 // Normalises any non-object device response into the output cell's data shape.
@@ -110,8 +139,13 @@ export function useWorkbookExecution({
 }: UseWorkbookExecutionOptions) {
   const [runnerState, setRunnerState] = useState<Readonly<RunnerState> | null>(null);
   const [promptingCellId, setPromptingCellId] = useState<string | null>(null);
+  const [lastRunCompletion, setLastRunCompletion] = useState<{
+    sequence: number;
+    status: "complete" | "partial";
+  }>();
   const [sensorFamily, setSensorFamilyState] = useState<SensorFamily>("multispeq");
   const [connectionType, setConnectionType] = useState<WorkbookConnectionType>("serial");
+  const completionSequenceRef = useRef(0);
 
   const cellsRef = useRef(cells);
   cellsRef.current = cells;
@@ -294,6 +328,7 @@ export function useWorkbookExecution({
     const options = {
       cells: current,
       mode: "notebook",
+      allowMacroArtifactDispatch: false,
       deviceFamily: sensorFamilyToDeviceType(sensorFamilyRef.current),
       devices: connectionsRef.current.map(toDeviceRef),
     } as const;
@@ -364,6 +399,7 @@ export function useWorkbookExecution({
 
   const runCell = useCallback(
     async (cellId: string) => {
+      setLastRunCompletion(undefined);
       const runner = ensureRunner();
       if (!runner) return;
       const beforeChangeSeq = cellsChangeSeqRef.current;
@@ -373,15 +409,34 @@ export function useWorkbookExecution({
         cellsChangeSeqRef.current += 1;
         onCellsChangeRef.current(cellsRef.current);
       }
+      setLastRunCompletion({
+        sequence: ++completionSequenceRef.current,
+        status: attemptCompletionStatus(runner.getState(), new Set([cellId])),
+      });
     },
     [ensureRunner, settle],
   );
 
   const runAll = useCallback(async () => {
+    setLastRunCompletion(undefined);
     const runner = ensureRunner();
     if (!runner) return;
+    const beforeExecCounter = runner.getState().execCounter;
     runner.send({ type: "RUN_ALL" });
     await settle(runner);
+    if (runnerRef.current !== runner) return;
+    const state = runner.getState();
+    const executedCellIds = new Set(
+      Object.entries(state.cellRuns)
+        .filter(([, run]) =>
+          run?.executionOrder.some((executionOrder) => executionOrder > beforeExecCounter),
+        )
+        .map(([cellId]) => ownerCellId(cellId)),
+    );
+    setLastRunCompletion({
+      sequence: ++completionSequenceRef.current,
+      status: attemptCompletionStatus(state, executedCellIds),
+    });
   }, [ensureRunner, settle]);
 
   const stopExecution = useCallback(() => {
@@ -415,7 +470,10 @@ export function useWorkbookExecution({
     disposeRunner();
     setRunnerState(null);
     setPromptingCellId(null);
-    onCellsChangeRef.current(cellsRef.current.filter((c) => c.type !== "output"));
+    setLastRunCompletion(undefined);
+    onCellsChangeRef.current(
+      mapWorkbookCellTree(cellsRef.current, ({ cell }) => (cell.type === "output" ? null : cell)),
+    );
   }, [disposeRunner]);
 
   const executionStates = useMemo(() => {
@@ -424,6 +482,12 @@ export function useWorkbookExecution({
       states[id] = {
         status: toExecutionStatus(run.status),
         error: run.error,
+        isPartial: runnerState
+          ? Object.entries(runnerState.outputs).some(
+              ([outputId, entry]) =>
+                ownerCellId(outputId) === id && outputHasPartialDeviceResults(entry),
+            )
+          : false,
         executionOrder: run.executionOrder,
       };
     }
@@ -452,6 +516,7 @@ export function useWorkbookExecution({
     disconnectDevice,
 
     executionStates,
+    lastRunCompletion,
     isRunningAll: runnerState?.runAllActive ?? false,
     runCell,
     runAll,

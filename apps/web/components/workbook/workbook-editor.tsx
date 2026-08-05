@@ -305,6 +305,7 @@ function SortableCellGroup({
               allCells={cells}
               executionStatus={cellState?.status}
               executionError={cellState?.error}
+              executionStates={executionStates}
               promptedQuestionId={promptedQuestionId}
               onQuestionAnswered={onQuestionAnswered}
               readOnly={readOnly}
@@ -331,6 +332,7 @@ function SortableCellGroup({
                 allCells={cells}
                 executionStatus={executionStates?.[output.id]?.status}
                 executionError={executionStates?.[output.id]?.error}
+                executionStates={executionStates}
                 promptedQuestionId={promptedQuestionId}
                 onQuestionAnswered={onQuestionAnswered}
                 readOnly={readOnly}

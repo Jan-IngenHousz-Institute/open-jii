@@ -323,6 +323,54 @@ describe("BranchCellComponent", () => {
     expect(await screen.findByText("Command (battery)")).toBeInTheDocument();
   });
 
+  it("authors recovery conditions from a parallel container's lane statuses", async () => {
+    const user = userEvent.setup();
+    const cell = makeBranchCell({
+      paths: [
+        {
+          id: "path-1",
+          label: "Path 1",
+          color: "",
+          conditions: [
+            {
+              id: "cond-1",
+              sourceCellId: "parallel-1",
+              field: "ambient",
+              operator: "eq",
+              value: "failed",
+            },
+          ],
+        },
+      ],
+    });
+    const container: WorkbookCell = {
+      id: "parallel-1",
+      type: "parallel",
+      isCollapsed: false,
+      name: "Device lanes",
+      defaultLaneId: "manual",
+      lanes: [
+        { id: "ambient", label: "Ambient", color: "#111", conditions: [], body: [] },
+        { id: "manual", label: "Manual", color: "#222", conditions: [], body: [] },
+      ],
+    };
+    render(
+      <BranchCellComponent
+        cell={cell}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        allCells={[container, cell]}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Source cell" }));
+    expect(screen.getByRole("option", { name: "Parallel (Device lanes)" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("combobox", { name: "Field" }));
+    expect(screen.getByRole("option", { name: "ambient" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "manual" })).toBeInTheDocument();
+  });
+
   it("renders the condition's IF / AND labels correctly for multiple conditions", () => {
     renderBranch({
       paths: [

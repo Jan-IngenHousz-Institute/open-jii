@@ -164,6 +164,35 @@ describe("useWorkbookExecution", () => {
     expect(updated).toHaveLength(2);
   });
 
+  it("clearOutputs removes outputs inside lane bodies", () => {
+    const producer = createProtocolCell({ id: "nested-protocol" });
+    const output = createOutputCell({ id: "nested-output", producedBy: producer.id });
+    const container: WorkbookCell = {
+      id: "parallel",
+      type: "parallel",
+      name: "lanes",
+      defaultLaneId: "lane",
+      isCollapsed: false,
+      lanes: [
+        {
+          id: "lane",
+          label: "Lane",
+          color: "#111",
+          conditions: [],
+          body: [producer, output],
+        },
+      ],
+    };
+    const { result, onCellsChange } = renderExecution([container]);
+
+    act(() => result.current.clearOutputs());
+
+    const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+    expect(updated[0].type).toBe("parallel");
+    if (updated[0].type !== "parallel") throw new Error("expected container");
+    expect(updated[0].lanes[0].body.map((cell) => cell.id)).toEqual(["nested-protocol"]);
+  });
+
   describe("runCell - protocol", () => {
     it("errors when protocol has no code", async () => {
       const proto = createProtocolCell();
@@ -676,6 +705,38 @@ describe("useWorkbookExecution", () => {
       expect(capturedBody?.context?.threshold).toEqual({ answer: "42" });
       const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
       expect(findOutput(updated, macro.id)?.data).toEqual({ threshold: 42 });
+    });
+
+    it("never dispatches a command-shaped ctx-only macro result on the web host", async () => {
+      const question = createQuestionCell({
+        id: "q-artifact",
+        name: "Threshold",
+        answer: "42",
+        isAnswered: true,
+      });
+      const macro = createMacroCell();
+      const artifact = {
+        __ojArtifact: "command",
+        version: 1,
+        content: "battery",
+      };
+      setMockConnected(true);
+      server.use(
+        http.post(`${API_URL}/api/v1/macros/:id/execute`, () =>
+          HttpResponse.json({
+            macro_id: macro.payload.macroId,
+            success: true,
+            output: artifact,
+          }),
+        ),
+      );
+
+      const { result, onCellsChange } = renderExecution([question, macro]);
+      await act(() => result.current.runCell(macro.id));
+
+      expect(mockExecuteCommand).not.toHaveBeenCalled();
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(findOutput(updated, macro.id)?.data).toEqual(artifact);
     });
 
     it("fails an empty envelope through the macro error path without invoking the macro", async () => {

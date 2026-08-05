@@ -123,7 +123,8 @@ export function BranchCellComponent({
             candidate.type === "protocol" ||
             candidate.type === "command" ||
             candidate.type === "macro" ||
-            candidate.type === "question",
+            candidate.type === "question" ||
+            candidate.type === "parallel",
         ),
     [sourceLocations],
   );
@@ -187,6 +188,10 @@ export function BranchCellComponent({
       );
       const sourceCell = sourceLocation?.cell;
       if (sourceCell?.type === "question") return ["answer"];
+      if (sourceCell?.type === "parallel") {
+        const laneIds = sourceCell.lanes.map((lane) => lane.id);
+        return new Set(laneIds).size === laneIds.length ? laneIds : [];
+      }
 
       const outputCell = sourceLocation?.body.find(
         (candidate) => candidate.type === "output" && candidate.producedBy === sourceCellId,
@@ -223,6 +228,8 @@ export function BranchCellComponent({
           return `Macro (${c.payload.name ?? c.payload.macroId.slice(0, 8)})`;
         case "question":
           return c.question.text ? `Q: ${c.question.text.slice(0, 30)}` : "Question";
+        case "parallel":
+          return `Parallel (${c.name})`;
         case "markdown":
           return c.content ? `MD: ${c.content.slice(0, 30)}` : "Markdown";
         case "branch":
@@ -475,7 +482,7 @@ export function BranchCellComponent({
             onValueChange={(v) => handleConditionUpdate(pathIndex, cond.id, "field", v)}
             disabled={readOnly}
           >
-            <SelectTrigger className="h-7 min-w-[80px] flex-1 text-xs">
+            <SelectTrigger aria-label="Field" className="h-7 min-w-[80px] flex-1 text-xs">
               <SelectValue placeholder="field" />
             </SelectTrigger>
             <SelectContent>

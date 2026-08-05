@@ -161,14 +161,14 @@ export function branchTargetCells(cells: WorkbookCell[], branch: CellAddress): W
   return body.filter((cell) => cell.id !== branch.cellId && cell.type !== "output");
 }
 
-/** Recursive immutable mapper used by hydrators and host projections. */
+/** Recursive immutable mapper/filter used by hydrators and host projections. */
 export function mapWorkbookCellTree(
   cells: WorkbookCell[],
-  map: (location: CellLocation) => WorkbookCell,
+  map: (location: CellLocation) => WorkbookCell | null,
 ): WorkbookCell[] {
   assertUniqueCellIds(cells);
   const visit = (body: WorkbookCell[], path: CellPath): WorkbookCell[] =>
-    body.map((original, index) => {
+    body.flatMap((original, index) => {
       let cell: WorkbookCell = original;
       if (original.type === "parallel") {
         cell = {
@@ -182,7 +182,8 @@ export function mapWorkbookCellTree(
           })),
         };
       }
-      return map({ cell, cellId: cell.id, index, body, path });
+      const mapped = map({ cell, cellId: cell.id, index, body, path });
+      return mapped === null ? [] : [mapped];
     });
   return visit(cells, []);
 }

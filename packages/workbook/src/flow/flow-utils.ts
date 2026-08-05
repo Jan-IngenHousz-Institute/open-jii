@@ -49,8 +49,10 @@ export function cellById(
 }
 
 /** Next step in document order, skipping output cells; null past the end. */
-export function nextCellId(cells: RunnerCell[], cellId: string): string | null {
-  const location = findWorkbookCell(cells, cellId);
+export function nextCellId(cells: RunnerCell[], cellId: string, path?: CellPath): string | null {
+  const location = path
+    ? findWorkbookCellInBody(cells, { path, cellId })
+    : findWorkbookCell(cells, cellId);
   if (!location) return null;
   const order = location.body.filter(isExecutable);
   const idx = order.findIndex((c) => c.id === cellId);
@@ -59,8 +61,10 @@ export function nextCellId(cells: RunnerCell[], cellId: string): string | null {
 }
 
 /** Previous step in document order; null before the start. */
-export function prevCellId(cells: RunnerCell[], cellId: string): string | null {
-  const location = findWorkbookCell(cells, cellId);
+export function prevCellId(cells: RunnerCell[], cellId: string, path?: CellPath): string | null {
+  const location = path
+    ? findWorkbookCellInBody(cells, { path, cellId })
+    : findWorkbookCell(cells, cellId);
   if (!location) return null;
   const order = location.body.filter(isExecutable);
   const idx = order.findIndex((c) => c.id === cellId);
@@ -74,16 +78,24 @@ export function resolveGotoCellId(
   cells: RunnerCell[],
   gotoCellId: string,
   sourceCellId?: string,
+  path?: CellPath,
 ): string | null {
-  const source = sourceCellId ? findWorkbookCell(cells, sourceCellId) : undefined;
+  const source = sourceCellId
+    ? path
+      ? findWorkbookCellInBody(cells, { path, cellId: sourceCellId })
+      : findWorkbookCell(cells, sourceCellId)
+    : undefined;
   const target = source
     ? findWorkbookCellInBody(cells, { path: source.path, cellId: gotoCellId })?.cell
-    : cellById(cells, gotoCellId);
+    : cellById(cells, gotoCellId, path);
   return target && isExecutable(target) ? target.id : null;
 }
 
-export function cellIndex(cells: RunnerCell[], cellId: string): number {
-  return findWorkbookCell(cells, cellId)?.index ?? -1;
+export function cellIndex(cells: RunnerCell[], cellId: string, path?: CellPath): number {
+  return (
+    (path ? findWorkbookCellInBody(cells, { path, cellId }) : findWorkbookCell(cells, cellId))
+      ?.index ?? -1
+  );
 }
 
 /**

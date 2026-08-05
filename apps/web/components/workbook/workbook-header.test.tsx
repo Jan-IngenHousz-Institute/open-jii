@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MockInstance } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
 import { WorkbookHeader } from "./workbook-header";
@@ -280,6 +281,39 @@ describe("WorkbookHeader", () => {
 
     const clearButton = screen.getByRole("button", { name: /clear all/i });
     expect(clearButton).toBeDisabled();
+  });
+
+  it("enables nested-only exports and Clear all from the whole cell tree", async () => {
+    const user = userEvent.setup();
+    const nestedOutput = createOutputCell({ id: "nested-output", producedBy: protocolCell.id });
+    const container: WorkbookCell = {
+      id: "parallel",
+      type: "parallel",
+      isCollapsed: false,
+      name: "lanes",
+      defaultLaneId: "lane",
+      lanes: [
+        {
+          id: "lane",
+          label: "Lane",
+          color: "#111",
+          conditions: [],
+          body: [protocolCell, macroCell, nestedOutput],
+        },
+      ],
+    };
+    renderHeader({ cells: [container] });
+
+    expect(screen.getByRole("button", { name: /clear all/i })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: /export/i }));
+    expect(screen.getByRole("menuitem", { name: /export protocol only/i })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByRole("menuitem", { name: /export macro only/i })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
 
   it("calls onToggleFlowchart when user clicks Flow button", async () => {

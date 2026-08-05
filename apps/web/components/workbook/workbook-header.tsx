@@ -258,9 +258,10 @@ export function WorkbookHeader({
     downloadFile(json, `${safeName}.jii`, "application/json");
   }, [title, cells, sensorFamily]);
 
-  const hasProtocols = cells.some((c) => c.type === "protocol");
-  const hasMacros = cells.some((c) => c.type === "macro");
-  const hasOutputs = cells.some((c) => c.type === "output");
+  const cellTree = walkWorkbookCells(cells);
+  const hasProtocols = cellTree.some(({ cell }) => cell.type === "protocol");
+  const hasMacros = cellTree.some(({ cell }) => cell.type === "macro");
+  const hasOutputs = cellTree.some(({ cell }) => cell.type === "output");
 
   return (
     <div

@@ -126,6 +126,28 @@ describe("host-view", () => {
     expect(fresh.execCounter).toBe(0);
   });
 
+  it("rebuilds parallel contexts from surviving container outputs after edits", () => {
+    const context = { attemptId: "parallel:1", lane: "done", lanes: {} };
+    const container: RunnerCell = {
+      id: "parallel",
+      type: "parallel",
+      isCollapsed: false,
+      name: "Old lanes",
+      defaultLaneId: "lane",
+      lanes: [{ id: "lane", label: "Lane", color: "#111", conditions: [], body: [] }],
+    };
+    const prev = state([container], {
+      outputs: { parallel: { v: context } },
+      parallelContexts: { old_lanes: context },
+    });
+
+    expect(carryOverState({ cells: [], mode: "notebook" }, prev).parallelContexts).toEqual({});
+    const renamed = { ...container, name: "Renamed lanes" };
+    expect(carryOverState({ cells: [renamed], mode: "notebook" }, prev).parallelContexts).toEqual({
+      renamed_lanes: context,
+    });
+  });
+
   it("effectiveCellRuns surfaces owner runs, mirrors running dispatch, marks the prompted cell", () => {
     const st = state([macroCell("a1"), commandCell("c1")], {
       cellRuns: {

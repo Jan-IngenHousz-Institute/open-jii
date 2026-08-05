@@ -1,4 +1,6 @@
 import type { OutputCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { resolveBranchPathById } from "@repo/api/transforms/evaluate-branch";
+import { sanitizeQuestionLabel } from "@repo/api/transforms/label-sanitization";
 import {
   findWorkbookCell,
   findWorkbookCellInBody,
@@ -8,7 +10,7 @@ import {
 import type { RunnerCell } from "../cells";
 import { isProducer } from "../flow/flow-utils";
 import { lastOrder, ownerCellId } from "./cell-entry";
-import type { CellRunStatus, CreateStateOptions, RunnerState } from "./state";
+import type { CellRunStatus, CreateStateOptions, ParallelContextEntry, RunnerState } from "./state";
 import { createInitialState, currentAnswers } from "./state";
 
 // Host-view helpers: fold runner state back onto a host's persisted cell
@@ -83,6 +85,14 @@ export function carryOverState(
   for (const [key, run] of Object.entries(prev.cellRuns)) {
     if (run && run.status !== "running" && ids.has(ownerCellId(key))) cellRuns[key] = run;
   }
+  const parallelContexts: RunnerState["parallelContexts"] = {};
+  for (const { cell } of walkWorkbookCells(opts.cells)) {
+    if (cell.type !== "parallel") continue;
+    const value = outputs[cell.id]?.v;
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      parallelContexts[sanitizeQuestionLabel(cell.name)] = value as ParallelContextEntry;
+    }
+  }
   return {
     ...base,
     outputs,
@@ -93,7 +103,7 @@ export function carryOverState(
     parallelAttempts: Object.fromEntries(
       Object.entries(prev.parallelAttempts).filter(([, attempt]) => attempt?.status === "complete"),
     ),
-    parallelContexts: prev.parallelContexts,
+    parallelContexts,
   };
 }
 
@@ -153,9 +163,8 @@ export function mergeCellsView(latest: RunnerCell[], state: Readonly<RunnerState
       continue;
     }
     if (run?.status !== "completed") continue;
-    const matched = run.lastMatchedPathId
-      ? cell.paths.find((p) => p.id === run.lastMatchedPathId)
-      : undefined;
+    const matchedResolution = resolveBranchPathById(cell.paths, run.lastMatchedPathId);
+    const matched = matchedResolution.status === "resolved" ? matchedResolution.path : undefined;
     // A device dispatch records its own summary lines in the output entry.
     const dispatchMessages = state.outputs[cell.id]?.messages;
     managed.set(cell.id, {
@@ -230,11 +239,17 @@ export function mergeCellsView(latest: RunnerCell[], state: Readonly<RunnerState
         }
       } else if (cell.type === "branch") {
         const run = state.cellRuns[cell.id];
-        if (
-          run?.status === "completed" &&
-          (cell.evaluatedPathId !== run.lastMatchedPathId || !("evaluatedPathId" in cell))
-        ) {
-          rendered = { ...cell, evaluatedPathId: run.lastMatchedPathId };
+        if (run?.status === "completed" || run?.status === "error") {
+          const matched = resolveBranchPathById(cell.paths, run.lastMatchedPathId);
+          if (matched.status === "resolved") {
+            if (cell.evaluatedPathId !== matched.path.id || !("evaluatedPathId" in cell)) {
+              rendered = { ...cell, evaluatedPathId: matched.path.id };
+            }
+          } else if ("evaluatedPathId" in cell) {
+            const cleared = { ...cell };
+            delete cleared.evaluatedPathId;
+            rendered = cleared;
+          }
         }
       } else if (cell.type === "question") {
         const answer = answers[cell.id];
