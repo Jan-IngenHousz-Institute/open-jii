@@ -460,6 +460,35 @@ describe("validateBranchCell", () => {
     expect(errors).toEqual(["Path 1: no conditions defined"]);
   });
 
+  it("allows a conditionless path only when it is the default", () => {
+    const goto = makeBranchCell({
+      id: "b1",
+      paths: [{ id: "p1", label: "Go to", color: "", conditions: [], gotoCellId: "target" }],
+      defaultPathId: "p1",
+    });
+
+    expect(validateBranchCell(goto)).toEqual([]);
+    expect(validateBranchCell({ ...goto, defaultPathId: undefined })).toEqual([
+      "Go to: no conditions defined",
+    ]);
+  });
+
+  it("documents the conditionless-path error produced by an old web client", () => {
+    const goto = makeBranchCell({
+      id: "b1",
+      paths: [{ id: "p1", label: "Go to", color: "", conditions: [], gotoCellId: "target" }],
+      defaultPathId: "p1",
+    });
+    const legacyWebErrors = goto.paths.flatMap((path) =>
+      path.conditions.length === 0
+        ? [`${path.label || "Unnamed path"}: no conditions defined`]
+        : [],
+    );
+
+    expect(legacyWebErrors).toEqual(["Go to: no conditions defined"]);
+    expect(validateBranchCell(goto)).toEqual([]);
+  });
+
   it("returns error for missing source cell", () => {
     const cell = makeBranchCell({
       id: "b1",

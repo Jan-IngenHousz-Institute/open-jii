@@ -758,11 +758,14 @@ export function useWorkbookExecution({
 
   // Returns the jump index into `currentCells`, or -1 if no jump.
   const resolveBranchJump = (branchCellId: string, currentCells: WorkbookCell[]): number => {
-    const branch = currentCells.find((c) => c.id === branchCellId);
-    if (branch?.type !== "branch" || !branch.evaluatedPathId) return -1;
+    const branchIndex = currentCells.findIndex((c) => c.id === branchCellId);
+    if (branchIndex === -1) return -1;
+    const branch = currentCells[branchIndex];
+    if (branch.type !== "branch" || !branch.evaluatedPathId) return -1;
     const matchedPath = branch.paths.find((p) => p.id === branch.evaluatedPathId);
     if (!matchedPath?.gotoCellId) return -1;
-    return currentCells.findIndex((c) => c.id === matchedPath.gotoCellId);
+    const targetIndex = currentCells.findIndex((c) => c.id === matchedPath.gotoCellId);
+    return targetIndex === branchIndex ? -1 : targetIndex;
   };
 
   const runCell = useCallback(
