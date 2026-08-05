@@ -98,13 +98,14 @@ export function createDefaultCell(
       throw new Error("Question cells must be created via the question picker");
     case "output":
       return { ...base, type: "output", producedBy: "" };
-    case "branch":
+    case "branch": {
+      const pathId = crypto.randomUUID();
       return {
         ...base,
         type: "branch",
         paths: [
           {
-            id: crypto.randomUUID(),
+            id: pathId,
             label: "Path 1",
             color: nextBranchPathColor([]),
             conditions: [
@@ -112,7 +113,9 @@ export function createDefaultCell(
             ],
           },
         ],
+        defaultPathId: pathId,
       };
+    }
   }
 }
 

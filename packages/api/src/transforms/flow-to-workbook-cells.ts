@@ -205,8 +205,8 @@ function mergeBranchTargets(
 /**
  * Apply graph structure to the draft while preserving all existing payload by
  * cell id. New nodes are materialised from their graph payload; existing nodes
- * are never reconstructed. Existing outputs keep their array index unless
- * their producer itself moves; outputs of a moved producer travel with it.
+ * are never reconstructed. Existing outputs preserve their original offset
+ * from a surviving producer as the surrounding sequence changes.
  */
 export function flowNodesToWorkbookCells(
   nodes: FlowNode[],
@@ -216,31 +216,6 @@ export function flowNodesToWorkbookCells(
   const ordered = orderFlowNodes(nodes, edges);
   const existingById = new Map(existingCells.map((cell) => [cell.id, cell]));
   const orderedIds = new Set(ordered.map((node) => node.id));
-  const originalExistingOrder = existingCells
-    .filter((cell) => cell.type !== "output" && orderedIds.has(cell.id))
-    .map((cell) => cell.id);
-  const nextExistingOrder = ordered
-    .filter((node) => existingById.get(node.id)?.type !== "output" && existingById.has(node.id))
-    .map((node) => node.id);
-  const originalIndexById = new Map(originalExistingOrder.map((id, index) => [id, index]));
-  const movedProducerIds = new Set(
-    nextExistingOrder.filter((id, index) => originalIndexById.get(id) !== index),
-  );
-  const movedOutputsByProducer = new Map<string, WorkbookCell[]>();
-  const stationaryOutputs: { cell: WorkbookCell; index: number }[] = [];
-
-  for (const [index, cell] of existingCells.entries()) {
-    if (cell.type !== "output") continue;
-    // Outputs are owned by their producer: deleting the producer deletes them.
-    if (existingById.has(cell.producedBy) && !orderedIds.has(cell.producedBy)) continue;
-    if (movedProducerIds.has(cell.producedBy)) {
-      const outputs = movedOutputsByProducer.get(cell.producedBy) ?? [];
-      outputs.push(cell);
-      movedOutputsByProducer.set(cell.producedBy, outputs);
-    } else {
-      stationaryOutputs.push({ cell, index });
-    }
-  }
 
   const cells: WorkbookCell[] = [];
   for (const node of ordered) {
@@ -259,13 +234,32 @@ export function flowNodesToWorkbookCells(
     }
 
     if (!cell || cell.type === "output") continue;
-    cells.push(cell, ...(movedOutputsByProducer.get(cell.id) ?? []));
+    cells.push(cell);
   }
 
-  // Insert in original order so a no-op projection is byte-identical even
-  // when an output was intentionally not adjacent to its producer.
-  for (const output of stationaryOutputs) {
-    cells.splice(Math.min(output.index, cells.length), 0, output.cell);
+  const survivingExistingCells = existingCells.filter((cell) => {
+    if (cell.type !== "output") return orderedIds.has(cell.id);
+    return !existingById.has(cell.producedBy) || orderedIds.has(cell.producedBy);
+  });
+  const originalProducerIndex = new Map<string, number>();
+  for (const [index, cell] of survivingExistingCells.entries()) {
+    if (cell.type !== "output" && !originalProducerIndex.has(cell.id)) {
+      originalProducerIndex.set(cell.id, index);
+    }
+  }
+
+  // Insert outputs in their original order. Recomputing the producer's current
+  // index after each insertion keeps multiple producers/outputs composable.
+  for (const [outputIndex, output] of survivingExistingCells.entries()) {
+    if (output.type !== "output") continue;
+
+    const producerIndex = cells.findIndex((cell) => cell.id === output.producedBy);
+    const previousProducerIndex = originalProducerIndex.get(output.producedBy);
+    const targetIndex =
+      producerIndex >= 0 && previousProducerIndex !== undefined
+        ? producerIndex + (outputIndex - previousProducerIndex)
+        : outputIndex;
+    cells.splice(Math.max(0, Math.min(targetIndex, cells.length)), 0, output);
   }
 
   return cells;

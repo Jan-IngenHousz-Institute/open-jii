@@ -352,6 +352,75 @@ describe("<FlowEditor /> (stable suite)", () => {
     expect(screen.queryByRole("button", { name: "edgePanel.remove" })).not.toBeInTheDocument();
   });
 
+  it("persists an edited branch-edge label to the matching workbook path", async () => {
+    const onWorkbookCellsChange = vi.fn();
+    const initialFlow = toInitialFlow(
+      [
+        {
+          id: "branch-1",
+          type: "BRANCH",
+          position: { x: 0, y: 0 },
+          data: {
+            title: "Branch",
+            isStartNode: true,
+            stepSpecification: {
+              paths: [{ id: "path-1", label: "Old", color: "" }],
+              defaultPathId: "path-1",
+            },
+          },
+        },
+        {
+          id: "target-1",
+          type: "INSTRUCTION",
+          position: { x: 100, y: 0 },
+          data: { title: "Target", isStartNode: false },
+        },
+      ],
+      [
+        {
+          id: "edge-path",
+          source: "branch-1",
+          target: "target-1",
+          sourceHandle: "path-1",
+          data: { kind: "branch", label: "Old" },
+        },
+      ],
+    );
+    renderEditor({
+      initialFlow,
+      workbookCells: [
+        {
+          id: "branch-1",
+          type: "branch",
+          isCollapsed: false,
+          paths: [
+            {
+              id: "path-1",
+              label: "Old",
+              color: "",
+              conditions: [],
+              gotoCellId: "target-1",
+            },
+          ],
+          defaultPathId: "path-1",
+        },
+        { id: "target-1", type: "markdown", isCollapsed: false, content: "Target" },
+      ],
+      onWorkbookCellsChange,
+    });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Sim Edge Click" }));
+    const input = screen.getByPlaceholderText("edgePanel.labelPlaceholder");
+    await user.clear(input);
+    await user.type(input, "Renamed");
+
+    const lastCells = onWorkbookCellsChange.mock.calls.at(-1)?.[0] as
+      | { type: string; paths?: { id: string; label: string }[] }[]
+      | undefined;
+    expect(lastCells?.[0].paths?.[0].label).toBe("Renamed");
+  });
+
   it("updates nodes/edges when initialFlow prop changes", () => {
     const firstNodes: readonly xyflowReact.Node[] = [
       {

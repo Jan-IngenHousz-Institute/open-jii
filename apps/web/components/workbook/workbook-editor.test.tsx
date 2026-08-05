@@ -82,6 +82,7 @@ describe("createDefaultCell", () => {
     const cell = createDefaultCell("branch");
     if (cell.type !== "branch") throw new Error("unexpected");
     expect(cell.paths).toHaveLength(1);
+    expect(cell.defaultPathId).toBe(cell.paths[0].id);
     expect(cell.paths[0].label).toBe("Path 1");
     expect(cell.paths[0].conditions[0]).toMatchObject({
       sourceCellId: "",

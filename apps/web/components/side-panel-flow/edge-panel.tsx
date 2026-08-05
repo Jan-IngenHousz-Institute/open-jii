@@ -98,6 +98,7 @@ export function EdgeSidePanel({
                 type="text"
                 value={getEdgeLabel(displayEdge)}
                 onChange={handleLabelChange}
+                maxLength={64}
                 placeholder={t("edgePanel.labelPlaceholder")}
                 disabled={isDisabled}
                 className="focus:border-jii-dark-green focus:ring-jii-dark-green/50 focus:outline-hidden w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"

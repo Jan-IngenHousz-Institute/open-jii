@@ -43,6 +43,11 @@ interface ExperimentDesignPageProps {
   params: Promise<{ id: string; locale: string }>;
 }
 
+interface ControlledDraft {
+  workbookId: string;
+  cells: WorkbookCell[];
+}
+
 const AUTO_SAVE_DELAY = 1500;
 
 /** Surfaces the draft autosave status (reported by WorkbookDraftEditor) inline. */
@@ -87,11 +92,24 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const { data: workbookDraft, isLoading: workbookDraftLoading } = useWorkbook(workbookId ?? "", {
     enabled: !!workbookId,
   });
-  const [draftCells, setDraftCells] = useState<WorkbookCell[] | null>(null);
+  const [controlledDraft, setControlledDraft] = useState<ControlledDraft | null>(null);
 
   useEffect(() => {
-    if (workbookDraft) setDraftCells((current) => current ?? workbookDraft.cells);
-  }, [workbookDraft]);
+    if (!workbookId || !workbookDraft) return;
+    setControlledDraft((current) =>
+      current?.workbookId === workbookId ? current : { workbookId, cells: workbookDraft.cells },
+    );
+  }, [workbookDraft, workbookId]);
+
+  const draftCells =
+    controlledDraft && controlledDraft.workbookId === workbookId ? controlledDraft.cells : null;
+  const handleDraftCellsChange = useCallback(
+    (cells: WorkbookCell[]) => {
+      if (!workbookId) return;
+      setControlledDraft({ workbookId, cells });
+    },
+    [workbookId],
+  );
 
   // Capability, not ownership: an `admin`/"Can edit" grantee on the
   // workbook may edit it even though they created nothing.
@@ -105,10 +123,10 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const canEdit = !!workbookDraft && canUpdateWorkbook && hasAccess;
 
   // Each autosave re-pins the experiment to the latest version (OJD-1626).
-  const upgradeVersion = useUpgradeWorkbookVersion(id);
-  const handleDraftSaved = useCallback(() => {
-    upgradeVersion.mutate({ id });
-  }, [id, upgradeVersion]);
+  const { mutateAsync: upgradeWorkbookVersion } = useUpgradeWorkbookVersion(id);
+  const handleDraftSaved = useCallback(async () => {
+    await upgradeWorkbookVersion({ id });
+  }, [id, upgradeWorkbookVersion]);
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(workbookId ?? "");
   const saveDraft = useCallback(
     async (next: WorkbookCell[]) => {
@@ -125,7 +143,12 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   );
   const autosave = useAutosave({
     value: draftCells ?? [],
-    toKey: useCallback((value: WorkbookCell[]) => JSON.stringify(value), []),
+    // Scope the anchor and every in-flight comparison to the linked workbook.
+    // A same-shaped draft from another workbook must still supersede the old queue.
+    toKey: useCallback(
+      (value: WorkbookCell[]) => JSON.stringify([workbookId ?? null, value]),
+      [workbookId],
+    ),
     isValid: useCallback(
       (value: WorkbookCell[]) => zWorkbookCellArray.safeParse(value).success,
       [],
@@ -249,19 +272,24 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
 
           <NavTabsContent value="list" className="mt-6">
             {canEdit ? (
-              <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
-                <WorkbookDraftEditor
-                  id={workbookId}
-                  initialCells={workbookDraft.cells}
-                  cells={draftCells ?? workbookDraft.cells}
-                  // Same capability the branch above gated on.
-                  canEdit={canUpdateWorkbook}
-                  name={workbookDraft.name}
-                  onCellsChange={setDraftCells}
-                  onSaved={handleDraftSaved}
-                  autosaveEnabled={false}
-                />
-              </WorkbookEntitySavedProvider>
+              draftCells ? (
+                <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
+                  <WorkbookDraftEditor
+                    key={workbookId}
+                    id={workbookId}
+                    initialCells={workbookDraft.cells}
+                    cells={draftCells}
+                    // Same capability the branch above gated on.
+                    canEdit={canUpdateWorkbook}
+                    name={workbookDraft.name}
+                    onCellsChange={handleDraftCellsChange}
+                    onSaved={handleDraftSaved}
+                    autosaveEnabled={false}
+                  />
+                </WorkbookEntitySavedProvider>
+              ) : (
+                <Skeleton className="h-64 w-full" />
+              )
             ) : (
               <WorkbookEditor
                 cells={versionedCells}
@@ -274,14 +302,19 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
 
           <NavTabsContent value="graph" className="mt-6">
             {canEdit ? (
-              <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
-                <WorkbookCanvasDraftEditor
-                  experimentId={id}
-                  initialCells={workbookDraft.cells}
-                  cells={draftCells ?? workbookDraft.cells}
-                  onCellsChange={setDraftCells}
-                />
-              </WorkbookEntitySavedProvider>
+              draftCells ? (
+                <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
+                  <WorkbookCanvasDraftEditor
+                    key={workbookId}
+                    experimentId={id}
+                    initialCells={workbookDraft.cells}
+                    cells={draftCells}
+                    onCellsChange={handleDraftCellsChange}
+                  />
+                </WorkbookEntitySavedProvider>
+              ) : (
+                <Skeleton className="h-64 w-full" />
+              )
             ) : (
               <FlowEditor initialFlow={derivedFlow} isDisabled />
             )}

@@ -21,7 +21,7 @@ import type {
   ExperimentUpsertFlowBody,
 } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import type { BranchCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
-import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
+import { cellsToFlowGraph, deriveFlowNodeName } from "@repo/api/transforms/cells-to-flow";
 import { resolveBranchPathById } from "@repo/api/transforms/evaluate-branch";
 import { flowNodesToWorkbookCells } from "@repo/api/transforms/flow-to-workbook-cells";
 import { Button } from "@repo/ui/components/button";
@@ -238,18 +238,22 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     const handleTitleChange = useCallback(
       (newTitle: string) => {
         if (selectedNode) {
+          const cell = workbookCellsRef.current?.find(
+            (candidate) => candidate.id === selectedNode.id,
+          );
+          const safeTitle = cell ? deriveFlowNodeName(cell, newTitle) : newTitle.slice(0, 64);
           updateDraftCell(selectedNode.id, (cell) =>
             mergePanelTitleIntoWorkbookCell(cell, newTitle),
           );
           setNodes((nds) =>
             nds.map((node) =>
               node.id === selectedNode.id
-                ? { ...node, data: { ...node.data, title: newTitle } }
+                ? { ...node, data: { ...node.data, title: safeTitle } }
                 : node,
             ),
           );
           setSelectedNode((prevNode) =>
-            prevNode ? { ...prevNode, data: { ...prevNode.data, title: newTitle } } : null,
+            prevNode ? { ...prevNode, data: { ...prevNode.data, title: safeTitle } } : null,
           );
         }
       },
@@ -259,9 +263,53 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     // Handle edge updates
     const handleEdgeUpdate = useCallback(
       (edgeId: string, updates: Partial<Edge>) => {
+        const edge = edges.find((candidate) => candidate.id === edgeId);
+        const nextLabel = updates.data?.label;
+        if (
+          edge &&
+          getReactFlowEdgeKind(edge) === "branch" &&
+          edge.sourceHandle &&
+          typeof nextLabel === "string"
+        ) {
+          updateDraftCell(edge.source, (cell) => {
+            if (cell.type !== "branch") return cell;
+            const pathIndex = cell.paths.findIndex((path) => path.id === edge.sourceHandle);
+            if (pathIndex === -1) return cell;
+            return {
+              ...cell,
+              paths: cell.paths.map((path, index) =>
+                index === pathIndex ? { ...path, label: nextLabel } : path,
+              ),
+            };
+          });
+          setNodes((current) =>
+            current.map((node) => {
+              if (node.id !== edge.source) return node;
+              const specification = node.data.stepSpecification as
+                | { paths?: { id: string; label: string; color: string }[] }
+                | undefined;
+              const pathIndex = specification?.paths?.findIndex(
+                (path) => path.id === edge.sourceHandle,
+              );
+              if (pathIndex === undefined || pathIndex < 0 || !specification?.paths) return node;
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  stepSpecification: {
+                    ...specification,
+                    paths: specification.paths.map((path, index) =>
+                      index === pathIndex ? { ...path, label: nextLabel } : path,
+                    ),
+                  },
+                },
+              };
+            }),
+          );
+        }
         setEdges((eds) => eds.map((edge) => (edge.id === edgeId ? { ...edge, ...updates } : edge)));
       },
-      [setEdges],
+      [edges, setEdges, setNodes, updateDraftCell],
     );
 
     // Handle edge deletion
@@ -492,6 +540,21 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     const selectedEdge = edges.find((edge) => edge.id === selectedEdgeId) ?? null;
     const selectedEdgeIsDeletable =
       !!selectedEdge && getReactFlowEdgeKind(selectedEdge) === "branch";
+    const selectedWorkbookCell = selectedNode
+      ? workbookCellsRef.current?.find((cell) => cell.id === selectedNode.id)
+      : undefined;
+    const rawNodeTitle = (() => {
+      switch (selectedWorkbookCell?.type) {
+        case "protocol":
+        case "macro":
+        case "command":
+          return selectedWorkbookCell.payload.name;
+        case "question":
+          return selectedWorkbookCell.name;
+        default:
+          return undefined;
+      }
+    })();
 
     return (
       <div>
@@ -501,7 +564,8 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           selectedNode={selectedNode}
           nodeType={selectedNode?.type}
           nodeTitle={
-            typeof selectedNode?.data.title === "string" ? selectedNode.data.title : undefined
+            rawNodeTitle ??
+            (typeof selectedNode?.data.title === "string" ? selectedNode.data.title : undefined)
           }
           onClose={() => {
             setSelectedNode(null);

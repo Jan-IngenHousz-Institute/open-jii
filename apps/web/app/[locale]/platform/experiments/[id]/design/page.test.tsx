@@ -1,13 +1,14 @@
 import {
   createExperiment,
   createExperimentAccess,
+  createMarkdownCell,
   createProtocolCell,
   createWorkbookDetail,
   readOnlyCapabilities,
   createWorkbookVersionSummary,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
+import { createTestQueryClient, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -55,28 +56,54 @@ vi.mock("@/components/workbook/workbook-editor", () => ({
 vi.mock("@/components/workbook/workbook-draft-editor", () => ({
   WorkbookDraftEditor: ({
     initialCells,
-    onSaved,
+    cells = initialCells,
+    onCellsChange,
     autosaveEnabled,
   }: {
     initialCells: unknown[];
-    onSaved?: () => void;
+    cells?: unknown[];
+    onCellsChange?: (cells: unknown[]) => void;
     autosaveEnabled?: boolean;
   }) => (
     <div
       data-testid="workbook-draft-editor"
       data-autosave-enabled={String(autosaveEnabled ?? true)}
+      data-cell-ids={cells
+        .map((cell) => (cell as { id?: string }).id)
+        .filter(Boolean)
+        .join(",")}
     >
       Draft Editor ({initialCells.length} cells)
-      <button data-testid="trigger-save" onClick={() => onSaved?.()}>
-        save
+      <button
+        data-testid="trigger-cell-edit"
+        onClick={() =>
+          onCellsChange?.([
+            ...cells,
+            { id: "edited-cell", type: "markdown", isCollapsed: false, content: "Edited" },
+          ])
+        }
+      >
+        edit cells
       </button>
     </div>
   ),
 }));
 
 vi.mock("@/components/workbook/workbook-canvas-draft-editor", () => ({
-  WorkbookCanvasDraftEditor: ({ initialCells }: { initialCells: unknown[] }) => (
-    <div data-testid="workbook-canvas-draft-editor">
+  WorkbookCanvasDraftEditor: ({
+    initialCells,
+    cells,
+  }: {
+    initialCells: unknown[];
+    cells: unknown[];
+  }) => (
+    <div
+      data-testid="workbook-canvas-draft-editor"
+      data-cell-ids={cells
+        .map((cell) => (cell as { id?: string }).id)
+        .filter(Boolean)
+        .join(",")}
+    >
       Canvas Draft Editor ({initialCells.length} cells)
     </div>
   ),
@@ -85,6 +112,7 @@ vi.mock("@/components/workbook/workbook-canvas-draft-editor", () => ({
 const EXP_ID = "exp-123";
 const WB_ID = "wb-1";
 const VERSION_ID = "ver-1";
+const PROTOCOL_ID = "11111111-1111-1111-1111-111111111111";
 const LOCALE = "en-US";
 const defaultProps = {
   params: Promise.resolve({ locale: LOCALE, id: EXP_ID }),
@@ -148,7 +176,10 @@ function mountWithWorkbook(overrides?: {
       name: "Test Workbook",
       description: "Measures canopy temperature",
       cells: [
-        createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
+        createProtocolCell({
+          id: "c1",
+          payload: { protocolId: PROTOCOL_ID, version: 1, name: "P1" },
+        }),
       ],
       ...(overrides?.canUpdateWorkbook === false ? { capabilities: readOnlyCapabilities } : {}),
     }),
@@ -161,7 +192,10 @@ function mountWithWorkbook(overrides?: {
     body: {
       ...versionSummary,
       cells: [
-        createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
+        createProtocolCell({
+          id: "c1",
+          payload: { protocolId: PROTOCOL_ID, version: 1, name: "P1" },
+        }),
       ],
       metadata: {},
       entitySnapshots: { protocols: {}, macros: {} },
@@ -402,18 +436,109 @@ describe("ExperimentDesignPage", () => {
     expect(screen.queryByTestId("workbook-draft-editor")).not.toBeInTheDocument();
   });
 
-  it("auto-upgrades the experiment's pinned version when a draft edit is saved", async () => {
+  it("finishes the draft save before re-pinning the experiment", async () => {
     mountWithWorkbook();
+    let releaseSave: (() => void) | undefined;
+    const saveBlocked = new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    });
+    const updateSpy = server.mount(contract.workbooks.updateWorkbook, {
+      body: createWorkbookDetail({ id: WB_ID }),
+      unblock: saveBlocked,
+    });
     const upgradeSpy = server.mount(contract.experiments.upgradeWorkbookVersion, {
       body: { workbookId: WB_ID, workbookVersionId: "ver-2", version: 2 },
     });
-    const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
-    const saveTrigger = await screen.findByTestId("trigger-save");
-    await user.click(saveTrigger);
+    await user.click(await screen.findByTestId("trigger-cell-edit"));
+    await waitFor(() => expect(updateSpy.called).toBe(true), { timeout: 3000 });
+    expect(upgradeSpy.called).toBe(false);
 
+    releaseSave?.();
     await waitFor(() => expect(upgradeSpy.called).toBe(true));
+  });
+
+  it("resets the controlled draft before edits can target a newly linked workbook", async () => {
+    const secondWorkbookId = "wb-2";
+    const secondVersionId = "ver-b";
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook();
+    const queryClient = createTestQueryClient();
+    const user = userEvent.setup();
+    render(<ExperimentDesignPage params={defaultProps.params} />, { queryClient });
+
+    expect(await screen.findByTestId("workbook-draft-editor")).toHaveAttribute(
+      "data-cell-ids",
+      "c1",
+    );
+
+    server.mount(contract.experiments.getExperiment, {
+      body: createExperiment({
+        id: EXP_ID,
+        status: "active",
+        name: "Test Experiment",
+        workbookId: secondWorkbookId,
+        workbookVersionId: secondVersionId,
+      }),
+    });
+    const secondCells = [
+      createMarkdownCell({ id: "b1", content: "Second workbook" }),
+      createMarkdownCell({ id: "b2", content: "Only B" }),
+    ];
+    const secondWorkbook = createWorkbookDetail({
+      id: secondWorkbookId,
+      name: "Second Workbook",
+      cells: secondCells,
+    });
+    server.mount(contract.workbooks.getWorkbook, { body: secondWorkbook });
+    server.mount(contract.workbooks.listWorkbookVersions, {
+      body: [
+        createWorkbookVersionSummary({
+          id: secondVersionId,
+          workbookId: secondWorkbookId,
+          version: 1,
+        }),
+      ],
+    });
+    server.mount(contract.workbooks.getWorkbookVersion, {
+      body: {
+        id: secondVersionId,
+        workbookId: secondWorkbookId,
+        version: 1,
+        cells: secondCells,
+        metadata: {},
+        entitySnapshots: { protocols: {}, macros: {} },
+      },
+    });
+    const updateSpy = server.mount(contract.workbooks.updateWorkbook, { body: secondWorkbook });
+    server.mount(contract.experiments.upgradeWorkbookVersion, {
+      body: { workbookId: secondWorkbookId, workbookVersionId: secondVersionId, version: 1 },
+    });
+
+    await queryClient.invalidateQueries();
+    await waitFor(() =>
+      expect(screen.getByTestId("workbook-draft-editor")).toHaveAttribute("data-cell-ids", "b1,b2"),
+    );
+
+    await user.click(screen.getByTestId("trigger-cell-edit"));
+    await waitFor(() => expect(updateSpy.called).toBe(true), { timeout: 3000 });
+
+    expect(updateSpy.params.id).toBe(secondWorkbookId);
+    expect((updateSpy.body as { cells: { id: string }[] }).cells.map((cell) => cell.id)).toEqual([
+      "b1",
+      "b2",
+      "edited-cell",
+    ]);
+
+    await user.click(screen.getByRole("tab", { name: "flow.viewGraph" }));
+    expect(await screen.findByTestId("workbook-canvas-draft-editor")).toHaveAttribute(
+      "data-cell-ids",
+      "b1,b2,edited-cell",
+    );
   });
 });

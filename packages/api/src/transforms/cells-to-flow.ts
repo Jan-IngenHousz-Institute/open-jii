@@ -48,13 +48,44 @@ function safeNodeName(value: string | undefined, fallback: string): string {
   return (singleLine || fallback).slice(0, 64);
 }
 
+/**
+ * Derive the schema-safe canvas label for a cell. `rawName` lets the live
+ * editor project an unsaved title through the exact same rule as initial load.
+ */
+export function deriveFlowNodeName(cell: WorkbookCell, rawName?: string): string {
+  switch (cell.type) {
+    case "protocol":
+      return safeNodeName(
+        rawName ?? cell.payload.name,
+        `Protocol ${cell.payload.protocolId.slice(0, 8)}`,
+      );
+    case "command": {
+      const commandName = rawName ?? cell.payload.name;
+      return safeNodeName(commandName?.trim() ? commandName : cell.payload.content, "Command");
+    }
+    case "macro":
+      return safeNodeName(
+        rawName ?? cell.payload.name,
+        `Macro ${cell.payload.macroId.slice(0, 8)}`,
+      );
+    case "question":
+      return safeNodeName(rawName ?? cell.name, "Question");
+    case "markdown":
+      return safeNodeName(rawName ?? cell.content, "Instruction");
+    case "branch":
+      return "Branch";
+    case "output":
+      return "Output";
+  }
+}
+
 function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
   switch (cell.type) {
     case "protocol":
       return makeNode(
         cell.id,
         "measurement",
-        safeNodeName(cell.payload.name, `Protocol ${cell.payload.protocolId.slice(0, 8)}`),
+        deriveFlowNodeName(cell),
         { protocolId: cell.payload.protocolId },
         isStart,
       );
@@ -65,7 +96,7 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       return makeNode(
         cell.id,
         "measurement",
-        safeNodeName(cell.payload.name || cell.payload.content, "Command"),
+        deriveFlowNodeName(cell),
         { command: { format: cell.payload.format, content: cell.payload.content } },
         isStart,
       );
@@ -75,26 +106,20 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       return makeNode(
         cell.id,
         "analysis",
-        safeNodeName(cell.payload.name, `Macro ${cell.payload.macroId.slice(0, 8)}`),
+        deriveFlowNodeName(cell),
         { macroId: cell.payload.macroId },
         isStart,
       );
 
     case "question":
       // Cell `name` is the column-key label; data pipeline canonicalises it into a column key downstream.
-      return makeNode(
-        cell.id,
-        "question",
-        safeNodeName(cell.name, "Question"),
-        cell.question,
-        isStart,
-      );
+      return makeNode(cell.id, "question", deriveFlowNodeName(cell), cell.question, isStart);
 
     case "markdown":
       return makeNode(
         cell.id,
         "instruction",
-        safeNodeName(cell.content, "Instruction"),
+        deriveFlowNodeName(cell),
         { text: cell.content },
         isStart,
       );

@@ -365,6 +365,78 @@ describe("flowNodesToWorkbookCells", () => {
     expect(flowNodesToWorkbookCells(graph.nodes, graph.edges, cells)).toEqual(cells);
   });
 
+  it("keeps an output's producer-relative offset when inserting before the producer", () => {
+    const existing: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1 },
+      },
+      { id: "out1", type: "output", isCollapsed: false, producedBy: "p1" },
+      { id: "b1", type: "markdown", isCollapsed: false, content: "After" },
+    ];
+    const projected = cellsToFlowGraph(existing);
+    const inserted = makeNode({
+      id: "n1",
+      type: "instruction",
+      name: "Before",
+      content: { text: "Before" },
+      isStart: true,
+    });
+    const nodes = [inserted, ...projected.nodes.map((node) => ({ ...node, isStart: false }))];
+    const edges = [makeEdge("n1", "p1"), makeEdge("p1", "b1")];
+
+    expect(flowNodesToWorkbookCells(nodes, edges, existing).map((cell) => cell.id)).toEqual([
+      "n1",
+      "p1",
+      "out1",
+      "b1",
+    ]);
+  });
+
+  it("keeps an output beside its producer when an earlier cell is deleted", () => {
+    const existing: WorkbookCell[] = [
+      { id: "a1", type: "markdown", isCollapsed: false, content: "Before" },
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1 },
+      },
+      { id: "out1", type: "output", isCollapsed: false, producedBy: "p1" },
+      { id: "b1", type: "markdown", isCollapsed: false, content: "After" },
+    ];
+    const projected = cellsToFlowGraph(existing);
+    const nodes = projected.nodes
+      .filter((node) => node.id !== "a1")
+      .map((node) => ({ ...node, isStart: node.id === "p1" }));
+
+    expect(
+      flowNodesToWorkbookCells(nodes, [makeEdge("p1", "b1")], existing).map((cell) => cell.id),
+    ).toEqual(["p1", "out1", "b1"]);
+  });
+
+  it("measures an output offset within the surviving cell order", () => {
+    const existing: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1 },
+      },
+      { id: "removed", type: "markdown", isCollapsed: false, content: "Remove me" },
+      { id: "out1", type: "output", isCollapsed: false, producedBy: "p1" },
+      { id: "b1", type: "markdown", isCollapsed: false, content: "After" },
+    ];
+    const projected = cellsToFlowGraph(existing);
+    const nodes = projected.nodes.filter((node) => node.id !== "removed");
+
+    expect(
+      flowNodesToWorkbookCells(nodes, [makeEdge("p1", "b1")], existing).map((cell) => cell.id),
+    ).toEqual(["p1", "out1", "b1"]);
+  });
+
   it("retargets and clears branch gotos without rebuilding branch payload", () => {
     const branch: WorkbookCell = {
       id: "b1",

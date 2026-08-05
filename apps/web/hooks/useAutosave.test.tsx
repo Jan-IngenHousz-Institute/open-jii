@@ -195,6 +195,51 @@ describe("useAutosave", () => {
     expect(result.current.status).toBe("idle");
   });
 
+  it("keeps an edit queued when it arrives during an awaited success effect", async () => {
+    let resolveFirstEffect: (() => void) | null = null;
+    const save = vi.fn().mockResolvedValue(undefined);
+    const onSaved = vi
+      .fn<(value: string) => Promise<void>>()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveFirstEffect = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(undefined);
+    const { result, rerender } = renderHook(
+      ({ value }: { value: string }) =>
+        useAutosave({ value, toKey: (v) => v, save, onSaved, delayMs: 20 }),
+      { initialProps: { value: "v0" } },
+    );
+
+    rerender({ value: "v1" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30);
+    });
+    expect(save).toHaveBeenCalledWith("v1");
+    expect(onSaved).toHaveBeenCalledWith("v1");
+    expect(result.current.isSaving).toBe(true);
+
+    rerender({ value: "v2" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30);
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFirstEffect?.();
+      await Promise.resolve();
+    });
+    await flushMicrotasks();
+
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith("v2");
+    expect(onSaved).toHaveBeenCalledTimes(2);
+    expect(onSaved).toHaveBeenLastCalledWith("v2");
+    expect(result.current.status).toBe("idle");
+  });
+
   it("does nothing when disabled, then arms on enable without firing", async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const { result, rerender } = renderHook(

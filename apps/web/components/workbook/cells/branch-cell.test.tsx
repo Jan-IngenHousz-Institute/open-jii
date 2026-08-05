@@ -2,6 +2,7 @@ import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { BranchCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { validateBranchCell } from "@repo/api/transforms/evaluate-branch";
 
 import { BranchCellComponent } from "./branch-cell";
 
@@ -18,6 +19,7 @@ function makeBranchCell(overrides: Partial<BranchCell> = {}): BranchCell {
         conditions: [{ id: "cond-1", sourceCellId: "", field: "", operator: "eq", value: "" }],
       },
     ],
+    defaultPathId: "path-1",
     ...overrides,
   };
 }
@@ -202,21 +204,33 @@ describe("BranchCellComponent", () => {
     expect(updated.paths[1].color).not.toBe(updated.paths[0].color);
   });
 
-  it("sets and clears the Otherwise path", async () => {
+  it("sets Otherwise to one exact authored path without producing a missing default", async () => {
     const user = userEvent.setup();
-    const { onUpdate } = renderBranch();
+    const { onUpdate } = renderBranch({
+      paths: [
+        makeBranchCell().paths[0],
+        {
+          id: "path-2",
+          label: "Path 2",
+          color: "#005E5E",
+          conditions: [
+            {
+              id: "cond-2",
+              sourceCellId: "q-1",
+              field: "answer",
+              operator: "eq",
+              value: "yes",
+            },
+          ],
+        },
+      ],
+    });
 
     await user.click(screen.getByRole("combobox", { name: "Otherwise path" }));
-    await user.click(screen.getByRole("option", { name: "Path 1" }));
-    expect(onUpdate.mock.calls[0][0]).toHaveProperty("defaultPathId", "path-1");
-
-    const { onUpdate: onClear } = renderBranch({ defaultPathId: "path-1" });
-    const clearTrigger = screen.getAllByRole("combobox", { name: "Otherwise path" }).at(-1);
-    expect(clearTrigger).toBeDefined();
-    if (!clearTrigger) throw new Error("Otherwise trigger not found");
-    await user.click(clearTrigger);
-    await user.click(screen.getByRole("option", { name: "No default (fall through)" }));
-    expect(onClear.mock.calls[0][0]).toHaveProperty("defaultPathId", undefined);
+    await user.click(screen.getByRole("option", { name: "Path 2" }));
+    const updated = onUpdate.mock.calls[0][0] as BranchCell;
+    expect(updated.defaultPathId).toBe("path-2");
+    expect(validateBranchCell(updated).some((error) => error.includes("Otherwise"))).toBe(false);
   });
 
   it("preserves a missing Otherwise path as a repairable option", async () => {

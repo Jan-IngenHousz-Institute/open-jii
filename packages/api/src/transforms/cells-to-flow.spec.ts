@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import { zExperimentFlowGraph } from "../domains/experiment/experiment.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
-import { cellsToFlowGraph } from "./cells-to-flow";
+import { cellsToFlowGraph, deriveFlowNodeName } from "./cells-to-flow";
 
 const uuidA = "11111111-1111-1111-1111-111111111111";
 const uuidB = "22222222-2222-2222-2222-222222222222";
@@ -280,6 +280,19 @@ describe("cellsToFlowGraph", () => {
     expect(nodes[0].name).toBe("Protocol 11111111");
     expect(nodes[1].name).toBe("m".repeat(64));
     expect(zExperimentFlowGraph.safeParse(cellsToFlowGraph(cells)).success).toBe(true);
+  });
+
+  it("uses the projection's safe-label rule for a raw live title without mutating it", () => {
+    const rawTitle = "Protocol ".repeat(10);
+    const cell: WorkbookCell = {
+      id: "p1",
+      type: "protocol",
+      isCollapsed: false,
+      payload: { protocolId: uuidA, version: 1, name: rawTitle },
+    };
+
+    expect(deriveFlowNodeName(cell, rawTitle)).toBe(rawTitle.trim().slice(0, 64));
+    expect(cell.payload.name).toBe(rawTitle);
   });
 
   it("converts an inline command cell to a measurement node carrying the command", () => {

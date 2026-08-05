@@ -98,6 +98,23 @@ export function useAutosave<T>({
 
         try {
           await saveRef.current(v);
+
+          if (keyRef.current !== k) {
+            // The write reached the server, but only the latest snapshot may
+            // run its success side effect. Continue directly with that value.
+            lastSavedKeyRef.current = k;
+            continue;
+          }
+
+          await onSavedRef.current?.(v);
+
+          if (keyRef.current !== k) {
+            // An edit can arrive while the success side effect is awaited. It
+            // must remain queued instead of being cleared as though k won.
+            lastSavedKeyRef.current = k;
+            continue;
+          }
+
           lastSavedKeyRef.current = k;
         } catch (err: unknown) {
           // If this snapshot was superseded, continue with the newest value.
@@ -107,14 +124,6 @@ export function useAutosave<T>({
           setStatus("error");
           return;
         }
-
-        if (keyRef.current !== k) {
-          // This response is stale. It has reached the server, but it must not
-          // drive client-side success effects (notably experiment re-pinning).
-          continue;
-        }
-
-        await onSavedRef.current?.(v);
         pendingFlushRef.current = false;
         setStatus("idle");
         return;

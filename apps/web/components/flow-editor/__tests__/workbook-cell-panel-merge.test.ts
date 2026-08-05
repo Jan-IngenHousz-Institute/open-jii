@@ -78,4 +78,22 @@ describe("workbook cell panel merge", () => {
       payload: { ...cell.payload, name: "New" },
     });
   });
+
+  it("preserves a raw overlong protocol title in the draft payload", () => {
+    const rawTitle = "p".repeat(65);
+    const cell: WorkbookCell = {
+      id: "p1",
+      type: "protocol",
+      isCollapsed: false,
+      payload: {
+        protocolId: "11111111-1111-1111-1111-111111111111",
+        version: 1,
+        name: "Old",
+      },
+    };
+
+    expect(mergePanelTitleIntoWorkbookCell(cell, rawTitle)).toMatchObject({
+      payload: { name: rawTitle },
+    });
+  });
 });
