@@ -1,316 +1,111 @@
-// @vitest-environment jsdom
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MeasurementContent } from "~/shared/measurements/flow-node";
-import type { Device } from "~/shared/types/device";
+import type { MultiScanRound } from "~/features/connection/services/scan-manager/execute-scan-assignments";
 
 import { useMeasurementCapture } from "./use-measurement-capture";
 
 const mocks = vi.hoisted(() => {
+  const startRunnerScan = vi.fn();
+  const continueRunnerWithSuccesses = vi.fn();
+  const cancelRunnerScan = vi.fn();
+  const navigateToQuestionFromOverview = vi.fn();
   const flowState = {
-    nextStep: vi.fn(),
-    setScanResults: vi.fn(),
-    navigateToQuestionFromOverview: vi.fn(),
-    devicePlan: undefined as { deviceId: string; targetCellId: string }[] | undefined,
-    completeDevicePlan: vi.fn(),
-    recordExpectedDevices: vi.fn(),
-    recordRealizedOutcomes: vi.fn(),
-    recordWorkbookDeviceOutcomes: vi.fn(),
-    flowNodes: [] as {
-      id: string;
-      name: string;
-      type: string;
-      content: unknown;
-      isStart: boolean;
-    }[],
+    runnerState: { status: "awaitingInput" },
+    awaitingScanStart: true,
+    runnerScanRound: undefined as MultiScanRound | undefined,
+    runnerSucceededCount: 0,
+    startRunnerScan,
+    continueRunnerWithSuccesses,
+    cancelRunnerScan,
+    navigateToQuestionFromOverview,
   };
-  const useMeasurementFlowStore = vi.fn(() => flowState);
-  Object.assign(useMeasurementFlowStore, { getState: () => flowState });
-
-  return {
-    devices: [] as Device[],
-    refetchConnectedDevices: vi.fn(),
-    executeScanAll: vi.fn(),
-    executeScanAssignments: vi.fn(),
-    resetScan: vi.fn(),
-    cancelAll: vi.fn(),
-    openDeviceSheet: vi.fn(),
-    playSound: vi.fn(),
-    logWarn: vi.fn(),
-    logError: vi.fn(),
-    toastError: vi.fn(),
-    resolveInlineCommand: vi.fn(),
-    flowState,
-    useMeasurementFlowStore,
-    isScanning: false,
+  const scannerState = {
+    executors: new Map(),
+    progress: undefined,
+    scanStartedAt: undefined,
+    estimatedMs: undefined,
   };
+  const refetch = vi.fn();
+  const connection = { devices: [] as { id: string; name: string; type: "usb" }[] };
+  const toastError = vi.fn();
+  return { flowState, scannerState, refetch, connection, toastError };
 });
 
-vi.mock("~/features/connection/hooks/use-device-connection", () => ({
-  useConnectedDevices: () => ({
-    data: mocks.devices,
-    refetch: mocks.refetchConnectedDevices,
-  }),
+vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
+  useMeasurementFlowStore: () => mocks.flowState,
 }));
-vi.mock("~/features/connection/hooks/use-multi-scanner", () => ({
-  useMultiScanner: () => ({
-    executeScanAll: mocks.executeScanAll,
-    executeScanAssignments: mocks.executeScanAssignments,
-    isScanning: mocks.isScanning,
-    deviceStates: [],
-    lastRound: null,
-    reset: mocks.resetScan,
-    cancelAll: mocks.cancelAll,
-  }),
+vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
+  useScannerCommandExecutorStore: (selector: (state: typeof mocks.scannerState) => unknown) =>
+    selector(mocks.scannerState),
+}));
+vi.mock("~/features/connection/hooks/use-device-connection", () => ({
+  useConnectedDevices: () => ({ data: mocks.connection.devices, refetch: mocks.refetch }),
 }));
 vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({
   useDeviceSheetStore: (selector: (state: { open: () => void }) => unknown) =>
-    selector({ open: mocks.openDeviceSheet }),
-}));
-vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
-  useScannerCommandExecutorStore: Object.assign(
-    (
-      selector: (state: {
-        progress: number;
-        scanStartedAt: number;
-        estimatedMs: number;
-      }) => unknown,
-    ) => selector({ progress: 0, scanStartedAt: 0, estimatedMs: 0 }),
-    { getState: () => ({ executors: new Map() }) },
-  ),
-}));
-vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
-  useMeasurementFlowStore: mocks.useMeasurementFlowStore,
-}));
-vi.mock("~/features/measurement-flow/utils/play-sound", () => ({
-  playSound: mocks.playSound,
-}));
-vi.mock("~/features/connection/utils/classify-scan-error", () => ({
-  classifyScanError: () => "unknown",
-}));
-vi.mock("~/shared/i18n", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
-vi.mock("~/shared/observability/logger", () => ({
-  createLogger: () => ({ warn: mocks.logWarn, error: mocks.logError }),
+    selector({ open: vi.fn() }),
 }));
 vi.mock("sonner-native", () => ({ toast: { error: mocks.toastError } }));
-vi.mock("@repo/api/transforms/command-payload", () => ({
-  resolveInlineCommand: mocks.resolveInlineCommand,
-}));
+vi.mock("~/shared/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
-const DEVICE_A: Device = { id: "usb-a", type: "usb", name: "Device A" };
-const DEVICE_B: Device = { id: "usb-b", type: "usb", name: "Device B" };
-const DEVICE_C: Device = { id: "usb-c", type: "usb", name: "Device C" };
-const DEVICE_D: Device = { id: "usb-d", type: "usb", name: "Device D" };
-const DEVICE_E: Device = { id: "usb-e", type: "usb", name: "Device E" };
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.connection.devices = [{ id: "a", name: "Device A", type: "usb" }];
+  mocks.refetch.mockResolvedValue({ data: mocks.connection.devices });
+  mocks.flowState.runnerState = { status: "awaitingInput" };
+  mocks.flowState.awaitingScanStart = true;
+  mocks.flowState.runnerScanRound = undefined;
+  mocks.flowState.runnerSucceededCount = 0;
+});
 
-const CONTENT: MeasurementContent = {
-  protocolId: "shared-protocol",
-  protocol: { code: [{ set: [] }], name: "Shared protocol" },
-};
-
-describe("useMeasurementCapture", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.devices = [DEVICE_A, DEVICE_B];
-    mocks.isScanning = false;
-    mocks.refetchConnectedDevices.mockResolvedValue({ data: [DEVICE_A, DEVICE_B] });
-    mocks.cancelAll.mockResolvedValue(undefined);
-    mocks.playSound.mockResolvedValue(undefined);
-    mocks.resolveInlineCommand.mockImplementation((command: { content: string }) => {
-      if (command.content === "bad") throw new Error("invalid inline command");
-      return `resolved:${command.content}`;
-    });
-    Object.assign(mocks.flowState, {
-      devicePlan: undefined,
-      flowNodes: [],
-    });
+describe("useMeasurementCapture runner mapping", () => {
+  it("starts an inline command without applying protocol-only validation", async () => {
+    const { result } = renderHook(() =>
+      useMeasurementCapture({ command: { format: "string", content: "battery" } }, "command-1"),
+    );
+    await act(() => result.current.startScan());
+    expect(mocks.flowState.startRunnerScan).toHaveBeenCalledWith("command-1");
+    expect(mocks.toastError).not.toHaveBeenCalled();
   });
 
-  it("records a successful broadcast round in connection order and advances", async () => {
-    mocks.executeScanAll.mockResolvedValue({
-      successes: [
-        { device: DEVICE_B, result: { device_id: "firmware-b", value: 2 } },
-        { device: DEVICE_A, result: { device_id: "firmware-a", value: 1 } },
-      ],
-      failures: [],
-    });
-    const { result } = renderHook(() => useMeasurementCapture(CONTENT, "measurement-cell"));
-
-    await act(async () => result.current.startScan());
-
-    expect(mocks.executeScanAll).toHaveBeenCalledWith(CONTENT.protocol, [DEVICE_A, DEVICE_B]);
-    expect(mocks.flowState.recordWorkbookDeviceOutcomes).toHaveBeenCalledWith([
-      {
-        producer_cell_id: "measurement-cell",
-        transport_device_id: "usb-b",
-        device_id: "firmware-b",
-        outcome: "ok",
-      },
-      {
-        producer_cell_id: "measurement-cell",
-        transport_device_id: "usb-a",
-        device_id: "firmware-a",
-        outcome: "ok",
-      },
-    ]);
-    expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
-      [
-        {
-          device: { id: "usb-a", name: "Device A" },
-          result: { device_id: "firmware-a", value: 1 },
-          measurementDeviceId: "firmware-a",
-          producerCellId: "measurement-cell",
-        },
-        {
-          device: { id: "usb-b", name: "Device B" },
-          result: { device_id: "firmware-b", value: 2 },
-          measurementDeviceId: "firmware-b",
-          producerCellId: "measurement-cell",
-        },
-      ],
-      "measurement-cell",
+  it("retains the protocol availability guard", async () => {
+    const { result } = renderHook(() =>
+      useMeasurementCapture({ protocolId: "protocol-1" }, "protocol-cell"),
     );
-    expect(mocks.resetScan).toHaveBeenCalledOnce();
-    expect(mocks.playSound).toHaveBeenCalledOnce();
-    expect(mocks.flowState.nextStep).toHaveBeenCalledOnce();
+    await act(() => result.current.startScan());
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "measurementFlow:measurementNode.toast.protocolUnavailable",
+    );
+    expect(mocks.flowState.startRunnerScan).not.toHaveBeenCalled();
   });
 
-  it("resolves each dispatch target independently and preserves payload provenance", async () => {
-    mocks.devices = [DEVICE_A, DEVICE_B, DEVICE_C, DEVICE_D, DEVICE_E];
-    mocks.refetchConnectedDevices.mockResolvedValue({ data: mocks.devices });
-    mocks.flowState.devicePlan = mocks.devices.map((device, index) => ({
-      deviceId: device.id,
-      targetCellId: `target-${index + 1}`,
-    }));
-    mocks.flowState.flowNodes = [
-      {
-        id: "target-1",
-        name: "Protocol target",
-        type: "measurement",
-        content: {
-          protocolId: "proto-a",
-          protocol: { code: [{ set: [{ label: "a" }] }], name: "Protocol A" },
-        },
-        isStart: false,
-      },
-      {
-        id: "target-2",
-        name: "Command target",
-        type: "measurement",
-        content: { command: { format: "string", content: "status" } },
-        isStart: false,
-      },
-      // target-3 is deliberately absent from the hydrated flow.
-      {
-        id: "target-4",
-        name: "Bad command",
-        type: "measurement",
-        content: { command: { format: "string", content: "bad" } },
-        isStart: false,
-      },
-      {
-        id: "target-5",
-        name: "Missing protocol",
-        type: "measurement",
-        content: { protocolId: "proto-missing" },
-        isStart: false,
-      },
-    ];
-    mocks.executeScanAssignments.mockImplementation((assignments, prefailed) =>
-      Promise.resolve({
-        successes: assignments.map(({ device }: { device: Device }, index: number) => ({
-          device,
-          result: { value: index + 1 },
-        })),
-        failures: prefailed,
-      }),
+  it("blocks before the runner gate when no device is connected", async () => {
+    mocks.connection.devices = [];
+    const { result } = renderHook(() =>
+      useMeasurementCapture({ command: { format: "string", content: "battery" } }, "command-1"),
     );
-    const { result } = renderHook(() => useMeasurementCapture({}, "target-1"));
-
-    await act(async () => result.current.startScan());
-
-    const [assignments, prefailed] = mocks.executeScanAssignments.mock.calls[0];
-    expect(assignments).toEqual([
-      {
-        device: DEVICE_A,
-        command: [{ set: [{ label: "a" }] }],
-        protocolId: "proto-a",
-        protocolName: "Protocol A",
-      },
-      { device: DEVICE_B, command: "resolved:status", protocolName: "Command target" },
-    ]);
-    expect(
-      prefailed.map(({ device, error }: { device: Device; error: Error }) => [
-        device.id,
-        error.message,
-      ]),
-    ).toEqual([
-      ["usb-c", "Dispatch target is not part of this flow"],
-      ["usb-d", "invalid inline command"],
-      ["usb-e", "Protocol code is unavailable for this dispatch target"],
-    ]);
-
-    act(() => result.current.completeWithSuccesses());
-
-    expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
-      [
-        {
-          device: { id: "usb-a", name: "Device A" },
-          result: { value: 1 },
-          measurementDeviceId: "usb-a",
-          producerCellId: "target-1",
-          protocolId: "proto-a",
-          protocolName: "Protocol A",
-        },
-        {
-          device: { id: "usb-b", name: "Device B" },
-          result: { value: 2 },
-          measurementDeviceId: "usb-b",
-          producerCellId: "target-2",
-          protocolId: undefined,
-          protocolName: "Command target",
-        },
-      ],
-      "target-1",
-    );
-    expect(mocks.flowState.completeDevicePlan).toHaveBeenCalledOnce();
-  });
-
-  it("blocks immediately when no device is connected", async () => {
-    mocks.devices = [];
-    const { result } = renderHook(() => useMeasurementCapture(CONTENT));
-
-    await act(async () => result.current.startScan());
-
+    await act(() => result.current.startScan());
     expect(mocks.toastError).toHaveBeenCalledWith(
       "measurementFlow:measurementNode.toast.notConnected",
     );
-    expect(mocks.refetchConnectedDevices).not.toHaveBeenCalled();
+    expect(mocks.refetch).not.toHaveBeenCalled();
   });
 
-  it("turns an unexpected scan rejection into the coherent scan error", async () => {
-    mocks.executeScanAll.mockRejectedValue(new Error("executor exploded"));
-    const { result } = renderHook(() => useMeasurementCapture(CONTENT));
-
-    await act(async () => result.current.startScan());
-
-    expect(mocks.logError).toHaveBeenCalledWith("scan error", { err: "executor exploded" });
-    expect(mocks.toastError).toHaveBeenCalledWith(
-      "measurementFlow:measurementNode.toast.scanError",
+  it("maps partial state and actions directly from the runner store", () => {
+    mocks.flowState.runnerScanRound = {
+      successes: [{ device: mocks.connection.devices[0], result: { ok: true } }],
+      failures: [{ device: { id: "b", name: "B", type: "usb" }, error: new Error("lost") }],
+    };
+    mocks.flowState.runnerSucceededCount = 1;
+    const { result } = renderHook(() =>
+      useMeasurementCapture({ command: { format: "string", content: "battery" } }, "command-1"),
     );
-  });
 
-  it("cancels before resetting when all devices disconnect during a scan", async () => {
-    mocks.devices = [];
-    mocks.isScanning = true;
-
-    renderHook(() => useMeasurementCapture(CONTENT));
-
-    await waitFor(() => expect(mocks.cancelAll).toHaveBeenCalledOnce());
-    expect(mocks.cancelAll.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.resetScan.mock.invocationCallOrder[0],
-    );
+    expect(result.current.lastRound).toBe(mocks.flowState.runnerScanRound);
+    expect(result.current.succeededCount).toBe(1);
+    act(() => result.current.completeWithSuccesses());
+    act(() => result.current.cancelScan());
+    expect(mocks.flowState.continueRunnerWithSuccesses).toHaveBeenCalled();
+    expect(mocks.flowState.cancelRunnerScan).toHaveBeenCalled();
   });
 });

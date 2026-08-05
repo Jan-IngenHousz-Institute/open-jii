@@ -8,7 +8,7 @@ import { MOBILE_PRE_IDENTITY_FAMILY } from "~/features/connection/services/mobil
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
-import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
+import { flowProtocolId } from "~/features/measurement-flow/domain/flow-state";
 import { deriveTerminalStatus } from "~/features/measurement-flow/domain/workbook-run-manifest";
 import { reconcileWorkbookRunManifests } from "~/features/measurement-flow/services/workbook-run-manifest-reconcile";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";

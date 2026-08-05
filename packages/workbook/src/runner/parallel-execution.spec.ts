@@ -139,6 +139,97 @@ describe("parallel container execution", () => {
     });
   });
 
+  it.each([
+    ["command-a", "command-b"],
+    ["command-b", "command-a"],
+  ] as const)(
+    "keeps partial terminal derivation stable when %s settles before %s",
+    (firstCellId, secondCellId) => {
+      const roster: DeviceRef[] = [
+        { id: "connection-a1", label: "A1", family: "multispeq" },
+        { id: "connection-a2", label: "A2", family: "multispeq" },
+        { id: "connection-b", label: "B", family: "ambit" },
+      ];
+      const container = parallel([
+        {
+          id: "lane-a",
+          label: "Multi",
+          color: "#f00",
+          conditions: [condition("is-multi", "multispeq")],
+          body: [commandCell("command-a")],
+        },
+        {
+          id: "lane-b",
+          label: "Ambit",
+          color: "#00f",
+          conditions: [condition("is-ambit", "ambit")],
+          body: [commandCell("command-b")],
+        },
+      ]);
+      let step = transition(
+        createInitialState({
+          cells: [container, commandCell("after")],
+          mode: "flow",
+          devices: roster,
+        }),
+        { type: "START" },
+      );
+      const byCell = new Map(commandEffects(step.effects).map((effect) => [effect.cellId, effect]));
+      const first = byCell.get(firstCellId);
+      const second = byCell.get(secondCellId);
+      if (!first || !second) throw new Error("expected both lane effects");
+      const outcomesFor = (cellId: string) =>
+        cellId === "command-a"
+          ? [
+              { deviceId: "connection-a1", data: { ok: true } },
+              { deviceId: "connection-a2", error: "lost" },
+            ]
+          : [{ deviceId: "connection-b", data: { ok: true } }];
+
+      step = completeCommand(step.state, first, outcomesFor(firstCellId));
+      expect(commandEffects(step.effects)).toEqual([]);
+      expect(step.state.cellRuns.after).toBeUndefined();
+      step = completeCommand(step.state, second, outcomesFor(secondCellId));
+
+      expect(commandEffects(step.effects)[0]?.cellId).toBe("after");
+      expect(step.state.parallelContexts.device_lanes?.lanes).toMatchObject({
+        "lane-a": { status: "partial" },
+        "lane-b": { status: "done" },
+      });
+      expect(step.state.activeContainerAttemptId).toBeNull();
+    },
+  );
+
+  it("releases an all-skipped attempt immediately", () => {
+    const container = parallel([
+      {
+        id: "lane-a",
+        label: "A",
+        color: "#f00",
+        conditions: [condition("is-multi", "multispeq")],
+        body: [commandCell("command-a")],
+      },
+      {
+        id: "fallback",
+        label: "Fallback",
+        color: "#999",
+        conditions: [],
+        body: [commandCell("fallback-command")],
+      },
+    ]);
+    const step = transition(
+      createInitialState({ cells: [container, commandCell("after")], mode: "flow", devices: [] }),
+      { type: "START" },
+    );
+
+    expect(commandEffects(step.effects).map((effect) => effect.cellId)).toEqual(["after"]);
+    expect(step.state.parallelContexts.device_lanes?.lanes).toMatchObject({
+      "lane-a": { status: "skipped" },
+      fallback: { status: "skipped" },
+    });
+    expect(step.state.activeContainerAttemptId).toBeNull();
+  });
+
   it("releases notebook RUN_ALL after its lane tracks finish", () => {
     const container = parallel([
       {

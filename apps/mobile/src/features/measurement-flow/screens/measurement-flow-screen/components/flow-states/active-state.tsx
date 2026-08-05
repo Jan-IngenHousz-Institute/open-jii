@@ -1,12 +1,8 @@
 import React from "react";
 import { View, ScrollView } from "react-native";
-import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import type { RunnerMeasurementFlowStore } from "~/features/measurement-flow/stores/use-runner-measurement-flow-store";
 import { FlowNode } from "~/shared/measurements/flow-node";
 
 import { AnalysisNode } from "../flow-nodes/analysis-node/analysis-node";
-import { BranchNode } from "../flow-nodes/branch-node/branch-node";
-import { CommandNode } from "../flow-nodes/command-node/command-node";
 import { InstructionNode } from "../flow-nodes/instruction-node";
 import { MeasurementNode } from "../flow-nodes/measurement-node/measurement-node";
 import { QuestionNode } from "../flow-nodes/question-node/question-node";
@@ -26,14 +22,15 @@ const ScrollableNode = ({ children }: { children: React.ReactNode }) => (
   </ScrollView>
 );
 
-function renderNode(currentNode: FlowNode, isDispatchTarget: boolean, runnerBacked: boolean) {
+function renderNode(currentNode: FlowNode) {
   switch (currentNode.type) {
     case "question":
       return <QuestionNode node={currentNode} />;
     case "analysis":
       return <AnalysisNode content={currentNode.content} nodeId={currentNode.id} />;
     case "branch":
-      return <BranchNode node={currentNode} />;
+      // Branches are transparent runner cells and never become host interactions.
+      return null;
     case "instruction":
       return (
         <ScrollableNode>
@@ -41,13 +38,6 @@ function renderNode(currentNode: FlowNode, isDispatchTarget: boolean, runnerBack
         </ScrollableNode>
       );
     case "measurement":
-      // A measurement node carries either a protocol reference or an inline
-      // device command; the latter runs through the lightweight CommandNode,
-      // except as a dispatch target, where the multi-device MeasurementNode
-      // runs each device's own payload.
-      if (currentNode.content?.command && !isDispatchTarget && !runnerBacked) {
-        return <CommandNode content={currentNode.content.command} nodeId={currentNode.id} />;
-      }
       return (
         <ScrollableNode>
           <MeasurementNode content={currentNode.content} nodeId={currentNode.id} />
@@ -59,12 +49,6 @@ function renderNode(currentNode: FlowNode, isDispatchTarget: boolean, runnerBack
 }
 
 export function ActiveState({ currentNode }: ActiveStateProps) {
-  const isDispatchTarget = useMeasurementFlowStore(
-    (s) => s.devicePlan?.some((p) => p.targetCellId === currentNode.id) ?? false,
-  );
-  const runnerBacked = useMeasurementFlowStore(
-    (state) => (state as unknown as Partial<RunnerMeasurementFlowStore>).runnerBacked === true,
-  );
   // Each node controls its own navigation/actions; no shared footer here.
-  return <View className="flex-1">{renderNode(currentNode, isDispatchTarget, runnerBacked)}</View>;
+  return <View className="flex-1">{renderNode(currentNode)}</View>;
 }

@@ -110,6 +110,8 @@ export interface MobileRunnerPortsDeps {
   getExecutors?: () => ReadonlyMap<string, DeviceExecutorEntry>;
   executeAssignments?: ExecuteAssignments;
   cancelDevices?: (deviceIds: string[]) => Promise<void>;
+  /** Refresh broadcast targets at tap time; dispatch/lane subsets remain frozen. */
+  resolveDeviceIds?: (input: CommandRunInput) => string[];
   /** Set by the host when partial-success UI chooses Continue instead of Retry. */
   shouldContinueAfterPartial?: () => boolean;
   onScanRound?: (input: CommandRunInput, round: MultiScanRound, outcomes: DeviceOutcome[]) => void;
@@ -130,17 +132,26 @@ function executorIdentity(entry: DeviceExecutorEntry, input: CommandRunInput): D
 }
 
 function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort {
+  let scannerModulePromise:
+    | Promise<typeof import("~/features/connection/stores/use-scanner-command-executor-store")>
+    | undefined;
+  const loadScannerModule = () =>
+    (scannerModulePromise ??= import(
+      "~/features/connection/stores/use-scanner-command-executor-store"
+    ));
+
   return {
     async execute(
       input: CommandRunInput,
       opts: { signal: AbortSignal; onProgress: (progress: CommandProgress) => void },
     ): Promise<DeviceOutcome[]> {
       await deps.scanGate.wait(opts.signal);
+      const targetedDeviceIds = deps.resolveDeviceIds?.(input) ?? input.deviceIds;
 
       const scannerModule =
         deps.getExecutors && deps.executeAssignments && deps.cancelDevices
           ? undefined
-          : await import("~/features/connection/stores/use-scanner-command-executor-store");
+          : await loadScannerModule();
       const scannerStore = scannerModule?.useScannerCommandExecutorStore;
       const getExecutors =
         deps.getExecutors ?? (() => scannerStore?.getState().executors ?? new Map());
@@ -153,7 +164,7 @@ function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort
             ),
           ).then(() => undefined));
       const onAbort = () => {
-        void cancelDevices(input.deviceIds).catch(() => undefined);
+        void cancelDevices(targetedDeviceIds).catch(() => undefined);
       };
       opts.signal.addEventListener("abort", onAbort, { once: true });
 
@@ -170,7 +181,7 @@ function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort
                 }),
             }));
         const accumulated = new Map<string, DeviceOutcome>();
-        let pendingDeviceIds = [...input.deviceIds];
+        let pendingDeviceIds = [...targetedDeviceIds];
 
         while (pendingDeviceIds.length > 0) {
           const executors = getExecutors();
@@ -241,7 +252,7 @@ function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort
           if (deps.shouldContinueAfterPartial?.()) break;
         }
 
-        const outcomes = input.deviceIds.map(
+        const outcomes = targetedDeviceIds.map(
           (deviceId): DeviceOutcome =>
             accumulated.get(deviceId) ?? {
               deviceId,

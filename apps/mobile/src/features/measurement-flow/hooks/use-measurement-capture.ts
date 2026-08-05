@@ -1,381 +1,91 @@
-import { useEffect, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { toast } from "sonner-native";
 import { useConnectedDevices } from "~/features/connection/hooks/use-device-connection";
-import { useMultiScanner } from "~/features/connection/hooks/use-multi-scanner";
-import type { MultiScanRound, ScanAssignment } from "~/features/connection/hooks/use-multi-scanner";
-import type {
-  DeviceScanFailure,
-  DeviceScanResult,
-} from "~/features/connection/services/scan-manager/utils/partition-scan-outcomes";
+import type { DeviceScanState } from "~/features/connection/hooks/use-multi-scanner";
 import { useDeviceSheetStore } from "~/features/connection/stores/use-device-sheet-store";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
-import { classifyScanError } from "~/features/connection/utils/classify-scan-error";
-import type {
-  DevicePlanEntry,
-  ScanResult,
-} from "~/features/measurement-flow/domain/flow-transitions";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
-import type { RunnerMeasurementFlowStore } from "~/features/measurement-flow/stores/use-runner-measurement-flow-store";
-import { playSound } from "~/features/measurement-flow/utils/play-sound";
 import { useTranslation } from "~/shared/i18n";
-import type { FlowNode, MeasurementContent } from "~/shared/measurements/flow-node";
-import { resolveMeasurementDeviceId } from "~/shared/measurements/measurement-device-id";
-import { createLogger } from "~/shared/observability/logger";
-import type { Device } from "~/shared/types/device";
+import type { MeasurementContent } from "~/shared/measurements/flow-node";
 
-import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
-
-const log = createLogger("measurement-capture");
-
-interface ResolvedTarget {
-  command: string | object;
-  protocolId?: string;
-  protocolName?: string;
-}
-
-// Resolves a dispatch target's payload from its hydrated flow node (protocol
-// snapshot code or inline command), the same mechanism the current node uses.
-// Errors fail only that device's round entry, never the whole round.
-function resolveTargetPayload(node: FlowNode | undefined): ResolvedTarget | Error {
-  const content = node?.content as MeasurementContent | undefined;
-  if (!node || !content) return new Error("Dispatch target is not part of this flow");
-  if (content.command) {
-    try {
-      return { command: resolveInlineCommand(content.command), protocolName: node.name };
-    } catch (err) {
-      return err instanceof Error ? err : new Error(String(err));
-    }
-  }
-  const code = content.protocol?.code;
-  if (!content.protocolId || !code || code.length === 0) {
-    return new Error("Protocol code is unavailable for this dispatch target");
-  }
-  return { command: code, protocolId: content.protocolId, protocolName: content.protocol?.name };
-}
-
-// View-model for MeasurementNode: owns the multi-scan lifecycle so the
-// component is a pure render switch over the returned state. nodeId (== cell
-// id) attributes the recorded result to its producing cell. See CONTEXT.md.
+/** Runner-backed view model for the measurement card and its user scan gate. */
 export function useMeasurementCapture(content: MeasurementContent, nodeId?: string) {
   const { t } = useTranslation("measurementFlow");
-  // Resolved once at flow-load (hydrateFlowNodes): snapshot code + cell name.
-  const protocol = content.protocol;
-  const {
-    executeScanAll,
-    executeScanAssignments,
-    isScanning,
-    deviceStates,
-    lastRound,
-    reset: resetScan,
-    cancelAll,
-  } = useMultiScanner();
   const { data: devices = [], refetch: refetchConnectedDevices } = useConnectedDevices();
+  const executors = useScannerCommandExecutorStore((state) => state.executors);
+  const scanProgress = useScannerCommandExecutorStore((state) => state.progress);
+  const scanStartedAt = useScannerCommandExecutorStore((state) => state.scanStartedAt);
+  const estimatedMs = useScannerCommandExecutorStore((state) => state.estimatedMs);
   const {
-    nextStep,
-    setScanResults,
+    runnerState,
+    awaitingScanStart,
+    runnerScanRound,
+    runnerSucceededCount,
+    startRunnerScan,
+    continueRunnerWithSuccesses,
+    cancelRunnerScan,
     navigateToQuestionFromOverview,
-    devicePlan,
-    completeDevicePlan,
-    recordWorkbookDeviceOutcomes,
   } = useMeasurementFlowStore();
-  const runnerSlice = useMeasurementFlowStore((state) => {
-    const runnerState = state as unknown as Partial<RunnerMeasurementFlowStore>;
-    return {
-      runnerBacked: runnerState.runnerBacked === true,
-      runnerState: runnerState.runnerState,
-      awaitingScanStart: runnerState.awaitingScanStart,
-      runnerScanRound: runnerState.runnerScanRound,
-      runnerSucceededCount: runnerState.runnerSucceededCount ?? 0,
-      startRunnerScan: runnerState.startRunnerScan,
-      continueRunnerWithSuccesses: runnerState.continueRunnerWithSuccesses,
-      cancelRunnerScan: runnerState.cancelRunnerScan,
-    };
-  });
-  // The dispatch plan applies only while THIS node is one of its targets;
-  // otherwise it is stale routing state and the node broadcasts as before.
-  const activePlan =
-    nodeId && devicePlan?.some((p) => p.targetCellId === nodeId) ? devicePlan : undefined;
-  const openDeviceSheet = useDeviceSheetStore((s) => s.open);
-  // Primary's live progress (legacy mirrors); the round shares one protocol so
-  // the estimate applies to every device.
-  const scanProgress = useScannerCommandExecutorStore((s) => s.progress);
-  const scanStartedAt = useScannerCommandExecutorStore((s) => s.scanStartedAt);
-  const estimatedMs = useScannerCommandExecutorStore((s) => s.estimatedMs);
-
-  // Successes accumulated across retry rounds of one Multi-scan: a device
-  // that already returned a result is not re-scanned when the user retries
-  // the failed ones.
-  const successesRef = useRef<DeviceScanResult[]>([]);
-
-  // Per-device payload provenance of the dispatch round (deviceId keyed),
-  // stamped onto each result so its upload carries its own protocolId.
-  const assignmentMetaRef = useRef<
-    Record<string, { protocolId?: string; protocolName?: string; measurementDeviceId?: string }>
-  >({});
-
-  // Keep stable refs so the disconnect-cleanup effect below doesn't need to
-  // list these as dependencies (avoids any memoisation concerns).
-  const resetScanRef = useRef(resetScan);
-  resetScanRef.current = resetScan;
-  const cancelAllRef = useRef(cancelAll);
-  cancelAllRef.current = cancelAll;
-
-  // Re-entry guard: the liveness probe is awaited before executeScanAll flips
-  // isScanning, so without this a double-tap could launch two scans.
+  const openDeviceSheet = useDeviceSheetStore((state) => state.open);
   const isStartingRef = useRef(false);
 
-  // When every device unexpectedly disconnects mid-scan, abort the in-flight
-  // commands before resetting (resetting first surfaces a raw transport error
-  // instead of the coherent cancelled path), then reset for a clean retry.
-  useEffect(() => {
-    if (devices.length === 0 && isScanning) {
-      successesRef.current = [];
-      void (async () => {
-        try {
-          await cancelAllRef.current();
-        } finally {
-          resetScanRef.current();
-        }
-      })();
-    }
-  }, [devices.length, isScanning]);
-
-  const completeWithSuccesses = () => {
-    if (runnerSlice.runnerBacked) {
-      runnerSlice.continueRunnerWithSuccesses?.();
-      return;
-    }
-    // Order results by connect order so the round reads consistently everywhere.
-    const orderOf = (id: string) => {
-      const i = devices.findIndex((d) => d.id === id);
-      return i === -1 ? Number.MAX_SAFE_INTEGER : i;
-    };
-    const ordered = [...successesRef.current].sort(
-      (a, b) => orderOf(a.device.id) - orderOf(b.device.id),
-    );
-    successesRef.current = [];
-    setScanResults(
-      ordered.map(({ device, result }) => ({
-        device: { id: device.id, name: device.name },
-        result: result as ScanResult,
-        producerCellId:
-          activePlan?.find((entry) => entry.deviceId === device.id)?.targetCellId ?? nodeId,
-        ...assignmentMetaRef.current[device.id],
+  const deviceStates = useMemo<DeviceScanState[]>(
+    () =>
+      Array.from(executors.values(), (entry) => ({
+        device: entry.device,
+        identity: entry.identity,
+        status: entry.isExecuting
+          ? "scanning"
+          : entry.error
+            ? "error"
+            : entry.commandResponse
+              ? "done"
+              : "idle",
+        error: entry.error,
       })),
-      nodeId,
-    );
-    assignmentMetaRef.current = {};
-    // The round covered every dispatch target; consumedNodeIds keeps skipping
-    // the other targets once while the plan itself is done.
-    if (activePlan) completeDevicePlan();
-    // Single-node flows wrap nextStep() straight back to this same mounted
-    // node; clear the finished round first so it renders Ready again instead
-    // of a stale scanning screen with a dead Cancel button.
-    resetScan();
-    // Play system notification sound when measurement completes. Never block
-    // flow advance on audio.
-    playSound().catch((e) => log.warn("playSound failed", { err: (e as Error)?.message }));
-    nextStep();
-  };
-
-  // Build per-device assignments from the plan; a device whose target payload
-  // cannot be resolved fails its own entry, the rest of the round still runs.
-  const runDispatchRound = (plan: DevicePlanEntry[], pendingDevices: Device[]) => {
-    const { flowNodes } = useMeasurementFlowStore.getState();
-    const assignments: ScanAssignment[] = [];
-    const prefailed: DeviceScanFailure[] = [];
-    for (const device of pendingDevices) {
-      const target = plan.find((p) => p.deviceId === device.id);
-      const node = flowNodes.find((n) => n.id === target?.targetCellId);
-      const resolved = resolveTargetPayload(node);
-      if (resolved instanceof Error) {
-        prefailed.push({ device, error: resolved });
-      } else {
-        assignments.push({ device, ...resolved });
-        assignmentMetaRef.current[device.id] = {
-          protocolId: resolved.protocolId,
-          protocolName: resolved.protocolName,
-        };
-      }
-    }
-    return executeScanAssignments(assignments, prefailed);
-  };
+    [executors],
+  );
 
   const startScan = async () => {
-    if (isScanning || isStartingRef.current) return;
+    if (isStartingRef.current || (runnerState?.status === "running" && !awaitingScanStart)) return;
     isStartingRef.current = true;
     try {
       if (devices.length === 0) {
         toast.error(t("measurementFlow:measurementNode.toast.notConnected"));
         return;
       }
-      // A dispatch round resolves each device's payload from ITS target cell,
-      // so the current node's own protocol guards only apply to broadcast.
-      if (!activePlan && !runnerSlice.runnerBacked) {
+      if (!content.command) {
         if (!content.protocolId) {
           toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
           return;
         }
-        if (!protocol) {
+        if (!content.protocol) {
           toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
           return;
         }
       }
-
-      // The cached device list is polled (~3s) and lags a real drop; probe the
-      // live connections first so we fail with a reconnect prompt, not a long hang.
       const { data: liveDevices } = await refetchConnectedDevices();
       if (!liveDevices || liveDevices.length === 0) {
-        log.warn("scan blocked: no device connected");
         toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
         return;
       }
-
-      if (runnerSlice.runnerBacked) {
-        if (nodeId) runnerSlice.startRunnerScan?.(nodeId);
-        return;
-      }
-
-      // Only scan devices that haven't succeeded in a previous round; a
-      // dispatch round additionally covers only the devices in the plan.
-      const pendingDevices = liveDevices.filter(
-        (d) =>
-          !successesRef.current.some((s) => s.device.id === d.id) &&
-          (!activePlan || activePlan.some((p) => p.deviceId === d.id)),
-      );
-      if (pendingDevices.length === 0) {
-        completeWithSuccesses();
-        return;
-      }
-
-      const producerFor = (deviceId: string) =>
-        activePlan?.find((entry) => entry.deviceId === deviceId)?.targetCellId ?? nodeId;
-
-      try {
-        let round: MultiScanRound;
-        if (activePlan) {
-          round = await runDispatchRound(activePlan, pendingDevices);
-        } else if (protocol) {
-          round = await executeScanAll(protocol, pendingDevices);
-        } else {
-          return; // unreachable: guarded above
-        }
-        successesRef.current = [
-          ...successesRef.current.filter(
-            (s) => !round.successes.some((r) => r.device.id === s.device.id),
-          ),
-          ...round.successes,
-        ];
-        const fallbackDeviceIdFor = (deviceId: string) =>
-          useScannerCommandExecutorStore.getState().executors.get(deviceId)?.identity?.deviceId ??
-          deviceId;
-        const deviceOutcomes = [
-          ...round.successes.flatMap(({ device, result }) => {
-            const producerCellId = producerFor(device.id);
-            const measurementDeviceId = resolveMeasurementDeviceId(
-              result,
-              fallbackDeviceIdFor(device.id),
-            );
-            assignmentMetaRef.current[device.id] = {
-              ...assignmentMetaRef.current[device.id],
-              measurementDeviceId,
-            };
-            return producerCellId
-              ? [
-                  {
-                    producer_cell_id: producerCellId,
-                    transport_device_id: device.id,
-                    device_id: measurementDeviceId ?? device.id,
-                    outcome: "ok" as const,
-                  },
-                ]
-              : [];
-          }),
-          ...round.failures.flatMap(({ device }) => {
-            const producerCellId = producerFor(device.id);
-            const measurementDeviceId = resolveMeasurementDeviceId(
-              undefined,
-              fallbackDeviceIdFor(device.id),
-            );
-            return producerCellId
-              ? [
-                  {
-                    producer_cell_id: producerCellId,
-                    transport_device_id: device.id,
-                    device_id: measurementDeviceId ?? device.id,
-                    outcome: "failed" as const,
-                  },
-                ]
-              : [];
-          }),
-        ];
-        recordWorkbookDeviceOutcomes(deviceOutcomes);
-
-        if (round.failures.length > 0 && successesRef.current.length === 0) {
-          const kind = classifyScanError(round.failures[0].error);
-          // Cancellation is user-initiated and handled by the cancel path.
-          if (kind === "cancelled") {
-            return;
-          }
-          if (kind === "disconnected") {
-            log.error("scan error: device disconnected", {
-              err: round.failures[0].error.message,
-            });
-            toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
-            return;
-          }
-          log.error("scan error", { err: round.failures[0].error.message });
-          toast.error(t("measurementFlow:measurementNode.toast.scanError"));
-          return;
-        }
-        if (round.failures.length === 0) {
-          completeWithSuccesses();
-        }
-        // Mixed round: the partial-failure state in MeasurementNode offers
-        // continue-with-successful / retry-failed.
-      } catch (error) {
-        log.error("scan error", { err: (error as Error)?.message });
-        toast.error(t("measurementFlow:measurementNode.toast.scanError"));
-      }
+      if (nodeId) startRunnerScan(nodeId);
     } finally {
       isStartingRef.current = false;
     }
   };
 
-  const cancelScan = () => {
-    if (runnerSlice.runnerBacked) {
-      runnerSlice.cancelRunnerScan?.();
-      return;
-    }
-    successesRef.current = [];
-    assignmentMetaRef.current = {};
-    // Await the cancel before resetting so the commands settle as
-    // "Measurement cancelled", not a raw error the scan catch would misread.
-    void (async () => {
-      try {
-        await cancelAllRef.current();
-      } finally {
-        resetScanRef.current();
-      }
-    })();
-  };
-
   return {
     device: devices[0] ?? null,
     devices,
-    protocol,
-    isScanning:
-      runnerSlice.runnerBacked && runnerSlice.runnerState
-        ? runnerSlice.runnerState.status === "running" && !runnerSlice.awaitingScanStart
-        : isScanning,
+    protocol: content.protocol,
+    isScanning: runnerState?.status === "running" && !awaitingScanStart,
     deviceStates,
-    lastRound: runnerSlice.runnerBacked ? runnerSlice.runnerScanRound : lastRound,
-    succeededCount: runnerSlice.runnerBacked
-      ? runnerSlice.runnerSucceededCount
-      : successesRef.current.length,
+    lastRound: runnerScanRound,
+    succeededCount: runnerSucceededCount,
     startScan,
-    cancelScan,
-    completeWithSuccesses,
+    cancelScan: cancelRunnerScan,
+    completeWithSuccesses: continueRunnerWithSuccesses,
     openDeviceSheet,
     navigateToQuestionFromOverview,
     scanProgress,

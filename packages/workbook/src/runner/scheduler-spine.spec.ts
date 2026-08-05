@@ -495,6 +495,73 @@ describe("scheduler spine: device subsets", () => {
     ]);
   });
 
+  it.each([
+    ["cA", "cB"],
+    ["cB", "cA"],
+  ] as const)(
+    "consumes concurrent dispatch targets exactly once when %s settles before %s",
+    (firstCellId, secondCellId) => {
+      const body = [
+        branchCell("dispatch", [
+          {
+            id: "multi",
+            goto: "cA",
+            condition: {
+              source: "$device",
+              field: "family",
+              operator: "eq",
+              value: "multispeq",
+            },
+          },
+          {
+            id: "ambit",
+            goto: "cB",
+            condition: {
+              source: "$device",
+              field: "family",
+              operator: "eq",
+              value: "ambit",
+            },
+          },
+        ]),
+        commandCell("cA"),
+        commandCell("cB"),
+        commandCell("lane-after"),
+      ];
+      let step = transition(
+        createInitialState({ cells: laneWorkbook([{ id: "A", body }]), mode: "flow", devices }),
+        { type: "START" },
+      );
+      const started = step.effects.filter(
+        (effect): effect is Extract<Effect, { kind: "runCommand" }> => effect.kind === "runCommand",
+      );
+      expect(started.map((effect) => [effect.cellId, effect.input.deviceIds])).toEqual([
+        ["cA", ["dev-A"]],
+        ["cB", ["dev-B"]],
+      ]);
+      const trackId = started[0]?.trackId;
+      if (!trackId) throw new Error("expected lane track");
+      expect(step.state.tracks[trackId].dispatchConsumed).toEqual({ cA: true, cB: true });
+
+      const byCell = new Map(started.map((effect) => [effect.cellId, effect] as const));
+      const first = byCell.get(firstCellId);
+      const second = byCell.get(secondCellId);
+      if (!first || !second) throw new Error("expected both dispatch effects");
+      step = transition(step.state, commandCompletion(first));
+      expect(step.effects).toEqual([]);
+      step = transition(step.state, commandCompletion(second));
+
+      const after = step.effects[0];
+      if (after.kind !== "runCommand") throw new Error("expected lane continuation");
+      expect(after.cellId).toBe("lane-after");
+      expect(step.effects).toHaveLength(1);
+      expect(step.state.tracks[trackId].dispatch).toBeNull();
+      expect(step.state.tracks[trackId].dispatchConsumed).toEqual({});
+      expect(step.state.cellRuns.cA?.executionOrder).toHaveLength(1);
+      expect(step.state.cellRuns.cB?.executionOrder).toHaveLength(1);
+    },
+  );
+
   it("STOP completes the current dispatch group without launching the next group", () => {
     const state = createInitialState({ cells, mode: "notebook", devices });
     let step = transition(state, { type: "RUN_ALL" });
