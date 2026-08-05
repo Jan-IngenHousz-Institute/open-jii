@@ -14,6 +14,7 @@ import { presentDevice, resolveDevicePrimaryLabel } from "~/util/device-presenta
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { mapWorkbookCellTree, walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 import { useTranslation } from "@repo/i18n";
 import { getDeviceTransportSupport } from "@repo/iot";
 import {
@@ -184,8 +185,8 @@ export function WorkbookHeader({
         created: new Date().toISOString(),
         device_family: sensorFamily,
       },
-      cells: cells.map((cell) => ({
-        ...cell,
+      cells: mapWorkbookCellTree(cells, (location) => ({
+        ...location.cell,
         isCollapsed: false,
       })),
     };
@@ -195,7 +196,9 @@ export function WorkbookHeader({
   }, [title, cells, sensorFamily]);
 
   const handleExportProtocol = useCallback(async () => {
-    const protocolCells = cells.filter((c) => c.type === "protocol");
+    const protocolCells = walkWorkbookCells(cells)
+      .map(({ cell }) => cell)
+      .filter((cell) => cell.type === "protocol");
     if (protocolCells.length === 0) return;
 
     for (const cell of protocolCells) {
@@ -212,7 +215,9 @@ export function WorkbookHeader({
   }, [cells]);
 
   const handleExportMacro = useCallback(async () => {
-    const macroCells = cells.filter((c) => c.type === "macro");
+    const macroCells = walkWorkbookCells(cells)
+      .map(({ cell }) => cell)
+      .filter((cell) => cell.type === "macro");
     if (macroCells.length === 0) return;
 
     // Use the macro's display name, not the stored DB filename (which can be

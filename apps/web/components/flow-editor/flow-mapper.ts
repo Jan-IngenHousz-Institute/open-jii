@@ -11,6 +11,7 @@ import {
   zExperimentMeasurementCommandContent,
   zExperimentAnalysisContent,
   zExperimentBranchContent,
+  zExperimentParallelContent,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { zExperimentQuestionKind } from "@repo/api/domains/experiment/experiment.schema";
 import type {
@@ -28,6 +29,7 @@ type MeasurementContent = z.infer<typeof zExperimentMeasurementContent>;
 type MeasurementCommandContent = z.infer<typeof zExperimentMeasurementCommandContent>;
 type AnalysisContent = z.infer<typeof zExperimentAnalysisContent>;
 type BranchContent = z.infer<typeof zExperimentBranchContent>;
+type ParallelContent = z.infer<typeof zExperimentParallelContent>;
 type QuestionKind = z.infer<typeof zExperimentQuestionKind>;
 
 // UI-focused question spec interface (matches the one in question-card.tsx)
@@ -44,7 +46,8 @@ type StepSpecification =
   | MeasurementContent
   | MeasurementCommandContent
   | AnalysisContent
-  | BranchContent;
+  | BranchContent
+  | ParallelContent;
 
 export interface FlowNodeDataBase extends Record<string, unknown> {
   title: string;
@@ -77,6 +80,7 @@ const REACT_FLOW_TO_API_NODE_TYPE = {
   COMMAND: "measurement",
   ANALYSIS: "analysis",
   BRANCH: "branch",
+  PARALLEL: "parallel",
 } as const;
 
 const QUESTION_KIND_TO_ANSWER_TYPE: Record<QuestionKind, QuestionUI["answerType"]> = {
@@ -120,7 +124,7 @@ export class FlowMapper {
   static toReactFlow(apiFlow: ExperimentFlow): { nodes: Node[]; edges: Edge[] } {
     const nodes: Node[] = apiFlow.graph.nodes.map((apiNode) => {
       const reactFlowTypeMapping: Record<
-        "question" | "instruction" | "measurement" | "analysis" | "branch",
+        "question" | "instruction" | "measurement" | "analysis" | "branch" | "parallel",
         NodeType
       > = {
         question: "QUESTION",
@@ -128,6 +132,7 @@ export class FlowMapper {
         measurement: "MEASUREMENT",
         analysis: "ANALYSIS",
         branch: "BRANCH",
+        parallel: "PARALLEL",
       };
 
       // A measurement node carrying an inline command renders as the COMMAND
@@ -316,6 +321,15 @@ export class FlowMapper {
         const parsed = zExperimentBranchContent.safeParse({
           paths: spec.paths ?? [],
           defaultPathId: spec.defaultPathId,
+        });
+        if (!parsed.success) {
+          throw new Error(parsed.error.errors[0].message);
+        }
+        content = parsed.data;
+      } else if (nodeType === "parallel") {
+        const parsed = zExperimentParallelContent.safeParse({
+          ...(isObject(data.stepSpecification) ? data.stepSpecification : {}),
+          name: nodeTitle,
         });
         if (!parsed.success) {
           throw new Error(parsed.error.errors[0].message);

@@ -5,6 +5,8 @@ import { DEVICE_CONTEXT_KEY } from "./device-context";
 import { sanitizeQuestionLabel } from "./label-sanitization";
 import type { MacroInputErrorCode, MacroInputSource } from "./normalize-macro-input";
 import { normalizeMacroInput } from "./normalize-macro-input";
+import type { CellAddress, CellLocation, CellPath } from "./workbook-cell-tree";
+import { findWorkbookCell, findWorkbookCellInBody, resolveCellScope } from "./workbook-cell-tree";
 
 export interface CellNamespace {
   // Producer output (or `{ answer }` for a question) keyed by stable cell id.
@@ -27,6 +29,10 @@ export interface BuildCellNamespaceOptions {
   deviceId?: string;
   /** Injected as `ctx["$device"]`; reserved, cell names can never produce it. */
   device?: DeviceContext;
+  /** Tree-aware consumer. When present, `beforeIndex` is ignored. */
+  consumer?: CellAddress;
+  /** Container attempt context, injected as `ctx["$parallel"]`. */
+  parallel?: Record<string, unknown>;
 }
 
 export class OutputDataNormalizationError extends Error {
@@ -60,8 +66,14 @@ export function resolveOutputData(
   cells: WorkbookCell[],
   producedBy: string,
   deviceId?: string,
+  producerPath?: CellPath,
 ): unknown {
-  const outputCell = cells.find((c) => c.type === "output" && c.producedBy === producedBy);
+  const producer = producerPath
+    ? findWorkbookCellInBody(cells, { path: producerPath, cellId: producedBy })
+    : findWorkbookCell(cells, producedBy);
+  const outputCell = producer?.body.find(
+    (cell) => cell.type === "output" && cell.producedBy === producedBy,
+  );
   if (outputCell?.type !== "output") return undefined;
 
   if (deviceId !== undefined) {
@@ -74,12 +86,13 @@ export function resolveOutputData(
 // The value a cell contributes to the namespace: `{ answer }` for an answered
 // question, the projected output for a protocol/macro/command, or undefined for
 // other cell types and for producers that have not run yet.
-function cellValue(cells: WorkbookCell[], cell: WorkbookCell, deviceId?: string): unknown {
+function cellValue(cells: WorkbookCell[], location: CellLocation, deviceId?: string): unknown {
+  const { cell } = location;
   if (cell.type === "question") {
     return cell.answer != null ? { answer: cell.answer } : undefined;
   }
   if (cell.type === "protocol" || cell.type === "macro" || cell.type === "command") {
-    return resolveOutputData(cells, cell.id, deviceId);
+    return resolveOutputData(cells, cell.id, deviceId, location.path);
   }
   return undefined;
 }
@@ -97,10 +110,14 @@ export function buildCellNamespace(
   const ctx: Record<string, unknown> = {};
   const names: Record<string, string> = {};
 
-  const limit = Math.max(0, Math.min(beforeIndex, cells.length));
-  for (let i = 0; i < limit; i++) {
-    const cell = cells[i];
-    const value = cellValue(cells, cell, options?.deviceId);
+  const scope: CellLocation[] = options?.consumer
+    ? resolveCellScope(cells, options.consumer)
+    : cells
+        .slice(0, Math.max(0, Math.min(beforeIndex, cells.length)))
+        .map((cell, index) => ({ cell, cellId: cell.id, index, body: cells, path: [] }));
+  for (const location of scope) {
+    const { cell } = location;
+    const value = cellValue(cells, location, options?.deviceId);
     if (value === undefined) continue;
 
     byId[cell.id] = value;
@@ -114,6 +131,9 @@ export function buildCellNamespace(
 
   if (options?.device) {
     ctx[DEVICE_CONTEXT_KEY] = options.device;
+  }
+  if (options?.parallel) {
+    ctx.$parallel = options.parallel;
   }
 
   return { ctx, byId, names };

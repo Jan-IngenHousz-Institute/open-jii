@@ -10,6 +10,7 @@ import type {
   QuestionCell,
   WorkbookCell,
 } from "../domains/workbook/workbook-cells.schema";
+import { zParallelCell } from "../domains/workbook/workbook-cells.schema";
 import { resolveBranchPathById } from "./evaluate-branch";
 
 type FlowNode = z.infer<typeof zExperimentFlowNode>;
@@ -168,6 +169,24 @@ function nodeToCell(node: FlowNode): WorkbookCell | null {
           ? { defaultPathId: content.defaultPathId }
           : {}),
       };
+    }
+
+    case "parallel": {
+      const parsed = zParallelCell.safeParse({
+        id: node.id,
+        type: "parallel",
+        isCollapsed: false,
+        name: typeof content.name === "string" ? content.name : node.name,
+        defaultLaneId:
+          typeof content.defaultLaneId === "string" ? content.defaultLaneId : undefined,
+        lanes: content.lanes,
+      });
+      if (!parsed.success) {
+        throw new Error(
+          `Invalid parallel container "${node.id}": ${parsed.error.errors[0].message}`,
+        );
+      }
+      return parsed.data;
     }
 
     default:

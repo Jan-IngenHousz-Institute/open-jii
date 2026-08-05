@@ -579,4 +579,46 @@ describe("flowNodesToWorkbookCells", () => {
       /Open the branch node settings/,
     );
   });
+
+  it("round-trips a parallel container without flattening or rebuilding its lanes", () => {
+    const cells: WorkbookCell[] = [
+      { id: "before", type: "markdown", isCollapsed: false, content: "Before" },
+      {
+        id: "parallel-1",
+        type: "parallel",
+        isCollapsed: true,
+        name: "Canopy",
+        defaultLaneId: "fallback",
+        lanes: [
+          {
+            id: "sun",
+            label: "Sun",
+            color: "#f59e0b",
+            conditions: [
+              { id: "c", sourceCellId: "$device", field: "index", operator: "lt", value: "2" },
+            ],
+            body: [{ id: "inside", type: "markdown", isCollapsed: true, content: "Lane body" }],
+          },
+          {
+            id: "fallback",
+            label: "Fallback",
+            color: "#64748b",
+            conditions: [],
+            body: [
+              {
+                id: "inside-2",
+                type: "command",
+                isCollapsed: false,
+                payload: { format: "string", content: "battery" },
+              },
+            ],
+          },
+        ],
+      },
+      { id: "after", type: "markdown", isCollapsed: false, content: "After" },
+    ];
+    const graph = cellsToFlowGraph(cells);
+
+    expect(flowNodesToWorkbookCells(graph.nodes, graph.edges, cells)).toEqual(cells);
+  });
 });

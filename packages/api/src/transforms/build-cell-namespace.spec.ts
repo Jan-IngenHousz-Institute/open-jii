@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 
-import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
+import type { ParallelBodyCell, WorkbookCell } from "../domains/workbook/workbook-cells.schema";
 import {
   buildCellNamespace,
   isOutputDataNormalizationError,
@@ -63,6 +63,11 @@ function question(id: string, name: string, answer?: string): WorkbookCell {
     question: { kind: "open_ended", text: "?", required: false },
     ...(answer != null ? { answer } : {}),
   };
+}
+
+function bodyCell(cell: WorkbookCell): ParallelBodyCell {
+  if (cell.type === "parallel") throw new Error("nested container");
+  return cell;
 }
 
 describe("buildCellNamespace", () => {
@@ -132,6 +137,55 @@ describe("buildCellNamespace", () => {
     expect(ns.ctx.baseline).toEqual({ value: 0.8 });
     expect(ns.ctx.stress).toEqual({ value: 0.4 });
     expect(ns.ctx.note).toEqual({ answer: "ok" });
+  });
+
+  it("uses the shared lane scope and exposes stable parallel context", () => {
+    const cells: WorkbookCell[] = [
+      protocol("root", "Root"),
+      output("root", { value: "root" }),
+      {
+        id: "parallel",
+        type: "parallel",
+        isCollapsed: false,
+        name: "lanes",
+        defaultLaneId: "b",
+        lanes: [
+          {
+            id: "a",
+            label: "A",
+            color: "#111111",
+            conditions: [],
+            body: [
+              bodyCell(protocol("a-source", "A source")),
+              bodyCell(output("a-source", { value: "a" })),
+              bodyCell(macro("a-consumer")),
+            ],
+          },
+          {
+            id: "b",
+            label: "B",
+            color: "#222222",
+            conditions: [],
+            body: [
+              bodyCell(protocol("b-source", "B source")),
+              bodyCell(output("b-source", { value: "b" })),
+            ],
+          },
+        ],
+      },
+    ];
+    const parallel = { lanes: { a: { status: "running" } } };
+    const ns = buildCellNamespace(cells, 0, {
+      consumer: {
+        path: [{ containerCellId: "parallel", laneId: "a" }],
+        cellId: "a-consumer",
+      },
+      parallel,
+    });
+
+    expect(ns.byId).toEqual({ root: { value: "root" }, "a-source": { value: "a" } });
+    expect(ns.byId["b-source"]).toBeUndefined();
+    expect(ns.ctx.$parallel).toBe(parallel);
   });
 });
 

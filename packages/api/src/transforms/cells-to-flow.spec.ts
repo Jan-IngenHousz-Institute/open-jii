@@ -331,4 +331,54 @@ describe("cellsToFlowGraph", () => {
     // Never an empty string: zFlowNode.name requires a minimum length of 1.
     expect(cellsToFlowGraph(cells).nodes[0].name).toBe("Command");
   });
+
+  it("projects a parallel container atomically with lane bodies inside its content", () => {
+    const container: Extract<WorkbookCell, { type: "parallel" }> = {
+      id: "parallel-1",
+      type: "parallel",
+      isCollapsed: true,
+      name: "Canopy",
+      defaultLaneId: "fallback",
+      lanes: [
+        {
+          id: "sun",
+          label: "Sun",
+          color: "#f59e0b",
+          conditions: [
+            { id: "c", sourceCellId: "$device", field: "index", operator: "lt", value: "2" },
+          ],
+          body: [{ id: "inside", type: "markdown", isCollapsed: false, content: "Lane body" }],
+        },
+        {
+          id: "fallback",
+          label: "Fallback",
+          color: "#64748b",
+          conditions: [],
+          body: [
+            {
+              id: "inside-2",
+              type: "command",
+              isCollapsed: false,
+              payload: { format: "string", content: "battery" },
+            },
+          ],
+        },
+      ],
+    };
+    const cells: WorkbookCell[] = [container];
+
+    const graph = cellsToFlowGraph(cells);
+    expect(graph.nodes).toHaveLength(1);
+    expect(graph.nodes[0]).toMatchObject({
+      id: "parallel-1",
+      type: "parallel",
+      content: { name: "Canopy", defaultLaneId: "fallback", lanes: container.lanes },
+    });
+    expect(graph.nodes.some((node) => node.id === "inside" || node.id === "inside-2")).toBe(false);
+
+    // A pre-container converter drops the unknown node and therefore drops its
+    // opaque body with it; no lane cell can become a flat executable sibling.
+    const oldKnownNodes = graph.nodes.filter((node) => node.type !== "parallel");
+    expect(oldKnownNodes).toEqual([]);
+  });
 });

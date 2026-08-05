@@ -11,6 +11,7 @@ import { parseApiError } from "~/util/apiError";
 import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
+import { findWorkbookCell, walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -141,7 +142,7 @@ export function WorkbookDraftEditor({
   // browser's Web Serial / Web Bluetooth picker still sees a live user gesture.
   const handleRunCell = useCallback(
     (cellId: string) => {
-      const cell = cells.find((c) => c.id === cellId);
+      const cell = findWorkbookCell(cells, cellId)?.cell;
       if ((cell?.type === "protocol" || cell?.type === "command") && !isConnected) {
         void connect();
         return;
@@ -152,7 +153,7 @@ export function WorkbookDraftEditor({
   );
 
   const handleClearOutputs = useCallback(() => {
-    const count = cells.filter((c) => c.type === "output").length;
+    const count = walkWorkbookCells(cells).filter(({ cell }) => cell.type === "output").length;
     clearOutputs();
     if (count > 0) {
       toast({ description: t("workbooks.outputsCleared", { count }) });

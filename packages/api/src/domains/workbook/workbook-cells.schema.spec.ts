@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  resolveParallelDefaultLane,
   zProtocolCell,
   zCommandCell,
   zMacroCell,
@@ -8,6 +9,8 @@ import {
   zBranchCell,
   zOutputCell,
   zMarkdownCell,
+  zParallelBodyCell,
+  zParallelCell,
   zWorkbookCell,
   zWorkbookCellArray,
   zWorkbookCellArrayInput,
@@ -421,6 +424,120 @@ describe("Workbook Cells Schema", () => {
       const cell = { id: "md1", type: "markdown", content: "hi", isCollapsed: true };
       const parsed = zWorkbookCell.parse(cell);
       expect(parsed.isCollapsed).toBe(true);
+    });
+  });
+
+  describe("parallel containers", () => {
+    const container = {
+      id: "parallel-1",
+      type: "parallel" as const,
+      name: "Canopy lanes",
+      defaultLaneId: "fallback",
+      lanes: [
+        {
+          id: "sunny",
+          label: "Sunny",
+          color: "#f59e0b",
+          conditions: [
+            {
+              id: "condition-1",
+              sourceCellId: "$device",
+              field: "family",
+              operator: "eq" as const,
+              value: "multispeq",
+            },
+          ],
+          body: [
+            {
+              id: "sunny-command",
+              type: "command" as const,
+              payload: { format: "string" as const, content: "battery" },
+            },
+          ],
+        },
+        {
+          id: "fallback",
+          label: "Fallback",
+          color: "#64748b",
+          conditions: [],
+          body: [{ id: "fallback-note", type: "markdown" as const, content: "Continue" }],
+        },
+      ],
+    };
+
+    it("round-trips identity, lane order, conditions, default, and lane bodies", () => {
+      const parsed = zParallelCell.parse(container);
+      expect(parsed).toMatchObject(container);
+      expect(parsed.lanes.map((lane) => lane.id)).toEqual(["sunny", "fallback"]);
+    });
+
+    it("uses a non-recursive body union", () => {
+      expect(zParallelBodyCell.safeParse(container).success).toBe(false);
+    });
+
+    it("rejects duplicate cell ids anywhere in the shallow tree", () => {
+      expect(() =>
+        zWorkbookCellArrayInput.parse([
+          { id: "shared", type: "markdown", content: "Root" },
+          {
+            ...container,
+            lanes: container.lanes.map((lane, index) =>
+              index === 0
+                ? { ...lane, body: [{ id: "shared", type: "markdown", content: "Lane" }] }
+                : lane,
+            ),
+          },
+        ]),
+      ).toThrow(/Cell id.*unique/i);
+    });
+
+    it("couples lane-id uniqueness with an exactly-one default", () => {
+      expect(() =>
+        zWorkbookCellArrayInput.parse([
+          { ...container, lanes: [container.lanes[1], { ...container.lanes[1] }] },
+        ]),
+      ).toThrow(/Lane id.*unique|exactly one lane/i);
+
+      expect(() =>
+        zWorkbookCellArrayInput.parse([{ ...container, defaultLaneId: "missing" }]),
+      ).toThrow(/exactly one lane/i);
+    });
+
+    it("resolves the default only when exactly one lane object matches", () => {
+      const parsed = zParallelCell.parse(container);
+      const resolved = resolveParallelDefaultLane(parsed);
+      expect(resolved).toEqual({ kind: "resolved", lane: parsed.lanes[1] });
+      expect(resolveParallelDefaultLane({ ...parsed, defaultLaneId: "missing" })).toEqual({
+        kind: "absent",
+        defaultLaneId: "missing",
+      });
+      expect(
+        resolveParallelDefaultLane({
+          ...parsed,
+          lanes: [parsed.lanes[1], { ...parsed.lanes[1] }],
+        }),
+      ).toMatchObject({ kind: "ambiguous", lanes: [parsed.lanes[1], parsed.lanes[1]] });
+    });
+
+    it("rejects canonical duplicate container names", () => {
+      expect(() =>
+        zWorkbookCellArrayInput.parse([
+          container,
+          {
+            ...container,
+            id: "parallel-2",
+            name: "Canopy_Lanes!",
+            lanes: [
+              {
+                ...container.lanes[1],
+                id: "only",
+                body: [{ id: "unique", type: "markdown", content: "x" }],
+              },
+            ],
+            defaultLaneId: "only",
+          },
+        ]),
+      ).toThrow(/Parallel container name.*unique/i);
     });
   });
 });

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { WorkbookIssue } from "@repo/api/transforms/validate-workbook";
 import { validateWorkbook } from "@repo/api/transforms/validate-workbook";
+import { walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -68,6 +69,26 @@ function issueMessage(
       return t("flow.upgradeDiff.issue.duplicateBranchPathId", { ref: issue.ref ?? "" });
     case "path-duplicate-conditions":
       return t("flow.upgradeDiff.issue.duplicatePathConditions", { detail: issue.detail ?? "" });
+    case "PARALLEL_LANE_EMPTY":
+      return `Parallel lane ${label} is empty`;
+    case "PARALLEL_NO_DEFAULT_LANE":
+      return `Parallel container ${label} needs a default lane`;
+    case "PARALLEL_MULTIPLE_DEFAULT_LANES":
+      return `Parallel container ${label} has an ambiguous default lane`;
+    case "PARALLEL_LANE_ID_DUPLICATE":
+      return `Parallel container ${label} has duplicate lane ids`;
+    case "PARALLEL_CELL_ID_DUPLICATE":
+      return `Cell id ${label} is used more than once`;
+    case "PARALLEL_NAME_DUPLICATE":
+      return `Parallel container name ${label} is used more than once`;
+    case "PARALLEL_REF_CROSSES_LANE":
+      return `Reference ${label} crosses parallel lanes`;
+    case "PARALLEL_REF_INTO_BODY":
+      return `Reference ${label} reaches into a parallel lane`;
+    case "CONTAINER_BRANCH_ESCAPES_BODY":
+      return `Branch target ${label} escapes its parallel lane`;
+    case "CONTAINER_NESTING_UNSUPPORTED":
+      return `Parallel containers cannot be nested`;
   }
 }
 
@@ -105,7 +126,7 @@ export function WorkbookUpgradeDialog({
   const referenced = useMemo(() => {
     const protocols = new Map<string, string | undefined>();
     const macros = new Map<string, string | undefined>();
-    for (const cell of liveCells) {
+    for (const { cell } of walkWorkbookCells(liveCells)) {
       if (cell.type === "protocol") protocols.set(cell.payload.protocolId, cell.payload.name);
       if (cell.type === "macro") macros.set(cell.payload.macroId, cell.payload.name);
     }

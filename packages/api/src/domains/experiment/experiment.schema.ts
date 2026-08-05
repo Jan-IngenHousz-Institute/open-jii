@@ -52,6 +52,7 @@ export const zExperimentFlowNodeType = z.enum([
   "measurement",
   "analysis",
   "branch",
+  "parallel",
 ]);
 
 export const zExperimentQuestionKind = z.enum(["yes_no", "open_ended", "multi_choice", "number"]);
@@ -145,6 +146,33 @@ export const zExperimentBranchContent = z.object({
   defaultPathId: z.string().optional(),
 });
 
+// The lane bodies are opaque at the experiment-flow layer and are parsed by
+// zParallelCell when converted back to workbook cells. Keeping them inside one
+// parallel node makes old converters drop container + bodies atomically.
+export const zExperimentParallelContent = z.object({
+  name: z.string().min(1).max(64),
+  defaultLaneId: z.string().optional(),
+  lanes: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        label: z.string().max(64),
+        color: z.string(),
+        conditions: z.array(
+          z.object({
+            id: z.string().min(1),
+            sourceCellId: z.string(),
+            field: z.string(),
+            operator: z.enum(["eq", "neq", "gt", "lt", "gte", "lte"]),
+            value: z.string(),
+          }),
+        ),
+        body: z.array(z.unknown()),
+      }),
+    )
+    .min(1),
+});
+
 export const zExperimentFlowNode = z.object({
   id: z.string().min(1),
   type: zExperimentFlowNodeType,
@@ -159,6 +187,7 @@ export const zExperimentFlowNode = z.object({
     zExperimentMeasurementCommandContent,
     zExperimentAnalysisContent,
     zExperimentBranchContent,
+    zExperimentParallelContent,
   ]),
   // A node can be marked as a start node. Exactly one node must be the start node for any flow.
   isStart: z.boolean().optional().default(false),

@@ -25,6 +25,7 @@ import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIo
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
+import { walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 import { cn } from "@repo/ui/lib/utils";
 
 import { AddCellButton } from "./add-cell-button";
@@ -115,6 +116,16 @@ export function createDefaultCell(
           },
         ],
         defaultPathId: pathId,
+      };
+    }
+    case "parallel": {
+      const laneId = crypto.randomUUID();
+      return {
+        ...base,
+        type: "parallel",
+        name: "Parallel",
+        defaultLaneId: laneId,
+        lanes: [{ id: laneId, label: "Default", color: "#119DA4", conditions: [], body: [] }],
       };
     }
   }
@@ -474,13 +485,14 @@ export function WorkbookEditor({
   const executionCounts = useMemo(() => {
     const counts: Record<string, number | undefined> = {};
     let counter = 1;
-    for (const cell of cells) {
+    for (const { cell } of walkWorkbookCells(cells)) {
       if (
         cell.type === "protocol" ||
         cell.type === "command" ||
         cell.type === "macro" ||
         cell.type === "question" ||
-        cell.type === "branch"
+        cell.type === "branch" ||
+        cell.type === "parallel"
       ) {
         counts[cell.id] = counter++;
       }

@@ -2,11 +2,15 @@ import type {
   BranchCell,
   BranchCondition,
   BranchPath,
+  ParallelCell,
   WorkbookCell,
 } from "../domains/workbook/workbook-cells.schema";
+import { resolveParallelDefaultLane } from "../domains/workbook/workbook-cells.schema";
 import { resolveOutputData } from "./build-cell-namespace";
 import type { DeviceContext } from "./device-context";
 import { DEVICE_CONTEXT_KEY } from "./device-context";
+import type { CellAddress } from "./workbook-cell-tree";
+import { branchTargetCells, findWorkbookCell, resolveCellScope } from "./workbook-cell-tree";
 
 /**
  * Host-supplied values that only exist at run time. `device` is the connected
@@ -17,6 +21,8 @@ export interface BranchRuntimeContext {
   device?: DeviceContext;
   /** Host connection id used to scope upstream multi-device outputs. */
   deviceId?: string;
+  /** Consumer address used to enforce ancestor/same-body reference scope. */
+  consumer?: CellAddress;
 }
 
 export type BranchPathResolution<T extends { id: string }> =
@@ -76,13 +82,17 @@ export function validateDeviceBranch(cell: BranchCell, cells: WorkbookCell[]): s
   if (!isDeviceScopedBranch(cell)) return [];
 
   const errors: string[] = [];
+  const location = findWorkbookCell(cells, cell.id);
+  const targets = new Map(
+    (location ? branchTargetCells(cells, location) : cells).map((target) => [target.id, target]),
+  );
   for (const path of cell.paths) {
     const label = path.label || "Unnamed path";
     if (!path.gotoCellId) {
       errors.push(`${label}: device-scoped paths must jump to a protocol or command cell`);
       continue;
     }
-    const target = cells.find((c) => c.id === path.gotoCellId);
+    const target = targets.get(path.gotoCellId);
     if (!target || (target.type !== "protocol" && target.type !== "command")) {
       errors.push(`${label}: jump target must be a protocol or command cell`);
     }
@@ -166,14 +176,19 @@ export function resolveConditionValue(
     return undefined;
   }
 
-  const sourceCell = cells.find((c) => c.id === sourceCellId);
+  const sourceLocation = runtime?.consumer
+    ? resolveCellScope(cells, runtime.consumer).find(
+        (candidate) => candidate.cell.id === sourceCellId,
+      )
+    : findWorkbookCell(cells, sourceCellId);
+  const sourceCell = sourceLocation?.cell;
   if (!sourceCell) return undefined;
 
   if (sourceCell.type === "question") {
     return sourceCell.answer ?? undefined;
   }
 
-  const data = resolveOutputData(cells, sourceCellId, runtime?.deviceId);
+  const data = resolveOutputData(cells, sourceCellId, runtime?.deviceId, sourceLocation.path);
   if (data == null) return undefined;
 
   const val = (data as Record<string, unknown>)[field];
@@ -227,12 +242,67 @@ export function evaluateBranch(
   cells: WorkbookCell[],
   runtime?: BranchRuntimeContext,
 ): BranchPath | undefined {
+  const location = runtime?.consumer ? undefined : findWorkbookCell(cells, cell.id);
+  const scopedRuntime: BranchRuntimeContext = {
+    ...runtime,
+    consumer:
+      runtime?.consumer ??
+      (location ? { path: location.path, cellId: location.cellId } : undefined),
+  };
   for (const path of cell.paths) {
-    if (evaluatePathConditions(path, cells, runtime)) {
+    if (evaluatePathConditions(path, cells, scopedRuntime)) {
       return path;
     }
   }
 
   const defaultPath = resolveBranchDefaultPath(cell);
   return defaultPath.status === "resolved" ? defaultPath.path : undefined;
+}
+
+export interface ParallelDeviceCandidate {
+  /** Stable host connection id carried by the track. */
+  deviceId: string;
+  device: DeviceContext;
+}
+
+export interface ParallelLaneAssignment {
+  lanes: Record<string, string[]>;
+  unassigned: string[];
+}
+
+/**
+ * Assign every device once, in lane order, then apply the explicit fallback.
+ * A conditionless lane never matches here; only `defaultLaneId` makes it the
+ * fallback, preserving ordinary branch zero-condition semantics.
+ */
+export function assignParallelLanes(
+  container: ParallelCell,
+  cells: WorkbookCell[],
+  devices: ParallelDeviceCandidate[],
+): ParallelLaneAssignment {
+  const defaultResolution = resolveParallelDefaultLane(container);
+  if (defaultResolution.kind !== "resolved") {
+    throw new Error(
+      `Default lane "${container.defaultLaneId ?? ""}" must resolve to exactly one lane`,
+    );
+  }
+  const defaultLane = defaultResolution.lane;
+  const location = findWorkbookCell(cells, container.id);
+  const consumer = location ? { path: location.path, cellId: location.cellId } : undefined;
+  const lanes = Object.fromEntries(container.lanes.map((lane) => [lane.id, [] as string[]]));
+  const unassigned: string[] = [];
+
+  for (const candidate of devices) {
+    const matched = container.lanes.find((lane) =>
+      evaluatePathConditions({ ...lane, gotoCellId: undefined }, cells, {
+        device: candidate.device,
+        deviceId: candidate.deviceId,
+        consumer,
+      }),
+    );
+    const lane = matched ?? defaultLane;
+    lanes[lane.id].push(candidate.deviceId);
+  }
+
+  return { lanes, unassigned };
 }

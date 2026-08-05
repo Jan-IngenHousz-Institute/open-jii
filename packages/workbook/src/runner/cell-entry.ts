@@ -12,6 +12,7 @@ import {
   validateBranchCell,
   validateDeviceBranch,
 } from "@repo/api/transforms/evaluate-branch";
+import { findWorkbookCell } from "@repo/api/transforms/workbook-cell-tree";
 import { validateCommandArtifact } from "@repo/iot";
 import type { SensorFamily } from "@repo/iot";
 
@@ -104,12 +105,12 @@ export function markDownstreamStale(
   originStamp: number = lastOrder(state.cellRuns[originCellId]),
 ): RunnerState {
   if (originStamp === 0) return state;
-  const origin = cellIndex(state.cells, originCellId);
-  if (origin < 0) return state;
+  const location = findWorkbookCell(state.cells, originCellId);
+  if (!location) return state;
 
   let cellRuns = state.cellRuns;
-  for (let i = origin + 1; i < state.cells.length; i++) {
-    const cell = state.cells[i];
+  for (let i = location.index + 1; i < location.body.length; i++) {
+    const cell = location.body[i];
     if (!isProducer(cell)) continue;
     const run = cellRuns[cell.id];
     if (run?.status === "completed" && lastOrder(run) < originStamp) {
@@ -344,6 +345,7 @@ export function startProducer(
           const ctx = buildCellNamespace(hydrated, idx, {
             deviceId: r.deviceId,
             device: deviceContextOf(devices, r.deviceId),
+            consumer: { path: track.cursor.body, cellId },
           });
           return { kind: "run", input: { ...base, ...identity, json: r.data, ctx } };
         } catch (error) {
@@ -363,7 +365,10 @@ export function startProducer(
     const json = upstream?.v ?? null;
     let ctx;
     try {
-      ctx = buildCellNamespace(hydrated, idx, { device: deviceContextOf(devices) });
+      ctx = buildCellNamespace(hydrated, idx, {
+        device: deviceContextOf(devices),
+        consumer: { path: track.cursor.body, cellId },
+      });
     } catch (error) {
       if (!isOutputDataNormalizationError(error)) throw error;
       return { state: failRun(next, cellId, error.message), effects: [] };
@@ -487,7 +492,9 @@ function resolveBranch(
   });
 
   const hydrated = hydrateCells(next.cells, currentAnswers(next), next.outputs);
-  const matched = evaluateBranch(cell, asWorkbookCells(hydrated));
+  const matched = evaluateBranch(cell, asWorkbookCells(hydrated), {
+    consumer: { path: track.cursor.body, cellId: cell.id },
+  });
 
   next = setCellRun(next, cell.id, {
     status: "completed",
@@ -499,7 +506,7 @@ function resolveBranch(
   let target: string | null = null;
   let jumped = false;
   if (matched?.gotoCellId && matched.gotoCellId !== cell.id) {
-    const resolved = resolveGotoCellId(next.cells, matched.gotoCellId);
+    const resolved = resolveGotoCellId(next.cells, matched.gotoCellId, cell.id);
     if (resolved !== null) {
       target = resolved;
       jumped = true;
@@ -568,8 +575,11 @@ function startDeviceDispatch(
         index,
       },
       deviceId: device.id,
+      consumer: { path: track.cursor.body, cellId: cell.id },
     });
-    const target = path?.gotoCellId ? cellById(next.cells, path.gotoCellId) : undefined;
+    const target = path?.gotoCellId
+      ? cellById(next.cells, path.gotoCellId, track.cursor.body)
+      : undefined;
     if (path && target && (target.type === "protocol" || target.type === "command")) {
       const group = groups.get(path.id);
       if (group) group.push(device);
@@ -846,7 +856,7 @@ export function landOn(
       const deviceScoped = isDeviceScopedBranch(cell);
       if (deviceScoped || s.mode === "notebook") {
         const errors = [
-          ...validateBranchCell(cell),
+          ...validateBranchCell(cell, { requireDefault: false }),
           ...(deviceScoped ? validateDeviceBranch(cell, asWorkbookCells(s.cells)) : []),
         ];
         if (errors.length > 0) {

@@ -77,6 +77,8 @@ export function mergePanelTitleIntoWorkbookCell(cell: WorkbookCell, title: strin
       return { ...cell, payload: { ...cell.payload, name: title } };
     case "question":
       return { ...cell, name: title };
+    case "parallel":
+      return { ...cell, name: title };
     default:
       return cell;
   }

@@ -1,9 +1,18 @@
 "use client";
 
-import { Code, FileText, FlaskConical, GitBranch, HelpCircle, Terminal } from "lucide-react";
+import {
+  Code,
+  Columns3,
+  FileText,
+  FlaskConical,
+  GitBranch,
+  HelpCircle,
+  Terminal,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -14,6 +23,7 @@ const cellIcons: Record<string, ReactNode> = {
   question: <HelpCircle className="h-3 w-3" />,
   branch: <GitBranch className="h-3 w-3" />,
   markdown: <FileText className="h-3 w-3" />,
+  parallel: <Columns3 className="h-3 w-3" />,
 };
 
 const cellTypeOrder = Object.keys(cellIcons);
@@ -21,7 +31,7 @@ const cellTypeOrder = Object.keys(cellIcons);
 /** Count cells by type, ignoring runtime-only output cells. */
 export function getWorkbookCellSummary(cells: WorkbookCell[]): [string, number][] {
   const counts: Record<string, number> = {};
-  for (const cell of cells) {
+  for (const { cell } of walkWorkbookCells(cells)) {
     if (cell.type === "output") continue;
     counts[cell.type] = (counts[cell.type] ?? 0) + 1;
   }

@@ -14,6 +14,7 @@ const TYPE_LABELS: Record<NodeType, string> = {
   COMMAND: "Command",
   ANALYSIS: "Macro",
   BRANCH: "Branch",
+  PARALLEL: "Parallel",
 };
 
 interface NodeContentProps {

@@ -18,6 +18,7 @@ import { parseApiError } from "~/util/apiError";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { findWorkbookCell } from "@repo/api/transforms/workbook-cell-tree";
 import type {
   CellRunStatus,
   DeviceOutcome,
@@ -336,7 +337,8 @@ export function useWorkbookExecution({
       const { trackId, interaction } = pending;
       const cellId = interaction.cellId;
       const cell =
-        cellsRef.current.find((c) => c.id === cellId) ?? st.cells.find((c) => c.id === cellId);
+        findWorkbookCell(cellsRef.current, cellId)?.cell ??
+        findWorkbookCell(st.cells, cellId)?.cell;
       if (cell?.type !== "question") return;
       const promptFn = onPromptQuestionRef.current;
       if (!promptFn) {

@@ -76,6 +76,8 @@ export function deriveFlowNodeName(cell: WorkbookCell, rawName?: string): string
       return "Branch";
     case "output":
       return "Output";
+    case "parallel":
+      return safeNodeName(rawName ?? cell.name, "Parallel");
   }
 }
 
@@ -132,6 +134,19 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
         {
           paths: cell.paths.map((p) => ({ id: p.id, label: p.label, color: p.color })),
           defaultPathId: cell.defaultPathId,
+        },
+        isStart,
+      );
+
+    case "parallel":
+      return makeNode(
+        cell.id,
+        "parallel",
+        deriveFlowNodeName(cell),
+        {
+          name: cell.name,
+          defaultLaneId: cell.defaultLaneId,
+          lanes: cell.lanes,
         },
         isStart,
       );

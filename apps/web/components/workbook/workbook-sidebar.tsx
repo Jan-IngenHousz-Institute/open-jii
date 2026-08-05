@@ -30,6 +30,7 @@ import {
   List,
   Microscope,
   PanelRightClose,
+  Columns3,
 } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { stripHtml } from "~/util/strip-html";
@@ -40,6 +41,7 @@ import type {
   WorkbookIssue,
   WorkbookValidationContext,
 } from "@repo/api/transforms/validate-workbook";
+import { walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -52,6 +54,7 @@ const cellColors: Record<string, string> = {
   branch: "#F29D38",
   markdown: "#6F8596",
   output: "#94A3B8",
+  parallel: "#087F8C",
 };
 
 /** Active/selected background per cell type (light tint of accent). */
@@ -62,6 +65,7 @@ const cellActiveBg: Record<string, string> = {
   macro: "#F1EFFD",
   branch: "#FBF3EA",
   markdown: "#F1F3F5",
+  parallel: "#E8F6F7",
 };
 
 const cellTypeLabels: Record<string, string> = {
@@ -72,6 +76,7 @@ const cellTypeLabels: Record<string, string> = {
   branch: "Branch",
   markdown: "Markdown",
   output: "Output",
+  parallel: "Parallel",
 };
 
 /** Type icon per cell type, matching the icons on the cell components. */
@@ -81,6 +86,7 @@ const cellIcons: Partial<Record<string, LucideIcon>> = {
   macro: Code,
   branch: GitBranch,
   markdown: FileText,
+  parallel: Columns3,
 };
 
 /** Extract a short subtitle for the sidebar row. */
@@ -103,6 +109,8 @@ function getCellSubtitle(cell: WorkbookCell): string {
     }
     case "output":
       return "Result";
+    case "parallel":
+      return `${cell.lanes.length} lane${cell.lanes.length === 1 ? "" : "s"}`;
   }
 }
 
@@ -124,7 +132,7 @@ interface WorkbookSidebarProps {
 function optimisticValidationContext(cells: WorkbookCell[]): WorkbookValidationContext {
   const protocols: WorkbookValidationContext["protocols"] = {};
   const macros: WorkbookValidationContext["macros"] = {};
-  for (const cell of cells) {
+  for (const { cell } of walkWorkbookCells(cells)) {
     if (cell.type === "protocol") protocols[cell.payload.protocolId] = {};
     if (cell.type === "macro") macros[cell.payload.macroId] = {};
   }
@@ -162,6 +170,26 @@ export function workbookIssueMessage(
       return t("workbooks.problems.issue.duplicatePathConditions", {
         detail: issue.detail ?? "",
       });
+    case "PARALLEL_LANE_EMPTY":
+      return `Lane ${issue.ref ?? "reference"} is empty`;
+    case "PARALLEL_NO_DEFAULT_LANE":
+      return "Parallel container needs exactly one default lane";
+    case "PARALLEL_MULTIPLE_DEFAULT_LANES":
+      return "Parallel container default lane is ambiguous";
+    case "PARALLEL_LANE_ID_DUPLICATE":
+      return `Duplicate lane id ${issue.ref ?? "reference"}`;
+    case "PARALLEL_CELL_ID_DUPLICATE":
+      return `Duplicate cell id ${issue.cellId ?? "reference"}`;
+    case "PARALLEL_NAME_DUPLICATE":
+      return `Parallel container name ${issue.cellLabel ?? "reference"} is not unique`;
+    case "PARALLEL_REF_CROSSES_LANE":
+      return `Reference ${issue.ref ?? "reference"} crosses parallel lanes`;
+    case "PARALLEL_REF_INTO_BODY":
+      return `Reference ${issue.ref ?? "reference"} reaches into a parallel lane`;
+    case "CONTAINER_BRANCH_ESCAPES_BODY":
+      return `Branch target ${issue.ref ?? "reference"} escapes its lane`;
+    case "CONTAINER_NESTING_UNSUPPORTED":
+      return "Parallel containers cannot be nested";
   }
 }
 

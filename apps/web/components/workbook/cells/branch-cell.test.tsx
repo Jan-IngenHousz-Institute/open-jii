@@ -314,7 +314,7 @@ describe("BranchCellComponent", () => {
         cell={cell}
         onUpdate={vi.fn()}
         onDelete={vi.fn()}
-        allCells={[cell, commandCell]}
+        allCells={[commandCell, cell]}
       />,
     );
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import type { ParallelBodyCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+
 import type { RunnerCell } from "../cells";
 import { commandCell, macroCell, markdownCell, protocolCell } from "../demo/fixtures";
 import {
@@ -21,6 +23,11 @@ const cells: RunnerCell[] = [
   commandCell("c"),
   macroCell("a"),
 ];
+
+function bodyCell(cell: RunnerCell): ParallelBodyCell {
+  if (cell.type === "parallel") throw new Error("nested container");
+  return cell;
+}
 
 describe("flow-utils", () => {
   it("command cells are executable producers; output cells are neither", () => {
@@ -49,5 +56,42 @@ describe("flow-utils", () => {
     expect(nearestUpstreamProducerId(cells, "a")).toBe("c");
     expect(nearestUpstreamProducerId(cells, "c")).toBe("p");
     expect(nearestUpstreamProducerId(cells, "md")).toBeNull();
+  });
+
+  it("keeps navigation and upstream resolution inside a lane body", () => {
+    const tree: RunnerCell[] = [
+      commandCell("root"),
+      {
+        id: "parallel",
+        type: "parallel",
+        isCollapsed: false,
+        name: "lanes",
+        defaultLaneId: "b",
+        lanes: [
+          {
+            id: "a",
+            label: "A",
+            color: "#111111",
+            conditions: [],
+            body: [bodyCell(commandCell("a1")), bodyCell(macroCell("a2"))],
+          },
+          {
+            id: "b",
+            label: "B",
+            color: "#222222",
+            conditions: [],
+            body: [bodyCell(commandCell("b1")), bodyCell(macroCell("b2"))],
+          },
+        ],
+      },
+      commandCell("after"),
+    ];
+
+    expect(nextCellId(tree, "a1")).toBe("a2");
+    expect(nextCellId(tree, "a2")).toBeNull();
+    expect(prevCellId(tree, "b1")).toBeNull();
+    expect(nearestUpstreamProducerId(tree, "a2")).toBe("a1");
+    expect(nearestUpstreamProducerId(tree, "b2")).toBe("b1");
+    expect(resolveGotoCellId(tree, "b1", "a2")).toBeNull();
   });
 });

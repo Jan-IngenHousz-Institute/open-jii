@@ -26,6 +26,11 @@ import {
   validateBranchCell,
   validateDeviceBranch,
 } from "@repo/api/transforms/evaluate-branch";
+import {
+  branchTargetCells,
+  findWorkbookCell,
+  resolveCellScope,
+} from "@repo/api/transforms/workbook-cell-tree";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -96,22 +101,33 @@ export function BranchCellComponent({
     return initial;
   });
 
-  const sourceCells = useMemo(
-    () =>
-      (allCells ?? []).filter(
-        (c) =>
-          c.id !== cell.id &&
-          (c.type === "protocol" ||
-            c.type === "command" ||
-            c.type === "macro" ||
-            c.type === "question"),
-      ),
+  const branchLocation = useMemo(
+    () => findWorkbookCell(allCells ?? [], cell.id),
     [allCells, cell.id],
   );
 
+  const sourceLocations = useMemo(
+    () => (branchLocation ? resolveCellScope(allCells ?? [], branchLocation) : []),
+    [allCells, branchLocation],
+  );
+
+  const sourceCells = useMemo(
+    () =>
+      sourceLocations
+        .map((location) => location.cell)
+        .filter(
+          (candidate) =>
+            candidate.type === "protocol" ||
+            candidate.type === "command" ||
+            candidate.type === "macro" ||
+            candidate.type === "question",
+        ),
+    [sourceLocations],
+  );
+
   const jumpTargets = useMemo(
-    () => (allCells ?? []).filter((c) => c.id !== cell.id && c.type !== "output"),
-    [allCells, cell.id],
+    () => (branchLocation ? branchTargetCells(allCells ?? [], branchLocation) : []),
+    [allCells, branchLocation],
   );
 
   const defaultPathResolution = useMemo(() => resolveBranchDefaultPath(cell), [cell]);
@@ -163,10 +179,15 @@ export function BranchCellComponent({
       if (!allCells) return [];
 
       // Questions only expose a single implicit "answer" field.
-      const sourceCell = allCells.find((c) => c.id === sourceCellId);
+      const sourceLocation = sourceLocations.find(
+        (candidate) => candidate.cell.id === sourceCellId,
+      );
+      const sourceCell = sourceLocation?.cell;
       if (sourceCell?.type === "question") return ["answer"];
 
-      const outputCell = allCells.find((c) => c.type === "output" && c.producedBy === sourceCellId);
+      const outputCell = sourceLocation?.body.find(
+        (candidate) => candidate.type === "output" && candidate.producedBy === sourceCellId,
+      );
       if (outputCell?.type !== "output" || outputCell.data == null) return [];
 
       const data = outputCell.data;
@@ -183,7 +204,7 @@ export function BranchCellComponent({
       }
       return [];
     },
-    [allCells],
+    [allCells, sourceLocations],
   );
 
   const getCellLabel = useCallback((c: WorkbookCell): string => {
@@ -267,7 +288,7 @@ export function BranchCellComponent({
                   if (c.id !== condId) return c;
                   const updated = { ...c, [field]: value };
                   if (field === "sourceCellId") {
-                    const src = (allCells ?? []).find((ac) => ac.id === value);
+                    const src = sourceCells.find((candidate) => candidate.id === value);
                     if (value === DEVICE_CONTEXT_KEY) {
                       // Keep a still-valid device field on reselect; default to family.
                       if (!(DEVICE_CONTEXT_FIELDS as readonly string[]).includes(c.field)) {
@@ -286,7 +307,7 @@ export function BranchCellComponent({
         ),
       });
     },
-    [cell, onUpdate, allCells],
+    [cell, onUpdate, sourceCells],
   );
 
   const handleAddCondition = useCallback(
@@ -404,7 +425,7 @@ export function BranchCellComponent({
     conditionIndex: number,
   ) => {
     const fields = getFieldsForSource(cond.sourceCellId);
-    const sourceCell = (allCells ?? []).find((c) => c.id === cond.sourceCellId);
+    const sourceCell = sourceCells.find((candidate) => candidate.id === cond.sourceCellId);
     const isQuestionSource = sourceCell?.type === "question";
     const sourceExists =
       cond.sourceCellId === DEVICE_CONTEXT_KEY ||

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { OutputCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type {
+  OutputCell,
+  ParallelBodyCell,
+} from "@repo/api/domains/workbook/workbook-cells.schema";
 
 import type { RunnerCell } from "../cells";
 import { branchCell, commandCell, macroCell, questionCell } from "../demo/fixtures";
@@ -24,6 +27,11 @@ const run = (status: CellRunState["status"], extra: Partial<CellRunState> = {}):
 
 function state(cells: RunnerCell[], patch: Partial<RunnerState> = {}): RunnerState {
   return { ...createInitialState({ cells, mode: "notebook" }), ...patch };
+}
+
+function bodyCell(cell: RunnerCell): ParallelBodyCell {
+  if (cell.type === "parallel") throw new Error("nested container");
+  return cell;
 }
 
 describe("host-view", () => {
@@ -132,5 +140,52 @@ describe("host-view", () => {
       q9: { status: "running" },
     });
     expect(effectiveCellRuns(null, null)).toEqual({});
+  });
+
+  it("hydrates and replaces outputs in their owning lane without moving their index", () => {
+    const container: RunnerCell = {
+      id: "parallel",
+      type: "parallel",
+      isCollapsed: false,
+      name: "lanes",
+      defaultLaneId: "a",
+      lanes: [
+        {
+          id: "a",
+          label: "A",
+          color: "#111111",
+          conditions: [],
+          body: [
+            bodyCell(commandCell("lane-command")),
+            bodyCell(questionCell("between", "Between")),
+            bodyCell(out("lane-command", { old: true })),
+          ],
+        },
+        {
+          id: "b",
+          label: "B",
+          color: "#222222",
+          conditions: [],
+          body: [
+            bodyCell({ ...out("lane-command", { crossLane: true }), id: "cross-lane-output" }),
+            bodyCell(commandCell("other")),
+          ],
+        },
+      ],
+    };
+    const st = state([container], {
+      outputs: { "lane-command": { v: { fresh: true } } },
+      cellRuns: { "lane-command": run("completed") },
+    });
+
+    expect(outputsFromCells([container])).toEqual({ "lane-command": { v: { old: true } } });
+    const merged = mergeCellsView([container], st);
+    if (merged[0].type !== "parallel") throw new Error("expected container");
+    expect(merged[0].lanes[0].body.map((cell) => cell.id)).toEqual([
+      "lane-command",
+      "between",
+      "out:lane-command:0:1",
+    ]);
+    expect(merged[0].lanes[1].body[0]).toMatchObject({ data: { crossLane: true } });
   });
 });

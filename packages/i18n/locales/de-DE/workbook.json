@@ -85,6 +85,8 @@
       "question_other": "{{count}} Fragen",
       "branch_one": "{{count}} Verzweigung",
       "branch_other": "{{count}} Verzweigungen",
+      "parallel_one": "{{count}} Parallelcontainer",
+      "parallel_other": "{{count}} Parallelcontainer",
       "markdown_one": "{{count}} Notiz",
       "markdown_other": "{{count}} Notizen"
     },

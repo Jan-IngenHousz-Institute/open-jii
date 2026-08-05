@@ -1,4 +1,7 @@
 import type { OutputDeviceResult } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { resolveParallelDefaultLane } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { sanitizeQuestionLabel } from "@repo/api/transforms/label-sanitization";
+import { walkWorkbookCells } from "@repo/api/transforms/workbook-cell-tree";
 import type { SensorFamily } from "@repo/iot";
 
 import type { RunnerCell } from "../cells";
@@ -46,7 +49,8 @@ const OFFLOADED_ENTRY_MARKER = "__workbookOutputEntryV2";
 
 function validateCells(cells: RunnerCell[]): void {
   const seen = new Set<string>();
-  for (const cell of cells) {
+  const parallelNames = new Set<string>();
+  for (const { cell } of walkWorkbookCells(cells)) {
     if (cell.id.endsWith(DISPATCH_STEP_SUFFIX)) {
       throw new Error(`Cell id "${cell.id}" uses the reserved "${DISPATCH_STEP_SUFFIX}" suffix`);
     }
@@ -54,6 +58,22 @@ function validateCells(cells: RunnerCell[]): void {
       throw new Error(`Duplicate cell id "${cell.id}"`);
     }
     seen.add(cell.id);
+    if (cell.type !== "parallel") continue;
+    const canonical = sanitizeQuestionLabel(cell.name);
+    if (parallelNames.has(canonical)) {
+      throw new Error(`Duplicate parallel container name "${cell.name}"`);
+    }
+    parallelNames.add(canonical);
+    const laneIds = new Set<string>();
+    for (const lane of cell.lanes) {
+      if (laneIds.has(lane.id)) {
+        throw new Error(`Duplicate lane id "${lane.id}" in container "${cell.id}"`);
+      }
+      laneIds.add(lane.id);
+    }
+    if (resolveParallelDefaultLane(cell).kind !== "resolved") {
+      throw new Error(`Parallel container "${cell.id}" must have exactly one default lane`);
+    }
   }
 }
 

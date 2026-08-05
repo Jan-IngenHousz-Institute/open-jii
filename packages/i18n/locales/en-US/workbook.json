@@ -93,6 +93,8 @@
       "question_other": "{{count}} Questions",
       "branch_one": "{{count}} Branch",
       "branch_other": "{{count}} Branches",
+      "parallel_one": "{{count}} Parallel container",
+      "parallel_other": "{{count}} Parallel containers",
       "markdown_one": "{{count}} Note",
       "markdown_other": "{{count}} Notes"
     },

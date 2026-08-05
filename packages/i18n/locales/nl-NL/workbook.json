@@ -85,6 +85,8 @@
       "question_other": "{{count}} Vragen",
       "branch_one": "{{count}} Vertakking",
       "branch_other": "{{count}} Vertakkingen",
+      "parallel_one": "{{count}} Parallelle container",
+      "parallel_other": "{{count}} Parallelle containers",
       "markdown_one": "{{count}} Notitie",
       "markdown_other": "{{count}} Notities"
     },

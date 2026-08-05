@@ -2,8 +2,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 
-import type { BranchCell, WorkbookCell } from "../domains/workbook/workbook-cells.schema";
+import type {
+  BranchCell,
+  ParallelCell,
+  WorkbookCell,
+} from "../domains/workbook/workbook-cells.schema";
 import {
+  assignParallelLanes,
   evaluateBranch,
   evaluatePathConditions,
   isGotoBranchCell,
@@ -332,6 +337,77 @@ describe("evaluatePathConditions", () => {
       ],
     };
     expect(evaluatePathConditions(path, cells)).toBe(true);
+  });
+});
+
+describe("assignParallelLanes", () => {
+  const container: ParallelCell = {
+    id: "parallel",
+    type: "parallel",
+    name: "device lanes",
+    isCollapsed: false,
+    defaultLaneId: "fallback",
+    lanes: [
+      {
+        id: "multispeq",
+        label: "MultispeQ",
+        color: "#111111",
+        conditions: [
+          {
+            id: "family",
+            sourceCellId: "$device",
+            field: "family",
+            operator: "eq",
+            value: "multispeq",
+          },
+        ],
+        body: [{ id: "a", type: "markdown", isCollapsed: false, content: "A" }],
+      },
+      {
+        id: "fallback",
+        label: "Fallback",
+        color: "#222222",
+        conditions: [],
+        body: [{ id: "b", type: "markdown", isCollapsed: false, content: "B" }],
+      },
+    ],
+  };
+
+  it("assigns once in lane order and uses only the explicit default as fallback", () => {
+    expect(
+      assignParallelLanes(
+        container,
+        [container],
+        [
+          { deviceId: "one", device: { id: "one", index: 0, family: "multispeq" } },
+          { deviceId: "two", device: { id: "two", index: 1, family: "ambit" } },
+        ],
+      ),
+    ).toEqual({ lanes: { multispeq: ["one"], fallback: ["two"] }, unassigned: [] });
+  });
+
+  it("does not let a conditionless lane claim a device without an explicit default", () => {
+    expect(() =>
+      assignParallelLanes(
+        { ...container, defaultLaneId: undefined },
+        [container],
+        [{ deviceId: "one", device: { id: "one", index: 0, family: "ambit" } }],
+      ),
+    ).toThrow(/exactly one lane/i);
+  });
+
+  it("keeps empty input explicit and rejects an ambiguous default", () => {
+    expect(assignParallelLanes(container, [container], [])).toEqual({
+      lanes: { multispeq: [], fallback: [] },
+      unassigned: [],
+    });
+    expect(() =>
+      assignParallelLanes(
+        { ...container, lanes: [...container.lanes, { ...container.lanes[1] }] },
+        [container],
+        [],
+      ),
+    ).toThrow(/exactly one lane/i);
   });
 });
 

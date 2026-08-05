@@ -1,9 +1,12 @@
+import type { CellPath } from "@repo/api/transforms/workbook-cell-tree";
 import type { SensorFamily } from "@repo/iot";
 
 import type { RunnerCell } from "../cells";
 import { firstExecutableCellId } from "../flow/flow-utils";
 import type { OutputEntry } from "../flow/hydrate";
 import type { CommandProgress } from "../ports";
+
+export type { CellPath } from "@repo/api/transforms/workbook-cell-tree";
 
 export const MAX_BRANCH_VISITS = 100;
 export const TRACE_CAP = 500;
@@ -75,9 +78,6 @@ export interface DeviceRef {
   firmwareVersion?: string;
   batteryPercent?: number;
 }
-
-/** A container nesting path. Root execution uses the empty path. */
-export type CellPath = readonly { containerCellId: string; laneId: string }[];
 
 /**
  * A host-visible interaction waiting on one track. Hosts must read these

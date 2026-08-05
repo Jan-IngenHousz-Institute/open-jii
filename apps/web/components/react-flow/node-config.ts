@@ -1,6 +1,14 @@
 import { Position } from "@xyflow/react";
 import type { Edge } from "@xyflow/react";
-import { BookText, GitBranch, HelpCircle, Cpu, ChartColumn, Terminal } from "lucide-react";
+import {
+  BookText,
+  GitBranch,
+  HelpCircle,
+  Cpu,
+  ChartColumn,
+  Columns3,
+  Terminal,
+} from "lucide-react";
 import React from "react";
 
 export const ALL_NODE_TYPES = [
@@ -10,6 +18,7 @@ export const ALL_NODE_TYPES = [
   "COMMAND",
   "ANALYSIS",
   "BRANCH",
+  "PARALLEL",
 ] as const;
 
 // infer NodeType from the tuple:
@@ -71,6 +80,14 @@ export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
   BRANCH: {
     accent: "#D08A3C",
     icon: React.createElement(GitBranch, { size: 16, strokeWidth: 2 }),
+    hasInput: true,
+    hasOutput: true,
+    defaultSourcePosition: Position.Right,
+    defaultTargetPosition: Position.Left,
+  },
+  PARALLEL: {
+    accent: "#0F766E",
+    icon: React.createElement(Columns3, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
     defaultSourcePosition: Position.Right,

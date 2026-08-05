@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
+import type { ParallelBodyCell, WorkbookCell } from "../domains/workbook/workbook-cells.schema";
 import { validateWorkbook } from "./validate-workbook";
 import type { WorkbookValidationContext } from "./validate-workbook";
 
@@ -63,6 +63,11 @@ const ctx = (
   protocols: WorkbookValidationContext["protocols"],
   macros: WorkbookValidationContext["macros"] = {},
 ): WorkbookValidationContext => ({ protocols, macros });
+
+function bodyCell(cell: WorkbookCell): ParallelBodyCell {
+  if (cell.type === "parallel") throw new Error("nested container");
+  return cell;
+}
 
 describe("validateWorkbook", () => {
   it("reports no issues for a well-formed workbook", () => {
@@ -375,5 +380,73 @@ describe("validateWorkbook", () => {
     );
 
     expect(result.issues.filter((issue) => issue.code === "unreachable-cell")).toEqual([]);
+  });
+
+  it("reports container identity, default, and empty-lane invariants", () => {
+    const container: WorkbookCell = {
+      id: "parallel",
+      type: "parallel",
+      isCollapsed: false,
+      name: "Canopy",
+      defaultLaneId: "missing",
+      lanes: [
+        { id: "same", label: "A", color: "#111111", conditions: [], body: [] },
+        { id: "same", label: "B", color: "#222222", conditions: [], body: [] },
+      ],
+    };
+    const codes = validateWorkbook([container], ctx({})).issues.map((issue) => issue.code);
+
+    expect(codes).toContain("PARALLEL_NO_DEFAULT_LANE");
+    expect(codes).toContain("PARALLEL_LANE_ID_DUPLICATE");
+    expect(codes.filter((code) => code === "PARALLEL_LANE_EMPTY")).toHaveLength(2);
+  });
+
+  it("rejects cross-lane reads, root reads into a body, and branch escapes", () => {
+    const laneQuestion = questionCell("lane-source");
+    const laneBranch = branchCell("lane-branch", "sibling-source", "after");
+    const siblingQuestion = questionCell("sibling-source");
+    if (siblingQuestion.type !== "question") throw new Error("expected question");
+    const container: WorkbookCell = {
+      id: "parallel",
+      type: "parallel",
+      isCollapsed: false,
+      name: "Canopy",
+      defaultLaneId: "lane-a",
+      lanes: [
+        {
+          id: "lane-a",
+          label: "A",
+          color: "#111111",
+          conditions: [],
+          body: [bodyCell(laneQuestion), bodyCell(laneBranch)],
+        },
+        {
+          id: "lane-b",
+          label: "B",
+          color: "#222222",
+          conditions: [],
+          body: [{ ...siblingQuestion, name: "sibling" }],
+        },
+      ],
+    };
+    const rootBranch = branchCell("root-branch", "lane-source");
+    const issues = validateWorkbook(
+      [
+        container,
+        { id: "after", type: "markdown", isCollapsed: false, content: "after" },
+        rootBranch,
+      ],
+      ctx({}),
+    ).issues;
+
+    expect(issues).toContainEqual(
+      expect.objectContaining({ code: "PARALLEL_REF_CROSSES_LANE", cellId: "lane-branch" }),
+    );
+    expect(issues).toContainEqual(
+      expect.objectContaining({ code: "CONTAINER_BRANCH_ESCAPES_BODY", cellId: "lane-branch" }),
+    );
+    expect(issues).toContainEqual(
+      expect.objectContaining({ code: "PARALLEL_REF_INTO_BODY", cellId: "root-branch" }),
+    );
   });
 });

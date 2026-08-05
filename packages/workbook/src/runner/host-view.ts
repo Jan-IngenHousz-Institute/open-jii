@@ -1,4 +1,9 @@
 import type { OutputCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import {
+  findWorkbookCell,
+  findWorkbookCellInBody,
+  walkWorkbookCells,
+} from "@repo/api/transforms/workbook-cell-tree";
 
 import type { RunnerCell } from "../cells";
 import { isProducer } from "../flow/flow-utils";
@@ -41,12 +46,15 @@ function sameOutputCell(existing: OutputCell, desired: OutputCell): boolean {
 
 /** Seed runner outputs from persisted output cells so macros/branches see them. */
 export function outputsFromCells(cells: RunnerCell[]): RunnerState["outputs"] {
-  const byId = new Map(cells.map((c) => [c.id, c]));
   const outputs: RunnerState["outputs"] = {};
-  for (const cell of cells) {
+  for (const location of walkWorkbookCells(cells)) {
+    const { cell } = location;
     if (cell.type !== "output") continue;
     if (cell.data == null && !cell.deviceResults?.length) continue;
-    const owner = byId.get(ownerCellId(cell.producedBy));
+    const owner = findWorkbookCellInBody(cells, {
+      path: location.path,
+      cellId: ownerCellId(cell.producedBy),
+    })?.cell;
     if (owner && isProducer(owner)) {
       outputs[cell.producedBy] = { v: cell.data, deviceResults: cell.deviceResults };
     }
@@ -67,7 +75,7 @@ export function carryOverState(
   const outputs = outputsFromCells(opts.cells);
   if (!prev) return { ...base, outputs };
 
-  const ids = new Set(opts.cells.map((c) => c.id));
+  const ids = new Set(walkWorkbookCells(opts.cells).map(({ cell }) => cell.id));
   for (const [key, entry] of Object.entries(prev.outputs)) {
     if (entry && ids.has(ownerCellId(key))) outputs[key] = entry;
   }
@@ -93,7 +101,6 @@ export function carryOverState(
  * changed, so merging is idempotent.
  */
 export function mergeCellsView(latest: RunnerCell[], state: Readonly<RunnerState>): RunnerCell[] {
-  const byId = new Map(latest.map((c) => [c.id, c]));
   const managed = new Map<string, OutputCell>();
   const byOwner = new Map<string, string[]>();
 
@@ -104,7 +111,7 @@ export function mergeCellsView(latest: RunnerCell[], state: Readonly<RunnerState
 
   for (const key of keys) {
     const ownerId = ownerCellId(key);
-    const owner = byId.get(ownerId);
+    const owner = findWorkbookCell(latest, ownerId)?.cell;
     if (!owner || !(isProducer(owner) || owner.type === "question")) continue;
     const run = state.cellRuns[key];
     const entry = state.outputs[key];
@@ -123,7 +130,7 @@ export function mergeCellsView(latest: RunnerCell[], state: Readonly<RunnerState
     byOwner.set(ownerId, [...(byOwner.get(ownerId) ?? []), key]);
   }
 
-  for (const cell of latest) {
+  for (const { cell } of walkWorkbookCells(latest)) {
     if (cell.type !== "branch") continue;
     const run = state.cellRuns[cell.id];
     if (run?.status === "error" && run.error !== undefined) {
@@ -163,7 +170,7 @@ export function mergeCellsView(latest: RunnerCell[], state: Readonly<RunnerState
   // Web parity: an answered question folds its answer back onto the cell and
   // gets an `{ answer }` output block.
   const answers = currentAnswers(state);
-  for (const cell of latest) {
+  for (const { cell } of walkWorkbookCells(latest)) {
     if (cell.type !== "question") continue;
     const answer = answers[cell.id];
     if (answer === undefined) continue;
@@ -181,43 +188,73 @@ export function mergeCellsView(latest: RunnerCell[], state: Readonly<RunnerState
   }
 
   const existingByKey = new Map<string, OutputCell>();
-  for (const cell of latest) {
-    if (cell.type === "output" && managed.has(cell.producedBy)) {
+  for (const location of walkWorkbookCells(latest)) {
+    const { cell } = location;
+    if (
+      cell.type === "output" &&
+      managed.has(cell.producedBy) &&
+      location.body.some((candidate) => candidate.id === ownerCellId(cell.producedBy))
+    ) {
       existingByKey.set(cell.producedBy, cell);
     }
   }
 
-  const result: RunnerCell[] = [];
-  for (const cell of latest) {
-    if (cell.type === "output" && managed.has(cell.producedBy)) continue;
-    let rendered: RunnerCell = cell;
-    if (cell.type === "branch") {
-      const run = state.cellRuns[cell.id];
+  const renderBody = (body: RunnerCell[]): RunnerCell[] => {
+    const result: RunnerCell[] = [];
+    const bodyIds = new Set(body.map((cell) => cell.id));
+    for (const cell of body) {
       if (
-        run?.status === "completed" &&
-        (cell.evaluatedPathId !== run.lastMatchedPathId || !("evaluatedPathId" in cell))
+        cell.type === "output" &&
+        managed.has(cell.producedBy) &&
+        bodyIds.has(ownerCellId(cell.producedBy))
       ) {
-        rendered = { ...cell, evaluatedPathId: run.lastMatchedPathId };
+        const desired = managed.get(cell.producedBy);
+        if (desired) result.push(sameOutputCell(cell, desired) ? cell : desired);
+        continue;
+      }
+
+      let rendered: RunnerCell = cell;
+      if (cell.type === "parallel") {
+        const lanes = cell.lanes.map((lane) => {
+          const nextBody = renderBody(lane.body) as typeof lane.body;
+          if (nextBody === lane.body) return lane;
+          return { ...lane, body: nextBody };
+        });
+        if (lanes.some((lane, index) => lane !== cell.lanes[index])) {
+          rendered = { ...cell, lanes };
+        }
+      } else if (cell.type === "branch") {
+        const run = state.cellRuns[cell.id];
+        if (
+          run?.status === "completed" &&
+          (cell.evaluatedPathId !== run.lastMatchedPathId || !("evaluatedPathId" in cell))
+        ) {
+          rendered = { ...cell, evaluatedPathId: run.lastMatchedPathId };
+        }
+      } else if (cell.type === "question") {
+        const answer = answers[cell.id];
+        if (answer !== undefined && (cell.answer !== answer || !cell.isAnswered)) {
+          rendered = { ...cell, answer, isAnswered: true };
+        }
+      }
+      result.push(rendered);
+
+      const ownedKeys = byOwner.get(cell.id);
+      if (!ownedKeys) continue;
+      // Existing outputs retain their current index. Only a newly materialized
+      // output is inserted after its owner, keeping byte-identical round trips.
+      for (const key of [...ownedKeys].sort((a, b) => a.length - b.length)) {
+        if (existingByKey.has(key)) continue;
+        const desired = managed.get(key);
+        if (desired) result.push(desired);
       }
     }
-    if (cell.type === "question") {
-      const answer = answers[cell.id];
-      if (answer !== undefined && (cell.answer !== answer || !cell.isAnswered)) {
-        rendered = { ...cell, answer, isAnswered: true };
-      }
-    }
-    result.push(rendered);
-    const ownedKeys = byOwner.get(cell.id);
-    if (!ownedKeys) continue;
-    // Owner first, dispatch step second, mirroring execution order.
-    ownedKeys.sort((a, b) => a.length - b.length);
-    for (const key of ownedKeys) {
-      const desired = managed.get(key);
-      if (!desired) continue;
-      const existing = existingByKey.get(key);
-      result.push(existing && sameOutputCell(existing, desired) ? existing : desired);
-    }
-  }
+    const unchanged =
+      result.length === body.length && result.every((cell, index) => cell === body[index]);
+    return unchanged ? body : result;
+  };
+
+  const result = renderBody(latest);
   const unchanged = result.length === latest.length && result.every((c, i) => c === latest[i]);
   return unchanged ? latest : result;
 }
