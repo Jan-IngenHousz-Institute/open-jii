@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
+import { nextBranchPathColor } from "../branch-path-colors";
 import { CellWrapper } from "../cell-wrapper";
 
 interface BranchCellProps {
@@ -40,6 +41,8 @@ interface BranchCellProps {
 }
 
 type BranchOperator = BranchCondition["operator"];
+
+const NO_DEFAULT_PATH = "__no_default_path__";
 
 const operatorLabels: Record<BranchOperator, string> = {
   eq: "=",
@@ -151,7 +154,7 @@ export function BranchCellComponent({
     const newPath: BranchPath = {
       id: crypto.randomUUID(),
       label: `Path ${cell.paths.length + 1}`,
-      color: "",
+      color: nextBranchPathColor(cell.paths.map((path) => path.color)),
       conditions: [
         {
           id: crypto.randomUUID(),
@@ -168,7 +171,11 @@ export function BranchCellComponent({
 
   const handleRemovePath = useCallback(
     (pathId: string) => {
-      onUpdate({ ...cell, paths: cell.paths.filter((p) => p.id !== pathId) });
+      onUpdate({
+        ...cell,
+        paths: cell.paths.filter((p) => p.id !== pathId),
+        defaultPathId: cell.defaultPathId === pathId ? undefined : cell.defaultPathId,
+      });
     },
     [cell, onUpdate],
   );
@@ -268,7 +275,7 @@ export function BranchCellComponent({
           onValueChange={(v) => handleConditionUpdate(path.id, cond.id, "sourceCellId", v)}
           disabled={readOnly}
         >
-          <SelectTrigger className="h-7 min-w-[100px] flex-1 text-xs">
+          <SelectTrigger aria-label="Source cell" className="h-7 min-w-[100px] flex-1 text-xs">
             <SelectValue placeholder="source..." />
           </SelectTrigger>
           <SelectContent>
@@ -471,23 +478,58 @@ export function BranchCellComponent({
       }
       onRun={() => onRun?.()}
     >
-      <div className="space-y-1">
-        {cell.paths.map((path) => (
-          <div key={path.id} className="group/path">
-            {renderPath(path)}
-          </div>
-        ))}
-
-        {!readOnly && (
-          <button
-            type="button"
-            className="text-muted-foreground hover:bg-muted/50 hover:text-foreground flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors"
-            onClick={handleAddPath}
+      <div className="space-y-2">
+        <div className="border-border/60 bg-muted/20 flex items-center gap-2 rounded-md border px-2.5 py-2">
+          <span className="text-muted-foreground shrink-0 text-xs font-semibold">Otherwise</span>
+          <Select
+            value={cell.defaultPathId ?? NO_DEFAULT_PATH}
+            onValueChange={(value) =>
+              onUpdate({
+                ...cell,
+                defaultPathId: value === NO_DEFAULT_PATH ? undefined : value,
+              })
+            }
+            disabled={readOnly}
           >
-            <Plus className="size-3.5" />
-            Add path
-          </button>
-        )}
+            <SelectTrigger aria-label="Otherwise path" className="h-7 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_DEFAULT_PATH} className="text-xs">
+                No default (fall through)
+              </SelectItem>
+              {cell.defaultPathId && !cell.paths.some((path) => path.id === cell.defaultPathId) && (
+                <SelectItem value={cell.defaultPathId} className="text-xs">
+                  Missing path ({cell.defaultPathId})
+                </SelectItem>
+              )}
+              {cell.paths.map((path, index) => (
+                <SelectItem key={path.id} value={path.id} className="text-xs">
+                  {path.label || `Path ${index + 1}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          {cell.paths.map((path) => (
+            <div key={path.id} className="group/path">
+              {renderPath(path)}
+            </div>
+          ))}
+
+          {!readOnly && (
+            <button
+              type="button"
+              className="text-muted-foreground hover:bg-muted/50 hover:text-foreground flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors"
+              onClick={handleAddPath}
+            >
+              <Plus className="size-3.5" />
+              Add path
+            </button>
+          )}
+        </div>
       </div>
     </CellWrapper>
   );

@@ -106,6 +106,34 @@ describe("BranchCellComponent", () => {
     expect(updated.paths).toHaveLength(2);
     expect(updated.paths[1].label).toBe("Path 2");
     expect(updated.paths[1].conditions).toHaveLength(1);
+    expect(updated.paths[1].color).toMatch(/^#[0-9A-F]{6}$/i);
+    expect(updated.paths[1].color).not.toBe(updated.paths[0].color);
+  });
+
+  it("sets and clears the Otherwise path", async () => {
+    const user = userEvent.setup();
+    const { onUpdate } = renderBranch();
+
+    await user.click(screen.getByRole("combobox", { name: "Otherwise path" }));
+    await user.click(screen.getByRole("option", { name: "Path 1" }));
+    expect(onUpdate.mock.calls[0][0]).toHaveProperty("defaultPathId", "path-1");
+
+    const { onUpdate: onClear } = renderBranch({ defaultPathId: "path-1" });
+    const clearTrigger = screen.getAllByRole("combobox", { name: "Otherwise path" }).at(-1);
+    expect(clearTrigger).toBeDefined();
+    if (!clearTrigger) throw new Error("Otherwise trigger not found");
+    await user.click(clearTrigger);
+    await user.click(screen.getByRole("option", { name: "No default (fall through)" }));
+    expect(onClear.mock.calls[0][0]).toHaveProperty("defaultPathId", undefined);
+  });
+
+  it("preserves a missing Otherwise path as a repairable option", async () => {
+    const user = userEvent.setup();
+    renderBranch({ defaultPathId: "deleted-path" });
+
+    await user.click(screen.getByRole("combobox", { name: "Otherwise path" }));
+
+    expect(screen.getByRole("option", { name: "Missing path (deleted-path)" })).toBeInTheDocument();
   });
 
   it("adds a condition when the user clicks '+ condition'", async () => {
@@ -130,9 +158,7 @@ describe("BranchCellComponent", () => {
       />,
     );
 
-    // The condition row renders the source-cell select first.
-    const [sourceTrigger] = screen.getAllByRole("combobox");
-    await user.click(sourceTrigger);
+    await user.click(screen.getByRole("combobox", { name: "Source cell" }));
 
     expect(await screen.findByText("Command (battery)")).toBeInTheDocument();
   });
