@@ -145,6 +145,14 @@ export function workbookIssueMessage(issue: WorkbookIssue): string {
       return `Workbook mixes sensor families${issue.detail ? `: ${issue.detail}` : ""}`;
     case "macro-without-input":
       return "Macro has no upstream measurement";
+    case "unreachable-cell":
+      return `${issue.cellLabel ?? issue.cellId ?? "Cell"} is unreachable`;
+    case "backward-goto-loop":
+      return `Go to loops backward to ${issue.ref ?? "an earlier cell"}`;
+    case "branch-no-default":
+      return "Branch has no Otherwise path and may fall through";
+    case "path-duplicate-conditions":
+      return `Duplicate path conditions${issue.detail ? `: ${issue.detail}` : ""}`;
   }
 }
 

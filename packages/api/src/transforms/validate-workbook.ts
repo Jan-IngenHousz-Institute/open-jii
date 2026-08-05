@@ -1,6 +1,7 @@
 import type { SensorFamily } from "../domains/protocol/protocol.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
 import { DEVICE_CONTEXT_KEY } from "./device-context";
+import { isDeviceScopedBranch, isGotoBranchCell } from "./evaluate-branch";
 
 export type WorkbookIssueLevel = "error" | "warning";
 
@@ -10,7 +11,11 @@ export type WorkbookIssueCode =
   | "dangling-branch-source"
   | "dangling-branch-goto"
   | "mixed-sensor-families"
-  | "macro-without-input";
+  | "macro-without-input"
+  | "unreachable-cell"
+  | "backward-goto-loop"
+  | "branch-no-default"
+  | "path-duplicate-conditions";
 
 export interface WorkbookIssue {
   level: WorkbookIssueLevel;
@@ -48,6 +53,119 @@ function cellLabelOf(cell: WorkbookCell): string | undefined {
     default:
       return undefined;
   }
+}
+
+function duplicateConditionKey(
+  cell: Extract<WorkbookCell, { type: "branch" }>,
+): Map<string, string> {
+  const firstPathByConditions = new Map<string, string>();
+  const duplicates = new Map<string, string>();
+  for (const path of cell.paths) {
+    if (path.conditions.length === 0) continue;
+    const key = path.conditions
+      .map(({ sourceCellId, field, operator, value }) =>
+        JSON.stringify({ sourceCellId, field, operator, value }),
+      )
+      .sort()
+      .join("|");
+    const firstPathId = firstPathByConditions.get(key);
+    if (firstPathId) duplicates.set(path.id, firstPathId);
+    else firstPathByConditions.set(key, path.id);
+  }
+  return duplicates;
+}
+
+function structuralBranchIssues(cells: WorkbookCell[]): WorkbookIssue[] {
+  const issues: WorkbookIssue[] = [];
+  const indexById = new Map(cells.map((cell, index) => [cell.id, index]));
+  const reachableIndexes = new Set<number>();
+  const pending = cells.length > 0 ? [0] : [];
+  let pendingIndex = 0;
+
+  const enqueue = (index: number | undefined) => {
+    if (index === undefined || index < 0 || index >= cells.length || reachableIndexes.has(index)) {
+      return;
+    }
+    pending.push(index);
+  };
+
+  while (pendingIndex < pending.length) {
+    const index = pending[pendingIndex++];
+    if (reachableIndexes.has(index)) continue;
+    reachableIndexes.add(index);
+    const cell = cells[index];
+
+    if (cell.type !== "branch") {
+      enqueue(index + 1);
+      continue;
+    }
+
+    for (const path of cell.paths) {
+      if (path.gotoCellId) enqueue(indexById.get(path.gotoCellId));
+    }
+
+    const defaultPath = cell.defaultPathId
+      ? cell.paths.find((path) => path.id === cell.defaultPathId)
+      : undefined;
+    const canFallThrough =
+      isDeviceScopedBranch(cell) ||
+      !defaultPath?.gotoCellId ||
+      cell.paths.some((path) => !path.gotoCellId);
+    if (canFallThrough) enqueue(index + 1);
+  }
+
+  for (const [index, cell] of cells.entries()) {
+    if (cell.type !== "output" && !reachableIndexes.has(index)) {
+      issues.push({
+        level: "warning",
+        code: "unreachable-cell",
+        cellId: cell.id,
+        cellLabel: cellLabelOf(cell),
+      });
+    }
+
+    if (cell.type !== "branch") continue;
+
+    if (!cell.defaultPathId) {
+      issues.push({
+        level: "warning",
+        code: "branch-no-default",
+        cellId: cell.id,
+        cellLabel: cellLabelOf(cell),
+      });
+    }
+
+    if (isGotoBranchCell(cell)) {
+      const targetId = cell.paths[0].gotoCellId;
+      const targetIndex = targetId ? indexById.get(targetId) : undefined;
+      if (targetIndex !== undefined && targetIndex < index) {
+        issues.push({
+          level: "warning",
+          code: "backward-goto-loop",
+          cellId: cell.id,
+          cellLabel: cellLabelOf(cell),
+          ref: targetId,
+        });
+      }
+    }
+
+    const duplicateConditions = duplicateConditionKey(cell);
+    for (const [pathId, firstPathId] of duplicateConditions) {
+      const path = cell.paths.find((candidate) => candidate.id === pathId);
+      let duplicateLabel = pathId;
+      if (path?.label.trim()) duplicateLabel = path.label.trim();
+      issues.push({
+        level: "warning",
+        code: "path-duplicate-conditions",
+        cellId: cell.id,
+        cellLabel: cellLabelOf(cell),
+        ref: pathId,
+        detail: `${duplicateLabel} duplicates ${firstPathId}`,
+      });
+    }
+  }
+
+  return issues;
 }
 
 /**
@@ -151,6 +269,8 @@ export function validateWorkbook(
       detail: [...families].sort().join(", "),
     });
   }
+
+  issues.push(...structuralBranchIssues(cells));
 
   return { issues, ok: !issues.some((i) => i.level === "error") };
 }

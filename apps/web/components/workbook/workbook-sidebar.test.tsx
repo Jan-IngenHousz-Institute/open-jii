@@ -161,4 +161,28 @@ describe("WorkbookSidebar", () => {
     render(<WorkbookSidebar cells={[markdownCell]} onCellClick={onCellClick} />);
     expect(screen.getByRole("region", { name: "Problems" })).toHaveTextContent("No problems found");
   });
+
+  it("lists an unreachable cell warning and selects the unreachable cell", async () => {
+    const user = userEvent.setup();
+    const goto = createBranchCell({
+      id: "goto",
+      paths: [
+        {
+          id: "goto-path",
+          label: "Go to",
+          color: "#005E5E",
+          conditions: [],
+          gotoCellId: "target",
+        },
+      ],
+      defaultPathId: "goto-path",
+    });
+    const orphan = createMarkdownCell({ id: "orphan", content: "Skipped" });
+    const target = createMarkdownCell({ id: "target", content: "Target" });
+    render(<WorkbookSidebar cells={[goto, orphan, target]} onCellClick={onCellClick} />);
+
+    expect(screen.getByText("orphan is unreachable")).toBeInTheDocument();
+    await user.click(screen.getByText("orphan is unreachable"));
+    expect(onCellClick).toHaveBeenCalledWith("orphan");
+  });
 });

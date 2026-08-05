@@ -133,7 +133,11 @@
         "danglingSource": "Een branchvoorwaarde verwijst naar een cel die niet meer bestaat ({{ref}})",
         "danglingGoto": "Een branch springt naar een cel die niet meer bestaat ({{ref}})",
         "macroWithoutInput": "Macro \"{{label}}\" heeft geen voorafgaande meting om op te draaien",
-        "mixedFamilies": "Dit werkboek mengt sensorfamilies ({{detail}}); een run richt zich op één apparaat"
+        "mixedFamilies": "Dit werkboek mengt sensorfamilies ({{detail}}); een run richt zich op één apparaat",
+        "unreachableCell": "Cel \"{{label}}\" is niet bereikbaar",
+        "backwardGotoLoop": "Een Ga naar springt terug naar {{ref}}",
+        "branchNoDefault": "Een branch heeft geen Anders-pad en kan doorlopen",
+        "duplicatePathConditions": "Een later pad herhaalt eerdere voorwaarden ({{detail}})"
       }
     }
   },

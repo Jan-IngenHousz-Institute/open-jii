@@ -159,7 +159,11 @@
         "danglingSource": "A branch condition points at a cell that no longer exists ({{ref}})",
         "danglingGoto": "A branch jumps to a cell that no longer exists ({{ref}})",
         "macroWithoutInput": "Macro \"{{label}}\" has no measurement before it to run on",
-        "mixedFamilies": "This workbook mixes sensor families ({{detail}}); one run targets a single device"
+        "mixedFamilies": "This workbook mixes sensor families ({{detail}}); one run targets a single device",
+        "unreachableCell": "Cell \"{{label}}\" cannot be reached",
+        "backwardGotoLoop": "A Go to loops backward to {{ref}}",
+        "branchNoDefault": "A branch has no Otherwise path and may fall through",
+        "duplicatePathConditions": "A later path repeats earlier conditions ({{detail}})"
       }
     }
   },
