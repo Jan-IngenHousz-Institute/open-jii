@@ -98,6 +98,7 @@ describe("BranchCellComponent", () => {
 
   it("presents intentional default-less fall-through as a warning, not an error", () => {
     renderBranch({
+      defaultPathId: undefined,
       paths: [
         {
           id: "path-1",

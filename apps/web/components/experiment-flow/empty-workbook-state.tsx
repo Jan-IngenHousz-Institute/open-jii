@@ -43,7 +43,6 @@ export function EmptyWorkbookState({ experimentName, hasAccess }: EmptyWorkbookS
 
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
-    if (!workbooks.some((workbook) => workbook.id === selectedWorkbookId)) return;
     void persistence
       .attachWorkbook(selectedWorkbookId)
       .then(() => {

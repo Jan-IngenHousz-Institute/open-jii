@@ -1,3 +1,4 @@
+import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
@@ -116,6 +117,9 @@ describe("NewExperimentForm", () => {
       body: { id: "exp-123" },
     });
     server.mount(contract.experiments.attachWorkbook, { status: 500 });
+    server.mount(contract.experiments.getExperiment, {
+      body: createExperiment({ id: "exp-123", workbookId: null, workbookVersionId: null }),
+    });
     const user = userEvent.setup();
     render(<NewExperimentForm />);
 
@@ -134,6 +138,54 @@ describe("NewExperimentForm", () => {
 
     await waitFor(() => expect(retryAttach.called).toBe(true));
     expect(create.callCount).toBe(1);
+    await waitFor(() =>
+      expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith(
+        "/en-US/platform/experiments/exp-123",
+      ),
+    );
+  });
+
+  it("treats a lost attachment response as success when retry reconciliation finds it", async () => {
+    wizardState.workbookId = "11111111-1111-1111-1111-111111111111";
+    server.mount(contract.workbooks.listWorkbooks, {
+      body: [
+        {
+          id: wizardState.workbookId,
+          name: "Workbook",
+          description: null,
+          cells: [],
+          metadata: {},
+          organizationId: null,
+          visibility: "public",
+          createdBy: "22222222-2222-2222-2222-222222222222",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+    const create = server.mount(contract.experiments.createExperiment, {
+      body: { id: "exp-123" },
+    });
+    const lostAttachResponse = server.mount(contract.experiments.attachWorkbook, { status: 500 });
+    const user = userEvent.setup();
+    render(<NewExperimentForm />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled());
+
+    const reconcile = server.mount(contract.experiments.getExperiment, {
+      body: createExperiment({
+        id: "exp-123",
+        workbookId: wizardState.workbookId,
+        workbookVersionId: "33333333-3333-3333-3333-333333333333",
+      }),
+    });
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() => expect(reconcile.called).toBe(true));
+    expect(create.callCount).toBe(1);
+    expect(lostAttachResponse.callCount).toBe(1);
     await waitFor(() =>
       expect(vi.mocked(useRouter)().push).toHaveBeenCalledWith(
         "/en-US/platform/experiments/exp-123",

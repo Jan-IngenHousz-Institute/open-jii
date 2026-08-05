@@ -29,6 +29,11 @@ interface UseAutosaveOptions<T> {
   scopeKey?: string;
   /** Persisted anchor for a scope whose editable value may be a retained local draft. */
   initialSavedKey?: string;
+  /**
+   * When true, an absent `initialSavedKey` means the scope has not loaded yet.
+   * Autosave cannot become dirty or write until that persisted baseline arrives.
+   */
+  requiresInitialSavedKey?: boolean;
 }
 
 export interface UseAutosaveReturn {
@@ -57,6 +62,7 @@ export function useAutosave<T>({
   enabled = true,
   scopeKey = "default",
   initialSavedKey,
+  requiresInitialSavedKey = false,
 }: UseAutosaveOptions<T>): UseAutosaveReturn {
   const key = useMemo(() => toKey(value), [value, toKey]);
 
@@ -64,9 +70,13 @@ export function useAutosave<T>({
   const [error, setError] = useState<unknown>(null);
   const errorRef = useRef<unknown>(null);
 
-  const firstSavedKey = initialSavedKey ?? key;
-  const lastSavedKeyRef = useRef(firstSavedKey);
-  const savedKeyByScopeRef = useRef(new Map([[scopeKey, firstSavedKey]]));
+  const firstSavedKey = initialSavedKey ?? (requiresInitialSavedKey ? undefined : key);
+  const lastSavedKeyRef = useRef<string | undefined>(firstSavedKey);
+  const savedKeyByScopeRef = useRef(
+    firstSavedKey === undefined
+      ? new Map<string, string>()
+      : new Map<string, string>([[scopeKey, firstSavedKey]]),
+  );
   const latestKeyByScopeRef = useRef(new Map([[scopeKey, key]]));
   const activatedScopesRef = useRef(new Set(enabled ? [scopeKey] : []));
   latestKeyByScopeRef.current.set(scopeKey, key);
@@ -78,10 +88,20 @@ export function useAutosave<T>({
       generation: scopeIdentityRef.current.generation + 1,
     };
     const savedKey = savedKeyByScopeRef.current.get(scopeKey);
-    const scopeSavedKey = savedKey ?? initialSavedKey ?? key;
-    if (savedKey === undefined) savedKeyByScopeRef.current.set(scopeKey, scopeSavedKey);
+    const scopeSavedKey =
+      savedKey ?? initialSavedKey ?? (requiresInitialSavedKey ? undefined : key);
+    if (savedKey === undefined && scopeSavedKey !== undefined) {
+      savedKeyByScopeRef.current.set(scopeKey, scopeSavedKey);
+    }
     lastSavedKeyRef.current = scopeSavedKey;
     if (enabled) activatedScopesRef.current.add(scopeKey);
+  }
+  // A server-backed owner can render before its query resolves. Install the
+  // first real baseline for the scope, but never let a later refetch overwrite
+  // an anchor that already owns local edits.
+  if (initialSavedKey !== undefined && !savedKeyByScopeRef.current.has(scopeKey)) {
+    savedKeyByScopeRef.current.set(scopeKey, initialSavedKey);
+    lastSavedKeyRef.current = initialSavedKey;
   }
 
   const valueRef = useRef(value);
@@ -120,6 +140,17 @@ export function useAutosave<T>({
         const k = keyRef.current;
         const scopeGeneration = scopeIdentityRef.current.generation;
         const activeScopeKey = scopeIdentityRef.current.key;
+        const savedKey = savedKeyByScopeRef.current.get(activeScopeKey);
+
+        // `undefined` is an unloaded scope, not an empty persisted workbook.
+        // With no server baseline there is nothing safe to compare or write.
+        if (savedKey === undefined) {
+          pendingFlushRef.current = false;
+          errorRef.current = null;
+          setError(null);
+          setStatus("idle");
+          return;
+        }
 
         if (isValidRef.current && !isValidRef.current(v)) {
           const validationError = new AutosaveValidationError();
@@ -129,7 +160,7 @@ export function useAutosave<T>({
           setStatus("error");
           return;
         }
-        if (k === lastSavedKeyRef.current) {
+        if (k === savedKey) {
           pendingFlushRef.current = false;
           setStatus("idle");
           return;
@@ -194,18 +225,22 @@ export function useAutosave<T>({
   }, []);
 
   useEffect(() => {
-    const savedKey = savedKeyByScopeRef.current.get(scopeKey) ?? keyRef.current;
+    const savedKey = savedKeyByScopeRef.current.get(scopeKey);
     lastSavedKeyRef.current = savedKey;
-    pendingFlushRef.current = keyRef.current !== savedKey;
+    pendingFlushRef.current = savedKey !== undefined && keyRef.current !== savedKey;
     errorRef.current = null;
     setStatus(pendingFlushRef.current ? "dirty" : "idle");
     setError(null);
-  }, [scopeKey]);
+  }, [scopeKey, initialSavedKey]);
 
   useEffect(() => {
     if (enabled && !wasEnabledRef.current) {
       const activeScope = scopeIdentityRef.current.key;
-      if (!activatedScopesRef.current.has(activeScope) && initialSavedKey === undefined) {
+      if (
+        !activatedScopesRef.current.has(activeScope) &&
+        initialSavedKey === undefined &&
+        !requiresInitialSavedKey
+      ) {
         // First activation initializes a scope whose disabled value may merely
         // have been loading. Later activations must retain that scope's saved
         // anchor so a real draft cannot be rebased away as "already saved".
@@ -218,17 +253,25 @@ export function useAutosave<T>({
         setError(null);
       } else {
         activatedScopesRef.current.add(activeScope);
-        const savedKey = savedKeyByScopeRef.current.get(activeScope) ?? keyRef.current;
+        const savedKey = savedKeyByScopeRef.current.get(activeScope);
         lastSavedKeyRef.current = savedKey;
-        pendingFlushRef.current = keyRef.current !== savedKey;
+        pendingFlushRef.current = savedKey !== undefined && keyRef.current !== savedKey;
         setStatus(pendingFlushRef.current ? "dirty" : "idle");
       }
     }
     wasEnabledRef.current = enabled;
-  }, [enabled, initialSavedKey]);
+  }, [enabled, initialSavedKey, requiresInitialSavedKey]);
 
   useEffect(() => {
     if (!enabled) return;
+    const savedKey = savedKeyByScopeRef.current.get(scopeKey);
+    if (savedKey === undefined) {
+      pendingFlushRef.current = false;
+      errorRef.current = null;
+      setError(null);
+      setStatus("idle");
+      return;
+    }
     if (isValidRef.current && !isValidRef.current(valueRef.current)) {
       const validationError = new AutosaveValidationError();
       pendingFlushRef.current = true;
@@ -237,7 +280,7 @@ export function useAutosave<T>({
       setStatus("error");
       return;
     }
-    if (key === lastSavedKeyRef.current) {
+    if (key === savedKey) {
       pendingFlushRef.current = false;
       setStatus((prev) => (prev === "saving" ? prev : "idle"));
       return;
@@ -255,7 +298,7 @@ export function useAutosave<T>({
         timerRef.current = null;
       }
     };
-  }, [key, enabled, delayMs, runSave, scopeKey]);
+  }, [key, enabled, delayMs, runSave, scopeKey, initialSavedKey]);
 
   const flush = useCallback(async (): Promise<void> => {
     if (timerRef.current || pendingFlushRef.current || inFlightRef.current) {
@@ -289,6 +332,7 @@ export function useAutosave<T>({
     hasUnsavedChanges: [...latestKeyByScopeRef.current].some(
       ([savedScope, latestKey]) =>
         activatedScopesRef.current.has(savedScope) &&
+        savedKeyByScopeRef.current.has(savedScope) &&
         savedKeyByScopeRef.current.get(savedScope) !== latestKey,
     ),
     error,

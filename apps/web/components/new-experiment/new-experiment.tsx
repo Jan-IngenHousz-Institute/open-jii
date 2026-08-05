@@ -3,7 +3,7 @@
 import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { useLocale } from "@/hooks/useLocale";
-import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
+import { orpcClient } from "@/lib/orpc";
 import { parseApiError } from "@/util/apiError";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -85,7 +85,6 @@ export function NewExperimentForm() {
     [t],
   );
 
-  const { data: workbooks = [] } = useWorkbookList();
   const pendingWorkbookId = useRef<string | undefined>(undefined);
   const attachWorkbook = useAttachWorkbook();
 
@@ -96,31 +95,52 @@ export function NewExperimentForm() {
     router.push(`/${locale}/platform/experiments/${experimentId}`);
   };
 
-  const attachPendingWorkbook = (experimentId: string) => {
+  const reportAttachmentFailure = (error: unknown) => {
+    setIsSubmitting(false);
+    toast({
+      description:
+        parseApiError(error)?.message ??
+        "The experiment was created, but its workbook could not be attached. Try again.",
+      variant: "destructive",
+    });
+  };
+
+  const attachPendingWorkbook = async (experimentId: string, reconcileFirst = false) => {
     if (!pendingWorkbookId.current) {
       finishCreation(experimentId);
       return;
     }
-    attachWorkbook.mutate(
-      {
+
+    const intendedWorkbookId = pendingWorkbookId.current;
+    let expectedWorkbookId: string | null = null;
+    let expectedWorkbookVersionId: string | null = null;
+
+    try {
+      if (reconcileFirst) {
+        // The first request may have committed even if its response was lost.
+        // Reconcile before retrying so an already-complete attachment is an
+        // idempotent success instead of a permanent compare-and-set conflict.
+        const currentExperiment = await orpcClient.experiments.getExperiment({
+          id: experimentId,
+        });
+        if (currentExperiment.workbookId === intendedWorkbookId) {
+          finishCreation(experimentId);
+          return;
+        }
+        expectedWorkbookId = currentExperiment.workbookId ?? null;
+        expectedWorkbookVersionId = currentExperiment.workbookVersionId ?? null;
+      }
+
+      await attachWorkbook.mutateAsync({
         id: experimentId,
-        workbookId: pendingWorkbookId.current,
-        expectedWorkbookId: null,
-        expectedWorkbookVersionId: null,
-      },
-      {
-        onSuccess: () => finishCreation(experimentId),
-        onError: (error) => {
-          setIsSubmitting(false);
-          toast({
-            description:
-              parseApiError(error)?.message ??
-              "The experiment was created, but its workbook could not be attached. Try again.",
-            variant: "destructive",
-          });
-        },
-      },
-    );
+        workbookId: intendedWorkbookId,
+        expectedWorkbookId,
+        expectedWorkbookVersionId,
+      });
+      finishCreation(experimentId);
+    } catch (error: unknown) {
+      reportAttachmentFailure(error);
+    }
   };
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
@@ -128,23 +148,15 @@ export function NewExperimentForm() {
       // Keep the created id until attachment succeeds. A retry must attach to
       // this experiment instead of creating a duplicate experiment.
       setCreatedExperimentId(experimentId);
-      attachPendingWorkbook(experimentId);
+      void attachPendingWorkbook(experimentId);
     },
   });
 
   function onSubmit(data: CreateExperimentBody) {
-    const selectedWorkbook = workbooks.find((workbook) => workbook.id === data.workbookId);
-    if (data.workbookId && !selectedWorkbook) {
-      toast({
-        description: "The selected workbook is no longer available. Refresh and choose it again.",
-        variant: "destructive",
-      });
-      return;
-    }
     setIsSubmitting(true);
-    pendingWorkbookId.current = selectedWorkbook?.id;
+    pendingWorkbookId.current = data.workbookId ?? undefined;
     if (createdExperimentId) {
-      attachPendingWorkbook(createdExperimentId);
+      void attachPendingWorkbook(createdExperimentId, true);
       return;
     }
     // Embargo is private-only: never send it on a public experiment (visibility

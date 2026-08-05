@@ -42,6 +42,9 @@ const cell = (id: string, content = id): WorkbookCell => ({
 interface HarnessProps {
   workbookId: string;
   cells: WorkbookCell[];
+  persistedCells?: WorkbookCell[];
+  enabled?: boolean;
+  baselineLoaded?: boolean;
 }
 
 const renderCoordinator = (initialProps: HarnessProps) => {
@@ -53,14 +56,22 @@ const renderCoordinator = (initialProps: HarnessProps) => {
     return cells;
   };
   return renderHook(
-    ({ workbookId, cells }: HarnessProps) =>
+    ({
+      workbookId,
+      cells,
+      persistedCells: persistedCellsProp,
+      enabled = true,
+      baselineLoaded = true,
+    }: HarnessProps) =>
       useWorkbookPersistenceCoordinator({
         experimentId: "experiment-1",
         workbookId,
         workbookVersionId: workbookId ? `version-${workbookId}` : "",
         cells,
-        persistedCells: persistedCells(workbookId, cells),
-        enabled: true,
+        persistedCells: baselineLoaded
+          ? (persistedCellsProp ?? persistedCells(workbookId, cells))
+          : undefined,
+        enabled,
         delayMs: 20,
       }),
     { initialProps },
@@ -79,6 +90,35 @@ describe("useWorkbookPersistenceCoordinator", () => {
   });
 
   afterEach(() => vi.useRealTimers());
+
+  it("does not save when a disabled cold scope receives its server baseline before activation", async () => {
+    const { result, rerender } = renderCoordinator({
+      workbookId: "workbook-a",
+      cells: [],
+      baselineLoaded: false,
+      enabled: false,
+    });
+
+    rerender({
+      workbookId: "workbook-a",
+      cells: [cell("server-a0")],
+      persistedCells: [cell("server-a0")],
+      enabled: false,
+    });
+    rerender({
+      workbookId: "workbook-a",
+      cells: [cell("server-a0")],
+      persistedCells: [cell("server-a0")],
+      enabled: true,
+    });
+
+    await act(async () => vi.advanceTimersByTimeAsync(30));
+
+    expect(result.current.autosave.status).toBe("idle");
+    expect(result.current.autosave.hasUnsavedChanges).toBe(false);
+    expect(mutations.update).not.toHaveBeenCalled();
+    expect(mutations.upgrade).not.toHaveBeenCalled();
+  });
 
   it("serializes a cells write and its pin before an entity pin and attachment", async () => {
     let releaseUpdate: (() => void) | undefined;

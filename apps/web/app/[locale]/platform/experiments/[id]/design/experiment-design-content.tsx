@@ -29,7 +29,7 @@ import { parseApiError } from "@/util/apiError";
 import { GitBranch, Info, List } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
@@ -55,6 +55,16 @@ function readRetainedDraft(workbookId: string): WorkbookCell[] | null {
   } catch {
     return null;
   }
+}
+
+function readHistoryState(): Record<string, unknown> {
+  const state: unknown = window.history.state;
+  if (typeof state !== "object" || state === null || Array.isArray(state)) return {};
+  return state as Record<string, unknown>;
+}
+
+function isWorkbookDraftGuardState(): boolean {
+  return readHistoryState()[HISTORY_GUARD_KEY] === true;
 }
 
 /** Surfaces the draft autosave status (reported by WorkbookDraftEditor) inline. */
@@ -131,6 +141,12 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
     },
     [workbookId],
   );
+  const handleCellsSaved = useCallback((savedWorkbookId: string, savedCells: WorkbookCell[]) => {
+    const retainedDraft = readRetainedDraft(savedWorkbookId);
+    if (retainedDraft && JSON.stringify(retainedDraft) === JSON.stringify(savedCells)) {
+      window.sessionStorage.removeItem(`${RETAINED_DRAFT_PREFIX}${savedWorkbookId}`);
+    }
+  }, []);
 
   // Capability, not ownership: an `admin`/"Can edit" grantee on the
   // workbook may edit it even though they created nothing.
@@ -148,29 +164,12 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
     workbookId: workbookId ?? "",
     workbookVersionId: workbookVersionId ?? "",
     cells: draftCells ?? [],
-    persistedCells: workbookDraft?.cells ?? [],
+    persistedCells: workbookDraft?.cells,
+    onCellsSaved: handleCellsSaved,
     enabled: canEdit && draftCells !== null,
     delayMs: AUTO_SAVE_DELAY,
   });
   const { autosave } = persistence;
-
-  useEffect(() => {
-    if (
-      workbookId &&
-      autosave.status === "idle" &&
-      !autosave.hasUnsavedChanges &&
-      !persistence.isPending &&
-      persistence.error === null
-    ) {
-      window.sessionStorage.removeItem(`${RETAINED_DRAFT_PREFIX}${workbookId}`);
-    }
-  }, [
-    autosave.hasUnsavedChanges,
-    autosave.status,
-    persistence.error,
-    persistence.isPending,
-    workbookId,
-  ]);
 
   const hasUnsavedWork =
     canEdit &&
@@ -178,16 +177,11 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
       autosave.status !== "idle" ||
       persistence.isPending ||
       persistence.error !== null);
+  const hasDirtyDraft = canEdit && autosave.hasUnsavedChanges;
+  const allowNavigationRef = useRef(false);
+
   useEffect(() => {
     if (!hasUnsavedWork) return;
-
-    // A same-URL sentinel makes Back land on this document first, before Next
-    // can unmount it. Cancelling restores the sentinel; confirming performs
-    // the real traversal. The session copy above remains recoverable even if
-    // the user deliberately leaves with an invalid draft.
-    const guardedState = { ...window.history.state, [HISTORY_GUARD_KEY]: true };
-    window.history.pushState(guardedState, "", window.location.href);
-    let leaveThroughHistory = false;
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
@@ -202,31 +196,46 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
         event.preventDefault();
         event.stopPropagation();
       } else {
-        leaveThroughHistory = true;
+        allowNavigationRef.current = true;
       }
     };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleLinkClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, [hasUnsavedWork]);
+
+  useEffect(() => {
+    if (!hasDirtyDraft) return;
+
+    // Back first lands on a same-URL sentinel. It exists only for a genuinely
+    // dirty draft, so opening a clean workbook never truncates Forward history.
+    const guardedState = { ...readHistoryState(), [HISTORY_GUARD_KEY]: true };
+    window.history.pushState(guardedState, "", window.location.href);
+
     const handlePopState = () => {
-      if (leaveThroughHistory) return;
+      if (allowNavigationRef.current) return;
       if (window.confirm(UNSAVED_CHANGES_MESSAGE)) {
-        leaveThroughHistory = true;
+        allowNavigationRef.current = true;
         window.history.back();
       } else {
         window.history.pushState(guardedState, "", window.location.href);
       }
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
     window.addEventListener("popstate", handlePopState);
-    document.addEventListener("click", handleLinkClick, true);
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("popstate", handlePopState);
-      document.removeEventListener("click", handleLinkClick, true);
-      if (!leaveThroughHistory && window.history.state?.[HISTORY_GUARD_KEY]) {
-        window.history.back();
+      if (!allowNavigationRef.current && isWorkbookDraftGuardState()) {
+        const currentState = readHistoryState();
+        const { [HISTORY_GUARD_KEY]: _guard, ...restoredState } = currentState;
+        window.history.replaceState(restoredState, "", window.location.href);
       }
     };
-  }, [hasUnsavedWork]);
+  }, [hasDirtyDraft]);
 
   const versionedCells = useMemo<WorkbookCell[]>(() => {
     if (!pinnedVersionData) return [];

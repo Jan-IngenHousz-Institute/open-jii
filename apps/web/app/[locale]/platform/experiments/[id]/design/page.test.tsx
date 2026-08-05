@@ -8,7 +8,7 @@ import {
   createWorkbookVersionSummary,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { createTestQueryClient, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, createTestQueryClient, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -118,6 +118,16 @@ const defaultProps = {
   params: Promise.resolve({ locale: LOCALE, id: EXP_ID }),
 };
 
+async function traverseHistory(direction: "back" | "forward") {
+  await act(async () => {
+    const traversed = new Promise<void>((resolve) => {
+      window.addEventListener("popstate", () => resolve(), { once: true });
+    });
+    window.history[direction]();
+    await traversed;
+  });
+}
+
 const activeExperiment = createExperiment({
   id: EXP_ID,
   status: "active",
@@ -206,6 +216,7 @@ function mountWithWorkbook(overrides?: {
 describe("ExperimentDesignPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.sessionStorage.clear();
     vi.mocked(use).mockReturnValue({ id: EXP_ID, locale: LOCALE });
     // Default to a logged-out session so the owner-only edit toggle stays hidden.
     vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
@@ -458,6 +469,37 @@ describe("ExperimentDesignPage", () => {
 
     releaseSave?.();
     await waitFor(() => expect(upgradeSpy.called).toBe(true));
+    await waitFor(() =>
+      expect(window.sessionStorage.getItem(`openjii:workbook-draft:${WB_ID}`)).toBeNull(),
+    );
+  });
+
+  it("retains a recovered invalid draft until that exact scope wins a save", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    const retainedKey = `openjii:workbook-draft:${WB_ID}`;
+    const invalidDraft = [
+      {
+        id: "question-1",
+        type: "question",
+        isCollapsed: false,
+        name: "",
+        questionType: "text",
+      },
+    ];
+    window.sessionStorage.setItem(retainedKey, JSON.stringify(invalidDraft));
+    mountWithWorkbook();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("workbook-draft-editor")).toHaveAttribute(
+        "data-cell-ids",
+        "question-1",
+      ),
+    );
+    expect(window.sessionStorage.getItem(retainedKey)).toBe(JSON.stringify(invalidDraft));
   });
 
   it("warns before navigation while a controlled draft has unsaved work", async () => {
@@ -483,12 +525,30 @@ describe("ExperimentDesignPage", () => {
       "This workbook still has changes that have not been saved.",
     );
 
-    window.dispatchEvent(new PopStateEvent("popstate"));
+    await traverseHistory("back");
     expect(confirm).toHaveBeenCalledTimes(2);
     expect(confirm).toHaveBeenLastCalledWith(
       "This workbook still has changes that have not been saved.",
     );
     confirm.mockRestore();
+  });
+
+  it("preserves Forward history while the loaded draft is clean", async () => {
+    window.history.replaceState({}, "", "/workbook-history-start");
+    window.history.pushState({}, "", "/workbook-history-forward");
+    await traverseHistory("back");
+    expect(window.location.pathname).toBe("/workbook-history-start");
+
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+    await screen.findByTestId("workbook-draft-editor");
+
+    await traverseHistory("forward");
+    expect(window.location.pathname).toBe("/workbook-history-forward");
   });
 
   it("resets the controlled draft before edits can target a newly linked workbook", async () => {

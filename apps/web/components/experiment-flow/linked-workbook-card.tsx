@@ -137,10 +137,8 @@ export function LinkedWorkbookCard({
 
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
-    const selectedWorkbook = workbooks.find((candidate) => candidate.id === selectedWorkbookId);
-    if (!selectedWorkbook) return;
     void persistence
-      .attachWorkbook(selectedWorkbook.id)
+      .attachWorkbook(selectedWorkbookId)
       .then(() => {
         toast({ description: t("flow.workbookAttached") });
         setSelectedWorkbookId("");

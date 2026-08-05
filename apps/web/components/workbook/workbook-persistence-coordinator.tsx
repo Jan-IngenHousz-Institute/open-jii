@@ -60,7 +60,8 @@ interface CoordinatorOptions {
   workbookId: string;
   workbookVersionId: string;
   cells: WorkbookCell[];
-  persistedCells: WorkbookCell[];
+  persistedCells?: WorkbookCell[];
+  onCellsSaved?: (workbookId: string, cells: WorkbookCell[]) => void | Promise<void>;
   enabled: boolean;
   delayMs?: number;
 }
@@ -88,6 +89,7 @@ export function useWorkbookPersistenceCoordinator({
   workbookVersionId,
   cells,
   persistedCells,
+  onCellsSaved,
   enabled,
   delayMs = 1500,
 }: CoordinatorOptions): WorkbookPersistenceCoordinator {
@@ -388,6 +390,10 @@ export function useWorkbookPersistenceCoordinator({
     value: cells,
     toKey: useCallback((value: WorkbookCell[]) => JSON.stringify(value), []),
     save: persistCells,
+    onSaved: useCallback(
+      (savedCells: WorkbookCell[]) => onCellsSaved?.(workbookId, savedCells),
+      [onCellsSaved, workbookId],
+    ),
     isValid: useCallback(
       (value: WorkbookCell[]) => zWorkbookCellArray.safeParse(value).success,
       [],
@@ -395,7 +401,8 @@ export function useWorkbookPersistenceCoordinator({
     delayMs,
     enabled,
     scopeKey: workbookId,
-    initialSavedKey: JSON.stringify(persistedCells),
+    initialSavedKey: persistedCells === undefined ? undefined : JSON.stringify(persistedCells),
+    requiresInitialSavedKey: true,
   });
   flushForTransitionRef.current = async () => {
     await autosave.flush();

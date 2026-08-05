@@ -13,11 +13,6 @@ interface BranchPanelProps {
 
 export function BranchPanel({ cell, allCells, onChange, disabled }: BranchPanelProps) {
   return (
-    <BranchCellComponent
-      cell={cell}
-      allCells={allCells}
-      onUpdate={onChange}
-      readOnly={disabled}
-    />
+    <BranchCellComponent cell={cell} allCells={allCells} onUpdate={onChange} readOnly={disabled} />
   );
 }
