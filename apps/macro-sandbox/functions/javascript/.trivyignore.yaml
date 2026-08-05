@@ -1,65 +1,38 @@
-# AWS Lambda Node.js base image CVEs (public.ecr.aws/lambda/nodejs:24)
-# All in AWS-managed components. Fixes require AWS to publish updated base images.
-# Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
-#
-# Pruned 2026-08-04 against a fresh build: AWS republished the base (updated
-# Amazon Linux snapshot and runtime SDK), clearing the previous openssl/glibc/
-# glib2/libsolv/libacl/libcap/RIE batches and most axios CVEs. Entries below are
-# the ones still live in the built image.
+# JS sandbox image (public.ecr.aws/lambda/nodejs:24). All entries are AWS-managed
+# components awaiting an AWS base republish. Sandbox is VPC-isolated: no outbound
+# HTTP, no IAM creds, macro code cannot spawn processes.
+# Verify with the ghcr trivy DB (mirror.gcr.io lags): --db-repository ghcr.io/aquasecurity/trivy-db:2
 
 vulnerabilities:
-  # axios@1.16.1 in the Lambda runtime SDK
-  # (var/runtime/node_modules/@aws-sdk/node_modules/axios).
+  # axios@1.16.1 in the runtime SDK (@aws-sdk's bundled tree).
   - id: GHSA-gcfj-64vw-6mp9
-    statement: >-
-      Node HTTP adapter can reuse an inherited proxy after interceptor
-      config changes it. Sandbox has no outbound HTTP and no proxy
-      configuration, so no request ever reaches the adapter's proxy logic.
+    statement: "Proxy reuse after interceptor change. No outbound HTTP or proxy config."
 
-  # brace-expansion@1.1.15 in the Lambda runtime SDK
-  # (var/runtime/node_modules/@aws-sdk/node_modules/brace-expansion).
+  # brace-expansion@1.1.15 in the runtime SDK (@aws-sdk's bundled tree).
   - id: CVE-2026-13149
-    statement: >-
-      ReDoS via exponential-time complexity. Bundled inside @aws-sdk's own
-      dependency tree, not invoked by sandbox code; sandbox has no outbound
-      HTTP and no IAM creds, so no attacker-controlled string ever reaches it.
+    statement: "ReDoS. Not invoked by sandbox code."
   - id: CVE-2026-14257
-    statement: >-
-      Same brace-expansion ReDoS, different CVE ID, same bundled copy.
-      Bundled inside @aws-sdk's own dependency tree, not invoked by sandbox
-      code; sandbox has no outbound HTTP and no IAM creds, so no
-      attacker-controlled string ever reaches it.
+    statement: "Same ReDoS, different CVE id."
   - id: CVE-2026-69152
-    statement: >-
-      brace-expansion DoS via unbounded intermediate arrays, a third CVE ID
-      against the same bundled copy. Bundled inside @aws-sdk's own dependency
-      tree, not invoked by sandbox code; sandbox has no outbound HTTP and no
-      IAM creds, so no attacker-controlled string ever reaches it.
+    statement: "DoS via unbounded arrays, same copy."
 
-  # gawk in Amazon Linux 2023 base image (installed 5.1.0-3.amzn2023.0.3, fixed
-  # in .0.4; awaiting AWS base image republish). All three require awk to parse
-  # attacker-controlled programs or input. The handler invokes no awk, and macro
-  # code runs in a vm context that cannot spawn processes.
+  # gawk@5.1.0-3.amzn2023.0.3, fixed in .0.4.
   - id: CVE-2026-40467
-    statement: "gawk use-after-free DoS. No awk invoked at runtime."
+    statement: "gawk use-after-free. No awk invoked at runtime."
     expired_at: 2026-11-05
   - id: CVE-2026-40468
-    statement: "gawk integer-overflow memory corruption. No awk invoked at runtime."
+    statement: "gawk integer overflow. No awk invoked at runtime."
     expired_at: 2026-11-05
   - id: CVE-2026-40553
-    statement: "gawk ftype() buffer overflow. No awk invoked at runtime."
+    statement: "gawk ftype() overflow. No awk invoked at runtime."
     expired_at: 2026-11-05
 
-  # glib2 in Amazon Linux 2023 base image (installed 2.82.2-770, fixed in -771;
-  # awaiting AWS base image republish). glib2 ships unused: no installed package
-  # requires it and the sandbox performs no xdgmime MIME sniffing.
+  # glib2@2.82.2-770, fixed in -771. Ships unused; nothing requires it.
   - id: CVE-2026-16118
-    statement: "xdgmime magic-line heap overflow in glib2. glib2 unused; no MIME sniffing."
+    statement: "xdgmime heap overflow. No MIME sniffing."
     expired_at: 2026-11-05
 
-  # rpm/rpm-libs in Amazon Linux 2023 base image (installed 4.16.1.3-29.amzn2023.0.6,
-  # fixed in .0.7; awaiting AWS base image republish). Reachable only when rpm
-  # parses a crafted NDB database; no package-manager operations happen at runtime.
+  # rpm/rpm-libs@4.16.1.3-29.amzn2023.0.6, fixed in .0.7.
   - id: CVE-2026-44605
-    statement: "rpm NDB slot-table heap overflow. No rpm operations at runtime."
+    statement: "rpm NDB heap overflow. No rpm operations at runtime."
     expired_at: 2026-11-05

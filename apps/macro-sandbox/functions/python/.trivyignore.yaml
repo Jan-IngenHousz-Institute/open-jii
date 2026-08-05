@@ -1,41 +1,26 @@
-# AWS Lambda Python base image CVEs (public.ecr.aws/lambda/python:3.12)
-# AWS-managed components; suppressions are only needed while a CVE is fixed
-# upstream but AWS has not yet republished the base image.
-# Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
-#
-# Pruned 2026-08-05 against a freshly pulled base and a fresh ghcr trivy DB
-# (mirror.gcr.io lags behind; verify with --db-repository ghcr.io/aquasecurity/trivy-db:2):
-# AWS republished with the openssl/libsolv/libacl/sqlite/util-linux batches fixed
-# and the runtime interface emulator rebuilt. The base moves continuously, so a
-# red scan here usually means a new CVE landed in a package awaiting the next AWS
-# republish: verify reachability, add a justified entry with an expiry, and prune
-# it once the republish lands.
+# Python sandbox image (public.ecr.aws/lambda/python:3.12). All entries are
+# AWS-managed components awaiting an AWS base republish. Sandbox is VPC-isolated:
+# no outbound HTTP, no IAM creds, restricted builtins.
+# Verify with the ghcr trivy DB (mirror.gcr.io lags): --db-repository ghcr.io/aquasecurity/trivy-db:2
 
 vulnerabilities:
-  # gawk in Amazon Linux 2023 base image (installed 5.1.0-3.amzn2023.0.3, fixed
-  # in .0.4; awaiting AWS base image republish). All three require awk to parse
-  # attacker-controlled programs or input. The handler invokes no awk, and macro
-  # code runs under restricted builtins that cannot spawn processes.
+  # gawk@5.1.0-3.amzn2023.0.3, fixed in .0.4.
   - id: CVE-2026-40467
-    statement: "gawk use-after-free DoS. No awk invoked at runtime."
+    statement: "gawk use-after-free. No awk invoked at runtime."
     expired_at: 2026-11-05
   - id: CVE-2026-40468
-    statement: "gawk integer-overflow memory corruption. No awk invoked at runtime."
+    statement: "gawk integer overflow. No awk invoked at runtime."
     expired_at: 2026-11-05
   - id: CVE-2026-40553
-    statement: "gawk ftype() buffer overflow. No awk invoked at runtime."
+    statement: "gawk ftype() overflow. No awk invoked at runtime."
     expired_at: 2026-11-05
 
-  # glib2 in Amazon Linux 2023 base image (installed 2.82.2-770, fixed in -771;
-  # awaiting AWS base image republish). glib2 ships unused: no installed package
-  # requires it and the sandbox performs no xdgmime MIME sniffing.
+  # glib2@2.82.2-770, fixed in -771. Ships unused; nothing requires it.
   - id: CVE-2026-16118
-    statement: "xdgmime magic-line heap overflow in glib2. glib2 unused; no MIME sniffing."
+    statement: "xdgmime heap overflow. No MIME sniffing."
     expired_at: 2026-11-05
 
-  # rpm/rpm-libs in Amazon Linux 2023 base image (installed 4.16.1.3-29.amzn2023.0.6,
-  # fixed in .0.7; awaiting AWS base image republish). Reachable only when rpm
-  # parses a crafted NDB database; no package-manager operations happen at runtime.
+  # rpm/rpm-libs@4.16.1.3-29.amzn2023.0.6, fixed in .0.7.
   - id: CVE-2026-44605
-    statement: "rpm NDB slot-table heap overflow. No rpm operations at runtime."
+    statement: "rpm NDB heap overflow. No rpm operations at runtime."
     expired_at: 2026-11-05

@@ -1,7 +1,4 @@
-# Suppressions for the dependency-scan job (filesystem scan of this repo's own
-# pnpm-lock.yaml). Docker image scans read .trivyignore.docker-images instead;
-# keeping the files separate scopes each suppression to the scan whose
-# justification actually holds.
-#
-# Currently empty: the last entry (CVE-2026-4926, path-to-regexp@8.3.0 pinned by
-# Express 5's router) cleared when router released ^8.0.0 resolving 8.4.2.
+# Suppressions for the dependency-scan job (fs scan of pnpm-lock.yaml).
+# Docker image scans read .trivyignore.docker-images instead; keeping the files
+# separate scopes each suppression to the scan whose justification holds.
+# Currently empty.

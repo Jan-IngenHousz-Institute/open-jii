@@ -1,10 +1,5 @@
-# R sandbox base image CVEs (debian:bookworm-slim)
-# Debian-managed OS packages. Fixes require Debian to publish updates to bookworm.
-# Sandbox Lambdas are VPC-isolated with no internet access and no IAM credentials.
-#
-# Pruned 2026-08-04 against a fresh build: no HIGH/CRITICAL findings remain.
-# The scan runs with ignore-unfixed, so Debian CVEs without a bookworm fix
-# (the bulk of the old entries) never fail CI; a suppression only becomes
-# necessary once Debian ships a fix we cannot take yet.
+# R sandbox image (debian:bookworm-slim). Currently no HIGH/CRITICAL findings.
+# The scan runs with ignore-unfixed, so unfixed-in-bookworm Debian CVEs never
+# fail CI; an entry is only needed once Debian ships a fix we cannot take yet.
 
 vulnerabilities: []
