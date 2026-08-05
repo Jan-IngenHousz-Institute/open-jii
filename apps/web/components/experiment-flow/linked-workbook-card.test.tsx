@@ -1,16 +1,15 @@
+import { orpcClient } from "@/lib/orpc";
 import { createExperiment, createWorkbook, createWorkbookVersionSummary } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { useState } from "react";
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import {
-  WorkbookPersistenceCoordinatorProvider,
-  useWorkbookPersistenceCoordinator,
-} from "../workbook/workbook-persistence-coordinator";
+import { WorkbookPersistenceCoordinatorProvider } from "../workbook/workbook-persistence-coordinator";
 import { LinkedWorkbookCard } from "./linked-workbook-card";
 
 const workbook = createWorkbook({ id: "wb-1", name: "Test Workbook" });
@@ -27,14 +26,58 @@ const defaultProps = {
 };
 
 function PersistenceHarness({ children }: { children: ReactElement }) {
-  const coordinator = useWorkbookPersistenceCoordinator({
-    experimentId: defaultProps.experimentId,
-    workbookId: defaultProps.workbookId,
-    cells: [],
-    enabled: false,
-  });
+  const [workbookId, setWorkbookId] = useState(defaultProps.workbookId);
+  const persistence = {
+    autosave: {
+      status: "idle" as const,
+      isDirty: false,
+      isSaving: false,
+      hasError: false,
+      hasUnsavedChanges: false,
+      error: null,
+      flush: async () => undefined,
+    },
+    entitySaved: async () => undefined,
+    manualUpgrade: async () => {
+      await orpcClient.experiments.upgradeWorkbookVersion({
+        id: defaultProps.experimentId,
+        expectedWorkbookId: workbookId,
+        expectedWorkbookVersionId: defaultProps.workbookVersionId,
+        expectedWorkbookRevision: workbook.revision,
+      });
+    },
+    renameWorkbook: async (name: string) => {
+      await orpcClient.workbooks.updateWorkbook({
+        id: workbookId,
+        name,
+        expectedRevision: workbook.revision,
+      });
+    },
+    attachWorkbook: async (nextWorkbook: { id: string; revision: number }) => {
+      await orpcClient.experiments.attachWorkbook({
+        id: defaultProps.experimentId,
+        workbookId: nextWorkbook.id,
+        expectedWorkbookId: workbookId,
+        expectedWorkbookVersionId: defaultProps.workbookVersionId,
+        expectedWorkbookRevision: nextWorkbook.revision,
+      });
+      setWorkbookId(nextWorkbook.id);
+    },
+    detachWorkbook: async () => {
+      await orpcClient.experiments.detachWorkbook({
+        id: defaultProps.experimentId,
+        expectedWorkbookId: workbookId,
+        expectedWorkbookVersionId: defaultProps.workbookVersionId,
+      });
+      setWorkbookId("");
+    },
+    setWorkbookVersion: async () => undefined,
+    retryFailed: async () => undefined,
+    isPending: false,
+    error: null,
+  };
   return (
-    <WorkbookPersistenceCoordinatorProvider coordinator={coordinator}>
+    <WorkbookPersistenceCoordinatorProvider coordinator={persistence}>
       {children}
     </WorkbookPersistenceCoordinatorProvider>
   );

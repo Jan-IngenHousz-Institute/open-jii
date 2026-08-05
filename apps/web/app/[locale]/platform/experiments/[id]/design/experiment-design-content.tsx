@@ -25,6 +25,7 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import type { UseAutosaveReturn } from "@/hooks/useAutosave";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
+import { parseApiError } from "@/util/apiError";
 import { GitBranch, Info, List } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -40,18 +41,24 @@ interface ExperimentDesignPageProps {
   params: Promise<{ id: string; locale: string }>;
 }
 
-interface ControlledDraft {
-  workbookId: string;
-  cells: WorkbookCell[];
-}
-
 const AUTO_SAVE_DELAY = 1500;
+const UNSAVED_CHANGES_MESSAGE = "This workbook still has changes that have not been saved.";
 
 /** Surfaces the draft autosave status (reported by WorkbookDraftEditor) inline. */
 function EditAutosaveStatus({ onRetry }: { onRetry: () => Promise<void> }) {
   const autosave = useAutosaveStatus();
   if (!autosave?.status) return null;
-  return <AutosaveIndicator status={autosave.status} variant="compact" onRetry={onRetry} />;
+  const errorMessage =
+    autosave.status === "error"
+      ? (parseApiError(autosave.error)?.message ??
+        (autosave.error instanceof Error ? autosave.error.message : undefined))
+      : undefined;
+  return (
+    <div className="flex max-w-xl items-center gap-2" role={errorMessage ? "alert" : undefined}>
+      <AutosaveIndicator status={autosave.status} variant="compact" onRetry={onRetry} />
+      {errorMessage ? <span className="text-destructive text-sm">{errorMessage}</span> : null}
+    </div>
+  );
 }
 
 function EditAutosaveReporter({ status, error }: Pick<UseAutosaveReturn, "status" | "error">) {
@@ -86,21 +93,22 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const { data: workbookDraft, isLoading: workbookDraftLoading } = useWorkbook(workbookId ?? "", {
     enabled: !!workbookId,
   });
-  const [controlledDraft, setControlledDraft] = useState<ControlledDraft | null>(null);
+  // Draft snapshots are keyed by workbook. A server-driven scope change must
+  // never overwrite another workbook's local debounce window or failed edit.
+  const [controlledDrafts, setControlledDrafts] = useState<Record<string, WorkbookCell[]>>({});
 
   useEffect(() => {
     if (!workbookId || !workbookDraft) return;
-    setControlledDraft((current) =>
-      current?.workbookId === workbookId ? current : { workbookId, cells: workbookDraft.cells },
+    setControlledDrafts((current) =>
+      current[workbookId] ? current : { ...current, [workbookId]: workbookDraft.cells },
     );
   }, [workbookDraft, workbookId]);
 
-  const draftCells =
-    controlledDraft && controlledDraft.workbookId === workbookId ? controlledDraft.cells : null;
+  const draftCells = workbookId ? (controlledDrafts[workbookId] ?? null) : null;
   const handleDraftCellsChange = useCallback(
     (cells: WorkbookCell[]) => {
       if (!workbookId) return;
-      setControlledDraft({ workbookId, cells });
+      setControlledDrafts((current) => ({ ...current, [workbookId]: cells }));
     },
     [workbookId],
   );
@@ -119,11 +127,45 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const persistence = useWorkbookPersistenceCoordinator({
     experimentId: id,
     workbookId: workbookId ?? "",
+    workbookVersionId: workbookVersionId ?? "",
+    workbookRevision: workbookDraft?.revision ?? 0,
     cells: draftCells ?? [],
     enabled: canEdit && draftCells !== null,
     delayMs: AUTO_SAVE_DELAY,
   });
   const { autosave } = persistence;
+
+  const hasUnsavedWork =
+    canEdit &&
+    (autosave.hasUnsavedChanges ||
+      autosave.status !== "idle" ||
+      persistence.isPending ||
+      persistence.error !== null);
+  useEffect(() => {
+    if (!hasUnsavedWork) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const handleLinkClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey) return;
+      const target = event.target instanceof Element ? event.target.closest("a") : null;
+      if (!(target instanceof HTMLAnchorElement)) return;
+      if (target.target || target.download || target.origin !== window.location.origin) return;
+      if (!window.confirm(UNSAVED_CHANGES_MESSAGE)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleLinkClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, [hasUnsavedWork]);
 
   const versionedCells = useMemo<WorkbookCell[]>(() => {
     if (!pinnedVersionData) return [];
@@ -247,6 +289,7 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
                       // Same capability the branch above gated on.
                       canEdit={canUpdateWorkbook}
                       name={workbookDraft.name}
+                      revision={workbookDraft.revision}
                       onCellsChange={handleDraftCellsChange}
                       autosaveEnabled={false}
                     />

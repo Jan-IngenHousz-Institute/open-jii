@@ -10,6 +10,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 interface WorkbookDescriptionProps {
   workbookId: string;
   description: string;
+  revision: number;
   hasAccess?: boolean;
 }
 
@@ -17,10 +18,13 @@ interface WorkbookDescriptionProps {
 export function WorkbookDescription({
   workbookId,
   description,
+  revision,
   hasAccess = false,
 }: WorkbookDescriptionProps) {
   const { t } = useTranslation(["workbook", "common"]);
-  const { mutateAsync: updateWorkbook, isPending: isUpdating } = useWorkbookUpdate(workbookId);
+  const { mutateAsync: updateWorkbook, isPending: isUpdating } = useWorkbookUpdate(workbookId, {
+    revision,
+  });
 
   const handleSave = async (newDescription: string) => {
     await updateWorkbook(

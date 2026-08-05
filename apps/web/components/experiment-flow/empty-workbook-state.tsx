@@ -32,7 +32,7 @@ export function EmptyWorkbookState({ experimentName, hasAccess }: EmptyWorkbookS
     onSuccess: (data) => {
       const workbookId = data.id;
       void persistence
-        .attachWorkbook(workbookId)
+        .attachWorkbook({ id: workbookId, revision: data.revision })
         .then(() => router.push(`/${locale}/platform/workbooks/${workbookId}`))
         .catch(() => toast({ description: t("flow.attachFailed"), variant: "destructive" }));
     },
@@ -43,8 +43,10 @@ export function EmptyWorkbookState({ experimentName, hasAccess }: EmptyWorkbookS
 
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
+    const selectedWorkbook = workbooks.find((workbook) => workbook.id === selectedWorkbookId);
+    if (!selectedWorkbook) return;
     void persistence
-      .attachWorkbook(selectedWorkbookId)
+      .attachWorkbook({ id: selectedWorkbook.id, revision: selectedWorkbook.revision })
       .then(() => {
         toast({ description: t("flow.workbookAttached") });
         setSelectedWorkbookId("");

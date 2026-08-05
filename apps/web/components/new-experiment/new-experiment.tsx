@@ -3,6 +3,8 @@
 import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { useLocale } from "@/hooks/useLocale";
+import { useWorkbookList } from "@/hooks/workbook/useWorkbookList/useWorkbookList";
+import { parseApiError } from "@/util/apiError";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 
@@ -82,24 +84,36 @@ export function NewExperimentForm() {
     [t],
   );
 
-  const pendingWorkbookId = useRef<string | undefined>(undefined);
+  const { data: workbooks = [] } = useWorkbookList();
+  const pendingWorkbook = useRef<{ id: string; revision: number } | undefined>(undefined);
   const attachWorkbook = useAttachWorkbook();
 
   const { mutate: createExperiment, isPending } = useExperimentCreate({
     onSuccess: (experimentId: string) => {
       // If a workbook was selected, attach it to create a version snapshot
-      if (pendingWorkbookId.current) {
+      if (pendingWorkbook.current) {
         attachWorkbook.mutate(
           {
             id: experimentId,
-            workbookId: pendingWorkbookId.current,
+            workbookId: pendingWorkbook.current.id,
             expectedWorkbookId: null,
+            expectedWorkbookVersionId: null,
+            expectedWorkbookRevision: pendingWorkbook.current.revision,
           },
           {
-            onSettled: () => {
+            onSuccess: () => {
               setIsSubmitting(true);
               toast({ description: t("experiments.experimentCreated") });
               router.push(`/${locale}/platform/experiments/${experimentId}`);
+            },
+            onError: (error) => {
+              setIsSubmitting(false);
+              toast({
+                description:
+                  parseApiError(error)?.message ??
+                  "The experiment was created, but its workbook could not be attached. Refresh and try again.",
+                variant: "destructive",
+              });
             },
           },
         );
@@ -112,8 +126,18 @@ export function NewExperimentForm() {
   });
 
   function onSubmit(data: CreateExperimentBody) {
+    const selectedWorkbook = workbooks.find((workbook) => workbook.id === data.workbookId);
+    if (data.workbookId && !selectedWorkbook) {
+      toast({
+        description: "The selected workbook is no longer available. Refresh and choose it again.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSubmitting(true);
-    pendingWorkbookId.current = data.workbookId ?? undefined;
+    pendingWorkbook.current = selectedWorkbook
+      ? { id: selectedWorkbook.id, revision: selectedWorkbook.revision }
+      : undefined;
     // Embargo is private-only: never send it on a public experiment (visibility
     // defaults to public), otherwise the create body validation rejects it.
     // The card only surfaces the embargo editor in the private branch, but its

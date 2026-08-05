@@ -38,7 +38,11 @@ vi.mock("@repo/ui/components/rich-text-renderer", () => ({
 describe("WorkbookDescription", () => {
   it("renders the existing description", () => {
     render(
-      <WorkbookDescription workbookId="wb-1" description="Measures chlorophyll fluorescence" />,
+      <WorkbookDescription
+        workbookId="wb-1"
+        description="Measures chlorophyll fluorescence"
+        revision={1}
+      />,
     );
 
     expect(screen.getByText("Measures chlorophyll fluorescence")).toBeInTheDocument();
@@ -46,7 +50,7 @@ describe("WorkbookDescription", () => {
 
   it("does not enter edit mode without access", async () => {
     const user = userEvent.setup();
-    render(<WorkbookDescription workbookId="wb-1" description="Read only" />);
+    render(<WorkbookDescription workbookId="wb-1" description="Read only" revision={1} />);
 
     const descriptionContainer = screen.getByTestId("rich-text-renderer").parentElement;
     if (descriptionContainer) await user.click(descriptionContainer);
@@ -59,7 +63,14 @@ describe("WorkbookDescription", () => {
       body: createWorkbook({ id: "wb-1", description: "New description" }),
     });
     const user = userEvent.setup();
-    render(<WorkbookDescription workbookId="wb-1" description="Old description" hasAccess />);
+    render(
+      <WorkbookDescription
+        workbookId="wb-1"
+        description="Old description"
+        revision={1}
+        hasAccess
+      />,
+    );
 
     const descriptionContainer = screen.getByTestId("rich-text-renderer").parentElement;
     if (descriptionContainer) await user.click(descriptionContainer);
@@ -71,6 +82,6 @@ describe("WorkbookDescription", () => {
 
     await waitFor(() => expect(updateSpy.called).toBe(true));
     expect(updateSpy.params).toMatchObject({ id: "wb-1" });
-    expect(updateSpy.body).toEqual({ description: "New description" });
+    expect(updateSpy.body).toEqual({ description: "New description", expectedRevision: 1 });
   });
 });

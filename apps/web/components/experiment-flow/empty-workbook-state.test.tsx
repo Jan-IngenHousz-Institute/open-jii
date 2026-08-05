@@ -1,16 +1,15 @@
+import { orpcClient } from "@/lib/orpc";
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { useState } from "react";
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import {
-  WorkbookPersistenceCoordinatorProvider,
-  useWorkbookPersistenceCoordinator,
-} from "../workbook/workbook-persistence-coordinator";
+import { WorkbookPersistenceCoordinatorProvider } from "../workbook/workbook-persistence-coordinator";
 import { EmptyWorkbookState } from "./empty-workbook-state";
 
 const workbooks = [
@@ -19,14 +18,38 @@ const workbooks = [
 ];
 
 function PersistenceHarness({ children }: { children: ReactElement }) {
-  const coordinator = useWorkbookPersistenceCoordinator({
-    experimentId: "exp-1",
-    workbookId: "",
-    cells: [],
-    enabled: false,
-  });
+  const [workbookId, setWorkbookId] = useState("");
+  const persistence = {
+    autosave: {
+      status: "idle" as const,
+      isDirty: false,
+      isSaving: false,
+      hasError: false,
+      hasUnsavedChanges: false,
+      error: null,
+      flush: async () => undefined,
+    },
+    entitySaved: async () => undefined,
+    manualUpgrade: async () => undefined,
+    renameWorkbook: async () => undefined,
+    attachWorkbook: async (nextWorkbook: { id: string; revision: number }) => {
+      await orpcClient.experiments.attachWorkbook({
+        id: "exp-1",
+        workbookId: nextWorkbook.id,
+        expectedWorkbookId: workbookId || null,
+        expectedWorkbookVersionId: null,
+        expectedWorkbookRevision: nextWorkbook.revision,
+      });
+      setWorkbookId(nextWorkbook.id);
+    },
+    detachWorkbook: async () => undefined,
+    setWorkbookVersion: async () => undefined,
+    retryFailed: async () => undefined,
+    isPending: false,
+    error: null,
+  };
   return (
-    <WorkbookPersistenceCoordinatorProvider coordinator={coordinator}>
+    <WorkbookPersistenceCoordinatorProvider coordinator={persistence}>
       {children}
     </WorkbookPersistenceCoordinatorProvider>
   );

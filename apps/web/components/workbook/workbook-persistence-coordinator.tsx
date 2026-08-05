@@ -4,7 +4,7 @@ import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttac
 import { useDetachWorkbook } from "@/hooks/experiment/useDetachWorkbook/useDetachWorkbook";
 import { useSetWorkbookVersion } from "@/hooks/experiment/useSetWorkbookVersion/useSetWorkbookVersion";
 import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
-import { useAutosave } from "@/hooks/useAutosave";
+import { AutosaveValidationError, useAutosave } from "@/hooks/useAutosave";
 import type { UseAutosaveReturn } from "@/hooks/useAutosave";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
@@ -37,12 +37,18 @@ interface FailedPersistenceOperation {
   error: unknown;
 }
 
+interface PendingCellPin {
+  fingerprint: string;
+  revision: number;
+  expectedVersionId: string;
+}
+
 export interface WorkbookPersistenceCoordinator {
   autosave: UseAutosaveReturn;
   entitySaved: () => Promise<void>;
   manualUpgrade: () => Promise<void>;
   renameWorkbook: (name: string) => Promise<void>;
-  attachWorkbook: (nextWorkbookId: string) => Promise<void>;
+  attachWorkbook: (nextWorkbook: { id: string; revision: number }) => Promise<void>;
   detachWorkbook: () => Promise<void>;
   setWorkbookVersion: (versionId: string) => Promise<void>;
   retryFailed: () => Promise<void>;
@@ -53,6 +59,8 @@ export interface WorkbookPersistenceCoordinator {
 interface CoordinatorOptions {
   experimentId: string;
   workbookId: string;
+  workbookVersionId: string;
+  workbookRevision: number;
   cells: WorkbookCell[];
   enabled: boolean;
   delayMs?: number;
@@ -78,11 +86,15 @@ export class PersistenceScopeChangedError extends Error {
 export function useWorkbookPersistenceCoordinator({
   experimentId,
   workbookId,
+  workbookVersionId,
+  workbookRevision,
   cells,
   enabled,
   delayMs = 1500,
 }: CoordinatorOptions): WorkbookPersistenceCoordinator {
-  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(workbookId);
+  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(workbookId, {
+    revision: workbookRevision,
+  });
   const { mutateAsync: upgradeWorkbook } = useUpgradeWorkbookVersion(experimentId);
   const { mutateAsync: attachWorkbookMutation } = useAttachWorkbook();
   const { mutateAsync: detachWorkbookMutation } = useDetachWorkbook();
@@ -94,7 +106,13 @@ export function useWorkbookPersistenceCoordinator({
   const tailRef = useRef<Promise<void>>(Promise.resolve());
   const pendingCountRef = useRef(0);
   const failedOperationRef = useRef<FailedPersistenceOperation | null>(null);
-  const writtenCellsRef = useRef(new Set<string>());
+  const revisionRef = useRef({ workbookId, revision: workbookRevision });
+  const versionRef = useRef({ workbookId, versionId: workbookVersionId });
+  const versionPropRef = useRef({ workbookId, versionId: workbookVersionId });
+  const pendingCellPinRef = useRef<PendingCellPin | null>(null);
+  const cellsRef = useRef(cells);
+  const flushForTransitionRef = useRef<() => Promise<void>>(async () => undefined);
+  cellsRef.current = cells;
 
   if (scopeRef.current.workbookId !== workbookId) {
     scopeRef.current = {
@@ -106,7 +124,22 @@ export function useWorkbookPersistenceCoordinator({
     tailRef.current = Promise.resolve();
     pendingCountRef.current = 0;
     failedOperationRef.current = null;
-    writtenCellsRef.current.clear();
+    revisionRef.current = { workbookId, revision: workbookRevision };
+    versionRef.current = { workbookId, versionId: workbookVersionId };
+    versionPropRef.current = { workbookId, versionId: workbookVersionId };
+    pendingCellPinRef.current = null;
+  } else {
+    // Same-workbook refetches may carry a newer token written in another
+    // surface. Never move the monotonic revision backwards after a local save.
+    if (workbookRevision > revisionRef.current.revision) {
+      revisionRef.current = { workbookId, revision: workbookRevision };
+    }
+    // Pairing versions are UUIDs, so observe prop transitions instead of
+    // trying to order them. An unchanged stale prop cannot undo a local pin.
+    if (versionPropRef.current.versionId !== workbookVersionId) {
+      versionPropRef.current = { workbookId, versionId: workbookVersionId };
+      versionRef.current = { workbookId, versionId: workbookVersionId };
+    }
   }
 
   useEffect(() => {
@@ -156,10 +189,7 @@ export function useWorkbookPersistenceCoordinator({
             await operation.run(() => assertOperationCurrent(operation));
             if (!operation.scopeTransition) {
               assertOperationCurrent(operation);
-            } else if (
-              !isOperationCurrent(operation) &&
-              scopeRef.current.workbookId !== operation.resultScope
-            ) {
+            } else if (scopeRef.current.workbookId !== operation.resultScope) {
               throw new PersistenceScopeChangedError();
             }
             if (failedOperationRef.current?.operation === operation) {
@@ -227,16 +257,28 @@ export function useWorkbookPersistenceCoordinator({
         makeOperation(
           "cells",
           async (assertCurrent) => {
-            if (!writtenCellsRef.current.has(fingerprint)) {
+            let pendingPin = pendingCellPinRef.current;
+            if (!pendingPin || pendingPin.fingerprint !== fingerprint) {
               assertCurrent();
-              await updateWorkbook({ id: workbookId, cells: nextCells });
+              const saved = await updateWorkbook({ id: workbookId, cells: nextCells });
               assertCurrent();
-              writtenCellsRef.current.clear();
-              writtenCellsRef.current.add(fingerprint);
+              revisionRef.current = { workbookId, revision: saved.revision };
+              pendingPin = {
+                fingerprint,
+                revision: saved.revision,
+                expectedVersionId: versionRef.current.versionId,
+              };
+              pendingCellPinRef.current = pendingPin;
             }
-            await upgradeWorkbook({ id: experimentId, expectedWorkbookId: workbookId });
+            const pinned = await upgradeWorkbook({
+              id: experimentId,
+              expectedWorkbookId: workbookId,
+              expectedWorkbookVersionId: pendingPin.expectedVersionId,
+              expectedWorkbookRevision: pendingPin.revision,
+            });
             assertCurrent();
-            writtenCellsRef.current.delete(fingerprint);
+            versionRef.current = { workbookId, versionId: pinned.workbookVersionId };
+            if (pendingCellPinRef.current === pendingPin) pendingCellPinRef.current = null;
           },
           fingerprint,
         ),
@@ -246,14 +288,25 @@ export function useWorkbookPersistenceCoordinator({
   );
 
   const enqueuePin = useCallback(
-    (kind: "entity" | "manual-upgrade") =>
-      enqueue(
+    (kind: "entity" | "manual-upgrade") => {
+      let expectedRevision: number | undefined;
+      let expectedVersionId: string | undefined;
+      return enqueue(
         makeOperation(kind, async (assertCurrent) => {
           assertCurrent();
-          await upgradeWorkbook({ id: experimentId, expectedWorkbookId: workbookId });
+          expectedRevision ??= revisionRef.current.revision;
+          expectedVersionId ??= versionRef.current.versionId;
+          const pinned = await upgradeWorkbook({
+            id: experimentId,
+            expectedWorkbookId: workbookId,
+            expectedWorkbookVersionId: expectedVersionId,
+            expectedWorkbookRevision: expectedRevision,
+          });
           assertCurrent();
+          versionRef.current = { workbookId, versionId: pinned.workbookVersionId };
         }),
-      ),
+      );
+    },
     [enqueue, experimentId, makeOperation, upgradeWorkbook, workbookId],
   );
 
@@ -267,8 +320,9 @@ export function useWorkbookPersistenceCoordinator({
           "rename",
           async (assertCurrent) => {
             assertCurrent();
-            await updateWorkbook({ id: workbookId, name });
+            const saved = await updateWorkbook({ id: workbookId, name });
             assertCurrent();
+            revisionRef.current = { workbookId, revision: saved.revision };
           },
           name,
         ),
@@ -277,42 +331,49 @@ export function useWorkbookPersistenceCoordinator({
   );
 
   const attachWorkbook = useCallback(
-    (nextWorkbookId: string) =>
-      enqueue(
+    async (nextWorkbook: { id: string; revision: number }) => {
+      await flushForTransitionRef.current();
+      return enqueue(
         makeOperation(
           "attach",
           async (assertCurrent) => {
             assertCurrent();
             await attachWorkbookMutation({
               id: experimentId,
-              workbookId: nextWorkbookId,
+              workbookId: nextWorkbook.id,
               expectedWorkbookId: workbookId || null,
+              expectedWorkbookVersionId: versionRef.current.versionId || null,
+              expectedWorkbookRevision: nextWorkbook.revision,
             });
           },
-          nextWorkbookId,
+          nextWorkbook.id,
           true,
-          nextWorkbookId,
+          nextWorkbook.id,
         ),
-      ),
+      );
+    },
     [attachWorkbookMutation, enqueue, experimentId, makeOperation, workbookId],
   );
 
-  const detachWorkbook = useCallback(
-    () =>
-      enqueue(
-        makeOperation(
-          "detach",
-          async (assertCurrent) => {
-            assertCurrent();
-            await detachWorkbookMutation({ id: experimentId });
-          },
-          undefined,
-          true,
-          "",
-        ),
+  const detachWorkbook = useCallback(async () => {
+    await flushForTransitionRef.current();
+    return enqueue(
+      makeOperation(
+        "detach",
+        async (assertCurrent) => {
+          assertCurrent();
+          await detachWorkbookMutation({
+            id: experimentId,
+            expectedWorkbookId: workbookId,
+            expectedWorkbookVersionId: versionRef.current.versionId,
+          });
+        },
+        undefined,
+        true,
+        "",
       ),
-    [detachWorkbookMutation, enqueue, experimentId, makeOperation],
-  );
+    );
+  }, [detachWorkbookMutation, enqueue, experimentId, makeOperation, workbookId]);
 
   const setWorkbookVersion = useCallback(
     (versionId: string) =>
@@ -321,13 +382,19 @@ export function useWorkbookPersistenceCoordinator({
           "set-version",
           async (assertCurrent) => {
             assertCurrent();
-            await setWorkbookVersionMutation({ id: experimentId, versionId });
+            const pinned = await setWorkbookVersionMutation({
+              id: experimentId,
+              versionId,
+              expectedWorkbookId: workbookId,
+              expectedWorkbookVersionId: versionRef.current.versionId,
+            });
             assertCurrent();
+            versionRef.current = { workbookId, versionId: pinned.workbookVersionId };
           },
           versionId,
         ),
       ),
-    [enqueue, experimentId, makeOperation, setWorkbookVersionMutation],
+    [enqueue, experimentId, makeOperation, setWorkbookVersionMutation, workbookId],
   );
 
   const retryFailed = useCallback(async () => {
@@ -347,6 +414,11 @@ export function useWorkbookPersistenceCoordinator({
     enabled,
     scopeKey: workbookId,
   });
+  flushForTransitionRef.current = async () => {
+    await autosave.flush();
+    const validation = zWorkbookCellArray.safeParse(cellsRef.current);
+    if (!validation.success) throw new AutosaveValidationError();
+  };
 
   return {
     autosave,

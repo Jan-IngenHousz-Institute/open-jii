@@ -29,6 +29,8 @@ function PersistenceHarness({ children }: { children: ReactElement }) {
   const coordinator = useWorkbookPersistenceCoordinator({
     experimentId: baseProps.experimentId,
     workbookId: baseProps.workbookId,
+    workbookVersionId: baseProps.currentVersionId,
+    workbookRevision: 1,
     cells: [],
     enabled: false,
   });
@@ -83,7 +85,11 @@ describe("WorkbookVersionHistoryDialog", () => {
     await user.click(within(confirm).getByRole("button", { name: "flow.versionHistory.restore" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toEqual({ versionId: "ver-1" });
+    expect(spy.body).toEqual({
+      versionId: "ver-1",
+      expectedWorkbookId: "wb-1",
+      expectedWorkbookVersionId: "ver-2",
+    });
     await waitFor(() => expect(baseProps.onOpenChange).toHaveBeenCalledWith(false));
   });
 

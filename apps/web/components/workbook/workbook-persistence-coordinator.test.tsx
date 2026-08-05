@@ -50,6 +50,8 @@ const renderCoordinator = (initialProps: HarnessProps) =>
       useWorkbookPersistenceCoordinator({
         experimentId: "experiment-1",
         workbookId,
+        workbookVersionId: workbookId ? `version-${workbookId}` : "",
+        workbookRevision: workbookId ? 1 : 0,
         cells,
         enabled: true,
         delayMs: 20,
@@ -61,11 +63,11 @@ describe("useWorkbookPersistenceCoordinator", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    mutations.update.mockResolvedValue(undefined);
-    mutations.upgrade.mockResolvedValue(undefined);
-    mutations.attach.mockResolvedValue(undefined);
+    mutations.update.mockImplementation(({ id }) => Promise.resolve({ id, revision: 2 }));
+    mutations.upgrade.mockResolvedValue({ workbookVersionId: "version-next" });
+    mutations.attach.mockResolvedValue({ workbookVersionId: "version-attached" });
     mutations.detach.mockResolvedValue(undefined);
-    mutations.setVersion.mockResolvedValue(undefined);
+    mutations.setVersion.mockResolvedValue({ workbookVersionId: "version-restored" });
   });
 
   afterEach(() => vi.useRealTimers());
@@ -74,8 +76,8 @@ describe("useWorkbookPersistenceCoordinator", () => {
     let releaseUpdate: (() => void) | undefined;
     mutations.update.mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          releaseUpdate = resolve;
+        new Promise((resolve) => {
+          releaseUpdate = () => resolve({ id: "workbook-a", revision: 2 });
         }),
     );
     const { result, rerender } = renderCoordinator({
@@ -86,11 +88,14 @@ describe("useWorkbookPersistenceCoordinator", () => {
     rerender({ workbookId: "workbook-a", cells: [cell("a1")] });
     await act(async () => vi.advanceTimersByTimeAsync(30));
     const entityPromise = result.current.entitySaved();
-    const attachPromise = result.current.attachWorkbook("workbook-b");
-    mutations.attach.mockImplementationOnce(() => {
-      rerender({ workbookId: "workbook-b", cells: [cell("b0")] });
-      return Promise.resolve();
-    });
+    let releaseAttach: (() => void) | undefined;
+    mutations.attach.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          releaseAttach = () => resolve({ workbookVersionId: "version-attached" });
+        }),
+    );
+    const attachPromise = result.current.attachWorkbook({ id: "workbook-b", revision: 1 });
 
     expect(mutations.update).toHaveBeenCalledTimes(1);
     expect(mutations.upgrade).not.toHaveBeenCalled();
@@ -98,15 +103,22 @@ describe("useWorkbookPersistenceCoordinator", () => {
 
     await act(async () => {
       releaseUpdate?.();
-      await Promise.all([entityPromise, attachPromise]);
+      await entityPromise;
+    });
+    expect(mutations.attach).toHaveBeenCalledTimes(1);
+    rerender({ workbookId: "workbook-b", cells: [cell("b0")] });
+    await act(async () => {
+      releaseAttach?.();
+      await attachPromise;
     });
 
     expect(mutations.upgrade).toHaveBeenCalledTimes(2);
-    expect(mutations.attach).toHaveBeenCalledTimes(1);
     expect(mutations.attach).toHaveBeenCalledWith({
       id: "experiment-1",
       workbookId: "workbook-b",
       expectedWorkbookId: "workbook-a",
+      expectedWorkbookVersionId: "version-next",
+      expectedWorkbookRevision: 1,
     });
     expect(mutations.update.mock.invocationCallOrder[0]).toBeLessThan(
       mutations.upgrade.mock.invocationCallOrder[0],
@@ -118,7 +130,9 @@ describe("useWorkbookPersistenceCoordinator", () => {
 
   it("retries a failed cells pin without repeating the successful workbook write", async () => {
     const failure = new Error("pin failed");
-    mutations.upgrade.mockRejectedValueOnce(failure).mockResolvedValueOnce(undefined);
+    mutations.upgrade
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce({ workbookVersionId: "version-next" });
     const { result, rerender } = renderCoordinator({
       workbookId: "workbook-a",
       cells: [cell("a0")],
@@ -140,8 +154,8 @@ describe("useWorkbookPersistenceCoordinator", () => {
     let releaseOldUpdate: (() => void) | undefined;
     mutations.update.mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          releaseOldUpdate = resolve;
+        new Promise((resolve) => {
+          releaseOldUpdate = () => resolve({ id: "workbook-a", revision: 2 });
         }),
     );
     const { result, rerender } = renderCoordinator({
@@ -197,7 +211,7 @@ describe("useWorkbookPersistenceCoordinator", () => {
     await expect(queuedEntity).resolves.toBeUndefined();
     expect(mutations.upgrade).toHaveBeenCalledTimes(2);
 
-    mutations.upgrade.mockResolvedValue(undefined);
+    mutations.upgrade.mockResolvedValue({ workbookVersionId: "version-next" });
     await act(async () => result.current.autosave.flush());
     expect(mutations.update).toHaveBeenCalledTimes(1);
     expect(mutations.upgrade).toHaveBeenCalledTimes(3);
@@ -211,7 +225,9 @@ describe("useWorkbookPersistenceCoordinator", () => {
       cells: [cell("a0")],
     });
 
-    await expect(result.current.attachWorkbook("workbook-b")).rejects.toBe(failure);
+    await expect(result.current.attachWorkbook({ id: "workbook-b", revision: 1 })).rejects.toBe(
+      failure,
+    );
 
     rerender({ workbookId: "workbook-a", cells: [cell("a1")] });
     await act(async () => vi.advanceTimersByTimeAsync(30));
@@ -224,6 +240,8 @@ describe("useWorkbookPersistenceCoordinator", () => {
     expect(mutations.upgrade).toHaveBeenCalledWith({
       id: "experiment-1",
       expectedWorkbookId: "workbook-a",
+      expectedWorkbookVersionId: "version-workbook-a",
+      expectedWorkbookRevision: 2,
     });
   });
 
@@ -235,19 +253,25 @@ describe("useWorkbookPersistenceCoordinator", () => {
       cells: [cell("a0")],
     });
 
-    await expect(result.current.attachWorkbook("workbook-b")).rejects.toBe(failure);
+    await expect(result.current.attachWorkbook({ id: "workbook-b", revision: 1 })).rejects.toBe(
+      failure,
+    );
     mutations.attach.mockImplementationOnce(() => {
       rerender({ workbookId: "workbook-c", cells: [cell("c0")] });
       return Promise.resolve();
     });
 
-    await expect(result.current.attachWorkbook("workbook-c")).resolves.toBeUndefined();
+    await expect(
+      result.current.attachWorkbook({ id: "workbook-c", revision: 1 }),
+    ).resolves.toBeUndefined();
 
     expect(mutations.attach).toHaveBeenCalledTimes(2);
     expect(mutations.attach).toHaveBeenLastCalledWith({
       id: "experiment-1",
       workbookId: "workbook-c",
       expectedWorkbookId: "workbook-a",
+      expectedWorkbookVersionId: "version-workbook-a",
+      expectedWorkbookRevision: 1,
     });
     expect(result.current.error).toBeNull();
   });
@@ -262,17 +286,28 @@ describe("useWorkbookPersistenceCoordinator", () => {
       return Promise.resolve();
     });
 
-    await expect(result.current.attachWorkbook("workbook-b")).rejects.toBeInstanceOf(
-      PersistenceScopeChangedError,
-    );
+    await expect(
+      result.current.attachWorkbook({ id: "workbook-b", revision: 1 }),
+    ).rejects.toBeInstanceOf(PersistenceScopeChangedError);
+  });
+
+  it("rejects an attachment completion when refetch leaves the rendered workbook unchanged", async () => {
+    const { result } = renderCoordinator({
+      workbookId: "workbook-a",
+      cells: [cell("a0")],
+    });
+
+    await expect(
+      result.current.attachWorkbook({ id: "workbook-b", revision: 1 }),
+    ).rejects.toBeInstanceOf(PersistenceScopeChangedError);
   });
 
   it("rejects queued work when an external scope change makes it stale", async () => {
     let releaseUpdate: (() => void) | undefined;
     mutations.update.mockImplementationOnce(
       () =>
-        new Promise<void>((resolve) => {
-          releaseUpdate = resolve;
+        new Promise((resolve) => {
+          releaseUpdate = () => resolve({ id: "workbook-a", revision: 2 });
         }),
     );
     const { result, rerender } = renderCoordinator({
@@ -282,7 +317,7 @@ describe("useWorkbookPersistenceCoordinator", () => {
 
     rerender({ workbookId: "workbook-a", cells: [cell("a1")] });
     await act(async () => vi.advanceTimersByTimeAsync(30));
-    const attachPromise = result.current.attachWorkbook("workbook-b");
+    const attachPromise = result.current.attachWorkbook({ id: "workbook-b", revision: 1 });
     const staleAssertion = expect(attachPromise).rejects.toBeInstanceOf(
       PersistenceScopeChangedError,
     );
@@ -292,5 +327,57 @@ describe("useWorkbookPersistenceCoordinator", () => {
 
     await staleAssertion;
     expect(mutations.attach).not.toHaveBeenCalled();
+  });
+
+  it("flushes a valid debounced edit before detaching", async () => {
+    const { result, rerender } = renderCoordinator({
+      workbookId: "workbook-a",
+      cells: [cell("a0")],
+    });
+
+    rerender({ workbookId: "workbook-a", cells: [cell("a1")] });
+    let releaseDetach: (() => void) | undefined;
+    mutations.detach.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseDetach = resolve;
+        }),
+    );
+    const detachPromise = result.current.detachWorkbook();
+
+    await act(async () => Promise.resolve());
+    expect(mutations.update).toHaveBeenCalledWith({
+      id: "workbook-a",
+      cells: [cell("a1")],
+    });
+    expect(mutations.upgrade).toHaveBeenCalledTimes(1);
+    expect(mutations.detach).toHaveBeenCalledTimes(1);
+
+    rerender({ workbookId: "", cells: [] });
+    await act(async () => {
+      releaseDetach?.();
+      await detachPromise;
+    });
+  });
+
+  it("rejects a scope transition while the controlled draft is invalid", async () => {
+    const invalidQuestion = {
+      id: "question-1",
+      type: "question",
+      isCollapsed: false,
+      name: "",
+      questionType: "text",
+    } as unknown as WorkbookCell;
+    const { result, rerender } = renderCoordinator({
+      workbookId: "workbook-a",
+      cells: [cell("a0")],
+    });
+
+    rerender({ workbookId: "workbook-a", cells: [invalidQuestion] });
+
+    await expect(result.current.detachWorkbook()).rejects.toBeInstanceOf(Error);
+    expect(result.current.autosave.status).toBe("error");
+    expect(mutations.update).not.toHaveBeenCalled();
+    expect(mutations.detach).not.toHaveBeenCalled();
   });
 });

@@ -9,6 +9,8 @@ import { contract } from "@repo/api/contract";
 import { useDetachWorkbook } from "./useDetachWorkbook";
 
 const experimentId = "11111111-1111-1111-1111-111111111111";
+const workbookId = "22222222-2222-2222-2222-222222222222";
+const workbookVersionId = "33333333-3333-3333-3333-333333333333";
 
 describe("useDetachWorkbook", () => {
   it("calls detach endpoint and returns updated experiment", async () => {
@@ -24,7 +26,11 @@ describe("useDetachWorkbook", () => {
     const { result } = renderHook(() => useDetachWorkbook());
 
     act(() => {
-      result.current.mutate({ id: experimentId });
+      result.current.mutate({
+        id: experimentId,
+        expectedWorkbookId: workbookId,
+        expectedWorkbookVersionId: workbookVersionId,
+      });
     });
 
     await waitFor(() => {
@@ -35,7 +41,6 @@ describe("useDetachWorkbook", () => {
   });
 
   it("invalidates the workbook caches using the experiment's workbookId (OJD-1626)", async () => {
-    const workbookId = "22222222-2222-2222-2222-222222222222";
     server.mount(contract.experiments.detachWorkbook, {
       body: createExperiment({ id: experimentId, workbookId: null }),
     });
@@ -50,7 +55,11 @@ describe("useDetachWorkbook", () => {
     const { result } = renderHook(() => useDetachWorkbook(), { queryClient });
 
     act(() => {
-      result.current.mutate({ id: experimentId });
+      result.current.mutate({
+        id: experimentId,
+        expectedWorkbookId: workbookId,
+        expectedWorkbookVersionId: workbookVersionId,
+      });
     });
 
     await waitFor(() => {
@@ -75,7 +84,11 @@ describe("useDetachWorkbook", () => {
     const { result } = renderHook(() => useDetachWorkbook());
 
     act(() => {
-      result.current.mutate({ id: experimentId });
+      result.current.mutate({
+        id: experimentId,
+        expectedWorkbookId: workbookId,
+        expectedWorkbookVersionId: workbookVersionId,
+      });
     });
 
     await waitFor(() => {

@@ -36,6 +36,7 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
         <WorkbookDescription
           workbookId={id}
           description={data.description ?? ""}
+          revision={data.revision}
           hasAccess={data.capabilities.canUpdate}
         />
 
@@ -55,6 +56,7 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
             initialCells={data.cells}
             canEdit={data.capabilities.canUpdate}
             name={data.name}
+            revision={data.revision}
           />
         </div>
       </div>

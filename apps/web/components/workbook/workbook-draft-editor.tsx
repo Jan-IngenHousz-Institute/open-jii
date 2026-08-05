@@ -24,6 +24,7 @@ interface WorkbookDraftEditorProps {
   /** Controlled draft value when autosave is owned by a parent surface. */
   cells?: WorkbookCell[];
   name: string;
+  revision: number;
   /** Called after each successful autosave. */
   onSaved?: (workbook: Workbook) => void;
   /** Mirrors live local edits so sibling editing surfaces can share one draft. */
@@ -44,12 +45,13 @@ export function WorkbookDraftEditor({
   canEdit,
   cells: controlledCells,
   name,
+  revision,
   onSaved,
   onCellsChange,
   autosaveEnabled = true,
 }: WorkbookDraftEditorProps) {
   const { t } = useTranslation(["workbook", "common"]);
-  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id, { onSuccess: onSaved });
+  const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id, { onSuccess: onSaved, revision });
 
   const [localCells, setLocalCells] = useState<WorkbookCell[]>(initialCells);
   const cells = controlledCells ?? localCells;

@@ -23,6 +23,8 @@ describe("useAttachWorkbook", () => {
         id: experimentId,
         workbookId,
         expectedWorkbookId: null,
+        expectedWorkbookVersionId: null,
+        expectedWorkbookRevision: 1,
       });
     });
 
@@ -31,7 +33,12 @@ describe("useAttachWorkbook", () => {
     });
 
     expect(spy.called).toBe(true);
-    expect(spy.body).toEqual({ workbookId, expectedWorkbookId: null });
+    expect(spy.body).toEqual({
+      workbookId,
+      expectedWorkbookId: null,
+      expectedWorkbookVersionId: null,
+      expectedWorkbookRevision: 1,
+    });
   });
 
   it("handles error state", async () => {
@@ -44,6 +51,8 @@ describe("useAttachWorkbook", () => {
         id: experimentId,
         workbookId,
         expectedWorkbookId: null,
+        expectedWorkbookVersionId: null,
+        expectedWorkbookRevision: 1,
       });
     });
 

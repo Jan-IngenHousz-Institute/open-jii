@@ -460,6 +460,28 @@ describe("ExperimentDesignPage", () => {
     await waitFor(() => expect(upgradeSpy.called).toBe(true));
   });
 
+  it("warns before navigation while a controlled draft has unsaved work", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const user = userEvent.setup();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    await user.click(await screen.findByTestId("trigger-cell-edit"));
+    const beforeUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(beforeUnload);
+    expect(beforeUnload.defaultPrevented).toBe(true);
+
+    await user.click(screen.getByText("flow.editOpenWorkbookLink"));
+    expect(confirm).toHaveBeenCalledWith(
+      "This workbook still has changes that have not been saved.",
+    );
+    confirm.mockRestore();
+  });
+
   it("resets the controlled draft before edits can target a newly linked workbook", async () => {
     const secondWorkbookId = "wb-2";
     const secondVersionId = "ver-b";

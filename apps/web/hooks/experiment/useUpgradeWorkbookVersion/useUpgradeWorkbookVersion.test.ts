@@ -19,7 +19,12 @@ describe("useUpgradeWorkbookVersion", () => {
     const { result } = renderHook(() => useUpgradeWorkbookVersion());
 
     act(() => {
-      result.current.mutate({ id: experimentId, expectedWorkbookId: workbookId });
+      result.current.mutate({
+        id: experimentId,
+        expectedWorkbookId: workbookId,
+        expectedWorkbookVersionId: versionId,
+        expectedWorkbookRevision: 1,
+      });
     });
 
     await waitFor(() => {
@@ -35,7 +40,12 @@ describe("useUpgradeWorkbookVersion", () => {
     const { result } = renderHook(() => useUpgradeWorkbookVersion());
 
     act(() => {
-      result.current.mutate({ id: experimentId, expectedWorkbookId: workbookId });
+      result.current.mutate({
+        id: experimentId,
+        expectedWorkbookId: workbookId,
+        expectedWorkbookVersionId: versionId,
+        expectedWorkbookRevision: 1,
+      });
     });
 
     await waitFor(() => {
