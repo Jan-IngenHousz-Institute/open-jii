@@ -113,6 +113,13 @@ export type { DeviceIdentity, SensorFamily } from "./core/families";
 export { SENSOR_FAMILIES, isSensorFamily } from "./core/families";
 export type { IdentifiedDevice, IdentifyDeviceOptions } from "./core/identify-device";
 export { identifyDevice, createConnectorForFamily } from "./core/identify-device";
+export type { CommandProgress, CommandProgressListener } from "./core/progress";
+export type {
+  CommandFamily,
+  ValidateCommandOptions,
+  ValidatedCommand,
+} from "./core/command-validator";
+export { validateCommandArtifact } from "./core/command-validator";
 
 // ── Logger (public DI contract) ─────────────────────
 export type { Logger } from "./utils/logger/logger";

@@ -14,6 +14,7 @@ const nextConfig = {
     "@repo/ui",
     "@repo/cms",
     "@repo/analytics",
+    "@repo/workbook",
   ],
 
   output: "standalone",
