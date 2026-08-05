@@ -108,12 +108,14 @@ const row = (
   overrides: Partial<{
     id: string;
     status: "pending" | "failed" | "successful";
+    deliveryGeneration: number;
     topic: string;
     result: object;
   }> = {},
 ) => ({
   id: overrides.id ?? "row-1",
   status: overrides.status ?? "pending",
+  deliveryGeneration: overrides.deliveryGeneration ?? 1,
   data: {
     topic: overrides.topic ?? "exp/proto",
     measurementResult: overrides.result ?? { foo: 1 },
@@ -138,6 +140,8 @@ describe("Outbox", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetMeasurements.mockResolvedValue([]);
+    mockMarkAsSuccessful.mockResolvedValue(true);
+    mockMarkAsFailed.mockResolvedValue(true);
     mockOnlineIsOnline.mockReturnValue(true);
     mockOnlineSubscribe.mockReturnValue(() => undefined);
   });
@@ -195,15 +199,35 @@ describe("Outbox", () => {
       transport.resolveNext();
       await flushMicrotasks(20);
 
-      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1");
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1", 1);
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
       expect(outbox.isProcessing("row-1")).toBe(false);
     });
 
-    it("keeps a delivered upload 'successful' even if the DB status write throws", async () => {
+    it("publishes and acknowledges the exact replacement generation", async () => {
+      mockGetMeasurementById.mockResolvedValueOnce(
+        row({ id: "manifest:attempt-1", deliveryGeneration: 2, result: { status: "complete" } }),
+      );
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+
+      outbox.enqueue("manifest:attempt-1");
+      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      expect(transport.calls[0].payload).toEqual({
+        status: "complete",
+        _client_id: "manifest:attempt-1:2",
+      });
+
+      transport.resolveNext();
+      await flushMicrotasks(20);
+
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("manifest:attempt-1", 2);
+    });
+
+    it("does not announce success when the generation-gated DB ack fails", async () => {
       // PUBACK arrives, then markAsSuccessful throws (e.g. SQLite busy). The
       // worker must NOT mark the row failed - the message was delivered - and
-      // must still emit a 'successful' settle.
+      // must not tell consumers the durable row was settled.
       mockGetMeasurementById.mockResolvedValueOnce(row({ id: "db-1" }));
       mockMarkAsSuccessful.mockRejectedValueOnce(new Error("sqlite busy"));
       const transport = makeTransport();
@@ -218,8 +242,7 @@ describe("Outbox", () => {
       await flushMicrotasks(40);
 
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
-      expect(settled).toHaveBeenCalledTimes(1);
-      expect(settled.mock.calls[0][0]).toEqual([{ id: "db-1", status: "successful" }]);
+      expect(settled).not.toHaveBeenCalled();
       expect(outbox.isProcessing("db-1")).toBe(false);
     });
   });
@@ -263,7 +286,7 @@ describe("Outbox", () => {
       transport.rejectNext(new MqttError("CredentialError", "no creds"));
       await flushMicrotasks(40);
 
-      expect(mockMarkAsFailed).toHaveBeenCalledWith("row-1");
+      expect(mockMarkAsFailed).toHaveBeenCalledWith("row-1", 1);
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
     });
 
@@ -286,7 +309,7 @@ describe("Outbox", () => {
       transport.resolveNext();
       await flushMicrotasks(40);
 
-      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1");
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1", 1);
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
     });
 
@@ -312,7 +335,7 @@ describe("Outbox", () => {
       transport.rejectNext(new MqttError("Disconnected", "kicked-2"));
       await flushMicrotasks(40);
 
-      expect(mockMarkAsFailed).toHaveBeenCalledWith("ex-1");
+      expect(mockMarkAsFailed).toHaveBeenCalledWith("ex-1", 1);
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
       expect(settled).toHaveBeenCalledTimes(1);
       expect(settled.mock.calls[0][0]).toEqual([{ id: "ex-1", status: "failed" }]);
@@ -435,7 +458,7 @@ describe("Outbox", () => {
       expect(transport.calls).toHaveLength(1);
       transport.resolveNext();
       await flushMicrotasks(20);
-      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("after-fail");
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("after-fail", 1);
     });
   });
 
@@ -465,7 +488,7 @@ describe("Outbox", () => {
       expect(transport.calls).toHaveLength(1);
       transport.resolveNext();
       await flushMicrotasks(20);
-      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("net-a");
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("net-a", 1);
     });
 
     it("starts paused while offline at construction (no upload until online)", async () => {
@@ -490,7 +513,7 @@ describe("Outbox", () => {
       expect(transport.calls).toHaveLength(1);
       transport.resolveNext();
       await flushMicrotasks(20);
-      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("net-b");
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("net-b", 1);
     });
   });
 

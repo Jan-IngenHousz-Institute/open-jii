@@ -14,6 +14,7 @@ const migrationFiles = [
   "0003_drop_uploading_status.sql",
   "0004_add_day_key.sql",
   "0005_add_record_kind.sql",
+  "0006_add_delivery_generation.sql",
 ];
 const migrationSqls = migrationFiles.map((f) =>
   readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"),
@@ -163,13 +164,13 @@ describe("measurements-storage", () => {
         },
       };
       await mod.saveMeasurementLatest(first, "pending", "manifest:attempt-1");
-      await mod.markAsSuccessful("manifest:attempt-1");
+      await mod.markAsSuccessful("manifest:attempt-1", 1);
       await mod.saveMeasurementLatest(first, "pending", "manifest:attempt-1");
       expect(
         (sqlite.prepare("SELECT status FROM measurements").get() as { status: string }).status,
       ).toBe("successful");
 
-      await mod.saveMeasurementLatest(
+      const replacement = await mod.saveMeasurementLatest(
         {
           ...first,
           measurementResult: { ...first.measurementResult, terminal_status: "complete" },
@@ -179,42 +180,13 @@ describe("measurements-storage", () => {
       );
       const latest = await mod.getMeasurement("manifest:attempt-1");
       expect(latest?.status).toBe("pending");
+      expect(replacement.generation).toBe(2);
+      expect(latest?.deliveryGeneration).toBe(2);
       expect(latest?.data.measurementResult).toMatchObject({ terminal_status: "complete" });
-    });
-
-    it("finds saved workbook attempts that have no terminal row", async () => {
-      const mod = await import("~/shared/db/measurements-storage");
-      await mod.saveMeasurementLatest(
-        {
-          ...mockMeasurement,
-          measurementResult: { workbook_attempt_id: "attempt-missing", value: 42 },
-        },
-        "pending",
-        "measurement:attempt-missing",
-      );
-      await mod.saveMeasurementLatest(
-        {
-          ...mockMeasurement,
-          measurementResult: {
-            record_kind: "workbook_run_complete",
-            workbook_attempt_id: "attempt-complete",
-          },
-        },
-        "pending",
-        "manifest:attempt-complete",
-      );
-      await mod.saveMeasurementLatest(
-        {
-          ...mockMeasurement,
-          measurementResult: { workbook_attempt_id: "attempt-complete", value: 7 },
-        },
-        "pending",
-        "measurement:attempt-complete",
-      );
-
-      await expect(mod.getWorkbookAttemptIdsMissingTerminal()).resolves.toEqual([
-        "attempt-missing",
-      ]);
+      await expect(mod.markAsSuccessful("manifest:attempt-1", 1)).resolves.toBe(false);
+      expect((await mod.getMeasurement("manifest:attempt-1"))?.status).toBe("pending");
+      await expect(mod.markAsSuccessful("manifest:attempt-1", 2)).resolves.toBe(true);
+      expect((await mod.getMeasurement("manifest:attempt-1"))?.status).toBe("successful");
     });
 
     it("rejects an unknown status at the database level (CHECK constraint)", () => {
@@ -307,6 +279,20 @@ describe("measurements-storage", () => {
   // ---------------------------------------------------------------------------
 
   describe("updateMeasurement — derived columns", () => {
+    it("increments the body generation so an older in-flight ack cannot settle the edit", async () => {
+      insertRow("u1", "pending");
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.updateMeasurement("u1", {
+        ...mockMeasurement,
+        measurementResult: { value: 43 },
+      });
+
+      const row = await mod.getMeasurement("u1");
+      expect(row?.deliveryGeneration).toBe(2);
+      await expect(mod.markAsSuccessful("u1", 1)).resolves.toBe(false);
+      expect((await mod.getMeasurement("u1"))?.status).toBe("pending");
+    });
+
     it("refreshes questions_text from the updated measurement payload", async () => {
       insertRow("u1", "failed");
       const mod = await import("~/shared/db/measurements-storage");
@@ -791,7 +777,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "pending");
 
       const mod = await import("~/shared/db/measurements-storage");
-      await mod.markAsSuccessful("m1");
+      await mod.markAsSuccessful("m1", 1);
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("successful");
@@ -801,7 +787,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "pending");
 
       const mod = await import("~/shared/db/measurements-storage");
-      await mod.markAsSuccessful("m1");
+      await mod.markAsSuccessful("m1", 1);
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all();
       expect(rows).toHaveLength(1);
@@ -812,7 +798,7 @@ describe("measurements-storage", () => {
       insertRow("other", "pending");
 
       const mod = await import("~/shared/db/measurements-storage");
-      await mod.markAsSuccessful("target");
+      await mod.markAsSuccessful("target", 1);
 
       const rows = sqlite.prepare("SELECT * FROM measurements ORDER BY id").all() as any[];
       expect(rows.find((r) => r.id === "target")?.status).toBe("successful");
@@ -823,7 +809,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "successful");
 
       const mod = await import("~/shared/db/measurements-storage");
-      await mod.markAsSuccessful("m1");
+      await mod.markAsSuccessful("m1", 1);
 
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
@@ -834,7 +820,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "failed");
 
       const mod = await import("~/shared/db/measurements-storage");
-      await mod.markAsSuccessful("m1");
+      await mod.markAsSuccessful("m1", 1);
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("successful");
@@ -844,7 +830,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "pending");
 
       const mod = await import("~/shared/db/measurements-storage");
-      await mod.markAsSuccessful("m1");
+      await mod.markAsSuccessful("m1", 1);
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("successful");
@@ -974,7 +960,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "pending");
 
       const mod = await import("~/shared/db/measurements-storage");
-      await mod.markAsFailed("m1");
+      await mod.markAsFailed("m1", 1);
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("failed");
@@ -984,7 +970,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "failed");
 
       const mod = await import("~/shared/db/measurements-storage");
-      await mod.markAsFailed("m1");
+      await mod.markAsFailed("m1", 1);
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("failed");
@@ -994,7 +980,7 @@ describe("measurements-storage", () => {
       insertRow("m1", "successful");
 
       const mod = await import("~/shared/db/measurements-storage");
-      await mod.markAsFailed("m1");
+      await mod.markAsFailed("m1", 1);
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("successful");
@@ -1005,7 +991,7 @@ describe("measurements-storage", () => {
       insertRow("other", "pending");
 
       const mod = await import("~/shared/db/measurements-storage");
-      await mod.markAsFailed("target");
+      await mod.markAsFailed("target", 1);
 
       const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
       expect(rows.find((r) => r.id === "target")?.status).toBe("failed");

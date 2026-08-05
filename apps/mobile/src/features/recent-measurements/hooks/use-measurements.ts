@@ -3,6 +3,7 @@ import { queryKeys } from "~/features/recent-measurements/services/measurement-l
 import { getOutbox } from "~/shared/composition/upload";
 import {
   clearMeasurements,
+  getMeasurementById,
   getMeasurements,
   markAsFailed,
   removeMeasurement as removeMeasurementFromStorage,
@@ -41,7 +42,8 @@ export function useMeasurements() {
   };
 
   const markFailed = async (key: string) => {
-    await markAsFailed(key);
+    const row = await getMeasurementById(key);
+    if (row) await markAsFailed(key, row.deliveryGeneration);
     await queryClient.invalidateQueries({ queryKey: queryKeys.root });
   };
 

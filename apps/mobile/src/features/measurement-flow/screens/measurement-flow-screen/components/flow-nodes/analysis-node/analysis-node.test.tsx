@@ -24,6 +24,7 @@ const {
   getTimeSyncState,
   scannerExecutors,
   toastWarning,
+  reconcileWorkbookRunManifests,
 } = vi.hoisted(() => ({
   summaryProps: vi.fn(),
   macroResultProps: vi.fn(),
@@ -39,6 +40,7 @@ const {
     current: new Map<string, { device: Device; identity: undefined }>(),
   },
   toastWarning: vi.fn(),
+  reconcileWorkbookRunManifests: vi.fn(),
 }));
 
 vi.mock("sonner-native", () => ({ toast: { warning: toastWarning } }));
@@ -52,6 +54,9 @@ vi.mock("~/features/recent-measurements/hooks/use-measurement-upload", () => ({
 }));
 vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
   useMeasurements: () => useMeasurements(),
+}));
+vi.mock("~/features/measurement-flow/services/workbook-run-manifest-reconcile", () => ({
+  reconcileWorkbookRunManifests,
 }));
 vi.mock("~/shared/time/time-sync", () => ({
   getSyncedUtcISO: () => getSyncedUtcISO(),
@@ -117,6 +122,8 @@ beforeEach(() => {
     workbookAttemptId: "attempt-1",
     workbookRunExpected: [],
     workbookRunRealized: [],
+    workbookTerminalReadyAttemptId: undefined,
+    pendingWorkbookRunManifests: [],
     flowNodes: [],
     currentFlowStep: 0,
     iterationCount: 0,
@@ -135,6 +142,7 @@ beforeEach(() => {
   macroResultProps.mockClear();
   actionBarProps.mockClear();
   toastWarning.mockClear();
+  reconcileWorkbookRunManifests.mockReset().mockResolvedValue(undefined);
   useExperiments.mockReturnValue({ experiments: [{ value: "exp-1", label: "From Query" }] });
   useSession.mockReturnValue({ session: { data: { user: { id: "user-1" } } } });
   useMeasurementUpload.mockReturnValue({

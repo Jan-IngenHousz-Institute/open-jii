@@ -72,6 +72,7 @@ class OutboxImpl implements Outbox {
   private readonly idListeners = new Map<string, Set<() => void>>();
   private readonly snapshotListeners = new Set<() => void>();
   private readonly settledListeners = new Set<(items: readonly SettledItem[]) => void>();
+  private readonly inFlightGenerations = new Map<string, number>();
   private cachedSnapshot: OutboxSnapshot = { isUploading: false, count: 0 };
   // Microtask coalescer: a burst of PUBACKs inside one JS turn produces
   // a single listener dispatch with every {id, status} from the burst.
@@ -102,8 +103,8 @@ class OutboxImpl implements Outbox {
         if (this.destroyed) return;
         log.error("worker exhausted retries - marking failed", { id, err: err.message });
         getTrace(id)?.end("error", { err: err.message, closed_by: "retry_exhausted" });
-        this.scheduleSettled({ id, status: "failed" });
-        void this.markFailedAfterExhaustion(id);
+        const generation = this.inFlightGenerations.get(id);
+        if (generation !== undefined) void this.markFailedAfterExhaustion(id, generation);
       },
       onSettled: (id) => {
         log.debug("settled", { id });
@@ -234,6 +235,7 @@ class OutboxImpl implements Outbox {
   // the PUBACK / retry-exhaust point so the fact lives where it's known.
   private releaseEnqueued(id: string): void {
     if (!this.enqueued.delete(id)) return;
+    this.inFlightGenerations.delete(id);
     this.notifySnapshot();
     this.notifyId(id);
   }
@@ -291,13 +293,14 @@ class OutboxImpl implements Outbox {
       trace?.end("ok", { skipped: "already_successful" });
       return;
     }
+    this.inFlightGenerations.set(id, row.deliveryGeneration);
 
     const payload = {
       ...row.data.measurementResult,
       // Embed the row UUID so an AWS IoT rule can deduplicate on the
       // downstream side if a crash between PUBACK and markAsSuccessful
       // leaves the row "pending" and we re-publish on next boot.
-      _client_id: id,
+      _client_id: row.deliveryGeneration === 1 ? id : `${id}:${row.deliveryGeneration}`,
     };
 
     trace?.setFields({ topic: row.data.topic, row_status_before: row.status });
@@ -326,20 +329,24 @@ class OutboxImpl implements Outbox {
         kind,
         err: (err as Error)?.message,
       });
-      await markAsFailed(id);
-      this.scheduleSettled({ id, status: "failed" });
+      const applied = await markAsFailed(id, row.deliveryGeneration);
+      if (applied) this.scheduleSettled({ id, status: "failed" });
       trace?.event("marked_failed", { kind });
       trace?.end("error", { err: (err as Error)?.message, kind });
       return;
     }
 
     // Phase 2 - record. PUBACK is in (message delivered), so a DB-write failure
-    // must NOT mark the row failed. Emit the successful settle regardless; if the
-    // write throws the row stays "pending" and re-publishes next drain (deduped
-    // downstream via _client_id).
+    // must NOT mark the row failed. The generation CAS also prevents this ack
+    // from settling a newer replacement body stored under the same row id.
     try {
-      await markAsSuccessful(id);
-      trace?.event("marked_successful");
+      const applied = await markAsSuccessful(id, row.deliveryGeneration);
+      if (applied) {
+        this.scheduleSettled({ id, status: "successful" });
+        trace?.event("marked_successful");
+      } else {
+        trace?.event("stale_generation_ack_ignored");
+      }
     } catch (dbErr) {
       log.error("publish ok but markAsSuccessful failed - leaving row for re-publish", {
         id,
@@ -347,17 +354,16 @@ class OutboxImpl implements Outbox {
       });
       trace?.event("mark_successful_failed", { err: (dbErr as Error)?.message });
     }
-    this.scheduleSettled({ id, status: "successful" });
     log.debug("publish ok", { id });
     trace?.end("ok");
   }
 
   // Mark a row failed after the retryer exhausted every attempt. Invoked
-  // fire-and-forget from onError (a void callback that can't await); the
-  // terminal settle and trace close already happened synchronously there.
-  private async markFailedAfterExhaustion(id: string): Promise<void> {
+  // fire-and-forget from onError (a void callback that can't await).
+  private async markFailedAfterExhaustion(id: string, generation: number): Promise<void> {
     try {
-      await markAsFailed(id);
+      const applied = await markAsFailed(id, generation);
+      if (applied) this.scheduleSettled({ id, status: "failed" });
     } catch (err) {
       log.warn("markAsFailed threw after retry exhaustion", {
         id,

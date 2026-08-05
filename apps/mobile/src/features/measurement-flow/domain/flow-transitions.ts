@@ -60,6 +60,8 @@ export interface FlowState {
   workbookAttemptId?: string;
   workbookRunExpected: WorkbookRunExpected[];
   workbookRunRealized: WorkbookRunRealized[];
+  /** Explicit proof that the active attempt reached its terminal transition. */
+  workbookTerminalReadyAttemptId?: string;
   pendingWorkbookRunManifests: PendingWorkbookRunManifest[];
   currentStep: number;
   flowNodes: FlowNode[];
@@ -100,6 +102,7 @@ export const initialFlowState: FlowState = {
   workbookAttemptId: undefined,
   workbookRunExpected: [],
   workbookRunRealized: [],
+  workbookTerminalReadyAttemptId: undefined,
   pendingWorkbookRunManifests: [],
   currentStep: 0,
   flowNodes: [],
@@ -136,23 +139,49 @@ function rotatedAttemptState(
   nextAttemptId: string | undefined,
   terminalStatus?: WorkbookRunTerminalStatus,
 ): Partial<FlowState> {
-  const manifest = buildPendingManifest({
-    attemptId: state.workbookAttemptId,
-    workbookVersionId: state.workbookVersionId,
-    experimentId: state.experimentId,
-    experimentName: state.experimentLabel,
-    expected: state.workbookRunExpected,
-    realized: state.workbookRunRealized,
-    terminalStatus,
-  });
+  const alreadyTerminalReady =
+    terminalStatus === undefined &&
+    state.workbookTerminalReadyAttemptId === state.workbookAttemptId;
+  const manifest = alreadyTerminalReady
+    ? undefined
+    : buildPendingManifest({
+        attemptId: state.workbookAttemptId,
+        workbookVersionId: state.workbookVersionId,
+        experimentId: state.experimentId,
+        experimentName: state.experimentLabel,
+        expected: state.workbookRunExpected,
+        realized: state.workbookRunRealized,
+        terminalStatus,
+      });
   return {
     workbookAttemptId: nextAttemptId,
     workbookRunExpected: [],
     workbookRunRealized: [],
+    workbookTerminalReadyAttemptId: undefined,
     pendingWorkbookRunManifests: manifest
       ? [...state.pendingWorkbookRunManifests, manifest]
       : state.pendingWorkbookRunManifests,
   };
+}
+
+/** True only when advancing now performs the normal end-of-attempt rotation. */
+export function willNextStepRotateAttempt(state: FlowState): boolean {
+  if (
+    state.isFromOverview ||
+    !state.experimentId ||
+    state.flowNodes.length === 0 ||
+    isQuestionsOnlyFlow(state.flowNodes)
+  ) {
+    return false;
+  }
+  let nextFlowStep = state.currentFlowStep + 1;
+  while (
+    nextFlowStep < state.flowNodes.length &&
+    state.consumedNodeIds.includes(state.flowNodes[nextFlowStep].id)
+  ) {
+    nextFlowStep += 1;
+  }
+  return nextFlowStep >= state.flowNodes.length;
 }
 
 // One readable interpretation of the mode flags. Precedence mirrors the

@@ -28,6 +28,7 @@ function resetStore() {
     workbookAttemptId: undefined,
     workbookRunExpected: [],
     workbookRunRealized: [],
+    workbookTerminalReadyAttemptId: undefined,
     pendingWorkbookRunManifests: [],
     currentStep: 0,
     flowNodes: [],
@@ -98,6 +99,35 @@ describe("useMeasurementFlowStore", () => {
 
       useMeasurementFlowStore.getState().setFlowGraph([], [], [], "version-2");
       expect(useMeasurementFlowStore.getState().workbookAttemptId).not.toBe(first);
+    });
+
+    it("marks only the final analysis as terminal-ready and rotates without duplicating it", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        workbookAttemptId: "attempt-1",
+        flowNodes: [
+          makeMeasurement("p1"),
+          makeAnalysis("a1"),
+          makeMeasurement("p2"),
+          makeAnalysis("a2"),
+        ],
+        currentFlowStep: 1,
+        workbookRunExpected: [{ producer_cell_id: "p1", device_ids: ["device-1"] }],
+        workbookRunRealized: [{ producer_cell_id: "p1", device_id: "device-1", outcome: "ok" }],
+      });
+
+      useMeasurementFlowStore.getState().markWorkbookRunTerminalReady();
+      expect(useMeasurementFlowStore.getState().workbookTerminalReadyAttemptId).toBeUndefined();
+      expect(useMeasurementFlowStore.getState().pendingWorkbookRunManifests).toEqual([]);
+
+      useMeasurementFlowStore.setState({ currentFlowStep: 3 });
+      useMeasurementFlowStore.getState().markWorkbookRunTerminalReady();
+      expect(useMeasurementFlowStore.getState().workbookTerminalReadyAttemptId).toBe("attempt-1");
+      expect(useMeasurementFlowStore.getState().pendingWorkbookRunManifests).toHaveLength(1);
+
+      useMeasurementFlowStore.getState().nextStep();
+      expect(useMeasurementFlowStore.getState().workbookTerminalReadyAttemptId).toBeUndefined();
+      expect(useMeasurementFlowStore.getState().pendingWorkbookRunManifests).toHaveLength(1);
     });
 
     it("records expected devices and lets retries replace their realized outcome", () => {

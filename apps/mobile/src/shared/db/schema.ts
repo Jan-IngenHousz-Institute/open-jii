@@ -36,6 +36,9 @@ export const measurements = sqliteTable(
     // Control records share the transactional outbox but are not user-facing
     // measurements. Null means an ordinary/legacy measurement row.
     recordKind: text("record_kind"),
+    // Monotonic body revision. Delivery acknowledgements compare this value
+    // so a PUBACK for an older body cannot settle a replacement body.
+    deliveryGeneration: integer("delivery_generation").notNull().default(1),
   },
   (table) => [
     check("measurements_status_check", sql`${table.status} IN ('pending', 'failed', 'successful')`),

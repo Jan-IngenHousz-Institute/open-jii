@@ -21,6 +21,7 @@ import {
   retryIterationState,
   returnToOverviewState,
   startNewIterationState,
+  willNextStepRotateAttempt,
 } from "~/features/measurement-flow/domain/flow-transitions";
 import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
@@ -84,6 +85,7 @@ interface MeasurementFlowStore extends FlowState {
   recordExpectedDevices: (entries: { producerCellId: string; deviceId: string }[]) => void;
   recordRealizedOutcomes: (entries: WorkbookRunRealized[]) => void;
   recordWorkbookDeviceOutcomes: (entries: WorkbookRunDeviceOutcome[]) => void;
+  markWorkbookRunTerminalReady: () => void;
   acknowledgeWorkbookRunManifest: (attemptId: string) => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
@@ -116,6 +118,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
             workbookAttemptId: uuidv4(),
             workbookRunExpected: [],
             workbookRunRealized: [],
+            workbookTerminalReadyAttemptId: undefined,
             pendingWorkbookRunManifests: previous
               ? [...state.pendingWorkbookRunManifests, previous]
               : state.pendingWorkbookRunManifests,
@@ -167,6 +170,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
                   workbookAttemptId: uuidv4(),
                   workbookRunExpected: [],
                   workbookRunRealized: [],
+                  workbookTerminalReadyAttemptId: undefined,
                   pendingWorkbookRunManifests: previous
                     ? [...state.pendingWorkbookRunManifests, previous]
                     : state.pendingWorkbookRunManifests,
@@ -251,6 +255,35 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           };
         }),
 
+      markWorkbookRunTerminalReady: () =>
+        set((state) => {
+          if (
+            !willNextStepRotateAttempt(state) ||
+            !state.workbookAttemptId ||
+            state.workbookTerminalReadyAttemptId === state.workbookAttemptId
+          ) {
+            return state;
+          }
+          const manifest = buildPendingManifest({
+            attemptId: state.workbookAttemptId,
+            workbookVersionId: state.workbookVersionId,
+            experimentId: state.experimentId,
+            experimentName: state.experimentLabel,
+            expected: state.workbookRunExpected,
+            realized: state.workbookRunRealized,
+          });
+          if (!manifest) return state;
+          return {
+            workbookTerminalReadyAttemptId: state.workbookAttemptId,
+            pendingWorkbookRunManifests: state.pendingWorkbookRunManifests.some(
+              (pending) =>
+                pending.record.workbook_attempt_id === manifest.record.workbook_attempt_id,
+            )
+              ? state.pendingWorkbookRunManifests
+              : [...state.pendingWorkbookRunManifests, manifest],
+          };
+        }),
+
       acknowledgeWorkbookRunManifest: (attemptId) =>
         set((state) => ({
           pendingWorkbookRunManifests: state.pendingWorkbookRunManifests.filter(
@@ -280,6 +313,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
               legacy.workbookAttemptId ?? (legacy.experimentId ? uuidv4() : undefined),
             workbookRunExpected: legacy.workbookRunExpected ?? [],
             workbookRunRealized: legacy.workbookRunRealized ?? [],
+            workbookTerminalReadyAttemptId: undefined,
             pendingWorkbookRunManifests: legacy.pendingWorkbookRunManifests ?? [],
           };
         }
@@ -295,6 +329,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         workbookAttemptId: state.workbookAttemptId,
         workbookRunExpected: state.workbookRunExpected,
         workbookRunRealized: state.workbookRunRealized,
+        workbookTerminalReadyAttemptId: state.workbookTerminalReadyAttemptId,
         pendingWorkbookRunManifests: state.pendingWorkbookRunManifests,
         currentStep: state.currentStep,
         flowNodes: state.flowNodes,

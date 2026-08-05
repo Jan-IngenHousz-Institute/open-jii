@@ -189,6 +189,7 @@ describe("measurement-flow-storage v2 wire format", () => {
       "workbookAttemptId",
       "workbookRunExpected",
       "workbookRunRealized",
+      "workbookTerminalReadyAttemptId",
       "workbookVersionId",
     ]);
   });

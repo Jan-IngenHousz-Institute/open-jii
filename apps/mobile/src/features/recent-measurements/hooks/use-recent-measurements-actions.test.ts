@@ -282,6 +282,7 @@ describe("useRecentMeasurementsActions", () => {
       const stored = {
         id: "k1",
         status: "failed" as const,
+        deliveryGeneration: 1,
         data: {
           topic: "t/t",
           measurementResult: {},

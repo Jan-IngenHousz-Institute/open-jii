@@ -5,6 +5,7 @@ import m0002 from "./0002_dashing_lenny_balinger.sql";
 import m0003 from "./0003_drop_uploading_status.sql";
 import m0004 from "./0004_add_day_key.sql";
 import m0005 from "./0005_add_record_kind.sql";
+import m0006 from "./0006_add_delivery_generation.sql";
 import journal from "./meta/_journal.json";
 
 export default {
@@ -16,5 +17,6 @@ export default {
     m0003,
     m0004,
     m0005,
+    m0006,
   },
 };

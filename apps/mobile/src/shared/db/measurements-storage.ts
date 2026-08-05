@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { eq, and, gte, lt, inArray, count, desc, isNull, ne, or } from "drizzle-orm";
+import { eq, and, gte, lt, inArray, count, desc, isNull, ne, or, sql } from "drizzle-orm";
 import { DateTime, Duration } from "luxon";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -147,11 +147,14 @@ export async function saveMeasurementLatest(
   upload: Measurement,
   status: MeasurementStatus,
   id: string,
-): Promise<{ id: string; changed: boolean }> {
+): Promise<{ id: string; changed: boolean; generation: number }> {
   await ensureMigrated();
   const derived = deriveListColumns(upload.measurementResult, upload.metadata.timestamp);
   const existing = db
-    .select({ measurementResult: measurements.measurementResult })
+    .select({
+      measurementResult: measurements.measurementResult,
+      deliveryGeneration: measurements.deliveryGeneration,
+    })
     .from(measurements)
     .where(eq(measurements.id, id))
     .get();
@@ -164,10 +167,14 @@ export async function saveMeasurementLatest(
     } catch {
       // A corrupt earlier body is replaced by the recoverable latest snapshot.
     }
-    if (isIdentical) return { id, changed: false };
+    if (isIdentical) {
+      return { id, changed: false, generation: existing.deliveryGeneration };
+    }
+    const nextGeneration = existing.deliveryGeneration + 1;
     db.update(measurements)
       .set({
         status,
+        deliveryGeneration: nextGeneration,
         topic: upload.topic,
         measurementResult: compressForStorage(upload.measurementResult),
         experimentName: upload.metadata.experimentName,
@@ -180,7 +187,7 @@ export async function saveMeasurementLatest(
       })
       .where(eq(measurements.id, id))
       .run();
-    return { id, changed: true };
+    return { id, changed: true, generation: nextGeneration };
   }
   db.insert(measurements)
     .values({
@@ -197,35 +204,7 @@ export async function saveMeasurementLatest(
       recordKind: (upload.measurementResult as { record_kind?: string }).record_kind,
     })
     .run();
-  return { id, changed: true };
-}
-
-/** Attempts with locally saved rows but no locally durable terminal record. */
-export async function getWorkbookAttemptIdsMissingTerminal(): Promise<string[]> {
-  await ensureMigrated();
-  const rows = db
-    .select({
-      recordKind: measurements.recordKind,
-      measurementResult: measurements.measurementResult,
-    })
-    .from(measurements)
-    .all();
-  const measurementAttempts = new Set<string>();
-  const terminalAttempts = new Set<string>();
-  for (const row of rows) {
-    try {
-      const payload = decompressFromStorage<{ workbook_attempt_id?: unknown }>(
-        row.measurementResult,
-      );
-      const attemptId = payload.workbook_attempt_id;
-      if (typeof attemptId !== "string" || attemptId.length === 0) continue;
-      if (row.recordKind === WORKBOOK_RUN_COMPLETE_RECORD_KIND) terminalAttempts.add(attemptId);
-      else measurementAttempts.add(attemptId);
-    } catch {
-      // A corrupt unrelated row cannot prove either side of completeness.
-    }
-  }
-  return [...measurementAttempts].filter((attemptId) => !terminalAttempts.has(attemptId));
+  return { id, changed: true, generation: 1 };
 }
 
 // Computed at save/update time so the list query never decompresses
@@ -285,6 +264,7 @@ function safeParseQuestionsText(text: string | null, id: string): AnswerData[] {
 export interface StoredMeasurement {
   id: string;
   status: MeasurementStatus;
+  deliveryGeneration: number;
   data: Measurement;
 }
 
@@ -419,6 +399,7 @@ export async function getMeasurement(id: string): Promise<StoredMeasurement | nu
     return {
       id: row.id,
       status: row.status,
+      deliveryGeneration: row.deliveryGeneration,
       data: {
         topic: row.topic,
         measurementResult: decompressFromStorage(row.measurementResult),
@@ -454,6 +435,7 @@ export async function getMeasurements(
           return {
             id: row.id,
             status: row.status,
+            deliveryGeneration: row.deliveryGeneration,
             data: {
               topic: row.topic,
               measurementResult: decompressFromStorage(row.measurementResult),
@@ -488,6 +470,7 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
     const derived = deriveListColumns(data.measurementResult, data.metadata.timestamp);
     db.update(measurements)
       .set({
+        deliveryGeneration: sql`${measurements.deliveryGeneration} + 1`,
         topic: data.topic,
         measurementResult: compressForStorage(data.measurementResult),
         experimentName: data.metadata.experimentName,
@@ -504,35 +487,47 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
   }
 }
 
-export async function markAsFailed(key: string): Promise<void> {
+export async function markAsFailed(key: string, generation: number): Promise<boolean> {
   await ensureMigrated();
   try {
-    db.update(measurements)
+    const result = db
+      .update(measurements)
       .set({ status: "failed" })
-      .where(and(eq(measurements.id, key), eq(measurements.status, "pending")))
+      .where(
+        and(
+          eq(measurements.id, key),
+          eq(measurements.deliveryGeneration, generation),
+          eq(measurements.status, "pending"),
+        ),
+      )
       .run();
+    return result.changes > 0;
   } catch (error) {
     log.error("Failed to mark measurement as failed", { key, err: (error as Error)?.message });
+    return false;
   }
 }
 
-/** Re-arm a latest-authoritative row after an older in-flight body settles. */
-export async function markAsPending(key: string): Promise<void> {
-  await ensureMigrated();
-  db.update(measurements).set({ status: "pending" }).where(eq(measurements.id, key)).run();
-}
-
-export async function markAsSuccessful(key: string): Promise<void> {
+export async function markAsSuccessful(key: string, generation: number): Promise<boolean> {
   await ensureMigrated();
   try {
     // Accept transitions from any pre-success state. A retry of a previously
     // "failed" row that finally goes through still ends at "successful".
-    db.update(measurements)
+    const result = db
+      .update(measurements)
       .set({ status: "successful" })
-      .where(and(eq(measurements.id, key), inArray(measurements.status, ["pending", "failed"])))
+      .where(
+        and(
+          eq(measurements.id, key),
+          eq(measurements.deliveryGeneration, generation),
+          inArray(measurements.status, ["pending", "failed"]),
+        ),
+      )
       .run();
+    return result.changes > 0;
   } catch (error) {
     log.error("Failed to mark measurement as successful", { key, err: (error as Error)?.message });
+    return false;
   }
 }
 

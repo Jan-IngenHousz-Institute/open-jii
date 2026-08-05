@@ -10,6 +10,7 @@ import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
 import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
 import { deriveTerminalStatus } from "~/features/measurement-flow/domain/workbook-run-manifest";
+import { reconcileWorkbookRunManifests } from "~/features/measurement-flow/services/workbook-run-manifest-reconcile";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
@@ -66,6 +67,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     workbookRunExpected,
     workbookRunRealized,
     setCellOutput,
+    markWorkbookRunTerminalReady,
   } = useMeasurementFlowStore();
   const protocolId = flowProtocolId(flowNodes);
   const { experiments } = useExperiments();
@@ -184,6 +186,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     () => ({
       id: "current",
       status: "successful",
+      deliveryGeneration: 1,
       data: {
         topic: "",
         measurementResult: { ...(scanResult ?? {}), questions },
@@ -268,6 +271,8 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       commentText: measurementComment.trim() || undefined,
       protocolName: activeProtocolName ?? protocolId,
     });
+    markWorkbookRunTerminalReady();
+    await reconcileWorkbookRunManifests();
     if (deriveTerminalStatus(workbookRunExpected, workbookRunRealized) === "partial") {
       toast.warning(t("measurementFlow:analysis.workbookRun.partialCompletion"));
     }

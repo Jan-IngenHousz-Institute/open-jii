@@ -7,17 +7,8 @@ import {
   workbookRunManifestRowId,
 } from "./workbook-run-manifest-reconcile";
 
-const {
-  saveMeasurementLatest,
-  getWorkbookAttemptIdsMissingTerminal,
-  markAsPending,
-  enqueue,
-  isProcessing,
-  subscribeProcessing,
-} = vi.hoisted(() => ({
+const { saveMeasurementLatest, enqueue, isProcessing, subscribeProcessing } = vi.hoisted(() => ({
   saveMeasurementLatest: vi.fn(),
-  getWorkbookAttemptIdsMissingTerminal: vi.fn(),
-  markAsPending: vi.fn(),
   enqueue: vi.fn(),
   isProcessing: vi.fn(),
   subscribeProcessing: vi.fn(),
@@ -25,8 +16,6 @@ const {
 
 vi.mock("~/shared/db/measurements-storage", () => ({
   saveMeasurementLatest,
-  getWorkbookAttemptIdsMissingTerminal,
-  markAsPending,
 }));
 vi.mock("~/shared/composition/upload", () => ({
   getOutbox: () => ({ enqueue, isProcessing, subscribeProcessing }),
@@ -39,14 +28,15 @@ vi.mock("~/shared/measurements/measurement-topic", () => ({
 describe("workbook run manifest reconcile", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    saveMeasurementLatest.mockResolvedValue({ id: "row-id", changed: true });
-    getWorkbookAttemptIdsMissingTerminal.mockResolvedValue([]);
-    markAsPending.mockResolvedValue(undefined);
+    saveMeasurementLatest.mockResolvedValue({ id: "row-id", changed: true, generation: 1 });
     isProcessing.mockReturnValue(false);
-    useMeasurementFlowStore.setState({ pendingWorkbookRunManifests: [] });
+    useMeasurementFlowStore.setState({
+      workbookTerminalReadyAttemptId: undefined,
+      pendingWorkbookRunManifests: [],
+    });
   });
 
-  it("persists and enqueues a boot-recovered manifest exactly once", async () => {
+  it("persists and enqueues a boot-recovered terminal-ready snapshot exactly once", async () => {
     const manifest = buildPendingManifest({
       attemptId: "attempt-1",
       workbookVersionId: "version-1",
@@ -81,15 +71,27 @@ describe("workbook run manifest reconcile", () => {
     expect(useMeasurementFlowStore.getState().pendingWorkbookRunManifests).toEqual([]);
   });
 
-  it("derives a terminal record when boot finds saved rows for the active attempt", async () => {
-    getWorkbookAttemptIdsMissingTerminal.mockResolvedValue(["attempt-crashed"]);
+  it("does not infer terminality from an active attempt without a persisted snapshot", async () => {
     useMeasurementFlowStore.setState({
       experimentId: "experiment-1",
-      experimentLabel: "Trial",
-      workbookVersionId: "version-1",
-      workbookAttemptId: "attempt-crashed",
+      workbookAttemptId: "attempt-in-progress",
       workbookRunExpected: [{ producer_cell_id: "cell-1", device_ids: ["MSPx-0001"] }],
       workbookRunRealized: [{ producer_cell_id: "cell-1", device_id: "MSPx-0001", outcome: "ok" }],
+      pendingWorkbookRunManifests: [],
+    });
+
+    await reconcileWorkbookRunManifests();
+
+    expect(saveMeasurementLatest).not.toHaveBeenCalled();
+  });
+
+  it("recovers a snapshot only from the explicit persisted terminal-ready marker", async () => {
+    useMeasurementFlowStore.setState({
+      experimentId: "experiment-1",
+      workbookAttemptId: "attempt-ready",
+      workbookTerminalReadyAttemptId: "attempt-ready",
+      workbookRunExpected: [{ producer_cell_id: "cell-1", device_ids: ["device-1"] }],
+      workbookRunRealized: [{ producer_cell_id: "cell-1", device_id: "device-1", outcome: "ok" }],
       pendingWorkbookRunManifests: [],
     });
 
@@ -98,25 +100,13 @@ describe("workbook run manifest reconcile", () => {
     expect(saveMeasurementLatest).toHaveBeenCalledWith(
       expect.objectContaining({
         measurementResult: expect.objectContaining({
-          workbook_attempt_id: "attempt-crashed",
+          workbook_attempt_id: "attempt-ready",
           terminal_status: "complete",
         }),
       }),
       "pending",
-      workbookRunManifestRowId("attempt-crashed"),
+      workbookRunManifestRowId("attempt-ready"),
     );
-    expect(enqueue).toHaveBeenCalledWith(workbookRunManifestRowId("attempt-crashed"));
-  });
-
-  it("does not terminalize a resumable active attempt that has no saved rows", async () => {
-    useMeasurementFlowStore.setState({
-      workbookAttemptId: "attempt-paused",
-      pendingWorkbookRunManifests: [],
-    });
-
-    await reconcileWorkbookRunManifests();
-
-    expect(saveMeasurementLatest).not.toHaveBeenCalled();
   });
 
   it("requeues a divergent replacement after the older body finishes publishing", async () => {
@@ -135,14 +125,13 @@ describe("workbook run manifest reconcile", () => {
       return vi.fn();
     });
 
-    const reconciliation = reconcileWorkbookRunManifests();
+    await reconcileWorkbookRunManifests();
 
-    await vi.waitFor(() => expect(subscribeProcessing).toHaveBeenCalled());
+    expect(subscribeProcessing).toHaveBeenCalled();
     expect(enqueue).not.toHaveBeenCalled();
+    expect(useMeasurementFlowStore.getState().pendingWorkbookRunManifests).toEqual([]);
     isProcessing.mockReturnValue(false);
     onProcessingChange();
-    await reconciliation;
-    expect(markAsPending).toHaveBeenCalledWith("workbook-run-complete:attempt-race");
     expect(enqueue).toHaveBeenCalledWith("workbook-run-complete:attempt-race");
   });
 });

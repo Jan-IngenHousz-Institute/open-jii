@@ -43,6 +43,13 @@
       "when": 1785926269000,
       "tag": "0005_add_record_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1786000000000,
+      "tag": "0006_add_delivery_generation",
+      "breakpoints": true
     }
   ]
 }
