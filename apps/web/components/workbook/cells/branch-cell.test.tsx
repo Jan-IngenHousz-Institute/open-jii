@@ -73,6 +73,15 @@ describe("BranchCellComponent", () => {
     expect(screen.getByText("If")).toBeInTheDocument();
   });
 
+  it("shows branch configuration errors inline before a run", () => {
+    renderBranch();
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("no source cell selected");
+    expect(alert).toHaveTextContent("no field selected");
+    expect(alert).toHaveTextContent("no value specified");
+  });
+
   it("lets the user rename a path inline", async () => {
     const user = userEvent.setup();
     const { onUpdate } = renderBranch();
@@ -275,5 +284,39 @@ describe("BranchCellComponent", () => {
 
     await user.click(screen.getByRole("combobox", { name: "Go to target" }));
     expect(screen.getByRole("option", { name: "Missing cell (deleted-cell)" })).toBeInTheDocument();
+  });
+
+  it("keeps missing condition sources and branch targets visible for repair", async () => {
+    const user = userEvent.setup();
+    renderBranch({
+      paths: [
+        {
+          id: "path-1",
+          label: "Broken",
+          color: "#005E5E",
+          conditions: [
+            {
+              id: "cond-1",
+              sourceCellId: "deleted-source",
+              field: "answer",
+              operator: "eq",
+              value: "yes",
+            },
+          ],
+          gotoCellId: "deleted-target",
+        },
+      ],
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "Source cell" }));
+    expect(
+      screen.getByRole("option", { name: "Missing cell (deleted-source)" }),
+    ).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("combobox", { name: /jump to cell/i }));
+    expect(
+      screen.getByRole("option", { name: "Missing cell (deleted-target)" }),
+    ).toBeInTheDocument();
   });
 });

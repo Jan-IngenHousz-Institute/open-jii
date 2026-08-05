@@ -363,6 +363,13 @@ export function WorkbookEditor({
   );
 
   const groups = useMemo(() => buildCellGroups(cells), [cells]);
+  const validationContext = useMemo(
+    () =>
+      entitySnapshots
+        ? { protocols: entitySnapshots.protocols, macros: entitySnapshots.macros }
+        : undefined,
+    [entitySnapshots],
+  );
   const sortableIds = useMemo(
     () => groups.filter((g) => g.source.type !== "output").map((g) => g.id),
     [groups],
@@ -608,6 +615,7 @@ export function WorkbookEditor({
             onReorder={readOnly ? undefined : handleReorder}
             collapsed={sidebarCollapsed}
             onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
+            validationContext={validationContext}
           />
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ChevronRight, GitBranch, Plus, Route, X } from "lucide-react";
+import { AlertCircle, ArrowRight, ChevronRight, GitBranch, Plus, Route, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import type {
@@ -10,7 +10,11 @@ import type {
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { DEVICE_CONTEXT_FIELDS, DEVICE_CONTEXT_KEY } from "@repo/api/transforms/device-context";
-import { isGotoBranchCell } from "@repo/api/transforms/evaluate-branch";
+import {
+  isGotoBranchCell,
+  validateBranchCell,
+  validateDeviceBranch,
+} from "@repo/api/transforms/evaluate-branch";
 import { Button } from "@repo/ui/components/button";
 import {
   Collapsible,
@@ -94,6 +98,26 @@ export function BranchCellComponent({
     () => (allCells ?? []).filter((c) => c.id !== cell.id && c.type !== "output"),
     [allCells, cell.id],
   );
+
+  const validationErrors = useMemo(
+    () => [...validateBranchCell(cell), ...validateDeviceBranch(cell, allCells ?? [])],
+    [allCells, cell],
+  );
+
+  const validationNotice =
+    validationErrors.length > 0 ? (
+      <div
+        role="alert"
+        className="border-destructive/30 bg-destructive/5 text-destructive flex gap-2 rounded-md border px-3 py-2 text-xs"
+      >
+        <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+        <ul className="space-y-0.5">
+          {validationErrors.map((error) => (
+            <li key={error}>{error}</li>
+          ))}
+        </ul>
+      </div>
+    ) : null;
 
   const getFieldsForSource = useCallback(
     (sourceCellId: string): string[] => {
@@ -277,52 +301,55 @@ export function BranchCellComponent({
         readOnly={readOnly}
         onRun={() => onRun?.()}
       >
-        <div className="flex items-center gap-2">
-          <ArrowRight className="text-muted-foreground size-4 shrink-0" />
-          <Select
-            value={path.gotoCellId ?? undefined}
-            onValueChange={(gotoCellId) => handleUpdatePath(path.id, { gotoCellId })}
-            disabled={readOnly}
-          >
-            <SelectTrigger aria-label="Go to target" className="h-8 flex-1 text-xs">
-              <SelectValue placeholder="Choose target cell..." />
-            </SelectTrigger>
-            <SelectContent>
-              {path.gotoCellId && !targetExists && (
-                <SelectItem value={path.gotoCellId} className="text-xs">
-                  Missing cell ({path.gotoCellId})
-                </SelectItem>
-              )}
-              {jumpTargets.map((target) => (
-                <SelectItem key={target.id} value={target.id} className="text-xs">
-                  {getCellLabel(target)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {!readOnly && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 shrink-0 text-xs"
-              onClick={() =>
-                handleUpdatePath(path.id, {
-                  conditions: [
-                    {
-                      id: crypto.randomUUID(),
-                      sourceCellId: "",
-                      field: "",
-                      operator: "eq",
-                      value: "",
-                    },
-                  ],
-                })
-              }
+        <div className="space-y-2">
+          {validationNotice}
+          <div className="flex items-center gap-2">
+            <ArrowRight className="text-muted-foreground size-4 shrink-0" />
+            <Select
+              value={path.gotoCellId ?? undefined}
+              onValueChange={(gotoCellId) => handleUpdatePath(path.id, { gotoCellId })}
+              disabled={readOnly}
             >
-              Convert to branch
-            </Button>
-          )}
+              <SelectTrigger aria-label="Go to target" className="h-8 flex-1 text-xs">
+                <SelectValue placeholder="Choose target cell..." />
+              </SelectTrigger>
+              <SelectContent>
+                {path.gotoCellId && !targetExists && (
+                  <SelectItem value={path.gotoCellId} className="text-xs">
+                    Missing cell ({path.gotoCellId})
+                  </SelectItem>
+                )}
+                {jumpTargets.map((target) => (
+                  <SelectItem key={target.id} value={target.id} className="text-xs">
+                    {getCellLabel(target)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!readOnly && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 shrink-0 text-xs"
+                onClick={() =>
+                  handleUpdatePath(path.id, {
+                    conditions: [
+                      {
+                        id: crypto.randomUUID(),
+                        sourceCellId: "",
+                        field: "",
+                        operator: "eq",
+                        value: "",
+                      },
+                    ],
+                  })
+                }
+              >
+                Convert to branch
+              </Button>
+            )}
+          </div>
         </div>
       </CellWrapper>
     );
@@ -332,6 +359,9 @@ export function BranchCellComponent({
     const fields = getFieldsForSource(cond.sourceCellId);
     const sourceCell = (allCells ?? []).find((c) => c.id === cond.sourceCellId);
     const isQuestionSource = sourceCell?.type === "question";
+    const sourceExists =
+      cond.sourceCellId === DEVICE_CONTEXT_KEY ||
+      sourceCells.some((c) => c.id === cond.sourceCellId);
 
     return (
       <div key={cond.id} className="group/cond flex items-center gap-1.5">
@@ -348,6 +378,11 @@ export function BranchCellComponent({
             <SelectValue placeholder="source..." />
           </SelectTrigger>
           <SelectContent>
+            {cond.sourceCellId && !sourceExists && (
+              <SelectItem value={cond.sourceCellId} className="text-xs">
+                Missing cell ({cond.sourceCellId})
+              </SelectItem>
+            )}
             <SelectItem value={DEVICE_CONTEXT_KEY} className="text-xs font-medium">
               Connected device
             </SelectItem>
@@ -435,6 +470,7 @@ export function BranchCellComponent({
   const renderPath = (path: BranchPath) => {
     const isExpanded = expandedPaths[path.id] ?? true;
     const isEvaluated = cell.evaluatedPathId === path.id;
+    const targetExists = jumpTargets.some((target) => target.id === path.gotoCellId);
 
     return (
       <div key={path.id} className="relative">
@@ -510,10 +546,15 @@ export function BranchCellComponent({
                     onValueChange={(v) => handleUpdatePath(path.id, { gotoCellId: v })}
                     disabled={readOnly}
                   >
-                    <SelectTrigger className="h-7 text-xs">
+                    <SelectTrigger aria-label="Jump to cell" className="h-7 text-xs">
                       <SelectValue placeholder="Jump to cell..." />
                     </SelectTrigger>
                     <SelectContent>
+                      {path.gotoCellId && !targetExists && (
+                        <SelectItem value={path.gotoCellId} className="text-xs">
+                          Missing cell ({path.gotoCellId})
+                        </SelectItem>
+                      )}
                       {jumpTargets.map((t) => (
                         <SelectItem key={t.id} value={t.id} className="text-xs">
                           {getCellLabel(t)}
@@ -549,6 +590,7 @@ export function BranchCellComponent({
       onRun={() => onRun?.()}
     >
       <div className="space-y-2">
+        {validationNotice}
         <div className="border-border/60 bg-muted/20 flex items-center gap-2 rounded-md border px-2.5 py-2">
           <span className="text-muted-foreground shrink-0 text-xs font-semibold">Otherwise</span>
           <Select
