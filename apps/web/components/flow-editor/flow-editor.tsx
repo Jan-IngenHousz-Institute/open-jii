@@ -35,6 +35,7 @@ import type { NodeType } from "../react-flow/node-config";
 import { ALL_NODE_TYPES, getStyledEdges, nodeTypeColorMap } from "../react-flow/node-config";
 import { FlowContextProvider, BaseNodeWrapper, ensureOneStartNode } from "../react-flow/node-utils";
 import { ExperimentSidePanel } from "../side-panel-flow/side-panel-flow";
+import { resolveBranchPathColor } from "../workbook/branch-path-colors";
 import { autoLayout } from "./auto-layout";
 import { BackEdge } from "./back-edge";
 import { FlowMapper } from "./flow-mapper";
@@ -265,8 +266,11 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
       const paths =
         (node.data as { stepSpecification?: { paths?: { id: string; color: string }[] } })
           .stepSpecification?.paths ?? [];
-      for (const path of paths) {
-        branchPathColors.set(`${node.id}:${path.id}`, path.color);
+      for (const [pathIndex, path] of paths.entries()) {
+        branchPathColors.set(
+          `${node.id}:${path.id}`,
+          resolveBranchPathColor(path.color, pathIndex),
+        );
       }
     }
 

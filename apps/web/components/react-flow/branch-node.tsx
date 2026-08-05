@@ -5,6 +5,7 @@ import React from "react";
 
 import { cn } from "@repo/ui/lib/utils";
 
+import { resolveBranchPathColor } from "../workbook/branch-path-colors";
 import { nodeTypeColorMap } from "./node-config";
 
 interface BranchPathSummary {
@@ -149,7 +150,7 @@ export function BranchNode(props: BranchNodeProps) {
                   >
                     <div
                       className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: path.color || accent }}
+                      style={{ backgroundColor: resolveBranchPathColor(path.color, idx) }}
                     />
                     <span
                       className="truncate text-[12.5px] font-medium text-slate-700"
@@ -175,7 +176,7 @@ export function BranchNode(props: BranchNodeProps) {
                       className="!h-2.5 !w-2.5 !rounded-full !border-2 transition-colors duration-150"
                       style={{
                         backgroundColor: "#FFFFFF",
-                        borderColor: path.color || accent,
+                        borderColor: resolveBranchPathColor(path.color, idx),
                         top: "50%",
                       }}
                     />
