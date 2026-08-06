@@ -364,6 +364,20 @@ jobs:
               || echo "::warning::Could not post release-preview comment"
           fi
 
+  tofu-scan:
+    name: OpenTofu (Security Scan)
+    needs: detect
+    runs-on: ubuntu-latest
+    if: needs.detect.outputs.has_infrastructure_changes == 'true'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Trivy IaC Misconfiguration Scan
+        uses: ./.github/actions/tofu/tofu-scan
+
   tofu:
     name: OpenTofu (Plan)
     needs: detect

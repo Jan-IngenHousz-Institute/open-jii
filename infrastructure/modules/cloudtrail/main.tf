@@ -4,15 +4,22 @@ locals {
   trail_name = "${var.project_name}-${var.environment}-cloudtrail"
 }
 
+# Logs are encrypted with SSE-S3 on the destination bucket; a customer-managed
+# KMS key is not required for this trail.
+#trivy:ignore:AVD-AWS-0015
 resource "aws_cloudtrail" "cloud_trail" {
   name                          = local.trail_name
   s3_bucket_name                = aws_s3_bucket.cloud_trail_bucket.id
   include_global_service_events = true
   is_multi_region_trail         = true
+  enable_log_file_validation    = true
 
   depends_on = [aws_s3_bucket_policy.cloud_trail_bucket_policy]
 }
 
+# SSE-S3 (AES256) is the accepted encryption standard for this bucket; a
+# customer-managed KMS key is not required.
+#trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket" "cloud_trail_bucket" {
   bucket = "${var.project_name}-${var.environment}-trail-bucket"
 }

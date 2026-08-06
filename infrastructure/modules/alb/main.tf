@@ -1,6 +1,9 @@
 # Application Load Balancer - Layer 7 load balancer with advanced routing
 # Internet-facing ALB that only accepts traffic from CloudFront via custom header verification
 
+# This ALB is intentionally internet-facing — it is the public entrypoint,
+# fronted by CloudFront + WAF and header-verified. Exposure is by design.
+#trivy:ignore:AVD-AWS-0053
 resource "aws_lb" "app_alb" {
   name               = "${var.service_name}-alb"
   internal           = false
@@ -10,6 +13,10 @@ resource "aws_lb" "app_alb" {
   # Idle timeout balances connection efficiency vs resource usage
   # 60s default is good for APIs; increase for long-running connections
   idle_timeout = var.idle_timeout
+
+  # Strip malformed/non-conforming HTTP headers before they reach the target,
+  # reducing request-smuggling surface.
+  drop_invalid_header_fields = true
 
   # Deletion protection prevents accidental ALB deletion in production
   # Disabled in dev/staging for easier teardown
