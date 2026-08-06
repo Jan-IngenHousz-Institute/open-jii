@@ -5,10 +5,10 @@
 
 # COMMAND ----------
 import dlt
-from pyspark.sql import functions as F
 
 from enrich.annotations_metadata import add_annotation_column
 from enrich.custom_metadata import add_custom_metadata_column
+from enrich.timezone import add_local_time_columns
 from openjii.centrum import (
     ANNOTATIONS_SOURCE_TABLE,
     ENRICHED_RAW_DATA_VIEW,
@@ -77,21 +77,9 @@ def enriched_experiment_raw_data():
             raw_data.data,
             raw_data.processed_timestamp
         )
-        .withColumn(
-            "measurement_time_local",
-            F.when(
-                F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "yyyy-MM-dd HH:mm:ss")
-            )
-        )
-        .withColumn(
-            "local_time",
-            F.when(
-                F.col("timezone").isNotNull(),
-                F.date_format(F.from_utc_timestamp(F.col("measurement_time_utc"), F.col("timezone")), "HH:mm")
-            )
-        )
     )
+
+    enriched = add_local_time_columns(enriched)
 
     enriched = add_annotation_column(enriched, annotations_source)
 
