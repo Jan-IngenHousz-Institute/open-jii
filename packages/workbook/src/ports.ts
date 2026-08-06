@@ -69,6 +69,8 @@ export interface MacroRunInput {
   deviceName?: string;
   /** Frozen device-connection subset owned by this track. */
   deviceIds: string[];
+  /** Exact upstream producer whose raw rows this macro consumes. */
+  producerCellId?: string;
   /**
    * Verbatim (raw, NOT normalized) output of the nearest upstream producer
    * cell (protocol or command) in the current cycle, or null. This is the
@@ -83,7 +85,10 @@ export interface MacroRunInput {
 
 export interface MacroRunnerPort {
   /** Hosts: web = backend executeMacro mutation; mobile = on-device Pyodide sandbox. */
-  run(input: MacroRunInput, opts: { signal: AbortSignal }): Promise<Record<string, unknown>>;
+  run(
+    input: MacroRunInput,
+    opts: { signal: AbortSignal; effectId?: string },
+  ): Promise<Record<string, unknown>>;
 }
 
 export type ResolvedCommandValue = string | Record<string, unknown> | unknown[];
@@ -114,7 +119,11 @@ export interface CommandExecutorPort {
    */
   execute(
     input: CommandRunInput,
-    opts: { signal: AbortSignal; onProgress: (p: CommandProgress) => void },
+    opts: {
+      signal: AbortSignal;
+      effectId?: string;
+      onProgress: (p: CommandProgress) => void;
+    },
   ): Promise<DeviceOutcome[]>;
 }
 

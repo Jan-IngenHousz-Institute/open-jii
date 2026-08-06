@@ -40,6 +40,8 @@ export interface WorkbookRunnerOptions {
   maxBranchVisits?: number;
   allowDeviceWrites?: boolean;
   allowMacroArtifactDispatch?: boolean;
+  /** Mobile compatibility: inline command results wait for explicit Continue. */
+  pauseAfterInlineCommand?: boolean;
   deviceFamily?: SensorFamily;
   devices?: DeviceRef[];
   initialAnswers?: Record<string, string>;
@@ -110,6 +112,7 @@ export class WorkbookRunner {
         maxBranchVisits: options.maxBranchVisits,
         allowDeviceWrites: options.allowDeviceWrites,
         allowMacroArtifactDispatch: options.allowMacroArtifactDispatch,
+        pauseAfterInlineCommand: options.pauseAfterInlineCommand,
         deviceFamily: options.deviceFamily,
         devices: options.devices,
         initialAnswers: options.initialAnswers,
@@ -362,6 +365,7 @@ export class WorkbookRunner {
         try {
           const output = await this.ports.macroRunner.run(singleLeg.input, {
             signal: controller.signal,
+            effectId,
           });
           return { output };
         } catch (error) {
@@ -385,6 +389,7 @@ export class WorkbookRunner {
         try {
           const output = await this.ports.macroRunner.run(leg.input, {
             signal: controller.signal,
+            effectId,
           });
           outcomes.push({ ...identity, data: output });
         } catch (error) {
@@ -417,6 +422,7 @@ export class WorkbookRunner {
     void this.ports.commandExecutor
       .execute(effect.input, {
         signal: controller.signal,
+        effectId,
         onProgress: (progress) =>
           this.dispatch({ type: "COMMAND_PROGRESS", effectId, trackId, cellId, progress }),
       })

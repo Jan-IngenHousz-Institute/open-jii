@@ -54,6 +54,7 @@ const zOptions = z.object({
   maxBranchVisits: z.number(),
   allowDeviceWrites: z.boolean(),
   allowMacroArtifactDispatch: z.boolean().default(false),
+  pauseAfterInlineCommand: z.boolean().default(false),
   deviceFamily: z.enum(SENSOR_FAMILIES).optional(),
 });
 

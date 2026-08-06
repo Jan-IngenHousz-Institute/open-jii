@@ -128,6 +128,28 @@ function basePorts(overrides: Partial<WorkbookRunnerPorts> = {}): WorkbookRunner
   };
 }
 
+it("can preserve the mobile inline-command Continue interaction as an explicit host policy", async () => {
+  const runner = new WorkbookRunner({
+    cells: battery,
+    ports: basePorts(),
+    mode: "flow",
+    pauseAfterInlineCommand: true,
+  });
+  runner.start();
+  await waitFor(
+    runner,
+    (state) => state.tracks.main.pendingInteraction?.cellId === "c1",
+    "inline command continue",
+  );
+  expect(runner.getState().tracks.main).toMatchObject({
+    status: "awaitingHuman",
+    cursor: { cellId: "c1" },
+    pendingInteraction: { kind: "instruction", cellId: "c1" },
+  });
+  runner.send({ type: "NEXT" });
+  expect(runner.getState().tracks.main.cursor.cellId).toBe("m1");
+});
+
 /** Battery workbook wired to a manually-settled executor. */
 function manualRunner() {
   const manual = createManualExecutor();

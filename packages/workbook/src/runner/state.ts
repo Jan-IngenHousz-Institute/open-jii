@@ -64,6 +64,8 @@ export interface RunnerOptionsState {
   allowDeviceWrites: boolean;
   /** Explicit host policy; web keeps macro-as-command construction disabled. */
   allowMacroArtifactDispatch: boolean;
+  /** Host policy for the legacy mobile inline-command Continue screen. */
+  pauseAfterInlineCommand: boolean;
   /** Fallback family when the device roster is empty (single-device hosts). */
   deviceFamily?: SensorFamily;
 }
@@ -226,6 +228,7 @@ export interface CreateStateOptions {
   maxBranchVisits?: number;
   allowDeviceWrites?: boolean;
   allowMacroArtifactDispatch?: boolean;
+  pauseAfterInlineCommand?: boolean;
   deviceFamily?: SensorFamily;
   devices?: DeviceRef[];
   initialAnswers?: Record<string, string>;
@@ -274,6 +277,7 @@ export function createInitialState(opts: CreateStateOptions): RunnerState {
       maxBranchVisits: opts.maxBranchVisits ?? MAX_BRANCH_VISITS,
       allowDeviceWrites: opts.allowDeviceWrites ?? false,
       allowMacroArtifactDispatch: opts.allowMacroArtifactDispatch ?? false,
+      pauseAfterInlineCommand: opts.pauseAfterInlineCommand ?? false,
       deviceFamily: opts.deviceFamily,
     },
     cells: opts.cells,

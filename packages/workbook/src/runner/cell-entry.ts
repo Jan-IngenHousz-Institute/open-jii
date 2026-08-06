@@ -345,6 +345,7 @@ export function startProducer(
       macroId: cell.payload.macroId,
       language: cell.payload.language,
       deviceIds: track.deviceIds,
+      producerCellId: upstreamId ?? undefined,
     };
 
     // Multi-device upstream: the macro runs once per device's measurement,

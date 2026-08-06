@@ -333,6 +333,7 @@ function handleReset(state: RunnerState): TransitionResult {
     maxBranchVisits: state.options.maxBranchVisits,
     allowDeviceWrites: state.options.allowDeviceWrites,
     allowMacroArtifactDispatch: state.options.allowMacroArtifactDispatch,
+    pauseAfterInlineCommand: state.options.pauseAfterInlineCommand,
     deviceFamily: state.options.deviceFamily,
     devices: state.devices,
   });
@@ -833,6 +834,17 @@ function handleInternal(state: RunnerState, event: WorkbookInternalEvent): Trans
       next = markDownstreamStale(next, owner, lastOrder(next.cellRuns[event.cellId]));
       if (isDispatchTarget(next, owned.trackId, event.cellId)) {
         return advanceDispatch(next, owned.trackId, event.cellId);
+      }
+      const completedCell = cellById(next.cells, owner, getTrack(next, owned.trackId).cursor.body);
+      if (next.options.pauseAfterInlineCommand && completedCell?.type === "command") {
+        return {
+          state: setTrack(next, {
+            ...getTrack(next, owned.trackId),
+            status: "awaitingHuman",
+            pendingInteraction: { kind: "instruction", cellId: owner },
+          }),
+          effects: [],
+        };
       }
       return continueAfterCompletion(next, owned.trackId, owner);
     }
