@@ -42,7 +42,6 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMultiLanguageEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
-  const isDevicesEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES);
   const { state } = useSidebar();
   const signOut = useSignOut();
 
@@ -64,7 +63,6 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
 
   // Build navigation items from config for mobile
   const allNavItems = Object.entries(mainNavigation)
-    .filter(([key]) => key !== "devices" || isDevicesEnabled)
     .map(([, nav]) => nav)
     .flatMap((nav) => {
       if ("children" in nav && nav.children.length > 0 && nav.navigable === false) {

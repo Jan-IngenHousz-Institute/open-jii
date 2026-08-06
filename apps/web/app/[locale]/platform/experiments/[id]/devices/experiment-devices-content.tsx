@@ -3,11 +3,8 @@
 import { ExperimentDevicesPanel } from "@/components/experiment-settings/devices/experiment-devices-panel";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { notFound } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { use } from "react";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { useTranslation } from "@repo/i18n";
 
 interface ExperimentDevicesContentProps {
@@ -17,16 +14,7 @@ interface ExperimentDevicesContentProps {
 export default function ExperimentDevicesContent({ params }: ExperimentDevicesContentProps) {
   const { id } = use(params);
   const { t } = useTranslation("iot");
-  // undefined while flags load; render nothing to avoid flashing a gated page
-  const devicesEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES);
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
-
-  if (devicesEnabled === false) {
-    notFound();
-  }
-  if (!devicesEnabled) {
-    return null;
-  }
 
   return (
     <EntityLayoutShell
