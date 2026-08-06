@@ -108,7 +108,7 @@ describe("ReadyState", () => {
     expect(screen.getByText("Not set")).toBeTruthy();
   });
 
-  it("passes the flow index (not the filtered position) to onCardPress", () => {
+  it("passes stable question ids to onCardPress", () => {
     const onCardPress = vi.fn();
     useMeasurementFlowStore.setState({
       flowNodes: [
@@ -121,7 +121,36 @@ describe("ReadyState", () => {
     render(<ReadyState onCardPress={onCardPress} />);
     fireEvent.press(screen.getByText("q1 text"));
     fireEvent.press(screen.getByText("q2 text"));
-    expect(onCardPress).toHaveBeenNthCalledWith(1, 1);
-    expect(onCardPress).toHaveBeenNthCalledWith(2, 3);
+    expect(onCardPress).toHaveBeenNthCalledWith(1, "q1");
+    expect(onCardPress).toHaveBeenNthCalledWith(2, "q2");
+  });
+
+  it("includes questions nested inside parallel lanes", () => {
+    const onCardPress = vi.fn();
+    useMeasurementFlowStore.setState({
+      flowNodes: [
+        {
+          id: "parallel-1",
+          name: "Parallel",
+          type: "parallel",
+          isStart: true,
+          content: {
+            laneNodes: {
+              "lane-a": [makeQuestion("lane-question")],
+            },
+          },
+        },
+      ],
+    });
+    useFlowAnswersStore.setState({
+      answersHistory: [{ "lane-question": "Nested answer" }],
+      autoincrementSettings: {},
+      rememberAnswerSettings: {},
+    });
+
+    render(<ReadyState onCardPress={onCardPress} />);
+    expect(screen.getByText("Nested answer")).toBeTruthy();
+    fireEvent.press(screen.getByText("lane-question text"));
+    expect(onCardPress).toHaveBeenCalledWith("lane-question");
   });
 });

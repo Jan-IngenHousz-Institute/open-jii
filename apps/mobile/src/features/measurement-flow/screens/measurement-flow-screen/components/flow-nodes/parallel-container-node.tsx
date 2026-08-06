@@ -53,6 +53,7 @@ function statusOf(runnerState: Readonly<RunnerState>, lane: ParallelLaneAttempt)
 
 export function ParallelContainerNode({ node }: { node: FlowNode }) {
   const runnerState = useMeasurementFlowStore((state) => state.runnerState);
+  const analysisQueue = useMeasurementFlowStore((state) => state.analysisQueue);
   const abandonLane = useMeasurementFlowStore((state) => state.abandonRunnerLane);
   const restartContainer = useMeasurementFlowStore((state) => state.restartRunnerContainer);
   const continueInteraction = useMeasurementFlowStore(
@@ -79,6 +80,9 @@ export function ParallelContainerNode({ node }: { node: FlowNode }) {
     laneTrackIds.has(trackId),
   );
   const interactionIds = interactions.map(({ trackId }) => trackId);
+  const analysisIds = analysisQueue.flatMap((interaction) =>
+    laneTrackIds.has(interaction.trackId) ? [interaction.trackId] : [],
+  );
   const liveEffectIds = Object.values(runnerState.inFlight).flatMap((effect) =>
     effect && laneTrackIds.has(effect.trackId) ? [effect.trackId] : [],
   );
@@ -89,9 +93,11 @@ export function ParallelContainerNode({ node }: { node: FlowNode }) {
   const candidates =
     interactionIds.length > 0
       ? interactionIds
-      : liveEffectIds.length > 0
-        ? liveEffectIds
-        : activeIds;
+      : analysisIds.length > 0
+        ? analysisIds
+        : liveEffectIds.length > 0
+          ? liveEffectIds
+          : activeIds;
   if (!presentedTrackRef.current || !candidates.includes(presentedTrackRef.current)) {
     presentedTrackRef.current = candidates[0] ?? null;
   }
@@ -106,6 +112,30 @@ export function ParallelContainerNode({ node }: { node: FlowNode }) {
           (candidate) => candidate.id === presentedTrack.cursor.cellId,
         )
       : undefined;
+  const presentedAnalysis = analysisQueue.find(
+    (interaction) =>
+      interaction.trackId === presentedTrackId && interaction.cellId === presentedNode?.id,
+  );
+  const presentedEffect = Object.values(runnerState.inFlight).find(
+    (effect) => effect?.trackId === presentedTrackId && effect.cellId === presentedNode?.id,
+  );
+  const presentedInteraction =
+    presentedAnalysis ??
+    (presentedEffect
+      ? {
+          effectId: presentedEffect.effectId,
+          trackId: presentedEffect.trackId,
+          cellId: presentedEffect.cellId,
+          deviceIds: presentedTrack?.deviceIds ?? [],
+        }
+      : presentedTrackId && presentedNode
+        ? {
+            effectId: `track:${presentedTrackId}:${presentedNode.id}`,
+            trackId: presentedTrackId,
+            cellId: presentedNode.id,
+            deviceIds: presentedTrack?.deviceIds ?? [],
+          }
+        : undefined);
   const deviceLabels = new Map(runnerState.devices.map((device) => [device.id, device.label]));
 
   return (
@@ -193,7 +223,7 @@ export function ParallelContainerNode({ node }: { node: FlowNode }) {
             </View>
           </View>
         ) : presentedNode ? (
-          <ActiveState currentNode={presentedNode} />
+          <ActiveState currentNode={presentedNode} interaction={presentedInteraction} />
         ) : (
           <View className="items-center p-6">
             <Text className="text-muted-foreground text-center">

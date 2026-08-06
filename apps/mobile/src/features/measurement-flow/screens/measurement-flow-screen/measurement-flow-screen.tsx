@@ -12,10 +12,12 @@ import { useExperiment } from "~/features/experiments/hooks/use-experiment";
 import { ExitFlowSheet } from "~/features/measurement-flow/components/exit-flow-sheet";
 import { FlowHero } from "~/features/measurement-flow/components/flow-hero";
 import { useFlowBackHandler } from "~/features/measurement-flow/hooks/use-flow-back-handler";
+import { flushMeasurementFlowForAppState } from "~/features/measurement-flow/services/flow-persistence-boundaries";
 import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-exit-flow-sheet-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
+import { useAppState } from "~/shared/ui/hooks/use-app-state";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 import { MeasurementFlowContainer } from "./components/measurement-flow-container";
@@ -51,6 +53,7 @@ export function MeasurementFlowScreen(_props: MeasurementFlowScreenProps = {}) {
   const statusBarStyle = hasAlerts && isLightMode ? "dark" : hasActiveFlow ? "light" : "auto";
 
   useFlowBackHandler(hasActiveFlow);
+  useAppState(flushMeasurementFlowForAppState);
 
   // Picker state has no tab bar to bail out to (the flow now covers the tabs
   // as a pushed screen with swipe-back disabled), so it gets its own dismiss.

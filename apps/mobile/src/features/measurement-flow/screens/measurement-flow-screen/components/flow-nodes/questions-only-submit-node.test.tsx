@@ -143,7 +143,7 @@ describe("QuestionsOnlySubmitNode", () => {
     });
     render(<QuestionsOnlySubmitNode />);
     fireEvent.press(screen.getByText("q2 text"));
-    expect(navigateToQuestionFromOverview).toHaveBeenCalledWith(1);
+    expect(navigateToQuestionFromOverview).toHaveBeenCalledWith("q2");
   });
 
   it("'Submit & Continue' uploads and dismisses the review screen", async () => {

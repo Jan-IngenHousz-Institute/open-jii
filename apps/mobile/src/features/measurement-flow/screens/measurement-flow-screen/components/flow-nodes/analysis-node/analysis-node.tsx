@@ -11,6 +11,7 @@ import { resolveExperimentName } from "~/features/measurement-flow/domain/experi
 import { flowProtocolId } from "~/features/measurement-flow/domain/flow-state";
 import { deriveTerminalStatus } from "~/features/measurement-flow/domain/workbook-run-manifest";
 import { reconcileWorkbookRunManifests } from "~/features/measurement-flow/services/workbook-run-manifest-reconcile";
+import type { AddressedGateToken } from "~/features/measurement-flow/services/workbook-runner-ports";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
@@ -44,18 +45,21 @@ interface AnalysisNodeProps {
   content: AnalysisContent;
   /** Flow node id == workbook cell id of this macro cell. */
   nodeId: string;
+  interaction?: AddressedGateToken;
 }
 
-export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
+export function AnalysisNode({ content, nodeId, interaction }: AnalysisNodeProps) {
   const { classes } = useTheme();
   const { t } = useTranslation("measurementFlow");
   // Resolved once at flow-load (hydrateFlowNodes): cell metadata + derived filename.
   const macro = content.macro;
   const {
     scanResult,
-    scanResults,
-    previousStep,
+    scanResults: displayScanResults,
+    uploadScanResults,
     nextStep,
+    continueRunnerAnalysis,
+    discardRunnerAnalysis,
     experimentId,
     experimentLabel,
     iterationCount,
@@ -90,10 +94,28 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
 
   // Multi-scan results; falls back to the legacy single scanResult for
   // pre-migration persisted flow snapshots.
-  const results = useMemo(
-    () => scanResults ?? (scanResult ? [{ device: undefined, result: scanResult }] : []),
-    [scanResults, scanResult],
-  );
+  const results = useMemo(() => {
+    const current = uploadScanResults?.filter(
+      (entry) => !workbookAttemptId || entry.workbookAttemptId === workbookAttemptId,
+    );
+    if (interaction) {
+      return (current ?? []).filter(
+        (entry) =>
+          (!interaction.producerCellId || entry.producerCellId === interaction.producerCellId) &&
+          interaction.deviceIds.includes(entry.device?.id ?? ""),
+      );
+    }
+    if (current && current.length > 0) return current;
+    return (
+      displayScanResults?.filter(
+        (entry) =>
+          entry.workbookAttemptId === undefined || entry.workbookAttemptId === workbookAttemptId,
+      ) ?? (scanResult ? [{ device: undefined, result: scanResult }] : [])
+    );
+  }, [displayScanResults, interaction, scanResult, uploadScanResults, workbookAttemptId]);
+  const activeScanResult = results[0]?.result ?? (interaction ? undefined : scanResult);
+  const activeProducerCellId =
+    interaction?.producerCellId ?? results[0]?.producerCellId ?? producerCellId;
   const isMultiDevice = results.length > 1;
 
   const { getCycleAnswers, getAnswer } = useFlowAnswersStore();
@@ -114,13 +136,21 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     const hydrated = hydrateCells(cells, {
       iterationCount,
       getAnswer,
-      scanResult,
-      scanResults,
-      producerCellId,
+      scanResult: activeScanResult,
+      scanResults: results,
+      producerCellId: activeProducerCellId,
       cellOutputs,
     });
     return hydrated;
-  }, [cells, iterationCount, getAnswer, scanResult, scanResults, producerCellId, cellOutputs]);
+  }, [
+    cells,
+    iterationCount,
+    getAnswer,
+    activeScanResult,
+    results,
+    activeProducerCellId,
+    cellOutputs,
+  ]);
 
   // One device-scoped ctx per rendered result, including that device's
   // upstream measurement and `$device` identity.
@@ -180,7 +210,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
   // Capture the display timestamp once so it stays stable across re-renders.
   // The upload handler captures its own fresh timestamp independently.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- scanResult is an intentional trigger to re-capture the timestamp on new scans
-  const displayTimestamp = useMemo(() => getSyncedLocalISO(), [scanResult]);
+  const displayTimestamp = useMemo(() => getSyncedLocalISO(), [activeScanResult]);
 
   // Synthetic StoredMeasurement for the live scan preview, not saved yet.
   // status "successful" hides the comment button in the modal.
@@ -191,7 +221,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       deliveryGeneration: 1,
       data: {
         topic: "",
-        measurementResult: { ...(scanResult ?? {}), questions },
+        measurementResult: { ...(activeScanResult ?? {}), questions },
         metadata: {
           experimentName,
           protocolName: activeProtocolName ?? "",
@@ -199,7 +229,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         },
       },
     }),
-    [displayTimestamp, experimentName, questions, activeProtocolName, scanResult],
+    [displayTimestamp, experimentName, questions, activeProtocolName, activeScanResult],
   );
 
   const handleUploadMeasurement = async () => {
@@ -284,11 +314,12 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     if (deriveTerminalStatus(workbookRunExpected, workbookRunRealized) === "partial") {
       toast.warning(t("measurementFlow:analysis.workbookRun.partialCompletion"));
     }
-    nextStep();
+    if (interaction?.effectId) continueRunnerAnalysis(interaction.effectId);
+    else nextStep();
   };
 
   const handleRetry = () => {
-    previousStep();
+    discardRunnerAnalysis(interaction?.trackId);
   };
 
   const { scrollViewRef, hasScrolled, handleScroll, scrollToTop } = useScrollToTop();
@@ -344,7 +375,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
             macro={macro}
             isLoading={false}
             macroId={content.macroId}
-            scanResult={scanResult}
+            scanResult={activeScanResult}
             ctx={macroContexts[0]?.ctx}
             inputError={macroContexts[0]?.inputError}
             onProcessed={handleProcessed}

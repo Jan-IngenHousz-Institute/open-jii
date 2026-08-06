@@ -66,8 +66,8 @@ export function QuestionsOnlySubmitNode() {
 
   const canUpload = Boolean(experimentId && session?.data?.user?.id);
 
-  const handleCardPress = (flowStepIndex: number) => {
-    navigateToQuestionFromOverview(flowStepIndex);
+  const handleCardPress = (questionId: string) => {
+    navigateToQuestionFromOverview(questionId);
   };
 
   const handleUpload = async (): Promise<boolean> => {

@@ -9,6 +9,8 @@ import type { RunnerState, Track } from "@repo/workbook";
 
 import { ParallelContainerNode } from "./parallel-container-node";
 
+const activeStateProps = vi.hoisted(() => vi.fn());
+
 vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
     t: (key: string, values?: { attempt?: string }) => {
@@ -30,7 +32,12 @@ vi.mock("./instruction-node", () => ({
   InstructionNode: ({ content }: { content: { text: string } }) => content.text,
 }));
 vi.mock("./question-node/question-node", () => ({ QuestionNode: () => null }));
-vi.mock("../flow-states/active-state", () => ({ ActiveState: () => null }));
+vi.mock("../flow-states/active-state", () => ({
+  ActiveState: (props: unknown) => {
+    activeStateProps(props);
+    return null;
+  },
+}));
 
 const instructionNode = (id: string, text: string): FlowNode => ({
   id,
@@ -132,5 +139,43 @@ describe("ParallelContainerNode", () => {
     expect(continueInteraction).toHaveBeenCalledWith("track-a", "instruction-a");
     fireEvent.press(screen.getAllByText("Abandon lane")[1]);
     expect(abandonLane).toHaveBeenCalledWith("track-b");
+  });
+
+  it("keeps a settled embedded command addressed to its lane track", () => {
+    const state = runnerState();
+    const track = state.tracks["track-a"];
+    if (!track) throw new Error("expected lane track");
+    state.tracks["track-a"] = {
+      ...track,
+      cursor: { ...track.cursor, cellId: "command-a" },
+      pendingInteraction: { kind: "instruction", cellId: "command-a" },
+    };
+    const commandContainer: FlowNode = {
+      ...containerNode,
+      content: {
+        ...containerNode.content,
+        laneNodes: {
+          ...containerNode.content.laneNodes,
+          "lane-a": [
+            {
+              id: "command-a",
+              name: "Command A",
+              type: "measurement",
+              content: { command: { format: "string", content: "status" } },
+              isStart: false,
+            },
+          ],
+        },
+      },
+    };
+    useMeasurementFlowStore.setState({ runnerState: state });
+
+    render(<ParallelContainerNode node={commandContainer} />);
+
+    expect(activeStateProps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interaction: expect.objectContaining({ trackId: "track-a", cellId: "command-a" }),
+      }),
+    );
   });
 });

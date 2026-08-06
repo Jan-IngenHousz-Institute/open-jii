@@ -68,6 +68,21 @@ describe("useMeasurementCapture runner mapping", () => {
     expect(mocks.toastError).not.toHaveBeenCalled();
   });
 
+  it("addresses run and cancel actions to the owning lane track", async () => {
+    const { result } = renderHook(() =>
+      useMeasurementCapture(
+        { command: { format: "string", content: "battery" } },
+        "command-1",
+        "track-a",
+      ),
+    );
+    await act(() => result.current.startScan());
+    act(() => result.current.cancelScan());
+
+    expect(mocks.flowState.startRunnerScan).toHaveBeenCalledWith("command-1", "track-a");
+    expect(mocks.flowState.cancelRunnerScan).toHaveBeenCalledWith("track-a");
+  });
+
   it("retains the protocol availability guard", async () => {
     const { result } = renderHook(() =>
       useMeasurementCapture({ protocolId: "protocol-1" }, "protocol-cell"),

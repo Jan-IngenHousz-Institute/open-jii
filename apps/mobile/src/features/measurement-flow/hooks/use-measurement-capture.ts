@@ -9,7 +9,11 @@ import { useTranslation } from "~/shared/i18n";
 import type { MeasurementContent } from "~/shared/measurements/flow-node";
 
 /** Runner-backed view model for the measurement card and its user scan gate. */
-export function useMeasurementCapture(content: MeasurementContent, nodeId?: string) {
+export function useMeasurementCapture(
+  content: MeasurementContent,
+  nodeId?: string,
+  trackId?: string,
+) {
   const { t } = useTranslation("measurementFlow");
   const { data: devices = [], refetch: refetchConnectedDevices } = useConnectedDevices();
   const executors = useScannerCommandExecutorStore((state) => state.executors);
@@ -69,7 +73,10 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
         toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
         return;
       }
-      if (nodeId) startRunnerScan(nodeId);
+      if (nodeId) {
+        if (trackId) startRunnerScan(nodeId, trackId);
+        else startRunnerScan(nodeId);
+      }
     } finally {
       isStartingRef.current = false;
     }
@@ -84,7 +91,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     lastRound: runnerScanRound,
     succeededCount: runnerSucceededCount,
     startScan,
-    cancelScan: cancelRunnerScan,
+    cancelScan: () => cancelRunnerScan(trackId),
     completeWithSuccesses: continueRunnerWithSuccesses,
     openDeviceSheet,
     navigateToQuestionFromOverview,

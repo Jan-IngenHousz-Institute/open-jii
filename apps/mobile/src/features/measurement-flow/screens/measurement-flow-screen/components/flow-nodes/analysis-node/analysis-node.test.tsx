@@ -129,6 +129,7 @@ beforeEach(() => {
     iterationCount: 0,
     scanResult: undefined,
     scanResults: undefined,
+    uploadScanResults: undefined,
     producerCellId: undefined,
     cellOutputs: {},
     cells: [],
@@ -236,8 +237,8 @@ describe("AnalysisNode macro output", () => {
   it("surfaces an empty sample envelope as a controlled processing failure", () => {
     const raw = { sample: [] };
     useMeasurementFlowStore.setState({
-      scanResult: raw as never,
-      scanResults: [{ result: raw as never }],
+      scanResult: raw,
+      scanResults: [{ result: raw }],
       producerCellId: "p1",
       cells: [
         {
@@ -503,5 +504,131 @@ describe("AnalysisNode upload with a command in the flow", () => {
         { device: { id: "2" }, protocolId: "proto-2", protocolName: "SPAD" },
       ],
     });
+  });
+
+  it("analyses and uploads only the addressed lane producer's rows", async () => {
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      experimentLabel: "Trial",
+      workbookVersionId: "version-1",
+      workbookAttemptId: "attempt-1",
+      flowNodes: commandProtocolMacroNodes,
+      currentFlowStep: 2,
+      uploadScanResults: [
+        {
+          workbookAttemptId: "attempt-1",
+          device: { id: "device-a", name: "A" },
+          result: { sample: [{ lane: "A" }] },
+          producerCellId: "producer-a",
+          containerCellId: "parallel-1",
+          laneId: "lane-a",
+          containerAttemptId: "parallel-1:1",
+          protocolId: "proto-1",
+        },
+        {
+          workbookAttemptId: "attempt-1",
+          device: { id: "device-b", name: "B" },
+          result: { sample: [{ lane: "B" }] },
+          producerCellId: "producer-b",
+          containerCellId: "parallel-1",
+          laneId: "lane-b",
+          containerAttemptId: "parallel-1:1",
+          protocolId: "proto-2",
+        },
+      ],
+      cells: [
+        {
+          id: "producer-a",
+          type: "protocol",
+          isCollapsed: false,
+          payload: { protocolId: "proto-1", version: 1, name: "Measurement" },
+        },
+        {
+          id: "m1",
+          type: "macro",
+          isCollapsed: false,
+          payload: { macroId: "macro-1", language: "python", name: "Analysis" },
+        },
+      ],
+    });
+
+    render(
+      <AnalysisNode
+        content={withMacro}
+        nodeId="m1"
+        interaction={{
+          effectId: "macro-a",
+          trackId: "lane-track-a",
+          cellId: "m1",
+          producerCellId: "producer-a",
+          deviceIds: ["device-a"],
+        }}
+      />,
+    );
+
+    expect(macroResultProps).toHaveBeenCalledTimes(1);
+    expect(macroResultProps.mock.calls[0][0]).toMatchObject({
+      scanResult: { sample: [{ lane: "A" }] },
+      ctx: { measurement: { lane: "A" } },
+    });
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    await act(async () => {
+      await props?.onUpload();
+    });
+
+    expect(uploadMeasurements).toHaveBeenCalledTimes(1);
+    expect(uploadMeasurements.mock.calls[0][0].results).toEqual([
+      expect.objectContaining({
+        device: { id: "device-a", name: "A" },
+        producerCellId: "producer-a",
+        laneId: "lane-a",
+        rawMeasurement: { sample: [{ lane: "A" }] },
+      }),
+    ]);
+  });
+
+  it("does not fall back to a sibling row when the addressed lane produced none", async () => {
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      flowNodes: commandProtocolMacroNodes,
+      scanResult: { sample: [{ lane: "A" }] },
+      uploadScanResults: [
+        {
+          workbookAttemptId: "attempt-1",
+          device: { id: "device-a", name: "A" },
+          result: { sample: [{ lane: "A" }] },
+          producerCellId: "producer-a",
+        },
+      ],
+    });
+
+    render(
+      <AnalysisNode
+        content={withMacro}
+        nodeId="m1"
+        interaction={{
+          effectId: "macro-b",
+          trackId: "lane-track-b",
+          cellId: "m1",
+          producerCellId: "producer-b",
+          deviceIds: ["device-b"],
+        }}
+      />,
+    );
+
+    expect(macroResultProps.mock.calls.at(-1)?.[0]?.scanResult).toBeUndefined();
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    await act(async () => {
+      await props?.onUpload();
+    });
+    expect(uploadMeasurements).not.toHaveBeenCalled();
   });
 });

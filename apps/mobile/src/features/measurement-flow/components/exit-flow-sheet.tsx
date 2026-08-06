@@ -6,6 +6,7 @@ import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step-info";
 import { teardownFlow } from "~/features/measurement-flow/services/flow-actions";
+import { flushMeasurementFlowForPause } from "~/features/measurement-flow/services/flow-persistence-boundaries";
 import { useExitFlowSheetStore } from "~/features/measurement-flow/stores/use-exit-flow-sheet-store";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
@@ -36,6 +37,7 @@ export function ExitFlowSheet() {
   // so the next launch (or tap on the home Resume card) rehydrates exactly
   // where the user left off.
   const handlePause = () => {
+    flushMeasurementFlowForPause();
     close();
     dismissFlow();
   };

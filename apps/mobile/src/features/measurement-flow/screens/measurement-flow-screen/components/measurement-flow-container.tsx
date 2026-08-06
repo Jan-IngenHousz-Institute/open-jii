@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useIterationStateSync } from "~/features/measurement-flow/hooks/use-iteration-state-sync";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
+import { flattenFlowNodes } from "~/shared/measurements/flow-node";
 
 import { ExperimentSelectionStep } from "./experiment-selection-step";
 import { QuestionsOnlySubmitNode } from "./flow-nodes/questions-only-submit-node";
@@ -11,10 +12,21 @@ import { EmptyState } from "./flow-states/empty-state";
 import { LoadingState } from "./flow-states/loading-state";
 
 export function MeasurementFlowContainer() {
-  const { flowNodes, currentFlowStep, isQuestionsSubmitPending, experimentId } =
-    useMeasurementFlowStore();
+  const {
+    flowNodes,
+    currentFlowStep,
+    isQuestionsSubmitPending,
+    experimentId,
+    overviewNodeId,
+    analysisQueue,
+  } = useMeasurementFlowStore();
   const isFlowInitialized = flowNodes.length > 0;
-  const currentNode = flowNodes[currentFlowStep];
+  const currentNode = overviewNodeId
+    ? flattenFlowNodes(flowNodes).find((node) => node.id === overviewNodeId)
+    : flowNodes[currentFlowStep];
+  const interaction = currentNode
+    ? analysisQueue.find((candidate) => candidate.cellId === currentNode.id)
+    : undefined;
   const insets = useSafeAreaInsets();
 
   useIterationStateSync(flowNodes);
@@ -59,7 +71,7 @@ export function MeasurementFlowContainer() {
       className="bg-card flex-1 rounded-t-[36px] pt-3"
       style={{ paddingBottom: navButtonsCarryInset ? 0 : insets.bottom }}
     >
-      <ActiveState currentNode={currentNode} />
+      <ActiveState currentNode={currentNode} interaction={interaction} />
     </View>
   );
 }

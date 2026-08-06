@@ -20,9 +20,10 @@ interface MeasurementNodeProps {
   content: MeasurementContent;
   /** Flow node id (== cell id); keys the result so a downstream branch can read it. */
   nodeId: string;
+  trackId?: string;
 }
 
-export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
+export function MeasurementNode({ content, nodeId, trackId }: MeasurementNodeProps) {
   const { classes, colors } = useTheme();
   const { t } = useTranslation("measurementFlow");
   const {
@@ -40,7 +41,7 @@ export function MeasurementNode({ content, nodeId }: MeasurementNodeProps) {
     scanProgress,
     scanStartedAt,
     estimatedMs,
-  } = useMeasurementCapture(content, nodeId);
+  } = useMeasurementCapture(content, nodeId, trackId);
 
   const renderState = () => {
     if (!device) {

@@ -7,6 +7,7 @@ import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import type { FlowNode } from "~/shared/measurements/flow-node";
+import { flattenFlowNodes } from "~/shared/measurements/flow-node";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 const answerText = cva("shrink text-base", {
@@ -19,7 +20,7 @@ const answerText = cva("shrink text-base", {
 });
 
 interface ReadyStateProps {
-  onCardPress: (index: number) => void;
+  onCardPress: (nodeId: string) => void;
 }
 
 export function ReadyState({ onCardPress }: ReadyStateProps) {
@@ -28,9 +29,9 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
   const { flowNodes, iterationCount } = useMeasurementFlowStore();
   const { getAnswer, isAutoincrementEnabled, isRememberAnswerEnabled } = useFlowAnswersStore();
 
-  const questionEntries: { node: FlowNode; index: number }[] = flowNodes
-    .map((node, index) => ({ node, index }))
-    .filter(({ node }) => node.type === "question");
+  const questionEntries: FlowNode[] = flattenFlowNodes(flowNodes).filter(
+    (node) => node.type === "question",
+  );
 
   const hasQuestions = questionEntries.length > 0;
 
@@ -60,7 +61,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
         showsVerticalScrollIndicator
         keyboardShouldPersistTaps="handled"
       >
-        {questionEntries.map(({ node, index }) => {
+        {questionEntries.map((node) => {
           const label =
             node.content?.text ??
             node.name ??
@@ -73,7 +74,7 @@ export function ReadyState({ onCardPress }: ReadyStateProps) {
           return (
             <TouchableOpacity
               key={node.id}
-              onPress={() => onCardPress(index)}
+              onPress={() => onCardPress(node.id)}
               activeOpacity={0.7}
               className="bg-gray-background mb-2 flex-row items-stretch gap-4 rounded-xl p-4"
             >
