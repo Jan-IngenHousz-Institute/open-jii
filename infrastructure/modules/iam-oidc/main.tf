@@ -704,6 +704,9 @@ locals {
         "kinesis:AddTagsToStream",
         "kinesis:RemoveTagsFromStream",
         "kinesis:ListTagsForStream",
+        # Required to manage server-side (SSE-KMS) encryption on the stream.
+        "kinesis:StartStreamEncryption",
+        "kinesis:StopStreamEncryption",
       ]
       resource = "*"
     }
