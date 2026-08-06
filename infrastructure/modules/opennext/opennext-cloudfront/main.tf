@@ -439,34 +439,3 @@ resource "aws_cloudfront_origin_request_policy" "posthog_passthrough" {
   }
 }
 
-
-# Detached from all behaviors. CloudFront 409s deletes of a policy that any
-# deployed distribution still references, so removal ships in a follow-up
-# after this detachment has been applied to every environment.
-resource "aws_cloudfront_origin_request_policy" "lambda_signed_requests" {
-  name    = "${var.project_name}-lambda-signed-requests"
-  comment = "Policy to forward necessary headers and cookies for signed Lambda requests"
-  headers_config {
-    header_behavior = "whitelist"
-    headers {
-      items = [
-        "x-forwarded-host",       # Essential for routing
-        "next-action",            # Required for server actions
-        "next-router-state-tree", # Required for RSC navigation
-        "next-router-prefetch",   # Required for prefetching
-        "rsc",                    # Essential RSC marker
-        "content-type",           # Required for content negotiation
-        "x-prerender-revalidate", # Needed for revalidation
-        "referer",                # Important for auth flows
-        "x-action-redirect",      # Needed for redirects in server actions
-        "origin"                  # Required for CORS
-      ]
-    }
-  }
-  cookies_config {
-    cookie_behavior = "all"
-  }
-  query_strings_config {
-    query_string_behavior = "all"
-  }
-}
