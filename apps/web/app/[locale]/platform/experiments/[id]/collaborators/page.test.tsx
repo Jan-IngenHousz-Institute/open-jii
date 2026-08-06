@@ -78,6 +78,7 @@ describe("ExperimentCollaboratorsPage", () => {
     vi.mocked(use).mockReturnValue({ locale: "en-US", id: experimentId });
     mockSession({ id: "user-1" });
     server.mount(contract.experiments.listJoinRequests, { body: [] });
+    server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
     server.mount(contract.users.listInvitations, { body: [] });
     server.mount(contract.sharing.listGrants, { body: [] });
   });
@@ -440,6 +441,65 @@ describe("ExperimentCollaboratorsPage", () => {
       await waitFor(() =>
         expect(screen.getByRole("button", { name: /experimentSettings.invite/ })).toBeDisabled(),
       );
+    });
+  });
+
+  describe("request to join", () => {
+    it("shows the prompt to a signed-in reader of a public experiment", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: accessPayload({
+          isAdmin: false,
+          experiment: { visibility: "public" },
+          capabilities: {
+            canContribute: false,
+            canUpdate: false,
+            canManage: false,
+            canShare: false,
+            canLeave: false,
+          },
+        }),
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("experimentSettings.requestToJoinPrompt")).toBeInTheDocument();
+      expect(screen.queryByText("sharing.yourAccessTitle")).not.toBeInTheDocument();
+    });
+
+    it("hides the prompt from a collaborator", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: accessPayload({ experiment: { visibility: "public" } }),
+      });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
+      );
+      expect(screen.queryByText("experimentSettings.requestToJoinPrompt")).not.toBeInTheDocument();
+    });
+
+    it("hides the prompt on an archived public experiment", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: accessPayload({
+          isAdmin: false,
+          experiment: { status: "archived", visibility: "public" },
+          capabilities: {
+            canContribute: false,
+            canUpdate: false,
+            canManage: false,
+            canShare: false,
+            canLeave: false,
+          },
+        }),
+      });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
+      );
+      expect(screen.queryByText("experimentSettings.requestToJoinPrompt")).not.toBeInTheDocument();
     });
   });
 

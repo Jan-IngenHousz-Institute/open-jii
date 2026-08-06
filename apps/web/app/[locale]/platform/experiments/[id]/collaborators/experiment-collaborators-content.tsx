@@ -5,6 +5,7 @@ import { ErrorDisplay } from "@/components/error-display";
 import { ExperimentInviteModal } from "@/components/experiment-settings/collaborators/experiment-invite-modal";
 import { ExperimentJoinRequestsPanel } from "@/components/experiment-settings/collaborators/experiment-join-requests-panel";
 import { ExperimentPendingInvitationsPanel } from "@/components/experiment-settings/collaborators/experiment-pending-invitations-panel";
+import { ExperimentRequestToJoin } from "@/components/experiment-settings/collaborators/experiment-request-to-join";
 import { CollaboratorsList } from "@/components/sharing/collaborators-list";
 import { LeaveResourceCard } from "@/components/sharing/leave-resource-card";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
@@ -16,6 +17,7 @@ import { useExperimentJoinRequests } from "~/hooks/experiment/join-request/useEx
 import { useUserInvitations } from "~/hooks/user-invitation/useUserInvitations/useUserInvitations";
 import { matchesGrantee } from "~/util/collaborator-filter";
 
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -29,12 +31,14 @@ interface ExperimentCollaboratorsPageProps {
 export default function ExperimentCollaboratorsPage({ params }: ExperimentCollaboratorsPageProps) {
   const { id } = use(params);
   const { t } = useTranslation();
+  const { data: session } = useSession();
 
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
   const experiment = accessData?.experiment;
   // Managing who collaborates is `can(share)` — a different question from
   // `can(manage)`, which owns the experiment's own settings.
   const canManage = accessData?.isAdmin ?? false;
+  const canContribute = accessData?.capabilities.canContribute ?? false;
   const canShare = accessData?.capabilities.canShare ?? false;
   const canLeave = accessData?.capabilities.canLeave ?? false;
 
@@ -116,6 +120,9 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
     );
   }
 
+  const canRequestToJoin =
+    session?.user.id && !canContribute && !isArchived && experiment.visibility === "public";
+
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <div className="space-y-1">
@@ -125,6 +132,12 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
         </p>
         <DocsHelpLink path="/guide/experiments/collaborators" className="mt-1" />
       </div>
+
+      {canRequestToJoin ? (
+        <div className="rounded-md border p-4">
+          <ExperimentRequestToJoin experimentId={id} />
+        </div>
+      ) : null}
 
       {hasTabs && (
         <div className="flex items-center gap-3">

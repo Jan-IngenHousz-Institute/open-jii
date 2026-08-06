@@ -26,7 +26,7 @@ import {
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
-import { seedCreatorControl } from "../../../sharing/core/resource-staffing";
+import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/protocol.model";
 
 // All protocol columns except the internal full-text `search_vector` (never returned to clients).
@@ -215,6 +215,8 @@ export class ProtocolRepository {
   async delete(id: string): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
       const results = await this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "protocol", id, "update");
+
         await deleteResourceGrants(tx, "protocol", id);
 
         return tx.delete(protocols).where(eq(protocols.id, id)).returning(protocolColumns);

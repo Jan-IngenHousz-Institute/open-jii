@@ -10,6 +10,7 @@ import {
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { compactTimestamp } from "../../../../common/utils/datetime";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -63,6 +64,7 @@ export class UploadDataUseCase {
     private readonly uploadsRepository: ExperimentDataUploadsRepository,
     private readonly multipartUploadService: MultipartUploadService,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(input: UploadExecuteInput): Promise<Result<UploadDataResult>> {
@@ -113,7 +115,12 @@ export class UploadDataUseCase {
           state.sourceKind = parsed.data;
         }
         if (!state.ctx) {
-          const prep = await this.preexecute(input.experimentId, state.sourceKind, formFields);
+          const prep = await this.preexecute(
+            input.experimentId,
+            input.userId,
+            state.sourceKind,
+            formFields,
+          );
           if (prep.isFailure()) {
             file.stream.resume();
             return failure(prep.error);
@@ -159,6 +166,7 @@ export class UploadDataUseCase {
 
   private async preexecute(
     experimentId: string,
+    userId: string,
     sourceKind: ExperimentUploadSourceKind,
     formFields: { targetKind?: string; targetName?: string; uploadTableId?: string },
   ): Promise<Result<UploadContext>> {
@@ -180,6 +188,18 @@ export class UploadDataUseCase {
       return failure(
         AppError.badRequest(parsedForm.error.issues[0]?.message ?? "Invalid upload form fields"),
       );
+    }
+    if (parsedForm.data.targetKind === "new") {
+      const access = await this.authz.can(userId, {
+        resourceType: "experiment",
+        resourceId: experimentId,
+        action: "manage",
+      });
+      if (!access.allow) {
+        return failure(
+          AppError.forbidden("Creating a new data table requires experiment management access"),
+        );
+      }
     }
     const targetSelection =
       parsedForm.data.targetKind === "new"

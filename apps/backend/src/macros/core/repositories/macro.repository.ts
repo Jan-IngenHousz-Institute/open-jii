@@ -24,7 +24,7 @@ import {
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
-import { seedCreatorControl } from "../../../sharing/core/resource-staffing";
+import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateMacroDto,
   UpdateMacroDto,
@@ -260,6 +260,8 @@ export class MacroRepository {
   async delete(id: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
       const results = await this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "macro", id, "update");
+
         await deleteResourceGrants(tx, "macro", id);
 
         return tx.delete(macros).where(eq(macros.id, id)).returning(macroColumns);

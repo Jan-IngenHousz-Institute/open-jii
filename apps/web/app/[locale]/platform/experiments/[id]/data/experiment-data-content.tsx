@@ -83,6 +83,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   // administering anything.
   const hasAccess = data.isAdmin;
   const canContribute = data.capabilities.canContribute;
+  const canManage = data.capabilities.canManage;
 
   // Check if experiment is archived - if so, redirect to not found (should use archive route)
   if (experiment.status === "archived") {
@@ -133,7 +134,12 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           </Link>
         </div>
 
-        <UploadDataModal experimentId={id} open={uploadDataOpen} onOpenChange={setUploadDataOpen} />
+        <UploadDataModal
+          experimentId={id}
+          canManage={canManage}
+          open={uploadDataOpen}
+          onOpenChange={setUploadDataOpen}
+        />
         <MetadataUploadModal
           experimentId={id}
           open={metadataModalOpen}
@@ -195,7 +201,12 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         ))}
       </NavTabs>
 
-      <UploadDataModal experimentId={id} open={uploadDataOpen} onOpenChange={setUploadDataOpen} />
+      <UploadDataModal
+        experimentId={id}
+        canManage={canManage}
+        open={uploadDataOpen}
+        onOpenChange={setUploadDataOpen}
+      />
       <MetadataUploadModal
         experimentId={id}
         open={metadataModalOpen}

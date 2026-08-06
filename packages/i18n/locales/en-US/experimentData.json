@@ -73,6 +73,7 @@
       "existingTable": {
         "label": "Existing table",
         "placeholder": "Pick a table",
+        "noneAvailable": "No upload tables are available. Ask an experiment manager to create one before uploading.",
         "rowCount_one": "{{count}} row",
         "rowCount_other": "{{count}} rows"
       },

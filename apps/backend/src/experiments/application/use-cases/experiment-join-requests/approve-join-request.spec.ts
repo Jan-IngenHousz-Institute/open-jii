@@ -205,7 +205,7 @@ describe("ApproveJoinRequestUseCase", () => {
 
   it("does not demote a requester promoted after the access check", async () => {
     const { experiment, request } = await seedPendingRequest();
-    const checkAccess = authz.can.bind(authz);
+    const checkAccess = authz.can.bind(authz) as AuthorizationService["can"];
     vi.spyOn(authz, "can").mockImplementationOnce(async (userId, accessRequest) => {
       const decision = await checkAccess(userId, accessRequest);
       expect(decision.allow).toBe(false);

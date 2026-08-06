@@ -28,7 +28,7 @@ import {
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
-import { seedCreatorControl } from "../../../sharing/core/resource-staffing";
+import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateWorkbookDto,
   UpdateWorkbookDto,
@@ -317,6 +317,8 @@ export class WorkbookRepository {
       // would leave the workbook alive with every grant on it gone — silently
       // stripping collaborators' access while the API reported failure.
       const results = await this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "workbook", id, "update");
+
         await deleteResourceGrants(tx, "workbook", id);
 
         return tx.delete(workbooks).where(eq(workbooks.id, id)).returning(workbookColumns);

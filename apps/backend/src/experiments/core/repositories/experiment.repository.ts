@@ -36,7 +36,11 @@ import {
 } from "../../../common/utils/profile-anonymization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { userIsSelectableGrantee } from "../../../sharing/core/grantee-selectability";
-import { findOwningOrgOwnerIds, seedCreatorControl } from "../../../sharing/core/resource-staffing";
+import {
+  findOwningOrgOwnerIds,
+  lockStaffedResource,
+  seedCreatorControl,
+} from "../../../sharing/core/resource-staffing";
 import {
   CreateExperimentDto,
   UpdateExperimentDto,
@@ -435,6 +439,8 @@ export class ExperimentRepository {
       // FK does not cascade). One transaction, or a partial failure strips
       // collaborators while the API reports failure.
       await this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "experiment", id, "update");
+
         // Referential only — the roster carries no access, but the FK still blocks.
         await tx.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
 

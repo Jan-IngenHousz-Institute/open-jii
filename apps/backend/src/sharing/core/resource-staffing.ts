@@ -146,19 +146,20 @@ export function orgRoleIsOwnerSql(roleRef: SQL): SQL {
  * A **shared** lock on the user's own row, ordering anything that depends on the
  * account still being open against its deletion. `users` not `profiles` — that row
  * always exists. Shared so concurrent creates by one person do not queue; only the
- * deletion takes it exclusively. Everything acquires user → organization → grants,
- * so no cycle.
+ * deletion takes it exclusively. Grant writes against an existing resource acquire
+ * user → organization → resource → grants, so no cycle.
  */
 export async function lockUserAccount(
   tx: DbOrTx,
   userId: string,
   mode: "share" | "update" = "share",
-): Promise<void> {
-  await tx
+): Promise<boolean> {
+  const rows = await tx
     .select({ id: users.id })
     .from(users)
     .where(eq(users.id, userId))
     .for(mode === "share" ? "share" : "update");
+  return rows.length > 0;
 }
 
 /**
@@ -166,7 +167,7 @@ export async function lockUserAccount(
  * inserts a tombstone row when there was no profile to stamp — so a missing row
  * means somebody mid-onboarding rather than somebody gone.
  */
-async function isLivingUser(tx: DbOrTx, userId: string): Promise<boolean> {
+export async function isLivingUser(tx: DbOrTx, userId: string): Promise<boolean> {
   const closed = await tx
     .select({ userId: profiles.userId })
     .from(profiles)
@@ -174,6 +175,51 @@ async function isLivingUser(tx: DbOrTx, userId: string): Promise<boolean> {
     .limit(1);
 
   return closed.length === 0;
+}
+
+export interface StaffedResourceRow extends Record<string, unknown> {
+  organizationId: string | null;
+}
+
+/** Read the owning organization without taking the resource-row lock. */
+export async function findStaffedResource(
+  tx: DbOrTx,
+  resourceType: SharingResourceType,
+  resourceId: string,
+): Promise<StaffedResourceRow | null> {
+  const table = STAFFED_RESOURCE_TABLES[resourceType];
+  const rows = await tx.execute<StaffedResourceRow>(sql`
+    SELECT ${table.organizationId} AS "organizationId"
+    FROM ${table}
+    WHERE ${table.id} = ${resourceId}
+    LIMIT 1
+  `);
+  return rows.length > 0 ? rows[0] : null;
+}
+
+/**
+ * Claim a resource row so a grant write and that resource's deletion cannot both
+ * proceed. Deletion claims it exclusively before sweeping the grants; a grant write
+ * claims it shared. Either the grant lands in time for the sweep, or it sees the
+ * deletion and refuses — nothing catches it otherwise, as grants have no FK.
+ *
+ * Acquire user → organization → resource → grants, never the other way round.
+ */
+export async function lockStaffedResource(
+  tx: DbOrTx,
+  resourceType: SharingResourceType,
+  resourceId: string,
+  mode: "share" | "update" = "share",
+): Promise<StaffedResourceRow | null> {
+  const table = STAFFED_RESOURCE_TABLES[resourceType];
+  const rows = await tx.execute<StaffedResourceRow>(sql`
+    SELECT ${table.organizationId} AS "organizationId"
+    FROM ${table}
+    WHERE ${table.id} = ${resourceId}
+    LIMIT 1
+    FOR ${mode === "share" ? sql`SHARE` : sql`UPDATE`}
+  `);
+  return rows.length > 0 ? rows[0] : null;
 }
 
 /**
@@ -588,6 +634,7 @@ export async function findBlockingResources(
 export async function lockAndFindBlockingResources(
   tx: Transaction,
   userId: string,
+  afterOrganizationLocks?: () => Promise<void>,
 ): Promise<BlockingResourceKey[]> {
   // 1. Owner-membership rows of every org this user owns, in a fixed order. Grant
   //    rows cannot anchor this — a resource owned outright has none. Creation takes
@@ -606,6 +653,11 @@ export async function lockAndFindBlockingResources(
   for (const { organizationId } of ownedOrgs) {
     await lockOrgOwnerships(tx, organizationId);
   }
+
+  // A grant-write caller claims its concrete resource here, preserving the global
+  // organization → resource → grants order. Account deletion has no resource
+  // row of its own to claim and leaves this hook empty.
+  await afterOrganizationLocks?.();
 
   // 2. Then per-resource staffing rows, in a fixed global order: one lock per
   //    resource, so two callers sharing resources could otherwise take them in

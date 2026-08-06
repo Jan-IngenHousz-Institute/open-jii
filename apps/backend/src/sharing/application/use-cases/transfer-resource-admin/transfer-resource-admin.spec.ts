@@ -1,15 +1,19 @@
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
-import { and, eq, resourceGrants } from "@repo/database";
+import { and, createSecondaryDatabase, eq, resourceGrants } from "@repo/database";
+import type { DatabaseInstance } from "@repo/database";
 
 import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
+import { SharingRepository } from "../../../core/repositories/sharing.repository";
 import { TransferResourceAdminUseCase } from "./transfer-resource-admin";
 
 describe("TransferResourceAdminUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: TransferResourceAdminUseCase;
+  let sharingRepo: SharingRepository;
+  let secondary: { database: DatabaseInstance; close: () => Promise<void> };
 
   /** The one answer every authorization negative gets, whatever its cause. */
   const NO_ACCESS_ERROR = "You have no access to transfer admin rights on this resource";
@@ -69,12 +73,14 @@ describe("TransferResourceAdminUseCase", () => {
 
   beforeAll(async () => {
     await testApp.setup();
+    secondary = createSecondaryDatabase();
   });
 
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(TransferResourceAdminUseCase);
+    sharingRepo = testApp.module.get(SharingRepository);
   });
 
   afterEach(() => {
@@ -82,8 +88,35 @@ describe("TransferResourceAdminUseCase", () => {
   });
 
   afterAll(async () => {
+    await secondary.close();
     await testApp.teardown();
   });
+
+  /** Pause after the target passed the picker-equivalent pre-flight check. */
+  const pauseAfterSelectabilityCheck = () => {
+    let checked!: () => void;
+    let release!: () => void;
+    const checkFinished = new Promise<void>((resolve) => {
+      checked = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    // Bound before the spy replaces the method, so the mock can still reach the
+    // real implementation without recursing back through itself.
+    const original = sharingRepo.granteeIsSelectable.bind(
+      sharingRepo,
+    ) as SharingRepository["granteeIsSelectable"];
+    const spy = vi
+      .spyOn(sharingRepo, "granteeIsSelectable")
+      .mockImplementationOnce(async (...args) => {
+        const selectable = await original(...args);
+        checked();
+        await released;
+        return selectable;
+      });
+    return { checkFinished, release, spy };
+  };
 
   it("promotes an existing collaborator to a direct admin grant", async () => {
     const { experiment } = await testApp.createExperiment({
@@ -360,6 +393,29 @@ describe("TransferResourceAdminUseCase", () => {
     assertSuccess(result);
     expect(result.value[0].success).toBe(false);
     expect(await directGrantRoleOf("experiment", experiment.id, closed)).toBeNull();
+  });
+
+  it("refuses a target whose account closes after selectability", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Closing Target",
+      userId: testUserId,
+    });
+    const target = await testApp.createTestUser({ name: "Closing during transfer" });
+    const { checkFinished, release, spy } = pauseAfterSelectabilityCheck();
+
+    const transferring = useCase.execute(
+      [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: target }],
+      testUserId,
+    );
+    await checkFinished;
+    assertSuccess(await new UserRepository(secondary.database).delete(target));
+    release();
+
+    const result = await transferring;
+    spy.mockRestore();
+    assertSuccess(result);
+    expect(result.value[0].success).toBe(false);
+    expect(await directGrantRoleOf("experiment", experiment.id, target)).toBeNull();
   });
 
   it("leaves the handed-over grant intact when the same hand-off is replayed", async () => {

@@ -13,7 +13,7 @@ import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
-import { seedCreatorControl } from "../../../sharing/core/resource-staffing";
+import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import { CreateIotDeviceDto, IotDeviceDto, UpdateIotDeviceDto } from "../models/iot-device.model";
 
 @Injectable()
@@ -126,6 +126,8 @@ export class IotDeviceRepository {
       // Grants are polymorphic (no FK cascade), so they need cleaning by hand. One
       // transaction, or a failure here strips access while the API reports failure.
       this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "device", deviceId, "update");
+
         await deleteResourceGrants(tx, "device", deviceId);
 
         return tx.delete(iotDevices).where(eq(iotDevices.id, deviceId)).returning();

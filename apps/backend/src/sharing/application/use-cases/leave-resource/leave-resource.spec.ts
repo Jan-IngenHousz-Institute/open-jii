@@ -4,6 +4,7 @@ import { and, eq, profiles, resourceGrants } from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { LeaveResourceUseCase } from "./leave-resource";
 
@@ -91,6 +92,27 @@ describe("leaveResource", () => {
     // Indistinguishable from the public-resource case: no existence disclosure.
     expect(onMissing.error.statusCode).toBe(StatusCodes.NOT_FOUND);
     expect(onMissing.error.message).toBe(onPublic.error.message);
+  });
+
+  it("keeps the uniform 404 after a shared resource is deleted", async () => {
+    const macro = await testApp.createMacro({ name: "Deleted before leave", createdBy: owner });
+    const viewer = await testApp.createTestUser({ name: "Former Viewer" });
+    await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: macro.id,
+      granteeType: "user",
+      granteeId: viewer,
+      role: "viewer",
+    });
+    assertSuccess(await testApp.module.get(MacroRepository).delete(macro.id));
+
+    const onDeleted = await leave.execute(viewer, "macro", macro.id);
+    const onMissing = await leave.execute(viewer, "macro", crypto.randomUUID());
+
+    assertFailure(onDeleted);
+    assertFailure(onMissing);
+    expect(onDeleted.error.statusCode).toBe(StatusCodes.NOT_FOUND);
+    expect(onDeleted.error.message).toBe(onMissing.error.message);
   });
 
   it("returns 404 for access held via an organization grant, leaving the org grant alone", async () => {

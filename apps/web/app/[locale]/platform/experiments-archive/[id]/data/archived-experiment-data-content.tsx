@@ -108,6 +108,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
 
         <UploadDataModal
           experimentId={id}
+          canManage={false}
           open={uploadModalOpen}
           onOpenChange={setUploadModalOpen}
         />
@@ -151,7 +152,12 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         ))}
       </NavTabs>
 
-      <UploadDataModal experimentId={id} open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
+      <UploadDataModal
+        experimentId={id}
+        canManage={false}
+        open={uploadModalOpen}
+        onOpenChange={setUploadModalOpen}
+      />
     </PageContainer>
   );
 }
