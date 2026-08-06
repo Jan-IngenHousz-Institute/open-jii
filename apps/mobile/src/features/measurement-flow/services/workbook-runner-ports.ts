@@ -24,6 +24,81 @@ interface GateWaiter {
   reject: (error: Error) => void;
 }
 
+export interface AddressedGateToken {
+  effectId: string;
+  trackId: string;
+  cellId: string;
+  producerCellId?: string;
+  deviceIds: string[];
+}
+
+interface AddressedGateWaiter extends GateWaiter {
+  token: AddressedGateToken;
+}
+
+/** A FIFO human-interaction queue where only the presented effect may resume. */
+export class AddressedUserGate {
+  private readonly waiters = new Map<string, AddressedGateWaiter>();
+  private readonly released = new Set<string>();
+
+  constructor(private readonly onPendingChange?: (tokens: AddressedGateToken[]) => void) {}
+
+  get pending(): AddressedGateToken[] {
+    return Array.from(this.waiters.values(), ({ token }) => token);
+  }
+
+  release(effectId: string): boolean {
+    const waiter = this.waiters.get(effectId);
+    if (!waiter) return false;
+    this.waiters.delete(effectId);
+    this.released.add(effectId);
+    this.emit();
+    waiter.release();
+    return true;
+  }
+
+  reset(): void {
+    const waiters = [...this.waiters.values()];
+    this.waiters.clear();
+    this.released.clear();
+    this.emit();
+    for (const waiter of waiters) waiter.reject(new Error(CANCELLED_MESSAGE));
+  }
+
+  wait(token: AddressedGateToken, signal: AbortSignal): Promise<void> {
+    if (signal.aborted) return Promise.reject(new Error(CANCELLED_MESSAGE));
+    // Multi-device macro legs share one effect id. Once the researcher has
+    // admitted the effect, every leg of that exact effect may finish.
+    if (this.released.has(token.effectId)) return Promise.resolve();
+
+    return new Promise<void>((resolve, reject) => {
+      const waiter: AddressedGateWaiter = {
+        token,
+        release: () => {
+          signal.removeEventListener("abort", onAbort);
+          resolve();
+        },
+        reject: (error) => {
+          signal.removeEventListener("abort", onAbort);
+          reject(error);
+        },
+      };
+      const onAbort = () => {
+        if (!this.waiters.delete(token.effectId)) return;
+        this.emit();
+        reject(new Error(CANCELLED_MESSAGE));
+      };
+      signal.addEventListener("abort", onAbort, { once: true });
+      this.waiters.set(token.effectId, waiter);
+      this.emit();
+    });
+  }
+
+  private emit(): void {
+    this.onPendingChange?.(this.pending);
+  }
+}
+
 /**
  * One user action releases every runner effect parked in the current scan
  * round. This is deliberately broadcast rather than one-shot: a device branch
@@ -104,7 +179,7 @@ type ExecuteAssignments = (
 
 export interface MobileRunnerPortsDeps {
   scanGate: BroadcastUserGate;
-  analysisGate: BroadcastUserGate;
+  analysisGate: AddressedUserGate;
   getProtocolCode: (protocolId: string) => Record<string, unknown>[] | null;
   getMacroMeta: (macroId: string) => MacroMeta | null;
   getExecutors?: () => ReadonlyMap<string, DeviceExecutorEntry>;
@@ -114,6 +189,8 @@ export interface MobileRunnerPortsDeps {
   resolveDeviceIds?: (input: CommandRunInput) => string[];
   /** Set by the host when partial-success UI chooses Continue instead of Retry. */
   shouldContinueAfterPartial?: () => boolean;
+  /** Changes on reset, experiment selection, cycle rotation and retry attempt. */
+  getExecutionGeneration?: () => string;
   onScanRound?: (input: CommandRunInput, round: MultiScanRound, outcomes: DeviceOutcome[]) => void;
   onScanError?: (error: unknown) => void;
   onScanSuccess?: (input: CommandRunInput, outcomes: DeviceOutcome[]) => void;
@@ -132,6 +209,11 @@ function executorIdentity(entry: DeviceExecutorEntry, input: CommandRunInput): D
 }
 
 function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort {
+  const retainedByRun = new Map<
+    string,
+    { accumulated: Map<string, DeviceOutcome>; pendingDeviceIds: string[] }
+  >();
+  let retainedGeneration: string | undefined;
   let scannerModulePromise:
     | Promise<typeof import("~/features/connection/stores/use-scanner-command-executor-store")>
     | undefined;
@@ -143,10 +225,22 @@ function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort
   return {
     async execute(
       input: CommandRunInput,
-      opts: { signal: AbortSignal; onProgress: (progress: CommandProgress) => void },
+      opts: {
+        signal: AbortSignal;
+        effectId?: string;
+        onProgress: (progress: CommandProgress) => void;
+      },
     ): Promise<DeviceOutcome[]> {
+      const generation = deps.getExecutionGeneration?.() ?? "default";
+      if (retainedGeneration !== generation) {
+        retainedByRun.clear();
+        retainedGeneration = generation;
+      }
+      const isCurrent = () =>
+        !opts.signal.aborted && (deps.getExecutionGeneration?.() ?? "default") === generation;
       await deps.scanGate.wait(opts.signal);
       const targetedDeviceIds = deps.resolveDeviceIds?.(input) ?? input.deviceIds;
+      const runKey = `${generation}:${input.trackId}:${input.cellId}`;
 
       const scannerModule =
         deps.getExecutors && deps.executeAssignments && deps.cancelDevices
@@ -180,8 +274,11 @@ function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort
                   throw new Error("Scanner command executor store is unavailable");
                 }),
             }));
-        const accumulated = new Map<string, DeviceOutcome>();
-        let pendingDeviceIds = [...targetedDeviceIds];
+        const retained = retainedByRun.get(runKey);
+        const accumulated = new Map(retained?.accumulated ?? []);
+        let pendingDeviceIds = retained?.pendingDeviceIds.filter((id) =>
+          targetedDeviceIds.includes(id),
+        ) ?? [...targetedDeviceIds];
 
         while (pendingDeviceIds.length > 0) {
           const executors = getExecutors();
@@ -241,15 +338,29 @@ function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort
             };
           });
           for (const outcome of roundOutcomes) accumulated.set(outcome.deviceId, outcome);
-          deps.onScanRound?.({ ...input, deviceIds: pendingDeviceIds }, round, roundOutcomes);
+          if (isCurrent()) {
+            deps.onScanRound?.({ ...input, deviceIds: pendingDeviceIds }, round, roundOutcomes);
+          }
 
-          if (round.failures.length === 0) break;
-          if (!roundOutcomes.some((outcome) => outcome.data !== undefined)) {
+          if (round.failures.length === 0) {
+            retainedByRun.delete(runKey);
+            break;
+          }
+          if (isCurrent() && !roundOutcomes.some((outcome) => outcome.data !== undefined)) {
             deps.onScanError?.(round.failures[0]?.error ?? new Error("Command execution failed"));
           }
           pendingDeviceIds = round.failures.map(({ device }) => device.id);
+          if (isCurrent()) {
+            retainedByRun.set(runKey, {
+              accumulated: new Map(accumulated),
+              pendingDeviceIds: [...pendingDeviceIds],
+            });
+          }
           await deps.scanGate.wait(opts.signal);
-          if (deps.shouldContinueAfterPartial?.()) break;
+          if (deps.shouldContinueAfterPartial?.()) {
+            retainedByRun.delete(runKey);
+            break;
+          }
         }
 
         const outcomes = targetedDeviceIds.map(
@@ -261,12 +372,14 @@ function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort
               error: "Command execution did not produce an outcome",
             },
         );
-        if (outcomes.some((outcome) => outcome.data !== undefined)) {
+        if (opts.signal.aborted) throw new Error(CANCELLED_MESSAGE);
+        retainedByRun.delete(runKey);
+        if (isCurrent() && outcomes.some((outcome) => outcome.data !== undefined)) {
           deps.onScanSuccess?.(input, outcomes);
         }
         return outcomes;
       } catch (error) {
-        if (!opts.signal.aborted) deps.onScanError?.(error);
+        if (isCurrent()) deps.onScanError?.(error);
         throw error;
       } finally {
         opts.signal.removeEventListener("abort", onAbort);
@@ -277,31 +390,43 @@ function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort
 
 function createMacroRunner(deps: MobileRunnerPortsDeps): MacroRunnerPort {
   return {
-    async run(input: MacroRunInput, opts: { signal: AbortSignal }) {
-      const resultPromise = (async (): Promise<Record<string, unknown>> => {
-        const meta = deps.getMacroMeta(input.macroId);
-        if (!meta || input.json === null || typeof input.json !== "object") return {};
-        try {
-          const { applyMacro } = await import(
-            "~/features/measurement-flow/utils/process-scan/process-scan"
-          );
-          const outputs = await applyMacro(
-            input.json,
-            { code: meta.code, language: meta.language },
-            input.ctx.ctx,
-          );
-          const output = outputs.length === 1 ? outputs[0] : { samples: outputs };
+    async run(input: MacroRunInput, opts: { signal: AbortSignal; effectId?: string }) {
+      const generation = deps.getExecutionGeneration?.() ?? "default";
+      const effectId = opts.effectId ?? `${input.trackId}:${input.cellId}`;
+      await deps.analysisGate.wait(
+        {
+          effectId,
+          trackId: input.trackId,
+          cellId: input.cellId,
+          producerCellId: input.producerCellId,
+          deviceIds: [...input.deviceIds],
+        },
+        opts.signal,
+      );
+      if (opts.signal.aborted || (deps.getExecutionGeneration?.() ?? "default") !== generation) {
+        throw new Error(CANCELLED_MESSAGE);
+      }
+      const meta = deps.getMacroMeta(input.macroId);
+      if (!meta || input.json === null || typeof input.json !== "object") return {};
+      try {
+        const { applyMacro } = await import(
+          "~/features/measurement-flow/utils/process-scan/process-scan"
+        );
+        const outputs = await applyMacro(
+          input.json,
+          { code: meta.code, language: meta.language },
+          input.ctx.ctx,
+        );
+        const output = outputs.length === 1 ? outputs[0] : { samples: outputs };
+        if (!opts.signal.aborted && (deps.getExecutionGeneration?.() ?? "default") === generation) {
           deps.onMacroOutput?.(input, output);
-          return output;
-        } catch {
-          // Current mobile analysis renders macro errors without blocking
-          // navigation/upload, so the port preserves that non-fatal behavior.
-          return {};
         }
-      })();
-      resultPromise.catch(() => undefined);
-      await deps.analysisGate.wait(opts.signal);
-      return resultPromise;
+        return output;
+      } catch {
+        // Current mobile analysis renders macro errors without blocking
+        // navigation/upload, so the port preserves that non-fatal behavior.
+        return {};
+      }
     },
   };
 }

@@ -23,6 +23,8 @@ export interface ScanResultEntry {
   containerAttemptId?: string;
   protocolId?: string;
   protocolName?: string;
+  /** Attempt that owns this uploadable row; absent rows are display-only legacy data. */
+  workbookAttemptId?: string;
 }
 
 /** One device's routing from a device-scoped branch. */
@@ -65,6 +67,8 @@ export interface FlowState {
   isQuestionsSubmitPending: boolean;
   scanResult?: ScanResult;
   scanResults?: ScanResultEntry[];
+  /** Attempt-scoped rows eligible for analysis/upload in the current cycle. */
+  uploadScanResults?: ScanResultEntry[];
   producerCellId?: string;
   cellOutputs: Record<string, unknown>;
   isFromOverview: boolean;
@@ -94,6 +98,7 @@ export const initialFlowState: FlowState = {
   isQuestionsSubmitPending: false,
   scanResult: undefined,
   scanResults: undefined,
+  uploadScanResults: undefined,
   producerCellId: undefined,
   cellOutputs: {},
   isFromOverview: false,

@@ -4,6 +4,7 @@
  */
 export type { MeasurementFlowStore } from "./measurement-flow-store-types";
 export {
+  consumeRejectedUnsupportedPersistedFlow,
   flushRunnerMeasurementFlowSnapshot,
   resetRunnerMeasurementFlowForTest,
   useRunnerMeasurementFlowStore as useMeasurementFlowStore,

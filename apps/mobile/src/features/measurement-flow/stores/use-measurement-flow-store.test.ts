@@ -6,6 +6,7 @@ import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
+import { flushMeasurementFlowForPause } from "../services/flow-persistence-boundaries";
 import {
   reconcileWorkbookRunManifests,
   workbookRunManifestRowId,
@@ -190,6 +191,35 @@ beforeEach(async () => {
 afterEach(() => resetRunnerMeasurementFlowForTest());
 
 describe("runner-backed mobile qualification matrix", () => {
+  it("restores the current cursor captured at the real Pause boundary", async () => {
+    await start([question("q1"), instruction("review")]);
+    setAnswer("q1", "ready", 1);
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(1),
+    );
+
+    flushMeasurementFlowForPause();
+    const persisted = await waitForMicrotasks(async () => {
+      const raw = await AsyncStorage.getItem("measurement-flow-storage");
+      expect(raw).not.toBeNull();
+      const envelope = JSON.parse(raw ?? "{}") as {
+        state?: { snapshot?: { state?: { tracks?: { main?: { cursor?: { cellId?: string } } } } } };
+      };
+      expect(envelope.state?.snapshot?.state?.tracks?.main?.cursor?.cellId).toBe("review");
+      if (raw === null) throw new Error("Pause snapshot was not persisted");
+      return raw;
+    });
+
+    resetRunnerMeasurementFlowForTest();
+    await AsyncStorage.setItem("measurement-flow-storage", persisted);
+    await useMeasurementFlowStore.persist.rehydrate();
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().runnerState?.tracks.main).toMatchObject({
+        pendingInteraction: { kind: "instruction", cellId: "review" },
+      }),
+    );
+  });
+
   it("runs one protocol concurrently on every connected device", async () => {
     connect(["a", "multispeq"], ["b", "ambit"]);
     const calls: string[] = [];
@@ -347,6 +377,151 @@ describe("runner-backed mobile qualification matrix", () => {
     expect(scanner.state.cancelCommandOn.mock.calls.map(([id]) => id)).toEqual(["a", "b"]);
   });
 
+  it("abandons only the cancelled lane while its sibling finishes", async () => {
+    connect(["a", "multispeq"], ["b", "ambit"]);
+    const releases = new Map<string, (value: object) => void>();
+    scanner.state.executeCommandOn.mockImplementation(
+      (deviceId: string) =>
+        new Promise((resolve) => {
+          releases.set(deviceId, resolve);
+        }),
+    );
+    const container: WorkbookCell = {
+      id: "parallel-cancel",
+      type: "parallel",
+      name: "cancel_lanes",
+      isCollapsed: false,
+      defaultLaneId: "lane-b",
+      lanes: [
+        {
+          id: "lane-a",
+          label: "A",
+          color: "#0a0",
+          conditions: [familyCondition("multi", "multispeq")],
+          body: [command("measure-a", "A")],
+        },
+        {
+          id: "lane-b",
+          label: "B",
+          color: "#00a",
+          conditions: [familyCondition("ambit", "ambit")],
+          body: [command("measure-b", "B")],
+        },
+      ],
+    };
+    await start([container, instruction("done")]);
+    useMeasurementFlowStore.getState().startRunnerScan("measure-a");
+    await waitForMicrotasks(() => expect(releases.size).toBe(2));
+    const attempt =
+      useMeasurementFlowStore.getState().runnerState?.parallelAttempts["parallel-cancel:1"];
+    const trackA = attempt?.lanes["lane-a"]?.trackId;
+    const trackB = attempt?.lanes["lane-b"]?.trackId;
+    if (!trackA || !trackB) throw new Error("expected lane tracks");
+
+    useMeasurementFlowStore.getState().cancelRunnerScan(trackA);
+    await waitForMicrotasks(() => expect(scanner.state.cancelCommandOn).toHaveBeenCalledWith("a"));
+    expect(scanner.state.cancelCommandOn).not.toHaveBeenCalledWith("b");
+    releases.get("b")?.({ device_id: "firmware-b", value: 2 });
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().runnerState?.tracks[trackB]).toMatchObject({
+        status: "awaitingHuman",
+        pendingInteraction: { kind: "instruction", cellId: "measure-b" },
+      }),
+    );
+    useMeasurementFlowStore.getState().continueRunnerTrackInteraction(trackB, "measure-b");
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(1),
+    );
+    expect(useMeasurementFlowStore.getState().workbookRunRealized).toEqual(
+      expect.arrayContaining([expect.objectContaining({ lane_id: "lane-a", abandoned: true })]),
+    );
+  });
+
+  it("keeps multiple producers from one device attempt-scoped and clears upload rows on rotation", async () => {
+    connect(["a", "multispeq"]);
+    scanner.state.executeCommandOn.mockImplementation((_deviceId: string, payload: unknown) =>
+      Promise.resolve({ device_id: "firmware-a", payload }),
+    );
+    await start([command("measure-1", "ONE"), command("measure-2", "TWO"), instruction("done")]);
+    const firstAttempt = useMeasurementFlowStore.getState().workbookAttemptId;
+
+    useMeasurementFlowStore.getState().startRunnerScan("measure-1");
+    await waitForMicrotasks(() =>
+      expect(
+        useMeasurementFlowStore.getState().runnerState?.tracks.main.pendingInteraction,
+      ).toEqual({
+        kind: "instruction",
+        cellId: "measure-1",
+      }),
+    );
+    useMeasurementFlowStore.getState().nextStep();
+    useMeasurementFlowStore.getState().startRunnerScan("measure-2");
+    await waitForMicrotasks(() =>
+      expect(
+        useMeasurementFlowStore.getState().runnerState?.tracks.main.pendingInteraction,
+      ).toEqual({
+        kind: "instruction",
+        cellId: "measure-2",
+      }),
+    );
+
+    expect(useMeasurementFlowStore.getState().uploadScanResults).toEqual([
+      expect.objectContaining({ producerCellId: "measure-1", workbookAttemptId: firstAttempt }),
+      expect.objectContaining({ producerCellId: "measure-2", workbookAttemptId: firstAttempt }),
+    ]);
+    useMeasurementFlowStore.getState().nextStep();
+    useMeasurementFlowStore.getState().nextStep();
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().iterationCount).toBe(1),
+    );
+    expect(useMeasurementFlowStore.getState().workbookAttemptId).not.toBe(firstAttempt);
+    expect(useMeasurementFlowStore.getState().uploadScanResults).toBeUndefined();
+    expect(useMeasurementFlowStore.getState().scanResult).toMatchObject({ payload: "TWO" });
+  });
+
+  it("never downgrades a frozen lane identity after its device disconnects", async () => {
+    connect(["transport-a", "multispeq"]);
+    const container: WorkbookCell = {
+      id: "parallel-disconnect",
+      type: "parallel",
+      name: "disconnect_lane",
+      isCollapsed: false,
+      defaultLaneId: "lane-a",
+      lanes: [
+        {
+          id: "lane-a",
+          label: "A",
+          color: "#0a0",
+          conditions: [],
+          body: [command("measure-a", "A")],
+        },
+      ],
+    };
+    await start([container, instruction("done")]);
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().workbookRunExpected).toEqual([
+        expect.objectContaining({ device_ids: ["firmware-transport-a"] }),
+      ]),
+    );
+
+    const previous = { ...scanner.state, executors: scanner.state.executors };
+    scanner.state.executors = new Map();
+    for (const listener of scanner.listeners) listener(scanner.state, previous);
+    useMeasurementFlowStore.getState().startRunnerScan("measure-a");
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().runnerScanRound?.failures).toHaveLength(1),
+    );
+    expect(useMeasurementFlowStore.getState().workbookRunExpected).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          lane_id: "lane-a",
+          device_ids: ["firmware-transport-a"],
+          device_id_by_transport: { "transport-a": "firmware-transport-a" },
+        }),
+      ]),
+    );
+  });
+
   it("wraps iterations, retains the prior scan, and supports Back over a branch jump", async () => {
     connect(["a", "multispeq"]);
     scanner.state.executeCommandOn.mockResolvedValue({ device_id: "firmware-a", value: 1 });
@@ -357,9 +532,15 @@ describe("runner-backed mobile qualification matrix", () => {
     );
     useMeasurementFlowStore.getState().startRunnerScan("measure");
     await waitForMicrotasks(() =>
-      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(2),
+      expect(
+        useMeasurementFlowStore.getState().runnerState?.tracks.main.pendingInteraction,
+      ).toEqual({ kind: "instruction", cellId: "measure" }),
     );
     const priorScan = useMeasurementFlowStore.getState().scanResult;
+    useMeasurementFlowStore.getState().nextStep();
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(2),
+    );
     useMeasurementFlowStore.getState().nextStep();
     await waitForMicrotasks(() =>
       expect(useMeasurementFlowStore.getState().iterationCount).toBe(1),
@@ -606,7 +787,14 @@ describe("runner-backed mobile qualification matrix", () => {
     const failedLane = Object.values(
       useMeasurementFlowStore.getState().runnerState?.parallelAttempts["parallel-1:1"]?.lanes ?? {},
     ).find((lane) => lane.laneId === "lane-b");
+    const successfulLane = Object.values(
+      useMeasurementFlowStore.getState().runnerState?.parallelAttempts["parallel-1:1"]?.lanes ?? {},
+    ).find((lane) => lane.laneId === "lane-a");
     if (!failedLane?.trackId) throw new Error("expected failed lane track");
+    if (!successfulLane?.trackId) throw new Error("expected successful lane track");
+    useMeasurementFlowStore
+      .getState()
+      .continueRunnerTrackInteraction(successfulLane.trackId, "measure-a");
     useMeasurementFlowStore.getState().abandonRunnerLane(failedLane.trackId);
     await waitForMicrotasks(() =>
       expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(1),

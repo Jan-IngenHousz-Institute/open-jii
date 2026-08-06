@@ -74,6 +74,7 @@ describe("measurement-flow-storage v3 runner snapshot wire format", () => {
       "scanResult",
       "scanResults",
       "snapshot",
+      "uploadScanResults",
       "workbookAttemptId",
       "workbookRunExpected",
       "workbookRunRealized",

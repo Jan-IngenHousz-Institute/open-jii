@@ -11,6 +11,7 @@ import type {
   ScanResultEntry,
 } from "~/features/measurement-flow/domain/flow-state";
 import { initialFlowState } from "~/features/measurement-flow/domain/flow-state";
+import { guardMobileWorkbookContent } from "~/features/measurement-flow/utils/workbook-capabilities";
 import { flattenFlowNodes, isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 import { resolveMeasurementDeviceId } from "~/shared/measurements/measurement-device-id";
 import { createLogger } from "~/shared/observability/logger";
@@ -20,10 +21,11 @@ import type {
   DeviceRef,
   ParallelContainerAttempt,
   ParallelLaneAttempt,
+  RunnerCell,
   RunnerState,
   WorkbookSnapshot,
 } from "@repo/workbook";
-import { MAIN_TRACK_ID, WorkbookRunner } from "@repo/workbook";
+import { hashCells, MAIN_TRACK_ID, parseSnapshot, WorkbookRunner } from "@repo/workbook";
 
 import {
   addRealizedLaneStatus,
@@ -33,11 +35,17 @@ import {
 } from "../domain/workbook-run-manifest";
 import type {
   WorkbookRunDeviceOutcome,
+  WorkbookRunExpectedLane,
   WorkbookRunContainerProvenance,
   WorkbookRunLaneAssignment,
   WorkbookRunRealizedLane,
 } from "../domain/workbook-run-manifest";
-import { BroadcastUserGate, createMobileRunnerPorts } from "../services/workbook-runner-ports";
+import {
+  AddressedUserGate,
+  BroadcastUserGate,
+  createMobileRunnerPorts,
+} from "../services/workbook-runner-ports";
+import type { AddressedGateToken } from "../services/workbook-runner-ports";
 import type { MeasurementFlowStore } from "./measurement-flow-store-types";
 import { useFlowAnswersStore } from "./use-flow-answers-store";
 
@@ -49,14 +57,16 @@ export interface RunnerMeasurementFlowStore extends MeasurementFlowStore {
   runnerState: RunnerState | null;
   awaitingScanStart: boolean;
   awaitingAnalysisContinue: boolean;
+  analysisQueue: AddressedGateToken[];
   scanError?: unknown;
   runnerScanRound?: MultiScanRound;
   runnerSucceededCount: number;
   overviewNodeId: string | null;
-  startRunnerScan: (cellId: string) => void;
+  startRunnerScan: (cellId: string, trackId?: string) => void;
   continueRunnerWithSuccesses: () => void;
-  cancelRunnerScan: () => void;
-  continueRunnerAnalysis: () => void;
+  cancelRunnerScan: (trackId?: string) => void;
+  continueRunnerAnalysis: (effectId?: string) => void;
+  discardRunnerAnalysis: (trackId?: string) => void;
 }
 
 let runner: WorkbookRunner | null = null;
@@ -69,13 +79,99 @@ let startGeneration = 0;
 let continuePartialScan = false;
 let liveExecutorDeviceIds: string[] = [];
 let autoFollowTargetCellId: string | null | undefined;
+let rejectedUnsupportedPersistedFlow = false;
+
+const SUPPORTED_FLOW_NODE_TYPES = new Set([
+  "instruction",
+  "question",
+  "measurement",
+  "analysis",
+  "branch",
+  "parallel",
+]);
+const SUPPORTED_WORKBOOK_CELL_TYPES = new Set([
+  "protocol",
+  "command",
+  "macro",
+  "question",
+  "branch",
+  "output",
+  "markdown",
+  "parallel",
+]);
+
+function validatePersistedWorkbookCells(value: unknown): RunnerCell[] {
+  if (!Array.isArray(value)) throw new Error("Persisted workbook cells are not an array");
+  const visit = (cells: unknown[]): void => {
+    for (const candidate of cells) {
+      if (
+        !candidate ||
+        typeof candidate !== "object" ||
+        typeof (candidate as { id?: unknown }).id !== "string" ||
+        typeof (candidate as { type?: unknown }).type !== "string"
+      ) {
+        throw new Error("Persisted workbook cell has an invalid shape");
+      }
+      const type = (candidate as { type: string }).type;
+      if (!SUPPORTED_WORKBOOK_CELL_TYPES.has(type)) {
+        throw new Error(`Unsupported mobile workbook cell type ${type}`);
+      }
+      if (type === "parallel") {
+        const lanes = (candidate as { lanes?: unknown }).lanes;
+        if (!Array.isArray(lanes)) throw new Error("Persisted parallel cell has no lanes");
+        for (const lane of lanes) {
+          if (
+            !lane ||
+            typeof lane !== "object" ||
+            !Array.isArray((lane as { body?: unknown }).body)
+          ) {
+            throw new Error("Persisted parallel lane has no body");
+          }
+          visit((lane as { body: unknown[] }).body);
+        }
+      }
+    }
+  };
+  visit(value);
+  return value as RunnerCell[];
+}
+
+export function consumeRejectedUnsupportedPersistedFlow(): boolean {
+  const rejected = rejectedUnsupportedPersistedFlow;
+  rejectedUnsupportedPersistedFlow = false;
+  return rejected;
+}
+
+function validatePersistedRunnerState(persisted: Partial<RunnerMeasurementFlowStore>): void {
+  if (!persisted.snapshot) throw new Error("Active persisted flow has no runner snapshot");
+  const snapshot = parseSnapshot(persisted.snapshot);
+  if (hashCells(snapshot.state.cells) !== snapshot.cellsHash) {
+    throw new Error("Persisted runner cells do not match their hash");
+  }
+  const snapshotCells = validatePersistedWorkbookCells(snapshot.state.cells);
+  guardMobileWorkbookContent({ cells: snapshotCells });
+  const cells = validatePersistedWorkbookCells(persisted.cells ?? []);
+  guardMobileWorkbookContent({ cells });
+  for (const node of flattenFlowNodes(persisted.flowNodes ?? [])) {
+    if (!SUPPORTED_FLOW_NODE_TYPES.has(node.type)) {
+      throw new Error(`Unsupported mobile flow node type ${String(node.type)}`);
+    }
+  }
+}
 
 const scanGate = new BroadcastUserGate((pending) => {
   useRunnerMeasurementFlowStore.setState({ awaitingScanStart: pending });
 });
-const analysisGate = new BroadcastUserGate((pending) => {
-  useRunnerMeasurementFlowStore.setState({ awaitingAnalysisContinue: pending });
+const analysisGate = new AddressedUserGate((analysisQueue) => {
+  useRunnerMeasurementFlowStore.setState({
+    analysisQueue,
+    awaitingAnalysisContinue: analysisQueue.length > 0,
+  });
 });
+
+function executionGeneration(): string {
+  return `${startGeneration}:${useRunnerMeasurementFlowStore.getState().workbookAttemptId ?? "none"}`;
+}
 
 function protocolMetadata(input: {
   cellId: string;
@@ -140,6 +236,7 @@ function recordPortRound(
   outcomes: DeviceOutcome[],
 ): void {
   useRunnerMeasurementFlowStore.setState((state) => {
+    if (!state.workbookAttemptId) return state;
     const metadata = protocolMetadata(input);
     const executorEntries = new Map(
       state.runnerState?.devices.map((device) => [device.id, device] as const) ?? [],
@@ -172,48 +269,52 @@ function recordPortRound(
             }
           : {}),
         ...metadata,
+        workbookAttemptId: state.workbookAttemptId,
       };
     });
     const scanResults = [
       ...(state.scanResults?.filter(({ device }) => !device || !targeted.has(device.id)) ?? []),
       ...successes,
     ].sort((left, right) => orderOf(left.device?.id) - orderOf(right.device?.id));
-    const ledgerEntries: WorkbookRunDeviceOutcome[] = outcomes.map((outcome) => ({
-      producer_cell_id: input.cellId,
-      transport_device_id: outcome.deviceId,
-      device_id:
+    const uploadKey = (entry: ScanResultEntry) =>
+      [
+        entry.workbookAttemptId,
+        entry.containerAttemptId,
+        entry.laneId,
+        entry.producerCellId,
+        entry.device?.id,
+      ].join(":");
+    const successKeys = new Set(successes.map(uploadKey));
+    const uploadScanResults = [
+      ...(state.uploadScanResults?.filter((entry) => !successKeys.has(uploadKey(entry))) ?? []),
+      ...successes,
+    ].sort((left, right) => orderOf(left.device?.id) - orderOf(right.device?.id));
+    const frozenLaneAssignment = provenance
+      ? state.workbookRunExpected.find(
+          (entry): entry is WorkbookRunExpectedLane =>
+            !("producer_cell_id" in entry) &&
+            entry.container_cell_id === provenance.container_cell_id &&
+            entry.lane_id === provenance.lane_id &&
+            entry.container_attempt_id === provenance.container_attempt_id,
+        )
+      : undefined;
+    const ledgerEntries: WorkbookRunDeviceOutcome[] = outcomes.map((outcome) => {
+      const deviceId =
         successes.find(({ device }) => device?.id === outcome.deviceId)?.measurementDeviceId ??
         executorEntries.get(outcome.deviceId)?.deviceId ??
-        outcome.deviceId,
-      outcome: outcome.error === undefined ? "ok" : "failed",
-      ...provenance,
-    }));
-    let expected = state.workbookRunExpected;
-    if (provenance) {
-      const owner = containerLaneForTrack(state.runnerState, input.trackId);
-      if (owner) {
-        expected = setExpectedLaneAssignment(expected, {
-          ...provenance,
-          devices: owner.lane.deviceIds.map((deviceId) => {
-            const device = executorEntries.get(deviceId);
-            const result = scanResults.find(
-              (entry) =>
-                entry.device?.id === deviceId &&
-                entry.containerAttemptId === provenance.container_attempt_id &&
-                entry.laneId === provenance.lane_id,
-            )?.result;
-            return {
-              transport_device_id: deviceId,
-              handshake_device_id: device?.deviceId,
-              ...(result ? { raw_measurement: result } : {}),
-            };
-          }),
-        });
-      }
-    }
+        frozenLaneAssignment?.device_id_by_transport?.[outcome.deviceId] ??
+        outcome.deviceId;
+      return {
+        producer_cell_id: input.cellId,
+        transport_device_id: outcome.deviceId,
+        device_id: deviceId,
+        outcome: outcome.error === undefined ? "ok" : "failed",
+        ...provenance,
+      };
+    });
     const ledger = ledgerEntries.reduce(
       (next, entry) => addWorkbookDeviceOutcome(next.expected, next.realized, entry),
-      { expected, realized: state.workbookRunRealized },
+      { expected: state.workbookRunExpected, realized: state.workbookRunRealized },
     );
     const mergedRound = mergeRound(state.runnerScanRound, round, input.deviceIds);
     const runnerScanRound: MultiScanRound = {
@@ -226,6 +327,7 @@ function recordPortRound(
     };
     return {
       scanResults,
+      uploadScanResults,
       scanResult: scanResults[0]?.result,
       producerCellId: scanResults[0]?.producerCellId,
       runnerScanRound,
@@ -264,6 +366,7 @@ const ports = createMobileRunnerPorts({
     return isFrozenSubset ? input.deviceIds : liveExecutorDeviceIds;
   },
   shouldContinueAfterPartial: () => continuePartialScan,
+  getExecutionGeneration: executionGeneration,
   onScanError: (error) => useRunnerMeasurementFlowStore.setState({ scanError: error }),
   onScanSuccess: () => {
     void import("~/features/measurement-flow/utils/play-sound")
@@ -352,6 +455,7 @@ function rotateAttemptForCycle(): void {
         : state.pendingWorkbookRunManifests,
       runnerScanRound: undefined,
       runnerSucceededCount: 0,
+      uploadScanResults: undefined,
     };
   });
 }
@@ -557,6 +661,7 @@ async function startPreparedRunner(snapshot?: WorkbookSnapshot): Promise<void> {
           deviceFamily: "multispeq",
           devices,
           allowDeviceWrites: false,
+          pauseAfterInlineCommand: true,
         });
     if (snapshot) next.setDevices(devices);
     adoptRunner(next);
@@ -572,6 +677,7 @@ async function startPreparedRunner(snapshot?: WorkbookSnapshot): Promise<void> {
         ? [...current.pendingWorkbookRunManifests, abandoned]
         : current.pendingWorkbookRunManifests,
     });
+    if (snapshot) useFlowAnswersStore.getState().clearHistory();
   }
 }
 
@@ -594,6 +700,7 @@ const clearedRunnerState = {
   runnerState: null,
   awaitingScanStart: false,
   awaitingAnalysisContinue: false,
+  analysisQueue: [],
   scanError: undefined,
   runnerScanRound: undefined,
   runnerSucceededCount: 0,
@@ -698,8 +805,9 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
           get().returnToOverview();
           return;
         }
-        if (analysisGate.pending) {
-          analysisGate.arm();
+        const pendingAnalysis = analysisGate.pending[0];
+        if (pendingAnalysis) {
+          analysisGate.release(pendingAnalysis.effectId);
           return;
         }
         const node = state.flowNodes[state.currentFlowStep];
@@ -769,6 +877,7 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
         set({
           scanResult: undefined,
           scanResults: undefined,
+          uploadScanResults: undefined,
           producerCellId: undefined,
           cellOutputs: {},
           isFromOverview: false,
@@ -789,6 +898,7 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
             : state.pendingWorkbookRunManifests,
           scanResult: undefined,
           scanResults: undefined,
+          uploadScanResults: undefined,
           producerCellId: undefined,
           cellOutputs: {},
           runnerScanRound: undefined,
@@ -808,15 +918,37 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
           isQuestionsSubmitPending: false,
           scanResult: undefined,
           scanResults: undefined,
+          uploadScanResults: undefined,
           producerCellId: undefined,
           cellOutputs: {},
         });
         runner?.send({ type: "START_CYCLE" });
       },
       recordExpectedLaneAssignment: (assignment: WorkbookRunLaneAssignment) =>
-        set((state) => ({
-          workbookRunExpected: setExpectedLaneAssignment(state.workbookRunExpected, assignment),
-        })),
+        set((state) => {
+          const existing = state.workbookRunExpected.find(
+            (entry): entry is WorkbookRunExpectedLane =>
+              !("producer_cell_id" in entry) &&
+              entry.container_cell_id === assignment.container_cell_id &&
+              entry.lane_id === assignment.lane_id &&
+              entry.container_attempt_id === assignment.container_attempt_id,
+          );
+          const reconciledAssignment = {
+            ...assignment,
+            devices: assignment.devices.map((device) => ({
+              ...device,
+              handshake_device_id:
+                device.handshake_device_id ??
+                existing?.device_id_by_transport?.[device.transport_device_id],
+            })),
+          };
+          return {
+            workbookRunExpected: setExpectedLaneAssignment(
+              state.workbookRunExpected,
+              reconciledAssignment,
+            ),
+          };
+        }),
       recordRealizedLaneStatus: (lane: WorkbookRunRealizedLane) =>
         set((state) => ({
           workbookRunRealized: addRealizedLaneStatus(state.workbookRunRealized, lane),
@@ -862,10 +994,16 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
             (pending) => pending.record.workbook_attempt_id !== attemptId,
           ),
         })),
-      navigateToQuestionFromOverview: (questionIndex) => {
-        const node = get().flowNodes[questionIndex];
-        if (node)
-          set({ overviewNodeId: node.id, currentFlowStep: questionIndex, isFromOverview: true });
+      navigateToQuestionFromOverview: (questionId) => {
+        const topLevelIndex = get().flowNodes.findIndex(
+          (node) =>
+            node.id === questionId ||
+            (node.type === "parallel" &&
+              flattenFlowNodes([node]).some((candidate) => candidate.id === questionId)),
+        );
+        if (topLevelIndex >= 0) {
+          set({ overviewNodeId: questionId, currentFlowStep: topLevelIndex, isFromOverview: true });
+        }
       },
       returnToOverview: () => {
         void syncOverviewAnswerAndReturn();
@@ -885,7 +1023,7 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
           type: "RETRY",
           target: { kind: "containerAttempt", containerCellId, attemptId },
         }),
-      startRunnerScan: (cellId) => {
+      startRunnerScan: (cellId, trackId) => {
         continuePartialScan = false;
         set((state) => ({
           scanError: undefined,
@@ -898,15 +1036,31 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
         scanGate.arm();
         runner?.send({
           type: "RETRY",
-          target: { kind: "postCancel", trackId: MAIN_TRACK_ID, cellId },
+          target: { kind: "postCancel", trackId: trackId ?? MAIN_TRACK_ID, cellId },
         });
       },
       continueRunnerWithSuccesses: () => {
         continuePartialScan = true;
         scanGate.arm();
       },
-      cancelRunnerScan: () => runner?.cancel(),
-      continueRunnerAnalysis: () => analysisGate.arm(),
+      cancelRunnerScan: (trackId) => {
+        if (trackId && trackId !== MAIN_TRACK_ID) {
+          runner?.send({ type: "ABANDON_LANE", trackId });
+          return;
+        }
+        runner?.cancel();
+      },
+      continueRunnerAnalysis: (effectId) => {
+        const target = effectId ?? analysisGate.pending[0]?.effectId;
+        if (target) analysisGate.release(target);
+      },
+      discardRunnerAnalysis: (trackId) => {
+        if (trackId && trackId !== MAIN_TRACK_ID) {
+          runner?.send({ type: "ABANDON_LANE", trackId });
+          return;
+        }
+        get().previousStep();
+      },
     }),
     {
       name: "measurement-flow-storage",
@@ -935,6 +1089,27 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
           ],
         };
       },
+      merge: (persisted, current) => {
+        const candidate =
+          persisted !== null && typeof persisted === "object"
+            ? (persisted as Partial<RunnerMeasurementFlowStore>)
+            : {};
+        if (candidate.experimentId || candidate.snapshot) {
+          try {
+            validatePersistedRunnerState(candidate);
+          } catch (error) {
+            rejectedUnsupportedPersistedFlow = true;
+            log.warn("persisted runner rejected before publication", {
+              err: (error as Error)?.message,
+            });
+            return {
+              ...current,
+              pendingWorkbookRunManifests: candidate.pendingWorkbookRunManifests ?? [],
+            };
+          }
+        }
+        return { ...current, ...candidate };
+      },
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
@@ -952,6 +1127,7 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
         isQuestionsSubmitPending: state.isQuestionsSubmitPending,
         scanResult: state.scanResult,
         scanResults: state.scanResults,
+        uploadScanResults: state.uploadScanResults,
         producerCellId: state.producerCellId,
         cellOutputs: state.cellOutputs,
         isFromOverview: state.isFromOverview,

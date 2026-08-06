@@ -3,9 +3,16 @@ import type { MultiScanRound } from "~/features/connection/services/scan-manager
 import type { DeviceExecutorEntry } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { Device } from "~/shared/types/device";
 
-import type { CommandRunInput, DeviceOutcome } from "@repo/workbook";
+import type { CommandRunInput, DeviceOutcome, MacroRunInput } from "@repo/workbook";
 
-import { BroadcastUserGate, createMobileRunnerPorts } from "./workbook-runner-ports";
+import {
+  AddressedUserGate,
+  BroadcastUserGate,
+  createMobileRunnerPorts,
+} from "./workbook-runner-ports";
+
+const applyMacro = vi.hoisted(() => vi.fn());
+vi.mock("~/features/measurement-flow/utils/process-scan/process-scan", () => ({ applyMacro }));
 
 function device(id: string): Device {
   return { id, name: `Device ${id}`, type: "usb" };
@@ -56,7 +63,20 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function emptyMacroRunnerDeps(scanGate: BroadcastUserGate, analysisGate: BroadcastUserGate) {
+function macro(cellId: string, trackId = "lane-a"): MacroRunInput {
+  return {
+    trackId,
+    cellId,
+    macroId: cellId,
+    language: "javascript",
+    deviceIds: [trackId],
+    producerCellId: `producer-${trackId}`,
+    json: { value: trackId },
+    ctx: { ctx: {}, byId: {}, names: {} },
+  };
+}
+
+function emptyMacroRunnerDeps(scanGate: BroadcastUserGate, analysisGate: AddressedUserGate) {
   return {
     scanGate,
     analysisGate,
@@ -69,7 +89,7 @@ function emptyMacroRunnerDeps(scanGate: BroadcastUserGate, analysisGate: Broadca
 describe("mobile workbook runner command port", () => {
   it("releases heterogeneous target subsets together and returns per-device outcomes", async () => {
     const scanGate = new BroadcastUserGate();
-    const analysisGate = new BroadcastUserGate();
+    const analysisGate = new AddressedUserGate();
     const a = device("a");
     const b = device("b");
     const executors = new Map([
@@ -136,7 +156,7 @@ describe("mobile workbook runner command port", () => {
 
   it("cancels only the targeted subset and does not flatten missing devices", async () => {
     const scanGate = new BroadcastUserGate();
-    const analysisGate = new BroadcastUserGate();
+    const analysisGate = new AddressedUserGate();
     const a = device("a");
     const executors = new Map([[a.id, entry(a)]]);
     const round = deferred<MultiScanRound>();
@@ -164,9 +184,39 @@ describe("mobile workbook runner command port", () => {
     await expect(running).rejects.toThrow("Measurement cancelled");
   });
 
+  it("drops a late command round before any host callback can mutate a new attempt", async () => {
+    const scanGate = new BroadcastUserGate();
+    const analysisGate = new AddressedUserGate();
+    const a = device("a");
+    const round = deferred<MultiScanRound>();
+    const onScanRound = vi.fn();
+    let generation = "attempt-1";
+    const ports = createMobileRunnerPorts({
+      ...emptyMacroRunnerDeps(scanGate, analysisGate),
+      getExecutors: () => new Map([[a.id, entry(a)]]),
+      executeAssignments: () => round.promise,
+      onScanRound,
+      getExecutionGeneration: () => generation,
+    });
+    const abort = new AbortController();
+    const running = ports.commandExecutor.execute(command("cell-a", ["a"]), {
+      signal: abort.signal,
+      effectId: "e-command",
+      onProgress: vi.fn(),
+    });
+    scanGate.arm();
+    await Promise.resolve();
+    abort.abort();
+    generation = "attempt-2";
+    round.resolve({ successes: [{ device: a, result: { stale: true } }], failures: [] });
+
+    await expect(running).rejects.toThrow("Measurement cancelled");
+    expect(onScanRound).not.toHaveBeenCalled();
+  });
+
   it("accumulates successes and retries only the failed devices", async () => {
     const scanGate = new BroadcastUserGate();
-    const analysisGate = new BroadcastUserGate();
+    const analysisGate = new AddressedUserGate();
     const a = device("a");
     const b = device("b");
     const executors = new Map([[a.id, entry(a)]]);
@@ -202,5 +252,109 @@ describe("mobile workbook runner command port", () => {
     expect(executeAssignments).toHaveBeenCalledTimes(2);
     expect(executeAssignments.mock.calls[0]?.[0].map(({ device }) => device.id)).toEqual(["a"]);
     expect(executeAssignments.mock.calls[1]?.[0].map(({ device }) => device.id)).toEqual(["b"]);
+  });
+
+  it("retains the failed-only partition when a parked partial round is cancelled", async () => {
+    const scanGate = new BroadcastUserGate();
+    const analysisGate = new AddressedUserGate();
+    const a = device("a");
+    const b = device("b");
+    const executors = new Map([
+      [a.id, entry(a)],
+      [b.id, entry(b)],
+    ]);
+    const executeAssignments = vi
+      .fn()
+      .mockResolvedValueOnce({
+        successes: [{ device: a, result: { value: 1 } }],
+        failures: [{ device: b, error: new Error("retry b") }],
+      })
+      .mockResolvedValueOnce({
+        successes: [{ device: b, result: { value: 2 } }],
+        failures: [],
+      });
+    const ports = createMobileRunnerPorts({
+      ...emptyMacroRunnerDeps(scanGate, analysisGate),
+      getExecutors: () => executors,
+      executeAssignments,
+      getExecutionGeneration: () => "attempt-1",
+    });
+    const firstAbort = new AbortController();
+    const first = ports.commandExecutor.execute(command("cell-a", ["a", "b"]), {
+      signal: firstAbort.signal,
+      effectId: "e1",
+      onProgress: vi.fn(),
+    });
+    scanGate.arm();
+    await vi.waitFor(() => expect(scanGate.pending).toBe(true));
+    firstAbort.abort();
+    await expect(first).rejects.toThrow("Measurement cancelled");
+
+    const retry = ports.commandExecutor.execute(command("cell-a", ["a", "b"]), {
+      signal: new AbortController().signal,
+      effectId: "e2",
+      onProgress: vi.fn(),
+    });
+    scanGate.arm();
+    await expect(retry).resolves.toEqual([
+      expect.objectContaining({ deviceId: "a", data: { value: 1 } }),
+      expect.objectContaining({ deviceId: "b", data: { value: 2 } }),
+    ]);
+    expect(executeAssignments.mock.calls[1]?.[0].map(({ device }) => device.id)).toEqual(["b"]);
+  });
+});
+
+describe("mobile workbook runner analysis queue", () => {
+  it("releases simultaneous macros individually in reverse presentation order", async () => {
+    const scanGate = new BroadcastUserGate();
+    const analysisGate = new AddressedUserGate();
+    const ports = createMobileRunnerPorts({
+      ...emptyMacroRunnerDeps(scanGate, analysisGate),
+      getMacroMeta: () => null,
+    });
+    const first = ports.macroRunner.run(macro("macro-a", "lane-a"), {
+      signal: new AbortController().signal,
+      effectId: "e-a",
+    });
+    const second = ports.macroRunner.run(macro("macro-b", "lane-b"), {
+      signal: new AbortController().signal,
+      effectId: "e-b",
+    });
+    expect(analysisGate.pending.map(({ effectId }) => effectId)).toEqual(["e-a", "e-b"]);
+
+    expect(analysisGate.release("e-b")).toBe(true);
+    await expect(second).resolves.toEqual({});
+    expect(analysisGate.pending.map(({ effectId }) => effectId)).toEqual(["e-a"]);
+    expect(analysisGate.release("e-a")).toBe(true);
+    await expect(first).resolves.toEqual({});
+  });
+
+  it("drops a macro output that settles after abort and generation change", async () => {
+    const scanGate = new BroadcastUserGate();
+    const analysisGate = new AddressedUserGate();
+    const output = deferred<Record<string, unknown>[]>();
+    applyMacro.mockReturnValueOnce(output.promise);
+    const onMacroOutput = vi.fn();
+    let generation = "attempt-1";
+    const ports = createMobileRunnerPorts({
+      ...emptyMacroRunnerDeps(scanGate, analysisGate),
+      analysisGate,
+      getMacroMeta: () => ({ code: "code", language: "javascript" }),
+      getExecutionGeneration: () => generation,
+      onMacroOutput,
+    });
+    const abort = new AbortController();
+    const running = ports.macroRunner.run(macro("macro-a"), {
+      signal: abort.signal,
+      effectId: "e-a",
+    });
+    analysisGate.release("e-a");
+    await Promise.resolve();
+    abort.abort();
+    generation = "attempt-2";
+    output.resolve([{ stale: true }]);
+
+    await expect(running).resolves.toEqual({ stale: true });
+    expect(onMacroOutput).not.toHaveBeenCalled();
   });
 });

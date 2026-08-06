@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { createInitialState, hashCells } from "@repo/workbook";
 
 import { installFlowRehydrationGuard } from "./flow-rehydration-guard";
 import { useFlowAnswersStore } from "./use-flow-answers-store";
@@ -51,6 +52,70 @@ describe("flow rehydration capability guard", () => {
       cells: [container],
     });
     expect(useFlowAnswersStore.getState().getAnswer(0, "plot")).toBe("A-1");
+    uninstall();
+  });
+
+  it("rejects an unsupported real v3 envelope before it becomes live and clears answers", async () => {
+    const futureCells = [{ id: "future-1", type: "future-cell" }] as unknown as Parameters<
+      typeof createInitialState
+    >[0]["cells"];
+    const runnerState = createInitialState({ cells: futureCells, mode: "flow" });
+    await AsyncStorage.setItem(
+      "measurement-flow-storage",
+      JSON.stringify({
+        state: {
+          experimentId: "experiment-unsupported",
+          workbookVersionId: "version-unsupported",
+          cells: futureCells,
+          flowNodes: [
+            {
+              id: "future-1",
+              type: "future-cell",
+              name: "Future",
+              content: {},
+              isStart: true,
+            },
+          ],
+          snapshot: {
+            schemaVersion: 2,
+            savedAt: 1,
+            cellsHash: hashCells(futureCells),
+            state: runnerState,
+          },
+        },
+        version: 3,
+      }),
+    );
+    await AsyncStorage.setItem(
+      "flow-answers-storage",
+      JSON.stringify({
+        state: {
+          answersHistory: [{ plot: "orphan" }],
+          autoincrementSettings: {},
+          rememberAnswerSettings: {},
+        },
+        version: 1,
+      }),
+    );
+    const observedTypes: string[][] = [];
+    const unsubscribe = useMeasurementFlowStore.subscribe((state) => {
+      observedTypes.push(state.flowNodes.map((node) => node.type));
+    });
+    const uninstall = installFlowRehydrationGuard();
+
+    await Promise.all([
+      useMeasurementFlowStore.persist.rehydrate(),
+      useFlowAnswersStore.persist.rehydrate(),
+    ]);
+
+    expect(useMeasurementFlowStore.getState()).toMatchObject({
+      experimentId: undefined,
+      cells: [],
+      flowNodes: [],
+    });
+    expect(observedTypes.every((types) => !types.includes("future-cell"))).toBe(true);
+    expect(useFlowAnswersStore.getState().answersHistory).toEqual([]);
+    unsubscribe();
     uninstall();
   });
 });
