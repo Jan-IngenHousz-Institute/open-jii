@@ -678,55 +678,49 @@ async function main() {
 
   // 7. Workbooks with a published version, pinned to two active experiments so
   // device onboarding configs carry a real procedure. Soil Health stays
-  // unpinned to exercise the workbook-less config path.
+  // unpinned to exercise the workbook-less config path. Like the real publish
+  // flow, each version snapshots its referenced protocol's code so the config
+  // is executable without a lookup. Corn pairs with an ambyte protocol (its
+  // bound device is the Ambyte gateway); wheat with a multispeq one.
   const workbookSeeds = [
     {
       name: "[Seed] Corn Measurement Workbook",
       description: "Measurement procedure for the corn photosynthesis field trial.",
       experimentId: ex[0].id,
-      cells: [
-        {
-          id: crypto.randomUUID(),
-          type: "markdown",
-          content: "## Corn field procedure\nClamp the third fully expanded leaf from the top.",
-          isCollapsed: false,
-        },
-        {
-          id: crypto.randomUUID(),
-          type: "protocol",
-          payload: { protocolId: p[0].id, version: 1, name: p[0].name },
-          isCollapsed: false,
-        },
-      ],
+      intro: "## Corn field procedure\nLog soil moisture at each plot marker.",
+      protocol: p[6],
     },
     {
       name: "[Seed] Wheat Phenotyping Workbook",
       description: "Flag leaf measurement procedure for the winter wheat phenotyping study.",
       experimentId: ex[3].id,
-      cells: [
-        {
-          id: crypto.randomUUID(),
-          type: "markdown",
-          content: "## Wheat procedure\nMeasure the flag leaf at mid-blade, avoiding the midrib.",
-          isCollapsed: false,
-        },
-        {
-          id: crypto.randomUUID(),
-          type: "protocol",
-          payload: { protocolId: p[2].id, version: 1, name: p[2].name },
-          isCollapsed: false,
-        },
-      ],
+      intro: "## Wheat procedure\nMeasure the flag leaf at mid-blade, avoiding the midrib.",
+      protocol: p[2],
     },
   ];
 
   for (const wb of workbookSeeds) {
+    const cells = [
+      {
+        id: crypto.randomUUID(),
+        type: "markdown",
+        content: wb.intro,
+        isCollapsed: false,
+      },
+      {
+        id: crypto.randomUUID(),
+        type: "protocol",
+        payload: { protocolId: wb.protocol.id, version: 1, name: wb.protocol.name },
+        isCollapsed: false,
+      },
+    ];
+
     const [workbook] = await db
       .insert(workbooks)
       .values({
         name: wb.name,
         description: wb.description,
-        cells: wb.cells,
+        cells,
         createdBy: user.id,
         organizationId: personalOrganizationId,
       })
@@ -737,9 +731,14 @@ async function main() {
       .values({
         workbookId: workbook.id,
         version: 1,
-        cells: wb.cells,
+        cells,
         metadata: {},
-        entitySnapshots: { protocols: {}, macros: {} },
+        entitySnapshots: {
+          protocols: {
+            [wb.protocol.id]: { code: wb.protocol.code, family: wb.protocol.family },
+          },
+          macros: {},
+        },
         createdBy: user.id,
       })
       .returning();
