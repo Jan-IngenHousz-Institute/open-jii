@@ -11,8 +11,7 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
-from typing import Any, cast
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
@@ -26,6 +25,7 @@ LEGACY_TIMEZONE_ALIASES = {"AMT": "Europe/Amsterdam"}
 _OFFSET_PATTERN = r"^([+-])(\d{2})(?::(\d{2})(?::(\d{2}))?)?$"
 _OFFSET_RE = re.compile(_OFFSET_PATTERN)
 _EDGE_WHITESPACE_PATTERN = r"^[ \t\r\n]+|[ \t\r\n]+$"
+_VALID_IANA_TIMEZONES = tuple(sorted(available_timezones() | {"UTC"}))
 
 
 def _valid_zone_offset(value: str) -> bool:
@@ -78,15 +78,6 @@ def _strip_timezone_column(source):
     return F.regexp_replace(source, _EDGE_WHITESPACE_PATTERN, "")
 
 
-def _jvm_zone_ids(df: DataFrame) -> tuple[str, ...]:
-    """Read the exact region IDs accepted by this Spark JVM's timezone engine."""
-    jvm = cast(Any, df.sparkSession._jvm)
-    if jvm is None:
-        raise RuntimeError("Spark JVM is unavailable for timezone validation")
-    zone_ids = jvm.java.time.ZoneId.getAvailableZoneIds().toArray()
-    return tuple(sorted({str(zone_id) for zone_id in zone_ids} | {"UTC"}))
-
-
 def _canonical_timezone_column(source, valid_zone_ids: tuple[str, ...]):
     """Return a Spark column containing only conversion-safe timezone IDs."""
     candidate = _strip_timezone_column(source)
@@ -116,10 +107,11 @@ def add_local_time_columns(
     original = F.col(timezone_column)
     stripped = _strip_timezone_column(original)
     effective = F.col(effective_column)
-    valid_zone_ids = _jvm_zone_ids(df)
-
     return (
-        df.withColumn(effective_column, _canonical_timezone_column(original, valid_zone_ids))
+        # Databricks blocks java.time.ZoneId.getAvailableZoneIds() through its
+        # Py4J allowlist. Use Python's system IANA database, which is also what
+        # canonical_timezone() validates, and keep conversion Spark-native.
+        df.withColumn(effective_column, _canonical_timezone_column(original, _VALID_IANA_TIMEZONES))
         .withColumn(
             "timezone_valid",
             original.isNull() | (F.length(stripped) == 0) | effective.isNotNull(),

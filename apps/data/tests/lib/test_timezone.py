@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
+
+import enrich.timezone as timezone_module
 import pytest
 from enrich.timezone import add_local_time_columns, canonical_timezone
 from pyspark.sql import functions as F
@@ -27,6 +30,12 @@ from pyspark.sql import functions as F
 )
 def test_canonical_timezone(source, expected):
     assert canonical_timezone(source) == expected
+
+
+def test_timezone_validation_does_not_call_blocked_databricks_py4j_api():
+    source = inspect.getsource(timezone_module)
+    assert "jvm.java.time.ZoneId" not in source
+    assert "sparkSession._jvm" not in source
 
 
 @pytest.mark.spark
