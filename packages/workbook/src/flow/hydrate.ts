@@ -16,6 +16,14 @@ export interface OutputEntry {
   messages?: string[];
 }
 
+export interface HydrateCellsOptions {
+  /**
+   * Leave device-producer values raw when the shared API namespace reader is
+   * the normalization boundary (macro ctx construction).
+   */
+  normalizeDeviceOutputs?: boolean;
+}
+
 /**
  * Rebuild the cell array with live runtime values folded in, so the shared
  * `evaluateBranch` and `buildCellNamespace` read current state: question
@@ -27,6 +35,7 @@ export function hydrateCells(
   cells: RunnerCell[],
   answers: Partial<Record<string, string>>,
   outputs: Partial<Record<string, OutputEntry>>,
+  options: HydrateCellsOptions = {},
 ): RunnerCell[] {
   const seenProducers = new Set<string>();
 
@@ -38,7 +47,8 @@ export function hydrateCells(
     if (cell.type === "protocol" || cell.type === "command") deviceProducer.add(cell.id);
   }
   const view = (producedBy: string, raw: unknown): unknown =>
-    deviceProducer.has(producedBy) || producedBy.endsWith("__dispatch")
+    options.normalizeDeviceOutputs !== false &&
+    (deviceProducer.has(producedBy) || producedBy.endsWith("__dispatch"))
       ? normalizeOutputData(raw)
       : raw;
   const deviceResultsView = (

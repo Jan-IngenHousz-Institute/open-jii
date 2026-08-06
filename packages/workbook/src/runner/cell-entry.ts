@@ -299,7 +299,14 @@ export function startProducer(
   if (cell.type === "macro") {
     const upstreamId = nearestUpstreamProducerId(next.cells, cellId);
     const upstream = upstreamId ? next.outputs[upstreamId] : undefined;
-    const hydrated = asWorkbookCells(hydrateCells(next.cells, currentAnswers(next), next.outputs));
+    const hydrated = asWorkbookCells(
+      hydrateCells(next.cells, currentAnswers(next), next.outputs, {
+        // buildCellNamespace is the macro-read normalization boundary. Keeping
+        // device values raw here lets it reject one bad device without
+        // poisoning valid sibling legs.
+        normalizeDeviceOutputs: false,
+      }),
+    );
     const idx = cellIndex(next.cells, cellId);
     const base = {
       trackId,

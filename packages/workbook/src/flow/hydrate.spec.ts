@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { OutputDataNormalizationError } from "@repo/api/transforms/build-cell-namespace";
 import { evaluateBranch } from "@repo/api/transforms/evaluate-branch";
 
 import type { RunnerCell } from "../cells";
@@ -15,12 +16,21 @@ const cells: RunnerCell[] = [
 ];
 
 describe("normalizeOutputData", () => {
-  it("unwraps sample envelopes and boxes scalar samples", () => {
-    expect(normalizeOutputData({ sample: [{ Phi2: 0.7 }] })).toEqual([{ Phi2: 0.7 }]);
-    expect(normalizeOutputData({ sample: { Phi2: 0.7 } })).toEqual([{ Phi2: 0.7 }]);
+  it("shares main's macro-input projection without inventing array semantics", () => {
+    expect(normalizeOutputData({ sample: [{ Phi2: 0.7 }] })).toEqual({ Phi2: 0.7 });
+    expect(normalizeOutputData({ sample: { Phi2: 0.7 } })).toEqual({ Phi2: 0.7 });
+    expect(normalizeOutputData({ sample: 0.7 })).toEqual({ sample: 0.7 });
+    expect(normalizeOutputData([{ Phi2: 0.7 }])).toEqual([{ Phi2: 0.7 }]);
     expect(normalizeOutputData({ Phi2: 0.7 })).toEqual({ Phi2: 0.7 });
     expect(normalizeOutputData("82%")).toBe("82%");
     expect(normalizeOutputData(null)).toBeNull();
+  });
+
+  it("throws main's typed normalization error for an empty sample envelope", () => {
+    expect(() => normalizeOutputData({ sample: [] })).toThrowError(OutputDataNormalizationError);
+    expect(() => normalizeOutputData({ sample: [] })).toThrowError(
+      "Output data normalization failed: empty-envelope",
+    );
   });
 });
 
@@ -40,7 +50,7 @@ describe("hydrateCells", () => {
     // c2 has no authored output cell: a synthetic one appends.
     const synthetic = hydrated.find((c) => c.type === "output" && c.producedBy === "c2");
     if (synthetic?.type !== "output") throw new Error("synthetic missing");
-    expect(synthetic.data).toEqual([{ ok: 1 }]);
+    expect(synthetic.data).toEqual({ ok: 1 });
   });
 
   it("never sample-unwraps macro outputs (only device responses)", () => {
@@ -58,7 +68,22 @@ describe("hydrateCells", () => {
     );
     const dOut = dispatched.find((c) => c.type === "output" && c.producedBy === "a1__dispatch");
     if (dOut?.type !== "output") throw new Error("dispatch output missing");
-    expect(dOut.data).toEqual([{ ok: 1 }]);
+    expect(dOut.data).toEqual({ ok: 1 });
+  });
+
+  it("leaves producer values raw when the API namespace is the macro-read boundary", () => {
+    const raw = { sample: [{ ok: 1 }] };
+    const hydrated = hydrateCells(
+      cells,
+      {},
+      { c2: { v: raw } },
+      {
+        normalizeDeviceOutputs: false,
+      },
+    );
+    const out = hydrated.find((c) => c.type === "output" && c.producedBy === "c2");
+    if (out?.type !== "output") throw new Error("raw macro input missing");
+    expect(out.data).toBe(raw);
   });
 
   it("makes the same authored condition match web- and mobile-shaped responses", () => {
