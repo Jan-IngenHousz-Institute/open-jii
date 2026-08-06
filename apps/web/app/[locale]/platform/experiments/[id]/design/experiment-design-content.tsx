@@ -29,7 +29,7 @@ import { parseApiError } from "@/util/apiError";
 import { GitBranch, Info, List } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
@@ -44,7 +44,6 @@ interface ExperimentDesignPageProps {
 const AUTO_SAVE_DELAY = 1500;
 const UNSAVED_CHANGES_MESSAGE = "This workbook still has changes that have not been saved.";
 const RETAINED_DRAFT_PREFIX = "openjii:workbook-draft:";
-const HISTORY_GUARD_KEY = "__openJiiWorkbookDraftGuard";
 
 function readRetainedDraft(workbookId: string): WorkbookCell[] | null {
   try {
@@ -55,16 +54,6 @@ function readRetainedDraft(workbookId: string): WorkbookCell[] | null {
   } catch {
     return null;
   }
-}
-
-function readHistoryState(): Record<string, unknown> {
-  const state: unknown = window.history.state;
-  if (typeof state !== "object" || state === null || Array.isArray(state)) return {};
-  return state as Record<string, unknown>;
-}
-
-function isWorkbookDraftGuardState(): boolean {
-  return readHistoryState()[HISTORY_GUARD_KEY] === true;
 }
 
 /** Surfaces the draft autosave status (reported by WorkbookDraftEditor) inline. */
@@ -177,9 +166,6 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
       autosave.status !== "idle" ||
       persistence.isPending ||
       persistence.error !== null);
-  const hasDirtyDraft = canEdit && autosave.hasUnsavedChanges;
-  const allowNavigationRef = useRef(false);
-
   useEffect(() => {
     if (!hasUnsavedWork) return;
 
@@ -195,8 +181,6 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
       if (!window.confirm(UNSAVED_CHANGES_MESSAGE)) {
         event.preventDefault();
         event.stopPropagation();
-      } else {
-        allowNavigationRef.current = true;
       }
     };
 
@@ -207,35 +191,6 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
       document.removeEventListener("click", handleLinkClick, true);
     };
   }, [hasUnsavedWork]);
-
-  useEffect(() => {
-    if (!hasDirtyDraft) return;
-
-    // Back first lands on a same-URL sentinel. It exists only for a genuinely
-    // dirty draft, so opening a clean workbook never truncates Forward history.
-    const guardedState = { ...readHistoryState(), [HISTORY_GUARD_KEY]: true };
-    window.history.pushState(guardedState, "", window.location.href);
-
-    const handlePopState = () => {
-      if (allowNavigationRef.current) return;
-      if (window.confirm(UNSAVED_CHANGES_MESSAGE)) {
-        allowNavigationRef.current = true;
-        window.history.back();
-      } else {
-        window.history.pushState(guardedState, "", window.location.href);
-      }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-      if (!allowNavigationRef.current && isWorkbookDraftGuardState()) {
-        const currentState = readHistoryState();
-        const { [HISTORY_GUARD_KEY]: _guard, ...restoredState } = currentState;
-        window.history.replaceState(restoredState, "", window.location.href);
-      }
-    };
-  }, [hasDirtyDraft]);
 
   const versionedCells = useMemo<WorkbookCell[]>(() => {
     if (!pinnedVersionData) return [];

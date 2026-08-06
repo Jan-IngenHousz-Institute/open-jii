@@ -134,16 +134,14 @@ describe("DetachWorkbookUseCase", () => {
     const gate = new Promise<void>((resolve) => {
       releaseDetach = resolve;
     });
-    const updatePair = experimentRepo.updateWorkbookAndFlowIfExpected.bind(experimentRepo);
-    vi.spyOn(experimentRepo, "updateWorkbookAndFlowIfExpected").mockImplementation(
-      async (...args) => {
-        if (args[2].workbookId === null) {
-          detachStarted?.();
-          await gate;
-        }
-        return updatePair(...args);
-      },
-    );
+    const updatePairSpy = vi
+      .spyOn(experimentRepo, "updateWorkbookAndFlowIfExpected")
+      .mockImplementationOnce(async (...args) => {
+        detachStarted?.();
+        await gate;
+        updatePairSpy.mockRestore();
+        return experimentRepo.updateWorkbookAndFlowIfExpected(...args);
+      });
 
     const staleDetach = detachUseCase.execute(
       experimentId,

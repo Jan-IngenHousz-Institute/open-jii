@@ -502,7 +502,7 @@ describe("ExperimentDesignPage", () => {
     expect(window.sessionStorage.getItem(retainedKey)).toBe(JSON.stringify(invalidDraft));
   });
 
-  it("warns before navigation while a controlled draft has unsaved work", async () => {
+  it("warns before unload and internal navigation while a controlled draft is unsaved", async () => {
     vi.mocked(useSession).mockReturnValue({
       data: { user: { id: "user-1" } },
       isPending: false,
@@ -525,19 +525,15 @@ describe("ExperimentDesignPage", () => {
       "This workbook still has changes that have not been saved.",
     );
 
-    await traverseHistory("back");
-    expect(confirm).toHaveBeenCalledTimes(2);
-    expect(confirm).toHaveBeenLastCalledWith(
-      "This workbook still has changes that have not been saved.",
-    );
     confirm.mockRestore();
   });
 
-  it("preserves Forward history while the loaded draft is clean", async () => {
-    window.history.replaceState({}, "", "/workbook-history-start");
-    window.history.pushState({}, "", "/workbook-history-forward");
+  it("does not mutate real Back/Forward history when a dirty draft is retained", async () => {
+    window.history.replaceState({ position: "start" }, "", "/workbook-history-start");
+    window.history.pushState({ position: "forward" }, "", "/workbook-history-forward");
     await traverseHistory("back");
     expect(window.location.pathname).toBe("/workbook-history-start");
+    const historyLength = window.history.length;
 
     vi.mocked(useSession).mockReturnValue({
       data: { user: { id: "user-1" } },
@@ -545,10 +541,22 @@ describe("ExperimentDesignPage", () => {
     } as unknown as ReturnType<typeof useSession>);
     mountWithWorkbook();
     render(<ExperimentDesignPage params={defaultProps.params} />);
-    await screen.findByTestId("workbook-draft-editor");
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("trigger-cell-edit"));
+
+    expect(window.history.length).toBe(historyLength);
+    expect(window.location.pathname).toBe("/workbook-history-start");
+    expect(window.history.state).toEqual({ position: "start" });
+    expect(window.sessionStorage.getItem(`openjii:workbook-draft:${WB_ID}`)).toContain(
+      "edited-cell",
+    );
 
     await traverseHistory("forward");
     expect(window.location.pathname).toBe("/workbook-history-forward");
+    expect(window.history.state).toEqual({ position: "forward" });
+    expect(window.sessionStorage.getItem(`openjii:workbook-draft:${WB_ID}`)).toContain(
+      "edited-cell",
+    );
   });
 
   it("resets the controlled draft before edits can target a newly linked workbook", async () => {

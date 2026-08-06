@@ -124,13 +124,7 @@ describe("AttachWorkbookUseCase", () => {
   });
 
   it("rejects an attachment when the expected workbook scope is stale", async () => {
-    const first = await useCase.execute(
-      experimentId,
-      workbookId,
-      null,
-      null,
-      adminUserId,
-    );
+    const first = await useCase.execute(experimentId, workbookId, null, null, adminUserId);
     assertSuccess(first);
     const otherWorkbook = await testApp.createWorkbook({
       name: "Other Workbook",

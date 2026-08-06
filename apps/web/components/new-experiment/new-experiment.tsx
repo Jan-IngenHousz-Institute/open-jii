@@ -123,7 +123,10 @@ export function NewExperimentForm() {
         const currentExperiment = await orpcClient.experiments.getExperiment({
           id: experimentId,
         });
-        if (currentExperiment.workbookId === intendedWorkbookId) {
+        if (
+          currentExperiment.workbookId === intendedWorkbookId &&
+          currentExperiment.workbookVersionId !== null
+        ) {
           finishCreation(experimentId);
           return;
         }
@@ -154,7 +157,8 @@ export function NewExperimentForm() {
 
   function onSubmit(data: CreateExperimentBody) {
     setIsSubmitting(true);
-    pendingWorkbookId.current = data.workbookId ?? undefined;
+    const { workbookId, ...createBody } = data;
+    pendingWorkbookId.current = workbookId;
     if (createdExperimentId) {
       void attachPendingWorkbook(createdExperimentId, true);
       return;
@@ -163,7 +167,11 @@ export function NewExperimentForm() {
     // defaults to public), otherwise the create body validation rejects it.
     // The card only surfaces the embargo editor in the private branch, but its
     // default-90-day effect can still leave a stale value on the form.
-    const payload = data.visibility === "private" ? data : { ...data, embargoUntil: undefined };
+    const payload =
+      createBody.visibility === "private" ? createBody : { ...createBody, embargoUntil: undefined };
+    // A workbook is attached only after creation has produced an experiment id
+    // and a version can be pinned atomically. Sending workbookId here would
+    // persist the invalid half-pair { workbookId, workbookVersionId: null }.
     createExperiment(payload);
   }
 

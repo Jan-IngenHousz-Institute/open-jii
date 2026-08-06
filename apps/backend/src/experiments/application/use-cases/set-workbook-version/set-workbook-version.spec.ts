@@ -274,16 +274,14 @@ describe("SetWorkbookVersionUseCase", () => {
     const gate = new Promise<void>((resolve) => {
       releaseRestore = resolve;
     });
-    const updatePair = experimentRepo.updateWorkbookAndFlowIfExpected.bind(experimentRepo);
-    vi.spyOn(experimentRepo, "updateWorkbookAndFlowIfExpected").mockImplementation(
-      async (...args) => {
-        if (args[2].workbookVersionId === v1Id) {
-          restoreStarted?.();
-          await gate;
-        }
-        return updatePair(...args);
-      },
-    );
+    const updatePairSpy = vi
+      .spyOn(experimentRepo, "updateWorkbookAndFlowIfExpected")
+      .mockImplementationOnce(async (...args) => {
+        restoreStarted?.();
+        await gate;
+        updatePairSpy.mockRestore();
+        return experimentRepo.updateWorkbookAndFlowIfExpected(...args);
+      });
 
     const staleRestore = setUseCase.execute(experimentId, v1Id, workbookId, v2Id, adminUserId);
     await started;
