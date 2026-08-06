@@ -29,6 +29,8 @@ export function useSignOut() {
         orpc.sharing.listGrants.key(),
         orpc.sharing.searchGranteeOrganizations.key(),
         orpc.users.listInvitations.key(),
+        orpc.experiments.getMyJoinRequest.key(),
+        orpc.users.getDeletionBlockers.key(),
         ...allResourceCacheFamilies(),
       ];
       for (const queryKey of authorizationSensitiveKeys) {

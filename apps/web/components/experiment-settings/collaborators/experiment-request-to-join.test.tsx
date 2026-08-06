@@ -1,13 +1,21 @@
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { createTestQueryClient, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentRequestToJoin } from "./experiment-request-to-join";
 
 const EXPERIMENT_ID = "exp-1";
+
+function mockSession(userId: string | null, isPending = false) {
+  vi.mocked(useSession).mockReturnValue({
+    data: userId ? { user: { id: userId } } : null,
+    isPending,
+  } as ReturnType<typeof useSession>);
+}
 
 const MOCK_JOIN_REQUEST = {
   id: "req-1",
@@ -28,6 +36,10 @@ const MOCK_JOIN_REQUEST = {
 };
 
 describe("ExperimentRequestToJoin", () => {
+  afterEach(() => {
+    mockSession(null);
+  });
+
   it("renders nothing while loading", () => {
     server.mount(contract.experiments.getMyJoinRequest, { delay: "infinite" });
     const { container } = render(<ExperimentRequestToJoin experimentId={EXPERIMENT_ID} />);
@@ -170,6 +182,26 @@ describe("ExperimentRequestToJoin", () => {
 
       await screen.findByText("experimentSettings.requestPendingDescription");
       expect(screen.getByText("experimentSettings.cancelRequest")).toBeInTheDocument();
+    });
+
+    it("never shows user A's request or cancel action after user B signs in", async () => {
+      const queryClient = createTestQueryClient();
+      mockSession("user-a");
+      server.mount(contract.experiments.getMyJoinRequest, { body: MOCK_JOIN_REQUEST });
+      const element = () => <ExperimentRequestToJoin experimentId={EXPERIMENT_ID} />;
+      const { rerender } = render(element(), { queryClient });
+
+      await screen.findByText("experimentSettings.cancelRequest");
+
+      // The same QueryClient survives A's sign-out and B's sign-in.
+      mockSession("user-b");
+      server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
+      rerender(element());
+
+      expect(screen.queryByText("experimentSettings.cancelRequest")).not.toBeInTheDocument();
+      expect(screen.queryByText("experimentSettings.requestToJoin")).not.toBeInTheDocument();
+      await screen.findByText("experimentSettings.requestToJoin");
+      expect(screen.queryByText("experimentSettings.cancelRequest")).not.toBeInTheDocument();
     });
 
     it("cancels request and shows success toast", async () => {

@@ -9,7 +9,6 @@ import {
   profiles,
   resourceGrants,
   STAFFING_GRANT_ROLES,
-  upsertGrant,
   users,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
@@ -21,10 +20,7 @@ import {
   getAnonymizedEmail,
   getAnonymizedAvatarUrl,
 } from "../../../common/utils/profile-anonymization";
-import {
-  assertResourceStaysStaffed,
-  findOwningOrgOwnerIds,
-} from "../../../sharing/core/resource-staffing";
+import { findOwningOrgOwnerIds } from "../../../sharing/core/resource-staffing";
 import type {
   ExperimentJoinRequestDto,
   JoinRequestStatus,
@@ -32,6 +28,10 @@ import type {
 
 /** Same role the sharing UI writes for "Can view". */
 const JOIN_APPROVAL_GRANT_ROLE = "viewer";
+
+export type ApproveJoinRequestOutcome =
+  | { outcome: "approved"; request: ExperimentJoinRequestDto }
+  | { outcome: "not-pending" };
 
 const joinRequestSelectFields = {
   id: experimentJoinRequests.id,
@@ -140,43 +140,55 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Mark approved and grant the requester read-and-contribute, atomically. The
-   * staffing guard runs inline rather than via the sharing repository's guarded
-   * write, which would open a second transaction and cost the approve its atomicity.
+   * Atomically claim a pending request and ensure the requester has at least the
+   * approval tier. The grant insert never overwrites an existing role, so approval
+   * cannot demote an administrator and needs no last-staffing guard.
    */
   async approve(
     requestId: string,
     requesterUserId: string,
     experimentId: string,
     decidedBy: string,
-  ): Promise<Result<ExperimentJoinRequestDto>> {
+  ): Promise<Result<ApproveJoinRequestOutcome>> {
     return tryCatch(async () => {
-      await this.database.transaction(async (tx) => {
-        await tx
+      const claimed = await this.database.transaction(async (tx) => {
+        const updated = await tx
           .update(experimentJoinRequests)
           .set({
             status: "approved",
             decidedBy,
             decidedAt: new Date(),
           })
-          .where(eq(experimentJoinRequests.id, requestId));
+          .where(
+            and(
+              eq(experimentJoinRequests.id, requestId),
+              eq(experimentJoinRequests.status, "pending"),
+            ),
+          )
+          .returning({ id: experimentJoinRequests.id });
 
-        await assertResourceStaysStaffed(tx, {
-          resourceType: "experiment",
-          resourceId: experimentId,
-          target: { by: "grantee", granteeType: "user", granteeId: requesterUserId },
-          nextRole: JOIN_APPROVAL_GRANT_ROLE,
-        });
+        if (updated.length === 0) {
+          return false;
+        }
 
-        await upsertGrant(tx, {
-          resourceType: "experiment",
-          resourceId: experimentId,
-          granteeType: "user",
-          granteeId: requesterUserId,
-          role: JOIN_APPROVAL_GRANT_ROLE,
-          createdBy: decidedBy,
-        });
+        await tx
+          .insert(resourceGrants)
+          .values({
+            resourceType: "experiment",
+            resourceId: experimentId,
+            granteeType: "user",
+            granteeId: requesterUserId,
+            role: JOIN_APPROVAL_GRANT_ROLE,
+            createdBy: decidedBy,
+          })
+          .onConflictDoNothing();
+
+        return true;
       });
+
+      if (!claimed) {
+        return { outcome: "not-pending" };
+      }
 
       const result = await this.database
         .select(joinRequestSelectFields)
@@ -186,7 +198,7 @@ export class ExperimentJoinRequestRepository {
         .where(eq(experimentJoinRequests.id, requestId))
         .limit(1);
 
-      return result[0];
+      return { outcome: "approved", request: result[0] };
     });
   }
 

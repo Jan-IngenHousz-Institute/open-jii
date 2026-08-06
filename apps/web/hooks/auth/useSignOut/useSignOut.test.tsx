@@ -1,3 +1,4 @@
+import { myJoinRequestQueryKey } from "@/hooks/experiment/join-request/useMyJoinRequest/useMyJoinRequest";
 import { experimentAccessQueryKey } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import {
   collaboratorsQueryKey,
@@ -35,10 +36,32 @@ describe("useSignOut", () => {
     const orgsKey = granteeOrganizationsQueryKey("user-a", undefined);
     const invitationsKey = invitationsQueryKey("user-a", "experiment", "exp-1");
     const accessKey = experimentAccessQueryKey("user-a", "exp-1");
+    const joinRequestKey = myJoinRequestQueryKey("user-a", "exp-1");
+    const deletionBlockersKey = orpc.users.getDeletionBlockers.queryKey({
+      input: { id: "user-a" },
+    });
     queryClient.setQueryData(grantsKey, []);
     queryClient.setQueryData(orgsKey, []);
     queryClient.setQueryData(invitationsKey, []);
     queryClient.setQueryData(accessKey, createExperimentAccess({ isAdmin: true }));
+    queryClient.setQueryData(joinRequestKey, {
+      id: "request-a",
+      experimentId: "exp-1",
+      user: {
+        id: "user-a",
+        firstName: "User",
+        lastName: "A",
+        email: "user-a@example.com",
+        avatarUrl: null,
+      },
+      message: null,
+      status: "pending",
+      decidedBy: null,
+      decidedAt: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    queryClient.setQueryData(deletionBlockersKey, { resources: [] });
 
     const { result } = renderHook(() => useSignOut(), { queryClient });
     await result.current.mutateAsync();
@@ -50,6 +73,8 @@ describe("useSignOut", () => {
     expect(queryClient.getQueryData(orgsKey)).toBeUndefined();
     expect(queryClient.getQueryData(invitationsKey)).toBeUndefined();
     expect(queryClient.getQueryData(accessKey)).toBeUndefined();
+    expect(queryClient.getQueryData(joinRequestKey)).toBeUndefined();
+    expect(queryClient.getQueryData(deletionBlockersKey)).toBeUndefined();
   });
 
   it("drops the resource detail and list caches, which carry no principal at all", async () => {

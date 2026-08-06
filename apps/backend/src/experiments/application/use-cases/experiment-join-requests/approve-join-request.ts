@@ -98,8 +98,11 @@ export class ApproveJoinRequestUseCase {
         });
         return failure(AppError.internal("Failed to approve join request"));
       }
+      if (approveResult.value.outcome === "not-pending") {
+        return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
+      }
 
-      const approved = approveResult.value;
+      const approved = approveResult.value.request;
 
       // Send the same membership-change email used by direct invites/adds
       if (approved.user.email) {
