@@ -32,12 +32,37 @@ vi.mock("@/hooks/experiment/useSetWorkbookVersion/useSetWorkbookVersion", () => 
   useSetWorkbookVersion: () => ({ mutateAsync: mutations.setVersion }),
 }));
 
-const cell = (id: string, content = id): WorkbookCell => ({
+const cell = (id: string, content = id): Extract<WorkbookCell, { type: "markdown" }> => ({
   id,
   type: "markdown",
   isCollapsed: false,
   content,
 });
+
+const container = (id: string, name: string): WorkbookCell => ({
+  id,
+  type: "parallel",
+  isCollapsed: false,
+  name,
+  defaultLaneId: `${id}-lane`,
+  lanes: [
+    {
+      id: `${id}-lane`,
+      label: "Lane",
+      color: "#64748b",
+      conditions: [],
+      body: [cell(`${id}-body`)],
+    },
+  ],
+});
+
+const invalidIdentityDrafts: [string, WorkbookCell[]][] = [
+  ["duplicate cell ids", [cell("shared", "First"), cell("shared", "Second")]],
+  [
+    "canonical container-name collisions",
+    [container("parallel-a", "plot id"), container("parallel-b", "plot-id")],
+  ],
+];
 
 interface HarnessProps {
   workbookId: string;
@@ -398,6 +423,43 @@ describe("useWorkbookPersistenceCoordinator", () => {
       await detachPromise;
     });
   });
+
+  it("persists and flushes a valid container draft", async () => {
+    const nextCells = [container("parallel-a", "plot id")];
+    const { result, rerender } = renderCoordinator({
+      workbookId: "workbook-a",
+      cells: [cell("a0")],
+    });
+
+    rerender({ workbookId: "workbook-a", cells: nextCells });
+    await act(async () => result.current.autosave.flush());
+
+    expect(mutations.update).toHaveBeenCalledWith({
+      id: "workbook-a",
+      cells: nextCells,
+    });
+    expect(mutations.upgrade).toHaveBeenCalledTimes(1);
+    expect(mutations.detach).not.toHaveBeenCalled();
+  });
+
+  it.each(invalidIdentityDrafts)(
+    "blocks autosave and transition flush for %s",
+    async (_caseName, invalidCells) => {
+      const { result, rerender } = renderCoordinator({
+        workbookId: "workbook-a",
+        cells: [cell("a0")],
+      });
+
+      rerender({ workbookId: "workbook-a", cells: invalidCells });
+      await act(async () => vi.advanceTimersByTimeAsync(30));
+
+      expect(result.current.autosave.status).toBe("error");
+      await expect(result.current.detachWorkbook()).rejects.toBeInstanceOf(Error);
+      expect(mutations.update).not.toHaveBeenCalled();
+      expect(mutations.upgrade).not.toHaveBeenCalled();
+      expect(mutations.detach).not.toHaveBeenCalled();
+    },
+  );
 
   it("rejects a scope transition while the controlled draft is invalid", async () => {
     const invalidQuestion = {

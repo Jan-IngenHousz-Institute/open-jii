@@ -11,7 +11,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { ReactNode } from "react";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
-import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { zWorkbookCellArrayInput } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 type OperationKind =
   | "cells"
@@ -395,7 +395,7 @@ export function useWorkbookPersistenceCoordinator({
       [onCellsSaved, workbookId],
     ),
     isValid: useCallback(
-      (value: WorkbookCell[]) => zWorkbookCellArray.safeParse(value).success,
+      (value: WorkbookCell[]) => zWorkbookCellArrayInput.safeParse(value).success,
       [],
     ),
     delayMs,
@@ -406,7 +406,7 @@ export function useWorkbookPersistenceCoordinator({
   });
   flushForTransitionRef.current = async () => {
     await autosave.flush();
-    const validation = zWorkbookCellArray.safeParse(cellsRef.current);
+    const validation = zWorkbookCellArrayInput.safeParse(cellsRef.current);
     if (!validation.success) throw new AutosaveValidationError();
   };
 
