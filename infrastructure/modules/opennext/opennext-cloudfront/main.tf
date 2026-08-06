@@ -233,8 +233,8 @@ resource "aws_cloudfront_distribution" "distribution" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 
-    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingOptimized
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # Managed-AllViewerExceptHostHeader
 
     lambda_function_association {
       event_type   = "origin-request"
@@ -270,7 +270,7 @@ resource "aws_cloudfront_distribution" "distribution" {
     compress               = true
 
     cache_policy_id          = aws_cloudfront_cache_policy.image_cache_policy.id
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # Managed-AllViewerExceptHostHeader
   }
 
   # Cache behavior for PostHog ingest routes - direct passthrough to PostHog
@@ -317,7 +317,7 @@ resource "aws_cloudfront_distribution" "distribution" {
     compress               = true
 
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # Managed-AllViewerExceptHostHeader
 
     lambda_function_association {
       event_type   = "origin-request"
@@ -341,7 +341,7 @@ resource "aws_cloudfront_distribution" "distribution" {
     compress               = true
 
     cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.lambda_signed_requests.id
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # Managed-AllViewerExceptHostHeader
 
     function_association {
       event_type   = "viewer-request"
@@ -384,43 +384,6 @@ resource "aws_cloudfront_distribution" "distribution" {
   restrictions {
     geo_restriction {
       restriction_type = "none"
-    }
-  }
-}
-
-resource "aws_cloudfront_cache_policy" "cache_policy" {
-  name = "${var.project_name}-cache-policy"
-
-  default_ttl = 0
-  max_ttl     = 31536000
-  min_ttl     = 0
-
-  parameters_in_cache_key_and_forwarded_to_origin {
-    cookies_config {
-      cookie_behavior = "all"
-    }
-
-    headers_config {
-      header_behavior = "whitelist"
-
-      headers {
-        items = [
-          "x-forwarded-host",       # Essential for routing
-          "next-action",            # Required for server actions
-          "next-router-state-tree", # Required for RSC navigation
-          "next-router-prefetch",   # Required for prefetching
-          "rsc",                    # Essential RSC marker
-          "content-type",           # Required for content negotiation
-          "x-prerender-revalidate", # Needed for revalidation
-          "referer",                # Important for auth flows
-          "x-action-redirect",      # Needed for redirects in server actions
-          "origin"                  # Required for CORS
-        ]
-      }
-    }
-
-    query_strings_config {
-      query_string_behavior = "all"
     }
   }
 }
@@ -476,7 +439,10 @@ resource "aws_cloudfront_origin_request_policy" "posthog_passthrough" {
   }
 }
 
-# Origin Request Policy for Lambda signed requests
+
+# Detached from all behaviors. CloudFront 409s deletes of a policy that any
+# deployed distribution still references, so removal ships in a follow-up
+# after this detachment has been applied to every environment.
 resource "aws_cloudfront_origin_request_policy" "lambda_signed_requests" {
   name    = "${var.project_name}-lambda-signed-requests"
   comment = "Policy to forward necessary headers and cookies for signed Lambda requests"
