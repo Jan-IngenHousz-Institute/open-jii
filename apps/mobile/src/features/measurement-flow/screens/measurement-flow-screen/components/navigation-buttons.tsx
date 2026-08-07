@@ -6,6 +6,7 @@ import { advanceWithAnswer } from "~/features/measurement-flow/services/flow-act
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
+import { flattenFlowNodes } from "~/shared/measurements/flow-node";
 import { Button } from "~/shared/ui/Button";
 
 import { BackButton } from "./back-button";
@@ -22,6 +23,7 @@ export function NavigationButtons() {
     isQuestionsSubmitPending,
     returnToOverview,
     iterationCount,
+    overviewNodeId,
   } = useMeasurementFlowStore();
 
   const keyboard = useAnimatedKeyboard();
@@ -31,7 +33,9 @@ export function NavigationButtons() {
     paddingBottom: Math.max(insets.bottom, keyboard.height.value),
   }));
   // Get current node to check type
-  const currentNode = flowNodes[currentFlowStep];
+  const currentNode = overviewNodeId
+    ? flattenFlowNodes(flowNodes).find((node) => node.id === overviewNodeId)
+    : flowNodes[currentFlowStep];
   const currentAnswer = useFlowAnswersStore((s) =>
     currentNode?.type === "question" ? s.getAnswer(iterationCount, currentNode.id) : undefined,
   );

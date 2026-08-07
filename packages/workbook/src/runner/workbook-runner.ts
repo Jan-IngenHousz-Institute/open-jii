@@ -411,7 +411,10 @@ export class WorkbookRunner {
     })()
       .then(finish)
       .catch((error: unknown) => finish({ error: errorMessage(error) }))
-      .finally(() => this.controllers.delete(effectId));
+      .finally(() => {
+        this.ports.macroRunner.settleEffect?.(effectId);
+        this.controllers.delete(effectId);
+      });
   }
 
   /** Execute a command effect; the port returns one outcome per targeted device. */

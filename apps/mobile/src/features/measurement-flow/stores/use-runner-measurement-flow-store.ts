@@ -165,9 +165,15 @@ const scanGate = new BroadcastUserGate((pending) => {
 const analysisGate = new AddressedUserGate((analysisQueue) => {
   useRunnerMeasurementFlowStore.setState({
     analysisQueue,
-    awaitingAnalysisContinue: analysisQueue.length > 0,
+    awaitingAnalysisContinue: analysisQueue.some((token) => !token.admitted),
   });
 });
+
+function normalizeScanResult(result: unknown): ScanResult {
+  return result !== null && typeof result === "object" && !Array.isArray(result)
+    ? (result as ScanResult)
+    : { response: result };
+}
 
 function executionGeneration(): string {
   return `${startGeneration}:${useRunnerMeasurementFlowStore.getState().workbookAttemptId ?? "none"}`;
@@ -260,7 +266,7 @@ function recordPortRound(
         device: { id: device.id, name: device.name },
         measurementDeviceId,
         producerCellId: input.cellId,
-        result: result as ScanResult,
+        result: normalizeScanResult(result),
         ...(provenance
           ? {
               containerCellId: provenance.container_cell_id,

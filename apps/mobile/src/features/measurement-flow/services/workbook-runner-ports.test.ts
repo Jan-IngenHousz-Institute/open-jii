@@ -324,9 +324,19 @@ describe("mobile workbook runner analysis queue", () => {
 
     expect(analysisGate.release("e-b")).toBe(true);
     await expect(second).resolves.toEqual({});
+    expect(analysisGate.pending).toEqual([
+      expect.objectContaining({ effectId: "e-a", admitted: false }),
+      expect.objectContaining({ effectId: "e-b", admitted: true }),
+    ]);
+    ports.macroRunner.settleEffect?.("e-b");
     expect(analysisGate.pending.map(({ effectId }) => effectId)).toEqual(["e-a"]);
     expect(analysisGate.release("e-a")).toBe(true);
     await expect(first).resolves.toEqual({});
+    expect(analysisGate.pending).toEqual([
+      expect.objectContaining({ effectId: "e-a", admitted: true }),
+    ]);
+    ports.macroRunner.settleEffect?.("e-a");
+    expect(analysisGate.pending).toEqual([]);
   });
 
   it("drops a macro output that settles after abort and generation change", async () => {

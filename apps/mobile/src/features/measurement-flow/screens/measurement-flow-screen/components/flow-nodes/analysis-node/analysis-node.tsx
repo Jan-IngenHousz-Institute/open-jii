@@ -233,7 +233,10 @@ export function AnalysisNode({ content, nodeId, interaction }: AnalysisNodeProps
   );
 
   const handleUploadMeasurement = async () => {
+    if (interaction?.admitted) return;
     if (results.length === 0) {
+      if (interaction?.effectId) continueRunnerAnalysis(interaction.effectId);
+      else nextStep();
       return;
     }
 
@@ -384,17 +387,19 @@ export function AnalysisNode({ content, nodeId, interaction }: AnalysisNodeProps
         )}
       </ScrollView>
 
-      <AnalysisActionBar
-        hasScrolled={hasScrolled}
-        isUploading={isUploading}
-        onScrollToTop={scrollToTop}
-        onRetry={handleRetry}
-        onUpload={() =>
-          handleUploadMeasurement().catch((e) =>
-            log.warn("handleUploadMeasurement failed", { err: (e as Error)?.message }),
-          )
-        }
-      />
+      {!interaction?.admitted && (
+        <AnalysisActionBar
+          hasScrolled={hasScrolled}
+          isUploading={isUploading}
+          onScrollToTop={scrollToTop}
+          onRetry={handleRetry}
+          onUpload={() =>
+            handleUploadMeasurement().catch((e) =>
+              log.warn("handleUploadMeasurement failed", { err: (e as Error)?.message }),
+            )
+          }
+        />
+      )}
 
       <MeasurementQuestionsModal
         visible={questionsModalVisible}

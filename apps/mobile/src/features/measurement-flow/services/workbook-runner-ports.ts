@@ -18,6 +18,24 @@ import type {
 } from "@repo/workbook";
 
 const CANCELLED_MESSAGE = "Measurement cancelled";
+const RAW_PRIMITIVE_COMMAND_RESULT = Symbol("rawPrimitiveCommandResult");
+
+type PrimitiveCommandEnvelope = Record<string, unknown> & {
+  [RAW_PRIMITIVE_COMMAND_RESULT]?: string;
+};
+
+function normalizeCommandDriverResult(result: string | object): object {
+  if (typeof result === "object" && result !== null) return result;
+  const envelope = { response: result } as PrimitiveCommandEnvelope;
+  Object.defineProperty(envelope, RAW_PRIMITIVE_COMMAND_RESULT, { value: result });
+  return envelope;
+}
+
+function commandResultForRunner(result: object): unknown {
+  return RAW_PRIMITIVE_COMMAND_RESULT in result
+    ? (result as PrimitiveCommandEnvelope)[RAW_PRIMITIVE_COMMAND_RESULT]
+    : result;
+}
 
 interface GateWaiter {
   release: () => void;
@@ -30,50 +48,56 @@ export interface AddressedGateToken {
   cellId: string;
   producerCellId?: string;
   deviceIds: string[];
+  /** Accepted by the researcher but retained until the owning effect settles. */
+  admitted?: boolean;
 }
 
-interface AddressedGateWaiter extends GateWaiter {
+interface AddressedGateEntry {
   token: AddressedGateToken;
+  waiter?: GateWaiter;
 }
 
 /** A FIFO human-interaction queue where only the presented effect may resume. */
 export class AddressedUserGate {
-  private readonly waiters = new Map<string, AddressedGateWaiter>();
-  private readonly released = new Set<string>();
+  private readonly entries = new Map<string, AddressedGateEntry>();
 
   constructor(private readonly onPendingChange?: (tokens: AddressedGateToken[]) => void) {}
 
   get pending(): AddressedGateToken[] {
-    return Array.from(this.waiters.values(), ({ token }) => token);
+    return Array.from(this.entries.values(), ({ token }) => token);
   }
 
   release(effectId: string): boolean {
-    const waiter = this.waiters.get(effectId);
-    if (!waiter) return false;
-    this.waiters.delete(effectId);
-    this.released.add(effectId);
+    const entry = this.entries.get(effectId);
+    if (!entry?.waiter || entry.token.admitted) return false;
+    const waiter = entry.waiter;
+    entry.token = { ...entry.token, admitted: true };
+    entry.waiter = undefined;
     this.emit();
     waiter.release();
     return true;
   }
 
-  reset(): void {
-    const waiters = [...this.waiters.values()];
-    this.waiters.clear();
-    this.released.clear();
+  settle(effectId: string): void {
+    if (!this.entries.delete(effectId)) return;
     this.emit();
-    for (const waiter of waiters) waiter.reject(new Error(CANCELLED_MESSAGE));
+  }
+
+  reset(): void {
+    const entries = [...this.entries.values()];
+    this.entries.clear();
+    this.emit();
+    for (const { waiter } of entries) waiter?.reject(new Error(CANCELLED_MESSAGE));
   }
 
   wait(token: AddressedGateToken, signal: AbortSignal): Promise<void> {
     if (signal.aborted) return Promise.reject(new Error(CANCELLED_MESSAGE));
     // Multi-device macro legs share one effect id. Once the researcher has
     // admitted the effect, every leg of that exact effect may finish.
-    if (this.released.has(token.effectId)) return Promise.resolve();
+    if (this.entries.get(token.effectId)?.token.admitted) return Promise.resolve();
 
     return new Promise<void>((resolve, reject) => {
-      const waiter: AddressedGateWaiter = {
-        token,
+      const waiter: GateWaiter = {
         release: () => {
           signal.removeEventListener("abort", onAbort);
           resolve();
@@ -84,12 +108,16 @@ export class AddressedUserGate {
         },
       };
       const onAbort = () => {
-        if (!this.waiters.delete(token.effectId)) return;
+        if (this.entries.get(token.effectId)?.waiter !== waiter) return;
+        this.entries.delete(token.effectId);
         this.emit();
         reject(new Error(CANCELLED_MESSAGE));
       };
       signal.addEventListener("abort", onAbort, { once: true });
-      this.waiters.set(token.effectId, waiter);
+      this.entries.set(token.effectId, {
+        token: { ...token, admitted: false },
+        waiter,
+      });
       this.emit();
     });
   }
@@ -268,11 +296,15 @@ function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort
           ((assignments, options) =>
             executeScanAssignments(assignments, {
               ...options,
-              executeCommandOn:
-                scannerStore?.getState().executeCommandOn ??
-                (() => {
+              executeCommandOn: async (deviceId, command, commandOptions) => {
+                const executeCommandOn = scannerStore?.getState().executeCommandOn;
+                if (!executeCommandOn) {
                   throw new Error("Scanner command executor store is unavailable");
-                }),
+                }
+                return normalizeCommandDriverResult(
+                  await executeCommandOn(deviceId, command, commandOptions),
+                );
+              },
             }));
         const retained = retainedByRun.get(runKey);
         const accumulated = new Map(retained?.accumulated ?? []);
@@ -331,7 +363,7 @@ function createCommandExecutor(deps: MobileRunnerPortsDeps): CommandExecutorPort
             }
             const identity = executorIdentity(entry, input);
             const success = successes.get(deviceId);
-            if (success) return { ...identity, data: success.result };
+            if (success) return { ...identity, data: commandResultForRunner(success.result) };
             return {
               ...identity,
               error: failures.get(deviceId)?.error.message ?? "Command execution failed",
@@ -427,6 +459,9 @@ function createMacroRunner(deps: MobileRunnerPortsDeps): MacroRunnerPort {
         // navigation/upload, so the port preserves that non-fatal behavior.
         return {};
       }
+    },
+    settleEffect(effectId) {
+      deps.analysisGate.settle(effectId);
     },
   };
 }

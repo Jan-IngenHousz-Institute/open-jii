@@ -23,7 +23,11 @@ const scanner = vi.hoisted(() => {
   interface ScannerState {
     executors: Map<string, ReturnType<typeof entry>>;
     executeCommandOn: Mock<
-      (deviceId: string, payload: unknown, options?: { timeoutMs?: number }) => Promise<object>
+      (
+        deviceId: string,
+        payload: unknown,
+        options?: { timeoutMs?: number },
+      ) => Promise<string | object>
     >;
     cancelCommandOn: Mock<(deviceId: string) => Promise<void>>;
   }
@@ -50,7 +54,11 @@ const scanner = vi.hoisted(() => {
     executors: new Map(),
     executeCommandOn:
       vi.fn<
-        (deviceId: string, payload: unknown, options?: { timeoutMs?: number }) => Promise<object>
+        (
+          deviceId: string,
+          payload: unknown,
+          options?: { timeoutMs?: number },
+        ) => Promise<string | object>
       >(),
     cancelCommandOn: vi.fn<(deviceId: string) => Promise<void>>(() => Promise.resolve()),
   };
@@ -71,6 +79,7 @@ const manifestSink = vi.hoisted(() => ({
   saveMeasurementLatest: vi.fn(),
   enqueue: vi.fn(),
 }));
+const macroRuntime = vi.hoisted(() => ({ applyMacro: vi.fn() }));
 
 vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
   useScannerCommandExecutorStore: scanner.hook,
@@ -78,6 +87,7 @@ vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () =>
 vi.mock("~/features/measurement-flow/utils/play-sound", () => ({
   playSound: () => Promise.resolve(),
 }));
+vi.mock("~/features/measurement-flow/utils/process-scan/process-scan", () => macroRuntime);
 vi.mock("~/shared/db/measurements-storage", () => ({
   saveMeasurementLatest: manifestSink.saveMeasurementLatest,
 }));
@@ -122,6 +132,12 @@ const protocol = (
   isCollapsed: false,
   payload: { protocolId, version: 1, name: id },
 });
+const macro = (id: string, macroId: string): Extract<WorkbookCell, { type: "macro" }> => ({
+  id,
+  type: "macro",
+  isCollapsed: false,
+  payload: { macroId, language: "javascript", name: id },
+});
 
 const familyCondition = (id: string, family: "multispeq" | "ambit") => ({
   id,
@@ -137,13 +153,17 @@ function connect(...devices: [string, "multispeq" | "ambit"][]) {
   );
 }
 
-async function start(cells: WorkbookCell[], protocolCodes: Record<string, object[]> = {}) {
+async function start(
+  cells: WorkbookCell[],
+  protocolCodes: Record<string, object[]> = {},
+  macroCodes: Record<string, string> = {},
+) {
   const graph = cellsToFlowGraph(cells);
   const nodes = hydrateFlowNodes(graph.nodes, cells, {
     protocols: Object.fromEntries(
       Object.entries(protocolCodes).map(([id, code]) => [id, { code, family: "multispeq" }]),
     ),
-    macros: {},
+    macros: Object.fromEntries(Object.entries(macroCodes).map(([id, code]) => [id, { code }])),
   });
   useMeasurementFlowStore.getState().setFlowGraph(nodes, graph.edges, cells, "version-1");
   useMeasurementFlowStore.getState().setExperimentId("experiment-1", "Experiment");
@@ -157,6 +177,14 @@ function setAnswer(cellId: string, value: string, targetIndex: number) {
   useFlowAnswersStore.getState().setAnswer(state.iterationCount, cellId, value);
   if (targetIndex >= state.flowNodes.length) state.nextStep();
   else state.setCurrentFlowStep(targetIndex);
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
 }
 
 async function waitForMicrotasks<T>(assertion: () => T | Promise<T>): Promise<Awaited<T>> {
@@ -176,6 +204,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   scanner.state.executeCommandOn.mockReset();
   scanner.state.cancelCommandOn.mockReset().mockResolvedValue(undefined);
+  macroRuntime.applyMacro.mockReset().mockResolvedValue([{}]);
   manifestSink.saveMeasurementLatest.mockReset().mockResolvedValue({
     id: "manifest-row",
     changed: true,
@@ -191,6 +220,96 @@ beforeEach(async () => {
 afterEach(() => resetRunnerMeasurementFlowForTest());
 
 describe("runner-backed mobile qualification matrix", () => {
+  it("keeps an accepted macro token until its exact slow effect settles", async () => {
+    connect(["a", "multispeq"], ["b", "ambit"]);
+    scanner.state.executeCommandOn.mockImplementation((deviceId: string) =>
+      Promise.resolve({ device_id: `firmware-${deviceId}`, lane: deviceId }),
+    );
+    const macroA = "00000000-0000-4000-8000-000000000001";
+    const macroB = "00000000-0000-4000-8000-000000000002";
+    const first = deferred<Record<string, unknown>[]>();
+    const second = deferred<Record<string, unknown>[]>();
+    macroRuntime.applyMacro.mockImplementation((json: { lane?: string }) =>
+      json.lane === "a" ? first.promise : second.promise,
+    );
+    const container: WorkbookCell = {
+      id: "parallel-macros",
+      type: "parallel",
+      name: "macro_lanes",
+      isCollapsed: false,
+      defaultLaneId: "lane-b",
+      lanes: [
+        {
+          id: "lane-a",
+          label: "A",
+          color: "#0a0",
+          conditions: [familyCondition("multi", "multispeq")],
+          body: [command("measure-a", "A"), macro("macro-a", macroA)],
+        },
+        {
+          id: "lane-b",
+          label: "B",
+          color: "#00a",
+          conditions: [familyCondition("ambit", "ambit")],
+          body: [command("measure-b", "B"), macro("macro-b", macroB)],
+        },
+      ],
+    };
+    await start([container, instruction("done")], {}, { [macroA]: "A", [macroB]: "B" });
+    useMeasurementFlowStore.getState().startRunnerScan("measure-a");
+    await waitForMicrotasks(() => {
+      const tracks = Object.values(useMeasurementFlowStore.getState().runnerState?.tracks ?? {});
+      expect(
+        tracks.filter((track) => track.pendingInteraction?.cellId?.startsWith("measure-")),
+      ).toHaveLength(2);
+    });
+    const attempt =
+      useMeasurementFlowStore.getState().runnerState?.parallelAttempts["parallel-macros:1"];
+    const trackA = attempt?.lanes["lane-a"]?.trackId;
+    const trackB = attempt?.lanes["lane-b"]?.trackId;
+    if (!trackA || !trackB) throw new Error("expected macro lane tracks");
+    useMeasurementFlowStore.getState().continueRunnerTrackInteraction(trackA, "measure-a");
+    useMeasurementFlowStore.getState().continueRunnerTrackInteraction(trackB, "measure-b");
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().analysisQueue).toHaveLength(2),
+    );
+    const tokenA = useMeasurementFlowStore
+      .getState()
+      .analysisQueue.find((token) => token.cellId === "macro-a");
+    const tokenB = useMeasurementFlowStore
+      .getState()
+      .analysisQueue.find((token) => token.cellId === "macro-b");
+    if (!tokenA || !tokenB) throw new Error("expected addressed macro tokens");
+
+    try {
+      useMeasurementFlowStore.getState().continueRunnerAnalysis(tokenA.effectId);
+      await waitForMicrotasks(() => expect(macroRuntime.applyMacro).toHaveBeenCalledTimes(1));
+      expect(useMeasurementFlowStore.getState().analysisQueue).toEqual([
+        expect.objectContaining({
+          effectId: tokenA.effectId,
+          producerCellId: "measure-a",
+          admitted: true,
+        }),
+        expect.objectContaining({ effectId: tokenB.effectId, admitted: false }),
+      ]);
+
+      first.resolve([{ lane: "A" }]);
+      await waitForMicrotasks(() =>
+        expect(useMeasurementFlowStore.getState().analysisQueue).toEqual([
+          expect.objectContaining({ effectId: tokenB.effectId, admitted: false }),
+        ]),
+      );
+      useMeasurementFlowStore.getState().continueRunnerAnalysis(tokenB.effectId);
+      second.resolve([{ lane: "B" }]);
+      await waitForMicrotasks(() =>
+        expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(1),
+      );
+    } finally {
+      first.resolve([{ lane: "A" }]);
+      second.resolve([{ lane: "B" }]);
+    }
+  });
+
   it("restores the current cursor captured at the real Pause boundary", async () => {
     await start([question("q1"), instruction("review")]);
     setAnswer("q1", "ready", 1);
@@ -245,6 +364,106 @@ describe("runner-backed mobile qualification matrix", () => {
         producerCellId: "p1",
       }),
     ]);
+  });
+
+  it("normalizes a primitive command response while preserving raw runner output and Continue", async () => {
+    connect(["a", "multispeq"]);
+    scanner.state.executeCommandOn.mockResolvedValue("READY");
+    await start([command("status", "STATUS"), instruction("done")]);
+
+    useMeasurementFlowStore.getState().startRunnerScan("status");
+    await waitForMicrotasks(() =>
+      expect(
+        useMeasurementFlowStore.getState().runnerState?.tracks.main.pendingInteraction,
+      ).toEqual({ kind: "instruction", cellId: "status" }),
+    );
+    expect(useMeasurementFlowStore.getState().runnerState?.outputs.status?.v).toBe("READY");
+    expect(useMeasurementFlowStore.getState().scanResult).toEqual({ response: "READY" });
+    expect(useMeasurementFlowStore.getState().uploadScanResults).toEqual([
+      expect.objectContaining({ producerCellId: "status", result: { response: "READY" } }),
+    ]);
+
+    useMeasurementFlowStore.getState().nextStep();
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(1),
+    );
+  });
+
+  it("continues cycle two when a branch skips its producer and reaches analysis with zero rows", async () => {
+    connect(["a", "multispeq"]);
+    scanner.state.executeCommandOn.mockResolvedValue({ device_id: "firmware-a", value: 1 });
+    const macroId = "00000000-0000-4000-8000-000000000003";
+    const branch: WorkbookCell = {
+      id: "branch",
+      type: "branch",
+      isCollapsed: false,
+      paths: [
+        {
+          id: "skip",
+          label: "Skip producer",
+          color: "#0a0",
+          conditions: [
+            {
+              id: "skip-answer",
+              sourceCellId: "route",
+              field: "answer",
+              operator: "eq",
+              value: "skip",
+            },
+          ],
+          gotoCellId: "analysis",
+        },
+      ],
+    };
+    await start(
+      [
+        question("route"),
+        branch,
+        protocol("measure", "protocol-measure"),
+        macro("analysis", macroId),
+        instruction("done"),
+      ],
+      { "protocol-measure": [{ scan: true }] },
+      { [macroId]: "macro" },
+    );
+
+    setAnswer("route", "measure", 2);
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().awaitingScanStart).toBe(true),
+    );
+    useMeasurementFlowStore.getState().startRunnerScan("measure");
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().analysisQueue).toHaveLength(1),
+    );
+    const firstToken = useMeasurementFlowStore.getState().analysisQueue[0];
+    if (!firstToken) throw new Error("expected first-cycle analysis token");
+    useMeasurementFlowStore.getState().continueRunnerAnalysis(firstToken.effectId);
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(4),
+    );
+    useMeasurementFlowStore.getState().nextStep();
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().iterationCount).toBe(1),
+    );
+
+    setAnswer("route", "skip", 3);
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().analysisQueue).toHaveLength(1),
+    );
+    const secondToken = useMeasurementFlowStore.getState().analysisQueue[0];
+    if (!secondToken) throw new Error("expected zero-row analysis token");
+    expect(secondToken).toMatchObject({ cellId: "analysis", producerCellId: "measure" });
+    expect(useMeasurementFlowStore.getState().uploadScanResults).toBeUndefined();
+    expect(useMeasurementFlowStore.getState().scanResult).toEqual({
+      device_id: "firmware-a",
+      value: 1,
+    });
+
+    useMeasurementFlowStore.getState().continueRunnerAnalysis(secondToken.effectId);
+    await waitForMicrotasks(() =>
+      expect(useMeasurementFlowStore.getState().currentFlowStep).toBe(4),
+    );
+    expect(scanner.state.executeCommandOn).toHaveBeenCalledTimes(1);
   });
 
   it("starts heterogeneous assignments together and preserves each producer", async () => {

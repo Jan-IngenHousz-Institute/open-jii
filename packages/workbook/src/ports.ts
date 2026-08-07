@@ -89,6 +89,8 @@ export interface MacroRunnerPort {
     input: MacroRunInput,
     opts: { signal: AbortSignal; effectId?: string },
   ): Promise<Record<string, unknown>>;
+  /** Called once after the runtime has settled every leg owned by this effect. */
+  settleEffect?(effectId: string): void;
 }
 
 export type ResolvedCommandValue = string | Record<string, unknown> | unknown[];

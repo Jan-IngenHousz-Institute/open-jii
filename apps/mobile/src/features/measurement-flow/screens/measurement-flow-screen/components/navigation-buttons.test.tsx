@@ -5,7 +5,12 @@ import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
+import { ReadyState } from "./flow-nodes/measurement-node/components/ready-state";
 import { NavigationButtons } from "./navigation-buttons";
+
+const navigateToQuestionFromOverview =
+  useMeasurementFlowStore.getState().navigateToQuestionFromOverview;
+const returnToOverview = useMeasurementFlowStore.getState().returnToOverview;
 
 vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
@@ -40,6 +45,9 @@ beforeEach(() => {
     isQuestionsSubmitPending: false,
     scanResult: undefined,
     isFromOverview: false,
+    overviewNodeId: null,
+    navigateToQuestionFromOverview,
+    returnToOverview,
   });
   useFlowAnswersStore.setState({
     answersHistory: [],
@@ -163,5 +171,49 @@ describe("NavigationButtons", () => {
     render(<NavigationButtons />);
     fireEvent.press(screen.getByText("Next"));
     expect(nextStep).toHaveBeenCalled();
+  });
+
+  it("returns from editing a nested lane question to the Ready review", () => {
+    const nestedQuestion = makeQuestion("lane-question", {
+      kind: "open_ended",
+      text: "Nested question",
+      required: false,
+    });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      flowNodes: [
+        {
+          id: "parallel-1",
+          name: "Parallel",
+          type: "parallel",
+          isStart: true,
+          content: { laneNodes: { "lane-a": [nestedQuestion] } },
+        },
+      ],
+      currentFlowStep: 0,
+    });
+
+    render(
+      <>
+        <ReadyState
+          onCardPress={(nodeId) =>
+            useMeasurementFlowStore.getState().navigateToQuestionFromOverview(nodeId)
+          }
+        />
+        <NavigationButtons />
+      </>,
+    );
+    fireEvent.press(screen.getByText("Nested question"));
+
+    expect(useMeasurementFlowStore.getState()).toMatchObject({
+      overviewNodeId: "lane-question",
+      currentFlowStep: 0,
+      isFromOverview: true,
+    });
+    fireEvent.press(screen.getByText("Back to overview"));
+    expect(useMeasurementFlowStore.getState()).toMatchObject({
+      overviewNodeId: null,
+      isFromOverview: false,
+    });
   });
 });

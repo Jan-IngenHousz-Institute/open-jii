@@ -593,6 +593,8 @@ describe("AnalysisNode upload with a command in the flow", () => {
 
   it("does not fall back to a sibling row when the addressed lane produced none", async () => {
     const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    const continueRunnerAnalysis = vi.fn();
+    const originalContinue = useMeasurementFlowStore.getState().continueRunnerAnalysis;
     useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
@@ -606,6 +608,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
           producerCellId: "producer-a",
         },
       ],
+      continueRunnerAnalysis,
     });
 
     render(
@@ -630,5 +633,81 @@ describe("AnalysisNode upload with a command in the flow", () => {
       await props?.onUpload();
     });
     expect(uploadMeasurements).not.toHaveBeenCalled();
+    expect(continueRunnerAnalysis).toHaveBeenCalledOnce();
+    expect(continueRunnerAnalysis).toHaveBeenCalledWith("macro-b");
+    act(() => {
+      useMeasurementFlowStore.setState({ continueRunnerAnalysis: originalContinue });
+    });
+  });
+
+  it("keeps an admitted interaction as a non-actionable provenance tombstone", () => {
+    useMeasurementFlowStore.setState({
+      uploadScanResults: [
+        {
+          workbookAttemptId: "attempt-1",
+          device: { id: "device-a", name: "A" },
+          result: { sample: [{ lane: "A" }] },
+          producerCellId: "producer-a",
+        },
+      ],
+    });
+
+    render(
+      <AnalysisNode
+        content={withMacro}
+        nodeId="m1"
+        interaction={{
+          effectId: "macro-a",
+          trackId: "lane-track-a",
+          cellId: "m1",
+          producerCellId: "producer-a",
+          deviceIds: ["device-a"],
+          admitted: true,
+        }}
+      />,
+    );
+
+    expect(macroResultProps.mock.calls.at(-1)?.[0]?.scanResult).toEqual({
+      sample: [{ lane: "A" }],
+    });
+    expect(actionBarProps).not.toHaveBeenCalled();
+  });
+
+  it("uploads a primitive command response after boundary normalization", async () => {
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      experimentLabel: "Trial",
+      flowNodes: commandProtocolMacroNodes,
+      uploadScanResults: [
+        {
+          workbookAttemptId: "attempt-1",
+          device: { id: "device-a", name: "A" },
+          result: { response: "READY" },
+          producerCellId: "cmd1",
+          protocolId: "proto-1",
+        },
+      ],
+    });
+
+    render(<AnalysisNode content={withMacro} nodeId="m1" />);
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    await act(async () => {
+      await props?.onUpload();
+    });
+
+    expect(uploadMeasurements).toHaveBeenCalledWith(
+      expect.objectContaining({
+        results: [
+          expect.objectContaining({
+            producerCellId: "cmd1",
+            rawMeasurement: { response: "READY" },
+          }),
+        ],
+      }),
+    );
   });
 });
