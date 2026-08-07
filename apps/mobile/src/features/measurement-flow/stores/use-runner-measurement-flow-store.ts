@@ -1008,7 +1008,12 @@ export const useRunnerMeasurementFlowStore = create<RunnerMeasurementFlowStore>(
               flattenFlowNodes([node]).some((candidate) => candidate.id === questionId)),
         );
         if (topLevelIndex >= 0) {
-          set({ overviewNodeId: questionId, currentFlowStep: topLevelIndex, isFromOverview: true });
+          set({
+            overviewNodeId: questionId,
+            currentFlowStep: topLevelIndex,
+            isFromOverview: true,
+            isQuestionsSubmitPending: false,
+          });
         }
       },
       returnToOverview: () => {
