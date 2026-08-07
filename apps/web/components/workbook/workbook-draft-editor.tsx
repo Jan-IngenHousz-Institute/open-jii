@@ -5,7 +5,7 @@ import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useWorkbookExecution } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
@@ -117,6 +117,7 @@ export function WorkbookDraftEditor({
     disconnect,
     disconnectDevice,
     executionStates,
+    lastRunCompletion,
     isRunningAll,
     runCell,
     runAll,
@@ -127,6 +128,13 @@ export function WorkbookDraftEditor({
     onCellsChange: handleCellsChange,
     onPromptQuestion: handlePromptQuestion,
   });
+
+  useEffect(() => {
+    if (lastRunCompletion?.status !== "partial") return;
+    toast({
+      description: t("workbooks.partialRunCompletion"),
+    });
+  }, [lastRunCompletion, t]);
 
   // Trigger the same `connect()` the toolbar uses when the user clicks Run on
   // a Protocol or Command cell with no device. Done before any await so the

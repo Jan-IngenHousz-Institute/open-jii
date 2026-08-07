@@ -25,6 +25,11 @@ const makeBranch = (id: string): FlowNode =>
 function resetStore() {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
+    workbookAttemptId: undefined,
+    workbookRunExpected: [],
+    workbookRunRealized: [],
+    workbookTerminalReadyAttemptId: undefined,
+    pendingWorkbookRunManifests: [],
     currentStep: 0,
     flowNodes: [],
     currentFlowStep: 0,
@@ -67,7 +72,119 @@ describe("useMeasurementFlowStore", () => {
   describe("simple setters", () => {
     it("setExperimentId updates experimentId", () => {
       useMeasurementFlowStore.getState().setExperimentId("exp-1");
-      expect(useMeasurementFlowStore.getState().experimentId).toBe("exp-1");
+      const state = useMeasurementFlowStore.getState();
+      expect(state.experimentId).toBe("exp-1");
+      expect(state.workbookAttemptId).toBeTruthy();
+    });
+
+    it("keeps an attempt id through ordinary steps and rotates it on an iteration wrap", () => {
+      useMeasurementFlowStore.getState().setExperimentId("exp-1");
+      useMeasurementFlowStore.setState({
+        flowNodes: [makeMeasurement("m1"), makeAnalysis("a1")],
+        currentFlowStep: 0,
+      });
+      const first = useMeasurementFlowStore.getState().workbookAttemptId;
+
+      useMeasurementFlowStore.getState().nextStep();
+      expect(useMeasurementFlowStore.getState().workbookAttemptId).toBe(first);
+
+      useMeasurementFlowStore.getState().nextStep();
+      expect(useMeasurementFlowStore.getState().workbookAttemptId).not.toBe(first);
+    });
+
+    it("rotates the attempt id when the pinned workbook version changes", () => {
+      useMeasurementFlowStore.getState().setExperimentId("exp-1");
+      useMeasurementFlowStore.getState().setFlowGraph([], [], [], "version-1");
+      const first = useMeasurementFlowStore.getState().workbookAttemptId;
+
+      useMeasurementFlowStore.getState().setFlowGraph([], [], [], "version-2");
+      expect(useMeasurementFlowStore.getState().workbookAttemptId).not.toBe(first);
+    });
+
+    it("marks only the final analysis as terminal-ready and rotates without duplicating it", () => {
+      useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
+        workbookAttemptId: "attempt-1",
+        flowNodes: [
+          makeMeasurement("p1"),
+          makeAnalysis("a1"),
+          makeMeasurement("p2"),
+          makeAnalysis("a2"),
+        ],
+        currentFlowStep: 1,
+        workbookRunExpected: [{ producer_cell_id: "p1", device_ids: ["device-1"] }],
+        workbookRunRealized: [{ producer_cell_id: "p1", device_id: "device-1", outcome: "ok" }],
+      });
+
+      useMeasurementFlowStore.getState().markWorkbookRunTerminalReady();
+      expect(useMeasurementFlowStore.getState().workbookTerminalReadyAttemptId).toBeUndefined();
+      expect(useMeasurementFlowStore.getState().pendingWorkbookRunManifests).toEqual([]);
+
+      useMeasurementFlowStore.setState({ currentFlowStep: 3 });
+      useMeasurementFlowStore.getState().markWorkbookRunTerminalReady();
+      expect(useMeasurementFlowStore.getState().workbookTerminalReadyAttemptId).toBe("attempt-1");
+      expect(useMeasurementFlowStore.getState().pendingWorkbookRunManifests).toHaveLength(1);
+
+      useMeasurementFlowStore.getState().nextStep();
+      expect(useMeasurementFlowStore.getState().workbookTerminalReadyAttemptId).toBeUndefined();
+      expect(useMeasurementFlowStore.getState().pendingWorkbookRunManifests).toHaveLength(1);
+    });
+
+    it("records expected devices and lets retries replace their realized outcome", () => {
+      const store = useMeasurementFlowStore.getState();
+      store.recordExpectedDevices([
+        { producerCellId: "cell-1", deviceId: "device-1" },
+        { producerCellId: "cell-1", deviceId: "device-1" },
+      ]);
+      store.recordRealizedOutcomes([
+        { producer_cell_id: "cell-1", device_id: "device-1", outcome: "failed" },
+      ]);
+      useMeasurementFlowStore
+        .getState()
+        .recordRealizedOutcomes([
+          { producer_cell_id: "cell-1", device_id: "device-1", outcome: "ok" },
+        ]);
+
+      const state = useMeasurementFlowStore.getState();
+      expect(state.workbookRunExpected).toEqual([
+        { producer_cell_id: "cell-1", device_ids: ["device-1"] },
+      ]);
+      expect(state.workbookRunRealized).toEqual([
+        { producer_cell_id: "cell-1", device_id: "device-1", outcome: "ok" },
+      ]);
+    });
+
+    it("replaces a failed transport fallback when retry learns firmware identity", () => {
+      const store = useMeasurementFlowStore.getState();
+      store.recordWorkbookDeviceOutcomes([
+        {
+          producer_cell_id: "cell-1",
+          transport_device_id: "usb-42",
+          device_id: "usb-42",
+          outcome: "failed",
+        },
+      ]);
+      useMeasurementFlowStore.getState().recordWorkbookDeviceOutcomes([
+        {
+          producer_cell_id: "cell-1",
+          transport_device_id: "usb-42",
+          device_id: "MSPx-0001",
+          outcome: "ok",
+        },
+      ]);
+
+      const state = useMeasurementFlowStore.getState();
+      expect(state.workbookRunExpected).toEqual([
+        { producer_cell_id: "cell-1", device_ids: ["MSPx-0001"] },
+      ]);
+      expect(state.workbookRunRealized).toEqual([
+        {
+          producer_cell_id: "cell-1",
+          transport_device_id: "usb-42",
+          device_id: "MSPx-0001",
+          outcome: "ok",
+        },
+      ]);
     });
 
     it("setCurrentStep updates currentStep", () => {

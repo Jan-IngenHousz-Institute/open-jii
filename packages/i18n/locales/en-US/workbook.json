@@ -56,6 +56,7 @@
     },
     "outputsCleared_one": "Cleared {{count}} output",
     "outputsCleared_other": "Cleared {{count}} outputs",
+    "partialRunCompletion": "Run completed with partial results. Successful device data remains available; one or more devices failed.",
     "notUsed": "Not used",
     "usedByCount_one": "{{count}} experiment",
     "usedByCount_other": "{{count}} experiments",

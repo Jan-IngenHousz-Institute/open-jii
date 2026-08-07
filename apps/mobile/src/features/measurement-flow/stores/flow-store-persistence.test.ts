@@ -5,7 +5,7 @@ import { useFlowAnswersStore } from "./use-flow-answers-store";
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
 
 // Characterization of the AsyncStorage wire format of both persisted flow
-// stores (pinned at version 1). A silent shape change wipes a field
+// stores (measurement v2, answers v1). A silent shape change wipes a field
 // researcher's paused flow on rehydrate. v1 deliberately discards pre-fix v0
 // payloads; update fixtures ONLY with a deliberate change or a version bump.
 
@@ -14,6 +14,17 @@ const ANSWERS_KEY = "flow-answers-storage";
 
 // A pre-fix v0 envelope for each store: rehydrating it must reset to defaults.
 const MEASUREMENT_V0 = `{ "state": { "experimentId": "old-exp", "iterationCount": 5 }, "version": 0 }`;
+const MEASUREMENT_V1_WITHOUT_ATTEMPT = `{
+  "state": {
+    "experimentId": "legacy-exp",
+    "experimentLabel": "Legacy trial",
+    "workbookVersionId": "legacy-version",
+    "flowNodes": [{ "id": "node-m1", "name": "measure", "type": "measurement", "isStart": true }],
+    "currentFlowStep": 0,
+    "iterationCount": 2
+  },
+  "version": 1
+}`;
 const ANSWERS_V0 = `{ "state": { "answersHistory": [{ "plot": "old" }], "autoincrementSettings": { "plot": true }, "rememberAnswerSettings": {} }, "version": 0 }`;
 
 // v0 envelope for a paused mid-flow session, parked on the measurement node.
@@ -24,6 +35,10 @@ const MEASUREMENT_FIXTURE = `{
     "experimentId": "exp-42",
     "experimentLabel": "Greenhouse Trial B",
     "workbookVersionId": "version-17",
+    "workbookAttemptId": "attempt-23",
+    "workbookRunExpected": [{ "producer_cell_id": "node-m1", "device_ids": ["1002"] }],
+    "workbookRunRealized": [{ "producer_cell_id": "node-m1", "device_id": "1002", "outcome": "ok" }],
+    "pendingWorkbookRunManifests": [],
     "protocolId": "proto-7",
     "currentStep": 1,
     "flowNodes": [
@@ -80,7 +95,7 @@ const MEASUREMENT_FIXTURE = `{
     "branchVisitCounts": { "node-b1": 2 },
     "branchReturnStack": [{ "landing": 3, "step": 1 }]
   },
-  "version": 1
+  "version": 2
 }`;
 
 // v0 envelope after two completed answer iterations with per-question
@@ -119,7 +134,7 @@ async function readEnvelope(key: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
-describe("measurement-flow-storage v1 wire format", () => {
+describe("measurement-flow-storage v2 wire format", () => {
   beforeAll(async () => {
     await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_FIXTURE);
     await useMeasurementFlowStore.persist.rehydrate();
@@ -142,7 +157,7 @@ describe("measurement-flow-storage v1 wire format", () => {
     useMeasurementFlowStore.setState({}); // identity write still runs partialize + setItem
     const envelope = await readEnvelope(MEASUREMENT_KEY);
     expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
-    expect(envelope.version).toBe(1);
+    expect(envelope.version).toBe(2);
     expect(envelope.state).toEqual(EXPECTED_WRITTEN_STATE);
   });
 
@@ -167,11 +182,32 @@ describe("measurement-flow-storage v1 wire format", () => {
       "isQuestionsSubmitPending",
       "iterationCount",
       "lastMatchedPath",
+      "pendingWorkbookRunManifests",
       "producerCellId",
       "scanResult",
       "scanResults",
+      "workbookAttemptId",
+      "workbookRunExpected",
+      "workbookRunRealized",
+      "workbookTerminalReadyAttemptId",
       "workbookVersionId",
     ]);
+  });
+});
+
+describe("measurement flow v1 -> v2 migration", () => {
+  it("mints an attempt and initializes manifest state for an active paused flow", async () => {
+    await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_V1_WITHOUT_ATTEMPT);
+    await useMeasurementFlowStore.persist.rehydrate();
+    const state = useMeasurementFlowStore.getState();
+
+    expect(state.experimentId).toBe("legacy-exp");
+    expect(state.workbookVersionId).toBe("legacy-version");
+    expect(state.workbookAttemptId).toEqual(expect.any(String));
+    expect(state.workbookAttemptId).not.toHaveLength(0);
+    expect(state.workbookRunExpected).toEqual([]);
+    expect(state.workbookRunRealized).toEqual([]);
+    expect(state.pendingWorkbookRunManifests).toEqual([]);
   });
 });
 

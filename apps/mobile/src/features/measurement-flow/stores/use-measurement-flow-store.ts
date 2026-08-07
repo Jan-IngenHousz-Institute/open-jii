@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type {
@@ -20,10 +21,22 @@ import {
   retryIterationState,
   returnToOverviewState,
   startNewIterationState,
+  willNextStepRotateAttempt,
 } from "~/features/measurement-flow/domain/flow-transitions";
 import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+
+import {
+  addExpectedDevice,
+  addRealizedOutcome,
+  addWorkbookDeviceOutcome,
+  buildPendingManifest,
+} from "../domain/workbook-run-manifest";
+import type {
+  WorkbookRunDeviceOutcome,
+  WorkbookRunRealized,
+} from "../domain/workbook-run-manifest";
 
 interface MeasurementFlowStore extends FlowState {
   // AutoProceededSummary anchor: first manual question at the start of the
@@ -69,6 +82,11 @@ interface MeasurementFlowStore extends FlowState {
   completeDevicePlan: () => void;
   setIterationAnchor: (anchor: { iteration: number; nodeId?: string }) => void;
   dismissQuestionsSubmit: () => void;
+  recordExpectedDevices: (entries: { producerCellId: string; deviceId: string }[]) => void;
+  recordRealizedOutcomes: (entries: WorkbookRunRealized[]) => void;
+  recordWorkbookDeviceOutcomes: (entries: WorkbookRunDeviceOutcome[]) => void;
+  markWorkbookRunTerminalReady: () => void;
+  acknowledgeWorkbookRunManifest: (attemptId: string) => void;
   navigateToQuestionFromOverview: (questionIndex: number) => void;
   returnToOverview: () => void;
 }
@@ -83,12 +101,34 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       ...initialFlowState,
       iterationAnchor: undefined,
 
-      setExperimentId: (experimentId, experimentLabel) => set({ experimentId, experimentLabel }),
+      setExperimentId: (experimentId, experimentLabel) =>
+        set((state) => {
+          const previous = buildPendingManifest({
+            attemptId: state.workbookAttemptId,
+            workbookVersionId: state.workbookVersionId,
+            experimentId: state.experimentId,
+            experimentName: state.experimentLabel,
+            expected: state.workbookRunExpected,
+            realized: state.workbookRunRealized,
+            terminalStatus: "abandoned",
+          });
+          return {
+            experimentId,
+            experimentLabel,
+            workbookAttemptId: uuidv4(),
+            workbookRunExpected: [],
+            workbookRunRealized: [],
+            workbookTerminalReadyAttemptId: undefined,
+            pendingWorkbookRunManifests: previous
+              ? [...state.pendingWorkbookRunManifests, previous]
+              : state.pendingWorkbookRunManifests,
+          };
+        }),
 
       setCurrentStep: (step) => set({ currentStep: step }),
       setCurrentFlowStep: (step) => set({ currentFlowStep: step }),
 
-      nextStep: () => set(nextStepState),
+      nextStep: () => set((state) => nextStepState(state, uuidv4())),
       previousStep: () => set(previousStepState),
 
       // Route through resetFlow so the persisted slice is cleared too.
@@ -106,15 +146,41 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         }),
 
       setFlowGraph: (nodes, edges, cells, workbookVersionId) =>
-        set({
-          flowNodes: nodes,
-          edges,
-          cells,
-          workbookVersionId,
-          currentFlowStep: 0,
-          branchVisitCounts: {},
-          lastMatchedPath: undefined,
-          branchReturnStack: [],
+        set((state) => {
+          const versionChanged =
+            state.workbookVersionId !== undefined && state.workbookVersionId !== workbookVersionId;
+          const previous = versionChanged
+            ? buildPendingManifest({
+                attemptId: state.workbookAttemptId,
+                workbookVersionId: state.workbookVersionId,
+                experimentId: state.experimentId,
+                experimentName: state.experimentLabel,
+                expected: state.workbookRunExpected,
+                realized: state.workbookRunRealized,
+                terminalStatus: "abandoned",
+              })
+            : undefined;
+          return {
+            flowNodes: nodes,
+            edges,
+            cells,
+            workbookVersionId,
+            ...(versionChanged
+              ? {
+                  workbookAttemptId: uuidv4(),
+                  workbookRunExpected: [],
+                  workbookRunRealized: [],
+                  workbookTerminalReadyAttemptId: undefined,
+                  pendingWorkbookRunManifests: previous
+                    ? [...state.pendingWorkbookRunManifests, previous]
+                    : state.pendingWorkbookRunManifests,
+                }
+              : {}),
+            currentFlowStep: 0,
+            branchVisitCounts: {},
+            lastMatchedPath: undefined,
+            branchReturnStack: [],
+          };
         }),
 
       setLastMatchedPath: (path) => set({ lastMatchedPath: path }),
@@ -129,11 +195,11 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       recordBranchJump: (landing) => set((state) => recordBranchJumpState(state, landing)),
 
-      resetFlow: () => set({ ...resetFlowState(), iterationAnchor: undefined }),
+      resetFlow: () => set((state) => ({ ...resetFlowState(state), iterationAnchor: undefined })),
 
-      startNewIteration: () => set(startNewIterationState),
+      startNewIteration: () => set((state) => startNewIterationState(state, uuidv4())),
 
-      retryCurrentIteration: () => set(retryIterationState()),
+      retryCurrentIteration: () => set((state) => retryIterationState(state, uuidv4())),
 
       finishFlow: () => set(finishFlowState),
 
@@ -156,7 +222,74 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       setIterationAnchor: (anchor) => set({ iterationAnchor: anchor }),
 
-      dismissQuestionsSubmit: () => set(dismissQuestionsSubmitState),
+      dismissQuestionsSubmit: () => set((state) => dismissQuestionsSubmitState(state, uuidv4())),
+
+      recordExpectedDevices: (entries) =>
+        set((state) => ({
+          workbookRunExpected: entries.reduce(
+            (expected, entry) => addExpectedDevice(expected, entry.producerCellId, entry.deviceId),
+            state.workbookRunExpected,
+          ),
+        })),
+
+      recordRealizedOutcomes: (entries) =>
+        set((state) => ({
+          workbookRunRealized: entries.reduce(
+            (realized, entry) => addRealizedOutcome(realized, entry),
+            state.workbookRunRealized,
+          ),
+        })),
+
+      recordWorkbookDeviceOutcomes: (entries) =>
+        set((state) => {
+          const next = entries.reduce(
+            (ledger, entry) => addWorkbookDeviceOutcome(ledger.expected, ledger.realized, entry),
+            {
+              expected: state.workbookRunExpected,
+              realized: state.workbookRunRealized,
+            },
+          );
+          return {
+            workbookRunExpected: next.expected,
+            workbookRunRealized: next.realized,
+          };
+        }),
+
+      markWorkbookRunTerminalReady: () =>
+        set((state) => {
+          if (
+            !willNextStepRotateAttempt(state) ||
+            !state.workbookAttemptId ||
+            state.workbookTerminalReadyAttemptId === state.workbookAttemptId
+          ) {
+            return state;
+          }
+          const manifest = buildPendingManifest({
+            attemptId: state.workbookAttemptId,
+            workbookVersionId: state.workbookVersionId,
+            experimentId: state.experimentId,
+            experimentName: state.experimentLabel,
+            expected: state.workbookRunExpected,
+            realized: state.workbookRunRealized,
+          });
+          if (!manifest) return state;
+          return {
+            workbookTerminalReadyAttemptId: state.workbookAttemptId,
+            pendingWorkbookRunManifests: state.pendingWorkbookRunManifests.some(
+              (pending) =>
+                pending.record.workbook_attempt_id === manifest.record.workbook_attempt_id,
+            )
+              ? state.pendingWorkbookRunManifests
+              : [...state.pendingWorkbookRunManifests, manifest],
+          };
+        }),
+
+      acknowledgeWorkbookRunManifest: (attemptId) =>
+        set((state) => ({
+          pendingWorkbookRunManifests: state.pendingWorkbookRunManifests.filter(
+            (manifest) => manifest.record.workbook_attempt_id !== attemptId,
+          ),
+        })),
 
       navigateToQuestionFromOverview: (questionIndex) =>
         set(navigateToQuestionFromOverviewState(questionIndex)),
@@ -166,12 +299,26 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
     {
       name: "measurement-flow-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // v1 wire format, pinned by flow-store-persistence.test.ts. v1 discards
-      // flows persisted by pre-fix (v0) builds, which can hold a mis-seeded
-      // plot or a stale "Experiment" name; the upgrade starts them clean.
-      version: 1,
-      migrate: (persisted, version) =>
-        (version < 1 ? initialFlowState : persisted) as MeasurementFlowStore,
+      // v2 adds attempt/manifest state to the already-shipped v1 wire format.
+      // Active v1 flows mint an attempt during hydration so resume can upload.
+      version: 2,
+      migrate: (persisted, version) => {
+        if (version < 1) return initialFlowState;
+        if (version < 2) {
+          const legacy: Partial<FlowState> =
+            persisted !== null && typeof persisted === "object" ? { ...persisted } : {};
+          return {
+            ...legacy,
+            workbookAttemptId:
+              legacy.workbookAttemptId ?? (legacy.experimentId ? uuidv4() : undefined),
+            workbookRunExpected: legacy.workbookRunExpected ?? [],
+            workbookRunRealized: legacy.workbookRunRealized ?? [],
+            workbookTerminalReadyAttemptId: undefined,
+            pendingWorkbookRunManifests: legacy.pendingWorkbookRunManifests ?? [],
+          };
+        }
+        return persisted;
+      },
       // protocolId was dropped from the persisted slice (now derived from
       // flowNodes via flowProtocolId); legacy payloads carrying it merge in
       // as an ignored extra key.
@@ -179,6 +326,11 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
         workbookVersionId: state.workbookVersionId,
+        workbookAttemptId: state.workbookAttemptId,
+        workbookRunExpected: state.workbookRunExpected,
+        workbookRunRealized: state.workbookRunRealized,
+        workbookTerminalReadyAttemptId: state.workbookTerminalReadyAttemptId,
+        pendingWorkbookRunManifests: state.pendingWorkbookRunManifests,
         currentStep: state.currentStep,
         flowNodes: state.flowNodes,
         currentFlowStep: state.currentFlowStep,

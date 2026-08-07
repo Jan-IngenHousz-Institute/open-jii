@@ -48,9 +48,16 @@ describe("exportMeasurementsToFile", () => {
 
   it("creates and writes a file with correct counts", async () => {
     mockGetMeasurements
-      .mockResolvedValueOnce([{ id: "failed-1", status: "failed", data: mockStoredMeasurement() }])
       .mockResolvedValueOnce([
-        { id: "synced-1", status: "successful", data: mockStoredMeasurement() },
+        { id: "failed-1", status: "failed", deliveryGeneration: 1, data: mockStoredMeasurement() },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "synced-1",
+          status: "successful",
+          deliveryGeneration: 1,
+          data: mockStoredMeasurement(),
+        },
       ]);
 
     await exportMeasurementsToFile();
@@ -67,6 +74,7 @@ describe("exportMeasurementsToFile", () => {
         {
           id: "failed-1",
           status: "failed",
+          deliveryGeneration: 1,
           data: mockStoredMeasurement({ experimentName: "Exp A" }),
         },
       ])
@@ -74,6 +82,7 @@ describe("exportMeasurementsToFile", () => {
         {
           id: "synced-1",
           status: "successful",
+          deliveryGeneration: 1,
           data: mockStoredMeasurement({ experimentName: "Exp B" }),
         },
       ]);
@@ -96,11 +105,13 @@ describe("exportMeasurementsToFile", () => {
         {
           id: "old",
           status: "failed",
+          deliveryGeneration: 1,
           data: mockStoredMeasurement({ timestamp: "2026-01-01T00:00:00.000Z" }),
         },
         {
           id: "new",
           status: "failed",
+          deliveryGeneration: 1,
           data: mockStoredMeasurement({ timestamp: "2026-03-01T00:00:00.000Z" }),
         },
       ])

@@ -2,12 +2,15 @@ import { clsx } from "clsx";
 import { CircleCheckBig } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
+import { toast } from "sonner-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { MOBILE_PRE_IDENTITY_FAMILY } from "~/features/connection/services/mobile-runtime-support";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
 import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
+import { deriveTerminalStatus } from "~/features/measurement-flow/domain/workbook-run-manifest";
+import { reconcileWorkbookRunManifests } from "~/features/measurement-flow/services/workbook-run-manifest-reconcile";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
@@ -60,7 +63,11 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     producerCellId,
     cellOutputs,
     workbookVersionId,
+    workbookAttemptId,
+    workbookRunExpected,
+    workbookRunRealized,
     setCellOutput,
+    markWorkbookRunTerminalReady,
   } = useMeasurementFlowStore();
   const protocolId = flowProtocolId(flowNodes);
   const { experiments } = useExperiments();
@@ -179,6 +186,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     () => ({
       id: "current",
       status: "successful",
+      deliveryGeneration: 1,
       data: {
         topic: "",
         measurementResult: { ...(scanResult ?? {}), questions },
@@ -209,6 +217,10 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       throw new Error("Missing user id");
     }
 
+    if (!workbookAttemptId) {
+      throw new Error("Missing workbook attempt id");
+    }
+
     if (!macro?.id || !macro?.name || !macro?.filename) {
       throw new Error("Missing macro information");
     }
@@ -222,9 +234,21 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       // Dispatch rounds stamped a per-device protocolId/protocolName on each
       // result; the upload publishes those on their own protocol topic.
       results: results.map(
-        ({ device, result, protocolId: resultProtocolId, protocolName }, index) => ({
+        (
+          {
+            device,
+            result,
+            producerCellId: resultProducerCellId,
+            measurementDeviceId,
+            protocolId: resultProtocolId,
+            protocolName,
+          },
+          index,
+        ) => ({
           rawMeasurement: result,
           device,
+          producerCellId: resultProducerCellId ?? producerCellId,
+          measurementDeviceId,
           protocolId: resultProtocolId,
           protocolName,
           macroContext: macroCtxs[index],
@@ -242,10 +266,16 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         filename: macro.filename,
       },
       workbookVersionId,
+      workbookAttemptId,
       questions,
       commentText: measurementComment.trim() || undefined,
       protocolName: activeProtocolName ?? protocolId,
     });
+    markWorkbookRunTerminalReady();
+    await reconcileWorkbookRunManifests();
+    if (deriveTerminalStatus(workbookRunExpected, workbookRunRealized) === "partial") {
+      toast.warning(t("measurementFlow:analysis.workbookRun.partialCompletion"));
+    }
     nextStep();
   };
 

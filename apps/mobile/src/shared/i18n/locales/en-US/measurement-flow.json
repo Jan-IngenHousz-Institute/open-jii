@@ -123,7 +123,8 @@
       "noQuestionsAnswered": "No questions answered"
     },
     "workbookRun": {
-      "deviceHeading": "Device {{index}}: {{name}}"
+      "deviceHeading": "Device {{index}}: {{name}}",
+      "partialCompletion": "Run completed with partial results. Successful measurements were saved; one or more devices did not produce data."
     }
   },
   "commandNode": {

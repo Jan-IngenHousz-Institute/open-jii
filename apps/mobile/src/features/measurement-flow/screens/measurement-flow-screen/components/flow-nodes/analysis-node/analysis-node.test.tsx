@@ -23,6 +23,8 @@ const {
   getSyncedLocalISO,
   getTimeSyncState,
   scannerExecutors,
+  toastWarning,
+  reconcileWorkbookRunManifests,
 } = vi.hoisted(() => ({
   summaryProps: vi.fn(),
   macroResultProps: vi.fn(),
@@ -37,7 +39,11 @@ const {
   scannerExecutors: {
     current: new Map<string, { device: Device; identity: undefined }>(),
   },
+  toastWarning: vi.fn(),
+  reconcileWorkbookRunManifests: vi.fn(),
 }));
+
+vi.mock("sonner-native", () => ({ toast: { warning: toastWarning } }));
 
 vi.mock("~/features/experiments/hooks/use-experiments", () => ({
   useExperiments: () => useExperiments(),
@@ -48,6 +54,9 @@ vi.mock("~/features/recent-measurements/hooks/use-measurement-upload", () => ({
 }));
 vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
   useMeasurements: () => useMeasurements(),
+}));
+vi.mock("~/features/measurement-flow/services/workbook-run-manifest-reconcile", () => ({
+  reconcileWorkbookRunManifests,
 }));
 vi.mock("~/shared/time/time-sync", () => ({
   getSyncedUtcISO: () => getSyncedUtcISO(),
@@ -110,6 +119,11 @@ beforeEach(() => {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
     experimentLabel: undefined,
+    workbookAttemptId: "attempt-1",
+    workbookRunExpected: [],
+    workbookRunRealized: [],
+    workbookTerminalReadyAttemptId: undefined,
+    pendingWorkbookRunManifests: [],
     flowNodes: [],
     currentFlowStep: 0,
     iterationCount: 0,
@@ -127,6 +141,8 @@ beforeEach(() => {
   summaryProps.mockClear();
   macroResultProps.mockClear();
   actionBarProps.mockClear();
+  toastWarning.mockClear();
+  reconcileWorkbookRunManifests.mockReset().mockResolvedValue(undefined);
   useExperiments.mockReturnValue({ experiments: [{ value: "exp-1", label: "From Query" }] });
   useSession.mockReturnValue({ session: { data: { user: { id: "user-1" } } } });
   useMeasurementUpload.mockReturnValue({
@@ -344,6 +360,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
     expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
       protocolId: "proto-1",
       workbookVersionId: "version-1",
+      workbookAttemptId: "attempt-1",
       results: [{ rawMeasurement: { sample: [{ phi2: 0.8 }] } }],
     });
   });
@@ -355,12 +372,31 @@ describe("AnalysisNode upload with a command in the flow", () => {
       experimentId: "exp-1",
       experimentLabel: "Trial",
       workbookVersionId: "version-1",
+      workbookAttemptId: "attempt-1",
+      workbookRunExpected: [
+        { producer_cell_id: "p1", device_ids: ["firmware-1"] },
+        { producer_cell_id: "p2", device_ids: ["firmware-2"] },
+      ],
+      workbookRunRealized: [
+        { producer_cell_id: "p1", device_id: "firmware-1", outcome: "ok" },
+        { producer_cell_id: "p2", device_id: "firmware-2", outcome: "failed" },
+      ],
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },
       scanResults: [
-        { device: { id: "1", name: "MultispeQ #1" }, result: { sample: [{ phi2: 0.8 }] } },
-        { device: { id: "2", name: "MultispeQ #2" }, result: { sample: [{ phi2: 0.7 }] } },
+        {
+          device: { id: "1", name: "MultispeQ #1" },
+          result: { sample: [{ phi2: 0.8 }] },
+          measurementDeviceId: "firmware-1",
+          producerCellId: "p1",
+        },
+        {
+          device: { id: "2", name: "MultispeQ #2" },
+          result: { sample: [{ phi2: 0.7 }] },
+          measurementDeviceId: "firmware-2",
+          producerCellId: "p2",
+        },
       ],
       producerCellId: "p1",
       cells: [
@@ -403,15 +439,22 @@ describe("AnalysisNode upload with a command in the flow", () => {
         {
           rawMeasurement: { sample: [{ phi2: 0.8 }] },
           device: { id: "1" },
+          measurementDeviceId: "firmware-1",
+          producerCellId: "p1",
           macroContext: { measurement: { phi2: 0.8 } },
         },
         {
           rawMeasurement: { sample: [{ phi2: 0.7 }] },
           device: { id: "2" },
+          measurementDeviceId: "firmware-2",
+          producerCellId: "p2",
           macroContext: { measurement: { phi2: 0.7 } },
         },
       ],
     });
+    expect(toastWarning).toHaveBeenCalledWith(
+      "measurementFlow:analysis.workbookRun.partialCompletion",
+    );
   });
 
   it("threads each dispatch result's own protocolId/protocolName to the upload", async () => {

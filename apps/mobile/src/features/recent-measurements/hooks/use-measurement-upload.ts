@@ -57,6 +57,7 @@ interface SharedUploadArgs {
   questions: AnswerData[];
   commentText?: string;
   workbookVersionId?: string;
+  workbookAttemptId: string;
 }
 
 export function useMeasurementUpload() {
@@ -80,6 +81,7 @@ export function useMeasurementUpload() {
       questions,
       commentText,
       workbookVersionId,
+      workbookAttemptId,
     }: SharedUploadArgs & {
       results: {
         rawMeasurement: any;
@@ -88,6 +90,8 @@ export function useMeasurementUpload() {
         // the batch-level protocolId/protocolName for this result only.
         protocolId?: string;
         protocolName?: string;
+        producerCellId?: string;
+        measurementDeviceId?: string;
         macroContext?: Record<string, unknown>;
       }[];
     }) => {
@@ -134,8 +138,10 @@ export function useMeasurementUpload() {
           commentText,
           workbookRunId,
           workbookVersionId,
+          workbookAttemptId,
+          producerCellId: result.producerCellId,
           macroContext,
-          fallbackDeviceId: device?.id,
+          fallbackDeviceId: result.measurementDeviceId ?? device?.id,
           location,
         });
 

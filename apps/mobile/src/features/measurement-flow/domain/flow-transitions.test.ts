@@ -90,6 +90,10 @@ describe("edge transitions", () => {
       branchReturnStack: [],
       devicePlan: undefined,
       consumedNodeIds: [],
+      workbookAttemptId: undefined,
+      workbookRunExpected: [],
+      workbookRunRealized: [],
+      pendingWorkbookRunManifests: [],
     });
   });
 

@@ -27,3 +27,8 @@ def test_runtime_not_reexported() -> None:
     # runtime.py reads spark.conf eagerly; keeping it out of the package __init__
     # is what makes `import openjii.centrum` safe without an active Spark session.
     assert "runtime" not in centrum.__all__
+
+
+def test_workbook_completeness_tables_are_exported() -> None:
+    assert centrum.WORKBOOK_RUN_CONTROL_TABLE == "workbook_run_control"
+    assert centrum.WORKBOOK_RUN_COMPLETENESS_TABLE == "workbook_run_completeness"

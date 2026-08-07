@@ -48,6 +48,7 @@ const SHARED = {
   userId: "user-1",
   macro: null,
   questions: [],
+  workbookAttemptId: "attempt-1",
 };
 
 type SavedCall = [
@@ -56,6 +57,7 @@ type SavedCall = [
     measurementResult: {
       workbook_run_id?: string;
       workbook_version_id?: string;
+      workbook_attempt_id?: string;
       macro_context?: string;
     };
     metadata: { protocolName: string };
@@ -114,6 +116,11 @@ describe("useMeasurementUpload", () => {
     const runIds = calls.map(([m]) => m.measurementResult.workbook_run_id);
     expect(runIds[0]).toBeTruthy();
     expect(new Set(runIds).size).toBe(1);
+    expect(calls.map(([m]) => m.measurementResult.workbook_attempt_id)).toEqual([
+      "attempt-1",
+      "attempt-1",
+      "attempt-1",
+    ]);
     expect(calls[0][0].measurementResult).toMatchObject({
       workbook_version_id: "version-1",
       macro_context: JSON.stringify({ measurement: { a: 1 } }),
@@ -135,5 +142,6 @@ describe("useMeasurementUpload", () => {
     const [measurement] = saveMeasurement.mock.calls[0] as SavedCall;
     expect(measurement.topic).toBe("topic/exp-1/proto-shared");
     expect(measurement.measurementResult).not.toHaveProperty("workbook_run_id");
+    expect(measurement.measurementResult.workbook_attempt_id).toBe("attempt-1");
   });
 });

@@ -3,6 +3,14 @@ import { isQuestionsOnlyFlow } from "~/shared/measurements/flow-node";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
+import type {
+  PendingWorkbookRunManifest,
+  WorkbookRunExpected,
+  WorkbookRunRealized,
+  WorkbookRunTerminalStatus,
+} from "./workbook-run-manifest";
+import { buildPendingManifest } from "./workbook-run-manifest";
+
 // Raw MultispeQ output: device-defined JSON the flow stores verbatim and
 // hands to macro evaluation / upload. Persisted, so keep it structural.
 export type ScanResult = Record<string, unknown>;
@@ -10,7 +18,11 @@ export type ScanResult = Record<string, unknown>;
 /** One device's scan output; device is absent for legacy single-device results. */
 export interface ScanResultEntry {
   device?: { id: string; name: string };
+  /** Canonical firmware/handshake/transport identity stamped on the row and manifest. */
+  measurementDeviceId?: string;
   result: ScanResult;
+  /** Workbook cell that produced this device's row; required for completeness joins. */
+  producerCellId?: string;
   /** Dispatch rounds: the protocol this device actually ran (per-device upload). */
   protocolId?: string;
   protocolName?: string;
@@ -43,6 +55,14 @@ export interface FlowState {
   // Immutable workbook version whose protocol/macro snapshots this run uses.
   // Uploaded with measurements so cloud macro execution resolves the same code.
   workbookVersionId?: string;
+  // Stable identity for one execution attempt. Minted when an experiment is
+  // entered and rotated only when execution starts over.
+  workbookAttemptId?: string;
+  workbookRunExpected: WorkbookRunExpected[];
+  workbookRunRealized: WorkbookRunRealized[];
+  /** Explicit proof that the active attempt reached its terminal transition. */
+  workbookTerminalReadyAttemptId?: string;
+  pendingWorkbookRunManifests: PendingWorkbookRunManifest[];
   currentStep: number;
   flowNodes: FlowNode[];
   currentFlowStep: number;
@@ -79,6 +99,11 @@ export const initialFlowState: FlowState = {
   experimentId: undefined,
   experimentLabel: undefined,
   workbookVersionId: undefined,
+  workbookAttemptId: undefined,
+  workbookRunExpected: [],
+  workbookRunRealized: [],
+  workbookTerminalReadyAttemptId: undefined,
+  pendingWorkbookRunManifests: [],
   currentStep: 0,
   flowNodes: [],
   currentFlowStep: 0,
@@ -108,6 +133,56 @@ const clearedBranchIteration: Partial<FlowState> = {
   devicePlan: undefined,
   consumedNodeIds: [],
 };
+
+function rotatedAttemptState(
+  state: FlowState,
+  nextAttemptId: string | undefined,
+  terminalStatus?: WorkbookRunTerminalStatus,
+): Partial<FlowState> {
+  const alreadyTerminalReady =
+    terminalStatus === undefined &&
+    state.workbookTerminalReadyAttemptId === state.workbookAttemptId;
+  const manifest = alreadyTerminalReady
+    ? undefined
+    : buildPendingManifest({
+        attemptId: state.workbookAttemptId,
+        workbookVersionId: state.workbookVersionId,
+        experimentId: state.experimentId,
+        experimentName: state.experimentLabel,
+        expected: state.workbookRunExpected,
+        realized: state.workbookRunRealized,
+        terminalStatus,
+      });
+  return {
+    workbookAttemptId: nextAttemptId,
+    workbookRunExpected: [],
+    workbookRunRealized: [],
+    workbookTerminalReadyAttemptId: undefined,
+    pendingWorkbookRunManifests: manifest
+      ? [...state.pendingWorkbookRunManifests, manifest]
+      : state.pendingWorkbookRunManifests,
+  };
+}
+
+/** True only when advancing now performs the normal end-of-attempt rotation. */
+export function willNextStepRotateAttempt(state: FlowState): boolean {
+  if (
+    state.isFromOverview ||
+    !state.experimentId ||
+    state.flowNodes.length === 0 ||
+    isQuestionsOnlyFlow(state.flowNodes)
+  ) {
+    return false;
+  }
+  let nextFlowStep = state.currentFlowStep + 1;
+  while (
+    nextFlowStep < state.flowNodes.length &&
+    state.consumedNodeIds.includes(state.flowNodes[nextFlowStep].id)
+  ) {
+    nextFlowStep += 1;
+  }
+  return nextFlowStep >= state.flowNodes.length;
+}
 
 // One readable interpretation of the mode flags. Precedence mirrors the
 // branch order of the transitions below.
@@ -139,7 +214,7 @@ export function flowProtocolId(flowNodes: FlowNode[]): string | undefined {
   return (node?.content as { protocolId?: string } | undefined)?.protocolId;
 }
 
-export function nextStepState(state: FlowState): Partial<FlowState> {
+export function nextStepState(state: FlowState, nextAttemptId?: string): Partial<FlowState> {
   if (state.isFromOverview) {
     return { currentFlowStep: firstMeasurementStep(state.flowNodes), isFromOverview: false };
   }
@@ -162,6 +237,7 @@ export function nextStepState(state: FlowState): Partial<FlowState> {
       return {
         currentFlowStep: 0,
         iterationCount: state.iterationCount + 1,
+        ...rotatedAttemptState(state, nextAttemptId),
         ...clearedBranchIteration,
       };
     }
@@ -215,17 +291,25 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
       cellOutputs: {},
       cells: [],
       edges: [],
+      ...rotatedAttemptState(state, undefined, "abandoned"),
       ...clearedBranchIteration,
     };
   }
   return { currentStep: Math.max(0, state.currentStep - 1) };
 }
 
-export function resetFlowState(): Partial<FlowState> {
-  return { ...initialFlowState };
+export function resetFlowState(state?: FlowState): Partial<FlowState> {
+  if (!state) return { ...initialFlowState };
+  return {
+    ...initialFlowState,
+    ...rotatedAttemptState(state, undefined, "abandoned"),
+  };
 }
 
-export function startNewIterationState(state: FlowState): Partial<FlowState> {
+export function startNewIterationState(
+  state: FlowState,
+  nextAttemptId?: string,
+): Partial<FlowState> {
   return {
     currentFlowStep: 0,
     iterationCount: state.iterationCount + 1,
@@ -235,11 +319,12 @@ export function startNewIterationState(state: FlowState): Partial<FlowState> {
     producerCellId: undefined,
     cellOutputs: {},
     isFromOverview: false,
+    ...rotatedAttemptState(state, nextAttemptId),
     ...clearedBranchIteration,
   };
 }
 
-export function retryIterationState(): Partial<FlowState> {
+export function retryIterationState(state: FlowState, nextAttemptId?: string): Partial<FlowState> {
   return {
     currentFlowStep: 0,
     isQuestionsSubmitPending: false,
@@ -248,6 +333,7 @@ export function retryIterationState(): Partial<FlowState> {
     producerCellId: undefined,
     cellOutputs: {},
     isFromOverview: false,
+    ...rotatedAttemptState(state, nextAttemptId),
     ...clearedBranchIteration,
   };
 }
@@ -261,7 +347,10 @@ export function finishFlowState(state: FlowState): Partial<FlowState> {
   };
 }
 
-export function dismissQuestionsSubmitState(state: FlowState): Partial<FlowState> {
+export function dismissQuestionsSubmitState(
+  state: FlowState,
+  nextAttemptId?: string,
+): Partial<FlowState> {
   return {
     isQuestionsSubmitPending: false,
     currentFlowStep: 0,
@@ -270,6 +359,7 @@ export function dismissQuestionsSubmitState(state: FlowState): Partial<FlowState
     scanResults: undefined,
     producerCellId: undefined,
     cellOutputs: {},
+    ...rotatedAttemptState(state, nextAttemptId),
     ...clearedBranchIteration,
   };
 }

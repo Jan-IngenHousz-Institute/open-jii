@@ -54,6 +54,37 @@ annotation_schema = StructType(
     ]
 )
 
+workbook_run_expected_schema = StructType(
+    [
+        StructField("producer_cell_id", StringType(), False),
+        StructField("device_ids", ArrayType(StringType()), False),
+    ]
+)
+
+workbook_run_realized_schema = StructType(
+    [
+        StructField("producer_cell_id", StringType(), False),
+        StructField("device_id", StringType(), False),
+        StructField("outcome", StringType(), False),
+    ]
+)
+
+# Terminal control record published through the same Kinesis stream as sensor
+# rows. It is parsed only after bronze routing has removed it from measurement
+# ingestion.
+workbook_run_control_schema = StructType(
+    [
+        StructField("topic", StringType(), True),
+        StructField("record_kind", StringType(), False),
+        StructField("workbook_attempt_id", StringType(), False),
+        StructField("workbook_version_id", StringType(), True),
+        StructField("terminal_status", StringType(), False),
+        StructField("expected", ArrayType(workbook_run_expected_schema), False),
+        StructField("realized", ArrayType(workbook_run_realized_schema), False),
+        StructField("_client_id", StringType(), True),
+    ]
+)
+
 # Top-level schema for the JSON payload published by devices over Kinesis.
 sensor_schema = StructType(
     [
@@ -75,6 +106,10 @@ sensor_schema = StructType(
         # One uuid per multi-device workbook run; the round's rows share it.
         # Nullable: absent on single-device uploads and all older payloads.
         StructField("workbook_run_id", StringType(), True),
+        # Stable execution-attempt identity. Nullable for older payloads.
+        StructField("workbook_attempt_id", StringType(), True),
+        # Producer cell provenance used with device_id for attempt completeness.
+        StructField("producer_cell_id", StringType(), True),
         # GPS fix at measurement time; absent on older payloads and when the
         # app had no location permission or fix.
         StructField("latitude", DoubleType(), True),
@@ -106,6 +141,8 @@ large_iot_schema = StructType(
         # Workbook execution metadata; absent on single-device uploads.
         # macro_context stays a JSON string because its keys are dynamic.
         StructField("workbook_run_id", StringType(), True),
+        StructField("workbook_attempt_id", StringType(), True),
+        StructField("producer_cell_id", StringType(), True),
         StructField("workbook_version_id", StringType(), True),
         StructField("macro_context", StringType(), True),
         # GPS fix at measurement time; absent without permission or fix.

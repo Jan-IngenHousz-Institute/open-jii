@@ -2,6 +2,7 @@ import { compressSample } from "~/features/recent-measurements/utils/compress-sa
 import { MeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
+import { resolveMeasurementDeviceId } from "~/shared/measurements/measurement-device-id";
 
 export interface MacroInfo {
   id: string;
@@ -21,6 +22,10 @@ export interface BuildUploadPayloadArgs {
   workbookRunId?: string;
   /** Immutable workbook version that owns the macro snapshot. */
   workbookVersionId?: string;
+  /** Stable id minted when execution enters this workbook attempt. */
+  workbookAttemptId?: string;
+  /** Workbook producer cell for this measurement row. */
+  producerCellId?: string;
   /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
   macroContext?: Record<string, unknown>;
   fallbackDeviceId?: string;
@@ -40,11 +45,14 @@ export function buildUploadPayload({
   commentText,
   workbookRunId,
   workbookVersionId,
+  workbookAttemptId,
+  producerCellId,
   macroContext,
   fallbackDeviceId,
   location,
 }: BuildUploadPayloadArgs) {
   const macroFilenames = macro?.filename ? [macro.filename] : [];
+  const measurementDeviceId = resolveMeasurementDeviceId(rawMeasurement, fallbackDeviceId);
 
   let injectedSample: unknown;
   const hasInjectableSample = "sample" in rawMeasurement && rawMeasurement.sample;
@@ -66,11 +74,11 @@ export function buildUploadPayload({
     annotations: buildAnnotations(commentText),
     // The firmware-provided device_id wins; the local USB/BT id is a weak
     // fallback (Android USB deviceIds are transient across replugs).
-    ...(rawMeasurement.device_id == null && fallbackDeviceId
-      ? { device_id: fallbackDeviceId }
-      : {}),
+    ...(measurementDeviceId !== undefined ? { device_id: measurementDeviceId } : {}),
     ...(workbookRunId ? { workbook_run_id: workbookRunId } : {}),
     ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
+    ...(workbookAttemptId ? { workbook_attempt_id: workbookAttemptId } : {}),
+    ...(producerCellId ? { producer_cell_id: producerCellId } : {}),
     ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
   };

@@ -203,6 +203,8 @@ const MIGRATION_SQLS = [
   "0002_dashing_lenny_balinger.sql",
   "0003_drop_uploading_status.sql",
   "0004_add_day_key.sql",
+  "0005_add_record_kind.sql",
+  "0006_add_delivery_generation.sql",
 ].map((f) => readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"));
 
 function createDb() {

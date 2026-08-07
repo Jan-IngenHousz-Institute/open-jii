@@ -42,6 +42,7 @@ type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 interface CellExecutionState {
   status: CellExecutionStatus;
   error?: string;
+  isPartial?: boolean;
   executionOrder?: number[];
 }
 
