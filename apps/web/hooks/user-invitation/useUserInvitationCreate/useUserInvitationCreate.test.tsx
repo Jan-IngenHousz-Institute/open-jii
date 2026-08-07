@@ -21,7 +21,7 @@ describe("useUserInvitationCreate", () => {
         resourceType: "experiment",
         resourceId: "exp-1",
         email: "new@example.com",
-        role: "member",
+        tier: "viewer",
       });
     });
 
@@ -55,6 +55,7 @@ describe("useUserInvitationCreate", () => {
         resourceType: "experiment",
         resourceId: "exp-1",
         email: "new@example.com",
+        tier: "viewer",
       });
     });
 
@@ -77,6 +78,7 @@ describe("useUserInvitationCreate", () => {
         resourceType: "experiment",
         resourceId: "exp-1",
         email: "new@example.com",
+        tier: "viewer",
       });
     });
 
@@ -96,6 +98,7 @@ describe("useUserInvitationCreate", () => {
         resourceType: "experiment",
         resourceId: "exp-1",
         email: "new@example.com",
+        tier: "viewer",
       });
     });
 

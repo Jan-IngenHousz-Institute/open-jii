@@ -7,16 +7,9 @@ import initTranslations from "@repo/i18n/server";
 import { createServerOrpcClient } from "./server-orpc";
 
 /**
- * Server-side title helpers for authenticated `/platform` entity routes.
- *
- * Each route resolves a recognizable, localized title before the root
- * `%s | openJII` template (see `app/layout.tsx`). The fetchers below run under
- * the caller's session (cookie-forwarded, see {@link createServerOrpcClient})
- * and are request-memoized with React `cache`, so the metadata fetch shares a
- * response with any sibling fetch of the same entity in the same request and is
- * never persisted across users. Any failure (403/404/network) resolves to
- * `null`, and callers fall back to a safe generic localized label rather than
- * leaking inaccessible entity data.
+ * Fetches run with the caller's session and are memoized only within that request,
+ * so titles can share detail responses without crossing users. Failures fall back
+ * to generic localized labels instead of leaking inaccessible entity names.
  */
 
 /** Middot separator used between title segments (`Section · Entity`). */
@@ -129,12 +122,8 @@ const EXPERIMENT_SECTION_KEY: Record<Exclude<ExperimentSection, "overview">, str
 };
 
 /**
- * Title for an experiment overview or section route.
- *
- * - overview: `{name}` (or the generic `Experiment` noun when inaccessible)
- * - section: `{Section} · {name}` (or `{Section}` alone when inaccessible)
- * - archived: the localized `Archived` marker is appended so active and
- *   archived tabs are always distinguishable.
+ * Inaccessible sections keep their section label without an entity name; archived
+ * titles append a marker so active and archived tabs remain distinguishable.
  */
 export async function buildExperimentMetadata({
   locale,
@@ -220,30 +209,59 @@ export async function buildDashboardMetadata({
 
 // --- macros / protocols / workbooks -----------------------------------------
 
-/** Title for a macro overview route: the macro name, else the generic noun. */
+/**
+ * Sections a macro, protocol or workbook detail route can be on. All three share
+ * one tab strip component (`components/sharing/resource-detail-tabs.tsx`), so the
+ * section labels come from the same shared keys it renders.
+ */
+type SharedResourceSection = "overview" | "collaborators";
+
+const SHARED_RESOURCE_SECTION_KEY: Record<Exclude<SharedResourceSection, "overview">, string> = {
+  collaborators: "common:sharing.collaboratorsTab",
+};
+
+/**
+ * Title for a macro overview or section route.
+ *
+ * - overview: `{name}` (or the generic `Macro` noun when inaccessible)
+ * - section: `{Section} · {name}` (or `{Section}` alone when inaccessible)
+ */
 export async function buildMacroMetadata({
   locale,
   id,
+  section = "overview",
 }: {
   locale: string;
   id: string;
+  section?: SharedResourceSection;
 }): Promise<Metadata> {
-  const { t } = await initTranslations({ locale, namespaces: ["macro"] });
+  const { t } = await initTranslations({ locale, namespaces: ["macro", "common"] });
   const macro = await fetchMacroSummary(id);
-  return { title: nonEmpty(macro?.name) ?? t("macro:macros.macro") };
+
+  const sectionLabel = section === "overview" ? null : t(SHARED_RESOURCE_SECTION_KEY[section]);
+  const lead = nonEmpty(macro?.name) ?? (section === "overview" ? t("macro:macros.macro") : null);
+
+  return { title: joinTitleParts([sectionLabel, lead]) };
 }
 
-/** Title for a protocol overview route: the protocol name, else the noun. */
+/** Title for a protocol overview or section route; see {@link buildMacroMetadata}. */
 export async function buildProtocolMetadata({
   locale,
   id,
+  section = "overview",
 }: {
   locale: string;
   id: string;
+  section?: SharedResourceSection;
 }): Promise<Metadata> {
   const { t } = await initTranslations({ locale, namespaces: ["common"] });
   const protocol = await fetchProtocolSummary(id);
-  return { title: nonEmpty(protocol?.name) ?? t("common:protocols.protocol") };
+
+  const sectionLabel = section === "overview" ? null : t(SHARED_RESOURCE_SECTION_KEY[section]);
+  const lead =
+    nonEmpty(protocol?.name) ?? (section === "overview" ? t("common:protocols.protocol") : null);
+
+  return { title: joinTitleParts([sectionLabel, lead]) };
 }
 
 /** Title for a protocol runner route: `Connect & Test · {protocol}`. */
@@ -260,50 +278,86 @@ export async function buildProtocolRunMetadata({
   return { title: joinTitleParts([runner, nonEmpty(protocol?.name)]) };
 }
 
-/** Title for a workbook overview route: the workbook name, else the noun. */
+/** Title for a workbook overview or section route; see {@link buildMacroMetadata}. */
 export async function buildWorkbookMetadata({
   locale,
   id,
+  section = "overview",
 }: {
   locale: string;
   id: string;
+  section?: SharedResourceSection;
 }): Promise<Metadata> {
-  const { t } = await initTranslations({ locale, namespaces: ["workbook"] });
+  const { t } = await initTranslations({ locale, namespaces: ["workbook", "common"] });
   const workbook = await fetchWorkbookSummary(id);
-  return { title: nonEmpty(workbook?.name) ?? t("workbook:workbooks.workbook") };
+
+  const sectionLabel = section === "overview" ? null : t(SHARED_RESOURCE_SECTION_KEY[section]);
+  const lead =
+    nonEmpty(workbook?.name) ?? (section === "overview" ? t("workbook:workbooks.workbook") : null);
+
+  return { title: joinTitleParts([sectionLabel, lead]) };
 }
 
 // --- devices ----------------------------------------------------------------
 
-/**
- * Title for a device detail route. Prefers the assigned name, then the canonical
- * product name (both via the shared {@link presentDevice} transform), then the
- * serial number as a stable recognizable identifier, and finally the generic
- * localized `Device` noun.
- */
-export async function buildDeviceMetadata({
-  locale,
-  deviceId,
-}: {
-  locale: string;
-  deviceId: string;
-}): Promise<Metadata> {
-  const { t } = await initTranslations({ locale, namespaces: ["iot"] });
-  const generic = t("iot:iot.protocolRunner.device");
-  const device = await fetchDeviceSummary(deviceId);
-  if (!device) {
-    return { title: generic };
-  }
+type DeviceSummary = NonNullable<Awaited<ReturnType<typeof fetchDeviceSummary>>>;
 
+/** Localized device tab labels, mapped to `t()` keys (the strip's own copy). */
+type DeviceSection =
+  | "overview"
+  | "collaborators"
+  | "credentials"
+  | "lineage"
+  | "monitoring"
+  | "onboarding";
+
+const DEVICE_SECTION_KEY: Record<Exclude<DeviceSection, "overview">, string> = {
+  collaborators: "iot:iot.devices.detailTabs.collaborators",
+  credentials: "iot:iot.devices.detailTabs.credentials",
+  lineage: "iot:iot.devices.detailTabs.lineage",
+  monitoring: "iot:iot.devices.detailTabs.monitoring",
+  onboarding: "iot:iot.devices.detailTabs.onboarding",
+};
+
+/**
+ * A device's own recognizable label: the assigned name, then the canonical product
+ * name (both via the shared {@link presentDevice} transform), then the serial
+ * number as a stable identifier. `null` when nothing identifying resolves.
+ */
+function deviceIdentity(device: DeviceSummary): string | null {
   const present = presentDevice({
     name: device.name,
     family: device.deviceType,
     id: device.id,
   });
-  const title =
-    present.provenance === "fallback"
-      ? (nonEmpty(device.serialNumber) ?? generic)
-      : present.primary;
 
-  return { title };
+  return present.provenance === "fallback" ? nonEmpty(device.serialNumber) : present.primary;
+}
+
+/**
+ * Title for a device detail overview or section route.
+ *
+ * - overview: `{device}` (or the generic `Device` noun when unidentifiable)
+ * - section: `{Section} · {device}` (or `{Section}` alone when unidentifiable)
+ */
+export async function buildDeviceMetadata({
+  locale,
+  deviceId,
+  section = "overview",
+}: {
+  locale: string;
+  deviceId: string;
+  section?: DeviceSection;
+}): Promise<Metadata> {
+  const { t } = await initTranslations({ locale, namespaces: ["iot"] });
+  const device = await fetchDeviceSummary(deviceId);
+
+  const sectionLabel = section === "overview" ? null : t(DEVICE_SECTION_KEY[section]);
+  const identity = device ? deviceIdentity(device) : null;
+  // Overview falls back to the generic entity noun; sections fall back to their
+  // own label so an inaccessible device never surfaces as a bare marketing title
+  // and never leaks a name.
+  const lead = identity ?? (section === "overview" ? t("iot:iot.protocolRunner.device") : null);
+
+  return { title: joinTitleParts([sectionLabel, lead]) };
 }

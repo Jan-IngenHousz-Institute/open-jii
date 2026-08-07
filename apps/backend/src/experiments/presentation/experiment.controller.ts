@@ -11,6 +11,7 @@ import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { SetVisibilityUseCase } from "../../visibility/application/use-cases/set-visibility/set-visibility";
 import { CreateExperimentUseCase } from "../application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "../application/use-cases/delete-experiment/delete-experiment";
 import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
@@ -33,6 +34,7 @@ export class ExperimentController {
     private readonly listExperimentsUseCase: ListExperimentsUseCase,
     private readonly updateExperimentUseCase: UpdateExperimentUseCase,
     private readonly deleteExperimentUseCase: DeleteExperimentUseCase,
+    private readonly setVisibilityUseCase: SetVisibilityUseCase,
   ) {}
 
   @CanCreateInOrg()
@@ -113,6 +115,22 @@ export class ExperimentController {
       const result = await this.updateExperimentUseCase.execute(id, transformedBody);
       if (result.isSuccess()) {
         return formatDates(result.value);
+      }
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  @CanAccess({ resource: "experiment", action: "manage" })
+  @Implement(experimentContract.setVisibility)
+  setVisibility() {
+    return implement(experimentContract.setVisibility).handler(async ({ input }) => {
+      const result = await this.setVisibilityUseCase.execute(
+        "experiment",
+        input.id,
+        input.visibility,
+      );
+      if (result.isSuccess()) {
+        return result.value;
       }
       return throwOrpcFailure(result, this.logger);
     });

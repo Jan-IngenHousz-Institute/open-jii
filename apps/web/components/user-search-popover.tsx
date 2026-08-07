@@ -9,13 +9,6 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@repo/ui/components/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
 
 import { UserAvatar } from "./user-avatar";
 
@@ -25,7 +18,7 @@ function isValidEmail(value: string): boolean {
   return emailSchema.safeParse(value).success;
 }
 
-export interface UserSearchPopoverProps {
+interface UserSearchPopoverProps {
   availableUsers: UserProfile[];
   searchValue: string;
   onSearchChange: (value: string) => void;
@@ -38,8 +31,6 @@ export interface UserSearchPopoverProps {
   selectedEmail?: string | null;
   onClearSelection: () => void;
   disabled?: boolean;
-  selectedRole?: string;
-  onRoleChange?: (role: string) => void;
   existingEmails?: string[];
 }
 
@@ -56,8 +47,6 @@ export function UserSearchPopover({
   selectedEmail = null,
   onClearSelection,
   disabled = false,
-  selectedRole = "member",
-  onRoleChange,
   existingEmails = [],
 }: UserSearchPopoverProps) {
   const { t } = useTranslation();
@@ -111,9 +100,6 @@ export function UserSearchPopover({
           hasSelection={hasSelection}
           searchValue={searchValue}
           handleClear={handleClear}
-          selectedRole={selectedRole}
-          onRoleChange={onRoleChange}
-          t={t}
         />
       </PopoverAnchor>
 
@@ -147,9 +133,6 @@ const SearchInput = React.forwardRef<
     hasSelection: boolean;
     searchValue: string;
     handleClear: () => void;
-    selectedRole: string;
-    onRoleChange?: (role: string) => void;
-    t: (key: string) => string;
   }
 >(function SearchInput(
   {
@@ -161,9 +144,6 @@ const SearchInput = React.forwardRef<
     hasSelection,
     searchValue,
     handleClear,
-    selectedRole,
-    onRoleChange,
-    t,
   },
   ref,
 ) {
@@ -200,24 +180,6 @@ const SearchInput = React.forwardRef<
           </Button>
         )}
       </div>
-      {hasSelection && (
-        <>
-          <div className="bg-border h-6 w-px" />
-          <Select
-            value={selectedRole}
-            onValueChange={onRoleChange}
-            disabled={isAddingUser || disabled}
-          >
-            <SelectTrigger className="h-auto w-[100px] border-0 px-3 shadow-none focus:ring-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="member">{t("experimentSettings.roleMember")}</SelectItem>
-              <SelectItem value="admin">{t("experimentSettings.roleAdmin")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </>
-      )}
     </div>
   );
 });

@@ -3,7 +3,7 @@ title: "Managing & organizing experiments"
 description: "Find, search, and filter your experiments from the experiments list, and archive the ones you have finished."
 ---
 
-{/* verified: code@12a361a74 2026-07-19 */}
+{/* verified: code@efd66bdd4 2026-08-04 */}
 
 The **Experiments** page is your home base. It lists your experiments and gives
 you a few ways to find the one you want.
@@ -22,8 +22,10 @@ Two controls help you narrow the list:
 - **Search** — type in the search box to match experiments by name and
   description (and by the people and locations linked to them).
 - **Filter** — switch between:
-  - **Member Experiments** — experiments you are a member of.
-  - **All Experiments** — your experiments plus public experiments from others.
+  - **Member Experiments** — experiments you created, plus the ones shared with
+    you personally.
+  - **All Experiments** — everything you can open: the above, plus experiments
+    reached through an organization, plus public ones.
 
 ## Create and transfer
 
@@ -44,6 +46,6 @@ anything.
 {/* NEEDS-LIVE-CHECK: confirm exactly where and how "archive" is triggered on the current build (e.g. an action inside the experiment), and whether an experiment's status is displayed to the user anywhere in the list/overview. */}
 
 <Callout type="info">
-  Archiving is an admin action. See [roles](/guide/experiments/collaborators) for what admins and
-  members can do.
+  Archiving needs **Can edit**. See [access levels](/guide/experiments/collaborators) for what each
+  level allows.
 </Callout>

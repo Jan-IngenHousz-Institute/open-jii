@@ -102,7 +102,7 @@ describe("UpdateExperimentMetadataUseCase", () => {
     });
 
     const memberId = await testApp.createTestUser({});
-    await testApp.addExperimentMember(experiment.id, memberId, "admin");
+    await testApp.addExperimentAdmin(experiment.id, memberId);
 
     const mockResult: ExperimentMetadataDto = {
       metadataId,

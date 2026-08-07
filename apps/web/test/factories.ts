@@ -9,6 +9,7 @@
  * const exp = createExperiment({ name: "My test", status: "archived" });
  * ```
  */
+import type { ResourceCapabilities } from "@repo/api/domains/authorization/capabilities.schema";
 import type {
   ExperimentDashboardLayout,
   ExperimentDashboardWidget,
@@ -36,9 +37,10 @@ import type {
 } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
-import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
-import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
+import type { IotDevice, IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
+import type { Macro, MacroDetail } from "@repo/api/domains/macro/macro.schema";
+import type { Protocol, ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
+import type { ResourceGrantDto, ResourceOwnerDto } from "@repo/api/domains/sharing/sharing.schema";
 import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
 import type {
   BranchCell,
@@ -50,7 +52,7 @@ import type {
   QuestionCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { WorkbookVersionSummary } from "@repo/api/domains/workbook/workbook-version.schema";
-import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
+import type { Workbook, WorkbookDetail } from "@repo/api/domains/workbook/workbook.schema";
 import type { Session } from "@repo/auth/types";
 
 // ── Experiment ──────────────────────────────────────────────────
@@ -112,6 +114,13 @@ export function createExperimentAccess(
     experiment: createExperiment(experimentOverrides),
     hasAccess: true,
     isAdmin: false,
+    capabilities: {
+      canContribute: false,
+      canUpdate: false,
+      canManage: false,
+      canShare: false,
+      canLeave: false,
+    },
     ...accessOverrides,
   };
 }
@@ -234,6 +243,99 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
     bio: null,
     activated: true,
     email: "test@example.com",
+    ...overrides,
+  };
+}
+
+// ── Capability signal (detail responses) ────────────────────────
+
+/**
+ * A fully enabled capability fixture. Override individual flags or use
+ * `readOnlyCapabilities` for a viewer.
+ */
+export function createCapabilities(
+  overrides: Partial<ResourceCapabilities> = {},
+): ResourceCapabilities {
+  return {
+    canContribute: true,
+    canUpdate: true,
+    canManage: true,
+    canShare: true,
+    canLeave: true,
+    ...overrides,
+  };
+}
+
+/** A grantee with read access only — nothing contributable, editable or shareable. */
+export const readOnlyCapabilities: ResourceCapabilities = {
+  canContribute: false,
+  canUpdate: false,
+  canManage: false,
+  canShare: false,
+  canLeave: false,
+};
+
+export function createMacroDetail(overrides: Partial<MacroDetail> = {}): MacroDetail {
+  return { ...createMacro(overrides), capabilities: createCapabilities(), ...overrides };
+}
+
+export function createProtocolDetail(overrides: Partial<ProtocolDetail> = {}): ProtocolDetail {
+  return { ...createProtocol(overrides), capabilities: createCapabilities(), ...overrides };
+}
+
+export function createWorkbookDetail(overrides: Partial<WorkbookDetail> = {}): WorkbookDetail {
+  return { ...createWorkbook(overrides), capabilities: createCapabilities(), ...overrides };
+}
+
+// ── Resource grant (sharing) ────────────────────────────────────
+
+let grantSeq = 0;
+
+/**
+ * A direct grant as `GET /{resourceType}/{id}/collaborators` returns it. Defaults
+ * to a user grantee who *is* an org member (so `isOutsideCollaborator` is false)
+ * with the read-only `viewer` role.
+ */
+export function createResourceGrant(overrides: Partial<ResourceGrantDto> = {}): ResourceGrantDto {
+  grantSeq++;
+  return {
+    kind: "grant",
+    id: `grant-${grantSeq}`,
+    resourceType: "experiment",
+    resourceId: "resource-1",
+    granteeType: "user",
+    granteeId: `user-${grantSeq}`,
+    role: "viewer",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    createdBy: "owner-1",
+    isOutsideCollaborator: false,
+    grantee: {
+      type: "user",
+      displayName: "Grace Hopper",
+      email: "grace@example.com",
+      avatarUrl: null,
+    },
+    ...overrides,
+  };
+}
+
+/**
+ * An owner row as the collaborators endpoint synthesizes it from the resource's
+ * owning organization. Carries no grant id and no role — there is nothing to
+ * change or revoke on it.
+ */
+export function createResourceOwner(overrides: Partial<ResourceOwnerDto> = {}): ResourceOwnerDto {
+  grantSeq++;
+  return {
+    kind: "owner",
+    granteeType: "user",
+    granteeId: `owner-${grantSeq}`,
+    grantee: {
+      type: "user",
+      displayName: "Ada Lovelace",
+      email: "ada@example.com",
+      avatarUrl: null,
+    },
     ...overrides,
   };
 }
@@ -454,7 +556,8 @@ export function createInvitation(overrides: Partial<Invitation> = {}): Invitatio
     resourceType: "experiment",
     resourceId: crypto.randomUUID(),
     email: `user${invitationSeq}@example.com`,
-    role: "member",
+    // Least privilege by default; "viewer" is the contributing tier.
+    tier: "viewer",
     status: "pending",
     invitedBy: "user-1",
     invitedByName: "Test User",
@@ -752,6 +855,19 @@ export function createIotDevice(overrides: Partial<IotDevice> = {}): IotDevice {
   };
 }
 
+/**
+ * A device as its detail route returns it: the registry row plus the caller's
+ * capabilities. Defaults to the owner's view — full control, and no grant of their
+ * own to leave, because owning is not a grant.
+ */
+export function createIotDeviceDetail(overrides: Partial<IotDeviceDetail> = {}): IotDeviceDetail {
+  return {
+    ...createIotDevice(overrides),
+    capabilities: createCapabilities({ canContribute: false, canLeave: false }),
+    ...overrides,
+  };
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 /** Reset sequence counters, useful in beforeEach if deterministic IDs matter */
@@ -775,4 +891,5 @@ export function resetFactories() {
   iotDeviceSeq = 0;
   dashboardSeq = 0;
   dashboardWidgetSeq = 0;
+  grantSeq = 0;
 }

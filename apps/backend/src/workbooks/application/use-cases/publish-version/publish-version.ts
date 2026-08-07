@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
@@ -20,6 +21,7 @@ export class PublishVersionUseCase {
     private readonly workbookVersionRepository: WorkbookVersionRepository,
     private readonly protocolRepository: ProtocolRepository,
     private readonly macroRepository: MacroRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   // Always mints a new version. Callers gate via IsWorkbookUpgradableUseCase; reuse the latest if undrifted.
@@ -38,6 +40,31 @@ export class PublishVersionUseCase {
       return failure(AppError.notFound(`Workbook with ID ${workbookId} not found`));
     }
 
+    // Minting a version snapshots the cells into durable, later-readable state, so
+    // the publisher must be able to read the workbook itself — not just the entities
+    // its cells reference (checked below). This is the choke point for every minting
+    // caller (attach/upgrade/transfer), so a revoked grantee cannot capture
+    // post-revocation state through a path that authorized some other resource.
+    const workbookAccess = await this.authz.can(userId, {
+      resourceType: "workbook",
+      resourceId: workbookId,
+      action: "read",
+    });
+    if (!workbookAccess.allow) {
+      this.logger.warn({
+        msg: "Publish denied: no read access to the workbook",
+        operation: "publishVersion",
+        workbookId,
+        userId,
+        reason: workbookAccess.reason,
+      });
+      return failure(
+        workbookAccess.reason === "not-found"
+          ? AppError.notFound(`Workbook with ID ${workbookId} not found`)
+          : AppError.forbidden("You do not have access to this workbook"),
+      );
+    }
+
     const latestResult = await this.workbookVersionRepository.getLatestVersion(workbookId);
     if (latestResult.isFailure()) return latestResult;
     const nextVersion = latestResult.value ? latestResult.value.version + 1 : 1;
@@ -49,6 +76,35 @@ export class PublishVersionUseCase {
     const macroIds = [
       ...new Set(cells.flatMap((c) => (c.type === "macro" ? [c.payload.macroId] : []))),
     ];
+
+    // A version snapshots the full code of every referenced protocol/macro, and the
+    // snapshot is later readable through the workbook. Cells can name arbitrary
+    // UUIDs, so without this a caller could exfiltrate a private macro/protocol's
+    // code just by referencing it. A dangling ref (`not-found`) is tolerated —
+    // nothing to snapshot, nothing to leak.
+    //
+    // Run in parallel: the checks are independent and read-only, and a large
+    // workbook would otherwise serialize hundreds of multi-query authorizations.
+    const refChecks = await Promise.all([
+      ...protocolIds.map((id) =>
+        this.authz
+          .can(userId, { resourceType: "protocol", resourceId: id, action: "read" })
+          .then((decision) => ({ kind: "protocol" as const, id, decision })),
+      ),
+      ...macroIds.map((id) =>
+        this.authz
+          .can(userId, { resourceType: "macro", resourceId: id, action: "read" })
+          .then((decision) => ({ kind: "macro" as const, id, decision })),
+      ),
+    ]);
+    const denied = refChecks.find((r) => !r.decision.allow && r.decision.reason !== "not-found");
+    if (denied) {
+      return failure(
+        AppError.forbidden(
+          `Cannot publish: no read access to referenced ${denied.kind} ${denied.id}`,
+        ),
+      );
+    }
 
     const [protocolsResult, macrosResult] = await Promise.all([
       this.protocolRepository.findByIds(protocolIds),

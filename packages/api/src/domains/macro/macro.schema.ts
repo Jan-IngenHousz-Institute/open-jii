@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { zResourceCapabilities } from "../authorization/capabilities.schema";
+import { zVisibility } from "../visibility/visibility.schema";
+
 // ── Helpers ──────────────────────────────────────────────────────────
 function jsonStringOrValue<T extends z.ZodTypeAny>(schema: T) {
   return z.preprocess((val) => {
@@ -38,6 +41,15 @@ export const zMacro = z.object({
 });
 export const zMacroList = z.array(zMacro);
 
+/**
+ * A single macro plus the caller's effective capabilities on it. Only the detail
+ * route returns this: capabilities cost one `can()` resolution per resource, so
+ * list rows deliberately stay plain `zMacro` rather than paying it per row.
+ */
+export const zMacroDetail = zMacro.extend({
+  capabilities: zResourceCapabilities,
+});
+
 // Query parameters
 export const zMacroFilterQuery = z.object({
   search: z.string().optional(),
@@ -65,6 +77,10 @@ export const zCreateMacroRequestBody = z.object({
   // Optional target organization to create into; defaults to the creator's
   // personal org. The caller must be a member of the given organization.
   organizationId: z.string().uuid().optional(),
+  // Visibility at creation: defaults to public. Post-create changes go through the
+  // dedicated `setVisibility` route only, which is monotonic (private→public); the
+  // update body never carries visibility.
+  visibility: zVisibility.optional(),
 });
 
 export const zUpdateMacroRequestBody = z.object({
@@ -102,7 +118,9 @@ export const zMacroProtocolEntry = z.object({
 export const zMacroProtocolList = z.array(zMacroProtocolEntry);
 
 export const zAddCompatibleProtocolsBody = z.object({
-  protocolIds: z.array(z.string().uuid()).min(1),
+  // Capped so a single request can't fan out into an unbounded set of per-id
+  // authorization checks (each link target is read-access validated server-side).
+  protocolIds: z.array(z.string().uuid()).min(1).max(100),
 });
 
 export const zMacroProtocolPathParams = z.object({
@@ -167,6 +185,7 @@ export const zMacroBatchWebhookErrorResponse = z.object({
 // Infer types from Zod schemas
 export type MacroLanguage = z.infer<typeof zMacroLanguage>;
 export type Macro = z.infer<typeof zMacro>;
+export type MacroDetail = z.infer<typeof zMacroDetail>;
 export type MacroList = z.infer<typeof zMacroList>;
 export type MacroFilterQuery = z.infer<typeof zMacroFilterQuery>;
 export type MacroFilter = MacroFilterQuery["search"];

@@ -30,12 +30,18 @@ describe("CanAccessGuard", () => {
     userId?: string;
     params?: Record<string, string>;
     path?: string;
+    method?: string;
+    query?: Record<string, unknown>;
+    body?: unknown;
   }): ExecutionContext {
     const handler = vi.fn();
     const request = {
       session: options?.userId ? { user: { id: options.userId } } : null,
       params: options?.params ?? {},
       path: options?.path ?? "/test",
+      method: options?.method ?? "GET",
+      query: options?.query ?? {},
+      body: options?.body,
     };
 
     return {
@@ -112,6 +118,106 @@ describe("CanAccessGuard", () => {
       resourceType: "experiment",
       resourceId,
       action: "update",
+    });
+  });
+
+  describe("payload that contradicts the URL", () => {
+    const userId = crypto.randomUUID();
+
+    beforeEach(() => {
+      setMetadata({ resource: "experiment", action: "read" });
+      vi.mocked(authorizationService.can).mockResolvedValue({ allow: true, reason: "org-role" });
+    });
+
+    it("rejects a query param that replaces the authorized path id", async () => {
+      await expect(
+        guard.canActivate(
+          createContext({
+            userId,
+            method: "GET",
+            params: { id: crypto.randomUUID() },
+            query: { id: crypto.randomUUID() },
+          }),
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(authorizationService.can).not.toHaveBeenCalled();
+    });
+
+    it("rejects a body field that replaces the authorized path id", async () => {
+      await expect(
+        guard.canActivate(
+          createContext({
+            userId,
+            method: "POST",
+            params: { id: crypto.randomUUID() },
+            body: { id: crypto.randomUUID() },
+          }),
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(authorizationService.can).not.toHaveBeenCalled();
+    });
+
+    it("rejects a contradicted path param the decorator does not name", async () => {
+      setMetadata({ resource: "workbook", action: "read" });
+
+      await expect(
+        guard.canActivate(
+          createContext({
+            userId,
+            method: "GET",
+            params: { id: crypto.randomUUID(), versionId: crypto.randomUUID() },
+            query: { versionId: crypto.randomUUID() },
+          }),
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(authorizationService.can).not.toHaveBeenCalled();
+    });
+
+    it("allows a payload that restates a path param verbatim", async () => {
+      const resourceId = crypto.randomUUID();
+
+      await expect(
+        guard.canActivate(
+          createContext({
+            userId,
+            method: "GET",
+            params: { id: resourceId },
+            query: { id: resourceId },
+          }),
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it("rejects a repeated query key, which arrives as an array rather than a string", async () => {
+      const resourceId = crypto.randomUUID();
+
+      await expect(
+        guard.canActivate(
+          createContext({
+            userId,
+            method: "GET",
+            params: { id: resourceId },
+            query: { id: [resourceId, resourceId] },
+          }),
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(authorizationService.can).not.toHaveBeenCalled();
+    });
+
+    it("ignores a query param on a write, which the request decoder never reads", async () => {
+      const resourceId = crypto.randomUUID();
+
+      await expect(
+        guard.canActivate(
+          createContext({
+            userId,
+            method: "POST",
+            params: { id: resourceId },
+            query: { id: crypto.randomUUID() },
+            body: {},
+          }),
+        ),
+      ).resolves.toBe(true);
     });
   });
 

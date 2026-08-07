@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { zResourceCapabilities } from "../authorization/capabilities.schema";
+import { zVisibility } from "../visibility/visibility.schema";
 import { zWorkbookCellArray, zWorkbookCellArrayInput } from "./workbook-cells.schema";
 
 export const zWorkbook = z.object({
@@ -29,6 +31,14 @@ export const zWorkbookListItem = zWorkbook.omit({ cells: true }).extend({
 
 export const zWorkbookList = z.array(zWorkbookListItem);
 
+/**
+ * A single workbook plus the caller's effective capabilities on it. Detail route
+ * only — see `zMacroDetail` for why list rows stay plain.
+ */
+export const zWorkbookDetail = zWorkbook.extend({
+  capabilities: zResourceCapabilities,
+});
+
 export const zWorkbookFilterQuery = z.object({
   search: z.string().optional(),
   filter: z.enum(["my"]).optional(),
@@ -52,6 +62,10 @@ export const zCreateWorkbookRequestBody = z.object({
   // Optional target organization to create into; defaults to the creator's
   // personal org. The caller must be a member of the given organization.
   organizationId: z.string().uuid().optional(),
+  // Visibility at creation: defaults to public. Post-create changes go through the
+  // dedicated `setVisibility` route only, which is monotonic (private→public); the
+  // update body never carries visibility.
+  visibility: zVisibility.optional(),
 });
 
 export const zUpdateWorkbookRequestBody = z.object({
@@ -72,6 +86,7 @@ export const zWorkbookErrorResponse = z.object({
 });
 
 export type Workbook = z.infer<typeof zWorkbook>;
+export type WorkbookDetail = z.infer<typeof zWorkbookDetail>;
 export type WorkbookListItem = z.infer<typeof zWorkbookListItem>;
 export type WorkbookList = z.infer<typeof zWorkbookList>;
 export type WorkbookFilterQuery = z.infer<typeof zWorkbookFilterQuery>;

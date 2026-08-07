@@ -249,8 +249,8 @@ describe("ListExperimentsUseCase", () => {
       userId: otherUserId,
       status: "archived",
     });
-    await testApp.addExperimentMember(memberExpActive.id, mainUserId, "member");
-    await testApp.addExperimentMember(memberExpArchived.id, mainUserId, "member");
+    await testApp.addExperimentCollaborator(memberExpActive.id, mainUserId);
+    await testApp.addExperimentCollaborator(memberExpArchived.id, mainUserId);
     await testApp.createExperiment({
       name: "Other Experiment",
       userId: otherUserId,

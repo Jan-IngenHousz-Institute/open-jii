@@ -3,7 +3,6 @@ import { faker } from "@faker-js/faker";
 import { macros } from "@repo/database";
 
 import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
-import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { ProtocolMacroRepository } from "../../../core/repositories/protocol-macro.repository";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -117,31 +116,29 @@ describe("AddCompatibleMacrosUseCase", () => {
     expect(result.error.code).toBe("INTERNAL_ERROR");
   });
 
-  it("should return INTERNAL_ERROR when macroRepository.findById fails", async () => {
+  it("should return FORBIDDEN when the caller cannot read a linked macro", async () => {
+    // Link targets are validated by read access, not mere existence: an editor
+    // of a public protocol must not be able to link (and thereby expose) a
+    // private macro they cannot access.
     const protocol = await testApp.createProtocol({
-      name: "Macro Verify Failure Protocol",
+      name: "No Access Protocol",
       createdBy: testUserId,
     });
 
-    const [macro] = await testApp.database
-      .insert(macros)
-      .values({
-        name: `verify-fail-macro-${faker.string.alphanumeric(6)}`,
-        filename: `macro_${faker.string.alphanumeric(8)}`,
-        description: "test",
-        language: "python",
-        code: btoa("print('hello')"),
-        createdBy: testUserId,
-      })
-      .returning();
+    const otherUser = await testApp.createTestUser({});
+    const otherOrgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(otherOrgId, otherUser, "owner");
+    const privateMacro = await testApp.createMacro({
+      name: `private-macro-${faker.string.alphanumeric(6)}`,
+      createdBy: otherUser,
+      visibility: "private",
+      organizationId: otherOrgId,
+    });
 
-    const macroRepo = testApp.module.get(MacroRepository);
-    vi.spyOn(macroRepo, "findById").mockResolvedValueOnce(failure(AppError.internal("db error")));
-
-    const result = await useCase.execute(protocol.id, [macro.id], testUserId);
+    const result = await useCase.execute(protocol.id, [privateMacro.id], testUserId);
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(result.error.code).toBe("FORBIDDEN");
   });
 
   it("should return INTERNAL_ERROR when protocolMacroRepository.addMacros fails", async () => {

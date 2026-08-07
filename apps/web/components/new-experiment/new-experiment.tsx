@@ -61,8 +61,8 @@ export function NewExperimentForm() {
         component: createFormStep([NewExperimentDetailsCard]),
       },
       {
-        title: t("experiments.membersVisibilityTitle"),
-        description: t("experiments.membersVisibilityDescription"),
+        title: t("experiments.collaboratorsVisibilityTitle"),
+        description: t("experiments.collaboratorsVisibilityDescription"),
         validationSchema: membersVisibilitySchema,
         component: createFormStep([NewExperimentMembersCard, NewExperimentVisibilityCard]),
       },
@@ -110,7 +110,12 @@ export function NewExperimentForm() {
   function onSubmit(data: CreateExperimentBody) {
     setIsSubmitting(true);
     pendingWorkbookId.current = data.workbookId ?? undefined;
-    createExperiment(data);
+    // Embargo is private-only: never send it on a public experiment (visibility
+    // defaults to public), otherwise the create body validation rejects it.
+    // The card only surfaces the embargo editor in the private branch, but its
+    // default-90-day effect can still leave a stale value on the form.
+    const payload = data.visibility === "private" ? data : { ...data, embargoUntil: undefined };
+    createExperiment(payload);
   }
 
   // Track if user has entered any data

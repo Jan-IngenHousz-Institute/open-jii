@@ -1,17 +1,22 @@
-import { ensurePersonalOrganization, organizationMembers, organizations } from "@repo/database";
+import {
+  and,
+  ensurePersonalOrganization,
+  eq,
+  experiments,
+  organizationMembers,
+  organizations,
+  resourceGrants,
+} from "@repo/database";
 
 import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
-import { LocationRepository } from "../../../../experiments/core/repositories/experiment-location.repository";
-import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
 import { TestHarness } from "../../../../test/test-harness";
-import type { UserDto } from "../../../../users/core/models/user.model";
+import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { CreateExperimentUseCase } from "./create-experiment";
 
 describe("CreateExperimentUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: CreateExperimentUseCase;
-  let experimentMemberRepository: ExperimentMemberRepository;
   let locationRepository: LocationRepository;
 
   beforeAll(async () => {
@@ -22,7 +27,6 @@ describe("CreateExperimentUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateExperimentUseCase);
-    experimentMemberRepository = testApp.module.get(ExperimentMemberRepository);
     locationRepository = testApp.module.get(LocationRepository);
 
     // Mock the Databricks service
@@ -97,33 +101,137 @@ describe("CreateExperimentUseCase", () => {
     expect(result.value.organizationId).toBe(personalOrganizationId);
   });
 
-  it("should add the creating user as an admin member", async () => {
+  it("seeds the creator with no grant at all", async () => {
     const experimentData = {
       name: "Member Test Experiment",
-      description: "Testing automatic member creation",
+      description: "Testing the creator's access",
     };
 
     const experimentResult = await useCase.execute(experimentData, testUserId);
 
-    // Verify result is success
-    expect(experimentResult.isSuccess()).toBe(true);
     assertSuccess(experimentResult);
     const createdExperiment = experimentResult.value;
 
-    const membersResult = await experimentMemberRepository.getMembers(createdExperiment.id);
+    // The creator's access comes from owning the experiment — they own the
+    // personal org it lands in — so a grant would only repeat it, and would put
+    // them on the collaborators list as a collaborator on their own experiment.
+    const grants = await testApp.database
+      .select()
+      .from(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, "experiment"),
+          eq(resourceGrants.resourceId, createdExperiment.id),
+          eq(resourceGrants.granteeType, "user"),
+        ),
+      );
+    expect(grants).toEqual([]);
+  });
 
-    expect(membersResult.isSuccess()).toBe(true);
-    assertSuccess(membersResult);
-    const members = membersResult.value;
+  it("gives each inline collaborator the contributing tier, and nothing more", async () => {
+    const contributorId = await testApp.createTestUser({ email: "inline@example.com" });
 
-    // Should have exactly 1 member (the creator)
-    expect(members.length).toBe(1);
+    const experimentResult = await useCase.execute(
+      { name: "Inline Collaborators Experiment", members: [{ userId: contributorId }] },
+      testUserId,
+    );
+    assertSuccess(experimentResult);
+    const createdExperiment = experimentResult.value;
 
-    // Verify the creator was added as an admin
-    expect(members[0]).toMatchObject({
-      experimentId: createdExperiment.id,
-      role: "admin",
-      user: expect.objectContaining({ id: testUserId }) as Partial<UserDto>,
+    const grants = await testApp.database
+      .select()
+      .from(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, "experiment"),
+          eq(resourceGrants.resourceId, createdExperiment.id),
+          eq(resourceGrants.granteeType, "user"),
+        ),
+      );
+    // Only the person they listed gets a grant; the creator needs none.
+    expect(Object.fromEntries(grants.map((g) => [g.granteeId, g.role]))).toEqual({
+      [contributorId]: "viewer",
+    });
+  });
+
+  /**
+   * `resource_grants` has no foreign key on `grantee_id`, so nothing at the
+   * database level stops the create form's `members[]` from becoming grant rows for
+   * people who cannot be shared with. The check is the same one the sharing surface
+   * applies, and it refuses the whole create — a half-built experiment with some of
+   * its collaborators attached is worse than none.
+   */
+  describe("inline collaborators who cannot be shared with", () => {
+    async function grantsOn(experimentId: string) {
+      return testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experimentId),
+          ),
+        );
+    }
+
+    it.each([
+      ["a user id that names nobody", () => Promise.resolve(crypto.randomUUID())],
+      [
+        "a deactivated account",
+        async () => testApp.createTestUser({ name: "Gone User", activated: false }),
+      ],
+      [
+        "a closed account",
+        async () => testApp.createTestUser({ name: "Closed User", deletedAt: new Date() }),
+      ],
+    ])("refuses the create for %s", async (_label, seedGrantee) => {
+      const granteeId = await seedGrantee();
+
+      const result = await useCase.execute(
+        { name: `Unselectable ${crypto.randomUUID()}`, members: [{ userId: granteeId }] },
+        testUserId,
+      );
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(400);
+      expect(result.error.message).toBe("Grantee not found");
+    });
+
+    it("leaves no experiment behind when a grantee is rejected", async () => {
+      const good = await testApp.createTestUser({ email: "good@example.com" });
+      const name = `Rolled Back ${crypto.randomUUID()}`;
+
+      const result = await useCase.execute(
+        { name, members: [{ userId: good }, { userId: crypto.randomUUID() }] },
+        testUserId,
+      );
+
+      assertFailure(result);
+      // The whole create is one transaction, so the experiment, the creator's
+      // control and the first grantee's grant all roll back together — the name is
+      // free again rather than taken by a row nobody asked to keep.
+      const rows = await testApp.database
+        .select()
+        .from(experiments)
+        .where(eq(experiments.name, name));
+      expect(rows).toEqual([]);
+    });
+
+    it("keeps seeding valid collaborators in the same transaction as the experiment", async () => {
+      const first = await testApp.createTestUser({ email: "first@example.com" });
+      const second = await testApp.createTestUser({ email: "second@example.com" });
+
+      const result = await useCase.execute(
+        { name: `Both ${crypto.randomUUID()}`, members: [{ userId: first }, { userId: second }] },
+        testUserId,
+      );
+
+      assertSuccess(result);
+      const grants = await grantsOn(result.value.id);
+      expect(Object.fromEntries(grants.map((g) => [g.granteeId, g.role]))).toEqual({
+        [first]: "viewer",
+        [second]: "viewer",
+      });
     });
   });
 

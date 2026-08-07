@@ -62,6 +62,11 @@ describe("GetExperimentAccessUseCase", () => {
         }),
         hasAccess: true,
         isAdmin: true,
+        capabilities: expect.objectContaining({
+          canManage: expect.any(Boolean) as boolean,
+          canShare: expect.any(Boolean) as boolean,
+          canUpdate: expect.any(Boolean) as boolean,
+        }) as unknown,
       });
     });
 
@@ -93,6 +98,11 @@ describe("GetExperimentAccessUseCase", () => {
         }),
         hasAccess: true,
         isAdmin: true,
+        capabilities: expect.objectContaining({
+          canManage: expect.any(Boolean) as boolean,
+          canShare: expect.any(Boolean) as boolean,
+          canUpdate: expect.any(Boolean) as boolean,
+        }) as unknown,
       });
     });
 
@@ -104,7 +114,7 @@ describe("GetExperimentAccessUseCase", () => {
       });
 
       // Add another user as admin member
-      await testApp.addExperimentMember(experiment.id, anotherUserId, "admin");
+      await testApp.addExperimentAdmin(experiment.id, anotherUserId);
 
       // Act
       const result = await useCase.execute(experiment.id, anotherUserId);
@@ -121,6 +131,11 @@ describe("GetExperimentAccessUseCase", () => {
         }),
         hasAccess: true,
         isAdmin: true,
+        capabilities: expect.objectContaining({
+          canManage: expect.any(Boolean) as boolean,
+          canShare: expect.any(Boolean) as boolean,
+          canUpdate: expect.any(Boolean) as boolean,
+        }) as unknown,
       });
     });
 
@@ -132,7 +147,7 @@ describe("GetExperimentAccessUseCase", () => {
       });
 
       // Add another user as regular member
-      await testApp.addExperimentMember(experiment.id, anotherUserId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, anotherUserId);
 
       // Act
       const result = await useCase.execute(experiment.id, anotherUserId);
@@ -149,6 +164,11 @@ describe("GetExperimentAccessUseCase", () => {
         }),
         hasAccess: true,
         isAdmin: false,
+        capabilities: expect.objectContaining({
+          canManage: expect.any(Boolean) as boolean,
+          canShare: expect.any(Boolean) as boolean,
+          canUpdate: expect.any(Boolean) as boolean,
+        }) as unknown,
       });
     });
 
@@ -180,6 +200,11 @@ describe("GetExperimentAccessUseCase", () => {
         }),
         hasAccess: true,
         isAdmin: false,
+        capabilities: expect.objectContaining({
+          canManage: expect.any(Boolean) as boolean,
+          canShare: expect.any(Boolean) as boolean,
+          canUpdate: expect.any(Boolean) as boolean,
+        }) as unknown,
       });
     });
 

@@ -4,8 +4,6 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
-import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 
 import { ExperimentArchive } from "./experiment-archive";
@@ -14,23 +12,25 @@ import { ExperimentDelete } from "./experiment-delete";
 interface ExperimentInfoCardProps {
   experimentId: string;
   experiment: Experiment;
-  members: ExperimentMember[];
+  /** `can(manage)` from the experiment-access response. */
+  canManage: boolean;
 }
 
-export function ExperimentInfoCard({ experimentId, experiment, members }: ExperimentInfoCardProps) {
+export function ExperimentInfoCard({
+  experimentId,
+  experiment,
+  canManage,
+}: ExperimentInfoCardProps) {
   const { t } = useTranslation();
-  const { data: session } = useSession();
-  const currentUserId = session?.user.id;
 
-  const currentMember = currentUserId
-    ? members.find((m) => m.user.id === currentUserId)
-    : undefined;
-  const isAdmin = currentMember?.role === "admin";
+  // The roster carries no tier since the members→grants consolidation, so
+  // "can this person administer the experiment" is the server's can() answer.
+  const isAdmin = canManage;
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.EXPERIMENT_DELETION);
 
   const isArchived = experiment.status === "archived";
 
-  if (!isAdmin && !isDeletionEnabled) return null;
+  if (!isAdmin) return null;
 
   return (
     <>
@@ -40,18 +40,16 @@ export function ExperimentInfoCard({ experimentId, experiment, members }: Experi
         className="text-muted-foreground mx-4 border-t"
       />
       <div className="px-6 py-4">
-        {isAdmin && (
-          <p className="text-muted-foreground mb-2 text-sm">
-            {t(
-              isDeletionEnabled
-                ? "experimentSettings.dangerZoneNote_deleteAllowed"
-                : "experimentSettings.dangerZoneNote",
-            )}
-          </p>
-        )}
+        <p className="text-muted-foreground mb-2 text-sm">
+          {t(
+            isDeletionEnabled
+              ? "experimentSettings.dangerZoneNote_deleteAllowed"
+              : "experimentSettings.dangerZoneNote",
+          )}
+        </p>
 
         <div className="flex flex-col gap-3 md:flex-row">
-          {isAdmin && <ExperimentArchive experimentId={experimentId} isArchived={isArchived} />}
+          <ExperimentArchive experimentId={experimentId} isArchived={isArchived} />
 
           <ExperimentDelete experimentId={experimentId} experimentName={experiment.name} />
         </div>

@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 
-import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
+import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { UserAvatar } from "../user-avatar";
 
 interface ExperimentMembersTrailProps {
-  members: ExperimentMember[];
+  contributors: ExperimentContributor[];
   href: string;
   isLoading?: boolean;
 }
@@ -16,7 +16,7 @@ interface ExperimentMembersTrailProps {
 const MAX_VISIBLE_AVATARS = 5;
 
 export function ExperimentMembersTrail({
-  members,
+  contributors,
   href,
   isLoading = false,
 }: ExperimentMembersTrailProps) {
@@ -37,12 +37,12 @@ export function ExperimentMembersTrail({
     );
   }
 
-  if (members.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t("experimentSettings.noMembers")}</p>;
+  if (contributors.length === 0) {
+    return <p className="text-muted-foreground text-sm">{t("sharing.noCollaboratorsYet")}</p>;
   }
 
-  const visible = members.slice(0, MAX_VISIBLE_AVATARS);
-  const remainder = members.length - visible.length;
+  const visible = contributors.slice(0, MAX_VISIBLE_AVATARS);
+  const remainder = contributors.length - visible.length;
 
   return (
     <Link
@@ -50,12 +50,12 @@ export function ExperimentMembersTrail({
       className="hover:bg-muted/50 group -mx-2 flex items-center gap-3 rounded-md px-2 py-1 transition-colors"
     >
       <div className="flex -space-x-2">
-        {visible.map((member) => (
+        {visible.map((contributor) => (
           <UserAvatar
-            key={member.user.id}
-            avatarUrl={member.user.avatarUrl}
-            firstName={member.user.firstName}
-            lastName={member.user.lastName}
+            key={contributor.userId}
+            avatarUrl={contributor.avatarUrl}
+            firstName={contributor.firstName}
+            lastName={contributor.lastName}
             className="ring-background bg-muted h-6 w-6 text-[10px] ring-2"
           />
         ))}
@@ -66,7 +66,7 @@ export function ExperimentMembersTrail({
         )}
       </div>
       <span className="text-muted-foreground group-hover:text-foreground text-sm transition-colors">
-        {members.length} {t("experimentSettings.membersTab").toLowerCase()}
+        {contributors.length} {t("sharing.collaboratorsTab").toLowerCase()}
       </span>
     </Link>
   );

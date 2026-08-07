@@ -93,26 +93,29 @@ describe("AddCompatibleProtocolsUseCase", () => {
     expect(result.error.code).toBe("INTERNAL_ERROR");
   });
 
-  it("should return INTERNAL_ERROR when macroProtocolRepository.findProtocolById fails", async () => {
+  it("should return FORBIDDEN when the caller cannot read a linked protocol", async () => {
+    // Link targets are validated by read access, not mere existence: an editor
+    // of a public macro must not be able to link (and thereby expose) a private
+    // protocol they cannot access.
     const macro = await testApp.createMacro({
-      name: "Protocol Verify Failure Macro",
+      name: "No Access Macro",
       createdBy: testUserId,
     });
 
-    const protocol = await testApp.createProtocol({
-      name: `verify-fail-protocol-${faker.string.alphanumeric(6)}`,
-      createdBy: testUserId,
+    const otherUser = await testApp.createTestUser({});
+    const otherOrgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(otherOrgId, otherUser, "owner");
+    const privateProtocol = await testApp.createProtocol({
+      name: `private-protocol-${faker.string.alphanumeric(6)}`,
+      createdBy: otherUser,
+      visibility: "private",
+      organizationId: otherOrgId,
     });
 
-    const macroProtocolRepo = testApp.module.get(MacroProtocolRepository);
-    vi.spyOn(macroProtocolRepo, "findProtocolById").mockResolvedValueOnce(
-      failure(AppError.internal("db error")),
-    );
-
-    const result = await useCase.execute(macro.id, [protocol.id], testUserId);
+    const result = await useCase.execute(macro.id, [privateProtocol.id], testUserId);
     expect(result.isSuccess()).toBe(false);
     assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(result.error.code).toBe("FORBIDDEN");
   });
 
   it("should return INTERNAL_ERROR when macroProtocolRepository.addProtocols fails", async () => {

@@ -4,6 +4,7 @@ import { and, eq, inArray, protocols, protocolMacros } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { MacroProtocolDto } from "../models/macro-protocol.model";
 
 @Injectable()
@@ -13,7 +14,7 @@ export class MacroProtocolRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  async listProtocols(macroId: string): Promise<Result<MacroProtocolDto[]>> {
+  async listProtocols(macroId: string, userId?: string): Promise<Result<MacroProtocolDto[]>> {
     return tryCatch(async () => {
       return this.database
         .select({
@@ -28,7 +29,19 @@ export class MacroProtocolRepository {
         })
         .from(protocolMacros)
         .innerJoin(protocols, eq(protocolMacros.protocolId, protocols.id))
-        .where(eq(protocolMacros.macroId, macroId))
+        .where(
+          and(
+            eq(protocolMacros.macroId, macroId),
+            accessibleResourceCondition({
+              database: this.database,
+              resourceType: "protocol",
+              resourceIdColumn: protocols.id,
+              organizationIdColumn: protocols.organizationId,
+              visibilityColumn: protocols.visibility,
+              userId,
+            }),
+          ),
+        )
         .orderBy(protocols.name);
     });
   }

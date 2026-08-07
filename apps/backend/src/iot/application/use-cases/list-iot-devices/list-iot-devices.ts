@@ -17,6 +17,6 @@ export class ListIotDevicesUseCase {
       userId,
     });
 
-    return this.deviceRepository.listByOwner(userId);
+    return this.deviceRepository.listAccessible(userId);
   }
 }

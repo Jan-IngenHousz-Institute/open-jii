@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarIcon, Info } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { ExperimentVisibility } from "@repo/api/domains/experiment/experiment.schema";
@@ -17,6 +17,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@repo/ui/components/form";
+import { Label } from "@repo/ui/components/label";
 import { Popover, PopoverTrigger, PopoverContent } from "@repo/ui/components/popover";
 import {
   Select,
@@ -29,19 +30,25 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { isoToLocalCalendarDate, embargoUntilHelperString } from "../new-experiment/embargo-utils";
 
-interface VisibilityFormValues {
-  visibility?: ExperimentVisibility;
+interface EmbargoFormValues {
   embargoUntil?: string;
 }
 
 interface ExperimentVisibilityFormProps {
-  form: UseFormReturn<VisibilityFormValues>;
+  form: UseFormReturn<EmbargoFormValues>;
+  /** Visibility as it stands; the select reflects it rather than owning it. */
   currentVisibility: ExperimentVisibility;
   isArchived: boolean;
   onVisibilityChange: (newVisibility: ExperimentVisibility) => void;
   onEmbargoDateSelect: (date?: Date) => Promise<void>;
 }
 
+/**
+ * Visibility is controlled outside the form so it stays persisted until the
+ * confirmed publish request lands, then becomes inert because publication is
+ * one-way. Embargo is rendered only while private because it schedules that same
+ * private → public transition.
+ */
 export function ExperimentVisibilityForm({
   form,
   currentVisibility,
@@ -52,8 +59,10 @@ export function ExperimentVisibilityForm({
   const { t } = useTranslation();
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isSavingEmbargo, setIsSavingEmbargo] = useState(false);
+  // The label points at the select trigger, which is a button and so labelable.
+  const visibilityFieldId = useId();
 
-  const visibility = form.watch("visibility");
+  const isPublic = currentVisibility === "public";
 
   const handleEmbargoDateSelect = async (date?: Date) => {
     try {
@@ -68,45 +77,36 @@ export function ExperimentVisibilityForm({
   return (
     <Form {...form}>
       <div className="space-y-4">
-        <FormField
-          control={form.control}
-          name="visibility"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("experimentSettings.visibility")}</FormLabel>
-              <Select
-                onValueChange={onVisibilityChange}
-                defaultValue={field.value}
-                value={field.value}
-                disabled={isArchived || currentVisibility === "public"}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("experimentSettings.visibilityPlaceholder")} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {Object.values(zExperimentVisibility.enum).map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {value.charAt(0).toUpperCase() + value.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {visibility === "public" && (
-                <div className="bg-surface-light text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">
-                  <Info className="text-primary h-4 w-4" />
-                  <div className="leading-tight">
-                    {t("experimentSettings.visibilityCannotBeChanged")}
-                  </div>
-                </div>
-              )}
-              <FormMessage />
-            </FormItem>
+        <div className="space-y-2">
+          <Label htmlFor={visibilityFieldId}>{t("experimentSettings.visibility")}</Label>
+          <Select
+            value={currentVisibility}
+            onValueChange={(value) => onVisibilityChange(value as ExperimentVisibility)}
+            disabled={isArchived || isPublic}
+          >
+            <SelectTrigger id={visibilityFieldId}>
+              <SelectValue placeholder={t("experimentSettings.visibilityPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(zExperimentVisibility.enum).map((value) => (
+                <SelectItem key={value} value={value}>
+                  {value.charAt(0).toUpperCase() + value.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isPublic && (
+            // Same copy the macro/protocol/workbook control shows, from the same
+            // key: the published state means the same thing on all four types, so
+            // it is worded once rather than per type.
+            <div className="bg-surface-light text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">
+              <Info className="text-primary h-4 w-4 shrink-0" />
+              <div className="leading-tight">{t("resourceVisibility.publishedDescription")}</div>
+            </div>
           )}
-        />
+        </div>
 
-        {visibility === "private" && (
+        {!isPublic && (
           <FormField
             name="embargoUntil"
             control={form.control}
@@ -153,7 +153,7 @@ export function ExperimentVisibilityForm({
                   </FormControl>
                   {helperText && (
                     <div className="bg-surface-light text-muted-foreground flex items-center gap-2 rounded-md p-2 text-sm">
-                      <Info className="text-primary h-6 w-6" />
+                      <Info className="text-primary h-4 w-4 shrink-0" />
                       <div className="leading-tight">{helperText}</div>
                     </div>
                   )}

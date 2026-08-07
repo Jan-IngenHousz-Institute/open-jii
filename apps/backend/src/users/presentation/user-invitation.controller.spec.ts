@@ -57,13 +57,12 @@ describe("InvitationController", () => {
           resourceType: "experiment",
           resourceId: experiment.id,
           email: "user1@example.com",
-          role: "member",
         })
         .expect(StatusCodes.CREATED);
 
       expect(response.body).toMatchObject({
         email: "user1@example.com",
-        role: "member",
+        tier: "viewer",
         status: "pending",
         resourceId: experiment.id,
         resourceType: "experiment",
@@ -80,7 +79,6 @@ describe("InvitationController", () => {
           resourceType: "experiment",
           resourceId: faker.string.uuid(),
           email: "user@example.com",
-          role: "member",
         })
         .expect(StatusCodes.UNAUTHORIZED);
     });
@@ -105,7 +103,6 @@ describe("InvitationController", () => {
           resourceType: "experiment",
           resourceId: faker.string.uuid(),
           email: "test@example.com",
-          role: "member",
         })
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
@@ -129,7 +126,6 @@ describe("InvitationController", () => {
           resourceType: "experiment",
           resourceId: experiment.id,
           email: "listed@example.com",
-          role: "member",
         })
         .expect(StatusCodes.CREATED);
 
@@ -175,66 +171,6 @@ describe("InvitationController", () => {
     });
   });
 
-  describe("updateInvitationRole", () => {
-    it("should update invitation role and return 200", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Controller Update Test",
-        userId: testUserId,
-      });
-
-      vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
-
-      const createPath = testApp.resolveOrpcPath(contract.users.createInvitation, {});
-      const createResponse: SuperTestResponse<Invitation> = await testApp
-        .post(createPath)
-        .withAuth(testUserId)
-        .send({
-          resourceType: "experiment",
-          resourceId: experiment.id,
-          email: "update-role@example.com",
-          role: "member",
-        })
-        .expect(StatusCodes.CREATED);
-
-      const invitationId = createResponse.body.id;
-      const updatePath = testApp.resolveOrpcPath(contract.users.updateInvitationRole, {
-        invitationId,
-      });
-
-      const response: SuperTestResponse<Invitation> = await testApp
-        .patch(updatePath)
-        .withAuth(testUserId)
-        .send({ role: "admin" })
-        .expect(StatusCodes.OK);
-
-      expect(response.body.role).toBe("admin");
-    });
-
-    it("should return 404 for non-existent invitation", async () => {
-      const updatePath = testApp.resolveOrpcPath(contract.users.updateInvitationRole, {
-        invitationId: faker.string.uuid(),
-      });
-
-      await testApp
-        .patch(updatePath)
-        .withAuth(testUserId)
-        .send({ role: "admin" })
-        .expect(StatusCodes.NOT_FOUND);
-    });
-
-    it("should return 401 if not authenticated", async () => {
-      const updatePath = testApp.resolveOrpcPath(contract.users.updateInvitationRole, {
-        invitationId: faker.string.uuid(),
-      });
-
-      await testApp
-        .patch(updatePath)
-        .withoutAuth()
-        .send({ role: "admin" })
-        .expect(StatusCodes.UNAUTHORIZED);
-    });
-  });
-
   describe("revokeInvitation", () => {
     it("should revoke an invitation and return 204", async () => {
       const { experiment } = await testApp.createExperiment({
@@ -252,7 +188,6 @@ describe("InvitationController", () => {
           resourceType: "experiment",
           resourceId: experiment.id,
           email: "revoke@example.com",
-          role: "member",
         })
         .expect(StatusCodes.CREATED);
 
@@ -288,7 +223,6 @@ describe("InvitationController", () => {
           resourceType: "experiment",
           resourceId: experiment.id,
           email: "double-revoke@example.com",
-          role: "member",
         })
         .expect(StatusCodes.CREATED);
 

@@ -62,7 +62,7 @@ function getSortColumnName(columnName: string, columnType?: string): string {
 const bulkSelectionFormSchema = z.object({
   selectedRowIds: z.array(z.string()),
 });
-export type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
+type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
 
 export function ExperimentDataTable({
   experimentId,
@@ -71,6 +71,7 @@ export function ExperimentDataTable({
   displayName,
   defaultSortColumn,
   errorColumn,
+  canContribute = false,
 }: {
   experimentId: string;
   tableName: string;
@@ -78,6 +79,8 @@ export function ExperimentDataTable({
   displayName?: string;
   defaultSortColumn?: string;
   errorColumn?: string;
+  /** Whether annotation controls are available. */
+  canContribute?: boolean;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
   const [persistedMetaData, setPersistedMetaData] = useState<TableMetadata>();
@@ -181,8 +184,10 @@ export function ExperimentDataTable({
     filters: activeFilters,
     formatFunction: formatValue,
     onChartClick: toggleChartPin,
-    onAddAnnotation: openAddAnnotationDialog,
-    onDeleteAnnotations: openDeleteAnnotationsDialog,
+    // Withheld without `can(contribute)`: the cells hide their add/remove controls
+    // when the handler is absent.
+    onAddAnnotation: canContribute ? openAddAnnotationDialog : undefined,
+    onDeleteAnnotations: canContribute ? openDeleteAnnotationsDialog : undefined,
     onToggleCellExpansion: toggleCellExpansion,
     isCellExpanded,
     errorColumn,
@@ -368,6 +373,7 @@ export function ExperimentDataTable({
           downloadTable={() => setDownloadModalOpen(true)}
           onAddAnnotation={openAddAnnotationDialog}
           onDeleteAnnotations={openDeleteAnnotationsDialog}
+          canContribute={canContribute}
         />
         <div className="text-muted-foreground relative -mt-px overflow-x-auto rounded-b-lg border">
           <Table className="w-max min-w-full">

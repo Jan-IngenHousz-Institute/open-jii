@@ -26,6 +26,7 @@ import { UploadTargetPicker } from "./upload-target-picker";
 
 export interface UploadCreateViewProps {
   experimentId: string;
+  canManage: boolean;
   sourceKind: ExperimentUploadSourceKind;
   onBack: () => void;
   onUploaded: () => void;
@@ -33,6 +34,7 @@ export interface UploadCreateViewProps {
 
 export function UploadCreateView({
   experimentId,
+  canManage,
   sourceKind,
   onBack,
   onUploaded,
@@ -55,7 +57,9 @@ export function UploadCreateView({
   const form = useForm<ExperimentUploadFormFields>({
     resolver: zodResolver(zExperimentUploadFormFields),
     mode: "onSubmit",
-    defaultValues: { targetKind: "new", sourceKind, targetName: "" },
+    defaultValues: canManage
+      ? { targetKind: "new", sourceKind, targetName: "" }
+      : { targetKind: "existing", sourceKind, uploadTableId: "" },
   });
 
   const targetKind = form.watch("targetKind");
@@ -143,6 +147,7 @@ export function UploadCreateView({
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
       <UploadTargetPicker
         control={form.control}
+        canManage={canManage}
         targetKind={targetKind}
         uploadTables={uploadTables}
         disabled={isUploading}
@@ -196,7 +201,7 @@ export function UploadCreateView({
         <Button type="button" variant="outline" onClick={onBack} disabled={isUploading}>
           {t("experimentData.uploadDataModal.actions.back")}
         </Button>
-        <Button type="submit" disabled={isUploading}>
+        <Button type="submit" disabled={isUploading || (!canManage && !hasExistingTables)}>
           {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {t("experimentData.uploadDataModal.actions.upload")}
         </Button>

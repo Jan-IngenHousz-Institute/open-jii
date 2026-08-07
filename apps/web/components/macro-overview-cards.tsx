@@ -11,6 +11,8 @@ import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { cva } from "@repo/ui/lib/utils";
 
+import { VisibilityBadge } from "./visibility/visibility-badge";
+
 const cardVariants = cva(
   "relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg",
   {
@@ -103,6 +105,8 @@ function MacroCard({
           {isPreferred && (
             <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
           )}
+          {/* Only when private: "public" is the unremarkable default. */}
+          <VisibilityBadge visibility={macro.visibility} privateOnly />
         </div>
         <div className="mb-auto">
           <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">

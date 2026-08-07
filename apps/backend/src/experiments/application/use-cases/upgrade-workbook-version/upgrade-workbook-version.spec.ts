@@ -89,6 +89,79 @@ describe("UpgradeWorkbookVersionUseCase", () => {
     expect(result.error.statusCode).toBe(400);
   });
 
+  // A user who manages the experiment but has no read access to the attached
+  // workbook must not be able to pin or mint workbook state through the upgrade
+  // path (the route only guards experiment `manage`).
+  describe("workbook access enforcement", () => {
+    /**
+     * Experiment administered by `manager`, with a PRIVATE workbook owned by a
+     * different user attached. `manager` holds a workbook grant that the test
+     * then revokes, reproducing the post-revocation case.
+     */
+    async function setupRevokedManager() {
+      const workbookOwner = await testApp.createTestUser({ name: "Workbook Owner" });
+      const manager = await testApp.createTestUser({ name: "Experiment Manager" });
+
+      const privateWorkbook = await testApp.createWorkbook({
+        name: `Private WB ${crypto.randomUUID()}`,
+        cells: [{ id: "md1", type: "markdown", content: "secret", isCollapsed: false }],
+        createdBy: workbookOwner,
+        visibility: "private",
+      });
+
+      const { experiment } = await testApp.createExperiment({
+        name: `Managed Exp ${crypto.randomUUID()}`,
+        userId: manager,
+      });
+
+      // Grant the manager workbook access so the attach succeeds, then revoke it.
+      const grant = await testApp.addResourceGrant({
+        resourceType: "workbook",
+        resourceId: privateWorkbook.id,
+        granteeType: "user",
+        granteeId: manager,
+        role: "admin",
+      });
+      assertSuccess(await attachUseCase.execute(experiment.id, privateWorkbook.id, manager));
+
+      return { manager, experimentId: experiment.id, workbookId: privateWorkbook.id, grant };
+    }
+
+    it("allows the upgrade while the manager still has workbook access", async () => {
+      const { manager, experimentId: expId, workbookId: wbId } = await setupRevokedManager();
+      await workbookRepo.update(wbId, {
+        cells: [{ id: "md1", type: "markdown", content: "v2", isCollapsed: false }],
+      });
+
+      const result = await upgradeUseCase.execute(expId, manager);
+      assertSuccess(result);
+      expect(result.value.version).toBe(2);
+    });
+
+    it("denies minting a new version after the workbook grant is revoked", async () => {
+      const { manager, experimentId: expId, workbookId: wbId, grant } = await setupRevokedManager();
+      await workbookRepo.update(wbId, {
+        cells: [{ id: "md1", type: "markdown", content: "post-revocation", isCollapsed: false }],
+      });
+      await testApp.removeResourceGrant(grant.id);
+
+      const result = await upgradeUseCase.execute(expId, manager);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(403);
+    });
+
+    it("denies pinning the existing latest version after revocation (never reaches publish)", async () => {
+      const { manager, experimentId: expId, grant } = await setupRevokedManager();
+      // Cells unchanged → the upgrade would reuse the latest version without
+      // publishing, so the check must sit before that branch too.
+      await testApp.removeResourceGrant(grant.id);
+
+      const result = await upgradeUseCase.execute(expId, manager);
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(403);
+    });
+  });
+
   it("refreshes the materialised flow row when cells change (mobile backward compat)", async () => {
     const before = await flowRepo.getByExperimentId(experimentId);
     assertSuccess(before);

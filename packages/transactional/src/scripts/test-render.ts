@@ -41,7 +41,7 @@ async function main(): Promise<void> {
       experimentName: "My Experiment",
       experimentUrl: `${baseUrl}/en-US/platform/experiments/123`,
       actor: "Jane Doe",
-      role: "member",
+      role: "a contributor who can view and add data",
     }),
   );
 

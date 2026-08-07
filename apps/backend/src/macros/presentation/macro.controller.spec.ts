@@ -636,6 +636,40 @@ describe("MacroController", () => {
     });
   });
 
+  describe("setVisibility", () => {
+    // Unlike the mocked use-cases above, these drive the real SetVisibilityUseCase
+    // against real rows — the monotonic rule is the point of the endpoint.
+    it("publishes a private macro and returns its new visibility", async () => {
+      const macro = await testApp.createMacro({
+        name: "Private macro",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+
+      const res = await testApp
+        .patch(testApp.resolveOrpcPath(contract.macros.setVisibility, { id: macro.id }))
+        .withAuth(testUserId)
+        .send({ visibility: "public" })
+        .expect(StatusCodes.OK);
+
+      expect(res.body).toEqual({ id: macro.id, visibility: "public" });
+    });
+
+    it("refuses to take a public macro back to private", async () => {
+      const macro = await testApp.createMacro({
+        name: "Public macro",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+
+      await testApp
+        .patch(testApp.resolveOrpcPath(contract.macros.setVisibility, { id: macro.id }))
+        .withAuth(testUserId)
+        .send({ visibility: "private" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
   describe("authentication and authorization", () => {
     it("should reject requests without authentication for all endpoints", async () => {
       const macroId = faker.string.uuid();
@@ -692,12 +726,30 @@ describe("MacroController", () => {
             .send({ name: "Blocked update" }),
       },
       {
+        name: "execute macro",
+        action: "read",
+        request: (id: string, userId: string) =>
+          testApp
+            .post(testApp.resolveOrpcPath(contract.macros.executeMacro, { id }))
+            .withAuth(userId)
+            .send({ data: {} }),
+      },
+      {
         name: "delete macro",
         action: "manage",
         request: (id: string, userId: string) =>
           testApp
             .delete(testApp.resolveOrpcPath(contract.macros.deleteMacro, { id }))
             .withAuth(userId),
+      },
+      {
+        name: "set macro visibility",
+        action: "manage",
+        request: (id: string, userId: string) =>
+          testApp
+            .patch(testApp.resolveOrpcPath(contract.macros.setVisibility, { id }))
+            .withAuth(userId)
+            .send({ visibility: "public" }),
       },
       {
         name: "list compatible protocols",

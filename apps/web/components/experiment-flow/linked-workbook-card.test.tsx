@@ -238,20 +238,20 @@ describe("LinkedWorkbookCard", () => {
     );
   });
 
-  it("hides the rename affordance for non-owners", async () => {
+  it("hides the rename affordance without update capability on the workbook", async () => {
     mountDefaults();
     render(<LinkedWorkbookCard {...defaultProps} />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
     expect(screen.queryByLabelText("flow.renameWorkbook")).not.toBeInTheDocument();
   });
 
-  it("renames the workbook in place when the user owns it", async () => {
+  it("renames the workbook in place when the user may update it", async () => {
     mountDefaults();
     const spy = server.mount(contract.workbooks.updateWorkbook, {
       body: { ...workbook, name: "Renamed Workbook" },
     });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} isWorkbookOwner />);
+    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -273,7 +273,7 @@ describe("LinkedWorkbookCard", () => {
       body: { ...workbook, name: "Via Enter" },
     });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} isWorkbookOwner />);
+    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -288,7 +288,7 @@ describe("LinkedWorkbookCard", () => {
   it("cancels the rename with Escape", async () => {
     mountDefaults();
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} isWorkbookOwner />);
+    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -301,7 +301,7 @@ describe("LinkedWorkbookCard", () => {
   it("cancels the rename via the cancel button", async () => {
     mountDefaults();
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} isWorkbookOwner />);
+    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -314,7 +314,7 @@ describe("LinkedWorkbookCard", () => {
     mountDefaults();
     const spy = server.mount(contract.workbooks.updateWorkbook, { body: workbook });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} isWorkbookOwner />);
+    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));
@@ -328,7 +328,7 @@ describe("LinkedWorkbookCard", () => {
     mountDefaults();
     server.mount(contract.workbooks.updateWorkbook, { status: 500 });
     const user = userEvent.setup();
-    render(<LinkedWorkbookCard {...defaultProps} isWorkbookOwner />);
+    render(<LinkedWorkbookCard {...defaultProps} canUpdateWorkbook />);
     await waitFor(() => expect(screen.getByText("Test Workbook")).toBeInTheDocument());
 
     await user.click(screen.getByLabelText("flow.renameWorkbook"));

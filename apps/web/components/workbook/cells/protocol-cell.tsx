@@ -16,7 +16,6 @@ import { parseApiError } from "~/util/apiError";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { protocolRequiresInteraction } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
@@ -59,7 +58,6 @@ export function ProtocolCellComponent({
 }: ProtocolCellProps) {
   const protocolId = cell.payload.protocolId;
   const { copy, copied } = useCopyToClipboard();
-  const { data: session } = useSession();
   const { t } = useTranslation("iot");
   const { t: tWorkbook } = useTranslation("workbook");
 
@@ -76,11 +74,13 @@ export function ProtocolCellComponent({
       : null;
 
   const protocolFamily = useSnapshot ? snapshot.family : protocolData?.family;
-  const isOwner = !!session?.user.id && session.user.id === protocolData?.createdBy;
-  const isEditable = isOwner && !readOnly;
-  // Read-only purely because the viewer did not create this protocol (not
+  // Capability, not ownership: see the macro cell — the detail payload
+  // carries the caller's `can(update)`, so a "Can edit" grantee edits here too.
+  const canUpdateProtocol = protocolData?.capabilities.canUpdate ?? false;
+  const isEditable = canUpdateProtocol && !readOnly;
+  // Read-only purely because the viewer may not update this protocol (not
   // because the cell is rendered from a pinned snapshot or in a read-only host).
-  const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!protocolData && !isOwner;
+  const isReadOnlyWithoutUpdate = !useSnapshot && !readOnly && !!protocolData && !canUpdateProtocol;
   // Lineage: this protocol is itself a fork of another one.
   const forkedFrom = useSnapshot ? undefined : protocolData?.forkedFrom;
 
@@ -257,7 +257,7 @@ export function ProtocolCellComponent({
       headerBadges={
         protocolFamily ||
         (isEditable && localCode != null) ||
-        isReadOnlyForNonOwner ||
+        isReadOnlyWithoutUpdate ||
         forkedFrom ? (
           <div className="flex items-center gap-2">
             {protocolFamily ? (
@@ -273,7 +273,7 @@ export function ProtocolCellComponent({
                 {tWorkbook("cells.forkedFrom")}
               </Link>
             ) : null}
-            {isReadOnlyForNonOwner ? (
+            {isReadOnlyWithoutUpdate ? (
               <>
                 <span className="text-muted-foreground text-xs">
                   {tWorkbook("cells.protocolReadOnly")}

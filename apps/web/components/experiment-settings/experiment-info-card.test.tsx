@@ -3,7 +3,6 @@ import { render, screen } from "@/test/test-utils";
 import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import { useSession } from "@repo/auth/client";
 
 import { ExperimentInfoCard } from "./experiment-info-card";
@@ -21,25 +20,12 @@ vi.mock("./experiment-delete", () => ({
 }));
 
 const experiment = createExperiment({ id: "exp-1", name: "Test", status: "active" });
-const members: ExperimentMember[] = [
-  {
-    role: "admin",
-    user: {
-      id: "user-1",
-      firstName: "Test",
-      lastName: "Admin",
-      email: "admin@test.com",
-      avatarUrl: null,
-    },
-    joinedAt: "2024-01-01T00:00:00.000Z",
-  },
-];
 
 describe("ExperimentInfoCard", () => {
   it("renders archive and delete for admin", () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-1" } } } as never);
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-    render(<ExperimentInfoCard experimentId="exp-1" experiment={experiment} members={members} />);
+    render(<ExperimentInfoCard experimentId="exp-1" experiment={experiment} canManage />);
 
     expect(screen.getByTestId("archive")).toBeInTheDocument();
     expect(screen.getByTestId("delete")).toBeInTheDocument();
@@ -48,30 +34,32 @@ describe("ExperimentInfoCard", () => {
   it("shows danger zone note", () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-1" } } } as never);
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
-    render(<ExperimentInfoCard experimentId="exp-1" experiment={experiment} members={members} />);
+    render(<ExperimentInfoCard experimentId="exp-1" experiment={experiment} canManage />);
 
     expect(screen.getByText("experimentSettings.dangerZoneNote_deleteAllowed")).toBeInTheDocument();
   });
 
-  it("hides archive for non-admin", () => {
+  it("hides archive without can(manage)", () => {
     vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-1" } } } as never);
-    const nonAdminMembers: ExperimentMember[] = [
-      {
-        role: "member",
-        user: {
-          id: "user-1",
-          firstName: "Test",
-          lastName: "Member",
-          email: "member@test.com",
-          avatarUrl: null,
-        },
-        joinedAt: "2024-01-01T00:00:00.000Z",
-      },
-    ];
-    render(
-      <ExperimentInfoCard experimentId="exp-1" experiment={experiment} members={nonAdminMembers} />,
-    );
+    render(<ExperimentInfoCard experimentId="exp-1" experiment={experiment} canManage={false} />);
 
     expect(screen.queryByTestId("archive")).not.toBeInTheDocument();
+  });
+
+  it("offers a read-only viewer no delete, even with the deletion flag on", () => {
+    // The flag governs whether managers may delete at all; it must never stand in
+    // for authorization. Deleting is manage-gated on the route, so a viewer offered
+    // the control could only ever get a 403.
+    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "user-1" } } } as never);
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+
+    const { container } = render(
+      <ExperimentInfoCard experimentId="exp-1" experiment={experiment} canManage={false} />,
+    );
+
+    expect(screen.queryByTestId("delete")).not.toBeInTheDocument();
+    // Nothing manage-only is left, so the section does not render its separator
+    // and padding around an empty space either.
+    expect(container).toBeEmptyDOMElement();
   });
 });

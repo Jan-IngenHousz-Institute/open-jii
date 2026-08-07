@@ -3,7 +3,7 @@ title: "Sharing & Collaboration"
 description: "Choose visibility, migrate PhotosynQ projects, and prepare reusable data."
 ---
 
-{/* verified: code@12a361a74966 2026-07-19 */}
+{/* verified: code@42fda9cf1 2026-07-28 */}
 
 Sharing starts with deliberate access settings and enough context for someone
 else to understand the data. openJII separates those concerns:
@@ -16,14 +16,25 @@ else to understand the data. openJII separates those concerns:
 - [Open & FAIR data](/guide/sharing/open-fair-data) is a practical checklist for
   metadata, identifiers, standard exports, provenance, and licensing decisions.
 
-Experiment collaboration uses two roles only: **admin** and **member**. Admins
-manage settings and collaborators; members contribute within the experiment.
-There is no Viewer role in the current contract or database enum.
+Experiments, macros, protocols and workbooks share one access model with two
+levels: **Can view** and **Can edit**. Can edit covers settings, publishing and
+managing access; Can view covers reading — and, on an experiment, contributing
+measurements and annotations. Each resource has a **Collaborators** tab where a
+user or a whole organization is given one of the two levels. See
+[Collaborators & access levels](/guide/experiments/collaborators) for the full
+behaviour on experiments.
+
+<Callout type="info">
+  On an experiment, **Can view** is not read-only: holding it is what makes someone a contributor.
+  Public visibility, by contrast, grants reading and nothing more, so a stranger on a public
+  experiment can never add measurements or annotations.
+</Callout>
 
 ## Before publishing or exporting
 
 1. Review the experiment description and structured metadata.
-2. Confirm member roles and whether contributor anonymization is appropriate.
+2. Confirm collaborator access levels and whether contributor anonymization is
+   appropriate.
 3. Check protocol and workbook versions.
 4. Inspect data quality annotations and known exclusions.
 5. Choose a license and citation practice for any external release.

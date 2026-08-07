@@ -62,7 +62,7 @@ export class UpdateAnnotationUseCase {
       return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
     }
 
-    // Experiment membership is enforced by @CanContributeToExperiment.
+    // The right to contribute here is enforced by @CanAccess.
     const updateAnnotation: UpdateAnnotationDto = {};
     if ("text" in data.content) {
       updateAnnotation.contentText = data.content.text;

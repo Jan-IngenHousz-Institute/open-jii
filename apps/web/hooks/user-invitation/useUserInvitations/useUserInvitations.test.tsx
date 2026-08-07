@@ -10,8 +10,8 @@ import { useUserInvitations } from "./useUserInvitations";
 describe("useUserInvitations", () => {
   it("returns invitations on success", async () => {
     const invitations = [
-      createInvitation({ email: "user1@example.com", role: "member" }),
-      createInvitation({ email: "user2@example.com", role: "admin" }),
+      createInvitation({ email: "user1@example.com", tier: "viewer" }),
+      createInvitation({ email: "user2@example.com", tier: "admin" }),
     ];
 
     server.mount(contract.users.listInvitations, { body: invitations });
@@ -24,7 +24,7 @@ describe("useUserInvitations", () => {
 
     expect(result.current.data).toHaveLength(2);
     expect(result.current.data?.[0]?.email).toBe("user1@example.com");
-    expect(result.current.data?.[1]?.role).toBe("admin");
+    expect(result.current.data?.[1]?.tier).toBe("admin");
   });
 
   it("passes correct query params", async () => {
@@ -60,5 +60,35 @@ describe("useUserInvitations", () => {
     });
 
     expect(result.current.error).not.toBeNull();
+  });
+
+  // The endpoint is can(share)-gated because pending invitations expose invitee
+  // emails, so a caller that already knows it lacks the capability must not spend a
+  // request that could only 403 — and must not surface a list either way.
+  it("skips the request entirely when disabled", async () => {
+    const spy = server.mount(contract.users.listInvitations, { body: [] });
+
+    const { result } = renderHook(() =>
+      useUserInvitations("experiment", "exp-123", { enabled: false }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(spy.called).toBe(false);
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it("does not retry a 403 — the denial settles immediately", async () => {
+    const spy = server.mount(contract.users.listInvitations, { status: 403 });
+
+    const { result } = renderHook(() => useUserInvitations("experiment", "exp-789"));
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(spy.calls).toHaveLength(1);
   });
 });

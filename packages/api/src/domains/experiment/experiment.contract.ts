@@ -1,6 +1,7 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 
+import { zSetVisibilityBody, zSetVisibilityResponse } from "../visibility/visibility.schema";
 import {
   zCreateExperimentBody,
   zExperiment,
@@ -32,6 +33,12 @@ export const experimentContract = {
     .route({ method: "PATCH", path: "/api/v1/experiments/{id}", successStatus: 200 })
     .input(zExperimentIdPathParam.and(zUpdateExperimentBody))
     .output(zExperiment),
+  // Publish (monotonic private→public, gated on `manage`). Separate from the
+  // general update so it can be a deliberate, one-way action.
+  setVisibility: oc
+    .route({ method: "PATCH", path: "/api/v1/experiments/{id}/visibility", successStatus: 200 })
+    .input(zExperimentIdPathParam.merge(zSetVisibilityBody))
+    .output(zSetVisibilityResponse),
   deleteExperiment: oc
     .route({ method: "DELETE", path: "/api/v1/experiments/{id}", successStatus: 204 })
     .input(zExperimentIdPathParam)

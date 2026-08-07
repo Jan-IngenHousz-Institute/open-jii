@@ -173,27 +173,34 @@ function CommentsPopover({
       <PopoverContent className="w-96">
         <div className="flex items-center justify-between border-b pb-3">
           <h3 className="text-base font-semibold">{t(`experimentDataAnnotations.comments`)}</h3>
+          {/* Annotating is a write: the handlers are only passed to a caller who
+              may contribute, so their absence is what hides these. Reading the
+              existing annotations stays available to anyone who can read. */}
           <div className="flex gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onAddAnnotation?.([rowId], "comment")}
-              title={t("experimentDataAnnotations.addComment")}
-              className="h-8 w-8 p-0"
-            >
-              <MessageSquare size={16} />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onDeleteAnnotations?.([rowId], "comment")}
-              title={t("experimentDataAnnotations.bulkActions.removeAllComments")}
-              className="h-8 w-8 p-0"
-            >
-              <Trash2 size={16} />
-            </Button>
+            {onAddAnnotation && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onAddAnnotation([rowId], "comment")}
+                title={t("experimentDataAnnotations.addComment")}
+                className="h-8 w-8 p-0"
+              >
+                <MessageSquare size={16} />
+              </Button>
+            )}
+            {onDeleteAnnotations && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onDeleteAnnotations([rowId], "comment")}
+                title={t("experimentDataAnnotations.bulkActions.removeAllComments")}
+                className="h-8 w-8 p-0"
+              >
+                <Trash2 size={16} />
+              </Button>
+            )}
           </div>
         </div>
         <div className="max-h-96 space-y-3 overflow-y-auto pr-2 pt-4">
@@ -234,26 +241,30 @@ function FlagsPopover({
         <div className="flex items-center justify-between border-b pb-3">
           <h3 className="text-base font-semibold">{t(`experimentDataAnnotations.flags`)}</h3>
           <div className="flex gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onAddAnnotation?.([rowId], "flag")}
-              title={t("experimentDataAnnotations.addFlag")}
-              className="h-8 w-8 p-0"
-            >
-              <Flag size={16} />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onDeleteAnnotations?.([rowId], "flag")}
-              title={t("experimentDataAnnotations.bulkActions.removeAllFlags")}
-              className="h-8 w-8 p-0"
-            >
-              <Trash2 size={16} />
-            </Button>
+            {onAddAnnotation && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onAddAnnotation([rowId], "flag")}
+                title={t("experimentDataAnnotations.addFlag")}
+                className="h-8 w-8 p-0"
+              >
+                <Flag size={16} />
+              </Button>
+            )}
+            {onDeleteAnnotations && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onDeleteAnnotations([rowId], "flag")}
+                title={t("experimentDataAnnotations.bulkActions.removeAllFlags")}
+                className="h-8 w-8 p-0"
+              >
+                <Trash2 size={16} />
+              </Button>
+            )}
           </div>
         </div>
         <div className="max-h-96 space-y-3 overflow-y-auto pr-2 pt-4">
@@ -271,7 +282,13 @@ interface EmptyAnnotationsPopoverProps {
   onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
 }
 
-function EmptyAnnotationsPopover({ rowId, onAddAnnotation }: EmptyAnnotationsPopoverProps) {
+/** Only rendered for a caller who may add annotations — there is nothing to read. */
+function EmptyAnnotationsPopover({
+  rowId,
+  onAddAnnotation,
+}: EmptyAnnotationsPopoverProps & {
+  onAddAnnotation: (rowIds: string[], type: ExperimentAnnotationType) => void;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -289,7 +306,7 @@ function EmptyAnnotationsPopover({ rowId, onAddAnnotation }: EmptyAnnotationsPop
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => onAddAnnotation?.([rowId], "comment")}
+              onClick={() => onAddAnnotation([rowId], "comment")}
               title={t("experimentDataAnnotations.addComment")}
               className="h-8 w-8 p-0"
             >
@@ -299,7 +316,7 @@ function EmptyAnnotationsPopover({ rowId, onAddAnnotation }: EmptyAnnotationsPop
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => onAddAnnotation?.([rowId], "flag")}
+              onClick={() => onAddAnnotation([rowId], "flag")}
               title={t("experimentDataAnnotations.addFlag")}
               className="h-8 w-8 p-0"
             >
@@ -372,7 +389,7 @@ export function ExperimentDataTableAnnotationsCell({
         />
       )}
 
-      {!hasAnnotations && (
+      {!hasAnnotations && onAddAnnotation && (
         <EmptyAnnotationsPopover rowId={rowId} onAddAnnotation={onAddAnnotation} />
       )}
     </div>

@@ -43,11 +43,11 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
   const [blockersExpanded, setBlockersExpanded] = useState(false);
   const signOut = useSignOut();
 
-  // Experiments where the user is the sole admin block deletion; surfaced when the dialog opens.
+  // Resources where the user is the sole admin block deletion; surfaced when the dialog opens.
   const { data: blockersData, isLoading: isLoadingBlockers } = useDeletionBlockers(userId, {
     enabled: open,
   });
-  const blockers = blockersData?.experiments ?? [];
+  const blockers = blockersData?.resources ?? [];
   const hasBlockers = blockers.length > 0;
   // Expanded only matters while blockers remain; once everything is transferred the section
   // collapses on its own so the erase/preserve summary comes back on screen.

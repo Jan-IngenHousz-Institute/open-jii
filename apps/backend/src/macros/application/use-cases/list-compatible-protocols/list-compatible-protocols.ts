@@ -15,7 +15,7 @@ export class ListCompatibleProtocolsUseCase {
     private readonly macroProtocolRepository: MacroProtocolRepository,
   ) {}
 
-  async execute(macroId: string): Promise<Result<MacroProtocolDto[]>> {
+  async execute(macroId: string, userId?: string): Promise<Result<MacroProtocolDto[]>> {
     this.logger.log({
       msg: "Listing compatible protocols for macro",
       operation: "listCompatibleProtocols",
@@ -30,7 +30,7 @@ export class ListCompatibleProtocolsUseCase {
       return failure(AppError.notFound(`Macro with ID ${macroId} not found`));
     }
 
-    const result = await this.macroProtocolRepository.listProtocols(macroId);
+    const result = await this.macroProtocolRepository.listProtocols(macroId, userId);
     if (result.isFailure()) {
       this.logger.error({
         msg: "Failed to list compatible protocols",

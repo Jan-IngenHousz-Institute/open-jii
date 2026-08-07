@@ -42,8 +42,11 @@ export class GlobalSearchUseCase {
     const perType = Math.min(PER_TYPE_LIMIT, limit);
     const [experiments, protocols, macros, workbooks] = await Promise.all([
       this.experimentRepository.findAll(userId, undefined, undefined, query, perType),
-      this.protocolRepository.findAll(query, undefined, undefined, perType),
-      this.macroRepository.findAll({ search: query }, perType),
+      // Pass the caller so each findAll applies the same access scoping it uses
+      // for listing — global search must not surface private resources the caller
+      // cannot access.
+      this.protocolRepository.findAll(query, undefined, userId, perType),
+      this.macroRepository.findAll({ search: query, userId }, perType),
       this.workbookRepository.findAll({ search: query, userId }, perType),
     ]);
 

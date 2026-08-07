@@ -16,13 +16,11 @@ export const createExperimentSchema = createInsertSchema(experiments)
     searchVector: true,
   })
   .extend({
+    // Only `userId` is read: everyone picked in the create form gets the
+    // read-and-contribute tier, and a per-person tier is chosen afterwards on the
+    // collaborators surface.
     members: z
-      .array(
-        z.object({
-          userId: z.string(),
-          role: z.enum(["admin", "member"]).optional(),
-        }),
-      )
+      .array(z.object({ userId: z.string() }))
       .min(1)
       .optional(),
     locations: z

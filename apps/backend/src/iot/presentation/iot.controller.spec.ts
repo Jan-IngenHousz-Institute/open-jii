@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
@@ -157,6 +158,25 @@ describe("IotController", () => {
         .withAuth(testUserId)
         .send({ experimentId: experiment.id })
         .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("requires contribute access to the experiment id in the request body", async () => {
+      const experimentId = "123e4567-e89b-12d3-a456-426614174000";
+      const canSpy = vi
+        .spyOn(testApp.module.get(AuthorizationService), "can")
+        .mockResolvedValue({ allow: false, reason: "forbidden" });
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.getUploadUrl))
+        .withAuth(testUserId)
+        .send({ experimentId })
+        .expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledWith(testUserId, {
+        resourceType: "experiment",
+        resourceId: experimentId,
+        action: "contribute",
+      });
     });
 
     it("should return 500 when AWS adapter fails", async () => {

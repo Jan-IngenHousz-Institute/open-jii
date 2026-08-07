@@ -265,6 +265,9 @@ describe("EmailAdapter", () => {
     const MOCK_RESOURCE_ID = "res-123";
     const MOCK_RESOURCE_NAME = "Test Experiment";
     const MOCK_ACTOR = "John Doe";
+    // The `role` argument is the display phrase `describeAccess()` builds, not a role
+    // token — the real caller never passes one.
+    const MOCK_ACCESS_PHRASE = "a contributor who can view and add data";
 
     it("should send an email and return success", async () => {
       const notificationSpy = vi
@@ -275,7 +278,7 @@ describe("EmailAdapter", () => {
         MOCK_RESOURCE_ID,
         MOCK_RESOURCE_NAME,
         MOCK_ACTOR,
-        "member",
+        MOCK_ACCESS_PHRASE,
         "invite@example.com",
       );
 
@@ -285,7 +288,7 @@ describe("EmailAdapter", () => {
         MOCK_RESOURCE_ID,
         MOCK_RESOURCE_NAME,
         MOCK_ACTOR,
-        "member",
+        MOCK_ACCESS_PHRASE,
         "invite@example.com",
       );
     });

@@ -1,23 +1,24 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
-import { ExperimentMemberRepository } from "../../../../experiments/core/repositories/experiment-member.repository";
-import type { DeletionBlocker, UserProfileMetadata } from "../../../core/models/user.model";
+import type { DeletionBlocker } from "../../../core/models/user.model";
 import { UserRepository } from "../../../core/repositories/user.repository";
 
 /**
- * Lists the experiments where the user is the only admin (the blockers for account deletion),
- * each enriched with that experiment's other members as transfer candidates. The delete-account
- * dialog uses this to let the user hand admin off — per experiment — before deleting.
+ * Lists the resources where the user is the only admin (the blockers for account
+ * deletion), each enriched with that resource's other collaborators as transfer
+ * candidates. The delete-account dialog uses this to let the user hand admin off —
+ * per resource — before deleting.
+ *
+ * Every shareable type can block, because every one is owned by an organization
+ * somebody has to answer for — including devices, whose orphaning would leave live
+ * AWS hardware nobody can tear down.
  */
 @Injectable()
 export class GetDeletionBlockersUseCase {
   private readonly logger = new Logger(GetDeletionBlockersUseCase.name);
 
-  constructor(
-    private readonly userRepository: UserRepository,
-    private readonly experimentMemberRepository: ExperimentMemberRepository,
-  ) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   async execute(userId: string): Promise<Result<DeletionBlocker[]>> {
     this.logger.log({
@@ -26,7 +27,7 @@ export class GetDeletionBlockersUseCase {
       userId,
     });
 
-    const blockersResult = await this.userRepository.findSoleAdminExperiments(userId);
+    const blockersResult = await this.userRepository.findSoleAdminResources(userId);
     if (blockersResult.isFailure()) {
       return blockersResult;
     }
@@ -35,31 +36,20 @@ export class GetDeletionBlockersUseCase {
     const result: DeletionBlocker[] = [];
 
     for (const blocker of blockers) {
-      // Only active members are transfer candidates — handing admin to a deactivated ("Unknown")
-      // account would re-orphan the experiment, and the transfer use case rejects them anyway.
-      const membersResult = await this.experimentMemberRepository.getMembers(blocker.id, {
-        activeOnly: true,
-      });
-      if (membersResult.isFailure()) {
-        return membersResult;
+      // Real identities on purpose, whatever an experiment's `anonymizeContributors`
+      // says: this list is shown only to the resource's sole admin, who has to
+      // recognise the person they are handing it to, and who already sees them on the
+      // sharing surface. The sole admin themselves is left out.
+      const candidatesResult = await this.userRepository.findGranteeProfiles(
+        blocker.resourceType,
+        blocker.id,
+        userId,
+      );
+      if (candidatesResult.isFailure()) {
+        return candidatesResult;
       }
 
-      // Ommit the sole admin from the candidates list
-      const candidates: UserProfileMetadata[] = membersResult.value
-        .filter((member) => member.user.id !== userId)
-        .map((member) => ({
-          userId: member.user.id,
-          firstName: member.user.firstName,
-          lastName: member.user.lastName,
-          avatarUrl: member.user.avatarUrl,
-        }));
-
-      result.push({
-        id: blocker.id,
-        name: blocker.name,
-        status: blocker.status,
-        candidates,
-      });
+      result.push({ ...blocker, candidates: candidatesResult.value });
     }
 
     this.logger.debug({

@@ -1,15 +1,19 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { z } from "zod";
 
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import {
   eq,
   asc,
+  ne,
   or,
   and,
-  count,
   ilike,
   inArray,
+  iotDevices,
+  macros,
   profiles,
+  protocols,
   users,
   accounts,
   apiKeys,
@@ -24,10 +28,13 @@ import {
   syncPersonalOrganizationName,
   personalOrgSlug,
   personalOrgName,
+  deleteGranteeGrants,
+  resourceGrants,
+  workbooks,
 } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import type { DatabaseInstance, Transaction } from "@repo/database";
 
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, trigramMatch } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
@@ -37,6 +44,12 @@ import {
   getAnonymizedEmail,
 } from "../../../common/utils/profile-anonymization";
 import {
+  findBlockingResources,
+  lockAndFindBlockingResources,
+  lockUserAccount,
+} from "../../../sharing/core/resource-staffing";
+import type { BlockingResourceKey } from "../../../sharing/core/resource-staffing";
+import {
   CreateUserDto,
   UpdateUserDto,
   UserDto,
@@ -44,7 +57,7 @@ import {
   UserProfileDto,
   CreateUserProfileDto,
   UserProfileMetadata,
-  SoleAdminExperiment,
+  SoleAdminResource,
 } from "../models/user.model";
 
 @Injectable()
@@ -122,15 +135,16 @@ export class UserRepository {
         .innerJoin(users, eq(profiles.userId, users.id))
         .$dynamic();
 
-      // Match activated/non-deleted profiles by name or email: substring (ILIKE) handles prefixes,
-      // trigram (%) adds typo tolerance; ranked by name/email similarity so the closest match leads.
+      const isDiscoverable = and(eq(profiles.activated, true), isNull(profiles.deletedAt));
+
+      // Match by name or email: substring (ILIKE) handles prefixes, trigram (%)
+      // adds typo tolerance; ranked by name/email similarity so the closest match leads.
       if (params.query) {
         const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
         query = query
           .where(
             and(
-              eq(profiles.activated, true),
-              isNull(profiles.deletedAt),
+              isDiscoverable,
               or(
                 trigramMatch(profiles.firstName, params.query),
                 trigramMatch(profiles.lastName, params.query),
@@ -142,7 +156,11 @@ export class UserRepository {
           .orderBy(
             sql`greatest(similarity(${fullName}, ${params.query}), similarity(${users.email}, ${params.query})) DESC`,
             asc(profiles.firstName),
+            // Names tie constantly, and without a unique tiebreaker paging drops rows.
+            asc(profiles.userId),
           );
+      } else {
+        query = query.where(isDiscoverable).orderBy(asc(profiles.firstName), asc(profiles.userId));
       }
 
       // Apply pagination
@@ -168,64 +186,136 @@ export class UserRepository {
   }
 
   /**
-   * Returns the experiments where this user is the *only* admin. These block account deletion,
-   * since deleting the user would leave the experiment without an admin.
+   * Returns the resources this user is the last answerable person for, across every
+   * shareable type. These block account deletion.
+   *
+   * See {@link findBlockingResources} for the two prongs. This is the pre-flight
+   * check that drives the delete dialog's blocker list and hand-off flow; the
+   * authoritative re-check runs inside the deletion transaction.
    */
-  async findSoleAdminExperiments(userId: string): Promise<Result<SoleAdminExperiment[]>> {
+  async findSoleAdminResources(userId: string): Promise<Result<SoleAdminResource[]>> {
     return tryCatch(async () => {
-      // 1. Find all experiments where this user is an admin
-      const adminExperiments = await this.database
-        .select({
-          id: experiments.id,
-          name: experiments.name,
-          status: experiments.status,
-        })
-        .from(experimentMembers)
-        .innerJoin(experiments, eq(experiments.id, experimentMembers.experimentId))
-        .where(and(eq(experimentMembers.userId, userId), eq(experimentMembers.role, "admin")));
-
-      if (adminExperiments.length === 0) {
-        return [];
-      }
-
-      // 2. Active-admin count per experiment. Deactivated admins can't own an experiment (the same
-      //    rule the transfer flow enforces on its targets), so they don't count toward keeping one
-      //    staffed — otherwise a sole active admin could delete their account and orphan it.
-      const experimentIds = adminExperiments.map((e) => e.id);
-      const adminCounts = await this.database
-        .select({
-          experimentId: experimentMembers.experimentId,
-          total: count(),
-        })
-        .from(experimentMembers)
-        .innerJoin(profiles, eq(profiles.userId, experimentMembers.userId))
-        .where(
-          and(
-            inArray(experimentMembers.experimentId, experimentIds),
-            eq(experimentMembers.role, "admin"),
-            eq(profiles.activated, true),
-          ),
-        )
-        .groupBy(experimentMembers.experimentId);
-
-      const soleAdminIds = new Set(
-        adminCounts.filter((c) => Number(c.total) === 1).map((c) => c.experimentId),
-      );
-
-      return adminExperiments.filter((e) => soleAdminIds.has(e.id));
+      const keys = await findBlockingResources(this.database, userId);
+      return this.hydrateResources(keys);
     });
   }
 
-  async isOnlyAdminOfAnyExperiments(userId: string): Promise<Result<boolean>> {
-    const result = await this.findSoleAdminExperiments(userId);
-    return result.map(
-      (soleAdminExperiments: SoleAdminExperiment[]) => soleAdminExperiments.length > 0,
+  /**
+   * Put names (and, for experiments, the lifecycle status) on the polymorphic
+   * `{type, id}` keys the blocking query returns — that is what the delete dialog
+   * lists. One query per type present, rather than per resource.
+   */
+  private async hydrateResources(keys: BlockingResourceKey[]): Promise<SoleAdminResource[]> {
+    if (keys.length === 0) {
+      return [];
+    }
+
+    const idsByType = new Map<SharingResourceType, string[]>();
+    for (const key of keys) {
+      idsByType.set(key.resource_type, [...(idsByType.get(key.resource_type) ?? []), key.id]);
+    }
+
+    const tables = { macro: macros, protocol: protocols, workbook: workbooks } as const;
+    const hydrated = await Promise.all(
+      [...idsByType].map(async ([resourceType, ids]): Promise<SoleAdminResource[]> => {
+        if (resourceType === "experiment") {
+          const rows = await this.database
+            .select({ id: experiments.id, name: experiments.name, status: experiments.status })
+            .from(experiments)
+            .where(inArray(experiments.id, ids));
+          return rows.map((row) => ({ resourceType, ...row }));
+        }
+        if (resourceType === "device") {
+          // A device's `name` is an optional label, so it falls back to the serial
+          // number — same order the detail page's title uses, minus its third
+          // fallback, which is a localized string and has no place in a repository.
+          const rows = await this.database
+            .select({
+              id: iotDevices.id,
+              name: sql<string>`coalesce(${iotDevices.name}, ${iotDevices.serialNumber})`,
+            })
+            .from(iotDevices)
+            .where(inArray(iotDevices.id, ids));
+          return rows.map((row) => ({ resourceType, id: row.id, name: row.name, status: null }));
+        }
+        const table = tables[resourceType];
+        const rows = await this.database
+          .select({ id: table.id, name: table.name })
+          .from(table)
+          .where(inArray(table.id, ids));
+        return rows.map((row) => ({ resourceType, id: row.id, name: row.name, status: null }));
+      }),
+    );
+
+    return hydrated.flat();
+  }
+
+  async isOnlyAdminOfAnyResources(userId: string): Promise<Result<boolean>> {
+    const result = await this.findSoleAdminResources(userId);
+    return result.map((soleAdminResources: SoleAdminResource[]) => soleAdminResources.length > 0);
+  }
+
+  /**
+   * The deletion guard: refuses when the user is the last answerable person for any
+   * resource. Shares {@link lockAndFindBlockingResources} with
+   * {@link findSoleAdminResources} and with the deletion hand-off, so the pre-flight
+   * list, this guard and the hand-off cannot disagree about who is blocked.
+   *
+   * @throws AppError (403) when the user is the last answerable person for a resource
+   */
+  private async assertNotSoleAdmin(tx: Transaction, userId: string): Promise<void> {
+    const blocking = await lockAndFindBlockingResources(tx, userId);
+
+    if (blocking.length > 0) {
+      throw AppError.forbidden(
+        "Cannot delete account - you are the only admin of one or more experiments, macros, protocols, workbooks or devices. Please assign other admins before deleting.",
+      );
+    }
+  }
+
+  /**
+   * The activated people who hold a direct grant on a resource, minus one user —
+   * the transfer candidates the delete dialog offers for a blocking resource.
+   * Deactivated and soft-deleted accounts are excluded: handing admin to one would
+   * re-orphan the resource, and the transfer use case rejects them anyway.
+   */
+  async findGranteeProfiles(
+    resourceType: SharingResourceType,
+    resourceId: string,
+    excludeUserId: string,
+  ): Promise<Result<UserProfileMetadata[]>> {
+    return tryCatch(() =>
+      this.database
+        .select({
+          userId: profiles.userId,
+          firstName: profiles.firstName,
+          lastName: profiles.lastName,
+          avatarUrl: profiles.avatarUrl,
+        })
+        .from(resourceGrants)
+        .innerJoin(profiles, eq(profiles.userId, resourceGrants.granteeId))
+        .where(
+          and(
+            eq(resourceGrants.resourceType, resourceType),
+            eq(resourceGrants.resourceId, resourceId),
+            eq(resourceGrants.granteeType, "user"),
+            ne(resourceGrants.granteeId, excludeUserId),
+            eq(profiles.activated, true),
+            isNull(profiles.deletedAt),
+          ),
+        ),
     );
   }
 
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database.transaction(async (tx) => {
+        // 0. Claim the account exclusively first. Creation takes the same row
+        //    (shared), so either a create commits first and its grant is swept up
+        //    below, or it queues behind this and refuses. Without the lock a create
+        //    could land a grant *after* the teardown, and nothing revisits those.
+        await lockUserAccount(tx, id, "update");
+
         // 1. Revoke every credential and browser session. The user row is kept
         //    for referential integrity, so its credential FKs never cascade.
         await tx.delete(apiKeys).where(eq(apiKeys.referenceId, id));
@@ -233,20 +323,42 @@ export class UserRepository {
         await tx.delete(accounts).where(eq(accounts.userId, id));
         await tx.delete(sessions).where(eq(sessions.userId, id));
 
-        // 2. Delete experiment memberships
-        await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
+        // 2. Re-check the sole-admin invariant inside the transaction. The
+        //    pre-flight check in DeleteUserUseCase drives the hand-off UX but is
+        //    raceable on its own: two last admins deleting at once would both see
+        //    the other and both commit.
+        await this.assertNotSoleAdmin(tx, id);
 
-        // 3. Anonymize profile: scrub PII and mark deleted
+        // Clear the dormant roster rows and every grant. `can()` reads
+        // resource_grants, so leaving grants behind keeps a deleted account's access
+        // alive — and nothing cascades on the grantee side.
+
+        await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
+        await deleteGranteeGrants(tx, id, "user");
+
+        // 3. Scrub PII and mark deleted. An upsert, not an update: `deleted_at` is
+        //    the only closed-account marker, and an UPDATE does nothing for someone
+        //    who never onboarded — leaving them a living owner forever.
         await tx
-          .update(profiles)
-          .set({
+          .insert(profiles)
+          .values({
+            userId: id,
             firstName: "Deleted",
             lastName: "User",
             bio: null,
             avatarUrl: null,
             deletedAt: sql`now() AT TIME ZONE 'UTC'`,
           })
-          .where(eq(profiles.userId, id));
+          .onConflictDoUpdate({
+            target: profiles.userId,
+            set: {
+              firstName: "Deleted",
+              lastName: "User",
+              bio: null,
+              avatarUrl: null,
+              deletedAt: sql`now() AT TIME ZONE 'UTC'`,
+            },
+          });
 
         // 4. Soft-delete user: scrub PII
         await tx

@@ -13,6 +13,8 @@ const mockProps = {
   downloadTable: vi.fn(),
   onAddAnnotation: vi.fn(),
   onDeleteAnnotations: vi.fn(),
+  // Annotating is a write, so the actions menu only exists for a contributor.
+  canContribute: true,
 };
 
 describe("BulkActionsBar", () => {
@@ -157,5 +159,16 @@ describe("BulkActionsBar", () => {
 
     expect(() => render(<BulkActionsBar {...propsWithoutTableRows} />)).not.toThrow();
     expect(screen.getByText(/3/)).toBeInTheDocument();
+  });
+
+  it("hides the actions menu entirely without contribute rights", () => {
+    // Every item in it is a write. Download stays: exporting what you can already
+    // read is not a write.
+    render(<BulkActionsBar {...mockProps} canContribute={false} />);
+
+    expect(
+      screen.queryByText("experimentDataAnnotations.bulkActions.actions"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("experimentDataTable.download")).toBeInTheDocument();
   });
 });

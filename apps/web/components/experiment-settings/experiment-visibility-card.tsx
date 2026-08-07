@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import type { ExperimentVisibility } from "@repo/api/domains/experiment/experiment.schema";
-import { visibilitySchema } from "@repo/api/domains/experiment/experiment.schema";
+import { embargoSchema } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { CardHeader, CardTitle, CardDescription, CardContent } from "@repo/ui/components/card";
@@ -21,6 +21,7 @@ import {
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useExperimentUpdate } from "../../hooks/experiment/useExperimentUpdate/useExperimentUpdate";
+import { useSetExperimentVisibility } from "../../hooks/experiment/useSetExperimentVisibility/useSetExperimentVisibility";
 import { localCalendarDateToIsoEndOfDay } from "../new-experiment/embargo-utils";
 import { ExperimentAnonymizeToggle } from "./experiment-anonymize-toggle";
 import { ExperimentVisibilityForm } from "./experiment-visibility-form";
@@ -33,6 +34,11 @@ interface ExperimentVisibilityCardProps {
   isArchived?: boolean;
 }
 
+interface EmbargoFormValues {
+  embargoUntil?: string;
+}
+
+/** One-way publish control and private-experiment embargo settings. */
 export function ExperimentVisibilityCard({
   experimentId,
   initialVisibility,
@@ -40,77 +46,53 @@ export function ExperimentVisibilityCard({
   initialAnonymize,
   isArchived = false,
 }: ExperimentVisibilityCardProps) {
-  const { mutateAsync: updateExperiment, isPending: isUpdating } = useExperimentUpdate();
+  const { mutateAsync: updateExperiment } = useExperimentUpdate();
+  const { mutateAsync: setVisibility, isPending: isPublishing } = useSetExperimentVisibility();
   const { t } = useTranslation();
-  const [currentVisibility, setCurrentVisibility] =
-    useState<ExperimentVisibility>(initialVisibility);
-  const [showVisibilityDialog, setShowVisibilityDialog] = useState(false);
-  const [pendingVisibility, setPendingVisibility] = useState<ExperimentVisibility | undefined>();
+  // Track a local publish so the select reads "Public" immediately on confirm,
+  // before the query refetches. Visibility is monotonic (private→public only),
+  // so `isPublic` is derived from the prop OR this flag — if the experiment is
+  // published elsewhere (embargo cron, another tab) and the query refetches to
+  // public, the card follows the prop rather than staying stuck on private.
+  const [publishedLocally, setPublishedLocally] = useState(false);
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
 
-  interface VisibilityFormValues {
-    visibility?: ExperimentVisibility;
-    embargoUntil?: string;
-  }
-
-  const form = useForm<VisibilityFormValues>({
-    resolver: zodResolver(visibilitySchema),
+  const form = useForm<EmbargoFormValues>({
+    resolver: zodResolver(embargoSchema),
     defaultValues: {
-      visibility: initialVisibility,
       embargoUntil,
     },
   });
 
-  const handleVisibilityChange = (newVisibility: ExperimentVisibility) => {
-    setPendingVisibility(newVisibility);
-    setShowVisibilityDialog(true);
-  };
+  const isPublic = initialVisibility === "public" || publishedLocally;
 
   const handleEmbargoDateSelect = async (date?: Date) => {
     const iso = localCalendarDateToIsoEndOfDay(date);
     form.setValue("embargoUntil", iso ?? "");
 
+    // Block the update if the picked date fails validation (Zod).
     const isValid = await form.trigger("embargoUntil");
-    //block updates if Zod fails
     if (!isValid) return;
-
-    const currentVisibilityValue = form.getValues("visibility");
-    if (!currentVisibilityValue) return;
 
     await updateExperiment({
       id: experimentId,
-      visibility: currentVisibilityValue,
       embargoUntil: iso ?? "",
     });
 
     toast({ description: t("experiments.experimentUpdated") });
   };
 
-  const confirmVisibilityChange = async () => {
-    if (pendingVisibility === undefined) return;
+  // The select is the only way in, and it is disabled once public, so the sole
+  // reachable change is private → public — which needs confirming, not writing.
+  const handleVisibilityChange = (next: ExperimentVisibility) => {
+    if (next === "public") setShowPublishDialog(true);
+  };
 
-    const currentEmbargoUntil = form.getValues("embargoUntil");
-    const updateData = {
-      visibility: pendingVisibility,
-      ...(pendingVisibility === "private" && {
-        embargoUntil: currentEmbargoUntil,
-      }),
-    };
-
-    await updateExperiment({
-      id: experimentId,
-      ...updateData,
-    });
-
-    form.setValue("visibility", pendingVisibility);
+  const confirmPublish = async () => {
+    await setVisibility({ id: experimentId, visibility: "public" });
+    setPublishedLocally(true);
     toast({ description: t("experiments.experimentUpdated") });
-
-    // If visibility was changed to public, update local state so UI disables private
-    if (pendingVisibility === "public") {
-      setCurrentVisibility("public");
-    }
-
-    setShowVisibilityDialog(false);
-    setPendingVisibility(undefined);
+    setShowPublishDialog(false);
   };
 
   return (
@@ -123,7 +105,7 @@ export function ExperimentVisibilityCard({
       <CardContent className="space-y-6">
         <ExperimentVisibilityForm
           form={form}
-          currentVisibility={currentVisibility}
+          currentVisibility={isPublic ? "public" : "private"}
           isArchived={isArchived}
           onVisibilityChange={handleVisibilityChange}
           onEmbargoDateSelect={handleEmbargoDateSelect}
@@ -135,31 +117,27 @@ export function ExperimentVisibilityCard({
           isArchived={isArchived}
         />
 
-        {/* Visibility Change Confirmation Dialog */}
-        <Dialog open={showVisibilityDialog} onOpenChange={setShowVisibilityDialog}>
+        {/* Publish confirmation — irreversible, one-way transition to public. */}
+        <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                {pendingVisibility === "public"
-                  ? t("experimentVisibility.changeToPublicTitle")
-                  : t("experimentVisibility.changeToPrivateTitle")}
-              </DialogTitle>
+              <DialogTitle>{t("experimentVisibility.changeToPublicTitle")}</DialogTitle>
               <DialogDescription>
-                {pendingVisibility === "public"
-                  ? t("experimentVisibility.changeToPublicDescription")
-                  : t("experimentVisibility.changeToPrivateDescription")}
+                {t("experimentVisibility.changeToPublicDescription")}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setShowVisibilityDialog(false)}
-                disabled={isUpdating}
+                onClick={() => setShowPublishDialog(false)}
+                disabled={isPublishing}
               >
                 {t("common.cancel")}
               </Button>
-              <Button onClick={confirmVisibilityChange} disabled={isUpdating}>
-                {isUpdating ? t("experimentSettings.saving") : t("common.confirm")}
+              <Button onClick={confirmPublish} disabled={isPublishing}>
+                {isPublishing
+                  ? t("experimentSettings.saving")
+                  : t("experimentVisibility.publishConfirmButton")}
               </Button>
             </DialogFooter>
           </DialogContent>

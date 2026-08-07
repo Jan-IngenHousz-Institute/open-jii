@@ -23,6 +23,13 @@ describe("MacroCodeEditor", () => {
     expect(screen.getByText(/2 lines/)).toBeInTheDocument();
   });
 
+  it("renders an empty editor for an empty value instead of substituting content", () => {
+    render(<MacroCodeEditor {...defaults} value="" />);
+
+    expect(screen.getByTestId("code-editor-textarea")).toHaveValue("");
+    expect(screen.getByText(/1 lines - 0 B/)).toBeInTheDocument();
+  });
+
   it("calls onChange when the user types in the editor", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();

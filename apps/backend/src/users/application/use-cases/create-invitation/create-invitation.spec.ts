@@ -53,13 +53,13 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "invitee@example.com",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
     assertSuccess(result);
     expect(result.value.email).toBe("invitee@example.com");
-    expect(result.value.role).toBe("member");
+    expect(result.value.tier).toBe("viewer");
     expect(result.value.status).toBe("pending");
   });
 
@@ -75,7 +75,7 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "duplicate@example.com",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
@@ -85,7 +85,7 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "duplicate@example.com",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
@@ -103,15 +103,50 @@ describe("CreateInvitationUseCase", () => {
       .spyOn(emailPort, "sendInvitationEmail")
       .mockResolvedValue(success(undefined));
 
-    await useCase.execute("experiment", experiment.id, "notify@example.com", "member", testUserId);
+    await useCase.execute(
+      "experiment",
+      experiment.id,
+      "notify@example.com",
+      { tier: "viewer" },
+      testUserId,
+    );
 
     expect(emailSpy).toHaveBeenCalledOnce();
     expect(emailSpy).toHaveBeenCalledWith(
       experiment.id,
       "Email Notification Test",
       expect.any(String),
-      "member",
+      // The email describes the access itself, in the same words the
+      // collaborators UI uses.
+      "a contributor who can view and add data",
       "notify@example.com",
+    );
+  });
+
+  it("describes an admin-tier invitation in the email", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Tiered Email Test",
+      userId: testUserId,
+    });
+
+    const emailSpy = vi
+      .spyOn(emailPort, "sendInvitationEmail")
+      .mockResolvedValue(success(undefined));
+
+    await useCase.execute(
+      "experiment",
+      experiment.id,
+      "editor@example.com",
+      { tier: "admin" },
+      testUserId,
+    );
+
+    expect(emailSpy).toHaveBeenCalledWith(
+      experiment.id,
+      "Tiered Email Test",
+      expect.any(String),
+      "a collaborator who can edit",
+      "editor@example.com",
     );
   });
 
@@ -129,7 +164,7 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "existing@example.com",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
@@ -143,7 +178,7 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "existing@example.com",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
@@ -163,7 +198,7 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "UPPERCASE@EXAMPLE.COM",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
@@ -186,7 +221,7 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "fail-check@example.com",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
@@ -208,7 +243,7 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "fail-create@example.com",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
@@ -230,7 +265,7 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "fallback-name@example.com",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
@@ -252,14 +287,14 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "actor-fallback@example.com",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
     assertFailure(result);
   });
 
-  it("should return conflict when email belongs to an existing member", async () => {
+  it("should return conflict when the email already holds a grant", async () => {
     const memberEmail = "member@example.com";
     const memberId = await testApp.createTestUser({ email: memberEmail });
     const { experiment } = await testApp.createExperiment({
@@ -267,7 +302,7 @@ describe("CreateInvitationUseCase", () => {
       userId: testUserId,
     });
 
-    await testApp.addExperimentMember(experiment.id, memberId, "member");
+    await testApp.addExperimentCollaborator(experiment.id, memberId);
 
     vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
 
@@ -275,23 +310,23 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       memberEmail,
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
     assertFailure(result);
     expect(result.error.statusCode).toBe(409);
-    expect(result.error.message).toContain("already a member");
+    expect(result.error.message).toContain("already has access");
   });
 
-  it("should fail when isEmailAlreadyMember check fails", async () => {
+  it("should fail when the existing-access check fails", async () => {
     const { experiment } = await testApp.createExperiment({
-      name: "Member Check Failure",
+      name: "Access Check Failure",
       userId: testUserId,
     });
 
     vi.spyOn(emailPort, "sendInvitationEmail").mockResolvedValue(success(undefined));
-    vi.spyOn(invitationRepo, "isEmailAlreadyMember").mockResolvedValueOnce(
+    vi.spyOn(invitationRepo, "isEmailAlreadyGranted").mockResolvedValueOnce(
       failure(AppError.internal("DB error")),
     );
 
@@ -299,11 +334,11 @@ describe("CreateInvitationUseCase", () => {
       "experiment",
       experiment.id,
       "check-fail@example.com",
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 
     assertFailure(result);
-    expect(result.error.message).toBe("Failed to check existing membership");
+    expect(result.error.message).toBe("Failed to check existing access");
   });
 });

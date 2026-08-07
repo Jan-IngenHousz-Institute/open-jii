@@ -1,5 +1,7 @@
 "use client";
 
+import { allResourceCacheFamilies } from "@/hooks/sharing/resource-cache-keys";
+import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { revalidateAuth } from "~/app/actions/revalidate";
 
@@ -19,6 +21,21 @@ export function useSignOut() {
       // Clear session cache
       queryClient.setQueryData(["auth", "session"], null);
       void queryClient.invalidateQueries({ queryKey: ["auth"] });
+
+      // The module-level QueryClient survives sign-out, while resource detail
+      // caches are not principal-scoped and carry private content/capabilities.
+      // Remove them so the next user cannot receive the old user's settled data.
+      const authorizationSensitiveKeys = [
+        orpc.sharing.listGrants.key(),
+        orpc.sharing.searchGranteeOrganizations.key(),
+        orpc.users.listInvitations.key(),
+        orpc.experiments.getMyJoinRequest.key(),
+        orpc.users.getDeletionBlockers.key(),
+        ...allResourceCacheFamilies(),
+      ];
+      for (const queryKey of authorizationSensitiveKeys) {
+        queryClient.removeQueries({ queryKey });
+      }
 
       // Revalidate Next.js cache
       await revalidateAuth();

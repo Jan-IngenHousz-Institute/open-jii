@@ -1,38 +1,25 @@
 "use client";
 
 import { DocsHelpLink } from "@/components/docs-help-link";
+import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
-import { useWorkbookDelete } from "@/hooks/workbook/useWorkbookDelete/useWorkbookDelete";
 import { orpc } from "@/lib/orpc";
 import { formatDate } from "@/util/date";
 import { useQueryClient } from "@tanstack/react-query";
-import { GitFork, Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { GitFork, MoreHorizontal, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import type { WorkbookListItem } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@repo/ui/components/alert-dialog";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -148,28 +135,13 @@ function SkeletonRow() {
 
 function WorkbookTableRow({ workbook }: { workbook: WorkbookListItem }) {
   const { t } = useTranslation("workbook");
-  const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
   const router = useRouter();
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const queryClient = useQueryClient();
 
-  const { mutate: deleteWorkbook, isPending: isDeleting } = useWorkbookDelete();
   const { mutate: createWorkbook, isPending: isDuplicating } = useWorkbookCreate({
     onSuccess: (data) => router.push(`/${locale}/platform/workbooks/${data.id}`),
   });
-
-  const handleDelete = () => {
-    deleteWorkbook(
-      { id: workbook.id },
-      {
-        onSuccess: () => {
-          toast({ title: t("workbooks.messages.deleteSuccess") });
-          setConfirmingDelete(false);
-        },
-      },
-    );
-  };
 
   // List rows don't carry cells, so duplication first fetches the full workbook.
   const handleDuplicate = async () => {
@@ -200,12 +172,6 @@ function WorkbookTableRow({ workbook }: { workbook: WorkbookListItem }) {
   const author = workbook.createdByName ?? `${workbook.createdBy.slice(0, 8)}…`;
   const usedBy = workbook.experimentCount ?? 0;
 
-  // Deleting a workbook attached to experiments unlinks them and loses their
-  // measurement flow, so that path is gated behind a feature flag (same as
-  // experiment deletion). Unused workbooks stay freely deletable.
-  const workbookDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.WORKBOOK_DELETION);
-  const canDelete = usedBy === 0 || workbookDeletionEnabled === true;
-
   return (
     <>
       <TableRow
@@ -226,6 +192,8 @@ function WorkbookTableRow({ workbook }: { workbook: WorkbookListItem }) {
           >
             {workbook.name}
           </Link>
+          {/* Only when private: "public" is the unremarkable default. */}
+          <VisibilityBadge visibility={workbook.visibility} privateOnly className="ml-2" />
           <WorkbookCellSummary counts={workbook.cellTypeCounts ?? {}} className="mt-1.5" />
         </TableCell>
         <TableCell className={cn("px-6 py-3 text-[13px]", TEXT_MUTED)}>
@@ -280,56 +248,11 @@ function WorkbookTableRow({ workbook }: { workbook: WorkbookListItem }) {
                   <GitFork className="mr-2 size-4" />
                   {t("workbooks.actions.fork")}
                 </DropdownMenuItem>
-                {canDelete && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        setConfirmingDelete(true);
-                      }}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="mr-2 size-4" />
-                      {t("workbooks.actions.delete")}
-                    </DropdownMenuItem>
-                  </>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </TableCell>
       </TableRow>
-
-      <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("workbooks.actions.delete")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {usedBy > 0
-                ? t("workbooks.messages.deleteInUseConfirm", { name: workbook.name, count: usedBy })
-                : t("workbooks.messages.deleteConfirm", { name: workbook.name })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>{tCommon("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isDeleting}
-              onClick={(e) => {
-                e.preventDefault();
-                handleDelete();
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                t("workbooks.actions.delete")
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

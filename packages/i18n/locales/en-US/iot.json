@@ -77,7 +77,7 @@
         "overview": "Overview",
         "credentials": "Credentials",
         "onboarding": "Onboarding",
-        "members": "Members",
+        "collaborators": "Collaborators",
         "lineage": "Lineage",
         "monitoring": "Monitoring"
       },
@@ -89,7 +89,6 @@
         "groups": "Organize devices into groups you can manage, provision, and onboard together.",
         "onboarding": "Onboard devices to experiments: hand each device its connection, experiment, and workbook procedure.",
         "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
-        "members": "Share device management with collaborators, the way experiments share access.",
         "lineage": "Trace this device's identity through to its ingested measurements."
       },
       "pageOf": "Page {{page}} of {{total}}",

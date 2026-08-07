@@ -1,4 +1,4 @@
-import { createProtocol } from "@/test/factories";
+import { createProtocolDetail, readOnlyCapabilities } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
@@ -153,6 +153,24 @@ vi.mock("../../protocol-settings/protocol-compatible-macros-card", () => ({
   ),
 }));
 
+// The publish control renders its own confirm Dialog; this file mocks Dialog by
+// testid, so stub the control out and cover it in its own test file.
+vi.mock("../../visibility/resource-publish-control", () => ({
+  ResourcePublishControl: ({
+    resourceType,
+    canManage,
+  }: {
+    resourceType: string;
+    canManage: boolean;
+  }) => (
+    <div
+      data-testid="resource-publish-control"
+      data-resource-type={resourceType}
+      data-can-manage={String(canManage)}
+    />
+  ),
+}));
+
 vi.mock("../../shared/details-sidebar-card", () => ({
   DetailsSidebarCard: ({
     title,
@@ -170,7 +188,7 @@ vi.mock("../../shared/details-sidebar-card", () => ({
   ),
 }));
 
-const mockProtocol = createProtocol({
+const mockProtocol = createProtocolDetail({
   id: "550e8400-e29b-41d4-a716-446655440000",
   name: "Test Protocol",
   description: "A test protocol description",
@@ -181,6 +199,13 @@ const mockProtocol = createProtocol({
   createdByName: "John Doe",
   createdAt: "2024-01-01T00:00:00.000Z",
   updatedAt: "2024-06-15T12:00:00.000Z",
+});
+
+// Gating is capability-based: the read-only fixture withholds
+// capabilities rather than merely naming a different creator.
+const readOnlyProtocol = createProtocolDetail({
+  ...mockProtocol,
+  capabilities: readOnlyCapabilities,
 });
 
 function renderComponent(props: Partial<React.ComponentProps<typeof ProtocolDetailsSidebar>> = {}) {
@@ -295,17 +320,15 @@ describe("ProtocolDetailsSidebar", () => {
     expect(screen.getByTestId("select-native")).toBeInTheDocument();
   });
 
-  it("renders family as plain text when user is not the creator", () => {
-    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
-    renderComponent();
+  it("renders family as plain text when the user cannot update", () => {
+    renderComponent({ protocol: readOnlyProtocol });
     expect(screen.queryByTestId("select")).not.toBeInTheDocument();
     expect(screen.getByText("MultispeQ")).toBeInTheDocument();
   });
 
-  it("renders Ambyte text when family is ambyte and user is not the creator", () => {
-    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
+  it("renders Ambyte text when family is ambyte and the user cannot update", () => {
     renderComponent({
-      protocol: { ...mockProtocol, family: "ambyte" },
+      protocol: { ...readOnlyProtocol, family: "ambyte" },
     });
     expect(screen.getByText("Ambyte")).toBeInTheDocument();
   });
@@ -371,9 +394,8 @@ describe("ProtocolDetailsSidebar", () => {
     expect(card.dataset.embedded).toBe("true");
   });
 
-  it("renders compatible macros count text when user is not the creator", async () => {
-    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
-    renderComponent();
+  it("renders compatible macros count text when the user cannot update", async () => {
+    renderComponent({ protocol: readOnlyProtocol });
     expect(screen.queryByTestId("protocol-compatible-macros-card")).not.toBeInTheDocument();
     expect(screen.getByText("protocolSettings.compatibleMacros")).toBeInTheDocument();
     await waitFor(() => {
@@ -382,7 +404,6 @@ describe("ProtocolDetailsSidebar", () => {
   });
 
   it("renders singular 'macro' for single compatible macro", async () => {
-    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
     server.mount(contract.protocols.listCompatibleMacros, {
       body: [
         {
@@ -399,27 +420,25 @@ describe("ProtocolDetailsSidebar", () => {
       ],
     });
 
-    renderComponent();
+    renderComponent({ protocol: readOnlyProtocol });
     await waitFor(() => {
       expect(screen.getByText("1 macro")).toBeInTheDocument();
     });
   });
 
-  it("renders 'no compatible macros' text when count is zero and user is not creator", async () => {
-    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
+  it("renders 'no compatible macros' text when count is zero and the user cannot update", async () => {
     server.mount(contract.protocols.listCompatibleMacros, { body: [] });
 
-    renderComponent();
+    renderComponent({ protocol: readOnlyProtocol });
     await waitFor(() => {
       expect(screen.getByText("protocolSettings.noCompatibleMacros")).toBeInTheDocument();
     });
   });
 
-  it("renders 'no compatible macros' when data is undefined and user is not creator", async () => {
-    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
+  it("renders 'no compatible macros' when data is undefined and the user cannot update", async () => {
     server.mount(contract.protocols.listCompatibleMacros, { body: [] });
 
-    renderComponent();
+    renderComponent({ protocol: readOnlyProtocol });
     await waitFor(() => {
       expect(screen.getByText("protocolSettings.noCompatibleMacros")).toBeInTheDocument();
     });
@@ -434,9 +453,8 @@ describe("ProtocolDetailsSidebar", () => {
     expect(screen.getByText("protocolSettings.deleteProtocol")).toBeInTheDocument();
   });
 
-  it("does not render danger zone when user is not the creator", () => {
-    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
-    renderComponent();
+  it("does not render danger zone when the user cannot update", () => {
+    renderComponent({ protocol: readOnlyProtocol });
     expect(screen.queryByText("protocolSettings.dangerZone")).not.toBeInTheDocument();
     expect(screen.queryByText("protocolSettings.deleteProtocol")).not.toBeInTheDocument();
   });
@@ -448,10 +466,9 @@ describe("ProtocolDetailsSidebar", () => {
     expect(screen.queryByText("protocolSettings.deleteProtocol")).not.toBeInTheDocument();
   });
 
-  it("does not render danger zone when both non-creator and flag disabled", () => {
-    vi.mocked(useSession).mockReturnValue({ data: { user: { id: "other-user" } } } as never);
+  it("does not render danger zone when both capability and flag are absent", () => {
     vi.mocked(useFeatureFlagEnabled).mockReturnValue(false);
-    renderComponent();
+    renderComponent({ protocol: readOnlyProtocol });
     expect(screen.queryByText("protocolSettings.dangerZone")).not.toBeInTheDocument();
   });
 
@@ -575,9 +592,8 @@ describe("ProtocolDetailsSidebar", () => {
     expect(separators).toHaveLength(1);
   });
 
-  it("treats user as non-creator when session is null", () => {
-    vi.mocked(useSession).mockReturnValue({ data: null } as never);
-    renderComponent();
+  it("locks the surface when the response grants no capabilities", () => {
+    renderComponent({ protocol: readOnlyProtocol });
 
     // Should show plain text family, not a Select
     expect(screen.queryByTestId("select")).not.toBeInTheDocument();

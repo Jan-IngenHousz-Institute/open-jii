@@ -139,6 +139,72 @@ describe("UploadDataUseCase", () => {
     );
   });
 
+  it("refuses a contributing collaborator who tries to create a new target table", async () => {
+    const collaboratorId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_New_Target_Without_Manage",
+      userId: testUserId,
+    });
+    await testApp.addExperimentCollaborator(experiment.id, collaboratorId);
+    const validateTarget = vi.spyOn(uploadsRepository, "validateTargetTable");
+
+    mountMultipart(multipartUploadService, async ({ field, file }) => {
+      field("sourceKind", "csv");
+      field("targetKind", "new");
+      field("targetName", "greenhouse_temps");
+      await file(makeFile("data.csv"));
+    });
+
+    const result = await useCase.execute({
+      experimentId: experiment.id,
+      userId: collaboratorId,
+      requestStream: Readable.from([""]),
+      requestHeaders: MULTIPART_HEADERS,
+    });
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toBe(
+      "Creating a new data table requires experiment management access",
+    );
+    expect(validateTarget).not.toHaveBeenCalled();
+    expect(databricksPort.uploadExperimentData).not.toHaveBeenCalled();
+  });
+
+  it("lets a contributing collaborator append to an existing target table", async () => {
+    const collaboratorId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({
+      name: "Upload_Existing_Target_Without_Manage",
+      userId: testUserId,
+    });
+    await testApp.addExperimentCollaborator(experiment.id, collaboratorId);
+    vi.spyOn(uploadsRepository, "validateTargetTable").mockResolvedValue(
+      success({ uploadTableId: STUB_UPLOAD_TABLE_ID, uploadTableName: "greenhouse_temps" }),
+    );
+
+    mountMultipart(multipartUploadService, async ({ field, file }) => {
+      field("sourceKind", "csv");
+      field("targetKind", "existing");
+      field("uploadTableId", STUB_UPLOAD_TABLE_ID);
+      await file(makeFile("data.csv"));
+    });
+
+    const result = await useCase.execute({
+      experimentId: experiment.id,
+      userId: collaboratorId,
+      requestStream: Readable.from([""]),
+      requestHeaders: MULTIPART_HEADERS,
+    });
+
+    assertSuccess(result);
+    expect(result.value.uploadTableId).toBe(STUB_UPLOAD_TABLE_ID);
+    expect(uploadsRepository.validateTargetTable).toHaveBeenCalledWith({
+      experimentId: experiment.id,
+      target: { kind: "existing", uploadTableId: STUB_UPLOAD_TABLE_ID },
+    });
+    expect(databricksPort.uploadExperimentData).toHaveBeenCalledTimes(1);
+  });
+
   it("uploads ambyte through the generic target flow", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Upload_Ambyte",

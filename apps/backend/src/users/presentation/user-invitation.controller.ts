@@ -10,7 +10,6 @@ import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { CreateInvitationUseCase } from "../application/use-cases/create-invitation/create-invitation";
 import { GetInvitationsUseCase } from "../application/use-cases/get-invitations/get-invitations";
 import { RevokeInvitationUseCase } from "../application/use-cases/revoke-invitation/revoke-invitation";
-import { UpdateInvitationRoleUseCase } from "../application/use-cases/update-invitation-role/update-invitation-role";
 
 @Controller()
 export class InvitationController {
@@ -20,7 +19,6 @@ export class InvitationController {
     private readonly createInvitationUseCase: CreateInvitationUseCase,
     private readonly getInvitationsUseCase: GetInvitationsUseCase,
     private readonly revokeInvitationUseCase: RevokeInvitationUseCase,
-    private readonly updateInvitationRoleUseCase: UpdateInvitationRoleUseCase,
   ) {}
 
   @Implement(userContract.createInvitation)
@@ -30,7 +28,7 @@ export class InvitationController {
         input.resourceType as "experiment",
         input.resourceId,
         input.email,
-        input.role,
+        { tier: input.tier },
         session.user.id,
       );
       if (result.isSuccess()) {
@@ -41,29 +39,15 @@ export class InvitationController {
   }
 
   @Implement(userContract.listInvitations)
-  listInvitations() {
+  listInvitations(@Session() session: UserSession) {
     return implement(userContract.listInvitations).handler(async ({ input }) => {
       const result = await this.getInvitationsUseCase.execute(
         input.resourceType as "experiment",
         input.resourceId,
-      );
-      if (result.isSuccess()) {
-        return formatDatesList(result.value);
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
-  }
-
-  @Implement(userContract.updateInvitationRole)
-  updateInvitationRole(@Session() session: UserSession) {
-    return implement(userContract.updateInvitationRole).handler(async ({ input }) => {
-      const result = await this.updateInvitationRoleUseCase.execute(
-        input.invitationId,
-        input.role,
         session.user.id,
       );
       if (result.isSuccess()) {
-        return formatDates(result.value);
+        return formatDatesList(result.value);
       }
       return throwOrpcFailure(result, this.logger);
     });

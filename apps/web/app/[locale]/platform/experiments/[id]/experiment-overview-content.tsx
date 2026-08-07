@@ -2,8 +2,8 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { useExperimentContributors } from "@/hooks/experiment/useExperimentContributors/useExperimentContributors";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
-import { useExperimentMembers } from "@/hooks/experiment/useExperimentMembers/useExperimentMembers";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
@@ -33,9 +33,10 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   const { data: locationsData } = useExperimentLocations(id);
   const locations = locationsData ?? [];
 
-  // Members
-  const { data: membersData, isLoading: isMembersLoading } = useExperimentMembers(id);
-  const members = membersData ?? [];
+  // Contributors (people with a grant that lets them add data here)
+  const { data: contributorsData, isLoading: isContributorsLoading } =
+    useExperimentContributors(id);
+  const contributors = contributorsData ?? [];
 
   const initialStatusRef = useRef<Experiment["status"] | null>(null);
 
@@ -68,9 +69,11 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         experimentId={id}
         experiment={experiment}
         locations={locations}
-        members={members}
-        isMembersLoading={isMembersLoading}
+        contributors={contributors}
+        isContributorsLoading={isContributorsLoading}
         hasAccess={hasAccess}
+        canManage={accessData.isAdmin}
+        canContribute={accessData.capabilities.canContribute}
       />
 
       {/* LEFT SIDE CONTENT (Second on mobile) */}

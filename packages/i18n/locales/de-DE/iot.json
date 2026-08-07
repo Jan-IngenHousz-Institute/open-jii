@@ -77,7 +77,7 @@
         "overview": "Übersicht",
         "credentials": "Anmeldedaten",
         "onboarding": "Einrichtung",
-        "members": "Mitglieder",
+        "collaborators": "Mitwirkende",
         "lineage": "Herkunft",
         "monitoring": "Überwachung"
       },
@@ -89,7 +89,6 @@
         "groups": "Organisieren Sie Geräte in Gruppen, die Sie gemeinsam verwalten, bereitstellen und einrichten können.",
         "onboarding": "Richten Sie Geräte für Experimente ein: Übergeben Sie jedem Gerät seine Verbindung, sein Experiment und seine Workbook-Prozedur.",
         "monitoring": "Verfolgen Sie Gerätekonnektivität, letzte Aktivität und den Zustand der Flotte auf einen Blick.",
-        "members": "Teilen Sie die Geräteverwaltung mit Mitarbeitenden, so wie Experimente den Zugriff teilen.",
         "lineage": "Verfolgen Sie die Identität dieses Geräts bis zu seinen erfassten Messungen."
       },
       "pageOf": "Seite {{page}} von {{total}}",

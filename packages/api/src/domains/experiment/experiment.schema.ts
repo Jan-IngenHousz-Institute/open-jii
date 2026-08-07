@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
+import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zExperimentData } from "./data/experiment-data.schema";
 import {
   zExperimentLocationInput,
@@ -11,8 +12,6 @@ import {
 export const zExperimentStatus = z.enum(["active", "stale", "archived", "published"]);
 
 export const zExperimentVisibility = z.enum(["private", "public"]);
-
-export const zExperimentMemberRole = z.enum(["admin", "member"]);
 
 export const zExperiment = z.object({
   id: z.string().uuid(),
@@ -40,6 +39,11 @@ export const zExperimentAccess = z.object({
   experiment: zExperiment,
   hasAccess: z.boolean(),
   isAdmin: z.boolean(),
+  /**
+   * Resolved by the same `can()` the guards use. `isAdmin` above is `can(manage)`,
+   * kept for existing call sites; the collaborators surface gates on `canShare`.
+   */
+  capabilities: zResourceCapabilities,
 });
 
 export const zExperimentFlowNodeType = z.enum([
@@ -260,7 +264,6 @@ export const zExperimentFlowGraph = z
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
-export type ExperimentMemberRole = z.infer<typeof zExperimentMemberRole>;
 export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentFlowNodeType = z.infer<typeof zExperimentFlowNodeType>;
@@ -330,7 +333,7 @@ export const zCreateExperimentBodyBase = z.object({
     .array(
       z.object({
         userId: z.string().uuid(),
-        role: zExperimentMemberRole.optional(),
+        // Display fields the picker carries; the backend only reads `userId`.
         firstName: z.string().optional(),
         lastName: z.string().optional(),
         // Another user's stored email passed through from the picker; format-validating
@@ -340,7 +343,9 @@ export const zCreateExperimentBodyBase = z.object({
       }),
     )
     .optional()
-    .describe("Optional array of member objects with userId and role"),
+    .describe(
+      "Optional collaborators to seed: each listed user receives a contributing grant on the new experiment. Higher tiers are handed out through the sharing endpoints.",
+    ),
   locations: z
     .array(zExperimentLocationInput)
     .optional()
@@ -353,6 +358,17 @@ export const zCreateExperimentBodyBase = z.object({
 });
 
 export const zCreateExperimentBody = zCreateExperimentBodyBase.superRefine((val, ctx) => {
+  // Embargo schedules a private→public publish, so it means nothing on something
+  // already public. Visibility defaults to public, so check the effective value.
+  const effectiveVisibility = val.visibility ?? "public";
+  if (val.embargoUntil !== undefined && effectiveVisibility === "public") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["embargoUntil"],
+      message: "Embargo can only be set on private experiments",
+    });
+    return;
+  }
   validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
 });
 
@@ -366,13 +382,14 @@ export const zUpdateExperimentBody = z.object({
     .describe("Updated experiment name"),
   description: z.string().optional().describe("Updated experiment description"),
   status: zExperimentStatus.optional().describe("Updated experiment status"),
-  visibility: zExperimentVisibility.optional().describe("Updated visibility setting"),
+  // `visibility` is deliberately absent: publishing is one-way and goes through the
+  // dedicated `setVisibility` route. Allowing it here would permit public→private.
   embargoUntil: z
     .string()
     .datetime()
     .optional()
     .describe(
-      "Updated embargo end date and time (ISO datetime string, will be stored as UTC in database)",
+      "Updated embargo end date and time (ISO datetime string, will be stored as UTC in database). Only editable while the experiment is still private.",
     ),
   anonymizeContributors: z
     .boolean()
@@ -386,9 +403,12 @@ export const zUpdateExperimentBody = z.object({
     .describe("Updated locations associated with the experiment"),
 });
 
-export const visibilitySchema = zUpdateExperimentBody
+/**
+ * Client schema for the settings embargo editor. Visibility moved to the dedicated
+ * `setVisibility` route; the embargo is only editable while still private.
+ */
+export const embargoSchema = zUpdateExperimentBody
   .pick({
-    visibility: true,
     embargoUntil: true,
   })
   .superRefine((val, ctx) => {

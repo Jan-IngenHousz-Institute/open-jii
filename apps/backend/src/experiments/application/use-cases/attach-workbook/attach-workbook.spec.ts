@@ -82,6 +82,25 @@ describe("AttachWorkbookUseCase", () => {
     expect(second.value.version).toBe(1);
   });
 
+  it("denies attaching a private workbook the caller cannot read", async () => {
+    // The route only guards `manage` on the experiment; attaching a workbook the
+    // caller has no read access to would materialise its design into their flow.
+    const otherUser = await testApp.createTestUser({});
+    const otherOrgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(otherOrgId, otherUser, "owner");
+    const privateWorkbook = await testApp.createWorkbook({
+      name: "Private Workbook",
+      cells: [{ id: "md1", type: "markdown", content: "secret", isCollapsed: false }],
+      createdBy: otherUser,
+      visibility: "private",
+      organizationId: otherOrgId,
+    });
+
+    const result = await useCase.execute(experimentId, privateWorkbook.id, adminUserId);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
+  });
+
   it("materialises a flow row from the version's cells (mobile backward compat)", async () => {
     const result = await useCase.execute(experimentId, workbookId, adminUserId);
     assertSuccess(result);

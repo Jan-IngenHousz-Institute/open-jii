@@ -3,6 +3,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import {
   and,
   asc,
+  deleteResourceGrants,
   desc,
   eq,
   ilike,
@@ -22,6 +23,8 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateMacroDto,
   UpdateMacroDto,
@@ -62,17 +65,22 @@ export class MacroRepository {
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
 
-      const results = await this.database
-        .insert(macros)
-        .values({
-          ...data,
-          id: macroId,
-          filename: generateHashedFilename(macroId),
-          createdBy: userId,
-          organizationId,
-        })
-        .returning(macroColumns);
-      return results;
+      return this.database.transaction(async (tx) => {
+        const results = await tx
+          .insert(macros)
+          .values({
+            ...data,
+            id: macroId,
+            filename: generateHashedFilename(macroId),
+            createdBy: userId,
+            organizationId,
+          })
+          .returning(macroColumns);
+
+        await seedCreatorControl(tx, "macro", macroId, organizationId, userId);
+
+        return results;
+      });
     });
   }
 
@@ -107,6 +115,18 @@ export class MacroRepository {
 
       if (filter?.language) {
         conditions.push(eq(macros.language, filter.language));
+      }
+
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "macro",
+        resourceIdColumn: macros.id,
+        organizationIdColumn: macros.organizationId,
+        visibilityColumn: macros.visibility,
+        userId: filter?.userId,
+      });
+      if (scope) {
+        conditions.push(scope);
       }
 
       if (filter?.filter === "my" && filter.userId) {
@@ -239,12 +259,16 @@ export class MacroRepository {
 
   async delete(id: string): Promise<Result<MacroDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database
-        .delete(macros)
-        .where(eq(macros.id, id))
-        .returning(macroColumns);
+      const results = await this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "macro", id, "update");
 
-      // Best-effort cache invalidation — must not mask a successful write
+        await deleteResourceGrants(tx, "macro", id);
+
+        return tx.delete(macros).where(eq(macros.id, id)).returning(macroColumns);
+      });
+
+      // Best-effort cache invalidation — must not mask a successful write.
+      // Outside the transaction: only invalidate once the delete is committed.
       void this.cachePort.invalidate(id).catch(() => {
         // noop — best-effort
       });

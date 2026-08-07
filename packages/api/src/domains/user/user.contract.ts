@@ -12,7 +12,6 @@ import {
   zListInvitationsQuery,
   zMarkWhatsNewSeenBody,
   zSearchUsersQuery,
-  zUpdateInvitationRoleBody,
   zUser,
   zUserIdPathParam,
   zUserMetadataWebhookPayload,
@@ -59,10 +58,6 @@ export const userContract = {
     .route({ method: "GET", path: "/api/v1/invitations", successStatus: 200 })
     .input(zListInvitationsQuery)
     .output(zInvitationList),
-  updateInvitationRole: oc
-    .route({ method: "PATCH", path: "/api/v1/invitations/{invitationId}", successStatus: 200 })
-    .input(zInvitationIdPathParam.merge(zUpdateInvitationRoleBody))
-    .output(zInvitation),
   revokeInvitation: oc
     .route({ method: "DELETE", path: "/api/v1/invitations/{invitationId}", successStatus: 204 })
     .input(zInvitationIdPathParam)

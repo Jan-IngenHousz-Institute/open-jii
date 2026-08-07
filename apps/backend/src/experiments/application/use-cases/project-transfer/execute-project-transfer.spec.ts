@@ -457,5 +457,42 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.protocolId).toBe(existingProtocolId);
       expect(result.value.macroId).toBe(existingMacroId);
     });
+
+    it("does not adopt an inaccessible private protocol with the same name", async () => {
+      // A stranger owns a private protocol named "X". The importer cannot read
+      // it, so the transfer must not reuse (and later snapshot) it. Names are
+      // globally unique, so a fresh create collides and the transfer fails
+      // closed — the stranger's private protocol is never adopted.
+      const protocolName = "Stranger Only Protocol";
+      const stranger = await testApp.createTestUser({});
+      const strangerOrg = await testApp.createOrganization();
+      await testApp.addOrganizationMember(strangerOrg, stranger, "owner");
+      const strangerProtocol = await testApp.createProtocol({
+        name: protocolName,
+        createdBy: stranger,
+        visibility: "private",
+        organizationId: strangerOrg,
+      });
+
+      const payload = buildPayload({
+        protocol: {
+          name: protocolName,
+          code: [{ step: "measure" }],
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+      });
+      const result = await useCase.execute(payload);
+
+      assertFailure(result);
+      // The stranger's protocol was not linked into any experiment created for
+      // the importer.
+      const experimentRepo = testApp.module.get(ExperimentRepository);
+      const importerExperiments = await experimentRepo.findAll(testUserId);
+      assertSuccess(importerExperiments);
+      expect(importerExperiments.value.some((e) => e.workbookId === strangerProtocol.id)).toBe(
+        false,
+      );
+    });
   });
 });

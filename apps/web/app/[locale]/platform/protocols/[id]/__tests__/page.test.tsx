@@ -1,4 +1,4 @@
-import { createProtocol } from "@/test/factories";
+import { createProtocolDetail, readOnlyCapabilities } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { use } from "react";
@@ -129,7 +129,7 @@ vi.mock("@/components/shared/inline-editable-description", () => ({
   ),
 }));
 
-const mockProtocol = createProtocol({
+const mockProtocol = createProtocolDetail({
   id: "proto-1",
   name: "Water Quality Protocol",
   description: "Measures water quality parameters",
@@ -201,9 +201,13 @@ describe("ProtocolOverviewPage", () => {
     );
   });
 
-  it("should pass hasAccess=false to description when user is not the creator", async () => {
+  it("should pass hasAccess=false to description when the caller cannot update", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "other-user" }),
+      body: createProtocolDetail({
+        ...mockProtocol,
+        createdBy: "other-user",
+        capabilities: readOnlyCapabilities,
+      }),
     });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
@@ -215,7 +219,7 @@ describe("ProtocolOverviewPage", () => {
 
   it("should pass hasAccess=true to description when user is the creator", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
+      body: createProtocolDetail({ ...mockProtocol, createdBy: "user-123" }),
     });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
@@ -248,7 +252,7 @@ describe("ProtocolOverviewPage", () => {
 
   it("should show the edit button for the creator when not editing", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
+      body: createProtocolDetail({ ...mockProtocol, createdBy: "user-123" }),
     });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
@@ -259,9 +263,13 @@ describe("ProtocolOverviewPage", () => {
     expect(screen.getByTestId("pencil-icon")).toBeInTheDocument();
   });
 
-  it("should not show the edit button for non-creators", async () => {
+  it("should not show the edit button without update capability", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "other-user" }),
+      body: createProtocolDetail({
+        ...mockProtocol,
+        createdBy: "other-user",
+        capabilities: readOnlyCapabilities,
+      }),
     });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
@@ -275,7 +283,7 @@ describe("ProtocolOverviewPage", () => {
 
   it("should handle null description gracefully", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, description: null }),
+      body: createProtocolDetail({ ...mockProtocol, description: null }),
     });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);
@@ -287,7 +295,7 @@ describe("ProtocolOverviewPage", () => {
 
   it("should call toast with success message when description save succeeds", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
+      body: createProtocolDetail({ ...mockProtocol, createdBy: "user-123" }),
     });
     const updateSpy = server.mount(contract.protocols.updateProtocol, { body: mockProtocol });
 
@@ -310,7 +318,7 @@ describe("ProtocolOverviewPage", () => {
 
   it("should call toast with destructive variant when description save fails", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
+      body: createProtocolDetail({ ...mockProtocol, createdBy: "user-123" }),
     });
     server.mount(contract.protocols.updateProtocol, { status: 400 });
 
@@ -330,7 +338,7 @@ describe("ProtocolOverviewPage", () => {
 
   it("should switch to ProtocolCodeEditor when creator clicks edit button", async () => {
     server.mount(contract.protocols.getProtocol, {
-      body: createProtocol({ ...mockProtocol, createdBy: "user-123" }),
+      body: createProtocolDetail({ ...mockProtocol, createdBy: "user-123" }),
     });
 
     render(<ProtocolOverviewPage params={Promise.resolve({ id: "proto-1" })} />);

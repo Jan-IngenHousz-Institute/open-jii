@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentJoinRequestDto } from "../../../core/models/experiment-join-request.model";
@@ -7,7 +8,6 @@ import { ExperimentDto } from "../../../core/models/experiment.model";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
-import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -15,8 +15,8 @@ export class RejectJoinRequestUseCase {
   private readonly logger = new Logger(RejectJoinRequestUseCase.name);
 
   constructor(
+    private readonly authz: AuthorizationService,
     private readonly experimentRepository: ExperimentRepository,
-    private readonly memberRepository: ExperimentMemberRepository,
     private readonly joinRequestRepository: ExperimentJoinRequestRepository,
     @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
   ) {}
@@ -56,16 +56,15 @@ export class RejectJoinRequestUseCase {
         return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
       }
 
-      // If the requester was added while this request was pending, surface that
-      // to the admin and avoid sending a confusing rejection email to a member.
-      const memberRoleResult = await this.memberRepository.getMemberRole(
-        experimentId,
-        existing.user.id,
-      );
-      if (memberRoleResult.isFailure()) {
-        return failure(AppError.internal("Failed to check requester membership"));
-      }
-      if (memberRoleResult.value) {
+      // The requester may have been granted access while this sat pending — close it
+      // instead of emailing a rejection to someone who now has access. `contribute`
+      // is the right check: a public reader lacks it, so their request still stands.
+      const alreadyCollaborator = await this.authz.can(existing.user.id, {
+        resourceType: "experiment",
+        resourceId: experimentId,
+        action: "contribute",
+      });
+      if (alreadyCollaborator.allow) {
         const cancelResult = await this.joinRequestRepository.markDecided(
           requestId,
           "cancelled",
@@ -76,7 +75,7 @@ export class RejectJoinRequestUseCase {
         }
 
         return failure(
-          AppError.conflict("The user is already a member of the experiment", ErrorCodes.CONFLICT),
+          AppError.conflict("The user already has access to the experiment", ErrorCodes.CONFLICT),
         );
       }
 

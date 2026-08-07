@@ -35,7 +35,7 @@ const accessPayload = createExperimentAccess({
 function mountDefaults() {
   server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
   server.mount(contract.experiments.getExperimentLocations, { body: [] });
-  server.mount(contract.experiments.listExperimentMembers, { body: [] });
+  server.mount(contract.experiments.listExperimentContributors, { body: [] });
   server.mount(contract.experiments.listExperimentDashboards, { body: [] });
 }
 
@@ -56,7 +56,7 @@ describe("ExperimentOverviewPage", () => {
   it("shows error display on failure", async () => {
     server.mount(contract.experiments.getExperimentAccess, { status: 500 });
     server.mount(contract.experiments.getExperimentLocations, { body: [] });
-    server.mount(contract.experiments.listExperimentMembers, { body: [] });
+    server.mount(contract.experiments.listExperimentContributors, { body: [] });
     server.mount(contract.experiments.listExperimentDashboards, { body: [] });
     render(<ExperimentOverviewPage {...props} />);
     await waitFor(() => {

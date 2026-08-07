@@ -27,7 +27,9 @@ import { MacroModule } from "./macros/macro.module";
 import { NewsletterModule } from "./newsletter/newsletter.module";
 import { ProtocolModule } from "./protocols/protocol.module";
 import { SearchModule } from "./search/search.module";
+import { SharingModule } from "./sharing/sharing.module";
 import { UserModule } from "./users/user.module";
+import { VisibilityModule } from "./visibility/visibility.module";
 import { WorkbookModule } from "./workbooks/workbook.module";
 
 const orpcLogger = new Logger("ORPC");
@@ -60,6 +62,7 @@ const orpcLogger = new Logger("ORPC");
     }),
     AnalyticsModule,
     AuthorizationModule,
+    VisibilityModule,
     DatabaseModule,
     ExperimentModule,
     IotModule,
@@ -67,6 +70,7 @@ const orpcLogger = new Logger("ORPC");
     NewsletterModule,
     ProtocolModule,
     SearchModule,
+    SharingModule,
     UserModule,
     WorkbookModule,
     HealthModule,
