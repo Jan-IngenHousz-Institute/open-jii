@@ -206,7 +206,24 @@
       "pushError": "Kon de configuratie niet versturen",
       "loadError": "Kon de experimenten niet laden. Probeer het opnieuw.",
       "inactiveDevice": "Dit apparaat heeft geen actieve inloggegevens en kan daarom niet worden onboardet. Geef eerst inloggegevens uit.",
-      "inlineProcedureNote": "Dit apparaat accepteert geen opgeslagen configuratie; het ontvangt zijn procedure per meting. Download de configuratie in plaats daarvan."
+      "inlineProcedureNote": "Dit apparaat accepteert geen opgeslagen configuratie; het ontvangt zijn procedure per meting. Download de configuratie in plaats daarvan.",
+      "includeWorkbook": "Workbook-procedures opnemen in de configuratie",
+      "questionsTitle": "Antwoorden op meetvragen vooraf invullen",
+      "questionsDescription": "Een apparaat kan vragen niet interactief beantwoorden; hier ingevulde antwoorden reizen mee in de configuratie en worden aan elke meting toegevoegd.",
+      "answerPlaceholder": "Antwoord",
+      "answerYes": "Ja",
+      "answerNo": "Nee",
+      "answerRequiredHint": "Beantwoord alle verplichte vragen voordat u de configuratie aflevert.",
+      "guide": {
+        "title": "Zo verbindt u uw apparaat",
+        "step1": "Haal de certificaatbundel en het Amazon-root-CA op via het tabblad Inloggegevens.",
+        "step2": "Maak verbinding met het onderstaande broker-eindpunt via MQTT over TLS, met de apparaatnaam als client-id.",
+        "step3": "Zet deze configuratie op het apparaat: download de JSON of push hem via een directe verbinding.",
+        "step4": "Voer de procedures van elk experiment op volgorde uit.",
+        "step5": "Publiceer elke meting naar het topic-prefix van het experiment plus /{{sensorVersion}}/{{sensorId}}/{{protocolId}}.",
+        "step6": "Voeg de vooraf ingevulde antwoorden toe aan elke gepubliceerde meting.",
+        "docsLink": "Lees de volledige handleiding voor apparaatintegratie"
+      }
     },
     "experimentDevices": {
       "tabLabel": "Apparaten",

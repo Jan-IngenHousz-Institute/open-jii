@@ -8,6 +8,7 @@ import { useIotCommunication } from "@/hooks/iot/useIotCommunication/useIotCommu
 import type { ConnectionType } from "@/hooks/iot/useIotCommunication/useIotCommunication";
 import { Download, Loader2, Send, Usb } from "lucide-react";
 import { useState } from "react";
+import { env } from "~/env";
 
 import type { DeviceOnboardingConfig, IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -20,9 +21,14 @@ import { downloadText } from "./iot-credential-file";
 interface DeviceConfigDeliveryProps {
   device: IotDevice;
   config: DeviceOnboardingConfig;
+  disabled?: boolean;
 }
 
-export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryProps) {
+export function DeviceConfigDelivery({
+  device,
+  config,
+  disabled = false,
+}: DeviceConfigDeliveryProps) {
   const { t } = useTranslation("iot");
   const [connectionType, setConnectionType] = useState<ConnectionType>("serial");
   const [isPushing, setIsPushing] = useState(false);
@@ -42,8 +48,15 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
     connectionType === "bluetooth" ? browserSupport.bluetooth : browserSupport.serial;
   const showConnectError = error !== null && !isConnected && !isConnecting;
 
+  // The file travels detached from the UI, so it names where its own contract
+  // is documented.
+  const deliveredFile = {
+    ...config,
+    docsUrl: `${env.NEXT_PUBLIC_DOCS_URL}/developers/device-integration`,
+  };
+
   const handleDownload = () => {
-    downloadText(`${device.thingName}-config.json`, JSON.stringify(config, null, 2));
+    downloadText(`${device.thingName}-config.json`, JSON.stringify(deliveredFile, null, 2));
   };
 
   const handleConnect = () => {
@@ -64,7 +77,7 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
     }
     setIsPushing(true);
     try {
-      await deliverDeviceConfig(driver, { config: { ...config }, id: config.thingName });
+      await deliverDeviceConfig(driver, { config: { ...deliveredFile }, id: config.thingName });
       toast({ title: t("iot.onboarding.pushSuccess") });
     } catch (pushError) {
       // The driver's message states exactly why (e.g. SET_CONFIG unsupported).
@@ -112,13 +125,16 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onClick={handleDownload}>
+        <Button variant="outline" onClick={handleDownload} disabled={disabled}>
           <Download className="mr-1.5 h-4 w-4" />
           {t("iot.onboarding.download")}
         </Button>
 
         {supportsPush && !isConnected && (
-          <Button onClick={handleConnect} disabled={isConnecting || !isSelectedTransportSupported}>
+          <Button
+            onClick={handleConnect}
+            disabled={disabled || isConnecting || !isSelectedTransportSupported}
+          >
             {isConnecting ? (
               <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
             ) : (
@@ -130,7 +146,7 @@ export function DeviceConfigDelivery({ device, config }: DeviceConfigDeliveryPro
 
         {supportsPush && isConnected && (
           <>
-            <Button onClick={handlePush} disabled={isPushing}>
+            <Button onClick={handlePush} disabled={disabled || isPushing}>
               {isPushing ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : (

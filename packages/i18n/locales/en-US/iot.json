@@ -206,7 +206,24 @@
       "pushError": "Could not push the configuration",
       "loadError": "Could not load experiments. Try again.",
       "inactiveDevice": "This device has no active credentials, so it cannot be onboarded. Issue credentials first.",
-      "inlineProcedureNote": "This device does not accept a stored configuration; it receives its procedure per measurement. Download the configuration instead."
+      "inlineProcedureNote": "This device does not accept a stored configuration; it receives its procedure per measurement. Download the configuration instead.",
+      "includeWorkbook": "Include workbook procedures in the configuration",
+      "questionsTitle": "Prefill measurement answers",
+      "questionsDescription": "A device cannot answer questions interactively; answers set here travel inside the configuration and the device attaches them to every measurement.",
+      "answerPlaceholder": "Answer",
+      "answerYes": "Yes",
+      "answerNo": "No",
+      "answerRequiredHint": "Answer all required questions before delivering the configuration.",
+      "guide": {
+        "title": "How to connect your device",
+        "step1": "Get the device certificate bundle and the Amazon root CA from the Credentials tab.",
+        "step2": "Connect to the broker endpoint below via MQTT over TLS, with the thing name as client id.",
+        "step3": "Load this configuration onto the device: download the JSON or push it over a direct connection.",
+        "step4": "Run the procedures of each experiment in order.",
+        "step5": "Publish each measurement to the experiment's topic prefix plus /{{sensorVersion}}/{{sensorId}}/{{protocolId}}.",
+        "step6": "Attach the prefilled answers to every published measurement.",
+        "docsLink": "Read the full device integration guide"
+      }
     },
     "experimentDevices": {
       "tabLabel": "Devices",

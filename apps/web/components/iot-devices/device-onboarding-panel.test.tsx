@@ -29,7 +29,29 @@ const config = {
       experimentId: boundExperiment.id,
       experimentName: "Fresh experiment",
       topicPrefix: `experiment/data_ingest/v1/${boundExperiment.id}/ambyte`,
-      workbook: null,
+      workbookVersion: null,
+      procedures: [],
+    },
+  ],
+};
+
+const configWithQuestion = {
+  ...config,
+  experiments: [
+    {
+      ...config.experiments[0],
+      workbookVersion: 1,
+      procedures: [
+        {
+          type: "question" as const,
+          id: "c-q",
+          name: "plot",
+          kind: "open_ended" as const,
+          text: "Which plot?",
+          required: true,
+          answer: null,
+        },
+      ],
     },
   ],
 };
@@ -87,7 +109,7 @@ describe("DeviceOnboardingPanel", () => {
     await user.click(screen.getByRole("button", { name: /iot.onboarding.onboard/ }));
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toEqual({ experimentIds: [fresh.id] });
+    expect(spy.body).toEqual({ experimentIds: [fresh.id], includeWorkbook: true });
 
     await waitFor(() => {
       expect(screen.getByText(config.endpoint)).toBeInTheDocument();
@@ -120,6 +142,49 @@ describe("DeviceOnboardingPanel", () => {
       expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" }));
     });
     expect(screen.getByText(config.endpoint)).toBeInTheDocument();
+  });
+
+  it("sends includeWorkbook: false when the toggle is off", async () => {
+    const user = userEvent.setup();
+    const fresh = createExperiment({ id: "22222222-2222-4222-8222-222222222222", name: "Fresh" });
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [fresh] });
+    const spy = server.mount(contract.iot.onboardDevice, { body: config });
+
+    render(<DeviceOnboardingPanel device={device} />);
+
+    await user.click(await screen.findByLabelText("Fresh"));
+    await user.click(screen.getByLabelText("iot.onboarding.includeWorkbook"));
+    await user.click(screen.getByRole("button", { name: /iot.onboarding.onboard/ }));
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toEqual({ experimentIds: [fresh.id], includeWorkbook: false });
+  });
+
+  it("gates delivery behind required question answers", async () => {
+    const user = userEvent.setup();
+    const fresh = createExperiment({ id: "22222222-2222-4222-8222-222222222222", name: "Fresh" });
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [fresh] });
+    server.mount(contract.iot.onboardDevice, { body: configWithQuestion });
+
+    render(<DeviceOnboardingPanel device={device} />);
+
+    await user.click(await screen.findByLabelText("Fresh"));
+    await user.click(screen.getByRole("button", { name: /iot.onboarding.onboard/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Which plot?")).toBeInTheDocument();
+    });
+    expect(screen.getByText("iot.onboarding.answerRequiredHint")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /iot.onboarding.download/ })).toBeDisabled();
+
+    await user.type(screen.getByLabelText(/Which plot\?/), "A1");
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /iot.onboarding.download/ })).toBeEnabled();
+    });
+    expect(screen.queryByText("iot.onboarding.answerRequiredHint")).not.toBeInTheDocument();
   });
 
   it("shows an error toast when onboarding fails", async () => {

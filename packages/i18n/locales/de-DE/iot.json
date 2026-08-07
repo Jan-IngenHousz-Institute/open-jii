@@ -206,7 +206,24 @@
       "pushError": "Konfiguration konnte nicht übertragen werden",
       "loadError": "Experimente konnten nicht geladen werden. Bitte erneut versuchen.",
       "inactiveDevice": "Dieses Gerät hat keine aktiven Zugangsdaten und kann daher nicht onboardet werden. Stellen Sie zuerst Zugangsdaten aus.",
-      "inlineProcedureNote": "Dieses Gerät akzeptiert keine gespeicherte Konfiguration; es erhält sein Verfahren pro Messung. Laden Sie die Konfiguration stattdessen herunter."
+      "inlineProcedureNote": "Dieses Gerät akzeptiert keine gespeicherte Konfiguration; es erhält sein Verfahren pro Messung. Laden Sie die Konfiguration stattdessen herunter.",
+      "includeWorkbook": "Workbook-Prozeduren in die Konfiguration aufnehmen",
+      "questionsTitle": "Antworten auf Messfragen vorbelegen",
+      "questionsDescription": "Ein Gerät kann Fragen nicht interaktiv beantworten; hier gesetzte Antworten reisen in der Konfiguration mit und werden jeder Messung angehängt.",
+      "answerPlaceholder": "Antwort",
+      "answerYes": "Ja",
+      "answerNo": "Nein",
+      "answerRequiredHint": "Beantworten Sie alle Pflichtfragen, bevor Sie die Konfiguration übergeben.",
+      "guide": {
+        "title": "So verbinden Sie Ihr Gerät",
+        "step1": "Holen Sie das Zertifikatspaket und das Amazon-Root-CA aus dem Tab Anmeldedaten.",
+        "step2": "Verbinden Sie sich per MQTT über TLS mit dem unten stehenden Broker-Endpunkt; Client-ID ist der Gerätename.",
+        "step3": "Übertragen Sie diese Konfiguration auf das Gerät: JSON herunterladen oder über eine Direktverbindung übertragen.",
+        "step4": "Führen Sie die Prozeduren jedes Experiments der Reihe nach aus.",
+        "step5": "Veröffentlichen Sie jede Messung unter dem Topic-Präfix des Experiments plus /{{sensorVersion}}/{{sensorId}}/{{protocolId}}.",
+        "step6": "Hängen Sie die vorbelegten Antworten an jede veröffentlichte Messung an.",
+        "docsLink": "Vollständigen Geräteintegrations-Leitfaden lesen"
+      }
     },
     "experimentDevices": {
       "tabLabel": "Geräte",

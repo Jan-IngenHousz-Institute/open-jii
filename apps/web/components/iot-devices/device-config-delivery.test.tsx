@@ -62,7 +62,8 @@ const config = {
       experimentId: "11111111-1111-4111-8111-111111111111",
       experimentName: "E",
       topicPrefix: "experiment/data_ingest/v1/11111111-1111-4111-8111-111111111111/ambyte",
-      workbook: null,
+      workbookVersion: null,
+      procedures: [],
     },
   ],
 };
@@ -120,7 +121,8 @@ describe("DeviceConfigDelivery", () => {
 
     await waitFor(() => {
       expect(deliverDeviceConfig).toHaveBeenCalledWith(communication.driver, {
-        config: { ...config },
+        // The delivered file self-describes: the docs link rides along.
+        config: { ...config, docsUrl: "http://localhost:3010/developers/device-integration" },
         id: config.thingName,
       });
     });
@@ -164,6 +166,14 @@ describe("DeviceConfigDelivery", () => {
         variant: "destructive",
       });
     });
+  });
+
+  it("disables download and push while delivery is locked", () => {
+    communication.isConnected = true;
+    render(<DeviceConfigDelivery device={ambyteDevice} config={config} disabled />);
+
+    expect(screen.getByRole("button", { name: /iot.onboarding.download/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /iot.onboarding.push/ })).toBeDisabled();
   });
 
   it("is download-only for multispeq", () => {
