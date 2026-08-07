@@ -2,13 +2,17 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import type { DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
 import { buildIngestTopicPrefix } from "@repo/api/transforms/iot-topic";
+import { compileDevicePlan } from "@repo/api/transforms/workbook-device-plan";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import type { AccessDecision } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
-import type { DeviceExperimentDto } from "../../../core/models/experiment-device.model";
+import type {
+  DeviceExperimentDto,
+  DeviceOnboardingExperimentDto,
+} from "../../../core/models/experiment-device.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
@@ -33,6 +37,7 @@ export class OnboardDeviceUseCase {
     deviceId: string,
     experimentIds: string[],
     userId: string,
+    includeWorkbook = true,
   ): Promise<Result<DeviceOnboardingConfig>> {
     this.logger.log({
       msg: "Onboarding device",
@@ -116,7 +121,7 @@ export class OnboardDeviceUseCase {
         // The sensorType segment is the device's family; the device appends
         // /{sensorVersion}/{sensorId}/{protocolId} per measurement.
         topicPrefix: buildIngestTopicPrefix(exp.experimentId, device.deviceType),
-        workbook: exp.workbook,
+        ...this.compileProcedures(exp, includeWorkbook),
       }));
 
     return success({
@@ -125,6 +130,29 @@ export class OnboardDeviceUseCase {
       endpoint: endpointResult.value,
       experiments,
     });
+  }
+
+  // The device gets a flat, ordered plan compiled from the pinned workbook,
+  // not the workbook document itself. Unpinned, degraded, or excluded
+  // workbooks yield an empty plan.
+  private compileProcedures(
+    exp: { experimentId: string; workbook: DeviceOnboardingExperimentDto["workbook"] },
+    includeWorkbook: boolean,
+  ): Pick<DeviceOnboardingConfig["experiments"][number], "workbookVersion" | "procedures"> {
+    if (!includeWorkbook || !exp.workbook) {
+      return { workbookVersion: null, procedures: [] };
+    }
+
+    const plan = compileDevicePlan(exp.workbook.cells, exp.workbook.entitySnapshots);
+    if (plan.missingProtocolIds.length > 0) {
+      this.logger.warn({
+        msg: "Workbook references protocols with no published snapshot; their cells were dropped from the device plan",
+        experimentId: exp.experimentId,
+        missingProtocolIds: plan.missingProtocolIds,
+      });
+    }
+
+    return { workbookVersion: exp.workbook.version, procedures: plan.procedures };
   }
 
   // Binding requires membership of, or IAM update rights on, every target

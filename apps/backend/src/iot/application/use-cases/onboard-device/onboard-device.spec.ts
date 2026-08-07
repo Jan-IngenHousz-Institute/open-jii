@@ -55,10 +55,19 @@ describe("OnboardDeviceUseCase", () => {
   const createActiveDevice = (createdBy: string) =>
     testApp.createIotDevice({ createdBy, status: "active" });
 
+  const PROTOCOL_CODE = [{ _protocol_set: [{ label: "SoilMoisture", interval: 5 }] }];
+
   const pinWorkbookVersion = async (experimentId: string) => {
     const workbook = await testApp.createWorkbook({ name: "WB", createdBy: userId });
+    const protocolId = faker.string.uuid();
     const cells = [
       { id: faker.string.uuid(), type: "markdown", content: "hi", isCollapsed: false },
+      {
+        id: faker.string.uuid(),
+        type: "protocol",
+        payload: { protocolId, version: 1, name: "Soil Moisture" },
+        isCollapsed: false,
+      },
     ];
     const [version] = await testApp.database
       .insert(workbookVersions)
@@ -67,7 +76,10 @@ describe("OnboardDeviceUseCase", () => {
         version: 1,
         cells,
         metadata: {},
-        entitySnapshots: { protocols: {}, macros: {} },
+        entitySnapshots: {
+          protocols: { [protocolId]: { code: PROTOCOL_CODE, family: "ambyte" } },
+          macros: {},
+        },
         createdBy: userId,
       })
       .returning();
@@ -75,7 +87,7 @@ describe("OnboardDeviceUseCase", () => {
       .update(experiments)
       .set({ workbookId: workbook.id, workbookVersionId: version.id })
       .where(eq(experiments.id, experimentId));
-    return version;
+    return { version, protocolId };
   };
 
   it("binds the device and returns the full config", async () => {
@@ -92,7 +104,8 @@ describe("OnboardDeviceUseCase", () => {
     expect(result.value.experiments[0].topicPrefix).toBe(
       `experiment/data_ingest/v1/${experiment.id}/${device.deviceType}`,
     );
-    expect(result.value.experiments[0].workbook).toBeNull();
+    expect(result.value.experiments[0].workbookVersion).toBeNull();
+    expect(result.value.experiments[0].procedures).toEqual([]);
 
     const bound = await repository.listExperimentsByDevice(device.id);
     assertSuccess(bound);
@@ -195,18 +208,38 @@ describe("OnboardDeviceUseCase", () => {
     expect(result.error.statusCode).toBe(404);
   });
 
-  it("includes the pinned workbook version in the config", async () => {
+  it("compiles the pinned workbook into a device plan with inlined protocol code", async () => {
     const device = await createActiveDevice(userId);
     const { experiment } = await testApp.createExperiment({ name: "Pinned", userId });
-    const version = await pinWorkbookVersion(experiment.id);
+    const { version, protocolId } = await pinWorkbookVersion(experiment.id);
 
     const result = await useCase.execute(device.id, [experiment.id], userId);
 
     assertSuccess(result);
-    const workbook = result.value.experiments[0].workbook;
-    expect(workbook?.version).toBe(version.version);
-    expect(workbook?.cells).toHaveLength(1);
-    expect(workbook?.entitySnapshots).toEqual({ protocols: {}, macros: {} });
+    const config = result.value.experiments[0];
+    expect(config.workbookVersion).toBe(version.version);
+    // The markdown cell is dropped; only the protocol cell projects.
+    expect(config.procedures).toEqual([
+      {
+        type: "protocol",
+        protocolId,
+        name: "Soil Moisture",
+        family: "ambyte",
+        code: PROTOCOL_CODE,
+      },
+    ]);
+  });
+
+  it("omits the plan when includeWorkbook is false, despite a pinned version", async () => {
+    const device = await createActiveDevice(userId);
+    const { experiment } = await testApp.createExperiment({ name: "Pinned", userId });
+    await pinWorkbookVersion(experiment.id);
+
+    const result = await useCase.execute(device.id, [experiment.id], userId, false);
+
+    assertSuccess(result);
+    expect(result.value.experiments[0].workbookVersion).toBeNull();
+    expect(result.value.experiments[0].procedures).toEqual([]);
   });
 
   it("fails before binding when the endpoint cannot be resolved", async () => {

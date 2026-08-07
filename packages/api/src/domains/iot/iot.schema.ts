@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-import { zExperiment } from "../experiment/experiment.schema";
+import { zCommandFormat, zExperiment } from "../experiment/experiment.schema";
 import { zSensorFamily } from "../protocol/protocol.schema";
-import { zEntitySnapshots, zWorkbookVersion } from "../workbook/workbook-version.schema";
 
 // --- Iot Credentials ---
 export const zIotCredentials = z.object({
@@ -104,11 +103,50 @@ export const zOnboardDeviceBody = z.object({
     .max(100)
     .default([])
     .describe("Experiments to bind the device to. An empty list re-issues the config."),
+  includeWorkbook: z
+    .boolean()
+    .default(true)
+    .describe("When false, the config carries only the connection and topic contract."),
 });
 
-export const zDeviceOnboardingWorkbook = zWorkbookVersion
-  .pick({ version: true, cells: true })
-  .extend({ entitySnapshots: zEntitySnapshots });
+// The device-facing projection of a pinned workbook: only cells a headless
+// device can act on, in cell order, with protocol code inlined so the config
+// is executable without lookups.
+export const zDeviceProcedureProtocol = z.object({
+  type: z.literal("protocol"),
+  protocolId: z.string().uuid(),
+  name: z.string().optional(),
+  family: zSensorFamily.optional(),
+  code: z.unknown().describe("The protocol's executable code, snapshotted at workbook publish"),
+});
+
+export const zDeviceProcedureCommand = z.object({
+  type: z.literal("command"),
+  format: zCommandFormat,
+  content: z.string(),
+  name: z.string().optional(),
+});
+
+export const zDeviceAnswer = z.union([z.string(), z.array(z.string()), z.null()]);
+
+export const zDeviceProcedureQuestion = z.object({
+  type: z.literal("question"),
+  id: z.string().describe("Workbook cell id; delivery-time answers key on it"),
+  name: z.string().describe("Canonical column key the pipeline uses for this question"),
+  kind: z.enum(["yes_no", "open_ended", "multi_choice", "number"]),
+  text: z.string(),
+  options: z.array(z.string()).optional(),
+  required: z.boolean(),
+  answer: zDeviceAnswer.describe(
+    "Prefilled at delivery; the device attaches it to every measurement",
+  ),
+});
+
+export const zDeviceProcedure = z.discriminatedUnion("type", [
+  zDeviceProcedureProtocol,
+  zDeviceProcedureCommand,
+  zDeviceProcedureQuestion,
+]);
 
 export const zDeviceOnboardingExperiment = z.object({
   experimentId: z.string().uuid(),
@@ -118,7 +156,13 @@ export const zDeviceOnboardingExperiment = z.object({
     .describe(
       "Ingest topic prefix (experiment/data_ingest/v1/{experimentId}/{sensorType}); the device appends /{sensorVersion}/{sensorId}/{protocolId} per measurement.",
     ),
-  workbook: zDeviceOnboardingWorkbook.nullable(),
+  workbookVersion: z
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .describe("Pinned workbook version the procedures were compiled from"),
+  procedures: z.array(zDeviceProcedure),
 });
 
 export const zDeviceOnboardingConfig = z.object({
@@ -137,6 +181,9 @@ export const zDeviceExperimentList = z.array(zDeviceExperiment);
 
 // --- Inferred types ---
 export type OnboardDeviceBody = z.infer<typeof zOnboardDeviceBody>;
+export type DeviceProcedure = z.infer<typeof zDeviceProcedure>;
+export type DeviceAnswer = z.infer<typeof zDeviceAnswer>;
+export type DeviceOnboardingExperiment = z.infer<typeof zDeviceOnboardingExperiment>;
 export type DeviceOnboardingConfig = z.infer<typeof zDeviceOnboardingConfig>;
 export type DeviceExperiment = z.infer<typeof zDeviceExperiment>;
 export type DeviceExperimentList = z.infer<typeof zDeviceExperimentList>;

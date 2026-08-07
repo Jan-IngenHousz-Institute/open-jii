@@ -682,6 +682,20 @@ async function main() {
   // flow, each version snapshots its referenced protocol's code so the config
   // is executable without a lookup. Corn pairs with an ambyte protocol (its
   // bound device is the Ambyte gateway); wheat with a multispeq one.
+  const cornQuestion = {
+    id: crypto.randomUUID(),
+    type: "question",
+    name: "plot",
+    question: {
+      kind: "multi_choice",
+      text: "Which plot is this device stationed at?",
+      options: ["A1", "A2", "B1", "B2"],
+      required: true,
+    },
+    isCollapsed: false,
+    isAnswered: false,
+  };
+
   const workbookSeeds = [
     {
       name: "[Seed] Corn Measurement Workbook",
@@ -689,6 +703,7 @@ async function main() {
       experimentId: ex[0].id,
       intro: "## Corn field procedure\nLog soil moisture at each plot marker.",
       protocol: p[6],
+      question: cornQuestion,
     },
     {
       name: "[Seed] Wheat Phenotyping Workbook",
@@ -696,6 +711,7 @@ async function main() {
       experimentId: ex[3].id,
       intro: "## Wheat procedure\nMeasure the flag leaf at mid-blade, avoiding the midrib.",
       protocol: p[2],
+      question: null,
     },
   ];
 
@@ -707,6 +723,7 @@ async function main() {
         content: wb.intro,
         isCollapsed: false,
       },
+      ...(wb.question ? [wb.question] : []),
       {
         id: crypto.randomUUID(),
         type: "protocol",

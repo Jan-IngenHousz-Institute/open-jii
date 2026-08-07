@@ -13983,6 +13983,11 @@
                     },
                     "maxItems": 100,
                     "description": "Experiments to bind the device to. An empty list re-issues the config."
+                  },
+                  "includeWorkbook": {
+                    "default": true,
+                    "type": "boolean",
+                    "description": "When false, the config carries only the connection and topic contract."
                   }
                 }
               }
@@ -14030,511 +14035,154 @@
                             "type": "string",
                             "description": "Ingest topic prefix (experiment/data_ingest/v1/{experimentId}/{sensorType}); the device appends /{sensorVersion}/{sensorId}/{protocolId} per measurement."
                           },
-                          "workbook": {
+                          "workbookVersion": {
                             "anyOf": [
                               {
-                                "type": "object",
-                                "properties": {
-                                  "version": {
-                                    "type": "integer",
-                                    "minimum": 0
-                                  },
-                                  "cells": {
-                                    "type": "array",
-                                    "items": {
-                                      "anyOf": [
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "id": {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            "isCollapsed": {
-                                              "default": false,
-                                              "type": "boolean"
-                                            },
-                                            "type": {
-                                              "const": "protocol"
-                                            },
-                                            "payload": {
-                                              "type": "object",
-                                              "properties": {
-                                                "protocolId": {
-                                                  "type": "string",
-                                                  "format": "uuid"
-                                                },
-                                                "version": {
-                                                  "type": "integer",
-                                                  "minimum": 0
-                                                },
-                                                "name": {
-                                                  "type": "string"
-                                                }
-                                              },
-                                              "required": [
-                                                "protocolId",
-                                                "version"
-                                              ],
-                                              "additionalProperties": false
-                                            }
-                                          },
-                                          "required": [
-                                            "id",
-                                            "type",
-                                            "payload"
-                                          ]
-                                        },
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "id": {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            "isCollapsed": {
-                                              "default": false,
-                                              "type": "boolean"
-                                            },
-                                            "type": {
-                                              "const": "command"
-                                            },
-                                            "payload": {
-                                              "type": "object",
-                                              "properties": {
-                                                "format": {
-                                                  "enum": [
-                                                    "string",
-                                                    "json",
-                                                    "yaml"
-                                                  ],
-                                                  "type": "string"
-                                                },
-                                                "content": {
-                                                  "type": "string",
-                                                  "minLength": 1
-                                                },
-                                                "name": {
-                                                  "type": "string"
-                                                }
-                                              },
-                                              "required": [
-                                                "format",
-                                                "content"
-                                              ],
-                                              "additionalProperties": false
-                                            }
-                                          },
-                                          "required": [
-                                            "id",
-                                            "type",
-                                            "payload"
-                                          ]
-                                        },
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "id": {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            "isCollapsed": {
-                                              "default": false,
-                                              "type": "boolean"
-                                            },
-                                            "type": {
-                                              "const": "macro"
-                                            },
-                                            "payload": {
-                                              "type": "object",
-                                              "properties": {
-                                                "macroId": {
-                                                  "type": "string",
-                                                  "format": "uuid"
-                                                },
-                                                "language": {
-                                                  "enum": [
-                                                    "python",
-                                                    "r",
-                                                    "javascript"
-                                                  ],
-                                                  "type": "string"
-                                                },
-                                                "name": {
-                                                  "type": "string"
-                                                }
-                                              },
-                                              "required": [
-                                                "macroId",
-                                                "language"
-                                              ],
-                                              "additionalProperties": false
-                                            }
-                                          },
-                                          "required": [
-                                            "id",
-                                            "type",
-                                            "payload"
-                                          ]
-                                        },
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "id": {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            "isCollapsed": {
-                                              "default": false,
-                                              "type": "boolean"
-                                            },
-                                            "type": {
-                                              "const": "question"
-                                            },
-                                            "name": {
-                                              "type": "string",
-                                              "minLength": 1,
-                                              "maxLength": 64
-                                            },
-                                            "question": {
-                                              "anyOf": [
-                                                {
-                                                  "type": "object",
-                                                  "properties": {
-                                                    "kind": {
-                                                      "const": "yes_no"
-                                                    },
-                                                    "text": {
-                                                      "type": "string",
-                                                      "maxLength": 64
-                                                    },
-                                                    "required": {
-                                                      "default": false,
-                                                      "type": "boolean"
-                                                    }
-                                                  },
-                                                  "required": [
-                                                    "kind",
-                                                    "text"
-                                                  ],
-                                                  "additionalProperties": false
-                                                },
-                                                {
-                                                  "type": "object",
-                                                  "properties": {
-                                                    "kind": {
-                                                      "const": "open_ended"
-                                                    },
-                                                    "text": {
-                                                      "type": "string",
-                                                      "maxLength": 64
-                                                    },
-                                                    "required": {
-                                                      "default": false,
-                                                      "type": "boolean"
-                                                    }
-                                                  },
-                                                  "required": [
-                                                    "kind",
-                                                    "text"
-                                                  ],
-                                                  "additionalProperties": false
-                                                },
-                                                {
-                                                  "type": "object",
-                                                  "properties": {
-                                                    "kind": {
-                                                      "const": "multi_choice"
-                                                    },
-                                                    "text": {
-                                                      "type": "string",
-                                                      "maxLength": 64
-                                                    },
-                                                    "options": {
-                                                      "type": "array",
-                                                      "items": {
-                                                        "type": "string",
-                                                        "minLength": 1,
-                                                        "maxLength": 64
-                                                      },
-                                                      "minItems": 1
-                                                    },
-                                                    "required": {
-                                                      "default": false,
-                                                      "type": "boolean"
-                                                    }
-                                                  },
-                                                  "required": [
-                                                    "kind",
-                                                    "text",
-                                                    "options"
-                                                  ],
-                                                  "additionalProperties": false
-                                                },
-                                                {
-                                                  "type": "object",
-                                                  "properties": {
-                                                    "kind": {
-                                                      "const": "number"
-                                                    },
-                                                    "text": {
-                                                      "type": "string",
-                                                      "maxLength": 64
-                                                    },
-                                                    "required": {
-                                                      "default": false,
-                                                      "type": "boolean"
-                                                    }
-                                                  },
-                                                  "required": [
-                                                    "kind",
-                                                    "text"
-                                                  ],
-                                                  "additionalProperties": false
-                                                }
-                                              ]
-                                            },
-                                            "answer": {
-                                              "type": "string"
-                                            },
-                                            "isAnswered": {
-                                              "default": false,
-                                              "type": "boolean"
-                                            }
-                                          },
-                                          "required": [
-                                            "id",
-                                            "type",
-                                            "name",
-                                            "question"
-                                          ]
-                                        },
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "id": {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            "isCollapsed": {
-                                              "default": false,
-                                              "type": "boolean"
-                                            },
-                                            "type": {
-                                              "const": "branch"
-                                            },
-                                            "paths": {
-                                              "type": "array",
-                                              "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                  "id": {
-                                                    "type": "string",
-                                                    "minLength": 1
-                                                  },
-                                                  "label": {
-                                                    "type": "string",
-                                                    "maxLength": 64
-                                                  },
-                                                  "color": {
-                                                    "type": "string"
-                                                  },
-                                                  "conditions": {
-                                                    "type": "array",
-                                                    "items": {
-                                                      "type": "object",
-                                                      "properties": {
-                                                        "id": {},
-                                                        "sourceCellId": {},
-                                                        "field": {},
-                                                        "operator": {},
-                                                        "value": {}
-                                                      }
-                                                    }
-                                                  },
-                                                  "gotoCellId": {
-                                                    "type": "string"
-                                                  }
-                                                },
-                                                "required": [
-                                                  "id",
-                                                  "label",
-                                                  "color",
-                                                  "conditions"
-                                                ]
-                                              },
-                                              "minItems": 1
-                                            },
-                                            "defaultPathId": {
-                                              "type": "string"
-                                            },
-                                            "evaluatedPathId": {
-                                              "type": "string"
-                                            }
-                                          },
-                                          "required": [
-                                            "id",
-                                            "type",
-                                            "paths"
-                                          ]
-                                        },
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "id": {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            "isCollapsed": {
-                                              "default": false,
-                                              "type": "boolean"
-                                            },
-                                            "type": {
-                                              "const": "output"
-                                            },
-                                            "producedBy": {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            "data": {},
-                                            "executionTime": {
-                                              "type": "number",
-                                              "minimum": 0
-                                            },
-                                            "messages": {
-                                              "type": "array",
-                                              "items": {
-                                                "type": "string"
-                                              }
-                                            },
-                                            "deviceResults": {
-                                              "type": "array",
-                                              "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                  "deviceId": {
-                                                    "type": "string"
-                                                  },
-                                                  "deviceLabel": {
-                                                    "type": "string"
-                                                  },
-                                                  "family": {
-                                                    "enum": [
-                                                      "multispeq",
-                                                      "ambyte",
-                                                      "minipar",
-                                                      "generic",
-                                                      "ambit"
-                                                    ],
-                                                    "type": "string"
-                                                  },
-                                                  "deviceName": {
-                                                    "type": "string"
-                                                  },
-                                                  "data": {},
-                                                  "error": {
-                                                    "type": "string"
-                                                  }
-                                                },
-                                                "required": [
-                                                  "deviceId"
-                                                ]
-                                              }
-                                            }
-                                          },
-                                          "required": [
-                                            "id",
-                                            "type",
-                                            "producedBy"
-                                          ]
-                                        },
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "id": {
-                                              "type": "string",
-                                              "minLength": 1
-                                            },
-                                            "isCollapsed": {
-                                              "default": false,
-                                              "type": "boolean"
-                                            },
-                                            "type": {
-                                              "const": "markdown"
-                                            },
-                                            "content": {
-                                              "type": "string"
-                                            }
-                                          },
-                                          "required": [
-                                            "id",
-                                            "type",
-                                            "content"
-                                          ]
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  "entitySnapshots": {
-                                    "type": "object",
-                                    "properties": {
-                                      "protocols": {
-                                        "type": "object",
-                                        "additionalProperties": {
-                                          "type": "object",
-                                          "properties": {
-                                            "code": {},
-                                            "family": {
-                                              "enum": [
-                                                "multispeq",
-                                                "ambyte",
-                                                "minipar",
-                                                "generic",
-                                                "ambit"
-                                              ],
-                                              "type": "string"
-                                            }
-                                          }
-                                        }
-                                      },
-                                      "macros": {
-                                        "type": "object",
-                                        "additionalProperties": {
-                                          "type": "object",
-                                          "properties": {
-                                            "code": {
-                                              "type": "string"
-                                            }
-                                          },
-                                          "required": [
-                                            "code"
-                                          ]
-                                        }
-                                      }
-                                    },
-                                    "required": [
-                                      "protocols",
-                                      "macros"
-                                    ]
-                                  }
-                                },
-                                "required": [
-                                  "version",
-                                  "cells",
-                                  "entitySnapshots"
-                                ]
+                                "type": "integer",
+                                "minimum": 0
                               },
                               {
                                 "type": "null"
                               }
-                            ]
+                            ],
+                            "description": "Pinned workbook version the procedures were compiled from"
+                          },
+                          "procedures": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "protocol"
+                                    },
+                                    "protocolId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "family": {
+                                      "enum": [
+                                        "multispeq",
+                                        "ambyte",
+                                        "minipar",
+                                        "generic",
+                                        "ambit"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "code": {
+                                      "description": "The protocol's executable code, snapshotted at workbook publish"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "protocolId"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "command"
+                                    },
+                                    "format": {
+                                      "enum": [
+                                        "string",
+                                        "json",
+                                        "yaml"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "content": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "format",
+                                    "content"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "question"
+                                    },
+                                    "id": {
+                                      "type": "string",
+                                      "description": "Workbook cell id; delivery-time answers key on it"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "description": "Canonical column key the pipeline uses for this question"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "yes_no",
+                                        "open_ended",
+                                        "multi_choice",
+                                        "number"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "text": {
+                                      "type": "string"
+                                    },
+                                    "options": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": {
+                                      "type": "boolean"
+                                    },
+                                    "answer": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Prefilled at delivery; the device attaches it to every measurement"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "id",
+                                    "name",
+                                    "kind",
+                                    "text",
+                                    "required",
+                                    "answer"
+                                  ]
+                                }
+                              ]
+                            }
                           }
                         },
                         "required": [
                           "experimentId",
                           "experimentName",
                           "topicPrefix",
-                          "workbook"
+                          "workbookVersion",
+                          "procedures"
                         ]
                       }
                     }

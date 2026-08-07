@@ -198,6 +198,14 @@ describe("Iot Schema", () => {
       );
       expect(zOnboardDeviceBody.safeParse({ experimentIds: ids }).success).toBe(false);
     });
+
+    it("defaults includeWorkbook to true", () => {
+      const result = zOnboardDeviceBody.safeParse({});
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.includeWorkbook).toBe(true);
+      }
+    });
   });
 
   describe("zDeviceOnboardingConfig", () => {
@@ -210,30 +218,60 @@ describe("Iot Schema", () => {
           experimentId: "11111111-1111-4111-8111-111111111111",
           experimentName: "Corn",
           topicPrefix: "experiment/data_ingest/v1/11111111-1111-4111-8111-111111111111/ambyte",
-          workbook: null,
+          workbookVersion: null,
+          procedures: [],
         },
       ],
     };
 
-    it("accepts a config with a workbook-less experiment", () => {
+    it("accepts a config with an unpinned experiment", () => {
       expect(zDeviceOnboardingConfig.safeParse(validConfig).success).toBe(true);
     });
 
-    it("accepts a pinned workbook payload", () => {
-      const withWorkbook = {
+    it("accepts a compiled procedure list of all three kinds", () => {
+      const withProcedures = {
         ...validConfig,
         experiments: [
           {
             ...validConfig.experiments[0],
-            workbook: {
-              version: 1,
-              cells: [],
-              entitySnapshots: { protocols: {}, macros: {} },
-            },
+            workbookVersion: 1,
+            procedures: [
+              {
+                type: "protocol",
+                protocolId: "22222222-2222-4222-8222-222222222222",
+                name: "Soil Moisture",
+                family: "ambyte",
+                code: [{ _protocol_set: [] }],
+              },
+              { type: "command", format: "string", content: "battery" },
+              {
+                type: "question",
+                id: "c-q",
+                name: "plot",
+                kind: "multi_choice",
+                text: "Which plot?",
+                options: ["A1", "B1"],
+                required: true,
+                answer: null,
+              },
+            ],
           },
         ],
       };
-      expect(zDeviceOnboardingConfig.safeParse(withWorkbook).success).toBe(true);
+      expect(zDeviceOnboardingConfig.safeParse(withProcedures).success).toBe(true);
+    });
+
+    it("rejects a procedure of unknown type", () => {
+      const bad = {
+        ...validConfig,
+        experiments: [
+          {
+            ...validConfig.experiments[0],
+            procedures: [{ type: "markdown", content: "hi" }],
+          },
+        ],
+      };
+      expect(zDeviceOnboardingConfig.safeParse(bad).success).toBe(false);
     });
 
     it("rejects an unknown device type", () => {
