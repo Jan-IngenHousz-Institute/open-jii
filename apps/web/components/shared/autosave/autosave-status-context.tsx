@@ -38,10 +38,13 @@ export function useAutosaveStatus(): { status: AutosaveStatus | null; error: unk
 }
 
 /** No-op when no provider is mounted, so callers can use it unconditionally. */
-export function useReportAutosaveStatus(report: { status: AutosaveStatus; error: unknown }): void {
+export function useReportAutosaveStatus(
+  report: { status: AutosaveStatus; error: unknown },
+  enabled = true,
+): void {
   const ctx = useContext(AutosaveStatusContext);
   useEffect(() => {
-    if (!ctx) return;
+    if (!ctx || !enabled) return;
     ctx.setStatus(report.status, report.error);
-  }, [ctx, report.status, report.error]);
+  }, [ctx, enabled, report.status, report.error]);
 }

@@ -44,7 +44,7 @@ describe("AttachWorkbookUseCase", () => {
   });
 
   it("attaches a workbook and creates version 1", async () => {
-    const result = await useCase.execute(experimentId, workbookId, adminUserId);
+    const result = await useCase.execute(experimentId, workbookId, null, null, adminUserId);
     assertSuccess(result);
     expect(result.value.workbookId).toBe(workbookId);
     expect(result.value.version).toBe(1);
@@ -55,6 +55,8 @@ describe("AttachWorkbookUseCase", () => {
     const result = await useCase.execute(
       "00000000-0000-0000-0000-000000000000",
       workbookId,
+      null,
+      null,
       adminUserId,
     );
     assertFailure(result);
@@ -65,6 +67,8 @@ describe("AttachWorkbookUseCase", () => {
     const result = await useCase.execute(
       experimentId,
       "00000000-0000-0000-0000-000000000000",
+      null,
+      null,
       adminUserId,
     );
     assertFailure(result);
@@ -72,10 +76,16 @@ describe("AttachWorkbookUseCase", () => {
   });
 
   it("reuses version when attaching same workbook again with unchanged cells", async () => {
-    const first = await useCase.execute(experimentId, workbookId, adminUserId);
+    const first = await useCase.execute(experimentId, workbookId, null, null, adminUserId);
     assertSuccess(first);
 
-    const second = await useCase.execute(experimentId, workbookId, adminUserId);
+    const second = await useCase.execute(
+      experimentId,
+      workbookId,
+      workbookId,
+      first.value.workbookVersionId,
+      adminUserId,
+    );
     assertSuccess(second);
 
     expect(second.value.workbookVersionId).toBe(first.value.workbookVersionId);
@@ -96,13 +106,13 @@ describe("AttachWorkbookUseCase", () => {
       organizationId: otherOrgId,
     });
 
-    const result = await useCase.execute(experimentId, privateWorkbook.id, adminUserId);
+    const result = await useCase.execute(experimentId, privateWorkbook.id, null, null, adminUserId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
   });
 
   it("materialises a flow row from the version's cells (mobile backward compat)", async () => {
-    const result = await useCase.execute(experimentId, workbookId, adminUserId);
+    const result = await useCase.execute(experimentId, workbookId, null, null, adminUserId);
     assertSuccess(result);
 
     const flow = await flowRepo.getByExperimentId(experimentId);
@@ -111,5 +121,20 @@ describe("AttachWorkbookUseCase", () => {
     expect(flow.value?.graph.nodes).toHaveLength(1);
     expect(flow.value?.graph.nodes[0]).toMatchObject({ id: "md1", type: "instruction" });
     expect(flow.value?.graph.edges).toHaveLength(0);
+  });
+
+  it("rejects an attachment when the expected workbook scope is stale", async () => {
+    const first = await useCase.execute(experimentId, workbookId, null, null, adminUserId);
+    assertSuccess(first);
+    const otherWorkbook = await testApp.createWorkbook({
+      name: "Other Workbook",
+      createdBy: adminUserId,
+    });
+
+    const stale = await useCase.execute(experimentId, otherWorkbook.id, null, null, adminUserId);
+
+    assertFailure(stale);
+    expect(stale.error.statusCode).toBe(409);
+    expect(stale.error.code).toBe("WORKBOOK_SCOPE_CHANGED");
   });
 });

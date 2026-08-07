@@ -177,6 +177,11 @@ export const zExperimentFlowEdge = z.object({
   target: z.string().min(1),
   label: z.string().max(64, "Edge label must be 64 characters or less").optional().nullable(),
   sourceHandle: z.string().max(64).optional().nullable(),
+  data: z
+    .object({
+      kind: z.enum(["sequence", "branch"]),
+    })
+    .optional(),
 });
 
 /**

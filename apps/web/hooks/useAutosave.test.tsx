@@ -1,7 +1,7 @@
 import { act, renderHook } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useAutosave } from "./useAutosave";
+import { AutosaveValidationError, useAutosave } from "./useAutosave";
 
 // Drain microtasks (Promise.resolve callbacks) without advancing fake timers.
 async function flushMicrotasks() {
@@ -150,9 +150,8 @@ describe("useAutosave", () => {
     expect(result.current.status).toBe("idle");
   });
 
-  it("ignores a stale save's resolution when a newer save already won", async () => {
+  it("serializes saves and applies success effects only for the winning snapshot", async () => {
     let resolveFirst: (() => void) | null = null;
-    let resolveSecond: (() => void) | null = null;
     const save = vi
       .fn<(v: string) => Promise<void>>()
       .mockImplementationOnce(
@@ -161,14 +160,11 @@ describe("useAutosave", () => {
             resolveFirst = r;
           }),
       )
-      .mockImplementationOnce(
-        () =>
-          new Promise<void>((r) => {
-            resolveSecond = r;
-          }),
-      );
+      .mockResolvedValueOnce(undefined);
+    const onSaved = vi.fn();
     const { result, rerender } = renderHook(
-      ({ value }: { value: string }) => useAutosave({ value, toKey: (v) => v, save, delayMs: 20 }),
+      ({ value }: { value: string }) =>
+        useAutosave({ value, toKey: (v) => v, save, onSaved, delayMs: 20 }),
       { initialProps: { value: "v0" } },
     );
 
@@ -182,21 +178,65 @@ describe("useAutosave", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30);
     });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenLastCalledWith("v1");
+    expect(onSaved).not.toHaveBeenCalled();
 
-    // Newer save resolves first.
-    await act(async () => {
-      resolveSecond?.();
-      await Promise.resolve();
-    });
-    await flushMicrotasks();
-    expect(result.current.status).toBe("idle");
-
-    // Older save resolves late — must NOT flip the state.
+    // The second request cannot start until the first has settled.
     await act(async () => {
       resolveFirst?.();
       await Promise.resolve();
     });
     await flushMicrotasks();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith("v2");
+    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(onSaved).toHaveBeenCalledWith("v2");
+    expect(result.current.status).toBe("idle");
+  });
+
+  it("keeps an edit queued when it arrives during an awaited success effect", async () => {
+    let resolveFirstEffect: (() => void) | null = null;
+    const save = vi.fn().mockResolvedValue(undefined);
+    const onSaved = vi
+      .fn<(value: string) => Promise<void>>()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveFirstEffect = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(undefined);
+    const { result, rerender } = renderHook(
+      ({ value }: { value: string }) =>
+        useAutosave({ value, toKey: (v) => v, save, onSaved, delayMs: 20 }),
+      { initialProps: { value: "v0" } },
+    );
+
+    rerender({ value: "v1" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30);
+    });
+    expect(save).toHaveBeenCalledWith("v1");
+    expect(onSaved).toHaveBeenCalledWith("v1");
+    expect(result.current.isSaving).toBe(true);
+
+    rerender({ value: "v2" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30);
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFirstEffect?.();
+      await Promise.resolve();
+    });
+    await flushMicrotasks();
+
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith("v2");
+    expect(onSaved).toHaveBeenCalledTimes(2);
+    expect(onSaved).toHaveBeenLastCalledWith("v2");
     expect(result.current.status).toBe("idle");
   });
 
@@ -221,6 +261,7 @@ describe("useAutosave", () => {
     });
     expect(save).not.toHaveBeenCalled();
     expect(result.current.status).toBe("idle");
+    expect(result.current.hasUnsavedChanges).toBe(false);
 
     // Now an edit fires.
     rerender({ value: "v2", enabled: true });
@@ -232,9 +273,34 @@ describe("useAutosave", () => {
     expect(save).toHaveBeenCalledWith("v2");
   });
 
-  it("respects isValid to gate save firing", async () => {
+  it("does not rebase an existing scope's dirty anchor when editing reactivates", async () => {
     const save = vi.fn().mockResolvedValue(undefined);
-    const { rerender } = renderHook(
+    const { result, rerender } = renderHook(
+      ({ value, enabled }: { value: string; enabled: boolean }) =>
+        useAutosave({ value, toKey: (v) => v, save, delayMs: 50, enabled }),
+      { initialProps: { value: "v0", enabled: true } },
+    );
+
+    rerender({ value: "v1", enabled: true });
+    expect(result.current.status).toBe("dirty");
+
+    // Permission/data initialization can briefly disable an already visited
+    // scope. Reactivating it must keep v0 as the saved anchor and persist v1.
+    rerender({ value: "v1", enabled: false });
+    rerender({ value: "v1", enabled: true });
+    expect(result.current.status).toBe("dirty");
+    expect(result.current.hasUnsavedChanges).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(save).toHaveBeenCalledWith("v1");
+    expect(result.current.status).toBe("idle");
+  });
+
+  it("surfaces an invalid draft instead of reporting it saved", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const { result, rerender } = renderHook(
       ({ value }: { value: string }) =>
         useAutosave({
           value,
@@ -251,12 +317,101 @@ describe("useAutosave", () => {
       await vi.advanceTimersByTimeAsync(100);
     });
     expect(save).not.toHaveBeenCalled();
+    expect(result.current.status).toBe("error");
+    expect(result.current.error).toBeInstanceOf(AutosaveValidationError);
 
     rerender({ value: "abc" });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100);
     });
     expect(save).toHaveBeenCalledWith("abc");
+    expect(result.current.status).toBe("idle");
+  });
+
+  it("rejects an explicit flush while the latest draft is invalid", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const { result, rerender } = renderHook(
+      ({ value }: { value: string }) =>
+        useAutosave({ value, toKey: (v) => v, save, isValid: (v) => v.length > 0 }),
+      { initialProps: { value: "valid" } },
+    );
+
+    rerender({ value: "" });
+
+    await expect(result.current.flush()).rejects.toBeInstanceOf(AutosaveValidationError);
+    expect(save).not.toHaveBeenCalled();
+    expect(result.current.status).toBe("error");
+  });
+
+  it("keeps a failed success effect retryable through flush", async () => {
+    const failure = new Error("pin failed");
+    const save = vi.fn().mockResolvedValue(undefined);
+    const onSaved = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce(undefined);
+    const { result, rerender } = renderHook(
+      ({ value }: { value: string }) =>
+        useAutosave({ value, toKey: (v) => v, save, onSaved, delayMs: 20 }),
+      { initialProps: { value: "v0" } },
+    );
+
+    rerender({ value: "v1" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30);
+    });
+    expect(result.current.status).toBe("error");
+    expect(result.current.error).toBe(failure);
+
+    await act(async () => result.current.flush());
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(onSaved).toHaveBeenCalledTimes(2);
+    expect(result.current.status).toBe("idle");
+  });
+
+  it("discards an in-flight completion after the persistence scope changes", async () => {
+    let releaseOldSave: (() => void) | undefined;
+    const save = vi
+      .fn<(value: string) => Promise<void>>()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            releaseOldSave = resolve;
+          }),
+      )
+      .mockResolvedValue(undefined);
+    const onSaved = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ value, scopeKey }: { value: string; scopeKey: string }) =>
+        useAutosave({ value, scopeKey, toKey: (v) => v, save, onSaved, delayMs: 20 }),
+      { initialProps: { value: "a0", scopeKey: "workbook-a" } },
+    );
+
+    rerender({ value: "a1", scopeKey: "workbook-a" });
+    await act(async () => vi.advanceTimersByTimeAsync(30));
+    expect(save).toHaveBeenCalledWith("a1");
+
+    rerender({ value: "b0", scopeKey: "workbook-b" });
+    await act(async () => {
+      releaseOldSave?.();
+      await Promise.resolve();
+    });
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(result.current.status).toBe("idle");
+    expect(result.current.hasUnsavedChanges).toBe(true);
+
+    rerender({ value: "b1", scopeKey: "workbook-b" });
+    await act(async () => vi.advanceTimersByTimeAsync(30));
+    expect(save).toHaveBeenLastCalledWith("b1");
+    expect(onSaved).toHaveBeenCalledWith("b1");
+
+    // Returning to A restores A's own persisted anchor. Its interrupted edit
+    // is dirty again rather than being silently rebased as though it saved.
+    rerender({ value: "a1", scopeKey: "workbook-a" });
+    expect(result.current.status).toBe("dirty");
+    await act(async () => vi.advanceTimersByTimeAsync(30));
+    expect(save).toHaveBeenLastCalledWith("a1");
+    expect(result.current.hasUnsavedChanges).toBe(false);
   });
 
   it("flush() fires the pending save and resolves once it settles", async () => {

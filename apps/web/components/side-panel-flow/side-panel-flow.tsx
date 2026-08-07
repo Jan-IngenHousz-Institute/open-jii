@@ -2,6 +2,7 @@ import type { Edge, Node } from "@xyflow/react";
 import { Info } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
+import type { BranchCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@repo/ui/components/tooltip";
 
 import { AnalysisPanel } from "./analysis-panel";
+import { BranchPanel } from "./branch-panel";
 import type { InlineCommandValue } from "./command-panel";
 import { CommandPanel } from "./command-panel";
 import { EdgeSidePanel } from "./edge-panel";
@@ -97,6 +99,9 @@ export interface ExperimentSidePanelProps {
   nodes?: Node[]; // Add nodes to check for existing start/end nodes
   edges?: Edge[]; // Edges for upstream protocol lookup
   isDisabled?: boolean; // Whether the panel is read-only
+  branchCell?: BranchCell;
+  workbookCells?: WorkbookCell[];
+  onBranchCellChange?: (cell: BranchCell) => void;
 }
 
 export function ExperimentSidePanel({
@@ -113,6 +118,9 @@ export function ExperimentSidePanel({
   nodes = [],
   edges = [],
   isDisabled = false,
+  branchCell,
+  workbookCells = [],
+  onBranchCellChange,
 }: ExperimentSidePanelProps) {
   // Keep previous content during transition
   const [displayNodeType, setDisplayNodeType] = useState(nodeType);
@@ -207,15 +215,22 @@ export function ExperimentSidePanel({
                 type="text"
                 value={currentTitle}
                 onChange={handleTitleChange}
+                maxLength={displayNodeType === "QUESTION" ? 64 : undefined}
                 placeholder={t("sidePanelFlow.labelPlaceholder")}
                 disabled={isDisabled}
                 required={displayNodeType === "QUESTION"}
                 aria-required={displayNodeType === "QUESTION"}
+                aria-invalid={displayNodeType === "QUESTION" && currentTitle.length === 0}
                 className="focus:border-jii-dark-green focus:ring-jii-dark-green/50 focus:outline-hidden w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
-              {displayNodeType === "QUESTION" && (
-                <p className="mt-1.5 text-xs text-gray-500">{t("sidePanelFlow.labelHint")}</p>
-              )}
+              {displayNodeType === "QUESTION" &&
+                (currentTitle.length === 0 ? (
+                  <p role="alert" className="text-destructive mt-1.5 text-xs">
+                    {t("sidePanelFlow.labelRequired")}
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-gray-500">{t("sidePanelFlow.labelHint")}</p>
+                ))}
             </CardContent>
           </Card>
 
@@ -367,6 +382,14 @@ export function ExperimentSidePanel({
               }}
               disabled={isDisabled}
               upstreamProtocolId={findUpstreamProtocolId(selectedNode.id, nodes, edges)}
+            />
+          )}
+          {displayNodeType === "BRANCH" && selectedNode && branchCell && (
+            <BranchPanel
+              cell={branchCell}
+              allCells={workbookCells}
+              onChange={(cell) => onBranchCellChange?.(cell)}
+              disabled={isDisabled}
             />
           )}
         </div>

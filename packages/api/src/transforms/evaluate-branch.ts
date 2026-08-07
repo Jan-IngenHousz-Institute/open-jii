@@ -19,6 +19,48 @@ export interface BranchRuntimeContext {
   deviceId?: string;
 }
 
+export type BranchPathResolution<T extends { id: string }> =
+  | { status: "resolved"; path: T }
+  | { status: "absent" }
+  | { status: "ambiguous" };
+
+/** Resolve an id only when it identifies exactly one path. */
+export function resolveBranchPathById<T extends { id: string }>(
+  paths: readonly T[],
+  pathId?: string,
+): BranchPathResolution<T> {
+  if (!pathId) return { status: "absent" };
+  const matches = paths.filter((path) => path.id === pathId);
+  if (matches.length === 0) return { status: "absent" };
+  if (matches.length > 1) return { status: "ambiguous" };
+  return { status: "resolved", path: matches[0] };
+}
+
+export function resolveBranchDefaultPath<T extends { id: string }>(cell: {
+  paths: readonly T[];
+  defaultPathId?: string;
+}): BranchPathResolution<T> {
+  return resolveBranchPathById(cell.paths, cell.defaultPathId);
+}
+
+export function resolveBranchEvaluatedPath<T extends { id: string }>(cell: {
+  paths: readonly T[];
+  evaluatedPathId?: string;
+}): BranchPathResolution<T> {
+  return resolveBranchPathById(cell.paths, cell.evaluatedPathId);
+}
+
+/** A schema-compatible unconditional jump authored as a one-path branch. */
+export function isGotoBranchCell(cell: BranchCell): boolean {
+  const defaultPath = resolveBranchDefaultPath(cell);
+  return (
+    cell.paths.length === 1 &&
+    cell.paths[0].conditions.length === 0 &&
+    defaultPath.status === "resolved" &&
+    defaultPath.path === cell.paths[0]
+  );
+}
+
 /** True when any condition of the branch reads the reserved `$device` source. */
 export function isDeviceScopedBranch(cell: BranchCell): boolean {
   return cell.paths.some((path) =>
@@ -48,7 +90,15 @@ export function validateDeviceBranch(cell: BranchCell, cells: WorkbookCell[]): s
   return errors;
 }
 
-export function validateBranchCell(cell: BranchCell): string[] {
+/**
+ * Validates an authored branch. Runtime callers may preserve the historical
+ * conditioned-branch fall-through by disabling the author-only default check;
+ * conditionless paths still require one uniquely resolved default either way.
+ */
+export function validateBranchCell(
+  cell: BranchCell,
+  options: { requireDefault?: boolean } = {},
+): string[] {
   const errors: string[] = [];
 
   if (cell.paths.length === 0) {
@@ -56,10 +106,29 @@ export function validateBranchCell(cell: BranchCell): string[] {
     return errors;
   }
 
+  const pathCounts = new Map<string, number>();
+  for (const path of cell.paths) {
+    pathCounts.set(path.id, (pathCounts.get(path.id) ?? 0) + 1);
+  }
+  for (const [pathId, count] of pathCounts) {
+    if (count > 1) errors.push(`Branch path id ${pathId} is duplicated`);
+  }
+
+  const defaultPathResolution = resolveBranchDefaultPath(cell);
+  if (options.requireDefault !== false) {
+    if (defaultPathResolution.status === "absent") {
+      errors.push("Branch Otherwise path is missing");
+    } else if (defaultPathResolution.status === "ambiguous") {
+      errors.push("Branch Otherwise path is ambiguous");
+    }
+  }
+  const defaultPath =
+    defaultPathResolution.status === "resolved" ? defaultPathResolution.path : undefined;
+
   for (const path of cell.paths) {
     const label = path.label || "Unnamed path";
 
-    if (path.conditions.length === 0) {
+    if (path.conditions.length === 0 && path !== defaultPath) {
       errors.push(`${label}: no conditions defined`);
       continue;
     }
@@ -164,9 +233,6 @@ export function evaluateBranch(
     }
   }
 
-  if (cell.defaultPathId) {
-    return cell.paths.find((p) => p.id === cell.defaultPathId);
-  }
-
-  return undefined;
+  const defaultPath = resolveBranchDefaultPath(cell);
+  return defaultPath.status === "resolved" ? defaultPath.path : undefined;
 }

@@ -9,20 +9,27 @@ import { PageContainer } from "@/components/page-container";
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import {
   AutosaveStatusProvider,
+  useReportAutosaveStatus,
   useAutosaveStatus,
 } from "@/components/shared/autosave/autosave-status-context";
+import { WorkbookCanvasDraftEditor } from "@/components/workbook/workbook-canvas-draft-editor";
 import { WorkbookDraftEditor } from "@/components/workbook/workbook-draft-editor";
 import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { WorkbookEntitySavedProvider } from "@/components/workbook/workbook-entity-saved-context";
+import {
+  WorkbookPersistenceCoordinatorProvider,
+  useWorkbookPersistenceCoordinator,
+} from "@/components/workbook/workbook-persistence-coordinator";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion";
+import type { UseAutosaveReturn } from "@/hooks/useAutosave";
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
+import { parseApiError } from "@/util/apiError";
 import { GitBranch, Info, List } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { use, useCallback, useMemo } from "react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
@@ -34,11 +41,41 @@ interface ExperimentDesignPageProps {
   params: Promise<{ id: string; locale: string }>;
 }
 
+const AUTO_SAVE_DELAY = 1500;
+const UNSAVED_CHANGES_MESSAGE = "This workbook still has changes that have not been saved.";
+const RETAINED_DRAFT_PREFIX = "openjii:workbook-draft:";
+
+function readRetainedDraft(workbookId: string): WorkbookCell[] | null {
+  try {
+    const value: unknown = JSON.parse(
+      window.sessionStorage.getItem(`${RETAINED_DRAFT_PREFIX}${workbookId}`) ?? "null",
+    );
+    return Array.isArray(value) ? (value as WorkbookCell[]) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Surfaces the draft autosave status (reported by WorkbookDraftEditor) inline. */
-function EditAutosaveStatus() {
+function EditAutosaveStatus({ onRetry }: { onRetry: () => Promise<void> }) {
   const autosave = useAutosaveStatus();
   if (!autosave?.status) return null;
-  return <AutosaveIndicator status={autosave.status} variant="compact" />;
+  const errorMessage =
+    autosave.status === "error"
+      ? (parseApiError(autosave.error)?.message ??
+        (autosave.error instanceof Error ? autosave.error.message : undefined))
+      : undefined;
+  return (
+    <div className="flex max-w-xl items-center gap-2" role={errorMessage ? "alert" : undefined}>
+      <AutosaveIndicator status={autosave.status} variant="compact" onRetry={onRetry} />
+      {errorMessage ? <span className="text-destructive text-sm">{errorMessage}</span> : null}
+    </div>
+  );
+}
+
+function EditAutosaveReporter({ status, error }: Pick<UseAutosaveReturn, "status" | "error">) {
+  useReportAutosaveStatus({ status, error });
+  return null;
 }
 
 export default function ExperimentDesignPage({ params }: ExperimentDesignPageProps) {
@@ -68,6 +105,37 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   const { data: workbookDraft, isLoading: workbookDraftLoading } = useWorkbook(workbookId ?? "", {
     enabled: !!workbookId,
   });
+  // Draft snapshots are keyed by workbook. A server-driven scope change must
+  // never overwrite another workbook's local debounce window or failed edit.
+  const [controlledDrafts, setControlledDrafts] = useState<Record<string, WorkbookCell[]>>({});
+
+  useEffect(() => {
+    if (!workbookId || !workbookDraft) return;
+    setControlledDrafts((current) =>
+      Object.hasOwn(current, workbookId)
+        ? current
+        : {
+            ...current,
+            [workbookId]: readRetainedDraft(workbookId) ?? workbookDraft.cells,
+          },
+    );
+  }, [workbookDraft, workbookId]);
+
+  const draftCells = workbookId ? (controlledDrafts[workbookId] ?? null) : null;
+  const handleDraftCellsChange = useCallback(
+    (cells: WorkbookCell[]) => {
+      if (!workbookId) return;
+      setControlledDrafts((current) => ({ ...current, [workbookId]: cells }));
+      window.sessionStorage.setItem(`${RETAINED_DRAFT_PREFIX}${workbookId}`, JSON.stringify(cells));
+    },
+    [workbookId],
+  );
+  const handleCellsSaved = useCallback((savedWorkbookId: string, savedCells: WorkbookCell[]) => {
+    const retainedDraft = readRetainedDraft(savedWorkbookId);
+    if (retainedDraft && JSON.stringify(retainedDraft) === JSON.stringify(savedCells)) {
+      window.sessionStorage.removeItem(`${RETAINED_DRAFT_PREFIX}${savedWorkbookId}`);
+    }
+  }, []);
 
   // Capability, not ownership: an `admin`/"Can edit" grantee on the
   // workbook may edit it even though they created nothing.
@@ -80,11 +148,49 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   // toast) on every save. Everyone else gets the read-only view.
   const canEdit = !!workbookDraft && canUpdateWorkbook && hasAccess;
 
-  // Each autosave re-pins the experiment to the latest version (OJD-1626).
-  const upgradeVersion = useUpgradeWorkbookVersion(id);
-  const handleDraftSaved = useCallback(() => {
-    upgradeVersion.mutate({ id });
-  }, [id, upgradeVersion]);
+  const persistence = useWorkbookPersistenceCoordinator({
+    experimentId: id,
+    workbookId: workbookId ?? "",
+    workbookVersionId: workbookVersionId ?? "",
+    cells: draftCells ?? [],
+    persistedCells: workbookDraft?.cells,
+    onCellsSaved: handleCellsSaved,
+    enabled: canEdit && draftCells !== null,
+    delayMs: AUTO_SAVE_DELAY,
+  });
+  const { autosave } = persistence;
+
+  const hasUnsavedWork =
+    canEdit &&
+    (autosave.hasUnsavedChanges ||
+      autosave.status !== "idle" ||
+      persistence.isPending ||
+      persistence.error !== null);
+  useEffect(() => {
+    if (!hasUnsavedWork) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const handleLinkClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey) return;
+      const target = event.target instanceof Element ? event.target.closest("a") : null;
+      if (!(target instanceof HTMLAnchorElement)) return;
+      if (target.target || target.download || target.origin !== window.location.origin) return;
+      if (!window.confirm(UNSAVED_CHANGES_MESSAGE)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleLinkClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, [hasUnsavedWork]);
 
   const versionedCells = useMemo<WorkbookCell[]>(() => {
     if (!pinnedVersionData) return [];
@@ -139,11 +245,9 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
 
   if (!workbookId || !workbookVersionId) {
     return (
-      <EmptyWorkbookState
-        experimentId={id}
-        experimentName={experimentData.name}
-        hasAccess={hasAccess}
-      />
+      <WorkbookPersistenceCoordinatorProvider coordinator={persistence}>
+        <EmptyWorkbookState experimentName={experimentData.name} hasAccess={hasAccess} />
+      </WorkbookPersistenceCoordinatorProvider>
     );
   }
 
@@ -157,71 +261,97 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
   return (
     <PageContainer width="fluid" className="space-y-3">
       <AutosaveStatusProvider>
-        {canEdit && (
-          <div className="flex items-start justify-between gap-3">
-            <div className="text-muted-foreground flex items-start gap-1.5 text-sm">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              <p>
-                {t("flow.editAutoApplyNotice")} {t("flow.editIsolatedHint")}{" "}
-                <Link
-                  href={`/${locale}/platform/workbooks/${workbookId}`}
-                  className="text-primary font-medium underline underline-offset-2"
-                >
-                  {t("flow.editOpenWorkbookLink")}
-                </Link>
-              </p>
+        <WorkbookPersistenceCoordinatorProvider coordinator={persistence}>
+          {canEdit && <EditAutosaveReporter status={autosave.status} error={autosave.error} />}
+          {canEdit && (
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-muted-foreground flex items-start gap-1.5 text-sm">
+                <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  {t("flow.editAutoApplyNotice")} {t("flow.editIsolatedHint")}{" "}
+                  <Link
+                    href={`/${locale}/platform/workbooks/${workbookId}`}
+                    className="text-primary font-medium underline underline-offset-2"
+                  >
+                    {t("flow.editOpenWorkbookLink")}
+                  </Link>
+                </p>
+              </div>
+              <EditAutosaveStatus onRetry={autosave.flush} />
             </div>
-            <EditAutosaveStatus />
-          </div>
-        )}
+          )}
 
-        <LinkedWorkbookCard
-          experimentId={id}
-          locale={locale}
-          workbookId={workbookId}
-          workbookVersionId={workbookVersionId}
-          hasAccess={hasAccess}
-          canUpdateWorkbook={canUpdateWorkbook}
-        />
+          <LinkedWorkbookCard
+            experimentId={id}
+            locale={locale}
+            workbookId={workbookId}
+            workbookVersionId={workbookVersionId}
+            hasAccess={hasAccess}
+            canUpdateWorkbook={canUpdateWorkbook}
+          />
 
-        <NavTabs defaultValue="list">
-          <NavTabsList>
-            <NavTabsTrigger value="list">
-              <List className="h-4 w-4" />
-              {t("flow.viewList")}
-            </NavTabsTrigger>
-            <NavTabsTrigger value="graph">
-              <GitBranch className="h-4 w-4" />
-              {t("flow.viewGraph")}
-            </NavTabsTrigger>
-          </NavTabsList>
+          <NavTabs defaultValue="list">
+            <NavTabsList>
+              <NavTabsTrigger value="list">
+                <List className="h-4 w-4" />
+                {t("flow.viewList")}
+              </NavTabsTrigger>
+              <NavTabsTrigger value="graph">
+                <GitBranch className="h-4 w-4" />
+                {t("flow.viewGraph")}
+              </NavTabsTrigger>
+            </NavTabsList>
 
-          <NavTabsContent value="list" className="mt-6">
-            {canEdit ? (
-              <WorkbookEntitySavedProvider onEntitySaved={handleDraftSaved}>
-                <WorkbookDraftEditor
-                  id={workbookId}
-                  initialCells={workbookDraft.cells}
-                  // Same capability the branch above gated on.
-                  canEdit={canUpdateWorkbook}
-                  name={workbookDraft.name}
-                  onSaved={handleDraftSaved}
+            <NavTabsContent value="list" className="mt-6">
+              {canEdit ? (
+                draftCells ? (
+                  <WorkbookEntitySavedProvider onEntitySaved={persistence.entitySaved}>
+                    <WorkbookDraftEditor
+                      key={workbookId}
+                      id={workbookId}
+                      initialCells={workbookDraft.cells}
+                      cells={draftCells}
+                      // Same capability the branch above gated on.
+                      canEdit={canUpdateWorkbook}
+                      name={workbookDraft.name}
+                      onCellsChange={handleDraftCellsChange}
+                      autosaveEnabled={false}
+                    />
+                  </WorkbookEntitySavedProvider>
+                ) : (
+                  <Skeleton className="h-64 w-full" />
+                )
+              ) : (
+                <WorkbookEditor
+                  cells={versionedCells}
+                  entitySnapshots={pinnedVersionData?.entitySnapshots}
+                  onCellsChange={() => undefined}
+                  readOnly
                 />
-              </WorkbookEntitySavedProvider>
-            ) : (
-              <WorkbookEditor
-                cells={versionedCells}
-                entitySnapshots={pinnedVersionData?.entitySnapshots}
-                onCellsChange={() => undefined}
-                readOnly
-              />
-            )}
-          </NavTabsContent>
+              )}
+            </NavTabsContent>
 
-          <NavTabsContent value="graph" className="mt-6">
-            <FlowEditor initialFlow={derivedFlow} isDisabled />
-          </NavTabsContent>
-        </NavTabs>
+            <NavTabsContent value="graph" className="mt-6">
+              {canEdit ? (
+                draftCells ? (
+                  <WorkbookEntitySavedProvider onEntitySaved={persistence.entitySaved}>
+                    <WorkbookCanvasDraftEditor
+                      key={workbookId}
+                      experimentId={id}
+                      initialCells={workbookDraft.cells}
+                      cells={draftCells}
+                      onCellsChange={handleDraftCellsChange}
+                    />
+                  </WorkbookEntitySavedProvider>
+                ) : (
+                  <Skeleton className="h-64 w-full" />
+                )
+              ) : (
+                <FlowEditor initialFlow={derivedFlow} isDisabled />
+              )}
+            </NavTabsContent>
+          </NavTabs>
+        </WorkbookPersistenceCoordinatorProvider>
       </AutosaveStatusProvider>
     </PageContainer>
   );

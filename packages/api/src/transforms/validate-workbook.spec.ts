@@ -40,6 +40,23 @@ const branchCell = (id: string, sourceCellId: string, gotoCellId?: string): Work
       gotoCellId,
     },
   ],
+  defaultPathId: "path-1",
+});
+
+const gotoCell = (id: string, gotoCellId: string): WorkbookCell => ({
+  id,
+  type: "branch",
+  isCollapsed: false,
+  paths: [
+    {
+      id: `${id}-path`,
+      label: "Go to",
+      color: "#005E5E",
+      conditions: [],
+      gotoCellId,
+    },
+  ],
+  defaultPathId: `${id}-path`,
 });
 
 const ctx = (
@@ -107,6 +124,12 @@ describe("validateWorkbook", () => {
     expect(result.issues).toEqual([]);
   });
 
+  it("does not treat the reserved device context as a dangling cell source", () => {
+    const cells = [branchCell("b1", "$device")];
+    const result = validateWorkbook(cells, ctx({}));
+    expect(result.issues).toEqual([]);
+  });
+
   it("warns (not errors) when a macro has no upstream measurement", () => {
     const cells = [macroCell("m1", "mac-1"), protocolCell("p1", "prot-1")];
     const result = validateWorkbook(
@@ -142,5 +165,215 @@ describe("validateWorkbook", () => {
         detail: "ambyte, multispeq",
       }),
     );
+  });
+
+  it("warns for a cell orphaned by a forward Go to and clears when a path reaches it", () => {
+    const orphaned = [gotoCell("goto", "target"), questionCell("orphan"), questionCell("target")];
+    expect(validateWorkbook(orphaned, ctx({})).issues).toContainEqual(
+      expect.objectContaining({ code: "unreachable-cell", cellId: "orphan" }),
+    );
+
+    const branch = orphaned[0];
+    if (branch.type !== "branch") throw new Error("expected branch");
+    const repaired: WorkbookCell[] = [
+      {
+        ...branch,
+        paths: [
+          {
+            id: "orphan-path",
+            label: "Orphan",
+            color: "#005E5E",
+            conditions: [
+              {
+                id: "condition",
+                sourceCellId: "target",
+                field: "answer",
+                operator: "eq",
+                value: "yes",
+              },
+            ],
+            gotoCellId: "orphan",
+          },
+          ...branch.paths,
+        ],
+      },
+      ...orphaned.slice(1),
+    ];
+    expect(
+      validateWorkbook(repaired, ctx({})).issues.filter(
+        (issue) => issue.code === "unreachable-cell" && issue.cellId === "orphan",
+      ),
+    ).toEqual([]);
+  });
+
+  it("warns for a backward Go to without blocking validation", () => {
+    const result = validateWorkbook([questionCell("target"), gotoCell("goto", "target")], ctx({}));
+
+    expect(result.ok).toBe(true);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ code: "backward-goto-loop", cellId: "goto", ref: "target" }),
+    );
+  });
+
+  it("keeps fall-through reachable for self, dangling, and backward Go to targets", () => {
+    const cases: WorkbookCell[][] = [
+      [gotoCell("goto", "goto"), questionCell("after")],
+      [gotoCell("goto", "missing"), questionCell("after")],
+      [questionCell("target"), gotoCell("goto", "target"), questionCell("after")],
+    ];
+
+    for (const cells of cases) {
+      const issues = validateWorkbook(cells, ctx({})).issues;
+      expect(
+        issues.filter((issue) => issue.code === "unreachable-cell" && issue.cellId === "after"),
+      ).toEqual([]);
+    }
+  });
+
+  it("warns when a branch has no default", () => {
+    const branch = branchCell("branch", "source");
+    if (branch.type !== "branch") throw new Error("expected branch");
+    const result = validateWorkbook(
+      [questionCell("source"), { ...branch, defaultPathId: undefined }],
+      ctx({}),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ code: "branch-no-default", cellId: "branch" }),
+    );
+  });
+
+  it("warns when Otherwise is dangling or ambiguous", () => {
+    const branch = branchCell("branch", "source");
+    if (branch.type !== "branch") throw new Error("expected branch");
+    const duplicatePath = { ...branch.paths[0], label: "Duplicate" };
+
+    const dangling = validateWorkbook(
+      [questionCell("source"), { ...branch, defaultPathId: "missing" }],
+      ctx({}),
+    );
+    expect(dangling.issues).toContainEqual(
+      expect.objectContaining({ code: "branch-no-default", cellId: "branch" }),
+    );
+
+    const ambiguous = validateWorkbook(
+      [questionCell("source"), { ...branch, paths: [...branch.paths, duplicatePath] }],
+      ctx({}),
+    );
+    expect(ambiguous.ok).toBe(false);
+    expect(ambiguous.issues).toContainEqual(
+      expect.objectContaining({ code: "branch-no-default", cellId: "branch" }),
+    );
+    expect(ambiguous.issues).toContainEqual(
+      expect.objectContaining({
+        level: "error",
+        code: "duplicate-branch-path-id",
+        cellId: "branch",
+        ref: "path-1",
+      }),
+    );
+  });
+
+  it("warns when a later path has structurally identical conditions", () => {
+    const branch = branchCell("branch", "source");
+    if (branch.type !== "branch") throw new Error("expected branch");
+    const duplicate = {
+      ...branch.paths[0],
+      id: "path-2",
+      label: "Duplicate",
+      conditions: branch.paths[0].conditions.map((condition) => ({
+        ...condition,
+        id: "different-condition-id",
+      })),
+    };
+    const result = validateWorkbook(
+      [questionCell("source"), { ...branch, paths: [...branch.paths, duplicate] }],
+      ctx({}),
+    );
+
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "path-duplicate-conditions",
+        cellId: "branch",
+        ref: "path-2",
+      }),
+    );
+  });
+
+  it("deduplicates repeated conditions before comparing paths", () => {
+    const branch = branchCell("branch", "source");
+    if (branch.type !== "branch") throw new Error("expected branch");
+    const condition = branch.paths[0].conditions[0];
+    const duplicate = {
+      ...branch.paths[0],
+      id: "path-2",
+      conditions: [condition, { ...condition, id: "repeated-condition" }],
+    };
+
+    const result = validateWorkbook(
+      [questionCell("source"), { ...branch, paths: [...branch.paths, duplicate] }],
+      ctx({}),
+    );
+
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        code: "path-duplicate-conditions",
+        cellId: "branch",
+        ref: "path-2",
+      }),
+    );
+  });
+
+  it("treats a device-scoped branch as a dispatcher with a fall-through edge", () => {
+    const deviceBranch: WorkbookCell = {
+      id: "dispatch",
+      type: "branch",
+      isCollapsed: false,
+      paths: [
+        {
+          id: "multispeq",
+          label: "MultispeQ",
+          color: "#005E5E",
+          conditions: [
+            {
+              id: "device-condition",
+              sourceCellId: "$device",
+              field: "family",
+              operator: "eq",
+              value: "multispeq",
+            },
+          ],
+          gotoCellId: "measurement",
+        },
+        {
+          id: "fallback",
+          label: "Fallback",
+          color: "#6C5CE7",
+          conditions: [],
+          gotoCellId: "command",
+        },
+      ],
+      defaultPathId: "fallback",
+    };
+    const afterDispatch: WorkbookCell = {
+      id: "after-dispatch",
+      type: "markdown",
+      isCollapsed: false,
+      content: "All device groups were dispatched",
+    };
+    const measurement = protocolCell("measurement", "protocol");
+    const command: WorkbookCell = {
+      id: "command",
+      type: "command",
+      isCollapsed: false,
+      payload: { format: "string", content: "battery" },
+    };
+    const result = validateWorkbook(
+      [deviceBranch, afterDispatch, measurement, command],
+      ctx({ protocol: { family: "multispeq" } }),
+    );
+
+    expect(result.issues.filter((issue) => issue.code === "unreachable-cell")).toEqual([]);
   });
 });

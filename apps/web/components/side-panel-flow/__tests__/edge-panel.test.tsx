@@ -10,7 +10,8 @@ const makeEdge = (overrides?: Partial<Edge>): Edge => ({
   id: "e1",
   source: "n1",
   target: "n2",
-  data: { label: "init", extra: "x" },
+  sourceHandle: "path-1",
+  data: { kind: "branch", label: "init", extra: "x" },
   ...overrides,
 });
 
@@ -40,9 +41,12 @@ describe("<EdgeSidePanel />", () => {
     const user = userEvent.setup();
     // Update label
     await user.clear(input);
+    expect(onUpdate).toHaveBeenCalledWith("e1", {
+      data: { kind: "branch", label: "", extra: "x" },
+    });
     await user.type(input, "updated");
     expect(onUpdate).toHaveBeenCalledWith("e1", {
-      data: { label: "updated", extra: "x" },
+      data: { kind: "branch", label: "updated", extra: "x" },
     });
     expect(input.value).toBe("updated"); // local state reflects change
 
@@ -55,7 +59,7 @@ describe("<EdgeSidePanel />", () => {
   it("falls back to edge.label when data.label is missing and updates via data.label", async () => {
     const onUpdate = vi.fn();
     const edge = makeEdge({
-      data: { foo: "bar" },
+      data: { kind: "branch", foo: "bar" },
       label: "LBL",
     });
 
@@ -76,7 +80,7 @@ describe("<EdgeSidePanel />", () => {
     await user.clear(input);
     await user.type(input, "X");
     expect(onUpdate).toHaveBeenCalledWith("e1", {
-      data: { foo: "bar", label: "X" },
+      data: { kind: "branch", foo: "bar", label: "X" },
     });
   });
 
@@ -118,5 +122,19 @@ describe("<EdgeSidePanel />", () => {
     const user = userEvent.setup();
     await user.click(screen.getByLabelText("edgePanel.closeBackdrop"));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("does not offer removal when the caller protects the sequence edge", () => {
+    render(
+      <EdgeSidePanel
+        open
+        selectedEdge={makeEdge({ data: { kind: "sequence" } })}
+        onClose={() => void 0}
+        isDisabled={false}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "edgePanel.remove" })).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("edgePanel.labelPlaceholder")).toBeDisabled();
   });
 });

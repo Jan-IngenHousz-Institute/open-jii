@@ -57,6 +57,11 @@ export function EdgeSidePanel({
   }, [open, selectedEdge]);
 
   const { t } = useTranslation("experiments");
+  const isBranchEdge =
+    displayEdge?.data?.kind === "branch" ||
+    (displayEdge?.data?.kind !== "sequence" &&
+      typeof displayEdge?.sourceHandle === "string" &&
+      displayEdge.sourceHandle.length > 0);
   return (
     <>
       {/* Always render backdrop for fade animation */}
@@ -98,31 +103,34 @@ export function EdgeSidePanel({
                 type="text"
                 value={getEdgeLabel(displayEdge)}
                 onChange={handleLabelChange}
+                maxLength={64}
                 placeholder={t("edgePanel.labelPlaceholder")}
-                disabled={isDisabled}
+                disabled={isDisabled || !isBranchEdge}
                 className="focus:border-jii-dark-green focus:ring-jii-dark-green/50 focus:outline-hidden w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
               />
             </CardContent>
           </Card>
 
-          {/* Edge Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-jii-dark-green">{t("edgePanel.actions")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  className="rounded bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-400"
-                  onClick={handleDeleteEdge}
-                  disabled={isDisabled}
-                >
-                  {t("edgePanel.remove")}
-                </button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Sequence edges are the workbook spine and are intentionally not removable. */}
+          {onEdgeDelete && isBranchEdge && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-jii-dark-green">{t("edgePanel.actions")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    className="rounded bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+                    onClick={handleDeleteEdge}
+                    disabled={isDisabled}
+                  >
+                    {t("edgePanel.remove")}
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </>

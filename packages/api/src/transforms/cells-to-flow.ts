@@ -15,7 +15,13 @@ export interface DerivedFlowGraph {
   edges: FlowEdge[];
 }
 
-function makeEdge(source: string, target: string, label?: string, sourceHandle?: string): FlowEdge {
+function makeEdge(
+  source: string,
+  target: string,
+  kind: "sequence" | "branch",
+  label?: string,
+  sourceHandle?: string,
+): FlowEdge {
   const id = sourceHandle ? `e-${source}-${sourceHandle}-${target}` : `e-${source}-${target}`;
   return {
     id,
@@ -23,6 +29,7 @@ function makeEdge(source: string, target: string, label?: string, sourceHandle?:
     target,
     label: label ?? null,
     sourceHandle: sourceHandle ?? null,
+    data: { kind },
   };
 }
 
@@ -36,13 +43,49 @@ function makeNode(
   return { id, type, name, content, isStart };
 }
 
+function safeNodeName(value: string | undefined, fallback: string): string {
+  const singleLine = value?.replace(/[\r\n]+/g, " ").trim() ?? "";
+  return (singleLine || fallback).slice(0, 64);
+}
+
+/**
+ * Derive the schema-safe canvas label for a cell. `rawName` lets the live
+ * editor project an unsaved title through the exact same rule as initial load.
+ */
+export function deriveFlowNodeName(cell: WorkbookCell, rawName?: string): string {
+  switch (cell.type) {
+    case "protocol":
+      return safeNodeName(
+        rawName ?? cell.payload.name,
+        `Protocol ${cell.payload.protocolId.slice(0, 8)}`,
+      );
+    case "command": {
+      const commandName = rawName ?? cell.payload.name;
+      return safeNodeName(commandName?.trim() ? commandName : cell.payload.content, "Command");
+    }
+    case "macro":
+      return safeNodeName(
+        rawName ?? cell.payload.name,
+        `Macro ${cell.payload.macroId.slice(0, 8)}`,
+      );
+    case "question":
+      return safeNodeName(rawName ?? cell.name, "Question");
+    case "markdown":
+      return safeNodeName(rawName ?? cell.content, "Instruction");
+    case "branch":
+      return "Branch";
+    case "output":
+      return "Output";
+  }
+}
+
 function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
   switch (cell.type) {
     case "protocol":
       return makeNode(
         cell.id,
         "measurement",
-        cell.payload.name ?? `Protocol ${cell.payload.protocolId.slice(0, 8)}`,
+        deriveFlowNodeName(cell),
         { protocolId: cell.payload.protocolId },
         isStart,
       );
@@ -50,16 +93,10 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
     case "command": {
       // Inline command rides the existing measurement node so old apps drop it
       // cleanly (unknown content) rather than choking on a new node type.
-      const source = cell.payload.name?.trim() ? cell.payload.name : cell.payload.content;
-      const label = source
-        .replace(/[\r\n]+/g, " ")
-        .trim()
-        .slice(0, 64);
       return makeNode(
         cell.id,
         "measurement",
-        // Never empty: zFlowNode.name requires a min length of 1.
-        label.length > 0 ? label : "Command",
+        deriveFlowNodeName(cell),
         { command: { format: cell.payload.format, content: cell.payload.content } },
         isStart,
       );
@@ -69,20 +106,20 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       return makeNode(
         cell.id,
         "analysis",
-        cell.payload.name ?? `Macro ${cell.payload.macroId.slice(0, 8)}`,
+        deriveFlowNodeName(cell),
         { macroId: cell.payload.macroId },
         isStart,
       );
 
     case "question":
       // Cell `name` is the column-key label; data pipeline canonicalises it into a column key downstream.
-      return makeNode(cell.id, "question", cell.name, cell.question, isStart);
+      return makeNode(cell.id, "question", deriveFlowNodeName(cell), cell.question, isStart);
 
     case "markdown":
       return makeNode(
         cell.id,
         "instruction",
-        cell.content.slice(0, 64),
+        deriveFlowNodeName(cell),
         { text: cell.content },
         isStart,
       );
@@ -127,13 +164,13 @@ export function cellsToFlowGraph(cells: WorkbookCell[]): DerivedFlowGraph {
     firstId ??= node.id;
 
     if (previousId) {
-      edges.push(makeEdge(previousId, node.id));
+      edges.push(makeEdge(previousId, node.id, "sequence"));
     }
 
     if (cell.type === "branch") {
       for (const path of cell.paths) {
         if (path.gotoCellId) {
-          edges.push(makeEdge(cell.id, path.gotoCellId, path.label, path.id));
+          edges.push(makeEdge(cell.id, path.gotoCellId, "branch", path.label, path.id));
         }
       }
     }

@@ -26,6 +26,23 @@
     "allChangesSaved": "Alle Änderungen gespeichert",
     "viewWorkbook": "Arbeitsmappe anzeigen",
     "required": "Erforderlich",
+    "problems": {
+      "title": "Probleme",
+      "none": "Keine Probleme gefunden",
+      "issue": {
+        "missingProtocol": "Protokoll {{ref}} fehlt",
+        "missingMacro": "Makro {{ref}} fehlt",
+        "danglingBranchSource": "Verzweigungsquelle {{ref}} fehlt",
+        "danglingBranchGoto": "Sprungziel {{ref}} fehlt",
+        "mixedSensorFamilies": "Arbeitsmappe mischt Sensorfamilien: {{detail}}",
+        "macroWithoutInput": "Makro hat keine vorherige Messung",
+        "unreachableCell": "{{label}} ist nicht erreichbar",
+        "backwardGotoLoop": "Gehe zu springt zurück zu {{ref}}",
+        "branchNoDefault": "Verzweigung hat keinen eindeutigen Sonst-Pfad und kann durchfallen",
+        "duplicateBranchPathId": "Verzweigungspfad-ID {{ref}} ist doppelt vorhanden",
+        "duplicatePathConditions": "Doppelte Pfadbedingungen: {{detail}}"
+      }
+    },
     "outputsCleared_one": "{{count}} Ausgabe gelöscht",
     "outputsCleared_other": "{{count}} Ausgaben gelöscht",
     "createDescription": "Geben Sie Ihrer Arbeitsmappe einen Namen. Sie können ihn später ändern.",

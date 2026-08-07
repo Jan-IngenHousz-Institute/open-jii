@@ -6,7 +6,11 @@ import type { BranchCell, WorkbookCell } from "../domains/workbook/workbook-cell
 import {
   evaluateBranch,
   evaluatePathConditions,
+  isGotoBranchCell,
   isDeviceScopedBranch,
+  resolveBranchDefaultPath,
+  resolveBranchEvaluatedPath,
+  resolveBranchPathById,
   resolveConditionValue,
   validateBranchCell,
   validateDeviceBranch,
@@ -397,6 +401,43 @@ describe("evaluateBranch", () => {
     expect(result?.id).toBe("pathDefault");
   });
 
+  it("fails closed when the default path id is ambiguous", () => {
+    const duplicate = {
+      id: "duplicate",
+      label: "Default",
+      color: "",
+      conditions: [],
+    };
+    const branch = makeBranchCell({
+      id: "b1",
+      defaultPathId: duplicate.id,
+      paths: [duplicate, { ...duplicate, label: "Also default" }],
+    });
+
+    expect(resolveBranchDefaultPath(branch)).toEqual({ status: "ambiguous" });
+    expect(evaluateBranch(branch, cells)).toBeUndefined();
+  });
+
+  it("distinguishes absent and uniquely resolved default paths", () => {
+    const path = { id: "only", label: "Only", color: "", conditions: [] };
+
+    expect(resolveBranchDefaultPath({ paths: [path] })).toEqual({ status: "absent" });
+    expect(resolveBranchDefaultPath({ paths: [path], defaultPathId: "missing" })).toEqual({
+      status: "absent",
+    });
+    expect(resolveBranchDefaultPath({ paths: [path], defaultPathId: path.id })).toEqual({
+      status: "resolved",
+      path,
+    });
+    expect(resolveBranchEvaluatedPath({ paths: [path], evaluatedPathId: path.id })).toEqual({
+      status: "resolved",
+      path,
+    });
+    expect(resolveBranchPathById([path, { ...path }], path.id)).toEqual({
+      status: "ambiguous",
+    });
+  });
+
   it("returns undefined when no path matches and no default", () => {
     const branch = makeBranchCell({
       id: "b1",
@@ -445,6 +486,26 @@ describe("evaluateBranch", () => {
 });
 
 describe("validateBranchCell", () => {
+  it("detects Go to cells structurally", () => {
+    const goto = makeBranchCell({
+      id: "b1",
+      paths: [{ id: "p1", label: "Go to", color: "", conditions: [], gotoCellId: "target" }],
+      defaultPathId: "p1",
+    });
+
+    expect(isGotoBranchCell(goto)).toBe(true);
+    expect(isGotoBranchCell({ ...goto, defaultPathId: undefined })).toBe(false);
+    expect(
+      isGotoBranchCell({
+        ...goto,
+        paths: [
+          ...goto.paths,
+          { id: "p2", label: "Other", color: "", conditions: [], gotoCellId: "target" },
+        ],
+      }),
+    ).toBe(false);
+  });
+
   it("returns error when branch has no paths", () => {
     const cell = makeBranchCell({ id: "b1", paths: [] });
     const errors = validateBranchCell(cell);
@@ -457,12 +518,74 @@ describe("validateBranchCell", () => {
       paths: [{ id: "p1", label: "Path 1", color: "", conditions: [] }],
     });
     const errors = validateBranchCell(cell);
-    expect(errors).toEqual(["Path 1: no conditions defined"]);
+    expect(errors).toEqual(["Branch Otherwise path is missing", "Path 1: no conditions defined"]);
+  });
+
+  it("allows a conditionless path only when it is the default", () => {
+    const goto = makeBranchCell({
+      id: "b1",
+      paths: [{ id: "p1", label: "Go to", color: "", conditions: [], gotoCellId: "target" }],
+      defaultPathId: "p1",
+    });
+
+    expect(validateBranchCell(goto)).toEqual([]);
+    expect(validateBranchCell({ ...goto, defaultPathId: undefined })).toEqual([
+      "Branch Otherwise path is missing",
+      "Go to: no conditions defined",
+    ]);
+  });
+
+  it("rejects a dangling Otherwise path", () => {
+    const cell = makeBranchCell({
+      id: "b1",
+      paths: [{ id: "p1", label: "Go to", color: "", conditions: [], gotoCellId: "target" }],
+      defaultPathId: "missing",
+    });
+
+    expect(validateBranchCell(cell)).toEqual([
+      "Branch Otherwise path is missing",
+      "Go to: no conditions defined",
+    ]);
+  });
+
+  it("rejects duplicate path ids without treating either as the default", () => {
+    const cell = makeBranchCell({
+      id: "b1",
+      paths: [
+        { id: "same", label: "First", color: "", conditions: [], gotoCellId: "target" },
+        { id: "same", label: "Second", color: "", conditions: [], gotoCellId: "other" },
+      ],
+      defaultPathId: "same",
+    });
+
+    expect(validateBranchCell(cell)).toEqual([
+      "Branch path id same is duplicated",
+      "Branch Otherwise path is ambiguous",
+      "First: no conditions defined",
+      "Second: no conditions defined",
+    ]);
+  });
+
+  it("documents the conditionless-path error produced by an old web client", () => {
+    const goto = makeBranchCell({
+      id: "b1",
+      paths: [{ id: "p1", label: "Go to", color: "", conditions: [], gotoCellId: "target" }],
+      defaultPathId: "p1",
+    });
+    const legacyWebErrors = goto.paths.flatMap((path) =>
+      path.conditions.length === 0
+        ? [`${path.label || "Unnamed path"}: no conditions defined`]
+        : [],
+    );
+
+    expect(legacyWebErrors).toEqual(["Go to: no conditions defined"]);
+    expect(validateBranchCell(goto)).toEqual([]);
   });
 
   it("returns error for missing source cell", () => {
     const cell = makeBranchCell({
       id: "b1",
+      defaultPathId: "p1",
       paths: [
         {
           id: "p1",
@@ -479,6 +602,7 @@ describe("validateBranchCell", () => {
   it("returns error for missing field", () => {
     const cell = makeBranchCell({
       id: "b1",
+      defaultPathId: "p1",
       paths: [
         {
           id: "p1",
@@ -495,6 +619,7 @@ describe("validateBranchCell", () => {
   it("returns error for missing value", () => {
     const cell = makeBranchCell({
       id: "b1",
+      defaultPathId: "p1",
       paths: [
         {
           id: "p1",
@@ -511,6 +636,7 @@ describe("validateBranchCell", () => {
   it("allows value of '0'", () => {
     const cell = makeBranchCell({
       id: "b1",
+      defaultPathId: "p1",
       paths: [
         {
           id: "p1",
@@ -527,6 +653,7 @@ describe("validateBranchCell", () => {
   it("returns multiple errors for multiple bad conditions", () => {
     const cell = makeBranchCell({
       id: "b1",
+      defaultPathId: "p1",
       paths: [
         {
           id: "p1",
@@ -550,6 +677,7 @@ describe("validateBranchCell", () => {
   it("returns no errors for fully configured cell", () => {
     const cell = makeBranchCell({
       id: "b1",
+      defaultPathId: "p1",
       paths: [
         {
           id: "p1",
@@ -568,6 +696,7 @@ describe("validateBranchCell", () => {
   it("uses 'Unnamed path' when label is empty", () => {
     const cell = makeBranchCell({
       id: "b1",
+      defaultPathId: "p1",
       paths: [
         {
           id: "p1",

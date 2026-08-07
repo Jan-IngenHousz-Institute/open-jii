@@ -3,8 +3,10 @@ import { Handle, Position } from "@xyflow/react";
 import { GitBranch } from "lucide-react";
 import React from "react";
 
+import { resolveBranchDefaultPath } from "@repo/api/transforms/evaluate-branch";
 import { cn } from "@repo/ui/lib/utils";
 
+import { resolveBranchPathColor } from "../workbook/branch-path-colors";
 import { nodeTypeColorMap } from "./node-config";
 
 interface BranchPathSummary {
@@ -33,6 +35,9 @@ export function BranchNode(props: BranchNodeProps) {
   const title = data.title ?? "Branch";
   const paths = data.stepSpecification?.paths ?? [];
   const defaultPathId = data.stepSpecification?.defaultPathId;
+  const defaultPathResolution = resolveBranchDefaultPath({ paths, defaultPathId });
+  const defaultPath =
+    defaultPathResolution.status === "resolved" ? defaultPathResolution.path : undefined;
   const accent = nodeTypeColorMap.BRANCH.accent;
   const isActive = nodeProps.selected || nodeProps.dragging;
 
@@ -96,6 +101,18 @@ export function BranchNode(props: BranchNodeProps) {
               top: HEADER_HEIGHT / 2,
             }}
           />
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="out"
+            className="!h-2 !w-2 !rounded-full !border transition-colors duration-150"
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderColor: isActive ? "#005e5e" : accent,
+              borderWidth: isActive ? 2 : 1.5,
+              top: HEADER_HEIGHT / 2,
+            }}
+          />
 
           <div
             className="flex items-center gap-3 px-3 pl-4"
@@ -140,16 +157,16 @@ export function BranchNode(props: BranchNodeProps) {
           ) : (
             <div className="py-1.5">
               {paths.map((path, idx) => {
-                const isDefault = defaultPathId === path.id;
+                const isDefault = path === defaultPath;
                 return (
                   <div
-                    key={path.id}
+                    key={`${path.id}:${idx}`}
                     className="relative flex items-center gap-2 px-3 pl-4 pr-5 transition-colors hover:bg-slate-50"
                     style={{ height: PATH_ROW_HEIGHT }}
                   >
                     <div
                       className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: path.color || accent }}
+                      style={{ backgroundColor: resolveBranchPathColor(path.color, path.id) }}
                     />
                     <span
                       className="truncate text-[12.5px] font-medium text-slate-700"
@@ -175,7 +192,7 @@ export function BranchNode(props: BranchNodeProps) {
                       className="!h-2.5 !w-2.5 !rounded-full !border-2 transition-colors duration-150"
                       style={{
                         backgroundColor: "#FFFFFF",
-                        borderColor: path.color || accent,
+                        borderColor: resolveBranchPathColor(path.color, path.id),
                         top: "50%",
                       }}
                     />

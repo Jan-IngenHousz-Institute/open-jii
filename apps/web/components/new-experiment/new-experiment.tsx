@@ -3,6 +3,8 @@
 import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useExperimentCreate } from "@/hooks/experiment/useExperimentCreate/useExperimentCreate";
 import { useLocale } from "@/hooks/useLocale";
+import { orpcClient } from "@/lib/orpc";
+import { parseApiError } from "@/util/apiError";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 
@@ -40,6 +42,7 @@ export function NewExperimentForm() {
   const locale = useLocale();
   const [hasFormData, setHasFormData] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdExperimentId, setCreatedExperimentId] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
@@ -85,36 +88,90 @@ export function NewExperimentForm() {
   const pendingWorkbookId = useRef<string | undefined>(undefined);
   const attachWorkbook = useAttachWorkbook();
 
+  const finishCreation = (experimentId: string) => {
+    setIsSubmitting(true);
+    setCreatedExperimentId(null);
+    toast({ description: t("experiments.experimentCreated") });
+    router.push(`/${locale}/platform/experiments/${experimentId}`);
+  };
+
+  const reportAttachmentFailure = (error: unknown) => {
+    setIsSubmitting(false);
+    toast({
+      description:
+        parseApiError(error)?.message ??
+        "The experiment was created, but its workbook could not be attached. Try again.",
+      variant: "destructive",
+    });
+  };
+
+  const attachPendingWorkbook = async (experimentId: string, reconcileFirst = false) => {
+    if (!pendingWorkbookId.current) {
+      finishCreation(experimentId);
+      return;
+    }
+
+    const intendedWorkbookId = pendingWorkbookId.current;
+    let expectedWorkbookId: string | null = null;
+    let expectedWorkbookVersionId: string | null = null;
+
+    try {
+      if (reconcileFirst) {
+        // The first request may have committed even if its response was lost.
+        // Reconcile before retrying so an already-complete attachment is an
+        // idempotent success instead of a permanent compare-and-set conflict.
+        const currentExperiment = await orpcClient.experiments.getExperiment({
+          id: experimentId,
+        });
+        if (
+          currentExperiment.workbookId === intendedWorkbookId &&
+          currentExperiment.workbookVersionId !== null
+        ) {
+          finishCreation(experimentId);
+          return;
+        }
+        expectedWorkbookId = currentExperiment.workbookId ?? null;
+        expectedWorkbookVersionId = currentExperiment.workbookVersionId ?? null;
+      }
+
+      await attachWorkbook.mutateAsync({
+        id: experimentId,
+        workbookId: intendedWorkbookId,
+        expectedWorkbookId,
+        expectedWorkbookVersionId,
+      });
+      finishCreation(experimentId);
+    } catch (error: unknown) {
+      reportAttachmentFailure(error);
+    }
+  };
+
   const { mutate: createExperiment, isPending } = useExperimentCreate({
     onSuccess: (experimentId: string) => {
-      // If a workbook was selected, attach it to create a version snapshot
-      if (pendingWorkbookId.current) {
-        attachWorkbook.mutate(
-          { id: experimentId, workbookId: pendingWorkbookId.current },
-          {
-            onSettled: () => {
-              setIsSubmitting(true);
-              toast({ description: t("experiments.experimentCreated") });
-              router.push(`/${locale}/platform/experiments/${experimentId}`);
-            },
-          },
-        );
-      } else {
-        setIsSubmitting(true);
-        toast({ description: t("experiments.experimentCreated") });
-        router.push(`/${locale}/platform/experiments/${experimentId}`);
-      }
+      // Keep the created id until attachment succeeds. A retry must attach to
+      // this experiment instead of creating a duplicate experiment.
+      setCreatedExperimentId(experimentId);
+      void attachPendingWorkbook(experimentId);
     },
   });
 
   function onSubmit(data: CreateExperimentBody) {
     setIsSubmitting(true);
-    pendingWorkbookId.current = data.workbookId ?? undefined;
+    const { workbookId, ...createBody } = data;
+    pendingWorkbookId.current = workbookId;
+    if (createdExperimentId) {
+      void attachPendingWorkbook(createdExperimentId, true);
+      return;
+    }
     // Embargo is private-only: never send it on a public experiment (visibility
     // defaults to public), otherwise the create body validation rejects it.
     // The card only surfaces the embargo editor in the private branch, but its
     // default-90-day effect can still leave a stale value on the form.
-    const payload = data.visibility === "private" ? data : { ...data, embargoUntil: undefined };
+    const payload =
+      createBody.visibility === "private" ? createBody : { ...createBody, embargoUntil: undefined };
+    // A workbook is attached only after creation has produced an experiment id
+    // and a version can be pinned atomically. Sending workbookId here would
+    // persist the invalid half-pair { workbookId, workbookVersionId: null }.
     createExperiment(payload);
   }
 
@@ -186,7 +243,7 @@ export function NewExperimentForm() {
             locations: [],
           }}
           onSubmit={onSubmit}
-          isSubmitting={isPending}
+          isSubmitting={isPending || attachWorkbook.isPending || isSubmitting}
           showStepIndicator={true}
           showStepTitles={true}
         />

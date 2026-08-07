@@ -7,6 +7,27 @@ import * as nodeUtils from "../../react-flow/node-utils";
 import { FlowEditor } from "../flow-editor";
 import type { FlowEditorHandle } from "../flow-editor";
 
+const flowUtilsMocks = vi.hoisted(() => ({
+  connectFlowNodes: vi.fn(
+    (
+      params: { source: string | null; target: string | null },
+      nodes: xyflowReact.Node[],
+      edges: xyflowReact.Edge[],
+    ) => ({
+      nodes,
+      edges: [
+        ...edges,
+        {
+          id: `e-${params.source}-${params.target}`,
+          source: params.source ?? "",
+          target: params.target ?? "",
+          data: { kind: "sequence" },
+        },
+      ],
+    }),
+  ),
+}));
+
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T) => v,
 }));
@@ -26,7 +47,7 @@ vi.mock("@xyflow/react", async () => {
     nodesDraggable,
     nodesConnectable,
   }: xyflowReact.ReactFlowProps) => (
-    <div data-testid="rf">
+    <div data-testid="rf" data-has-connect={typeof onConnect}>
       <div data-testid="rf-nodes-count">{nodes.length}</div>
       <div data-testid="rf-edges-count">{edges.length}</div>
       <div data-testid="rf-draggable">{String(nodesDraggable)}</div>
@@ -94,13 +115,17 @@ const toInitialFlow = (
     React.ComponentProps<typeof FlowEditor>["initialFlow"]
   >;
 
-vi.mock("../react-flow/flow-utils", () => ({
+vi.mock("../../react-flow/flow-utils", () => ({
+  connectFlowNodes: flowUtilsMocks.connectFlowNodes,
+  getReactFlowEdgeKind: (edge: xyflowReact.Edge) =>
+    edge.data?.kind === "branch" || edge.sourceHandle ? "branch" : "sequence",
+  getWorkbookCellInsertionIndex: () => 0,
   getFlowData: (...args: [xyflowReact.Node[], xyflowReact.Edge[]]) => getFlowDataSpy(...args),
   handleNodesDeleteWithReconnection: (
     _deleted: xyflowReact.Node,
     _nodes: xyflowReact.Node,
     edges: xyflowReact.Edge,
-  ) => edges,
+  ) => ({ edges, issues: [] }),
   handleNodeDrop: (_e: React.DragEvent, nodes: xyflowReact.Node[]) => ({
     newNode: {
       id: `new-${nodes.length + 1}`,
@@ -268,8 +293,11 @@ describe("<FlowEditor /> (stable suite)", () => {
     const user = userEvent.setup();
     const before = getCounts();
     expect(before.e).toBe(1);
+    expect(screen.getByTestId("rf-connectable").textContent).toBe("true");
+    expect(screen.getByTestId("rf")).toHaveAttribute("data-has-connect", "function");
 
     await user.click(screen.getByRole("button", { name: "Sim Connect" }));
+    expect(flowUtilsMocks.connectFlowNodes).toHaveBeenCalled();
     const after = getCounts();
     expect(after.e).toBe(2);
   });
@@ -303,6 +331,155 @@ describe("<FlowEditor /> (stable suite)", () => {
   it("ensureOneStartNode is invoked on mount", () => {
     renderEditor();
     expect(ensureOneStartNodeSpy).toHaveBeenCalled();
+  });
+
+  it("does not write workbook cells merely by mounting the graph", () => {
+    const onWorkbookCellsChange = vi.fn();
+    renderEditor({
+      workbookCells: [{ id: "md1", type: "markdown", isCollapsed: false, content: "Untouched" }],
+      onWorkbookCellsChange,
+    });
+
+    expect(onWorkbookCellsChange).not.toHaveBeenCalled();
+  });
+
+  it("does not offer deletion for the sequence spine", async () => {
+    renderEditor();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Sim Edge Click" }));
+
+    expect(screen.queryByRole("button", { name: "edgePanel.remove" })).not.toBeInTheDocument();
+  });
+
+  it("persists an edited branch-edge label to the matching workbook path", async () => {
+    const onWorkbookCellsChange = vi.fn();
+    const initialFlow = toInitialFlow(
+      [
+        {
+          id: "branch-1",
+          type: "BRANCH",
+          position: { x: 0, y: 0 },
+          data: {
+            title: "Branch",
+            isStartNode: true,
+            stepSpecification: {
+              paths: [{ id: "path-1", label: "Old", color: "" }],
+              defaultPathId: "path-1",
+            },
+          },
+        },
+        {
+          id: "target-1",
+          type: "INSTRUCTION",
+          position: { x: 100, y: 0 },
+          data: { title: "Target", isStartNode: false },
+        },
+      ],
+      [
+        {
+          id: "edge-path",
+          source: "branch-1",
+          target: "target-1",
+          sourceHandle: "path-1",
+          data: { kind: "branch", label: "Old" },
+        },
+      ],
+    );
+    renderEditor({
+      initialFlow,
+      workbookCells: [
+        {
+          id: "branch-1",
+          type: "branch",
+          isCollapsed: false,
+          paths: [
+            {
+              id: "path-1",
+              label: "Old",
+              color: "",
+              conditions: [],
+              gotoCellId: "target-1",
+            },
+          ],
+          defaultPathId: "path-1",
+        },
+        { id: "target-1", type: "markdown", isCollapsed: false, content: "Target" },
+      ],
+      onWorkbookCellsChange,
+    });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Sim Edge Click" }));
+    const input = screen.getByPlaceholderText("edgePanel.labelPlaceholder");
+    await user.clear(input);
+    await user.type(input, "Renamed");
+
+    const lastCells = onWorkbookCellsChange.mock.calls.at(-1)?.[0] as
+      | { type: string; paths?: { id: string; label: string }[] }[]
+      | undefined;
+    expect(lastCells?.[0].paths?.[0].label).toBe("Renamed");
+  });
+
+  it("refuses to edit an ambiguous legacy branch handle", async () => {
+    const onWorkbookCellsChange = vi.fn();
+    const paths = [
+      { id: "duplicate", label: "First", color: "" },
+      { id: "duplicate", label: "Second", color: "" },
+    ];
+    const initialFlow = toInitialFlow(
+      [
+        {
+          id: "branch-1",
+          type: "BRANCH",
+          position: { x: 0, y: 0 },
+          data: {
+            title: "Branch",
+            isStartNode: true,
+            stepSpecification: { paths },
+          },
+        },
+        {
+          id: "target-1",
+          type: "INSTRUCTION",
+          position: { x: 100, y: 0 },
+          data: { title: "Target", isStartNode: false },
+        },
+      ],
+      [
+        {
+          id: "edge-path",
+          source: "branch-1",
+          target: "target-1",
+          sourceHandle: "duplicate",
+          data: { kind: "branch", label: "First" },
+        },
+      ],
+    );
+    renderEditor({
+      initialFlow,
+      workbookCells: [
+        {
+          id: "branch-1",
+          type: "branch",
+          isCollapsed: false,
+          paths: paths.map((path) => ({ ...path, conditions: [], gotoCellId: "target-1" })),
+        },
+        { id: "target-1", type: "markdown", isCollapsed: false, content: "Target" },
+      ],
+      onWorkbookCellsChange,
+    });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Sim Edge Click" }));
+    const input = screen.getByPlaceholderText("edgePanel.labelPlaceholder");
+    await user.clear(input);
+    await user.type(input, "Changed");
+
+    expect(onWorkbookCellsChange).not.toHaveBeenCalled();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/branch node settings/);
+    expect(alert).toHaveClass("z-[100]");
   });
 
   it("updates nodes/edges when initialFlow prop changes", () => {

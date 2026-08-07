@@ -9,6 +9,7 @@ import {
   or,
   ne,
   experiments,
+  flows,
   experimentMembers,
   experimentLocations,
   exists,
@@ -46,6 +47,7 @@ import {
   UpdateExperimentDto,
   ExperimentDto,
 } from "../models/experiment.model";
+import type { FlowGraphDto } from "../models/flow.model";
 
 /**
  * Contributors plus the experiment's anonymization setting, so no caller can publish
@@ -63,6 +65,11 @@ const COLLABORATOR_GRANT_ROLE = "viewer";
 // All experiment columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _experimentSearchVector, ...experimentColumns } =
   getTableColumns(experiments);
+
+export interface ExpectedWorkbookPair {
+  workbookId: string | null;
+  workbookVersionId: string | null;
+}
 
 @Injectable()
 export class ExperimentRepository {
@@ -430,6 +437,43 @@ export class ExperimentRepository {
         .set(updateExperimentDto)
         .where(eq(experiments.id, id))
         .returning(experimentColumns),
+    );
+  }
+
+  /** Atomically change the workbook pin and materialised flow if the caller's scope is current. */
+  async updateWorkbookAndFlowIfExpected(
+    id: string,
+    expectedPair: ExpectedWorkbookPair,
+    updateExperimentDto: UpdateExperimentDto,
+    graph: FlowGraphDto | null,
+  ): Promise<Result<ExperimentDto | null>> {
+    return tryCatch(() =>
+      this.database.transaction(async (tx) => {
+        const workbookPredicate =
+          expectedPair.workbookId === null
+            ? isNull(experiments.workbookId)
+            : eq(experiments.workbookId, expectedPair.workbookId);
+        const workbookVersionPredicate =
+          expectedPair.workbookVersionId === null
+            ? isNull(experiments.workbookVersionId)
+            : eq(experiments.workbookVersionId, expectedPair.workbookVersionId);
+        const updated = await tx
+          .update(experiments)
+          .set(updateExperimentDto)
+          .where(and(eq(experiments.id, id), workbookPredicate, workbookVersionPredicate))
+          .returning(experimentColumns);
+        if (updated.length === 0) return null;
+
+        if (graph) {
+          await tx
+            .insert(flows)
+            .values({ experimentId: id, graph })
+            .onConflictDoUpdate({ target: flows.experimentId, set: { graph } });
+        } else {
+          await tx.delete(flows).where(eq(flows.experimentId, id));
+        }
+        return updated[0];
+      }),
     );
   }
 

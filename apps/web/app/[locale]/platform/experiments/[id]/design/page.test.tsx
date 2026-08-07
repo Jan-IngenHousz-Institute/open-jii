@@ -1,13 +1,14 @@
 import {
   createExperiment,
   createExperimentAccess,
+  createMarkdownCell,
   createProtocolCell,
   createWorkbookDetail,
   readOnlyCapabilities,
   createWorkbookVersionSummary,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
+import { act, createTestQueryClient, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -55,16 +56,55 @@ vi.mock("@/components/workbook/workbook-editor", () => ({
 vi.mock("@/components/workbook/workbook-draft-editor", () => ({
   WorkbookDraftEditor: ({
     initialCells,
-    onSaved,
+    cells = initialCells,
+    onCellsChange,
+    autosaveEnabled,
   }: {
     initialCells: unknown[];
-    onSaved?: () => void;
+    cells?: unknown[];
+    onCellsChange?: (cells: unknown[]) => void;
+    autosaveEnabled?: boolean;
   }) => (
-    <div data-testid="workbook-draft-editor">
+    <div
+      data-testid="workbook-draft-editor"
+      data-autosave-enabled={String(autosaveEnabled ?? true)}
+      data-cell-ids={cells
+        .map((cell) => (cell as { id?: string }).id)
+        .filter(Boolean)
+        .join(",")}
+    >
       Draft Editor ({initialCells.length} cells)
-      <button data-testid="trigger-save" onClick={() => onSaved?.()}>
-        save
+      <button
+        data-testid="trigger-cell-edit"
+        onClick={() =>
+          onCellsChange?.([
+            ...cells,
+            { id: "edited-cell", type: "markdown", isCollapsed: false, content: "Edited" },
+          ])
+        }
+      >
+        edit cells
       </button>
+    </div>
+  ),
+}));
+
+vi.mock("@/components/workbook/workbook-canvas-draft-editor", () => ({
+  WorkbookCanvasDraftEditor: ({
+    initialCells,
+    cells,
+  }: {
+    initialCells: unknown[];
+    cells: unknown[];
+  }) => (
+    <div
+      data-testid="workbook-canvas-draft-editor"
+      data-cell-ids={cells
+        .map((cell) => (cell as { id?: string }).id)
+        .filter(Boolean)
+        .join(",")}
+    >
+      Canvas Draft Editor ({initialCells.length} cells)
     </div>
   ),
 }));
@@ -72,10 +112,21 @@ vi.mock("@/components/workbook/workbook-draft-editor", () => ({
 const EXP_ID = "exp-123";
 const WB_ID = "wb-1";
 const VERSION_ID = "ver-1";
+const PROTOCOL_ID = "11111111-1111-1111-1111-111111111111";
 const LOCALE = "en-US";
 const defaultProps = {
   params: Promise.resolve({ locale: LOCALE, id: EXP_ID }),
 };
+
+async function traverseHistory(direction: "back" | "forward") {
+  await act(async () => {
+    const traversed = new Promise<void>((resolve) => {
+      window.addEventListener("popstate", () => resolve(), { once: true });
+    });
+    window.history[direction]();
+    await traversed;
+  });
+}
 
 const activeExperiment = createExperiment({
   id: EXP_ID,
@@ -135,7 +186,10 @@ function mountWithWorkbook(overrides?: {
       name: "Test Workbook",
       description: "Measures canopy temperature",
       cells: [
-        createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
+        createProtocolCell({
+          id: "c1",
+          payload: { protocolId: PROTOCOL_ID, version: 1, name: "P1" },
+        }),
       ],
       ...(overrides?.canUpdateWorkbook === false ? { capabilities: readOnlyCapabilities } : {}),
     }),
@@ -148,7 +202,10 @@ function mountWithWorkbook(overrides?: {
     body: {
       ...versionSummary,
       cells: [
-        createProtocolCell({ id: "c1", payload: { protocolId: "p1", version: 1, name: "P1" } }),
+        createProtocolCell({
+          id: "c1",
+          payload: { protocolId: PROTOCOL_ID, version: 1, name: "P1" },
+        }),
       ],
       metadata: {},
       entitySnapshots: { protocols: {}, macros: {} },
@@ -159,6 +216,7 @@ function mountWithWorkbook(overrides?: {
 describe("ExperimentDesignPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.sessionStorage.clear();
     vi.mocked(use).mockReturnValue({ id: EXP_ID, locale: LOCALE });
     // Default to a logged-out session so the owner-only edit toggle stays hidden.
     vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
@@ -339,9 +397,41 @@ describe("ExperimentDesignPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workbook-draft-editor")).toBeInTheDocument();
     });
+    expect(screen.getByTestId("workbook-draft-editor")).toHaveAttribute(
+      "data-autosave-enabled",
+      "false",
+    );
     // No edit/view toggle: anyone who may edit does so in place.
     expect(screen.queryByText("flow.editWorkbook")).not.toBeInTheDocument();
     expect(screen.queryByText("flow.viewPinned")).not.toBeInTheDocument();
+  });
+
+  it("renders the editable canvas over the same draft for an admin workbook grantee", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "grantee-not-the-creator" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook();
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    const graphTab = await screen.findByRole("tab", { name: "flow.viewGraph" });
+    await user.click(graphTab);
+    expect(graphTab).toHaveAttribute("data-state", "active");
+    expect(await screen.findByTestId("workbook-canvas-draft-editor")).toHaveTextContent("1 cells");
+    expect(screen.queryByTestId("flow-editor")).not.toBeInTheDocument();
+  });
+
+  it("keeps the graph read-only for a viewer without the edit gate", async () => {
+    mountWithWorkbook({ isAdmin: false });
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    await user.click(await screen.findByText("flow.viewGraph"));
+    expect(await screen.findByTestId("flow-editor")).toHaveAttribute("data-disabled", "true");
+    expect(screen.queryByTestId("workbook-canvas-draft-editor")).not.toBeInTheDocument();
   });
 
   it("shows the read-only editor for a non-admin who may update the workbook", async () => {
@@ -357,18 +447,197 @@ describe("ExperimentDesignPage", () => {
     expect(screen.queryByTestId("workbook-draft-editor")).not.toBeInTheDocument();
   });
 
-  it("auto-upgrades the experiment's pinned version when a draft edit is saved", async () => {
+  it("finishes the draft save before re-pinning the experiment", async () => {
     mountWithWorkbook();
+    let releaseSave: (() => void) | undefined;
+    const saveBlocked = new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    });
+    const updateSpy = server.mount(contract.workbooks.updateWorkbook, {
+      body: createWorkbookDetail({ id: WB_ID }),
+      unblock: saveBlocked,
+    });
     const upgradeSpy = server.mount(contract.experiments.upgradeWorkbookVersion, {
       body: { workbookId: WB_ID, workbookVersionId: "ver-2", version: 2 },
     });
-    const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
     render(<ExperimentDesignPage params={defaultProps.params} />);
 
-    const saveTrigger = await screen.findByTestId("trigger-save");
-    await user.click(saveTrigger);
+    await user.click(await screen.findByTestId("trigger-cell-edit"));
+    await waitFor(() => expect(updateSpy.called).toBe(true), { timeout: 3000 });
+    expect(upgradeSpy.called).toBe(false);
 
+    releaseSave?.();
     await waitFor(() => expect(upgradeSpy.called).toBe(true));
+    await waitFor(() =>
+      expect(window.sessionStorage.getItem(`openjii:workbook-draft:${WB_ID}`)).toBeNull(),
+    );
+  });
+
+  it("retains a recovered invalid draft until that exact scope wins a save", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    const retainedKey = `openjii:workbook-draft:${WB_ID}`;
+    const invalidDraft = [
+      {
+        id: "question-1",
+        type: "question",
+        isCollapsed: false,
+        name: "",
+        questionType: "text",
+      },
+    ];
+    window.sessionStorage.setItem(retainedKey, JSON.stringify(invalidDraft));
+    mountWithWorkbook();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("workbook-draft-editor")).toHaveAttribute(
+        "data-cell-ids",
+        "question-1",
+      ),
+    );
+    expect(window.sessionStorage.getItem(retainedKey)).toBe(JSON.stringify(invalidDraft));
+  });
+
+  it("warns before unload and internal navigation while a controlled draft is unsaved", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const user = userEvent.setup();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+
+    await user.click(await screen.findByTestId("trigger-cell-edit"));
+    expect(window.sessionStorage.getItem(`openjii:workbook-draft:${WB_ID}`)).toContain(
+      "edited-cell",
+    );
+    const beforeUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(beforeUnload);
+    expect(beforeUnload.defaultPrevented).toBe(true);
+
+    await user.click(screen.getByText("flow.editOpenWorkbookLink"));
+    expect(confirm).toHaveBeenCalledWith(
+      "This workbook still has changes that have not been saved.",
+    );
+
+    confirm.mockRestore();
+  });
+
+  it("does not mutate real Back/Forward history when a dirty draft is retained", async () => {
+    window.history.replaceState({ position: "start" }, "", "/workbook-history-start");
+    window.history.pushState({ position: "forward" }, "", "/workbook-history-forward");
+    await traverseHistory("back");
+    expect(window.location.pathname).toBe("/workbook-history-start");
+    const historyLength = window.history.length;
+
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook();
+    render(<ExperimentDesignPage params={defaultProps.params} />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("trigger-cell-edit"));
+
+    expect(window.history.length).toBe(historyLength);
+    expect(window.location.pathname).toBe("/workbook-history-start");
+    expect(window.history.state).toEqual({ position: "start" });
+    expect(window.sessionStorage.getItem(`openjii:workbook-draft:${WB_ID}`)).toContain(
+      "edited-cell",
+    );
+
+    await traverseHistory("forward");
+    expect(window.location.pathname).toBe("/workbook-history-forward");
+    expect(window.history.state).toEqual({ position: "forward" });
+    expect(window.sessionStorage.getItem(`openjii:workbook-draft:${WB_ID}`)).toContain(
+      "edited-cell",
+    );
+  });
+
+  it("resets the controlled draft before edits can target a newly linked workbook", async () => {
+    const secondWorkbookId = "wb-2";
+    const secondVersionId = "ver-b";
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as unknown as ReturnType<typeof useSession>);
+    mountWithWorkbook();
+    const queryClient = createTestQueryClient();
+    const user = userEvent.setup();
+    render(<ExperimentDesignPage params={defaultProps.params} />, { queryClient });
+
+    expect(await screen.findByTestId("workbook-draft-editor")).toHaveAttribute(
+      "data-cell-ids",
+      "c1",
+    );
+
+    server.mount(contract.experiments.getExperiment, {
+      body: createExperiment({
+        id: EXP_ID,
+        status: "active",
+        name: "Test Experiment",
+        workbookId: secondWorkbookId,
+        workbookVersionId: secondVersionId,
+      }),
+    });
+    const secondCells = [
+      createMarkdownCell({ id: "b1", content: "Second workbook" }),
+      createMarkdownCell({ id: "b2", content: "Only B" }),
+    ];
+    const secondWorkbook = createWorkbookDetail({
+      id: secondWorkbookId,
+      name: "Second Workbook",
+      cells: secondCells,
+    });
+    server.mount(contract.workbooks.getWorkbook, { body: secondWorkbook });
+    server.mount(contract.workbooks.listWorkbookVersions, {
+      body: [
+        createWorkbookVersionSummary({
+          id: secondVersionId,
+          workbookId: secondWorkbookId,
+          version: 1,
+        }),
+      ],
+    });
+    server.mount(contract.workbooks.getWorkbookVersion, {
+      body: {
+        id: secondVersionId,
+        workbookId: secondWorkbookId,
+        version: 1,
+        cells: secondCells,
+        metadata: {},
+        entitySnapshots: { protocols: {}, macros: {} },
+      },
+    });
+    const updateSpy = server.mount(contract.workbooks.updateWorkbook, { body: secondWorkbook });
+    server.mount(contract.experiments.upgradeWorkbookVersion, {
+      body: { workbookId: secondWorkbookId, workbookVersionId: secondVersionId, version: 1 },
+    });
+
+    await queryClient.invalidateQueries();
+    await waitFor(() =>
+      expect(screen.getByTestId("workbook-draft-editor")).toHaveAttribute("data-cell-ids", "b1,b2"),
+    );
+
+    await user.click(screen.getByTestId("trigger-cell-edit"));
+    await waitFor(() => expect(updateSpy.called).toBe(true), { timeout: 3000 });
+
+    expect(updateSpy.params.id).toBe(secondWorkbookId);
+    expect((updateSpy.body as { cells: { id: string }[] }).cells.map((cell) => cell.id)).toEqual([
+      "b1",
+      "b2",
+      "edited-cell",
+    ]);
+
+    await user.click(screen.getByRole("tab", { name: "flow.viewGraph" }));
+    expect(await screen.findByTestId("workbook-canvas-draft-editor")).toHaveAttribute(
+      "data-cell-ids",
+      "b1,b2,edited-cell",
+    );
   });
 });

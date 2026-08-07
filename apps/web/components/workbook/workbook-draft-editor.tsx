@@ -21,9 +21,15 @@ interface WorkbookDraftEditorProps {
   initialCells: WorkbookCell[];
   /** `can(update)` from the detail response — a "Can edit" grantee edits too. */
   canEdit: boolean;
+  /** Controlled draft value when autosave is owned by a parent surface. */
+  cells?: WorkbookCell[];
   name: string;
   /** Called after each successful autosave. */
   onSaved?: (workbook: Workbook) => void;
+  /** Mirrors live local edits so sibling editing surfaces can share one draft. */
+  onCellsChange?: (cells: WorkbookCell[]) => void;
+  /** Disable this editor's local autosave when a shared parent owns persistence. */
+  autosaveEnabled?: boolean;
 }
 
 /**
@@ -36,13 +42,17 @@ export function WorkbookDraftEditor({
   id,
   initialCells,
   canEdit,
+  cells: controlledCells,
   name,
   onSaved,
+  onCellsChange,
+  autosaveEnabled = true,
 }: WorkbookDraftEditorProps) {
   const { t } = useTranslation(["workbook", "common"]);
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id, { onSuccess: onSaved });
 
-  const [cells, setCells] = useState<WorkbookCell[]>(initialCells);
+  const [localCells, setLocalCells] = useState<WorkbookCell[]>(initialCells);
+  const cells = controlledCells ?? localCells;
 
   const [promptedQuestionId, setPromptedQuestionId] = useState<string | undefined>();
   const questionResolverRef = useRef<((answer: string | undefined) => void) | null>(null);
@@ -82,13 +92,18 @@ export function WorkbookDraftEditor({
     isValid: (c) => zWorkbookCellArray.safeParse(c).success,
     save,
     delayMs: AUTO_SAVE_DELAY,
+    enabled: autosaveEnabled,
   });
 
-  useReportAutosaveStatus(autosave);
+  useReportAutosaveStatus(autosave, autosaveEnabled);
 
-  const handleCellsChange = useCallback((next: WorkbookCell[]) => {
-    setCells(next);
-  }, []);
+  const handleCellsChange = useCallback(
+    (next: WorkbookCell[]) => {
+      if (!controlledCells) setLocalCells(next);
+      onCellsChange?.(next);
+    },
+    [controlledCells, onCellsChange],
+  );
 
   const {
     isConnected,

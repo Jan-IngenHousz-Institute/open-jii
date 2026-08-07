@@ -129,6 +129,29 @@ vi.mock("../analysis-panel", () => ({
   ),
 }));
 
+vi.mock("../branch-panel", () => ({
+  BranchPanel: ({
+    cell,
+    onChange,
+    disabled,
+  }: {
+    cell: { id: string; type: "branch"; paths: unknown[] };
+    onChange: (cell: { id: string; type: "branch"; paths: unknown[] }) => void;
+    disabled?: boolean;
+  }) => (
+    <div>
+      <span>BranchPanel</span>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange({ ...cell, paths: [...cell.paths, { id: "new-path" }] })}
+      >
+        Apply Branch Change
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock("../edge-panel", () => {
   type EdgeId = Edge["id"];
   interface EdgeSidePanelProps {
@@ -418,6 +441,31 @@ describe("<ExperimentSidePanel />", () => {
     });
   });
 
+  it("BranchPanel: reuses the workbook branch editor and propagates changes", async () => {
+    const user = userEvent.setup();
+    const branchCell = {
+      id: "branch-1",
+      type: "branch" as const,
+      isCollapsed: false,
+      paths: [],
+    };
+    const onBranchCellChange = vi.fn();
+    renderPanel({
+      selectedNode: makeNode("branch-1"),
+      nodeType: "BRANCH",
+      branchCell,
+      workbookCells: [branchCell],
+      onBranchCellChange,
+    });
+
+    expect(screen.getByText("BranchPanel")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Apply Branch Change" }));
+    expect(onBranchCellChange).toHaveBeenCalledWith({
+      ...branchCell,
+      paths: [{ id: "new-path" }],
+    });
+  });
+
   it("EdgeSidePanel opens when selectedEdge is provided and wires update/delete", async () => {
     const user = userEvent.setup();
     const { props } = renderPanel({
@@ -460,6 +508,25 @@ describe("<ExperimentSidePanel />", () => {
     const infoIcon = document.querySelector("svg.lucide-info");
     expect(infoIcon).toBeTruthy();
     expect(infoIcon).toHaveClass("lucide-info");
+  });
+
+  it("keeps question labels within the workbook schema bounds", async () => {
+    const user = userEvent.setup();
+    const { props } = renderPanel({
+      nodeType: "QUESTION",
+      nodeTitle: "Original",
+    });
+    const input = screen.getByPlaceholderText<HTMLInputElement>("sidePanelFlow.labelPlaceholder");
+
+    expect(input).toHaveAttribute("maxlength", "64");
+    await user.clear(input);
+    expect(props.onTitleChange).toHaveBeenCalledWith("");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent("sidePanelFlow.labelRequired");
+    await user.type(input, "x".repeat(65));
+
+    expect(input).toHaveValue("x".repeat(64));
+    expect(props.onTitleChange).toHaveBeenLastCalledWith("x".repeat(64));
   });
 
   it("does not show info icon for non-QUESTION nodes", () => {

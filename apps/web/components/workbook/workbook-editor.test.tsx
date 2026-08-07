@@ -82,6 +82,7 @@ describe("createDefaultCell", () => {
     const cell = createDefaultCell("branch");
     if (cell.type !== "branch") throw new Error("unexpected");
     expect(cell.paths).toHaveLength(1);
+    expect(cell.defaultPathId).toBe(cell.paths[0].id);
     expect(cell.paths[0].label).toBe("Path 1");
     expect(cell.paths[0].conditions[0]).toMatchObject({
       sourceCellId: "",
@@ -128,6 +129,21 @@ describe("WorkbookEditor — empty state", () => {
     const next = onCellsChange.mock.calls[0][0] as WorkbookCell[];
     expect(next).toHaveLength(1);
     expect(next[0].type).toBe("markdown");
+  });
+
+  it("adds a conditionless default Go to cell from the empty state", async () => {
+    const user = userEvent.setup();
+    const { onCellsChange } = renderEditor();
+
+    await user.click(screen.getByRole("button", { name: "Go to" }));
+
+    const next = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+    expect(next).toHaveLength(1);
+    const goto = next[0];
+    if (goto.type !== "branch") throw new Error("expected Go to branch shape");
+    expect(goto.paths).toHaveLength(1);
+    expect(goto.paths[0].conditions).toEqual([]);
+    expect(goto.defaultPathId).toBe(goto.paths[0].id);
   });
 
   it("adds a question cell when the user names it through the question picker", async () => {

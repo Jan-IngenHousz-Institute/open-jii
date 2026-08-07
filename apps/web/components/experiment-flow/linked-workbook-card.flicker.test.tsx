@@ -65,6 +65,16 @@ vi.mock("@/hooks/experiment/useDetachWorkbook/useDetachWorkbook", () => ({
 vi.mock("@/hooks/experiment/useUpgradeWorkbookVersion/useUpgradeWorkbookVersion", () => ({
   useUpgradeWorkbookVersion: () => ({ mutate: vi.fn() }),
 }));
+vi.mock("@/components/workbook/workbook-persistence-coordinator", () => ({
+  useWorkbookPersistence: () => ({
+    renameWorkbook: vi.fn(),
+    attachWorkbook: vi.fn(),
+    detachWorkbook: vi.fn(),
+    manualUpgrade: vi.fn(),
+    setWorkbookVersion: vi.fn(),
+    isPending: false,
+  }),
+}));
 
 const WORKBOOK_ID = "11111111-1111-1111-1111-111111111111";
 // Pinned == latest published, so the banner is driven solely by the

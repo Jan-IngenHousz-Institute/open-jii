@@ -28,6 +28,7 @@ import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-versio
 import { cn } from "@repo/ui/lib/utils";
 
 import { AddCellButton } from "./add-cell-button";
+import { nextBranchPathColor } from "./branch-path-colors";
 import { CellRenderer } from "./cell-renderer";
 import { WorkbookHeader } from "./workbook-header";
 import { WorkbookSidebar } from "./workbook-sidebar";
@@ -97,21 +98,24 @@ export function createDefaultCell(
       throw new Error("Question cells must be created via the question picker");
     case "output":
       return { ...base, type: "output", producedBy: "" };
-    case "branch":
+    case "branch": {
+      const pathId = crypto.randomUUID();
       return {
         ...base,
         type: "branch",
         paths: [
           {
-            id: crypto.randomUUID(),
+            id: pathId,
             label: "Path 1",
-            color: "",
+            color: nextBranchPathColor([]),
             conditions: [
               { id: crypto.randomUUID(), sourceCellId: "", field: "", operator: "eq", value: "" },
             ],
           },
         ],
+        defaultPathId: pathId,
       };
+    }
   }
 }
 
@@ -362,6 +366,13 @@ export function WorkbookEditor({
   );
 
   const groups = useMemo(() => buildCellGroups(cells), [cells]);
+  const validationContext = useMemo(
+    () =>
+      entitySnapshots
+        ? { protocols: entitySnapshots.protocols, macros: entitySnapshots.macros }
+        : undefined,
+    [entitySnapshots],
+  );
   const sortableIds = useMemo(
     () => groups.filter((g) => g.source.type !== "output").map((g) => g.id),
     [groups],
@@ -607,6 +618,7 @@ export function WorkbookEditor({
             onReorder={readOnly ? undefined : handleReorder}
             collapsed={sidebarCollapsed}
             onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
+            validationContext={validationContext}
           />
         </div>
       </div>

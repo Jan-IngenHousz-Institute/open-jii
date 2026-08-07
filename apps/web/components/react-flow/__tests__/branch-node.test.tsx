@@ -65,7 +65,7 @@ describe("BranchNode", () => {
     const sourceHandleIds = handles
       .filter((h) => h.getAttribute("data-handle-type") === "source")
       .map((h) => h.getAttribute("data-handle-id"));
-    expect(sourceHandleIds).toEqual(expect.arrayContaining(["p1", "p2"]));
+    expect(sourceHandleIds).toEqual(expect.arrayContaining(["out", "p1", "p2"]));
   });
 
   it("badges the default path", () => {
@@ -80,6 +80,27 @@ describe("BranchNode", () => {
     );
 
     expect(screen.getByText(/default/i)).toBeInTheDocument();
+  });
+
+  it("leaves an ambiguous duplicate default unmarked", () => {
+    const duplicatePaths = [
+      { id: "duplicate", label: "First", color: "#10B981" },
+      { id: "duplicate", label: "Second", color: "#EF4444" },
+    ];
+    render(
+      <BranchNode
+        nodes={[node]}
+        onNodeDelete={() => null}
+        {...node}
+        {...baseProps}
+        data={{
+          title: "Broken branch",
+          stepSpecification: { paths: duplicatePaths, defaultPathId: "duplicate" },
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/^default$/i)).not.toBeInTheDocument();
   });
 
   it("shows a placeholder when no paths are configured", () => {

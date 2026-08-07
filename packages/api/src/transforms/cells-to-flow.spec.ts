@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 
+import { zExperimentFlowGraph } from "../domains/experiment/experiment.schema";
 import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
-import { cellsToFlowGraph } from "./cells-to-flow";
+import { cellsToFlowGraph, deriveFlowNodeName } from "./cells-to-flow";
 
 const uuidA = "11111111-1111-1111-1111-111111111111";
 const uuidB = "22222222-2222-2222-2222-222222222222";
@@ -137,6 +138,7 @@ describe("cellsToFlowGraph", () => {
       target: "p1",
       label: null,
       sourceHandle: null,
+      data: { kind: "sequence" },
     });
     expect(edges[1]).toEqual({
       id: "e-p1-m1",
@@ -144,6 +146,7 @@ describe("cellsToFlowGraph", () => {
       target: "m1",
       label: null,
       sourceHandle: null,
+      data: { kind: "sequence" },
     });
 
     expect(nodes[0].position).toEqual({ x: -250, y: 240 });
@@ -186,6 +189,7 @@ describe("cellsToFlowGraph", () => {
     const loopEdge = edges.find((e) => e.source === "b1" && e.target === "p1");
     expect(loopEdge).toBeTruthy();
     expect(loopEdge?.label).toBe("Retry");
+    expect(loopEdge?.data).toEqual({ kind: "branch" });
 
     expect(edges.find((e) => e.source === "b1" && e.target === "md-end")).toBeTruthy();
   });
@@ -246,6 +250,49 @@ describe("cellsToFlowGraph", () => {
     ];
     const { nodes } = cellsToFlowGraph(cells);
     expect(nodes[0].name).toHaveLength(64);
+  });
+
+  it("uses a safe label for empty markdown without changing its content", () => {
+    const cells: WorkbookCell[] = [
+      { id: "md1", type: "markdown", isCollapsed: false, content: "" },
+    ];
+    const { nodes } = cellsToFlowGraph(cells);
+    expect(nodes[0].name).toBe("Instruction");
+    expect(nodes[0].content).toEqual({ text: "" });
+  });
+
+  it("falls back and truncates protocol and macro labels to the flow schema limit", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1, name: "" },
+      },
+      {
+        id: "m1",
+        type: "macro",
+        isCollapsed: false,
+        payload: { macroId: uuidB, language: "python", name: "m".repeat(100) },
+      },
+    ];
+    const { nodes } = cellsToFlowGraph(cells);
+    expect(nodes[0].name).toBe("Protocol 11111111");
+    expect(nodes[1].name).toBe("m".repeat(64));
+    expect(zExperimentFlowGraph.safeParse(cellsToFlowGraph(cells)).success).toBe(true);
+  });
+
+  it("uses the projection's safe-label rule for a raw live title without mutating it", () => {
+    const rawTitle = "Protocol ".repeat(10);
+    const cell: WorkbookCell = {
+      id: "p1",
+      type: "protocol",
+      isCollapsed: false,
+      payload: { protocolId: uuidA, version: 1, name: rawTitle },
+    };
+
+    expect(deriveFlowNodeName(cell, rawTitle)).toBe(rawTitle.trim().slice(0, 64));
+    expect(cell.payload.name).toBe(rawTitle);
   });
 
   it("converts an inline command cell to a measurement node carrying the command", () => {

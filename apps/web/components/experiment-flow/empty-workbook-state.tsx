@@ -1,6 +1,6 @@
 "use client";
 
-import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
+import { useWorkbookPersistence } from "@/components/workbook/workbook-persistence-coordinator";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { BookOpen, LinkIcon, Plus } from "lucide-react";
@@ -14,21 +14,16 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { WorkbookSelect } from "../workbook/workbook-select";
 
 interface EmptyWorkbookStateProps {
-  experimentId: string;
   experimentName: string;
   hasAccess: boolean;
 }
 
-export function EmptyWorkbookState({
-  experimentId,
-  experimentName,
-  hasAccess,
-}: EmptyWorkbookStateProps) {
+export function EmptyWorkbookState({ experimentName, hasAccess }: EmptyWorkbookStateProps) {
   const { t } = useTranslation("experiments");
   const router = useRouter();
   const locale = useLocale();
 
-  const attachWorkbook = useAttachWorkbook();
+  const persistence = useWorkbookPersistence();
   const [selectedWorkbookId, setSelectedWorkbookId] = useState("");
 
   // Create + attach + open in one step: a fresh workbook is only useful once it
@@ -36,33 +31,27 @@ export function EmptyWorkbookState({
   const createWorkbook = useWorkbookCreate({
     onSuccess: (data) => {
       const workbookId = data.id;
-      attachWorkbook.mutate(
-        { id: experimentId, workbookId },
-        {
-          onSuccess: () => router.push(`/${locale}/platform/workbooks/${workbookId}`),
-          onError: () => toast({ description: t("flow.attachFailed"), variant: "destructive" }),
-        },
-      );
+      void persistence
+        .attachWorkbook(workbookId)
+        .then(() => router.push(`/${locale}/platform/workbooks/${workbookId}`))
+        .catch(() => toast({ description: t("flow.attachFailed"), variant: "destructive" }));
     },
     onError: () => toast({ description: t("flow.createFailed"), variant: "destructive" }),
   });
 
-  const isCreating = createWorkbook.isPending || attachWorkbook.isPending;
+  const isCreating = createWorkbook.isPending || persistence.isPending;
 
   const handleAttach = () => {
     if (!selectedWorkbookId) return;
-    attachWorkbook.mutate(
-      { id: experimentId, workbookId: selectedWorkbookId },
-      {
-        onSuccess: () => {
-          toast({ description: t("flow.workbookAttached") });
-          setSelectedWorkbookId("");
-        },
-        onError: () => {
-          toast({ description: t("flow.attachFailed"), variant: "destructive" });
-        },
-      },
-    );
+    void persistence
+      .attachWorkbook(selectedWorkbookId)
+      .then(() => {
+        toast({ description: t("flow.workbookAttached") });
+        setSelectedWorkbookId("");
+      })
+      .catch(() => {
+        toast({ description: t("flow.attachFailed"), variant: "destructive" });
+      });
   };
 
   const handleCreate = () => {
@@ -95,7 +84,7 @@ export function EmptyWorkbookState({
               />
               <Button
                 onClick={handleAttach}
-                disabled={!selectedWorkbookId || attachWorkbook.isPending}
+                disabled={!selectedWorkbookId || persistence.isPending}
                 size="sm"
               >
                 <LinkIcon className="mr-1.5 h-4 w-4" />

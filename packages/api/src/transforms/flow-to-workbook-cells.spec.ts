@@ -5,6 +5,8 @@ import type {
   zExperimentFlowEdge,
   zExperimentFlowNode,
 } from "../domains/experiment/experiment.schema";
+import type { WorkbookCell } from "../domains/workbook/workbook-cells.schema";
+import { cellsToFlowGraph } from "./cells-to-flow";
 import { orderFlowNodes, flowNodesToWorkbookCells } from "./flow-to-workbook-cells";
 
 type FlowNode = z.infer<typeof zExperimentFlowNode>;
@@ -25,7 +27,7 @@ function makeNode(overrides: Partial<FlowNode> & { id: string; type: string }): 
 }
 
 function makeEdge(source: string, target: string): FlowEdge {
-  return { id: `${source}->${target}`, source, target };
+  return { id: `${source}->${target}`, source, target, data: { kind: "sequence" } };
 }
 
 describe("orderFlowNodes", () => {
@@ -51,35 +53,54 @@ describe("orderFlowNodes", () => {
     expect(result.map((n) => n.id)).toEqual(["n1", "n2", "n3"]);
   });
 
-  it("starts from first node when no isStart flag", () => {
+  it("rejects a graph without exactly one start node", () => {
     const nodes = [
       makeNode({ id: "n1", type: "measurement" }),
       makeNode({ id: "n2", type: "analysis" }),
     ];
     const edges = [makeEdge("n1", "n2")];
-    const result = orderFlowNodes(nodes, edges);
-    expect(result[0].id).toBe("n1");
+    expect(() => orderFlowNodes(nodes, edges)).toThrow("Exactly one start node");
   });
 
-  it("does not visit nodes twice (cycle protection)", () => {
+  it("rejects a cycle", () => {
     const nodes = [
       makeNode({ id: "n1", type: "measurement", isStart: true }),
       makeNode({ id: "n2", type: "analysis" }),
     ];
     const edges = [makeEdge("n1", "n2"), makeEdge("n2", "n1")];
-    const result = orderFlowNodes(nodes, edges);
-    expect(result).toHaveLength(2);
+    expect(() => orderFlowNodes(nodes, edges)).toThrow();
   });
 
-  it("skips disconnected nodes", () => {
+  it("rejects disconnected nodes", () => {
     const nodes = [
       makeNode({ id: "n1", type: "measurement", isStart: true }),
       makeNode({ id: "n2", type: "analysis" }),
       makeNode({ id: "n3", type: "question" }),
     ];
     const edges = [makeEdge("n1", "n2")];
-    const result = orderFlowNodes(nodes, edges);
-    expect(result.map((n) => n.id)).toEqual(["n1", "n2"]);
+    expect(() => orderFlowNodes(nodes, edges)).toThrow(
+      "Sequence edges must form one chain covering every node exactly once",
+    );
+  });
+
+  it("ignores branch reference edges while ordering", () => {
+    const nodes = [
+      makeNode({ id: "n1", type: "branch", isStart: true }),
+      makeNode({ id: "n2", type: "analysis" }),
+      makeNode({ id: "n3", type: "question" }),
+    ];
+    const edges: FlowEdge[] = [
+      makeEdge("n1", "n2"),
+      makeEdge("n2", "n3"),
+      {
+        id: "branch",
+        source: "n1",
+        target: "n3",
+        sourceHandle: "path-1",
+        data: { kind: "branch" },
+      },
+    ];
+    expect(orderFlowNodes(nodes, edges).map((node) => node.id)).toEqual(["n1", "n2", "n3"]);
   });
 });
 
@@ -210,5 +231,352 @@ describe("flowNodesToWorkbookCells", () => {
       type: "command",
       payload: { format: "string", content: "battery" },
     });
+  });
+
+  it("preserves every existing payload byte-for-byte while applying order", () => {
+    const existing: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: true,
+        payload: { protocolId: uuidA, version: 17, name: "Original protocol" },
+      },
+      {
+        id: "o1",
+        type: "output",
+        isCollapsed: true,
+        producedBy: "p1",
+        data: { value: 42 },
+        messages: ["kept"],
+      },
+      {
+        id: "q1",
+        type: "question",
+        isCollapsed: true,
+        name: "leaf_colour",
+        question: {
+          kind: "multi_choice",
+          text: "Leaf colour?",
+          options: ["green", "yellow"],
+          required: true,
+        },
+        answer: "green",
+        isAnswered: true,
+      },
+    ];
+    const graph = cellsToFlowGraph(existing);
+    const reversedNodes = graph.nodes.map((node, index) => ({
+      ...node,
+      isStart: index === graph.nodes.length - 1,
+    }));
+    const reversedEdges: FlowEdge[] = [
+      {
+        id: "q1-p1",
+        source: "q1",
+        target: "p1",
+        data: { kind: "sequence" },
+      },
+    ];
+
+    expect(flowNodesToWorkbookCells(reversedNodes, reversedEdges, existing)).toEqual([
+      existing[2],
+      existing[0],
+      existing[1],
+    ]);
+  });
+
+  it("round-trips a container-free workbook byte-identically", () => {
+    const cells: WorkbookCell[] = [
+      { id: "md1", type: "markdown", isCollapsed: true, content: "Prepare leaf" },
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 9, name: "Phi2" },
+      },
+      {
+        id: "out1",
+        type: "output",
+        isCollapsed: false,
+        producedBy: "p1",
+        data: [{ value: 0.7 }],
+        executionTime: 12,
+      },
+      {
+        id: "b1",
+        type: "branch",
+        isCollapsed: true,
+        paths: [
+          {
+            id: "path1",
+            label: "Retry",
+            color: "#10b981",
+            conditions: [
+              {
+                id: "cond1",
+                sourceCellId: "p1",
+                field: "value",
+                operator: "lt",
+                value: "0.5",
+              },
+            ],
+            gotoCellId: "p1",
+          },
+          {
+            id: "path2",
+            label: "Finish",
+            color: "#f59e0b",
+            conditions: [],
+          },
+        ],
+        defaultPathId: "path2",
+        evaluatedPathId: "path1",
+      },
+      {
+        id: "m1",
+        type: "macro",
+        isCollapsed: true,
+        payload: { macroId: uuidB, language: "python", name: "Keep language" },
+      },
+    ];
+    const graph = cellsToFlowGraph(cells);
+    expect(flowNodesToWorkbookCells(graph.nodes, graph.edges, cells)).toEqual(cells);
+  });
+
+  it("keeps a non-adjacent output at its existing index on a no-op round trip", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 3, name: "A" },
+      },
+      { id: "md1", type: "markdown", isCollapsed: false, content: "Between" },
+      {
+        id: "out1",
+        type: "output",
+        isCollapsed: false,
+        producedBy: "p1",
+        data: { value: 7 },
+      },
+    ];
+    const graph = cellsToFlowGraph(cells);
+
+    expect(flowNodesToWorkbookCells(graph.nodes, graph.edges, cells)).toEqual(cells);
+  });
+
+  it("keeps an output's producer-relative offset when inserting before the producer", () => {
+    const existing: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1 },
+      },
+      { id: "out1", type: "output", isCollapsed: false, producedBy: "p1" },
+      { id: "b1", type: "markdown", isCollapsed: false, content: "After" },
+    ];
+    const projected = cellsToFlowGraph(existing);
+    const inserted = makeNode({
+      id: "n1",
+      type: "instruction",
+      name: "Before",
+      content: { text: "Before" },
+      isStart: true,
+    });
+    const nodes = [inserted, ...projected.nodes.map((node) => ({ ...node, isStart: false }))];
+    const edges = [makeEdge("n1", "p1"), makeEdge("p1", "b1")];
+
+    expect(flowNodesToWorkbookCells(nodes, edges, existing).map((cell) => cell.id)).toEqual([
+      "n1",
+      "p1",
+      "out1",
+      "b1",
+    ]);
+  });
+
+  it("keeps an output beside its producer when an earlier cell is deleted", () => {
+    const existing: WorkbookCell[] = [
+      { id: "a1", type: "markdown", isCollapsed: false, content: "Before" },
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1 },
+      },
+      { id: "out1", type: "output", isCollapsed: false, producedBy: "p1" },
+      { id: "b1", type: "markdown", isCollapsed: false, content: "After" },
+    ];
+    const projected = cellsToFlowGraph(existing);
+    const nodes = projected.nodes
+      .filter((node) => node.id !== "a1")
+      .map((node) => ({ ...node, isStart: node.id === "p1" }));
+
+    expect(
+      flowNodesToWorkbookCells(nodes, [makeEdge("p1", "b1")], existing).map((cell) => cell.id),
+    ).toEqual(["p1", "out1", "b1"]);
+  });
+
+  it("measures an output offset within the surviving cell order", () => {
+    const existing: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1 },
+      },
+      { id: "removed", type: "markdown", isCollapsed: false, content: "Remove me" },
+      { id: "out1", type: "output", isCollapsed: false, producedBy: "p1" },
+      { id: "b1", type: "markdown", isCollapsed: false, content: "After" },
+    ];
+    const projected = cellsToFlowGraph(existing);
+    const nodes = projected.nodes.filter((node) => node.id !== "removed");
+
+    expect(
+      flowNodesToWorkbookCells(nodes, [makeEdge("p1", "b1")], existing).map((cell) => cell.id),
+    ).toEqual(["p1", "out1", "b1"]);
+  });
+
+  it("retargets and clears branch gotos without rebuilding branch payload", () => {
+    const branch: WorkbookCell = {
+      id: "b1",
+      type: "branch",
+      isCollapsed: true,
+      paths: [
+        {
+          id: "path1",
+          label: "Retry",
+          color: "#10b981",
+          conditions: [
+            { id: "c1", sourceCellId: "q1", field: "answer", operator: "eq", value: "yes" },
+          ],
+          gotoCellId: "q1",
+        },
+      ],
+    };
+    const target: WorkbookCell = {
+      id: "q1",
+      type: "question",
+      isCollapsed: false,
+      name: "answer",
+      question: { kind: "yes_no", text: "Continue?", required: false },
+      isAnswered: false,
+    };
+    const graph = cellsToFlowGraph([branch, target]);
+    const pathEdge = graph.edges.find((edge) => edge.data?.kind === "branch");
+    expect(pathEdge).toBeDefined();
+
+    const retargeted = flowNodesToWorkbookCells(
+      graph.nodes,
+      graph.edges.map((edge) => (edge.id === pathEdge?.id ? { ...edge, target: "b1" } : edge)),
+      [branch, target],
+    );
+    expect(retargeted[0]).toEqual({
+      ...branch,
+      paths: [{ ...branch.paths[0], gotoCellId: "b1" }],
+    });
+
+    const cleared = flowNodesToWorkbookCells(
+      graph.nodes,
+      graph.edges.filter((edge) => edge.data?.kind !== "branch"),
+      [branch, target],
+    );
+    expect(cleared[0]).toEqual({
+      ...branch,
+      paths: [
+        {
+          id: "path1",
+          label: "Retry",
+          color: "#10b981",
+          conditions: branch.paths[0].conditions,
+        },
+      ],
+    });
+  });
+
+  it("allows unrelated reordering when legacy branch path ids are ambiguous", () => {
+    const branch: WorkbookCell = {
+      id: "b1",
+      type: "branch",
+      isCollapsed: false,
+      paths: [
+        {
+          id: "duplicate",
+          label: "First",
+          color: "#10b981",
+          conditions: [],
+          gotoCellId: "q1",
+        },
+        {
+          id: "duplicate",
+          label: "Second",
+          color: "#f59e0b",
+          conditions: [],
+          gotoCellId: "b1",
+        },
+      ],
+    };
+    const target: WorkbookCell = {
+      id: "q1",
+      type: "question",
+      isCollapsed: false,
+      name: "answer",
+      question: { kind: "yes_no", text: "Continue?", required: false },
+      isAnswered: false,
+    };
+    const graph = cellsToFlowGraph([branch, target]);
+    const reorderedNodes = graph.nodes.map((node) => ({
+      ...node,
+      isStart: node.id === "q1",
+    }));
+    const reorderedEdges = [
+      ...graph.edges.filter((edge) => edge.data?.kind === "branch"),
+      makeEdge("q1", "b1"),
+    ];
+
+    const reordered = flowNodesToWorkbookCells(reorderedNodes, reorderedEdges, [branch, target]);
+
+    expect(reordered.map((cell) => cell.id)).toEqual(["q1", "b1"]);
+    expect(reordered[1]).toEqual(branch);
+  });
+
+  it("refuses only a target edit that must resolve an ambiguous legacy handle", () => {
+    const branch: WorkbookCell = {
+      id: "b1",
+      type: "branch",
+      isCollapsed: false,
+      paths: [
+        {
+          id: "duplicate",
+          label: "First",
+          color: "#10b981",
+          conditions: [],
+          gotoCellId: "q1",
+        },
+        {
+          id: "duplicate",
+          label: "Second",
+          color: "#f59e0b",
+          conditions: [],
+          gotoCellId: "b1",
+        },
+      ],
+    };
+    const target: WorkbookCell = {
+      id: "q1",
+      type: "question",
+      isCollapsed: false,
+      name: "answer",
+      question: { kind: "yes_no", text: "Continue?", required: false },
+      isAnswered: false,
+    };
+    const graph = cellsToFlowGraph([branch, target]);
+    const changedEdges = graph.edges.map((edge) =>
+      edge.data?.kind === "branch" && edge.target === "q1" ? { ...edge, target: "b1" } : edge,
+    );
+
+    expect(() => flowNodesToWorkbookCells(graph.nodes, changedEdges, [branch, target])).toThrow(
+      /Open the branch node settings/,
+    );
   });
 });

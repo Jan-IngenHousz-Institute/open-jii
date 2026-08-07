@@ -157,6 +157,57 @@ beforeEach(() => {
 });
 
 describe("evaluateAndRoute", () => {
+  it("routes a forward conditionless default Go to and records a Back return", () => {
+    flowState.cells = [branch("b1", [path("goto", [], "target")], "goto")];
+    flowState.flowNodes = [branchFlowNode("b1"), plainFlowNode("skipped"), plainFlowNode("target")];
+    flowState.currentFlowStep = 0;
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(2);
+    expect(mockRecordBranchJump).toHaveBeenCalledWith(2);
+  });
+
+  it("routes a backward conditionless default Go to without recording a Back return", () => {
+    flowState.cells = [qCell("target"), branch("b1", [path("goto", [], "target")], "goto")];
+    flowState.flowNodes = [plainFlowNode("target"), branchFlowNode("b1")];
+    flowState.currentFlowStep = 1;
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(0);
+    expect(mockRecordBranchJump).not.toHaveBeenCalled();
+  });
+
+  it("falls through for a conditionless default Go to that targets itself", () => {
+    flowState.cells = [branch("b1", [path("goto", [], "b1")], "goto")];
+    flowState.flowNodes = [branchFlowNode("b1"), plainFlowNode("next")];
+    flowState.currentFlowStep = 0;
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1);
+    expect(mockRecordBranchJump).toHaveBeenCalledWith(1);
+  });
+
+  it("fails closed when duplicate path ids make the default ambiguous", () => {
+    flowState.cells = [
+      branch("b1", [path("duplicate", [], "first"), path("duplicate", [], "second")], "duplicate"),
+    ];
+    flowState.flowNodes = [
+      branchFlowNode("b1"),
+      plainFlowNode("next"),
+      plainFlowNode("first"),
+      plainFlowNode("second"),
+    ];
+    flowState.currentFlowStep = 0;
+
+    evaluateAndRoute(branchFlowNode("b1"));
+
+    expect(mockSetLastMatchedPath).toHaveBeenCalledWith(undefined);
+    expect(mockSetCurrentFlowStep).toHaveBeenCalledWith(1);
+  });
+
   it("jumps to the matched path's gotoCellId target (simple branch)", () => {
     mockGetAnswer.mockImplementation((_c, id) => (id === "q1" ? "yes" : undefined));
     flowState.cells = [

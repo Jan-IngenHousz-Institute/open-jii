@@ -82,4 +82,35 @@ describe("useWorkbookUpdate", () => {
       expect(cached?.name).toBe("Original");
     });
   });
+
+  it("serializes separate writers for the same workbook", async () => {
+    const queryClient = createTestQueryClient();
+    let releaseFirst: (() => void) | undefined;
+    const firstBlocked = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const request = server.mount(contract.workbooks.updateWorkbook, {
+      body: createWorkbook({ id: "wb-1" }),
+      unblock: firstBlocked,
+    });
+    const { result } = renderHook(
+      () => ({
+        title: useWorkbookUpdate("wb-1"),
+        description: useWorkbookUpdate("wb-1"),
+      }),
+      { queryClient },
+    );
+
+    const first = result.current.title.mutateAsync({ id: "wb-1", name: "First" });
+    const second = result.current.description.mutateAsync({
+      id: "wb-1",
+      description: "Second",
+    });
+    await waitFor(() => expect(request.callCount).toBe(1));
+
+    releaseFirst?.();
+    await Promise.all([first, second]);
+
+    expect(request.calls[1]?.body).toEqual(expect.objectContaining({ description: "Second" }));
+  });
 });
