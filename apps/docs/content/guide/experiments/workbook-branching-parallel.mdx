@@ -1,0 +1,163 @@
+---
+title: "Branching, Go to, and parallel devices"
+description: "Route a workbook on earlier answers, end a path cleanly with Go to, edit the flow on the canvas, and run several devices at once with parallel lanes."
+---
+
+{/* verified: code@546757ef4 2026-08-08, captured against a local run with mock devices */}
+
+Workbooks run their cells top to bottom. This page covers the tools that change
+that order: **branches** that pick a path from earlier values, **Go to** cells
+that jump past cells that should not run, the **Graph** view for editing the
+flow visually, and **parallel containers** that run different chains on
+different connected devices at the same time.
+
+![A workbook combining a question, a branch, protocol chains, a Go to, and a parallel container](/img/workbooks/wb-design-list.png)
+
+## Branch on earlier answers
+
+A branch cell holds one or more **paths**. Each path has conditions over
+earlier cells (a question's answer, a value from a protocol or macro, or the
+pinned **Connected device** source) and a **THEN** target: the cell the run
+jumps to when the conditions match. Paths are evaluated in order and the first
+match wins.
+
+The **Otherwise** selector at the top marks one path as the default. When no
+conditioned path matches, the default routes the run; a path with no conditions
+is only valid as this default. A branch without a default simply falls through
+to the next cell, and the editor shows an amber hint so that choice is visible
+rather than accidental.
+
+![A branch cell with two conditioned paths, an Otherwise default, and jump targets](/img/workbooks/wb-branch-cell.png)
+
+Every path gets its own color, which the Graph view reuses for that path's
+edge, so the canvas and the list describe the same flow in the same colors.
+
+## End a path with Go to
+
+An if/else whose arms rejoin needs a way for one arm to _end_. A **Go to**
+cell is that: an unconditional jump to any later or earlier cell. Add one from
+the cell bar; it renders as a compact card with just its target.
+
+![The compact Go to cell with its jump target](/img/workbooks/wb-goto-cell.png)
+
+A typical shape, used in the workbook pictured above:
+
+1. a question asks about canopy condition;
+2. a branch routes _Stressed_ to a fluorescence chain and _Healthy_ to a quick
+   SPAD reading;
+3. the stressed chain ends with **Go to** pointing past the healthy chain, so
+   the two arms never bleed into each other.
+
+**Convert to branch** turns a Go to back into a full branch cell, keeping its
+target, when you later need conditions.
+
+<Callout type="info">
+  A backward Go to creates a loop. The run stops such a loop after 100 visits to the same branch,
+  and the Problems panel warns about it while you author.
+</Callout>
+
+## Problems: validation while you author
+
+Branch mistakes used to surface only in the middle of a run. The sidebar now
+has a live **Problems** section; issues also render inline on the affected
+cell, and clicking an entry scrolls to it.
+
+![The Problems panel reporting a missing jump target and a fall-through branch](/img/workbooks/wb-problems.png)
+
+It reports, among others:
+
+- a jump target that no longer exists (deleted or renamed away);
+- a branch with no resolvable Otherwise path that may fall through;
+- cells no path can reach;
+- two paths in one branch with identical conditions (the later one can never
+  win);
+- a backward Go to that will loop until the visit cap.
+
+Warnings do not block saving. They exist so a workbook is repaired before it is
+published to the field, not after.
+
+## Edit the flow on the canvas
+
+An experiment's **Design** tab now has two editable views of the same draft:
+**List** and **Graph**. The Graph view is no longer read-only.
+
+![The workbook rendered as a flow graph with branch paths as colored edges](/img/workbooks/wb-canvas.png)
+
+- The straight left-to-right chain of edges is the **sequence spine**: it _is_
+  the cell order, so it cannot be deleted, only rewired by moving nodes.
+- Colored edges leaving a branch are that branch's **paths**; dragging one
+  retargets the jump without touching any cell's content.
+- Selecting a node opens its panel. The branch panel is the same editor as the
+  List view, including the Otherwise selector, so the two views can never
+  disagree about what a branch does.
+- The floating toolbar places new protocol, macro, and question cells. Picking
+  an entity first means a placed cell is always valid.
+
+![Selecting a branch node opens the shared branch editor in a side panel](/img/workbooks/wb-canvas-branch-panel.png)
+
+Both views edit the same draft through one save pipeline, and edits made on
+the canvas autosave exactly like edits made in the list.
+
+<video controls width="100%" preload="metadata">
+  <source src="/img/workbooks/workbook-canvas-editing.webm" type="video/webm" />
+  Your browser does not support embedded video.
+</video>
+
+## Run devices in parallel lanes
+
+A **parallel container** holds named **lanes**. Each lane binds a subset of
+the connected devices with the same conditions a device branch uses (family,
+name, index), and owns its own ordered chain of cells. When the run reaches the
+container, every lane runs **concurrently**: two devices measure at the same
+time, each through its own chain.
+
+![A parallel container with two lanes, each binding one device to its own protocol chain](/img/workbooks/wb-parallel-cell.png)
+
+Rules worth knowing:
+
+- A lane's devices are **frozen when the container starts**. A device that
+  connects mid-run does not join, and one lane's commands can never reach
+  another lane's devices.
+- The run waits at the end of the container until every lane is terminal.
+  A lane stuck on a question or a long macro can be **abandoned**, which
+  resolves it and releases the run.
+- A failed lane does not fail the run: it resolves as failed with its device
+  named, sibling lanes are unaffected, and the run continues as **partial**.
+- Cells after the container can read each lane's status and branch on it, for
+  example to ask for a manual reading when a lane failed.
+
+![Two lanes executing concurrently during a run](/img/workbooks/wb-lanes-running.png)
+
+<video controls width="100%" preload="metadata">
+  <source src="/img/workbooks/workbook-parallel-run.webm" type="video/webm" />
+  Your browser does not support embedded video.
+</video>
+
+<Callout type="warn">
+  Parallel containers currently run on the web only; the mobile app support ships separately and
+  older app versions refuse container workbooks rather than mis-running them. Publishing a version
+  that contains a container is gated behind the `workbook-parallel-publish` release flag, so a
+  container workbook cannot reach field devices before the mobile side is out.
+</Callout>
+
+## Complete, partial, or unknown
+
+Multi-device runs used to fail silently: if one device produced nothing, the
+data simply was not there. Runs now mint an attempt id, stamp it (together with
+the producing cell and device) on every measurement, and emit a terminal
+manifest of what was expected versus what arrived. The pipeline derives a
+per-run status:
+
+| Status     | Meaning                                                                     |
+| ---------- | --------------------------------------------------------------------------- |
+| `complete` | Every expected producer and device pair delivered rows                      |
+| `partial`  | The run ended, but expected rows are missing (they can still heal late)     |
+| `unknown`  | No terminal manifest exists, for example after a crash, so no claim is made |
+
+The apps show a warning when a run completes partially, and a lane that
+produced no rows at all stays visible as an unmet expectation instead of
+disappearing.
+
+For choosing branch sources and macro context, see
+[Working with workbooks](/guide/experiments/workbooks) and
+[Writing macros](/guide/devices-protocols/writing-macros).

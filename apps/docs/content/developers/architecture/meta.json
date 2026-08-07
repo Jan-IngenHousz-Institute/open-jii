@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "identity-access-management",
+    "workbook-runtime",
     "data-ingestion",
     "time-synchronization",
     "medallion-layers"

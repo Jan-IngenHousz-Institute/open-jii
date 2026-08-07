@@ -1,4 +1,12 @@
 {
   "title": "Experiments",
-  "pages": ["index", "creating", "workbooks", "metadata", "managing", "collaborators"]
+  "pages": [
+    "index",
+    "creating",
+    "workbooks",
+    "workbook-branching-parallel",
+    "metadata",
+    "managing",
+    "collaborators"
+  ]
 }
