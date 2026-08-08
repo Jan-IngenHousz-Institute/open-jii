@@ -103,14 +103,6 @@ async function _runMacroBatch(event) {
           maxBuffer: 10 * 1024 * 1024, // 10MB output buffer
         },
         (error, stdout, stderr) => {
-          // Wrapper diagnostics are structured, content-free fingerprints.
-          // Forward one line per CloudWatch event so large batches do not
-          // collapse into a single truncated log entry.
-          for (const line of (stderr || "").split("\n")) {
-            const trimmed = line.trim();
-            if (trimmed) console.error("[handler] wrapper stderr:", trimmed.slice(0, 4000));
-          }
-
           // maxBuffer overflow can fire without setting error.killed/error.signal,
           // so check the code first.
           if (error?.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
@@ -133,11 +125,23 @@ async function _runMacroBatch(event) {
           const output = (stdout || "").trim();
           if (output) {
             try {
-              resolve(JSON.parse(output));
+              const parsed = JSON.parse(output);
+              if (Array.isArray(parsed?.fingerprints)) {
+                for (const fingerprint of parsed.fingerprints) {
+                  console.error(JSON.stringify(fingerprint));
+                }
+              }
+              if (parsed !== null && typeof parsed === "object") {
+                delete parsed.fingerprints;
+              }
+              resolve(parsed);
             } catch (parseErr) {
               const code = error?.code ?? "unknown";
               const signal = error?.signal ?? "none";
               const stderrTrimmed = (stderr || "").trim();
+              if (stderrTrimmed) {
+                console.error("[handler] wrapper stderr:", stderrTrimmed.slice(0, 4000));
+              }
               resolve({
                 status: "error",
                 results: [],

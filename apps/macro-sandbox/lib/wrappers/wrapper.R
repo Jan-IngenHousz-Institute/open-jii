@@ -54,6 +54,7 @@ if (!file.exists(input_data_path)) {
 batch_items <- fromJSON(input_data_path, simplifyVector = FALSE)
 # Result list
 results <- list()
+fingerprints <- list()
 
 # 3. PREPARE USER CODE
 # Reading the user script content
@@ -98,23 +99,72 @@ is_json_array <- function(value) {
   is.list(value) && is.null(names(value))
 }
 
+known_top_level_keys <- c(
+  "set", "macros", "protocol_id", "sample", "gps", "data", "output",
+  "time", "timestamp", "latitude", "longitude", "questions", "annotations",
+  "device", "protocol", "id"
+)
+
+# FNV-1a 32-bit over UTF-8 bytes. Keep the hash as an exactly-representable
+# double and decompose multiplication by 16777619 into 403 + 2^24 so no
+# intermediate exceeds the integer precision of an R double.
+fingerprint_digest <- function(value) {
+  modulus <- 4294967296
+  hash <- 2166136261
+  for (byte in as.integer(charToRaw(enc2utf8(value)))) {
+    low_byte <- hash %% 256
+    hash <- hash - low_byte + bitwXor(as.integer(low_byte), byte)
+    hash <- (hash * 403 + (hash %% 256) * 16777216) %% modulus
+  }
+  high <- as.integer(floor(hash / 65536))
+  low <- as.integer(hash %% 65536)
+  paste0("#", sprintf("%04x", high), sprintf("%04x", low))
+}
+
+redact_key <- function(key) {
+  if (key %in% known_top_level_keys) key else fingerprint_digest(key)
+}
+
+redact_label <- function(label) {
+  if (grepl("^[A-Za-z0-9_-]{1,24}$", label, perl = TRUE)) label else fingerprint_digest(label)
+}
+
+javascript_sort_keys <- function(keys) {
+  if (length(keys) < 2) return(keys)
+  sort_key <- function(value) {
+    utf16 <- iconv(value, from = "UTF-8", to = "UTF-16BE", toRaw = TRUE)[[1]]
+    paste(sprintf("%02x", as.integer(utf16)), collapse = "")
+  }
+  keys[order(vapply(keys, sort_key, character(1)), method = "radix")]
+}
+
 build_shape_fingerprint <- function(item) {
   data <- item$data
   is_array <- is_json_array(data)
   is_record <- is.list(data) && !is_array
-  set_value <- if (is_record) data$set else NULL
+  has_set <- is_record && "set" %in% names(data)
+  set_value <- if (has_set) data$set else NULL
   set_is_array <- is_json_array(set_value)
+  set_typeof <- if (!has_set) {
+    "undefined"
+  } else if (is.null(set_value)) {
+    "null"
+  } else if (set_is_array) {
+    "array"
+  } else {
+    json_typeof(set_value)
+  }
   set_labels <- if (set_is_array) {
-    Filter(
+    unname(Filter(
       Negate(is.null),
       lapply(set_value, function(entry) {
         if (is.list(entry) && is.character(entry$label) && length(entry$label) == 1) {
-          entry$label
+          redact_label(entry$label)
         } else {
           NULL
         }
       })
-    )
+    ))
   } else {
     list()
   }
@@ -126,8 +176,9 @@ build_shape_fingerprint <- function(item) {
     typeof = json_typeof(data),
     isArray = is_array,
     length = if (is_array) length(data) else if (is.character(data) && length(data) == 1) nchar(data, type = "chars") else NULL,
-    topLevelKeys = if (is_record) as.list(sort(names(data))) else list(),
+    topLevelKeys = if (is_record) unname(lapply(javascript_sort_keys(names(data)), redact_key)) else list(),
     setIsArray = set_is_array,
+    setTypeof = set_typeof,
     setLength = if (set_is_array) length(set_value) else NULL,
     setLabels = set_labels,
     macro_id = if (is.character(item$macro_id) && length(item$macro_id) == 1) item$macro_id else NULL,
@@ -239,11 +290,7 @@ for (item in batch_items) {
   # Use an environment (reference semantics) so output$key <- val works in-place.
   run_env$output <- new.env(parent = emptyenv())
 
-  writeLines(
-    toJSON(build_shape_fingerprint(item), auto_unbox = TRUE, null = "null"),
-    con = stderr()
-  )
-  flush(stderr())
+  fingerprints[[length(fingerprints) + 1]] <- build_shape_fingerprint(item)
   
   # B. Run User Code
   execution_result <- if (!is.null(parse_error)) {
@@ -282,7 +329,7 @@ for (item in batch_items) {
 # 5. OUTPUT
 # Use digits=NA to preserve full floating-point precision (max 17 significant digits)
 json_output <- toJSON(
-  list(status = "success", results = results),
+  list(status = "success", results = results, fingerprints = fingerprints),
   auto_unbox = TRUE,
   digits = NA,
   null = "null"

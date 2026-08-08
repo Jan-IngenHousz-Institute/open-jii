@@ -84,9 +84,22 @@ dir.create(tmpdir)
 script_path <- file.path(tmpdir, "script")
 input_path <- file.path(tmpdir, "input.json")
 output_path <- file.path(tmpdir, "output.json")
+stderr_path <- file.path(tmpdir, "stderr.log")
 
 writeLines(script_content, script_path)
 writeLines(toJSON(items, auto_unbox = TRUE, null = "null"), input_path)
+
+surface_wrapper_stderr <- function() {
+  if (!file.exists(stderr_path)) return()
+  wrapper_stderr <- paste(readLines(stderr_path, warn = FALSE), collapse = "\n")
+  if (nchar(wrapper_stderr) > 0) {
+    writeLines(
+      paste0("[handler] wrapper stderr: ", substr(wrapper_stderr, 1, 4000)),
+      con = stderr()
+    )
+    flush(stderr())
+  }
+}
 
 # Run wrapper in a subprocess with stripped environment (env -i).
 # Output file (3rd arg) prevents user cat()/print() from corrupting JSON.
@@ -102,7 +115,7 @@ result <- tryCatch({
       "Rscript", WRAPPER_PATH, script_path, input_path, output_path
     ),
     stdout = FALSE,
-    stderr = ""  # inherit Lambda stderr so wrapper crash messages reach CloudWatch
+    stderr = stderr_path
   )
 
   if (exit_code == 124) {
@@ -114,7 +127,13 @@ result <- tryCatch({
     } else {
       output_str <- paste(readLines(output_path, warn = FALSE), collapse = "\n")
       if (nchar(output_str) > 0) {
-        fromJSON(output_str, simplifyVector = FALSE)
+        tryCatch(
+          fromJSON(output_str, simplifyVector = FALSE),
+          error = function(e) {
+            surface_wrapper_stderr()
+            stop(e)
+          }
+        )
       } else {
         list(status = "error", results = list(), errors = list("Wrapper returned no output"))
       }
@@ -125,6 +144,20 @@ result <- tryCatch({
 }, error = function(e) {
   list(status = "error", results = list(), errors = list(paste0("Execution failed: ", e$message)))
 })
+
+if (is.list(result) && "fingerprints" %in% names(result)) {
+  fingerprints <- result$fingerprints
+  result$fingerprints <- NULL
+  if (is.list(fingerprints) && is.null(names(fingerprints))) {
+    for (fingerprint in fingerprints) {
+      writeLines(
+        toJSON(fingerprint, auto_unbox = TRUE, digits = NA, null = "null"),
+        con = stderr()
+      )
+      flush(stderr())
+    }
+  }
+}
 
 # Clean up
 unlink(tmpdir, recursive = TRUE)

@@ -110,13 +110,6 @@ def _execute(event):
             },
         )
 
-        # Fingerprints are emitted on stderr so they cannot enter the macro
-        # response. Forward each line as its own CloudWatch diagnostic.
-        for line in result.stderr.splitlines():
-            trimmed = line.strip()
-            if trimmed:
-                print(f"[handler] wrapper stderr: {trimmed[:4000]}", file=sys.stderr, flush=True)
-
         stdout = result.stdout.strip()
         if len(stdout) > MAX_OUTPUT_SIZE:
             return {
@@ -128,11 +121,23 @@ def _execute(event):
             try:
                 parsed = json.loads(stdout)
             except json.JSONDecodeError:
+                stderr = result.stderr.strip()
+                if stderr:
+                    print(f"[handler] wrapper stderr: {stderr[:4000]}", file=sys.stderr, flush=True)
                 return {
                     "status": "error",
                     "results": [],
                     "errors": ["Wrapper returned invalid JSON"],
                 }
+            if isinstance(parsed, dict):
+                fingerprints = parsed.pop("fingerprints", None)
+                if isinstance(fingerprints, list):
+                    for fingerprint in fingerprints:
+                        print(
+                            json.dumps(fingerprint, separators=(",", ":"), ensure_ascii=False),
+                            file=sys.stderr,
+                            flush=True,
+                        )
             return parsed
         else:
             return {

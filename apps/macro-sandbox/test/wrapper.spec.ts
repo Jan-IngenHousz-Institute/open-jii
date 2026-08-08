@@ -8,7 +8,29 @@ import { afterEach, describe, expect, it } from "vitest";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const wrapperPath = resolve(__dirname, "../lib/wrappers/wrapper.js");
 const helpersPath = resolve(__dirname, "../lib/helpers/helpers.js");
+const fixturePath = resolve(
+  __dirname,
+  "../../../packages/api/fixtures/macro-input-shape-fingerprints.json",
+);
 const tempDirs: string[] = [];
+
+interface FingerprintFixture {
+  fixtureVersion: number;
+  privacySentinels: string[];
+  cases: Array<{
+    name: string;
+    data: unknown;
+    expected: Record<string, unknown>;
+  }>;
+}
+
+interface WrapperEnvelope {
+  status: string;
+  results: Array<Record<string, unknown>>;
+  fingerprints: Array<Record<string, unknown>>;
+}
+
+const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as FingerprintFixture;
 
 function runWrapper(script: string, items: unknown[]) {
   const dir = mkdtempSync(resolve(tmpdir(), "macro-wrapper-test-"));
@@ -29,51 +51,45 @@ function runWrapper(script: string, items: unknown[]) {
   });
 }
 
+function fixtureItems() {
+  return fixture.cases.map((testCase, index) => ({
+    id: `row-${index}`,
+    macro_id: `macro-${index}`,
+    workbook_version_id: "workbook-version-456",
+    data: testCase.data,
+  }));
+}
+
+function expectedFingerprints() {
+  return fixture.cases.map((testCase, index) => ({
+    msg: "Macro input shape fingerprint",
+    operation: "executeMacro",
+    boundary: "sandbox-pre-execution",
+    ...testCase.expected,
+    macro_id: `macro-${index}`,
+    workbook_version_id: "workbook-version-456",
+  }));
+}
+
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
 describe("JavaScript macro wrapper diagnostics", () => {
-  it("logs only the input shape and identifiers before execution", () => {
-    const result = runWrapper('output["ok"] = true;', [
-      {
-        id: "row-1",
-        macro_id: "macro-123",
-        workbook_version_id: "workbook-version-456",
-        data: {
-          set: [
-            {
-              label: "SPAD",
-              measurement: "MEASUREMENT_VALUE_MUST_NOT_APPEAR",
-              latitude: 52.3676,
-              longitude: 4.9041,
-            },
-          ],
-          gps: { latitude: 52.3676, longitude: 4.9041 },
-        },
-      },
-    ]);
+  it("matches every v2 fingerprint fixture through structured stdout", () => {
+    expect(fixture.fixtureVersion).toBe(2);
+    const result = runWrapper('output["ok"] = true;', fixtureItems());
 
     expect(result.status).toBe(0);
-    expect(result.stderr, `wrapper stdout: ${result.stdout}`).not.toBe("");
-    const fingerprint = JSON.parse(result.stderr.trim()) as Record<string, unknown>;
-    expect(fingerprint).toEqual({
-      msg: "Macro input shape fingerprint",
-      operation: "executeMacro",
-      boundary: "sandbox-pre-execution",
-      typeof: "object",
-      isArray: false,
-      length: null,
-      topLevelKeys: ["gps", "set"],
-      setIsArray: true,
-      setLength: 1,
-      setLabels: ["SPAD"],
-      macro_id: "macro-123",
-      workbook_version_id: "workbook-version-456",
-    });
-    expect(result.stderr).not.toContain("MEASUREMENT_VALUE_MUST_NOT_APPEAR");
-    expect(result.stderr).not.toContain("52.3676");
-    expect(result.stderr).not.toContain("4.9041");
+    expect(result.stderr).toBe("");
+    const envelope = JSON.parse(result.stdout) as WrapperEnvelope;
+    expect(envelope.status).toBe("success");
+    expect(envelope.fingerprints).toEqual(expectedFingerprints());
+
+    const emittedFingerprints = JSON.stringify(envelope.fingerprints);
+    for (const sentinel of fixture.privacySentinels) {
+      expect(emittedFingerprints).not.toContain(sentinel);
+    }
   });
 
   it("includes the JavaScript error type and fingerprints failing items", () => {
@@ -82,14 +98,17 @@ describe("JavaScript macro wrapper diagnostics", () => {
     ]);
 
     expect(result.status).toBe(0);
-    expect(result.stderr, `wrapper stdout: ${result.stdout}`).not.toBe("");
-    expect(JSON.parse(result.stderr.trim())).toMatchObject({
-      boundary: "sandbox-pre-execution",
-      macro_id: "macro-123",
-    });
+    expect(result.stderr).toBe("");
     expect(JSON.parse(result.stdout)).toMatchObject({
       status: "success",
       results: [{ id: "row-1", success: false, error: "TypeError: bad input" }],
+      fingerprints: [
+        {
+          boundary: "sandbox-pre-execution",
+          macro_id: "macro-123",
+          setTypeof: "array",
+        },
+      ],
     });
   });
 });
