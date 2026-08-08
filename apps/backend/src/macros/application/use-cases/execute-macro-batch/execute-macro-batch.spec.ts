@@ -533,13 +533,16 @@ describe("ExecuteMacroBatchUseCase", () => {
       );
       expect(fingerprintCall?.[0]).toMatchObject({
         boundary: "backend-received",
+        itemCount: 1,
         topLevelKeys: ["set"],
         setIsArray: true,
+        setTypeof: "array",
         setLength: 1,
         setLabels: ["SPAD"],
         macro_id: macro.id,
         workbook_version_id: workbookVersionId,
       });
+      expect((fingerprintCall?.[0] as { sampleItemIds: string[] }).sampleItemIds).toHaveLength(1);
       expect(invokeSpy).toHaveBeenCalledWith(
         "test-fn",
         expect.objectContaining({

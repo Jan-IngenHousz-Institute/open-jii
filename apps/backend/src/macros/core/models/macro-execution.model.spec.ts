@@ -10,6 +10,7 @@ interface ShapeFingerprintFields {
   length: number | null;
   topLevelKeys: string[];
   setIsArray: boolean;
+  setTypeof: string;
   setLength: number | null;
   setLabels: string[];
 }
@@ -52,6 +53,6 @@ describe("buildMacroInputShapeFingerprint", () => {
   });
 
   it("uses the versioned shared fixture contract", () => {
-    expect(fixtures.fixtureVersion).toBe(1);
+    expect(fixtures.fixtureVersion).toBe(2);
   });
 });

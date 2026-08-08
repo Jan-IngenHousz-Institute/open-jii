@@ -15,12 +15,58 @@ export function emptyEnvelopeError(source: string): string {
   return `empty-envelope: recognized ${source} contained no measurement; macro not invoked`;
 }
 
+// Record keys and set labels are user-controlled (the request schema accepts an
+// arbitrary record), so a coordinate or measurement can arrive as a key name.
+// Known structural keys pass through; anything else is reduced to a stable
+// digest that is comparable across rows but not reversible into a value.
+const KNOWN_TOP_LEVEL_KEYS = new Set([
+  "set",
+  "macros",
+  "protocol_id",
+  "sample",
+  "gps",
+  "data",
+  "output",
+  "time",
+  "timestamp",
+  "latitude",
+  "longitude",
+  "questions",
+  "annotations",
+  "device",
+  "protocol",
+  "id",
+]);
+
+// Labels are user-defined per protocol (PAM, SPAD, ECS, Rep, X1..X8), so no
+// closed allowlist exists. This is a token-shape guard, not a guarantee.
+const SAFE_LABEL = /^[A-Za-z0-9_-]{1,24}$/;
+
+/** FNV-1a 32-bit over UTF-8 bytes. Kept identical in the JS/Python/R wrappers. */
+export function fingerprintDigest(value: string): string {
+  let hash = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(value)) {
+    hash ^= byte;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `#${hash.toString(16).padStart(8, "0")}`;
+}
+
+const redactKey = (key: string): string =>
+  KNOWN_TOP_LEVEL_KEYS.has(key) ? key : fingerprintDigest(key);
+
+const redactLabel = (label: string): string =>
+  SAFE_LABEL.test(label) ? label : fingerprintDigest(label);
+
 export interface MacroInputShapeFingerprint {
   typeof: string;
   isArray: boolean;
   length: number | null;
   topLevelKeys: string[];
   setIsArray: boolean;
+  // OJD-1702 was exactly "`.set` was not an array". setIsArray alone collapses
+  // object, string and null into one signature, so record the type too.
+  setTypeof: string;
   setLength: number | null;
   setLabels: string[];
   macro_id: string;
@@ -29,8 +75,9 @@ export interface MacroInputShapeFingerprint {
 
 /**
  * Describe a macro input without retaining any measurement content. Values are
- * deliberately never copied into the result; only JSON structure and the
- * explicitly permitted `set[].label` strings cross into logs.
+ * never copied. Structure crosses into logs verbatim; user-controlled key and
+ * label strings cross only if they are known-structural or token-shaped, and
+ * are otherwise reduced to a non-reversible digest.
  */
 export function buildMacroInputShapeFingerprint(
   data: unknown,
@@ -47,14 +94,15 @@ export function buildMacroInputShapeFingerprint(
     typeof: typeof data,
     isArray,
     length: isArray ? data.length : typeof data === "string" ? Array.from(data).length : null,
-    topLevelKeys: record ? Object.keys(record).sort() : [],
+    topLevelKeys: record ? Object.keys(record).sort().map(redactKey) : [],
     setIsArray,
+    setTypeof: set === null ? "null" : Array.isArray(set) ? "array" : typeof set,
     setLength: setIsArray ? set.length : null,
     setLabels: setIsArray
       ? set.flatMap((entry) => {
           if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return [];
           const label = (entry as Record<string, unknown>).label;
-          return typeof label === "string" ? [label] : [];
+          return typeof label === "string" ? [redactLabel(label)] : [];
         })
       : [],
     macro_id: macroId,

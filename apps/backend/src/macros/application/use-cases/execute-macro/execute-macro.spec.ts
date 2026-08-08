@@ -357,6 +357,7 @@ describe("ExecuteMacroUseCase", () => {
         length: null,
         topLevelKeys: ["sample"],
         setIsArray: false,
+        setTypeof: "undefined",
         setLength: null,
         setLabels: [],
         macro_id: macro.id,

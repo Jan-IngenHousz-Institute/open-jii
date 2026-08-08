@@ -1,11 +1,11 @@
 {
-  "fixtureVersion": 1,
+  "fixtureVersion": 2,
   "privacySentinels": [
     "MEASUREMENT_VALUE_MUST_NOT_APPEAR",
     "52.367601",
     "4.904101",
     "PRIVATE_ARRAY_VALUE_MUST_NOT_APPEAR",
-    "😀",
+    "\ud83d\ude00",
     "987654321.123456"
   ],
   "cases": [
@@ -20,34 +20,49 @@
             "longitude": 4.904101
           }
         ],
-        "gps": { "latitude": 52.367601, "longitude": 4.904101 }
+        "gps": {
+          "latitude": 52.367601,
+          "longitude": 4.904101
+        }
       },
       "expected": {
         "typeof": "object",
         "isArray": false,
         "length": null,
-        "topLevelKeys": ["gps", "set"],
+        "topLevelKeys": [
+          "gps",
+          "set"
+        ],
         "setIsArray": true,
+        "setTypeof": "array",
         "setLength": 1,
-        "setLabels": ["SPAD"]
+        "setLabels": [
+          "SPAD"
+        ]
       }
     },
     {
       "name": "array root",
-      "data": ["PRIVATE_ARRAY_VALUE_MUST_NOT_APPEAR", { "nested": "private" }],
+      "data": [
+        "PRIVATE_ARRAY_VALUE_MUST_NOT_APPEAR",
+        {
+          "nested": "private"
+        }
+      ],
       "expected": {
         "typeof": "object",
         "isArray": true,
         "length": 2,
         "topLevelKeys": [],
         "setIsArray": false,
+        "setTypeof": "undefined",
         "setLength": null,
         "setLabels": []
       }
     },
     {
       "name": "non-BMP string root",
-      "data": "😀",
+      "data": "\ud83d\ude00",
       "assertRoundTrip": true,
       "expected": {
         "typeof": "string",
@@ -55,6 +70,7 @@
         "length": 1,
         "topLevelKeys": [],
         "setIsArray": false,
+        "setTypeof": "undefined",
         "setLength": null,
         "setLabels": []
       }
@@ -68,6 +84,7 @@
         "length": null,
         "topLevelKeys": [],
         "setIsArray": false,
+        "setTypeof": "undefined",
         "setLength": null,
         "setLabels": []
       }
@@ -81,6 +98,7 @@
         "length": null,
         "topLevelKeys": [],
         "setIsArray": false,
+        "setTypeof": "undefined",
         "setLength": null,
         "setLabels": []
       }
@@ -94,8 +112,98 @@
         "length": null,
         "topLevelKeys": [],
         "setIsArray": false,
+        "setTypeof": "undefined",
         "setLength": null,
         "setLabels": []
+      }
+    },
+    {
+      "name": "OJD-1702: set is an object, not an array",
+      "data": {
+        "set": {
+          "label": "SPAD",
+          "measurement": "MEASUREMENT_VALUE_MUST_NOT_APPEAR"
+        },
+        "gps": {
+          "latitude": 52.367601
+        }
+      },
+      "expected": {
+        "typeof": "object",
+        "isArray": false,
+        "length": null,
+        "topLevelKeys": [
+          "gps",
+          "set"
+        ],
+        "setIsArray": false,
+        "setTypeof": "object",
+        "setLength": null,
+        "setLabels": []
+      }
+    },
+    {
+      "name": "OJD-1702: set is a string, not an array",
+      "data": {
+        "set": "MEASUREMENT_VALUE_MUST_NOT_APPEAR"
+      },
+      "expected": {
+        "typeof": "object",
+        "isArray": false,
+        "length": null,
+        "topLevelKeys": [
+          "set"
+        ],
+        "setIsArray": false,
+        "setTypeof": "string",
+        "setLength": null,
+        "setLabels": []
+      }
+    },
+    {
+      "name": "OJD-1702: set is null, not an array",
+      "data": {
+        "set": null,
+        "macros": []
+      },
+      "expected": {
+        "typeof": "object",
+        "isArray": false,
+        "length": null,
+        "topLevelKeys": [
+          "macros",
+          "set"
+        ],
+        "setIsArray": false,
+        "setTypeof": "null",
+        "setLength": null,
+        "setLabels": []
+      }
+    },
+    {
+      "name": "privacy: coordinate as key, sentinel as label",
+      "data": {
+        "52.367601,4.904101": true,
+        "set": [
+          {
+            "label": "MEASUREMENT_VALUE_MUST_NOT_APPEAR"
+          }
+        ]
+      },
+      "expected": {
+        "typeof": "object",
+        "isArray": false,
+        "length": null,
+        "topLevelKeys": [
+          "#b185024a",
+          "set"
+        ],
+        "setIsArray": true,
+        "setTypeof": "array",
+        "setLength": 1,
+        "setLabels": [
+          "#35e4df0b"
+        ]
       }
     }
   ]
