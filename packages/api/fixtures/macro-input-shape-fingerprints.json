@@ -5,7 +5,7 @@
     "52.367601",
     "4.904101",
     "PRIVATE_ARRAY_VALUE_MUST_NOT_APPEAR",
-    "\ud83d\ude00",
+    "😀",
     "987654321.123456"
   ],
   "cases": [
@@ -62,7 +62,7 @@
     },
     {
       "name": "non-BMP string root",
-      "data": "\ud83d\ude00",
+      "data": "😀",
       "assertRoundTrip": true,
       "expected": {
         "typeof": "string",

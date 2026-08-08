@@ -17,17 +17,17 @@ const tempDirs: string[] = [];
 interface FingerprintFixture {
   fixtureVersion: number;
   privacySentinels: string[];
-  cases: Array<{
+  cases: {
     name: string;
     data: unknown;
     expected: Record<string, unknown>;
-  }>;
+  }[];
 }
 
 interface WrapperEnvelope {
   status: string;
-  results: Array<Record<string, unknown>>;
-  fingerprints: Array<Record<string, unknown>>;
+  results: Record<string, unknown>[];
+  fingerprints: Record<string, unknown>[];
 }
 
 const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as FingerprintFixture;
