@@ -29,16 +29,11 @@
         "typeof": "object",
         "isArray": false,
         "length": null,
-        "topLevelKeys": [
-          "gps",
-          "set"
-        ],
+        "topLevelKeys": ["gps", "set"],
         "setIsArray": true,
         "setTypeof": "array",
         "setLength": 1,
-        "setLabels": [
-          "SPAD"
-        ]
+        "setLabels": ["SPAD"]
       }
     },
     {
@@ -132,10 +127,7 @@
         "typeof": "object",
         "isArray": false,
         "length": null,
-        "topLevelKeys": [
-          "gps",
-          "set"
-        ],
+        "topLevelKeys": ["gps", "set"],
         "setIsArray": false,
         "setTypeof": "object",
         "setLength": null,
@@ -151,9 +143,7 @@
         "typeof": "object",
         "isArray": false,
         "length": null,
-        "topLevelKeys": [
-          "set"
-        ],
+        "topLevelKeys": ["set"],
         "setIsArray": false,
         "setTypeof": "string",
         "setLength": null,
@@ -170,10 +160,7 @@
         "typeof": "object",
         "isArray": false,
         "length": null,
-        "topLevelKeys": [
-          "macros",
-          "set"
-        ],
+        "topLevelKeys": ["macros", "set"],
         "setIsArray": false,
         "setTypeof": "null",
         "setLength": null,
@@ -194,16 +181,11 @@
         "typeof": "object",
         "isArray": false,
         "length": null,
-        "topLevelKeys": [
-          "#b185024a",
-          "set"
-        ],
+        "topLevelKeys": ["#b185024a", "set"],
         "setIsArray": true,
         "setTypeof": "array",
         "setLength": 1,
-        "setLabels": [
-          "#35e4df0b"
-        ]
+        "setLabels": ["#35e4df0b"]
       }
     }
   ]
