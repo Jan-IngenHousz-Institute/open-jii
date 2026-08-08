@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { RESERVED_EXPERIMENT_COLUMN_NAMES } from "../experiment.schema";
 
+/** Measurement columns custom metadata may match against directly. */
+export const MATCHABLE_MEASUREMENT_COLUMNS = ["device_id"] as const;
+const METADATA_COLUMN_TARGET_PREFIX = "column:";
+
 function isAllowedMetadataColumnChar(c: string): boolean {
   return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c === "_";
 }
@@ -47,6 +51,17 @@ export const zExperimentCustomMetadataPayload = z
       .max(64, "Experiment question must be 64 characters or less"),
   })
   .superRefine((blob, ctx) => {
+    if (blob.experimentQuestionId.startsWith(METADATA_COLUMN_TARGET_PREFIX)) {
+      const column = blob.experimentQuestionId.slice(METADATA_COLUMN_TARGET_PREFIX.length);
+      if (!MATCHABLE_MEASUREMENT_COLUMNS.some((allowed) => allowed === column)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["experimentQuestionId"],
+          message: `Measurement column must be one of: ${MATCHABLE_MEASUREMENT_COLUMNS.join(", ")}`,
+        });
+      }
+    }
+
     // Reserved names: would collide with system columns once `custom_metadata`
     // is flattened to top-level by an export sink that requires unique columns.
     blob.columns.forEach((col, idx) => {
