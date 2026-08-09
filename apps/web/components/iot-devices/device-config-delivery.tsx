@@ -14,6 +14,13 @@ import type { DeviceOnboardingConfig, IotDevice } from "@repo/api/domains/iot/io
 import { useTranslation } from "@repo/i18n";
 import { deliverDeviceConfig, supportsConfigDelivery } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui/components/card";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { downloadText } from "./iot-credential-file";
@@ -22,12 +29,14 @@ interface DeviceConfigDeliveryProps {
   device: IotDevice;
   config: DeviceOnboardingConfig;
   disabled?: boolean;
+  disabledHint?: string | null;
 }
 
 export function DeviceConfigDelivery({
   device,
   config,
   disabled = false,
+  disabledHint = null,
 }: DeviceConfigDeliveryProps) {
   const { t } = useTranslation("iot");
   const [connectionType, setConnectionType] = useState<ConnectionType>("serial");
@@ -96,78 +105,81 @@ export function DeviceConfigDelivery({
   };
 
   return (
-    <section className="space-y-3">
-      <div className="space-y-1">
-        <h3 className="text-sm font-semibold">{t("iot.onboarding.deliveryTitle")}</h3>
-        <p className="text-muted-foreground text-xs">{t("iot.onboarding.deliveryDescription")}</p>
-      </div>
+    <Card className="shadow-none">
+      <CardHeader>
+        <CardTitle className="text-base">{t("iot.onboarding.deliveryTitle")}</CardTitle>
+        <CardDescription>{t("iot.onboarding.deliveryDescription")}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="bg-muted/50 space-y-2 rounded-lg p-3">
+          <p className="text-xs font-medium">{t("iot.onboarding.endpointLabel")}</p>
+          <p className="text-muted-foreground break-all font-mono text-xs">{config.endpoint}</p>
 
-      <div className="space-y-2 rounded-lg border p-3">
-        <p className="text-xs font-medium">{t("iot.onboarding.endpointLabel")}</p>
-        <p className="text-muted-foreground break-all font-mono text-xs">{config.endpoint}</p>
-
-        <p className="pt-1 text-xs font-medium">{t("iot.onboarding.topicsLabel")}</p>
-        <ul className="space-y-1">
-          {config.experiments.map((experiment) => (
-            <li key={experiment.experimentId} className="text-muted-foreground font-mono text-xs">
-              {experiment.topicPrefix}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {supportsPush && !isConnected && (
-        <ConnectionTypeSelector
-          connectionType={connectionType}
-          onConnectionTypeChange={handleConnectionTypeChange}
-          browserSupport={browserSupport}
-        />
-      )}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onClick={handleDownload} disabled={disabled}>
-          <Download className="mr-1.5 h-4 w-4" />
-          {t("iot.onboarding.download")}
-        </Button>
+          <p className="pt-1 text-xs font-medium">{t("iot.onboarding.topicsLabel")}</p>
+          <ul className="space-y-1">
+            {config.experiments.map((experiment) => (
+              <li key={experiment.experimentId} className="text-muted-foreground font-mono text-xs">
+                {experiment.topicPrefix}
+              </li>
+            ))}
+          </ul>
+        </div>
 
         {supportsPush && !isConnected && (
-          <Button
-            onClick={handleConnect}
-            disabled={disabled || isConnecting || !isSelectedTransportSupported}
-          >
-            {isConnecting ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <Usb className="mr-1.5 h-4 w-4" />
-            )}
-            {t("iot.onboarding.connect")}
-          </Button>
+          <ConnectionTypeSelector
+            connectionType={connectionType}
+            onConnectionTypeChange={handleConnectionTypeChange}
+            browserSupport={browserSupport}
+          />
         )}
 
-        {supportsPush && isConnected && (
-          <>
-            <Button onClick={handlePush} disabled={disabled || isPushing}>
-              {isPushing ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={handleDownload} disabled={disabled}>
+            <Download className="mr-1.5 h-4 w-4" />
+            {t("iot.onboarding.download")}
+          </Button>
+
+          {supportsPush && !isConnected && (
+            <Button
+              onClick={handleConnect}
+              disabled={disabled || isConnecting || !isSelectedTransportSupported}
+            >
+              {isConnecting ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : (
-                <Send className="mr-1.5 h-4 w-4" />
+                <Usb className="mr-1.5 h-4 w-4" />
               )}
-              {t("iot.onboarding.push")}
+              {t("iot.onboarding.connect")}
             </Button>
-            <Button variant="outline" onClick={handleDisconnect}>
-              {t("iot.onboarding.disconnect")}
-            </Button>
-          </>
+          )}
+
+          {supportsPush && isConnected && (
+            <>
+              <Button onClick={handlePush} disabled={disabled || isPushing}>
+                {isPushing ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-1.5 h-4 w-4" />
+                )}
+                {t("iot.onboarding.push")}
+              </Button>
+              <Button variant="outline" onClick={handleDisconnect}>
+                {t("iot.onboarding.disconnect")}
+              </Button>
+            </>
+          )}
+        </div>
+
+        {disabledHint !== null && <p className="text-muted-foreground text-xs">{disabledHint}</p>}
+
+        {showConnectError && (
+          <p className="text-destructive text-xs">{t("iot.onboarding.connectError")}</p>
         )}
-      </div>
 
-      {showConnectError && (
-        <p className="text-destructive text-xs">{t("iot.onboarding.connectError")}</p>
-      )}
-
-      {!supportsPush && (
-        <p className="text-muted-foreground text-xs">{t("iot.onboarding.inlineProcedureNote")}</p>
-      )}
-    </section>
+        {!supportsPush && (
+          <p className="text-muted-foreground text-xs">{t("iot.onboarding.inlineProcedureNote")}</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }

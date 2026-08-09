@@ -14,7 +14,15 @@ import type {
 } from "@repo/api/domains/iot/iot.schema";
 import { applyPlanAnswers } from "@repo/api/transforms/workbook-device-plan";
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui/components/card";
 import { Label } from "@repo/ui/components/label";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { Switch } from "@repo/ui/components/switch";
@@ -121,92 +129,93 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
   const canOnboard = isDeviceActive && (hasSelection || hasBindings) && !isOnboarding;
 
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-3xl space-y-6">
       <DeviceOnboardingGuide />
 
-      <section className="space-y-3">
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold">{t("iot.onboarding.currentTitle")}</h3>
-          <p className="text-muted-foreground text-xs">{t("iot.onboarding.currentDescription")}</p>
-        </div>
+      <Card className="shadow-none">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            {t("iot.onboarding.currentTitle")}
+            {hasBindings && <Badge variant="secondary">{bound.length}</Badge>}
+          </CardTitle>
+          <CardDescription>{t("iot.onboarding.currentDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingBound && <Skeleton className="h-14 w-full" />}
 
-        {isLoadingBound && <Skeleton className="h-14 w-full" />}
-
-        {isBoundError && (
-          <p className="text-destructive text-sm">{t("iot.onboarding.loadError")}</p>
-        )}
-
-        {!isLoadingBound && !isBoundError && !hasBindings && (
-          <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-            {t("iot.onboarding.currentEmpty")}
-          </p>
-        )}
-
-        {!isLoadingBound && !isBoundError && hasBindings && (
-          <ul className="divide-y rounded-lg border">{bound.map(renderBoundRow)}</ul>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold">{t("iot.onboarding.addTitle")}</h3>
-          <p className="text-muted-foreground text-xs">{t("iot.onboarding.addDescription")}</p>
-        </div>
-
-        {isExperimentsError && (
-          <p className="text-destructive text-sm">{t("iot.onboarding.loadError")}</p>
-        )}
-
-        {!isExperimentsError && selectable.length === 0 && (
-          <p className="text-muted-foreground text-sm">{t("iot.onboarding.addEmpty")}</p>
-        )}
-
-        {!isExperimentsError && selectable.length > 0 && (
-          <ul className="divide-y rounded-lg border">{selectable.map(renderSelectableRow)}</ul>
-        )}
-
-        {!isDeviceActive && (
-          <p className="text-muted-foreground text-sm">{t("iot.onboarding.inactiveDevice")}</p>
-        )}
-
-        <div className="flex items-center gap-2">
-          <Switch
-            id="include-workbook"
-            checked={includeWorkbook}
-            onCheckedChange={setIncludeWorkbook}
-          />
-          <Label htmlFor="include-workbook" className="text-sm font-normal">
-            {t("iot.onboarding.includeWorkbook")}
-          </Label>
-        </div>
-
-        <Button onClick={handleOnboard} disabled={!canOnboard}>
-          {isOnboarding ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Rocket className="mr-2 h-4 w-4" />
+          {isBoundError && (
+            <p className="text-destructive text-sm">{t("iot.onboarding.loadError")}</p>
           )}
-          {hasSelection ? t("iot.onboarding.onboard") : t("iot.onboarding.reissue")}
-        </Button>
-      </section>
+
+          {!isLoadingBound && !isBoundError && !hasBindings && (
+            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+              {t("iot.onboarding.currentEmpty")}
+            </p>
+          )}
+
+          {!isLoadingBound && !isBoundError && hasBindings && (
+            <ul className="divide-y rounded-lg border">{bound.map(renderBoundRow)}</ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-none">
+        <CardHeader>
+          <CardTitle className="text-base">{t("iot.onboarding.addTitle")}</CardTitle>
+          <CardDescription>{t("iot.onboarding.addDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isExperimentsError && (
+            <p className="text-destructive text-sm">{t("iot.onboarding.loadError")}</p>
+          )}
+
+          {!isExperimentsError && selectable.length === 0 && (
+            <p className="text-muted-foreground text-sm">{t("iot.onboarding.addEmpty")}</p>
+          )}
+
+          {!isExperimentsError && selectable.length > 0 && (
+            <ul className="divide-y rounded-lg border">{selectable.map(renderSelectableRow)}</ul>
+          )}
+
+          {!isDeviceActive && (
+            <p className="text-muted-foreground text-sm">{t("iot.onboarding.inactiveDevice")}</p>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="include-workbook"
+                checked={includeWorkbook}
+                onCheckedChange={setIncludeWorkbook}
+              />
+              <Label htmlFor="include-workbook" className="text-sm font-normal">
+                {t("iot.onboarding.includeWorkbook")}
+              </Label>
+            </div>
+
+            <Button className="w-fit" onClick={handleOnboard} disabled={!canOnboard}>
+              {isOnboarding ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Rocket className="mr-2 h-4 w-4" />
+              )}
+              {hasSelection ? t("iot.onboarding.onboard") : t("iot.onboarding.reissue")}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {questions.length > 0 && (
         <DevicePlanQuestions questions={questions} onAnswersChange={handleAnswersChange} />
       )}
 
       {deliveredConfig !== null && (
-        <>
-          {hasUnansweredRequired && (
-            <p className="text-muted-foreground text-sm">
-              {t("iot.onboarding.answerRequiredHint")}
-            </p>
-          )}
-          <DeviceConfigDelivery
-            device={device}
-            config={deliveredConfig}
-            disabled={hasUnansweredRequired}
-          />
-        </>
+        <DeviceConfigDelivery
+          device={device}
+          config={deliveredConfig}
+          disabled={hasUnansweredRequired}
+          disabledHint={hasUnansweredRequired ? t("iot.onboarding.answerRequiredHint") : null}
+        />
       )}
     </div>
   );

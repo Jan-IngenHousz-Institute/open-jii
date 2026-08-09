@@ -5,6 +5,13 @@ import { useForm } from "react-hook-form";
 
 import type { DeviceAnswer } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui/components/card";
 
 import type { DevicePlanQuestion } from "./device-plan-question-field";
 import { DevicePlanQuestionField } from "./device-plan-question-field";
@@ -61,13 +68,14 @@ export function DevicePlanQuestions({ questions, onAnswersChange }: DevicePlanQu
   );
 
   return (
-    <section className="space-y-3">
-      <div className="space-y-1">
-        <h3 className="text-sm font-semibold">{t("iot.onboarding.questionsTitle")}</h3>
-        <p className="text-muted-foreground text-xs">{t("iot.onboarding.questionsDescription")}</p>
-      </div>
-
-      <div className="divide-y rounded-lg border">{questions.map(renderField)}</div>
-    </section>
+    <Card className="shadow-none">
+      <CardHeader>
+        <CardTitle className="text-base">{t("iot.onboarding.questionsTitle")}</CardTitle>
+        <CardDescription>{t("iot.onboarding.questionsDescription")}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="divide-y rounded-lg border">{questions.map(renderField)}</div>
+      </CardContent>
+    </Card>
   );
 }

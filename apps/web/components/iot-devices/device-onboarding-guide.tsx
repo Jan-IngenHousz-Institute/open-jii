@@ -29,13 +29,13 @@ export function DeviceOnboardingGuide() {
   );
 
   return (
-    <Collapsible className="rounded-lg border">
-      <CollapsibleTrigger className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold">
+    <Collapsible className="bg-card rounded-xl border">
+      <CollapsibleTrigger className="flex w-full items-center gap-2 px-6 py-4 text-base font-semibold">
         <BookOpen className="h-4 w-4 shrink-0" />
         <span className="flex-1 text-left">{t("iot.onboarding.guide.title")}</span>
         <ChevronDown className="h-4 w-4 shrink-0" />
       </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-3 px-4 pb-4">
+      <CollapsibleContent className="space-y-3 px-6 pb-5">
         <ol className="list-decimal space-y-1.5 pl-5">{GUIDE_STEP_KEYS.map(renderStep)}</ol>
         <a
           href={`${env.NEXT_PUBLIC_DOCS_URL}/developers/device-integration`}
