@@ -6,7 +6,6 @@ import { CreateExperimentDto, ExperimentDto } from "../../../core/models/experim
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
-import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -15,7 +14,6 @@ export class CreateExperimentUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentMemberRepository: ExperimentMemberRepository,
     private readonly locationRepository: LocationRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
   ) {}
@@ -73,11 +71,21 @@ export class CreateExperimentUseCase {
         operation: "createExperiment",
         userId,
       });
+
+      // Everyone picked in the create form gets the read-and-contribute tier. The
+      // creator is filtered out: their org role already grants full control, and a
+      // grant can only raise access. `create` seeds these in the same transaction,
+      // so an unselectable grantee fails the whole create rather than half of it.
+      const invitedCollaborators = (Array.isArray(data.members) ? data.members : [])
+        .filter((member) => member.userId !== userId)
+        .map((member) => member.userId);
+
       // Create the experiment
       const experimentResult = await this.experimentRepository.create(
         data,
         userId,
         targetOrganizationId,
+        invitedCollaborators,
       );
 
       return experimentResult.chain(async (experiments: ExperimentDto[]) => {
@@ -92,61 +100,40 @@ export class CreateExperimentUseCase {
         }
 
         const experiment = experiments[0];
-        this.logger.debug({
-          msg: "Adding admin member to experiment",
+
+        // Associate locations if provided
+        if (Array.isArray(data.locations) && data.locations.length > 0) {
+          const locationsWithExperimentId = data.locations.map((location) => ({
+            ...location,
+            experimentId: experiment.id,
+          }));
+
+          const addLocationsResult =
+            await this.locationRepository.createMany(locationsWithExperimentId);
+          if (addLocationsResult.isFailure()) {
+            this.logger.error({
+              msg: "Failed to associate locations with experiment",
+              errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
+              operation: "createExperiment",
+              experimentId: experiment.id,
+              error: addLocationsResult.error,
+            });
+            return failure(
+              AppError.badRequest(
+                `Failed to associate locations: ${addLocationsResult.error.message}`,
+              ),
+            );
+          }
+        }
+
+        this.logger.log({
+          msg: "Experiment created successfully",
           operation: "createExperiment",
           experimentId: experiment.id,
           userId,
+          status: "success",
         });
-
-        // Filter out any member with the same userId as the admin
-        const filteredMembers = (Array.isArray(data.members) ? data.members : []).filter(
-          (member) => member.userId !== userId,
-        );
-
-        // Add the user as an admin member + the rest of the members if provided
-        const allMembers = [{ userId, role: "admin" as const }, ...filteredMembers];
-
-        const addMembersResult = await this.experimentMemberRepository.addMembers(
-          experiment.id,
-          allMembers,
-        );
-
-        return addMembersResult.chain(async () => {
-          // Associate locations if provided
-          if (Array.isArray(data.locations) && data.locations.length > 0) {
-            const locationsWithExperimentId = data.locations.map((location) => ({
-              ...location,
-              experimentId: experiment.id,
-            }));
-
-            const addLocationsResult =
-              await this.locationRepository.createMany(locationsWithExperimentId);
-            if (addLocationsResult.isFailure()) {
-              this.logger.error({
-                msg: "Failed to associate locations with experiment",
-                errorCode: ErrorCodes.EXPERIMENT_CREATE_FAILED,
-                operation: "createExperiment",
-                experimentId: experiment.id,
-                error: addLocationsResult.error,
-              });
-              return failure(
-                AppError.badRequest(
-                  `Failed to associate locations: ${addLocationsResult.error.message}`,
-                ),
-              );
-            }
-          }
-
-          this.logger.log({
-            msg: "Experiment created successfully",
-            operation: "createExperiment",
-            experimentId: experiment.id,
-            userId,
-            status: "success",
-          });
-          return success(experiment);
-        });
+        return success(experiment);
       });
     });
   }

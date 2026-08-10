@@ -30,6 +30,8 @@ export class CreateMacroUseCase {
         language: data.language,
         code: data.code,
         forkedFrom: data.forkedFrom,
+        // Visibility at create (defaults to public via the column default when omitted).
+        visibility: data.visibility,
       },
       userId,
       targetOrganizationId,

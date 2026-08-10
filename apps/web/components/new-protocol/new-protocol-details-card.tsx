@@ -124,6 +124,29 @@ export function NewProtocolDetailsCard({
           />
         </div>
 
+        {/* Visibility */}
+        <FormField
+          control={form.control}
+          name="visibility"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("newProtocol.visibility")}</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("newProtocol.selectVisibility")} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="public">{t("newProtocol.public")}</SelectItem>
+                  <SelectItem value="private">{t("newProtocol.private")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         {/* Description */}
         <FormField
           control={form.control}

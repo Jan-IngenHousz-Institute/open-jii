@@ -29,8 +29,21 @@ export class UserController {
   ) {}
 
   @Implement(userContract.deleteUser)
-  deleteUser() {
+  deleteUser(@Session() session: UserSession) {
     return implement(userContract.deleteUser).handler(async ({ input }) => {
+      // Account deletion is self-service only: the id names whose account to erase,
+      // and it has to be the caller's own. Refuse before the use case runs, because
+      // the use case distinguishes a missing user with a 404 — checking ownership
+      // second would turn this route into an oracle for whether an arbitrary account
+      // id exists.
+      if (input.id !== session.user.id) {
+        return throwOrpcError(
+          AppError.forbidden("You can only delete your own account"),
+          this.logger,
+          "deleteUser",
+        );
+      }
+
       const result = await this.deleteUserUseCase.execute(input.id);
       if (result.isSuccess()) {
         this.logger.log({
@@ -58,7 +71,7 @@ export class UserController {
 
       const result = await this.getDeletionBlockersUseCase.execute(input.id);
       if (result.isSuccess()) {
-        return { experiments: result.value };
+        return { resources: result.value };
       }
       return throwOrpcFailure(result, this.logger);
     });

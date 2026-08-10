@@ -77,7 +77,7 @@
         "overview": "Overzicht",
         "credentials": "Inloggegevens",
         "onboarding": "Onboarding",
-        "members": "Leden",
+        "collaborators": "Medewerkers",
         "lineage": "Herkomst",
         "monitoring": "Monitoring"
       },
@@ -88,7 +88,6 @@
         "title": "Binnenkort beschikbaar",
         "groups": "Organiseer apparaten in groepen die u samen kunt beheren, provisioneren en onboarden.",
         "monitoring": "Volg apparaatconnectiviteit, laatst gezien en de gezondheid van de vloot in één oogopslag.",
-        "members": "Deel apparaatbeheer met medewerkers, zoals experimenten toegang delen.",
         "lineage": "Traceer de identiteit van dit apparaat tot aan zijn opgenomen metingen.",
         "onboarding": "Onboard elk apparaat via zijn detailpagina (tabblad Onboarding). Bulk-onboarding vanuit dit overzicht volgt binnenkort."
       },

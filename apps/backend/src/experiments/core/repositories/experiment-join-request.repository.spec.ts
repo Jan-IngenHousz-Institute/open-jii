@@ -1,3 +1,12 @@
+import {
+  and,
+  createSecondaryDatabase,
+  eq,
+  experimentJoinRequests,
+  profiles,
+  resourceGrants,
+} from "@repo/database";
+
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { ExperimentJoinRequestRepository } from "./experiment-join-request.repository";
@@ -73,7 +82,7 @@ describe("ExperimentJoinRequestRepository", () => {
   });
 
   describe("approve", () => {
-    it("marks the request approved and adds the requester as a member", async () => {
+    it("marks the request approved and grants the requester viewer access", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "To-approve experiment",
         userId: adminUserId,
@@ -90,8 +99,25 @@ describe("ExperimentJoinRequestRepository", () => {
         adminUserId,
       );
       assertSuccess(approveResult);
-      expect(approveResult.value.status).toBe("approved");
-      expect(approveResult.value.decidedBy).toBe(adminUserId);
+      expect(approveResult.value.outcome).toBe("approved");
+      if (approveResult.value.outcome !== "approved") {
+        throw new Error("Expected approval to win the pending request claim");
+      }
+      expect(approveResult.value.request.status).toBe("approved");
+      expect(approveResult.value.request.decidedBy).toBe(adminUserId);
+
+      const [grant] = await testApp.database
+        .select({ role: resourceGrants.role })
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experiment.id),
+            eq(resourceGrants.granteeType, "user"),
+            eq(resourceGrants.granteeId, requesterUserId),
+          ),
+        );
+      expect(grant.role).toBe("viewer");
 
       // No more pending request
       const pending = await repository.findPendingByExperimentAndUser(
@@ -100,6 +126,81 @@ describe("ExperimentJoinRequestRepository", () => {
       );
       assertSuccess(pending);
       expect(pending.value).toBeNull();
+    });
+
+    it("leaves an existing admin grant unchanged", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Already promoted experiment",
+        userId: adminUserId,
+        visibility: "public",
+      });
+      const createResult = await repository.create(experiment.id, requesterUserId, undefined);
+      assertSuccess(createResult);
+      await testApp.addExperimentAdmin(experiment.id, requesterUserId);
+
+      const approveResult = await repository.approve(
+        createResult.value.id,
+        requesterUserId,
+        experiment.id,
+        adminUserId,
+      );
+
+      assertSuccess(approveResult);
+      expect(approveResult.value.outcome).toBe("approved");
+      const [grant] = await testApp.database
+        .select({ role: resourceGrants.role })
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experiment.id),
+            eq(resourceGrants.granteeType, "user"),
+            eq(resourceGrants.granteeId, requesterUserId),
+          ),
+        );
+      expect(grant.role).toBe("admin");
+    });
+
+    it("lets exactly one concurrent approval claim a pending request", async () => {
+      const secondary = createSecondaryDatabase();
+      try {
+        const secondaryRepository = new ExperimentJoinRequestRepository(secondary.database);
+        const secondAdminUserId = await testApp.createTestUser({});
+        const { experiment } = await testApp.createExperiment({
+          name: "Concurrently approved experiment",
+          userId: adminUserId,
+          visibility: "public",
+        });
+        const createResult = await repository.create(experiment.id, requesterUserId, undefined);
+        assertSuccess(createResult);
+
+        const outcomes = await Promise.all([
+          repository.approve(createResult.value.id, requesterUserId, experiment.id, adminUserId),
+          secondaryRepository.approve(
+            createResult.value.id,
+            requesterUserId,
+            experiment.id,
+            secondAdminUserId,
+          ),
+        ]);
+
+        const resolvedOutcomes = outcomes.map((result) => {
+          assertSuccess(result);
+          return result.value.outcome;
+        });
+        expect(resolvedOutcomes.sort()).toEqual(["approved", "not-pending"]);
+        const [decision] = await testApp.database
+          .select({
+            status: experimentJoinRequests.status,
+            decidedBy: experimentJoinRequests.decidedBy,
+          })
+          .from(experimentJoinRequests)
+          .where(eq(experimentJoinRequests.id, createResult.value.id));
+        expect(decision.status).toBe("approved");
+        expect([adminUserId, secondAdminUserId]).toContain(decision.decidedBy);
+      } finally {
+        await secondary.close();
+      }
     });
   });
 
@@ -165,18 +266,74 @@ describe("ExperimentJoinRequestRepository", () => {
         email: "second-admin@example.com",
         name: "Second Admin",
       });
-      await testApp.addExperimentMember(experiment.id, secondAdminId, "admin");
+      await testApp.addExperimentAdmin(experiment.id, secondAdminId);
 
       const nonAdminId = await testApp.createTestUser({
         email: "regular@example.com",
         name: "Regular Member",
       });
-      await testApp.addExperimentMember(experiment.id, nonAdminId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, nonAdminId);
 
       const result = await repository.listAdminEmails(experiment.id);
       assertSuccess(result);
       expect(result.value).toEqual(expect.arrayContaining(["second-admin@example.com"]));
       expect(result.value).not.toContain("regular@example.com");
+    });
+
+    it("notifies the owning org's owner, who holds no grant", async () => {
+      const soleOwner = await testApp.createTestUser({
+        email: "sole-owner@example.com",
+        name: "Sole Owner",
+      });
+      const { experiment } = await testApp.createExperiment({
+        name: "Personal workspace experiment",
+        userId: soleOwner,
+        visibility: "public",
+      });
+
+      const result = await repository.listAdminEmails(experiment.id);
+      assertSuccess(result);
+      // Sourced from grants alone this would be empty and every join request on a
+      // personal-workspace experiment would notify nobody.
+      expect(result.value).toEqual(["sole-owner@example.com"]);
+    });
+
+    it("mails an owner who also holds an admin grant exactly once", async () => {
+      const soleOwner = await testApp.createTestUser({
+        email: "double-counted@example.com",
+        name: "Owner And Grantee",
+      });
+      const { experiment } = await testApp.createExperiment({
+        name: "Owner with a grant",
+        userId: soleOwner,
+        visibility: "public",
+      });
+      await testApp.addExperimentAdmin(experiment.id, soleOwner);
+
+      const result = await repository.listAdminEmails(experiment.id);
+      assertSuccess(result);
+      expect(result.value).toEqual(["double-counted@example.com"]);
+    });
+
+    it("leaves out an owner whose account has been closed", async () => {
+      const gone = await testApp.createTestUser({ email: "gone@example.com", name: "Gone" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Husk experiment",
+        userId: gone,
+        visibility: "public",
+      });
+      const keeper = await testApp.createTestUser({ email: "keeper@example.com", name: "Keeper" });
+      await testApp.addExperimentAdmin(experiment.id, keeper);
+      await testApp.database
+        .update(profiles)
+        .set({ deletedAt: new Date() })
+        .where(eq(profiles.userId, gone));
+
+      const result = await repository.listAdminEmails(experiment.id);
+      assertSuccess(result);
+      // A closed account's mailbox is scrubbed; the admin grant holder is who is
+      // left to decide the request.
+      expect(result.value).toEqual(["keeper@example.com"]);
     });
   });
 });

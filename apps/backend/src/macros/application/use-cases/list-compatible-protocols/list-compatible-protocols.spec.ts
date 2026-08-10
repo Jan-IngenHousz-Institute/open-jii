@@ -72,6 +72,38 @@ describe("ListCompatibleProtocolsUseCase", () => {
     expect(protocolIds).toContain(protocol2.id);
   });
 
+  it("hides a linked private protocol the caller cannot read", async () => {
+    const macro = await testApp.createMacro({
+      name: "Macro With Mixed Protocols",
+      createdBy: testUserId,
+    });
+
+    const publicProtocol = await testApp.createProtocol({
+      name: `public-protocol-${faker.string.alphanumeric(6)}`,
+      createdBy: testUserId,
+    });
+
+    const otherUser = await testApp.createTestUser({});
+    const otherOrgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(otherOrgId, otherUser, "owner");
+    const privateProtocol = await testApp.createProtocol({
+      name: `private-protocol-${faker.string.alphanumeric(6)}`,
+      createdBy: otherUser,
+      visibility: "private",
+      organizationId: otherOrgId,
+    });
+
+    // Link both directly (bypassing the read-checked add use-case) to simulate a
+    // resource that later became inaccessible.
+    await macroProtocolRepository.addProtocols(macro.id, [publicProtocol.id, privateProtocol.id]);
+
+    const result = await useCase.execute(macro.id, testUserId);
+    assertSuccess(result);
+    const ids = result.value.map((e) => e.protocol.id);
+    expect(ids).toContain(publicProtocol.id);
+    expect(ids).not.toContain(privateProtocol.id);
+  });
+
   it("should return NOT_FOUND when macro does not exist", async () => {
     const nonExistentId = faker.string.uuid();
     const result = await useCase.execute(nonExistentId);

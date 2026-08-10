@@ -1,6 +1,7 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import z from "zod";
 
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { profiles, users } from "@repo/database";
 
 import type { ExperimentDto } from "../../../experiments/core/models/experiment.model";
@@ -55,10 +56,19 @@ export interface SearchUsersParams {
   offset?: number;
 }
 
-// An experiment for which the user is the sole admin — i.e. a blocker for account deletion.
-export type SoleAdminExperiment = Pick<ExperimentDto, "id" | "name" | "status">;
+// A resource for which the user is the last answerable person — i.e. a blocker for
+// account deletion. Any shareable type can be one, devices included: every one of
+// them is owned by an organization and can end up with a single living person able
+// to administer it.
+export interface SoleAdminResource {
+  resourceType: SharingResourceType;
+  id: string;
+  name: string;
+  // Only experiments carry a lifecycle status (the delete dialog badges it).
+  status: ExperimentDto["status"] | null;
+}
 
-// A sole-admin experiment enriched with the other members who could take over admin before deletion.
-export interface DeletionBlocker extends SoleAdminExperiment {
+// A sole-admin resource enriched with the other grantees who could take over admin before deletion.
+export interface DeletionBlocker extends SoleAdminResource {
   candidates: UserProfileMetadata[];
 }

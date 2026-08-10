@@ -18,13 +18,19 @@ import { UploadListView } from "./upload-list-view";
 
 export interface UploadDataModalProps {
   experimentId: string;
+  canManage: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 type UploadView = { name: "list" } | { name: "create"; sourceKind: ExperimentUploadSourceKind };
 
-export function UploadDataModal({ experimentId, open, onOpenChange }: UploadDataModalProps) {
+export function UploadDataModal({
+  experimentId,
+  canManage,
+  open,
+  onOpenChange,
+}: UploadDataModalProps) {
   const { t } = useTranslation("experimentData");
   const [view, setView] = React.useState<UploadView>({ name: "list" });
 
@@ -54,6 +60,7 @@ export function UploadDataModal({ experimentId, open, onOpenChange }: UploadData
         {view.name === "create" ? (
           <UploadCreateView
             experimentId={experimentId}
+            canManage={canManage}
             sourceKind={view.sourceKind}
             onBack={() => setView({ name: "list" })}
             onUploaded={() => setView({ name: "list" })}

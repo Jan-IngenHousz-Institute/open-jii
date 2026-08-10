@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
-import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolMacroDto } from "../../../core/models/protocol-macro.model";
 import { ProtocolMacroRepository } from "../../../core/repositories/protocol-macro.repository";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
@@ -14,7 +14,7 @@ export class AddCompatibleMacrosUseCase {
   constructor(
     private readonly protocolRepository: ProtocolRepository,
     private readonly protocolMacroRepository: ProtocolMacroRepository,
-    private readonly macroRepository: MacroRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
@@ -39,15 +39,24 @@ export class AddCompatibleMacrosUseCase {
       return failure(AppError.notFound(`Protocol with ID ${protocolId} not found`));
     }
 
-    // Validate that all macros exist
-    for (const macroId of macroIds) {
-      const macroResult = await this.macroRepository.findById(macroId);
-      if (macroResult.isFailure()) {
-        return failure(AppError.internal("Failed to verify macro"));
-      }
-      if (!macroResult.value) {
-        return failure(AppError.notFound(`Macro with ID ${macroId} not found`));
-      }
+    // Validate that the caller can READ every macro being linked — not just that
+    // it exists. Otherwise an editor of a public protocol could link (and thus
+    // expose via the compatibility list) a private macro they cannot access.
+    // Checks are independent and read-only, so run them in parallel.
+    const decisions = await Promise.all(
+      macroIds.map((macroId) =>
+        this.authz
+          .can(currentUserId, { resourceType: "macro", resourceId: macroId, action: "read" })
+          .then((decision) => ({ macroId, decision })),
+      ),
+    );
+    const denied = decisions.find((d) => !d.decision.allow);
+    if (denied) {
+      return failure(
+        denied.decision.reason === "not-found"
+          ? AppError.notFound(`Macro with ID ${denied.macroId} not found`)
+          : AppError.forbidden(`You do not have access to macro ${denied.macroId}`),
+      );
     }
 
     // Add the compatibility links

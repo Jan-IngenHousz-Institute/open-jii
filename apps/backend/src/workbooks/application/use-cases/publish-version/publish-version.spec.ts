@@ -98,6 +98,37 @@ describe("PublishVersionUseCase", () => {
     vi.restoreAllMocks();
   });
 
+  it("fails closed when a referenced protocol is private and inaccessible to the publisher", async () => {
+    // Referencing a private protocol's UUID must not let the publisher snapshot
+    // (and later read) its code without access.
+    const otherUser = await testApp.createTestUser({});
+    const otherOrgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(otherOrgId, otherUser, "owner");
+    const privateProtocol = await testApp.createProtocol({
+      name: `secret-protocol-${Math.random().toString(36).slice(2)}`,
+      createdBy: otherUser,
+      visibility: "private",
+      organizationId: otherOrgId,
+    });
+
+    const workbook = await testApp.createWorkbook({
+      name: "Exfil attempt",
+      cells: [
+        {
+          id: "p1",
+          type: "protocol",
+          isCollapsed: false,
+          payload: { protocolId: privateProtocol.id, version: 1 },
+        },
+      ],
+      createdBy: userId,
+    });
+
+    const result = await useCase.execute(workbook.id, userId);
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
+  });
+
   it("snapshots the current cells of the workbook", async () => {
     const cells = [
       {

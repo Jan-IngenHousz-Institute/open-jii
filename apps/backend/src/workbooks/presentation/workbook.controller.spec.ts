@@ -4,7 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
-import { success, failure, AppError } from "../../common/utils/fp-utils";
+import { assertSuccess, success, failure, AppError } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { CreateWorkbookUseCase } from "../application/use-cases/create-workbook/create-workbook";
 import { DeleteWorkbookUseCase } from "../application/use-cases/delete-workbook/delete-workbook";
@@ -15,6 +15,7 @@ import { ListWorkbooksUseCase } from "../application/use-cases/list-workbooks/li
 import { UpdateWorkbookUseCase } from "../application/use-cases/update-workbook/update-workbook";
 import type { WorkbookVersionDto } from "../core/models/workbook-version.model";
 import type { WorkbookDto } from "../core/models/workbook.model";
+import { WorkbookVersionRepository } from "../core/repositories/workbook-version.repository";
 
 describe("WorkbookController", () => {
   const testApp = TestHarness.App;
@@ -337,6 +338,157 @@ describe("WorkbookController", () => {
     });
   });
 
+  // The pinned-version read is what the experiment design tab and the mobile flow
+  // both depend on, and it is gated on the WORKBOOK — an experiment grant carries
+  // nothing here. Runs against the real guard, so the mocked `can()` is restored.
+  describe("getWorkbookVersion honours workbook visibility, not experiment access", () => {
+    let granteeId: string;
+
+    const versionFor = (workbookId: string): WorkbookVersionDto => ({
+      id: faker.string.uuid(),
+      workbookId,
+      version: 1,
+      cells: [],
+      metadata: {},
+      createdAt: new Date(),
+      createdBy: testUserId,
+    });
+
+    beforeEach(async () => {
+      vi.spyOn(testApp.module.get(AuthorizationService), "can").mockRestore();
+      granteeId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Experiment with a workbook the grantee cannot read",
+        userId: testUserId,
+      });
+      await testApp.addExperimentCollaborator(experiment.id, granteeId);
+    });
+
+    it("refuses a private workbook to an experiment collaborator who holds no grant on it", async () => {
+      const workbook = await testApp.createWorkbook({
+        name: "Private workbook",
+        createdBy: testUserId,
+        visibility: "private",
+      });
+      vi.spyOn(getWorkbookVersionUseCase, "execute").mockResolvedValue(
+        success(versionFor(workbook.id)),
+      );
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: workbook.id,
+        versionId: faker.string.uuid(),
+      });
+      await testApp.get(path).withAuth(granteeId).expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("allows the same read once the workbook is public", async () => {
+      const workbook = await testApp.createWorkbook({
+        name: "Public workbook",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+      const version = versionFor(workbook.id);
+      vi.spyOn(getWorkbookVersionUseCase, "execute").mockResolvedValue(success(version));
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: workbook.id,
+        versionId: version.id,
+      });
+      const response = await testApp.get(path).withAuth(granteeId).expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({ id: version.id });
+    });
+  });
+
+  /**
+   * The route carries two ids and the guard only authorizes the workbook one, so the
+   * version has to be looked up inside that workbook. Otherwise a caller could pair a
+   * workbook they may read with a version id belonging to a private workbook they may
+   * not, and be handed its cells and entity snapshots. Runs end to end against the
+   * real use case and repository — mocking the use case would skip the lookup that
+   * enforces this.
+   */
+  describe("getWorkbookVersion pairs the version with the workbook in the path", () => {
+    const SECRET_CELL_TEXT = "private workbook cell content";
+    const SECRET_SNAPSHOT_CODE = "private protocol snapshot code";
+
+    let versionRepo: WorkbookVersionRepository;
+
+    beforeEach(() => {
+      versionRepo = testApp.module.get(WorkbookVersionRepository);
+      vi.spyOn(testApp.module.get(AuthorizationService), "can").mockRestore();
+      vi.spyOn(getWorkbookVersionUseCase, "execute").mockRestore();
+    });
+
+    /** A real version row, so the lookup runs against real data rather than a stub. */
+    async function seedVersion(workbookId: string, cellText: string, snapshotCode: string) {
+      const created = await versionRepo.create({
+        workbookId,
+        version: 1,
+        cells: [{ id: "md1", type: "markdown", content: cellText, isCollapsed: false }],
+        metadata: {},
+        entitySnapshots: {
+          protocols: {
+            [faker.string.uuid()]: { code: [{ step: snapshotCode }], family: "multispeq" },
+          },
+          macros: {},
+        },
+        createdBy: testUserId,
+      });
+      assertSuccess(created);
+      return created.value;
+    }
+
+    it("returns not-found for a version of a private workbook the caller cannot read", async () => {
+      // A private workbook owned by somebody else, holding a version whose cells and
+      // protocol snapshot are the content that must not escape.
+      const strangerId = await testApp.createTestUser({});
+      const privateWorkbook = await testApp.createWorkbook({
+        name: "Private workbook holding a version",
+        createdBy: strangerId,
+        visibility: "private",
+      });
+      const secretVersion = await seedVersion(
+        privateWorkbook.id,
+        SECRET_CELL_TEXT,
+        SECRET_SNAPSHOT_CODE,
+      );
+
+      // The workbook the caller is actually authorized for.
+      const ownWorkbook = await testApp.createWorkbook({
+        name: "Readable workbook",
+        createdBy: testUserId,
+      });
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: ownWorkbook.id,
+        versionId: secretVersion.id,
+      });
+      const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+
+      const body = JSON.stringify(response.body);
+      expect(body).not.toContain(SECRET_CELL_TEXT);
+      expect(body).not.toContain(SECRET_SNAPSHOT_CODE);
+      expect(body).not.toContain(privateWorkbook.id);
+    });
+
+    it("serves the version when it does belong to the workbook in the path", async () => {
+      const ownWorkbook = await testApp.createWorkbook({
+        name: "Readable workbook with a version",
+        createdBy: testUserId,
+      });
+      const version = await seedVersion(ownWorkbook.id, "mine", "my snapshot");
+
+      const path = testApp.resolveOrpcPath(contract.workbooks.getWorkbookVersion, {
+        id: ownWorkbook.id,
+        versionId: version.id,
+      });
+      const response = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({ id: version.id, workbookId: ownWorkbook.id });
+    });
+  });
+
   describe("authorization", () => {
     // Each guarded route must delegate to AuthorizationService.can() with the
     // resource/action declared by its @CanAccess decorator, and turn a denial
@@ -369,6 +521,15 @@ describe("WorkbookController", () => {
           testApp
             .delete(testApp.resolveOrpcPath(contract.workbooks.deleteWorkbook, { id }))
             .withAuth(userId),
+      },
+      {
+        name: "set workbook visibility",
+        action: "manage",
+        request: (id: string, userId: string) =>
+          testApp
+            .patch(testApp.resolveOrpcPath(contract.workbooks.setVisibility, { id }))
+            .withAuth(userId)
+            .send({ visibility: "public" }),
       },
       {
         name: "list workbook versions",

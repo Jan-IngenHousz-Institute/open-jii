@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { zExperimentMemberRole, zExperimentStatus } from "../experiment/experiment.schema";
+import { zExperimentStatus } from "../experiment/experiment.schema";
+import { zShareableRole, zSharingResourceType } from "../sharing/sharing.schema";
 
 export const zUser = z.object({
   id: z.string().uuid(),
@@ -118,18 +119,21 @@ export type UserMetadataWebhookResponse = z.infer<typeof zUserMetadataWebhookRes
 export type WebhookSuccessResponse = z.infer<typeof zWebhookSuccessResponse>;
 export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
 
-// An experiment blocks account deletion when the user is its only admin. Each blocker carries
-// that experiment's other members (as user metadata) so the delete dialog can suggest who to
-// hand admin to, per experiment.
+// A shared resource blocks account deletion when the user is its only admin — any of the four
+// types, since every one of them is created with a creator admin grant. Each blocker carries that
+// resource's other collaborators (as user metadata) so the delete dialog can suggest who to hand
+// admin to, per resource.
 export const zDeletionBlocker = z.object({
+  resourceType: zSharingResourceType,
   id: z.string().uuid(),
   name: z.string(),
-  status: zExperimentStatus,
+  // Only experiments have a lifecycle status; the delete dialog badges it when present.
+  status: zExperimentStatus.nullable(),
   candidates: z.array(zUserMetadata),
 });
 
 export const zDeletionBlockersResponse = z.object({
-  experiments: z.array(zDeletionBlocker),
+  resources: z.array(zDeletionBlocker),
 });
 
 export type DeletionBlocker = z.infer<typeof zDeletionBlocker>;
@@ -138,12 +142,21 @@ export type DeletionBlockersResponse = z.infer<typeof zDeletionBlockersResponse>
 export const zInvitationStatus = z.enum(["pending", "accepted", "revoked"]);
 export const zInvitationResourceType = z.enum(["platform", "experiment"]);
 
+/**
+ * The access tier an invitation confers on acceptance. Accepting one writes a grant,
+ * so this is the grantable role set under the name this domain uses for it — aliased
+ * rather than restated, since a divergence would let an invitation promise a tier the
+ * sharing surface cannot grant.
+ */
+export const zInvitationTier = zShareableRole;
+
 export const zInvitation = z.object({
   id: z.string().uuid(),
   resourceType: zInvitationResourceType,
   resourceId: z.string().uuid().nullable(),
   email: z.string().email(),
-  role: z.string(),
+  /** Access tier granted on acceptance. */
+  tier: zInvitationTier,
   status: zInvitationStatus,
   invitedBy: z.string().uuid(),
   invitedByName: z.string().optional(),
@@ -154,15 +167,16 @@ export const zInvitation = z.object({
 
 export const zInvitationList = z.array(zInvitation);
 
+/**
+ * An invitation carries exactly one choice: the access tier the invitee gets on
+ * acceptance. It defaults to the lower of the two, so an invite always confers
+ * something without having to grant full control.
+ */
 export const zCreateInvitationBody = z.object({
   resourceType: zInvitationResourceType,
   resourceId: z.string().uuid(),
   email: z.string().email("Must be a valid email address"),
-  role: zExperimentMemberRole.optional().default("member"),
-});
-
-export const zUpdateInvitationRoleBody = z.object({
-  role: zExperimentMemberRole.describe("New role to assign to the invitation"),
+  tier: zInvitationTier.default("viewer").describe("Access tier to grant on acceptance"),
 });
 
 export const zInvitationIdPathParam = z.object({
@@ -187,9 +201,9 @@ export const zMarkWhatsNewSeenBody = z.object({});
 // Invitation types
 export type InvitationStatus = z.infer<typeof zInvitationStatus>;
 export type InvitationResourceType = z.infer<typeof zInvitationResourceType>;
+export type InvitationTier = z.infer<typeof zInvitationTier>;
 export type Invitation = z.infer<typeof zInvitation>;
 export type CreateInvitationBody = z.infer<typeof zCreateInvitationBody>;
-export type UpdateInvitationRoleBody = z.infer<typeof zUpdateInvitationRoleBody>;
 export type InvitationIdPathParam = z.infer<typeof zInvitationIdPathParam>;
 export type ListInvitationsQuery = z.infer<typeof zListInvitationsQuery>;
 export type WhatsNewSeenResponse = z.infer<typeof zWhatsNewSeenResponse>;

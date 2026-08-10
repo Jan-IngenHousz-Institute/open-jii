@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { IsWorkbookUpgradableUseCase } from "../../../../workbooks/application/use-cases/is-workbook-upgradable/is-workbook-upgradable";
 import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
@@ -29,6 +30,7 @@ export class UpgradeWorkbookVersionUseCase {
     private readonly isWorkbookUpgradableUseCase: IsWorkbookUpgradableUseCase,
     private readonly publishVersionUseCase: PublishVersionUseCase,
     private readonly flowRepository: FlowRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
@@ -47,6 +49,23 @@ export class UpgradeWorkbookVersionUseCase {
           AppError.badRequest(
             "Experiment does not have an attached workbook. Attach a workbook first.",
           ),
+        );
+      }
+
+      // The route guards the experiment; this reads the workbook's current cells.
+      // Without a check here, a revoked grantee could still capture the workbook's
+      // later state via an experiment they manage. Before both branches: the
+      // pin-existing path never reaches PublishVersionUseCase.
+      const workbookAccess = await this.authz.can(userId, {
+        resourceType: "workbook",
+        resourceId: experiment.workbookId,
+        action: "read",
+      });
+      if (!workbookAccess.allow) {
+        return failure(
+          workbookAccess.reason === "not-found"
+            ? AppError.notFound(`Workbook with ID ${experiment.workbookId} not found`)
+            : AppError.forbidden("You do not have access to this workbook"),
         );
       }
 

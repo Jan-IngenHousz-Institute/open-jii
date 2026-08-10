@@ -6,7 +6,9 @@ import type { CanAccessMetadata } from "./can-access.guard";
 /**
  * Declare the authorization requirement for a route and attach the guard that
  * enforces it. The guarded resource id is read from `req.params[param]`
- * (default `id`). Use on any route whose path carries the resource id:
+ * (default `id`), or from the body with `{ source: "body", param: "..." }` for
+ * routes that identify the resource in the payload. Use on any route that
+ * carries the resource id:
  *
  * ```ts
  * @CanAccess({ resource: "macro", action: "update" })

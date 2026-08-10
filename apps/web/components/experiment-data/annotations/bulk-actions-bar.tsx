@@ -23,6 +23,11 @@ interface BulkActionsBarProps {
   downloadTable: () => void;
   onAddAnnotation: (rowIds: string[], type: ExperimentAnnotationType) => void;
   onDeleteAnnotations: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  /**
+   * `can(contribute)`. Annotating is a write, so the actions menu is hidden
+   * without it — download stays, since reading the table implies exporting it.
+   */
+  canContribute?: boolean;
 }
 
 export function BulkActionsBar({
@@ -31,6 +36,7 @@ export function BulkActionsBar({
   downloadTable,
   onAddAnnotation,
   onDeleteAnnotations,
+  canContribute = false,
 }: BulkActionsBarProps) {
   const { t } = useTranslation();
   const selectedCount = rowIds.length;
@@ -100,45 +106,47 @@ export function BulkActionsBar({
           <Download className="h-4 w-4" />
           {t("experimentDataTable.download")}
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              {t("experimentDataAnnotations.bulkActions.actions")}
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem
-              onClick={() => onAddAnnotation(rowIds, "comment")}
-              disabled={selectedCount === 0}
-            >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              {t("experimentDataAnnotations.bulkActions.addComment")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onAddAnnotation(rowIds, "flag")}
-              disabled={selectedCount === 0}
-            >
-              <Flag className="mr-2 h-4 w-4" />
-              {t("experimentDataAnnotations.bulkActions.addFlag")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onDeleteAnnotations(rowIds, "comment")}
-              disabled={totalComments === 0}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t("experimentDataAnnotations.bulkActions.removeAllComments")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onDeleteAnnotations(rowIds, "flag")}
-              disabled={totalFlags === 0}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t("experimentDataAnnotations.bulkActions.removeAllFlags")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {canContribute && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                {t("experimentDataAnnotations.bulkActions.actions")}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                onClick={() => onAddAnnotation(rowIds, "comment")}
+                disabled={selectedCount === 0}
+              >
+                <MessageSquare className="mr-2 h-4 w-4" />
+                {t("experimentDataAnnotations.bulkActions.addComment")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onAddAnnotation(rowIds, "flag")}
+                disabled={selectedCount === 0}
+              >
+                <Flag className="mr-2 h-4 w-4" />
+                {t("experimentDataAnnotations.bulkActions.addFlag")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDeleteAnnotations(rowIds, "comment")}
+                disabled={totalComments === 0}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t("experimentDataAnnotations.bulkActions.removeAllComments")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onDeleteAnnotations(rowIds, "flag")}
+                disabled={totalFlags === 0}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t("experimentDataAnnotations.bulkActions.removeAllFlags")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );

@@ -50,7 +50,7 @@ describe("RevokeInvitationUseCase", () => {
       "experiment",
       experimentId,
       email,
-      "member",
+      { tier: "viewer" },
       testUserId,
     );
 

@@ -6,11 +6,14 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { macroContract } from "@repo/api/domains/macro/macro.contract";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
+import { resolveResourceCapabilities } from "../../authorization/resource-capabilities";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError, isSuccess } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { SetVisibilityUseCase } from "../../visibility/application/use-cases/set-visibility/set-visibility";
 import { AddCompatibleProtocolsUseCase } from "../application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "../application/use-cases/create-macro/create-macro";
 import { DeleteMacroUseCase } from "../application/use-cases/delete-macro/delete-macro";
@@ -39,6 +42,8 @@ export class MacroController {
     private readonly listCompatibleProtocolsUseCase: ListCompatibleProtocolsUseCase,
     private readonly addCompatibleProtocolsUseCase: AddCompatibleProtocolsUseCase,
     private readonly removeCompatibleProtocolUseCase: RemoveCompatibleProtocolUseCase,
+    private readonly setVisibilityUseCase: SetVisibilityUseCase,
+    private readonly authz: AuthorizationService,
   ) {}
 
   @CanCreateInOrg()
@@ -60,11 +65,20 @@ export class MacroController {
 
   @CanAccess({ resource: "macro", action: "read" })
   @Implement(macroContract.getMacro)
-  getMacro() {
+  getMacro(@Session() session: UserSession) {
     return implement(macroContract.getMacro).handler(async ({ input }) => {
       const result = await this.getMacroUseCase.execute(input.id);
       if (isSuccess(result)) {
-        return formatDates(result.value);
+        // The caller's effective capabilities ride along so the web app can gate
+        // editing/publishing/sharing on capability rather than on `createdBy`.
+        // Resolved after the fetch succeeded, so a 404 stays a 404.
+        const capabilities = await resolveResourceCapabilities(
+          this.authz,
+          session.user.id,
+          "macro",
+          input.id,
+        );
+        return { ...formatDates(result.value), capabilities };
       }
       return throwOrpcFailure(result, this.logger);
     });
@@ -99,6 +113,7 @@ export class MacroController {
     });
   }
 
+  @CanAccess({ resource: "macro", action: "read" })
   @Implement(macroContract.executeMacro)
   executeMacro() {
     return implement(macroContract.executeMacro).handler(async ({ input }) => {
@@ -136,11 +151,23 @@ export class MacroController {
     });
   }
 
+  @CanAccess({ resource: "macro", action: "manage" })
+  @Implement(macroContract.setVisibility)
+  setVisibility() {
+    return implement(macroContract.setVisibility).handler(async ({ input }) => {
+      const result = await this.setVisibilityUseCase.execute("macro", input.id, input.visibility);
+      if (result.isSuccess()) {
+        return result.value;
+      }
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
   @CanAccess({ resource: "macro", action: "read" })
   @Implement(macroContract.listCompatibleProtocols)
-  listCompatibleProtocols() {
+  listCompatibleProtocols(@Session() session: UserSession) {
     return implement(macroContract.listCompatibleProtocols).handler(async ({ input }) => {
-      const result = await this.listCompatibleProtocolsUseCase.execute(input.id);
+      const result = await this.listCompatibleProtocolsUseCase.execute(input.id, session.user.id);
       if (result.isSuccess()) {
         return formatDatesList(result.value);
       }

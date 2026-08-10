@@ -1,29 +1,29 @@
 "use client";
 
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
+import { ResourceDetailTabs } from "@/components/sharing/resource-detail-tabs";
 import { useMacroUpdate } from "@/hooks/macro/useMacroUpdate/useMacroUpdate";
 import { Code } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
-import { useSession } from "@repo/auth/client";
+import type { MacroDetail } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 interface MacroLayoutContentProps {
   id: string;
-  macro: Macro;
+  macro: MacroDetail;
   children: React.ReactNode;
 }
 
 export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentProps) {
   const { t } = useTranslation(["macro", "common"]);
   const { t: tCommon } = useTranslation("common");
-  const { data: session } = useSession();
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(id);
 
-  const isCreator = session?.user.id === macro.createdBy;
+  // Renaming is a content edit → `canUpdate`, not ownership.
+  const { canUpdate, canShare, canLeave } = macro.capabilities;
 
   const handleTitleSave = async (newName: string) => {
     await updateMacro(
@@ -43,7 +43,7 @@ export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentPr
     <div className="space-y-6">
       <InlineEditableTitle
         name={macro.name}
-        hasAccess={isCreator}
+        hasAccess={canUpdate}
         onSave={handleTitleSave}
         isPending={isUpdating}
         icon={<Code className="h-6 w-6" />}
@@ -53,7 +53,17 @@ export function MacroLayoutContent({ id, macro, children }: MacroLayoutContentPr
           ) : undefined
         }
       />
-      {children}
+
+      {/* The strip sits in the layout, so Overview and Collaborators are routes
+          under the same title rather than two states of one page. */}
+      <ResourceDetailTabs
+        resourceType="macro"
+        resourceId={id}
+        canShare={canShare}
+        canLeave={canLeave}
+      >
+        {children}
+      </ResourceDetailTabs>
     </div>
   );
 }

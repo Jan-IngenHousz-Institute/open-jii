@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { IsWorkbookUpgradableUseCase } from "../../../../workbooks/application/use-cases/is-workbook-upgradable/is-workbook-upgradable";
 import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
@@ -29,6 +30,7 @@ export class AttachWorkbookUseCase {
     private readonly isWorkbookUpgradableUseCase: IsWorkbookUpgradableUseCase,
     private readonly publishVersionUseCase: PublishVersionUseCase,
     private readonly flowRepository: FlowRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
@@ -41,6 +43,24 @@ export class AttachWorkbookUseCase {
     return experimentResult.chain(async (experiment: ExperimentDto | null) => {
       if (!experiment) {
         return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+      }
+
+      // The route only guards `manage` on the experiment; the workbook is a
+      // client-supplied cross-resource reference, so require the caller to be
+      // able to read it — a dynamic cross-resource reference is checked here rather
+      // than by the route guard. Otherwise a private workbook could be materialised into the
+      // caller's experiment flow without a grant.
+      const workbookAccess = await this.authz.can(userId, {
+        resourceType: "workbook",
+        resourceId: workbookId,
+        action: "read",
+      });
+      if (!workbookAccess.allow) {
+        return failure(
+          workbookAccess.reason === "not-found"
+            ? AppError.notFound(`Workbook with ID ${workbookId} not found`)
+            : AppError.forbidden("You do not have access to this workbook"),
+        );
       }
 
       const workbookResult = await this.workbookRepository.findById(workbookId);

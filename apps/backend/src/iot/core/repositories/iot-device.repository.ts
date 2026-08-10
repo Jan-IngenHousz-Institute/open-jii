@@ -1,9 +1,19 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { desc, eq, inArray, iotDevices, ensurePersonalOrganization } from "@repo/database";
+import {
+  desc,
+  deleteResourceGrants,
+  eq,
+  inArray,
+  iotDevices,
+  or,
+  ensurePersonalOrganization,
+} from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import { CreateIotDeviceDto, IotDeviceDto, UpdateIotDeviceDto } from "../models/iot-device.model";
 
 @Injectable()
@@ -23,20 +33,39 @@ export class IotDeviceRepository {
       // personal org so there is never an org-less device.
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
-      const results = await this.database
-        .insert(iotDevices)
-        .values({ ...createIotDeviceDto, createdBy: userId, organizationId })
-        .returning();
-      return results;
+
+      return this.database.transaction(async (tx) => {
+        const results = await tx
+          .insert(iotDevices)
+          .values({ ...createIotDeviceDto, createdBy: userId, organizationId })
+          .returning();
+
+        // A plain org `member` may register a device but is read-only, so without a
+        // grant they could not manage certificates on the device they just added.
+        await seedCreatorControl(tx, "device", results[0].id, organizationId, userId);
+
+        return results;
+      });
     });
   }
 
-  async listByOwner(userId: string): Promise<Result<IotDeviceDto[]>> {
+  // `createdBy` is an extra tier on the shared predicate, so a creator later removed
+  // from the owning org still sees devices they registered. The predicate's public
+  // arm is unreachable — devices are permanently private.
+  async listAccessible(userId: string): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(async () => {
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "device",
+        resourceIdColumn: iotDevices.id,
+        organizationIdColumn: iotDevices.organizationId,
+        visibilityColumn: iotDevices.visibility,
+        userId,
+      });
       const results = await this.database
         .select()
         .from(iotDevices)
-        .where(eq(iotDevices.createdBy, userId))
+        .where(or(eq(iotDevices.createdBy, userId), scope))
         .orderBy(desc(iotDevices.createdAt));
       return results;
     });
@@ -93,12 +122,16 @@ export class IotDeviceRepository {
   }
 
   async delete(deviceId: string): Promise<Result<IotDeviceDto[]>> {
-    return tryCatch(async () => {
-      const results = await this.database
-        .delete(iotDevices)
-        .where(eq(iotDevices.id, deviceId))
-        .returning();
-      return results;
-    });
+    return tryCatch(() =>
+      // Grants are polymorphic (no FK cascade), so they need cleaning by hand. One
+      // transaction, or a failure here strips access while the API reports failure.
+      this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "device", deviceId, "update");
+
+        await deleteResourceGrants(tx, "device", deviceId);
+
+        return tx.delete(iotDevices).where(eq(iotDevices.id, deviceId)).returning();
+      }),
+    );
   }
 }

@@ -3,8 +3,8 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
+import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import type { Experiment, ExperimentList } from "@repo/api/domains/experiment/experiment.schema";
-import type { ExperimentMemberList } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
@@ -12,7 +12,6 @@ import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapt
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
-import type { UserDto } from "../../users/core/models/user.model";
 
 describe("ExperimentController", () => {
   const testApp = TestHarness.App;
@@ -139,6 +138,39 @@ describe("ExperimentController", () => {
         })
         .expect(StatusCodes.BAD_REQUEST);
     });
+
+    it("should return 400 when embargoUntil is set on an explicitly public experiment", async () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
+        .withAuth(testUserId)
+        .send({
+          name: "Public With Embargo",
+          description: "Test Description",
+          status: "active",
+          visibility: "public",
+          embargoUntil: futureDate.toISOString(),
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("should return 400 when embargoUntil is set and visibility is omitted (defaults public)", async () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.createExperiment))
+        .withAuth(testUserId)
+        .send({
+          name: "Defaulted Public With Embargo",
+          description: "Test Description",
+          status: "active",
+          embargoUntil: futureDate.toISOString(),
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
   });
 
   describe("listExperiments", () => {
@@ -207,8 +239,8 @@ describe("ExperimentController", () => {
         userId: otherUserId,
         status: "archived",
       });
-      await testApp.addExperimentMember(memberExpActive.id, mainUserId, "member");
-      await testApp.addExperimentMember(memberExpArchived.id, mainUserId, "member");
+      await testApp.addExperimentCollaborator(memberExpActive.id, mainUserId);
+      await testApp.addExperimentCollaborator(memberExpArchived.id, mainUserId);
       await testApp.createExperiment({
         name: "Other Experiment",
         userId: otherUserId,
@@ -484,6 +516,73 @@ describe("ExperimentController", () => {
     });
   });
 
+  /**
+   * The handler does not receive the route params the authorization guard checked; it
+   * receives them merged with the client-supplied payload, payload last — the query
+   * string on a GET, the parsed body otherwise. So a payload key named after a path
+   * param would replace the id that was authorized, and a caller could be checked
+   * against an experiment it may read while being served one it may not. A request
+   * may restate a path param verbatim; anything else is refused. Only reachable over
+   * HTTP, because the merge happens in the request-decoding pipeline.
+   */
+  describe("getExperiment with a query param that shadows the path id", () => {
+    it("is rejected when the query id differs from the path id", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Reachable experiment",
+        userId: testUserId,
+      });
+      // Owned by somebody else and private: the caller is neither an organization
+      // member nor a grantee, so every action on it is denied.
+      const strangerId = await testApp.createTestUser({});
+      const { experiment: offLimits } = await testApp.createExperiment({
+        name: "Off-limits experiment",
+        userId: strangerId,
+        visibility: "private",
+      });
+
+      const response: SuperTestResponse<unknown> = await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.getExperiment, { id: experiment.id }))
+        .query({ id: offLimits.id })
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST);
+
+      // Nothing about the experiment the caller cannot read may leak into the reply.
+      expect(JSON.stringify(response.body)).not.toContain(offLimits.id);
+      expect(JSON.stringify(response.body)).not.toContain(offLimits.name);
+    });
+
+    it("is served normally when the query restates the path id", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Restated id experiment",
+        userId: testUserId,
+      });
+
+      const response: SuperTestResponse<Experiment> = await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.getExperiment, { id: experiment.id }))
+        .query({ id: experiment.id })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.id).toBe(experiment.id);
+    });
+
+    it("is rejected when the query id differs from the path id only in letter case", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Case variant experiment",
+        userId: testUserId,
+      });
+
+      // Postgres would resolve the uppercased uuid to the same row and serve a 200, so
+      // only the strict comparison stops it: a restatement has to be character for
+      // character what the path says.
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.getExperiment, { id: experiment.id }))
+        .query({ id: experiment.id.toUpperCase() })
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
   describe("getExperimentAccess", () => {
     it("reports read access without granting manage access to an organization member", async () => {
       const { experiment } = await testApp.createExperiment({
@@ -651,6 +750,71 @@ describe("ExperimentController", () => {
     });
   });
 
+  describe("setVisibility", () => {
+    it("publishes a private experiment (private → public)", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "To Publish",
+        visibility: "private",
+        userId: testUserId,
+      });
+
+      const path = testApp.resolveOrpcPath(contract.experiments.setVisibility, {
+        id: experiment.id,
+      });
+
+      const response = await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ visibility: "public" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({ id: experiment.id, visibility: "public" });
+
+      // The change persisted.
+      const getPath = testApp.resolveOrpcPath(contract.experiments.getExperiment, {
+        id: experiment.id,
+      });
+      const getResponse = await testApp.get(getPath).withAuth(testUserId).expect(StatusCodes.OK);
+      expect((getResponse.body as { visibility: string }).visibility).toBe("public");
+    });
+
+    it("rejects public → private (monotonic rule)", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Already Public",
+        visibility: "public",
+        userId: testUserId,
+      });
+
+      const path = testApp.resolveOrpcPath(contract.experiments.setVisibility, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ visibility: "private" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 403 without manage access", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Not Mine",
+        visibility: "private",
+        userId: testUserId,
+      });
+      const otherUserId = await testApp.createTestUser({});
+      const path = testApp.resolveOrpcPath(contract.experiments.setVisibility, {
+        id: experiment.id,
+      });
+
+      await testApp
+        .patch(path)
+        .withAuth(otherUserId)
+        .send({ visibility: "public" })
+        .expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
   describe("deleteExperiment", () => {
     beforeEach(() => {
       analyticsAdapter.setFlag(FEATURE_FLAGS.EXPERIMENT_DELETION, true);
@@ -735,165 +899,120 @@ describe("ExperimentController", () => {
     });
   });
 
-  describe("experimentMembers", () => {
-    it("should list experiment members", async () => {
+  describe("experimentContributors", () => {
+    it("credits everyone who holds a grant on the experiment", async () => {
       const { experiment } = await testApp.createExperiment({
-        name: "Member Test Experiment",
+        name: "Contributor Test Experiment",
         userId: testUserId,
       });
+      const collaboratorId = await testApp.createTestUser({ email: "collaborator@example.com" });
+      await testApp.addExperimentCollaborator(experiment.id, collaboratorId);
 
-      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
+      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentContributors, {
         id: experiment.id,
       });
 
-      const response: SuperTestResponse<ExperimentMemberList> = await testApp
+      const response: SuperTestResponse<ExperimentContributor[]> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0]).toMatchObject({
-        role: "admin",
-        user: expect.objectContaining({
-          id: testUserId,
-        }) as Partial<UserDto>,
+      // Credit is names and avatars only — no emails, no tiers. Who holds which
+      // tier is the sharing surface's business, and it is gated on can(share).
+      expect(response.body.map((c) => c.userId).sort()).toEqual(
+        [testUserId, collaboratorId].sort(),
+      );
+      for (const contributor of response.body) {
+        expect(Object.keys(contributor).sort()).toEqual([
+          "avatarUrl",
+          "firstName",
+          "lastName",
+          "userId",
+        ]);
+      }
+    });
+
+    it("pseudonymises every identity when the experiment anonymizes contributors", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Anonymized Contributor Test",
+        userId: testUserId,
+        visibility: "public",
+        anonymizeContributors: true,
+      });
+      const collaboratorId = await testApp.createTestUser({
+        email: "anon-collaborator@example.com",
+        name: "Real Name",
+      });
+      await testApp.addExperimentCollaborator(experiment.id, collaboratorId);
+      const readerId = await testApp.createTestUser({ email: "public-reader@example.com" });
+
+      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentContributors, {
+        id: experiment.id,
+      });
+
+      // A public reader is exactly the caller this protects: read access alone must
+      // not undo the experiment's own anonymization setting.
+      const response: SuperTestResponse<ExperimentContributor[]> = await testApp
+        .get(path)
+        .withAuth(readerId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(2);
+      for (const contributor of response.body) {
+        expect(contributor.firstName).toMatch(/^Contributor-[0-9A-F]{6}$/);
+        expect(contributor.lastName).toBe("");
+        expect(contributor.avatarUrl).toBeNull();
+        // The real user id would be enough to join this list back to the data grid
+        // and recover the name, so it is pseudonymised too.
+        expect(contributor.userId).toBe(contributor.firstName);
+      }
+      expect(response.body.map((c) => c.userId)).not.toContain(collaboratorId);
+      expect(response.body.map((c) => c.userId)).not.toContain(testUserId);
+
+      // The admin sees the same pseudonyms here; real identities live on the
+      // can(share)-gated collaborators list instead.
+      const asAdmin: SuperTestResponse<ExperimentContributor[]> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+      expect(asAdmin.body.map((c) => c.userId).sort()).toEqual(
+        response.body.map((c) => c.userId).sort(),
+      );
+    });
+
+    it("is read-gated: a stranger on a private experiment gets 403", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Private Contributor Test",
+        userId: testUserId,
+        visibility: "private",
+      });
+      const strangerId = await testApp.createTestUser({ email: "stranger@example.com" });
+
+      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentContributors, {
+        id: experiment.id,
+      });
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+
+      await testApp.get(path).withAuth(strangerId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledWith(strangerId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action: "read",
       });
     });
 
-    it("should return 401 if not authenticated when listing members", async () => {
+    it("should return 401 if not authenticated", async () => {
       const { experiment } = await testApp.createExperiment({
-        name: "Member Test Experiment",
+        name: "Contributor Auth Test",
         userId: testUserId,
       });
 
-      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
+      const path = testApp.resolveOrpcPath(contract.experiments.listExperimentContributors, {
         id: experiment.id,
       });
 
       await testApp.get(path).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
-    });
-
-    it("should add a member to an experiment", { timeout: 10000 }, async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Add Member Test",
-        userId: testUserId,
-      });
-      const newMemberId = await testApp.createTestUser({
-        email: "member@example.com",
-      });
-
-      const path = testApp.resolveOrpcPath(contract.experiments.addExperimentMembers, {
-        id: experiment.id,
-      });
-
-      await testApp
-        .post(path)
-        .withAuth(testUserId)
-        .send({ members: [{ userId: newMemberId, role: "member" }] })
-        .expect(StatusCodes.CREATED)
-        .expect(({ body }: { body: ExperimentMemberList }) => {
-          expect(body).toHaveLength(1);
-          expect(body[0]).toMatchObject({
-            experimentId: experiment.id,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            joinedAt: expect.any(String),
-            role: "member",
-            user: expect.objectContaining({
-              id: newMemberId,
-            }) as Partial<UserDto>,
-          });
-        });
-
-      // Verify member was added
-      const listPath = testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
-        id: experiment.id,
-      });
-      const response = await testApp.get(listPath).withAuth(testUserId).query({
-        userId: testUserId,
-      });
-      expect(response.body).toHaveLength(2);
-    });
-
-    it("should return 401 if not authenticated when adding a member", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Add Member Test",
-        userId: testUserId,
-      });
-      const newMemberId = await testApp.createTestUser({
-        email: "member@example.com",
-      });
-
-      const path = testApp.resolveOrpcPath(contract.experiments.addExperimentMembers, {
-        id: experiment.id,
-      });
-
-      await testApp
-        .post(path)
-        .withoutAuth()
-        .send({ userId: newMemberId, role: "member" })
-        .expect(StatusCodes.UNAUTHORIZED);
-    });
-
-    it("should remove a member from an experiment", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Remove Member Test",
-        userId: testUserId,
-      });
-      const newMemberId = await testApp.createTestUser({
-        email: "member-to-remove@example.com",
-      });
-
-      // Add the member first
-      await testApp.addExperimentMember(experiment.id, newMemberId, "member");
-
-      // Verify there are 2 members
-      const listPath = testApp.resolveOrpcPath(contract.experiments.listExperimentMembers, {
-        id: experiment.id,
-      });
-      let response: SuperTestResponse<ExperimentMemberList> = await testApp
-        .get(listPath)
-        .withAuth(testUserId)
-        .query({
-          userId: testUserId,
-        });
-
-      expect(response.body).toHaveLength(2);
-
-      // Now remove the member
-      const removePath = testApp.resolveOrpcPath(contract.experiments.removeExperimentMember, {
-        id: experiment.id,
-        memberId: newMemberId,
-      });
-
-      await testApp.delete(removePath).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
-
-      // Verify member was removed
-      response = await testApp.get(listPath).withAuth(testUserId).query({
-        userId: testUserId,
-      });
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].user.id).toBe(testUserId);
-    });
-
-    it("should return 401 if not authenticated when removing a member", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Remove Member Test",
-        userId: testUserId,
-      });
-      const newMemberId = await testApp.createTestUser({
-        email: "member-to-remove@example.com",
-      });
-
-      // Add the member first
-      await testApp.addExperimentMember(experiment.id, newMemberId, "member");
-
-      // Now try to remove the member without auth
-      const removePath = testApp.resolveOrpcPath(contract.experiments.removeExperimentMember, {
-        id: experiment.id,
-        memberId: newMemberId,
-      });
-
-      await testApp.delete(removePath).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -943,6 +1062,19 @@ describe("ExperimentController", () => {
               }),
             )
             .withAuth(userId),
+      },
+      {
+        name: "set experiment visibility",
+        action: "manage",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .patch(
+              testApp.resolveOrpcPath(contract.experiments.setVisibility, {
+                id: experimentId,
+              }),
+            )
+            .withAuth(userId)
+            .send({ visibility: "public" }),
       },
     ])("requires $action access to $name", async ({ action, request }) => {
       const { experiment } = await testApp.createExperiment({

@@ -10,6 +10,7 @@ import type {
   ExperimentUpdateAnnotationBody,
 } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
+import { AuthorizationService } from "../../authorization/authorization.service";
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -176,7 +177,6 @@ describe("ExperimentDataAnnotationsController", () => {
           content: { type: "comment", text: "This is a test comment" },
         },
       };
-
       await testApp
         .post(path)
         .withAuth(testUserId)
@@ -205,6 +205,7 @@ describe("ExperimentDataAnnotationsController", () => {
           content: { type: "comment", text: "This is a test comment" },
         },
       };
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
 
       await testApp
         .post(path)
@@ -213,6 +214,11 @@ describe("ExperimentDataAnnotationsController", () => {
         .expect(StatusCodes.FORBIDDEN);
 
       expect(executeSpy).not.toHaveBeenCalled();
+      expect(canSpy).toHaveBeenCalledWith(testUserId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action: "contribute",
+      });
     });
   });
 
@@ -607,11 +613,10 @@ describe("ExperimentDataAnnotationsController", () => {
   });
 
   describe("contributor authorization", () => {
-    // These routes require experiment MEMBERSHIP (not mere read access),
-    // enforced by @CanContributeToExperiment: a non-member must be rejected even
-    // on a public experiment. `addAnnotation` is covered by the public-experiment
-    // test above; this pins the decorator on the remaining routes so removing any
-    // one of them fails here.
+    // These routes require can(contribute), not mere read access: someone who can
+    // only read a public experiment must still be rejected. `addAnnotation` is
+    // covered by the public-experiment test above; this pins the decorator on the
+    // remaining routes so removing any one of them fails here.
     it.each([
       {
         name: "add annotations (bulk)",
@@ -661,8 +666,65 @@ describe("ExperimentDataAnnotationsController", () => {
         userId: ownerId,
         visibility: "public",
       });
+      const canSpy = vi.spyOn(testApp.module.get(AuthorizationService), "can");
 
       await request(experiment.id, testUserId).expect(StatusCodes.FORBIDDEN);
+
+      expect(canSpy).toHaveBeenCalledWith(testUserId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action: "contribute",
+      });
+    });
+  });
+
+  describe("a body id that shadows the path id", () => {
+    // The handler receives the route params merged with the request body, body last,
+    // so a body `id` would replace the experiment the guard authorized and the write
+    // would land on a different one. See the matching read-route group in
+    // `experiment.controller.spec.ts` for the full mechanism.
+    const annotationBody: ExperimentAddAnnotationBody = {
+      tableName: "data_table_1",
+      rowId: "row_123",
+      annotation: {
+        type: "comment",
+        content: { type: "comment", text: "Contradiction check" },
+      },
+    };
+
+    it("is rejected without writing anything", async () => {
+      const execute = vi
+        .spyOn(addAnnotationsUseCase, "execute")
+        .mockResolvedValue(success({ rowsAffected: 1 }));
+      // Owned by somebody else and private, so the caller may not contribute to it.
+      const strangerId = await testApp.createTestUser({});
+      const { experiment: offLimits } = await testApp.createExperiment({
+        name: "Off-limits annotations experiment",
+        userId: strangerId,
+        visibility: "private",
+      });
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.addAnnotation, { id: experimentId }))
+        .withAuth(testUserId)
+        .send({ ...annotationBody, id: offLimits.id })
+        .expect(StatusCodes.BAD_REQUEST);
+
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it("writes to the path experiment when the body restates its id", async () => {
+      const execute = vi
+        .spyOn(addAnnotationsUseCase, "execute")
+        .mockResolvedValue(success({ rowsAffected: 1 }));
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.experiments.addAnnotation, { id: experimentId }))
+        .withAuth(testUserId)
+        .send({ ...annotationBody, id: experimentId })
+        .expect(StatusCodes.CREATED);
+
+      expect(execute).toHaveBeenCalledWith(experimentId, expect.anything(), testUserId);
     });
   });
 });

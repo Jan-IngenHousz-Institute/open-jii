@@ -101,7 +101,7 @@ describe("UploadDataModal", () => {
     setExperimentTables();
     mountEmptyHistory();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     expect(screen.getByText("experimentData.uploadDataModal.title")).toBeInTheDocument();
     expect(screen.getByText("experimentData.uploadDataModal.description")).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe("UploadDataModal", () => {
     setExperimentTables();
     mountEmptyHistory();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
 
@@ -125,7 +125,7 @@ describe("UploadDataModal", () => {
     mountEmptyHistory();
     const spy = mountUploadCapture();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
     await userEvent.type(
@@ -152,7 +152,7 @@ describe("UploadDataModal", () => {
     mountEmptyHistory();
     const spy = mountUploadCapture();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
     // A .tsv file when CSV was chosen: error must surface without clicking Upload.
@@ -168,7 +168,7 @@ describe("UploadDataModal", () => {
     setExperimentTables();
     mountEmptyHistory();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
     await selectFiles(["data.tsv"]);
@@ -199,7 +199,7 @@ describe("UploadDataModal", () => {
     ]);
     mountEmptyHistory();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
 
@@ -208,6 +208,58 @@ describe("UploadDataModal", () => {
         screen.getByText("experimentData.uploadDataModal.existingTable.label"),
       ).toBeInTheDocument();
     });
+  });
+
+  it("does not offer a new table to a caller without manage access", async () => {
+    setExperimentTables([
+      createExperimentTable({
+        identifier: "leaf_traits",
+        tableType: "upload",
+        displayName: "Leaf Traits",
+        totalRows: 7,
+      }),
+    ]);
+    mountEmptyHistory();
+
+    render(<UploadDataModal experimentId="exp-1" canManage={false} open onOpenChange={vi.fn()} />);
+
+    await enterCreateView("csv");
+
+    expect(
+      screen.queryByLabelText("experimentData.uploadDataModal.targetKind.new"),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByText("experimentData.uploadDataModal.existingTable.label"),
+    ).toBeInTheDocument();
+  });
+
+  it("offers a new table to a caller with manage access", async () => {
+    setExperimentTables();
+    mountEmptyHistory();
+
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
+
+    await enterCreateView("csv");
+
+    expect(
+      await screen.findByLabelText("experimentData.uploadDataModal.targetKind.new"),
+    ).toBeInTheDocument();
+  });
+
+  it("disables upload when a caller without manage access has no existing table", async () => {
+    setExperimentTables();
+    mountEmptyHistory();
+
+    render(<UploadDataModal experimentId="exp-1" canManage={false} open onOpenChange={vi.fn()} />);
+
+    await enterCreateView("csv");
+
+    expect(
+      await screen.findByText("experimentData.uploadDataModal.existingTable.noneAvailable"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.upload" }),
+    ).toBeDisabled();
   });
 
   it("shows a validation error when appending with no table selected", async () => {
@@ -222,7 +274,7 @@ describe("UploadDataModal", () => {
     mountEmptyHistory();
     const spy = mountUploadCapture();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
     // Defaults to "append to existing" with no table picked; Upload must surface an error.
@@ -245,7 +297,7 @@ describe("UploadDataModal", () => {
     setExperimentTables();
     mountEmptyHistory();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("ambyte");
 
@@ -264,7 +316,7 @@ describe("UploadDataModal", () => {
     mountEmptyHistory();
     const spy = mountUploadCapture();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
     await userEvent.type(
@@ -286,7 +338,7 @@ describe("UploadDataModal", () => {
     mountEmptyHistory();
     const spy = mountUploadCapture();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
     await userEvent.type(
@@ -311,7 +363,7 @@ describe("UploadDataModal", () => {
     mountEmptyHistory();
     mountUploadCapture(500);
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
     await userEvent.type(
@@ -335,7 +387,7 @@ describe("UploadDataModal", () => {
     mountEmptyHistory();
     const spy = mountUploadCapture();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={vi.fn()} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
 
     await enterCreateView("csv");
     await userEvent.click(
@@ -353,7 +405,7 @@ describe("UploadDataModal", () => {
     mountEmptyHistory();
     const onOpenChange = vi.fn();
 
-    render(<UploadDataModal experimentId="exp-1" open onOpenChange={onOpenChange} />);
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={onOpenChange} />);
 
     await userEvent.click(
       screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.close" }),

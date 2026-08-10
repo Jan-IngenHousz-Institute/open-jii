@@ -63,6 +63,8 @@
     "viewPinned": "View pinned version",
     "noWorkbookLinked": "No workbook linked to this experiment.",
     "linkWorkbookPrompt": "Attach a workbook to define the experiment's data collection flow.",
+    "workbookNotShared": "This experiment's workbook is not shared with you.",
+    "workbookNotSharedHint": "Access is set per resource, so being added to the experiment does not include its workbook. Ask someone who can share the workbook to give you access.",
     "attach": "Attach",
     "workbookAttached": "Workbook attached successfully",
     "attachFailed": "Failed to attach workbook",

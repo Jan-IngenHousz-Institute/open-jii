@@ -1,6 +1,13 @@
 import { StatusCodes } from "http-status-codes";
 
-import { ensurePersonalOrganization, organizationMembers, organizations } from "@repo/database";
+import {
+  and,
+  ensurePersonalOrganization,
+  eq,
+  organizationMembers,
+  organizations,
+  resourceGrants,
+} from "@repo/database";
 
 import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
@@ -54,6 +61,27 @@ describe("CreateProtocolUseCase", () => {
       code: protocolData.code,
       createdBy: testUserId,
     });
+  });
+
+  it("creates no grant at all, the creator included", async () => {
+    const result = await useCase.execute(
+      { ...protocolData, name: `Granted Protocol ${crypto.randomUUID()}` },
+      testUserId,
+    );
+    assertSuccess(result);
+
+    // The creator is answerable for the protocol by owning it, so a grant would
+    // only repeat access they already have.
+    const grants = await testApp.database
+      .select()
+      .from(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, "protocol"),
+          eq(resourceGrants.resourceId, result.value.id),
+        ),
+      );
+    expect(grants).toEqual([]);
   });
 
   it("should assign the target organization to the protocol", async () => {

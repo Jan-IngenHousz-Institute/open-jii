@@ -4,6 +4,7 @@ import { ProtocolFilter } from "@repo/api/domains/protocol/protocol.schema";
 import {
   and,
   asc,
+  deleteResourceGrants,
   desc,
   eq,
   ilike,
@@ -24,6 +25,8 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/protocol.model";
 
 // All protocol columns except the internal full-text `search_vector` (never returned to clients).
@@ -45,15 +48,20 @@ export class ProtocolRepository {
       // Own the protocol with the requested target org (fallback: the creator's personal org).
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
-      const results = await this.database
-        .insert(protocols)
-        .values({
-          ...createProtocolDto,
-          createdBy: userId,
-          organizationId,
-        })
-        .returning(protocolColumns);
-      return results as ProtocolDto[];
+      return this.database.transaction(async (tx) => {
+        const results = await tx
+          .insert(protocols)
+          .values({
+            ...createProtocolDto,
+            createdBy: userId,
+            organizationId,
+          })
+          .returning(protocolColumns);
+
+        await seedCreatorControl(tx, "protocol", results[0].id, organizationId, userId);
+
+        return results as ProtocolDto[];
+      });
     });
   }
 
@@ -89,7 +97,20 @@ export class ProtocolRepository {
         );
       }
 
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "protocol",
+        resourceIdColumn: protocols.id,
+        organizationIdColumn: protocols.organizationId,
+        visibilityColumn: protocols.visibility,
+        userId: userId,
+      });
+      if (scope) {
+        conditions.push(scope);
+      }
+
       if (filter === "my" && userId) {
+        // "My protocols" narrows that down to what the caller authored.
         conditions.push(eq(protocols.createdBy, userId));
       }
 
@@ -193,10 +214,13 @@ export class ProtocolRepository {
 
   async delete(id: string): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database
-        .delete(protocols)
-        .where(eq(protocols.id, id))
-        .returning(protocolColumns);
+      const results = await this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "protocol", id, "update");
+
+        await deleteResourceGrants(tx, "protocol", id);
+
+        return tx.delete(protocols).where(eq(protocols.id, id)).returning(protocolColumns);
+      });
 
       return results as unknown as ProtocolDto[];
     });

@@ -28,6 +28,9 @@ vi.mock("@repo/ui/components/wizard-form", async (importOriginal) => {
             name: "Test Experiment",
             description: "Test Description",
             visibility: "public",
+            // The card's default-90-day effect can leave a stale embargo on the
+            // form even for a public experiment; the create flow must strip it.
+            embargoUntil: "2099-12-31T23:59:59.999Z",
             members: [],
             locations: [],
           });
@@ -62,6 +65,8 @@ describe("NewExperimentForm", () => {
     await waitFor(() => {
       expect(spy.callCount).toBe(1);
     });
+    // embargoUntil is absent: it is stripped from the payload for a public
+    // experiment (embargo is private-only), so the create body validates.
     expect(spy.body).toEqual({
       name: "Test Experiment",
       description: "Test Description",

@@ -151,6 +151,41 @@ describe("macro / protocol / workbook titles", () => {
     expect((await buildWorkbookMetadata({ locale: EN, id: "w1" })).title).toBe("Workbook");
   });
 
+  it("composes the shared collaborators label before the entity name", async () => {
+    remote.getMacro.mockResolvedValue({ name: "My Macro" });
+    remote.getProtocol.mockResolvedValue({ name: "My Protocol" });
+    remote.getWorkbook.mockResolvedValue({ name: "My Workbook" });
+    const section = { section: "collaborators" } as const;
+    expect((await buildMacroMetadata({ locale: EN, id: "m1", ...section })).title).toBe(
+      "Collaborators · My Macro",
+    );
+    expect((await buildProtocolMetadata({ locale: EN, id: "p1", ...section })).title).toBe(
+      "Collaborators · My Protocol",
+    );
+    expect((await buildWorkbookMetadata({ locale: EN, id: "w1", ...section })).title).toBe(
+      "Collaborators · My Workbook",
+    );
+    expect((await buildMacroMetadata({ locale: DE, id: "m1", ...section })).title).toBe(
+      "Mitwirkende · My Macro",
+    );
+  });
+
+  it("surfaces only the section label when the entity is inaccessible", async () => {
+    remote.getMacro.mockRejectedValue(new Error("403"));
+    remote.getProtocol.mockRejectedValue(new Error("403"));
+    remote.getWorkbook.mockRejectedValue(new Error("403"));
+    const section = { section: "collaborators" } as const;
+    expect((await buildMacroMetadata({ locale: EN, id: "m1", ...section })).title).toBe(
+      "Collaborators",
+    );
+    expect((await buildProtocolMetadata({ locale: EN, id: "p1", ...section })).title).toBe(
+      "Collaborators",
+    );
+    expect((await buildWorkbookMetadata({ locale: EN, id: "w1", ...section })).title).toBe(
+      "Collaborators",
+    );
+  });
+
   it("prefixes the localized runner label for the protocol runner", async () => {
     remote.getProtocol.mockResolvedValue({ name: "My Protocol" });
     expect((await buildProtocolRunMetadata({ locale: EN, id: "p1" })).title).toBe(
@@ -191,6 +226,51 @@ describe("device titles", () => {
   it("falls back to the generic localized noun when the device is inaccessible", async () => {
     remote.getIotDevice.mockRejectedValue(new Error("404"));
     expect((await buildDeviceMetadata({ locale: EN, deviceId: "dev-1" })).title).toBe("Device");
+  });
+
+  it("composes each tab label from the strip's own copy, before the device", async () => {
+    remote.getIotDevice.mockResolvedValue({
+      id: "dev-1",
+      name: "Greenhouse Sensor",
+      serialNumber: "SN-123",
+      deviceType: "unknown",
+    });
+    const titles = await Promise.all(
+      (["collaborators", "credentials", "lineage", "monitoring", "onboarding"] as const).map(
+        async (section) =>
+          (await buildDeviceMetadata({ locale: EN, deviceId: "dev-1", section })).title,
+      ),
+    );
+
+    expect(titles).toEqual([
+      "Collaborators · Greenhouse Sensor",
+      "Credentials · Greenhouse Sensor",
+      "Lineage · Greenhouse Sensor",
+      "Monitoring · Greenhouse Sensor",
+      "Onboarding · Greenhouse Sensor",
+    ]);
+  });
+
+  it("localizes a device tab label for de-DE", async () => {
+    remote.getIotDevice.mockResolvedValue({
+      id: "dev-1",
+      name: "Greenhouse Sensor",
+      serialNumber: "SN-123",
+      deviceType: "unknown",
+    });
+    expect(
+      (await buildDeviceMetadata({ locale: DE, deviceId: "dev-1", section: "credentials" })).title,
+    ).toBe("Anmeldedaten · Greenhouse Sensor");
+  });
+
+  it("surfaces only the tab label when the device is inaccessible", async () => {
+    remote.getIotDevice.mockRejectedValue(new Error("403"));
+    const { title } = await buildDeviceMetadata({
+      locale: EN,
+      deviceId: "dev-1",
+      section: "collaborators",
+    });
+    expect(title).toBe("Collaborators");
   });
 });
 

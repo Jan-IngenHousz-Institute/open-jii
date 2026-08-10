@@ -1,5 +1,7 @@
 import { faker } from "@faker-js/faker";
 
+import { and, eq, invitations, resourceGrants } from "@repo/database";
+
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { InvitationRepository } from "./user-invitation.repository";
@@ -38,7 +40,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "invite@example.com",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
 
@@ -47,12 +49,19 @@ describe("InvitationRepository", () => {
         resourceType: "experiment",
         resourceId: experiment.id,
         email: "invite@example.com",
-        role: "member",
+        // Least privilege by default: the contributing "can view" tier.
+        tier: "viewer",
         status: "pending",
         invitedBy: testUserId,
       });
       expect(result.value.id).toBeDefined();
       expect(result.value.createdAt).toBeDefined();
+
+      const [stored] = await testApp.database
+        .select({ role: invitations.role })
+        .from(invitations)
+        .where(eq(invitations.id, result.value.id));
+      expect(stored.role).toBe("member");
     });
 
     it("should lowercase the email", async () => {
@@ -65,7 +74,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "UPPER@EXAMPLE.COM",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
 
@@ -85,7 +94,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "pending@example.com",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
 
@@ -127,7 +136,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "revoked@example.com",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
       assertSuccess(createResult);
@@ -154,7 +163,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "case@example.com",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
 
@@ -180,7 +189,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "findme@example.com",
-        "admin",
+        { tier: "admin" },
         testUserId,
       );
       assertSuccess(createResult);
@@ -191,7 +200,7 @@ describe("InvitationRepository", () => {
       expect(result.value).not.toBeNull();
       expect(result.value?.id).toBe(createResult.value.id);
       expect(result.value?.email).toBe("findme@example.com");
-      expect(result.value?.role).toBe("admin");
+      expect(result.value?.tier).toBe("admin");
     });
 
     it("should return null for non-existent ID", async () => {
@@ -213,14 +222,14 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "list1@example.com",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
       await repository.create(
         "experiment",
         experiment.id,
         "list2@example.com",
-        "admin",
+        { tier: "admin" },
         testUserId,
       );
 
@@ -244,7 +253,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "enriched@example.com",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
 
@@ -266,7 +275,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "willrevoke@example.com",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
       assertSuccess(createResult);
@@ -276,7 +285,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "stillpending@example.com",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
 
@@ -312,7 +321,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "no-profile-inviter@example.com",
-        "member",
+        { tier: "viewer" },
         noProfileUserId,
       );
 
@@ -334,7 +343,13 @@ describe("InvitationRepository", () => {
         userId: testUserId,
       });
 
-      await repository.create("experiment", exp1.id, "only-a@example.com", "member", testUserId);
+      await repository.create(
+        "experiment",
+        exp1.id,
+        "only-a@example.com",
+        { tier: "viewer" },
+        testUserId,
+      );
 
       const result = await repository.listByResource("experiment", exp2.id);
 
@@ -354,7 +369,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "revoke@example.com",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
       assertSuccess(createResult);
@@ -365,53 +380,6 @@ describe("InvitationRepository", () => {
       const findResult = await repository.findById(createResult.value.id);
       assertSuccess(findResult);
       expect(findResult.value?.status).toBe("revoked");
-    });
-  });
-
-  describe("updateRole", () => {
-    it("should update the role on a pending invitation", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Update Role Test",
-        userId: testUserId,
-      });
-
-      const createResult = await repository.create(
-        "experiment",
-        experiment.id,
-        "role@example.com",
-        "member",
-        testUserId,
-      );
-      assertSuccess(createResult);
-
-      const updateResult = await repository.updateRole(createResult.value.id, "admin");
-
-      assertSuccess(updateResult);
-      expect(updateResult.value.role).toBe("admin");
-    });
-
-    it("should not update role on a revoked invitation", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Update Revoked Role",
-        userId: testUserId,
-      });
-
-      const createResult = await repository.create(
-        "experiment",
-        experiment.id,
-        "revokedrole@example.com",
-        "member",
-        testUserId,
-      );
-      assertSuccess(createResult);
-
-      await repository.revoke(createResult.value.id);
-
-      const updateResult = await repository.updateRole(createResult.value.id, "admin");
-
-      assertSuccess(updateResult);
-      // The returning will be undefined since no rows matched the pending status filter
-      expect(updateResult.value).toBeUndefined();
     });
   });
 
@@ -448,8 +416,8 @@ describe("InvitationRepository", () => {
         userId: testUserId,
       });
 
-      await repository.create("experiment", exp1.id, email, "member", testUserId);
-      await repository.create("experiment", exp2.id, email, "admin", testUserId);
+      await repository.create("experiment", exp1.id, email, { tier: "viewer" }, testUserId);
+      await repository.create("experiment", exp2.id, email, { tier: "admin" }, testUserId);
 
       const result = await repository.findPendingByEmail(email);
 
@@ -474,7 +442,7 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         "partialrevoke@example.com",
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
       assertSuccess(createResult);
@@ -488,7 +456,7 @@ describe("InvitationRepository", () => {
   });
 
   describe("acceptInvitation", () => {
-    it("should mark invitation as accepted and add experiment member", async () => {
+    it("accepts a stored 'member' invitation as a 'viewer' grant", async () => {
       const inviteeEmail = "accept@example.com";
       const { experiment } = await testApp.createExperiment({
         name: "Accept Invitation Test",
@@ -499,10 +467,16 @@ describe("InvitationRepository", () => {
         "experiment",
         experiment.id,
         inviteeEmail,
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
       assertSuccess(createResult);
+
+      const [storedInvitation] = await testApp.database
+        .select({ role: invitations.role })
+        .from(invitations)
+        .where(eq(invitations.id, createResult.value.id));
+      expect(storedInvitation.role).toBe("member");
 
       const newUserId = await testApp.createTestUser({ email: inviteeEmail });
 
@@ -511,10 +485,25 @@ describe("InvitationRepository", () => {
         newUserId,
         "experiment",
         experiment.id,
-        "member",
+        { tier: createResult.value.tier },
+        testUserId,
       );
 
       assertSuccess(acceptResult);
+      expect(acceptResult.value).toBe("accepted");
+
+      const [grant] = await testApp.database
+        .select({ role: resourceGrants.role })
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experiment.id),
+            eq(resourceGrants.granteeType, "user"),
+            eq(resourceGrants.granteeId, newUserId),
+          ),
+        );
+      expect(grant.role).toBe("viewer");
 
       // Verify invitation status changed
       const findResult = await repository.findById(createResult.value.id);
@@ -537,14 +526,14 @@ describe("InvitationRepository", () => {
       const newUserId = await testApp.createTestUser({ email: inviteeEmail });
 
       // Add as member first
-      await testApp.addExperimentMember(experiment.id, newUserId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, newUserId);
 
       // Create and accept invitation for same user
       const createResult = await repository.create(
         "experiment",
         experiment.id,
         inviteeEmail,
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
       assertSuccess(createResult);
@@ -555,7 +544,8 @@ describe("InvitationRepository", () => {
         newUserId,
         "experiment",
         experiment.id,
-        "member",
+        { tier: "viewer" },
+        testUserId,
       );
 
       assertSuccess(acceptResult);
@@ -577,14 +567,14 @@ describe("InvitationRepository", () => {
         "experiment",
         exp1.id,
         inviteeEmail,
-        "member",
+        { tier: "viewer" },
         testUserId,
       );
       const create2 = await repository.create(
         "experiment",
         exp2.id,
         inviteeEmail,
-        "admin",
+        { tier: "admin" },
         testUserId,
       );
       assertSuccess(create1);
@@ -597,14 +587,16 @@ describe("InvitationRepository", () => {
         newUserId,
         "experiment",
         exp1.id,
-        "member",
+        { tier: "viewer" },
+        testUserId,
       );
       const accept2 = await repository.acceptInvitation(
         create2.value.id,
         newUserId,
         "experiment",
         exp2.id,
-        "admin",
+        { tier: "admin" },
+        testUserId,
       );
 
       assertSuccess(accept1);

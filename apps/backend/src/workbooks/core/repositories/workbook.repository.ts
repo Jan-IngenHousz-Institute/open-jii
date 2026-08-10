@@ -3,18 +3,17 @@ import { Injectable, Inject } from "@nestjs/common";
 import {
   and,
   asc,
+  deleteResourceGrants,
   desc,
   ensurePersonalOrganization,
   eq,
   exists,
-  experimentMembers,
   experiments,
   getTableColumns,
   ilike,
   isNull,
   macros,
   ne,
-  or,
   profiles,
   protocols,
   sql,
@@ -28,6 +27,8 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateWorkbookDto,
   UpdateWorkbookDto,
@@ -100,15 +101,20 @@ export class WorkbookRepository {
       // Own the workbook with the requested target org (fallback: the creator's personal org).
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
-      const results = await this.database
-        .insert(workbooks)
-        .values({
-          ...data,
-          createdBy: userId,
-          organizationId,
-        })
-        .returning(workbookColumns);
-      return results as WorkbookDto[];
+      return this.database.transaction(async (tx) => {
+        const results = await tx
+          .insert(workbooks)
+          .values({
+            ...data,
+            createdBy: userId,
+            organizationId,
+          })
+          .returning(workbookColumns);
+
+        await seedCreatorControl(tx, "workbook", results[0].id, organizationId, userId);
+
+        return results as WorkbookDto[];
+      });
     });
   }
 
@@ -134,8 +140,12 @@ export class WorkbookRepository {
       const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
       const creatorMatch = (term: string) =>
         sql`(${profiles.activated} = true AND ${isNull(profiles.deletedAt)} AND ${ilike(creatorName, `%${escapeLike(term)}%`)})`;
-      // Match the name/description of a linked, non-archived experiment. Private experiment text
-      // is only searchable by members; without a requesting user, only public experiments match.
+      // Match the name/description of a linked, non-archived experiment. Scoped
+      // through the same shared predicate as the protocol/macro matches below, so
+      // "which experiments may this caller discover" has one definition: public, a
+      // grant of any kind, or membership of the owning org. The owning-org arm is
+      // what covers the caller's *own* private experiments — they hold no grant on
+      // what they own.
       const linkedExperimentMatch = (term: string) =>
         exists(
           this.database
@@ -145,29 +155,23 @@ export class WorkbookRepository {
               and(
                 eq(experiments.workbookId, workbooks.id),
                 ne(experiments.status, "archived"),
-                filter?.userId
-                  ? or(
-                      eq(experiments.visibility, "public"),
-                      exists(
-                        this.database
-                          .select()
-                          .from(experimentMembers)
-                          .where(
-                            and(
-                              eq(experimentMembers.experimentId, experiments.id),
-                              eq(experimentMembers.userId, filter.userId),
-                            ),
-                          ),
-                      ),
-                    )
-                  : eq(experiments.visibility, "public"),
+                accessibleResourceCondition({
+                  database: this.database,
+                  resourceType: "experiment",
+                  resourceIdColumn: experiments.id,
+                  organizationIdColumn: experiments.organizationId,
+                  visibilityColumn: experiments.visibility,
+                  userId: filter?.userId,
+                }),
                 ftsMatch(experiments.searchVector, experiments.name, term),
               ),
             ),
         );
 
       // Match a protocol/macro referenced by a cell, by the LIVE entity name (cells store the id;
-      // the payload name is optional and can go stale). Both are globally readable — no access filter.
+      // the payload name is optional and can go stale). Scope each linked child to the caller's
+      // access (undiscoverability): a private child the caller can't read must not make its
+      // parent workbook surface for a name probe. Without a caller, only public children match.
       const linkedProtocolMatch = (term: string) =>
         exists(
           this.database
@@ -177,6 +181,14 @@ export class WorkbookRepository {
               and(
                 ftsMatch(protocols.searchVector, protocols.name, term),
                 sql`${protocols.id} IN ${cellRefIds("protocol", "protocolId")}`,
+                accessibleResourceCondition({
+                  database: this.database,
+                  resourceType: "protocol",
+                  resourceIdColumn: protocols.id,
+                  organizationIdColumn: protocols.organizationId,
+                  visibilityColumn: protocols.visibility,
+                  userId: filter?.userId,
+                }),
               ),
             ),
         );
@@ -189,6 +201,14 @@ export class WorkbookRepository {
               and(
                 ftsMatch(macros.searchVector, macros.name, term),
                 sql`${macros.id} IN ${cellRefIds("macro", "macroId")}`,
+                accessibleResourceCondition({
+                  database: this.database,
+                  resourceType: "macro",
+                  resourceIdColumn: macros.id,
+                  organizationIdColumn: macros.organizationId,
+                  visibilityColumn: macros.visibility,
+                  userId: filter?.userId,
+                }),
               ),
             ),
         );
@@ -199,7 +219,24 @@ export class WorkbookRepository {
         );
       }
 
+      // Unconditional, the "my" view included: a view may narrow what the caller
+      // sees but must never widen it. Authorship is not an access path (`can()`
+      // does not consult `created_by`), so a creator since removed from the owning
+      // org, holding no grant, must not get the workbook's body back through a listing.
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "workbook",
+        resourceIdColumn: workbooks.id,
+        organizationIdColumn: workbooks.organizationId,
+        visibilityColumn: workbooks.visibility,
+        userId: filter?.userId,
+      });
+      if (scope) {
+        conditions.push(scope);
+      }
+
       if (filter?.filter === "my" && filter.userId) {
+        // "My workbooks" narrows that down to what the caller authored.
         conditions.push(eq(workbooks.createdBy, filter.userId));
       }
 
@@ -275,10 +312,18 @@ export class WorkbookRepository {
 
   async delete(id: string): Promise<Result<WorkbookDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database
-        .delete(workbooks)
-        .where(eq(workbooks.id, id))
-        .returning(workbookColumns);
+      // One transaction: the grants table is polymorphic (no FK cascade) so it must
+      // be cleaned by hand, and a delete that failed after a committed cleanup
+      // would leave the workbook alive with every grant on it gone — silently
+      // stripping collaborators' access while the API reported failure.
+      const results = await this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "workbook", id, "update");
+
+        await deleteResourceGrants(tx, "workbook", id);
+
+        return tx.delete(workbooks).where(eq(workbooks.id, id)).returning(workbookColumns);
+      });
+
       return results as unknown as WorkbookDto[];
     });
   }

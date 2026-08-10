@@ -116,6 +116,42 @@ describe("ListWorkbooks", () => {
     expect(spy.body).toMatchObject({ name: "My New WB" });
   });
 
+  it("gives the visibility select an accessible name", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+
+    // A placeholder is not an accessible name: the control needs a real label,
+    // like the macro and protocol create forms have.
+    expect(
+      await screen.findByRole("combobox", { name: "workbooks.visibility" }),
+    ).toBeInTheDocument();
+  });
+
+  it("creates a private workbook when private is picked", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    const spy = server.mount(contract.workbooks.createWorkbook, {
+      status: 201,
+      body: createWorkbook({ id: "wb-new", name: "Private WB", visibility: "private" }),
+    });
+
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    await user.click(await screen.findByRole("combobox", { name: "workbooks.visibility" }));
+    await user.click(screen.getByRole("option", { name: "workbooks.private" }));
+
+    const nameInput = screen.getByPlaceholderText("workbooks.namePlaceholder");
+    await user.type(nameInput, "Private WB{Enter}");
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.body).toMatchObject({ name: "Private WB", visibility: "private" });
+  });
+
   it("does not create a workbook when the name is blank", async () => {
     server.mount(contract.workbooks.listWorkbooks, { body: [] });
     const spy = server.mount(contract.workbooks.createWorkbook, {

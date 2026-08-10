@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zCommandFormat, zExperiment } from "../experiment/experiment.schema";
 import { zSensorFamily } from "../protocol/protocol.schema";
 
@@ -45,6 +46,19 @@ export const zIotDevice = z.object({
 });
 
 export const zIotDeviceList = z.array(zIotDevice);
+
+/**
+ * A single device plus the caller's effective capabilities on it. Only the detail
+ * route returns this: capabilities cost one `can()` resolution per resource, so
+ * the registry list stays plain `zIotDevice` rather than paying it per row.
+ *
+ * `canShare`/`canLeave` are what gate the device's Collaborators tab; `canManage`
+ * is what the credentials surface and the danger zone hang on, since on a device
+ * "manage" means issuing, rotating and revoking real AWS certificates.
+ */
+export const zIotDeviceDetail = zIotDevice.extend({
+  capabilities: zResourceCapabilities,
+});
 
 export const zRegisterIotDeviceBody = z.object({
   serialNumber: z.string().min(1).max(255).describe("Physical device identifier, e.g. MAC address"),
@@ -192,6 +206,7 @@ export type IotUploadUrlRequest = z.infer<typeof zIotUploadUrlRequest>;
 export type IotUploadUrl = z.infer<typeof zIotUploadUrl>;
 export type IotDeviceStatus = z.infer<typeof zIotDeviceStatus>;
 export type IotDevice = z.infer<typeof zIotDevice>;
+export type IotDeviceDetail = z.infer<typeof zIotDeviceDetail>;
 export type IotDeviceList = z.infer<typeof zIotDeviceList>;
 export type RegisterIotDeviceBody = z.infer<typeof zRegisterIotDeviceBody>;
 export type IotDevicePathParam = z.infer<typeof zIotDevicePathParam>;

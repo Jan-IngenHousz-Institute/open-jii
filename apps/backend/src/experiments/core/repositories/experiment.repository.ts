@@ -1,5 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { ExperimentFilter, ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
 import {
   desc,
@@ -12,30 +13,52 @@ import {
   experimentLocations,
   exists,
   ilike,
+  inArray,
   isNull,
   sql,
   profiles,
   alias,
   getTableColumns,
   ensurePersonalOrganization,
+  deleteResourceGrants,
+  upsertGrant,
   resourceGrants,
-  organizationMembers,
-  teamMembers,
 } from "@repo/database";
-import type { DatabaseInstance, SQL } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
 import {
+  getAnonymizedAvatarUrl,
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import { userIsSelectableGrantee } from "../../../sharing/core/grantee-selectability";
+import {
+  findOwningOrgOwnerIds,
+  lockStaffedResource,
+  seedCreatorControl,
+} from "../../../sharing/core/resource-staffing";
 import {
   CreateExperimentDto,
   UpdateExperimentDto,
   ExperimentDto,
 } from "../models/experiment.model";
+
+/**
+ * Contributors plus the experiment's anonymization setting, so no caller can publish
+ * identities without first deciding what to do about the flag.
+ */
+export interface ExperimentCollaborators {
+  /** `experiments.anonymize_contributors`: identities must not be published as-is. */
+  anonymizeContributors: boolean;
+  collaborators: ExperimentContributor[];
+}
+
+/** Read plus data contribution. Stored as the grant role `viewer`. */
+const COLLABORATOR_GRANT_ROLE = "viewer";
 
 // All experiment columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _experimentSearchVector, ...experimentColumns } =
@@ -49,24 +72,169 @@ export class ExperimentRepository {
     private readonly authz: AuthorizationService,
   ) {}
 
+  /**
+   * Insert, seed creator control, and grant the picked collaborators in one
+   * transaction — a failure anywhere leaves no experiment at all. An unselectable
+   * `collaboratorUserIds` entry fails the whole create with a 400.
+   */
   async create(
     createExperimentDto: CreateExperimentDto,
     userId: string,
     targetOrganizationId?: string | null,
+    collaboratorUserIds: string[] = [],
   ): Promise<Result<ExperimentDto[]>> {
     return tryCatch(async () => {
       // Own the experiment with the requested target org, falling back to the
       // creator's personal org so there is never an org-less resource.
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
-      return this.database
-        .insert(experiments)
-        .values({
-          ...createExperimentDto,
-          createdBy: userId,
-          organizationId,
+      return this.database.transaction(async (tx) => {
+        const results = await tx
+          .insert(experiments)
+          .values({
+            ...createExperimentDto,
+            createdBy: userId,
+            organizationId,
+          })
+          .returning(experimentColumns);
+
+        await seedCreatorControl(tx, "experiment", results[0].id, organizationId, userId);
+        await this.grantCollaborators(tx, results[0].id, collaboratorUserIds, userId);
+
+        return results;
+      });
+    });
+  }
+
+  /**
+   * Direct `viewer` grants for collaborators picked at create time. Grantees are
+   * validated first: `resource_grants` has no FK on `grantee_id`, so an unchecked
+   * write would store a row for a uuid naming nobody. Non-destructive — an existing
+   * grant is left alone, so it never lowers access and needs no staffing guard.
+   */
+  private async grantCollaborators(
+    tx: DbOrTx,
+    experimentId: string,
+    userIds: string[],
+    createdBy: string,
+  ): Promise<void> {
+    if (userIds.length === 0) return;
+
+    for (const userId of userIds) {
+      if (!(await userIsSelectableGrantee(tx, userId))) {
+        throw AppError.badRequest("Grantee not found");
+      }
+    }
+
+    const existing = await tx
+      .select({ granteeId: resourceGrants.granteeId })
+      .from(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, "experiment"),
+          eq(resourceGrants.resourceId, experimentId),
+          eq(resourceGrants.granteeType, "user"),
+          inArray(resourceGrants.granteeId, userIds),
+        ),
+      );
+    const alreadyGranted = new Set(existing.map((row) => row.granteeId));
+
+    for (const userId of userIds) {
+      if (alreadyGranted.has(userId)) continue;
+      await upsertGrant(tx, {
+        resourceType: "experiment",
+        resourceId: experimentId,
+        granteeType: "user",
+        granteeId: userId,
+        role: COLLABORATOR_GRANT_ROLE,
+        createdBy,
+      });
+    }
+  }
+
+  /**
+   * Activated grant-holders plus the owning org's owners, and the experiment's
+   * `anonymizeContributors` flag. The owners matter because a creator holds no grant
+   * on what they create, so grants alone would credit nobody on a personal-workspace
+   * experiment. Outer joins so it still reads with no collaborators.
+   */
+  async listCollaborators(experimentId: string): Promise<Result<ExperimentCollaborators>> {
+    return tryCatch(async () => {
+      const ownerIds = await findOwningOrgOwnerIds(this.database, "experiment", experimentId);
+      const rows = await this.database
+        .select({
+          anonymizeContributors: experiments.anonymizeContributors,
+          createdBy: experiments.createdBy,
+          userId: resourceGrants.granteeId,
+          // Whether the profile join matched. The name columns below can't answer
+          // that — they fall back to "Unknown"/"User" for a NULL row.
+          profileUserId: profiles.userId,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+          avatarUrl: getAnonymizedAvatarUrl(),
         })
-        .returning(experimentColumns);
+        .from(experiments)
+        .leftJoin(
+          resourceGrants,
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            eq(resourceGrants.resourceId, experiments.id),
+            eq(resourceGrants.granteeType, "user"),
+          ),
+        )
+        .leftJoin(
+          profiles,
+          and(
+            eq(profiles.userId, resourceGrants.granteeId),
+            eq(profiles.activated, true),
+            isNull(profiles.deletedAt),
+          ),
+        )
+        .where(eq(experiments.id, experimentId));
+
+      // A row without a matched profile is either a grant to an excluded account
+      // or the experiment on its own with nobody granted.
+      const granted = rows
+        .filter(
+          (r): r is typeof r & { userId: string } => r.userId !== null && r.profileUserId !== null,
+        )
+        .map(({ userId, firstName, lastName, avatarUrl }) => ({
+          userId,
+          firstName,
+          lastName,
+          avatarUrl,
+        }));
+
+      // Credited by relationship, not by a grant row. The creator counts in their
+      // own right: creating into an org you merely administer makes you no owner, and
+      // crediting that org's owner would put the wrong name on your work.
+      const createdBy = rows[0]?.createdBy;
+      const relatedIds = [...new Set([...ownerIds, ...(createdBy ? [createdBy] : [])])].filter(
+        (id) => !granted.some((collaborator) => collaborator.userId === id),
+      );
+      const related =
+        relatedIds.length === 0
+          ? []
+          : await this.database
+              .select({
+                userId: profiles.userId,
+                firstName: getAnonymizedFirstName(),
+                lastName: getAnonymizedLastName(),
+                avatarUrl: getAnonymizedAvatarUrl(),
+              })
+              .from(profiles)
+              .where(
+                and(
+                  inArray(profiles.userId, relatedIds),
+                  eq(profiles.activated, true),
+                  isNull(profiles.deletedAt),
+                ),
+              );
+
+      return {
+        anonymizeContributors: rows[0]?.anonymizeContributors ?? false,
+        collaborators: [...related, ...granted],
+      };
     });
   }
 
@@ -101,91 +269,39 @@ export class ExperimentRepository {
         conditions.push(ne(experiments.status, "archived"));
       }
 
-      // Accessibility scoping, aligned with can(): a user sees an experiment
-      // when it is public, they are an experiment member (contributor), they
-      // hold a grant (directly, via a team, or via an org grant), or they are a
-      // member of the experiment's owning organization.
-      const memberExists = exists(
+      const userGrantExists = exists(
         this.database
           .select()
-          .from(experimentMembers)
+          .from(resourceGrants)
           .where(
             and(
-              eq(experimentMembers.experimentId, experiments.id),
-              eq(experimentMembers.userId, userId),
+              eq(resourceGrants.resourceType, "experiment"),
+              eq(resourceGrants.resourceId, experiments.id),
+              eq(resourceGrants.granteeType, "user"),
+              eq(resourceGrants.granteeId, userId),
             ),
           ),
       );
 
+      // Unconditional, "member" included: a view may narrow what the caller sees but
+      // never widen it. Authorship is not an access path, so a creator since removed
+      // from the owning org must not get the body back through a listing.
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        visibilityColumn: experiments.visibility,
+        userId,
+      });
+      if (scope) {
+        conditions.push(scope);
+      }
+
       if (filter === "member") {
-        // Explicit "my experiments" filter: membership only.
-        conditions.push(memberExists);
-      } else {
-        const userGrantExists = exists(
-          this.database
-            .select()
-            .from(resourceGrants)
-            .where(
-              and(
-                eq(resourceGrants.resourceType, "experiment"),
-                eq(resourceGrants.resourceId, experiments.id),
-                eq(resourceGrants.granteeType, "user"),
-                eq(resourceGrants.granteeId, userId),
-              ),
-            ),
-        );
-        const teamGrantExists = exists(
-          this.database
-            .select()
-            .from(resourceGrants)
-            .innerJoin(teamMembers, eq(teamMembers.teamId, resourceGrants.granteeId))
-            .where(
-              and(
-                eq(resourceGrants.resourceType, "experiment"),
-                eq(resourceGrants.resourceId, experiments.id),
-                eq(resourceGrants.granteeType, "team"),
-                eq(teamMembers.userId, userId),
-              ),
-            ),
-        );
-        const orgGrantExists = exists(
-          this.database
-            .select()
-            .from(resourceGrants)
-            .innerJoin(
-              organizationMembers,
-              eq(organizationMembers.organizationId, resourceGrants.granteeId),
-            )
-            .where(
-              and(
-                eq(resourceGrants.resourceType, "experiment"),
-                eq(resourceGrants.resourceId, experiments.id),
-                eq(resourceGrants.granteeType, "organization"),
-                eq(organizationMembers.userId, userId),
-              ),
-            ),
-        );
-        const owningOrgMemberExists = exists(
-          this.database
-            .select()
-            .from(organizationMembers)
-            .where(
-              and(
-                eq(organizationMembers.organizationId, experiments.organizationId),
-                eq(organizationMembers.userId, userId),
-              ),
-            ),
-        );
-        conditions.push(
-          or(
-            eq(experiments.visibility, "public"),
-            memberExists,
-            userGrantExists,
-            teamGrantExists,
-            orgGrantExists,
-            owningOrgMemberExists,
-          ),
-        );
+        // "Mine": made or explicitly given, narrowed out of what I can already see.
+        // Authorship counts because a creator holds no grant on their own work.
+        conditions.push(or(userGrantExists, eq(experiments.createdBy, userId)));
       }
 
       if (status) {
@@ -193,8 +309,9 @@ export class ExperimentRepository {
       }
 
       // Cross-table fields matched at query time (can't live in the generated search_vector):
-      // creator via the `profiles` join, members/locations via `exists` subqueries. `memberProfiles`
-      // is aliased to avoid colliding with the creator join. Deactivated/deleted accounts are excluded.
+      // creator via the `profiles` join, collaborators/locations via `exists` subqueries.
+      // `memberProfiles` is aliased to avoid colliding with the creator join.
+      // Deactivated/deleted accounts are excluded.
       const memberProfiles = alias(profiles, "member_profiles");
       const creatorName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
       const creatorMatch = (term: string) =>
@@ -203,11 +320,13 @@ export class ExperimentRepository {
         exists(
           this.database
             .select()
-            .from(experimentMembers)
-            .innerJoin(memberProfiles, eq(memberProfiles.userId, experimentMembers.userId))
+            .from(resourceGrants)
+            .innerJoin(memberProfiles, eq(memberProfiles.userId, resourceGrants.granteeId))
             .where(
               and(
-                eq(experimentMembers.experimentId, experiments.id),
+                eq(resourceGrants.resourceType, "experiment"),
+                eq(resourceGrants.resourceId, experiments.id),
+                eq(resourceGrants.granteeType, "user"),
                 eq(memberProfiles.activated, true),
                 isNull(memberProfiles.deletedAt),
                 ilike(
@@ -316,18 +435,19 @@ export class ExperimentRepository {
 
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
-      // First delete experiment members to maintain referential integrity
-      await this.database.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
+      // Both side tables need cleaning by hand (grants are polymorphic; the roster
+      // FK does not cascade). One transaction, or a partial failure strips
+      // collaborators while the API reports failure.
+      await this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "experiment", id, "update");
 
-      // Clean up the mirrored resource grants (polymorphic — no FK cascade).
-      await this.database
-        .delete(resourceGrants)
-        .where(
-          and(eq(resourceGrants.resourceType, "experiment"), eq(resourceGrants.resourceId, id)),
-        );
+        // Referential only — the roster carries no access, but the FK still blocks.
+        await tx.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
 
-      // Then delete the experiment
-      await this.database.delete(experiments).where(eq(experiments.id, id));
+        await deleteResourceGrants(tx, "experiment", id);
+
+        await tx.delete(experiments).where(eq(experiments.id, id));
+      });
     });
   }
 
@@ -340,7 +460,7 @@ export class ExperimentRepository {
       hasAccess: boolean;
       hasArchiveAccess: boolean;
       isAdmin: boolean;
-      isMember: boolean;
+      canContribute: boolean;
     }>
   > {
     return tryCatch(async () => {
@@ -363,19 +483,9 @@ export class ExperimentRepository {
       };
 
       const result = await this.database
-        .select({
-          experiment: experimentFields,
-          memberRole: experimentMembers.role,
-        })
+        .select({ experiment: experimentFields })
         .from(experiments)
         .innerJoin(profiles, eq(experiments.createdBy, profiles.userId))
-        .leftJoin(
-          experimentMembers,
-          and(
-            eq(experimentMembers.experimentId, experiments.id),
-            eq(experimentMembers.userId, userId),
-          ),
-        )
         .where(eq(experiments.id, experimentId))
         .limit(1);
 
@@ -385,29 +495,43 @@ export class ExperimentRepository {
           hasAccess: false,
           isAdmin: false,
           hasArchiveAccess: false,
-          isMember: false,
+          canContribute: false,
         };
       }
 
-      const { experiment, memberRole } = result[0];
-      const isMember = memberRole !== null;
+      const { experiment } = result[0];
 
-      // Structural authorization flows through the unified can() (owning-org
-      // role → resource grants). experiment_members remains the contributor
-      // layer: `isMember` gates field measurements + annotations, and `hasAccess`
-      // (member OR public, applied at the call sites) gates reads.
-      const isAdmin = (
-        await this.authz.can(userId, {
+      // All three from can(), so access is decided in one place. `canContribute`
+      // gates measurements and annotations: public and plain org membership read only.
+      const [read, contribute, manage] = await Promise.all([
+        this.authz.can(userId, {
+          resourceType: "experiment",
+          resourceId: experimentId,
+          action: "read",
+        }),
+        this.authz.can(userId, {
+          resourceType: "experiment",
+          resourceId: experimentId,
+          action: "contribute",
+        }),
+        this.authz.can(userId, {
           resourceType: "experiment",
           resourceId: experimentId,
           action: "manage",
-        })
-      ).allow;
-      const hasAccess = isMember;
+        }),
+      ]);
+
+      const isAdmin = manage.allow;
       // Archived experiments are read-only: even admins lose write access.
       const hasArchiveAccess = experiment.status === "archived" ? false : isAdmin;
 
-      return { experiment, hasAccess, isAdmin, hasArchiveAccess, isMember };
+      return {
+        experiment,
+        hasAccess: read.allow,
+        isAdmin,
+        hasArchiveAccess,
+        canContribute: contribute.allow,
+      };
     });
   }
 

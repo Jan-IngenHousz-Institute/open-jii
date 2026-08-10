@@ -15,7 +15,6 @@ import { parseApiError } from "~/util/apiError";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import type { MacroCell as MacroCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -70,7 +69,6 @@ export function MacroCellComponent({
   const macroId = cell.payload.macroId;
   const language = cell.payload.language;
   const { copy, copied } = useCopyToClipboard();
-  const { data: session } = useSession();
   const { t } = useTranslation("workbook");
 
   const useSnapshot = snapshot != null;
@@ -80,11 +78,14 @@ export function MacroCellComponent({
   const rawCode = useSnapshot ? snapshot.code : (macroData?.code ?? null);
   const macroCode = rawCode ? decodeBase64(rawCode) : null;
   const macroLanguage = macroData?.language;
-  const isOwner = !!session?.user.id && session.user.id === macroData?.createdBy;
-  const isEditable = isOwner && !readOnly;
-  // Read-only purely because the viewer did not create this macro (not because
+  // Capability, not ownership: the detail payload already carries the
+  // caller's `can(update)`, so an `admin`/"Can edit" grantee edits the macro
+  // here exactly as they can on its own page.
+  const canUpdateMacro = macroData?.capabilities.canUpdate ?? false;
+  const isEditable = canUpdateMacro && !readOnly;
+  // Read-only purely because the viewer may not update this macro (not because
   // the cell is rendered from a pinned snapshot or in a read-only host).
-  const isReadOnlyForNonOwner = !useSnapshot && !readOnly && !!macroData && !isOwner;
+  const isReadOnlyWithoutUpdate = !useSnapshot && !readOnly && !!macroData && !canUpdateMacro;
   // Lineage: this macro is itself a fork of another one.
   const forkedFrom = useSnapshot ? undefined : macroData?.forkedFrom;
 
@@ -231,7 +232,7 @@ export function MacroCellComponent({
       forceActionsVisible={langSelectOpen}
       onRun={onRun}
       headerBadges={
-        isReadOnlyForNonOwner || (isEditable && localCode != null) || forkedFrom ? (
+        isReadOnlyWithoutUpdate || (isEditable && localCode != null) || forkedFrom ? (
           <div className="flex items-center gap-2">
             {forkedFrom ? (
               <Link
@@ -241,7 +242,7 @@ export function MacroCellComponent({
                 {t("cells.forkedFrom")}
               </Link>
             ) : null}
-            {isReadOnlyForNonOwner ? (
+            {isReadOnlyWithoutUpdate ? (
               <>
                 <span className="text-muted-foreground text-xs">{t("cells.macroReadOnly")}</span>
                 <TooltipProvider delayDuration={200}>
@@ -296,7 +297,7 @@ export function MacroCellComponent({
               <ExternalLink className="h-3 w-3" />
             </Link>
           </Button>
-          {isOwner ? (
+          {canUpdateMacro ? (
             <Select
               value={macroLanguage ?? language}
               onValueChange={(v) => handleLanguageChange(v as MacroLanguage)}

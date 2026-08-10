@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
@@ -27,6 +28,7 @@ export class SetWorkbookVersionUseCase {
     private readonly experimentRepository: ExperimentRepository,
     private readonly workbookVersionRepository: WorkbookVersionRepository,
     private readonly flowRepository: FlowRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
@@ -46,6 +48,25 @@ export class SetWorkbookVersionUseCase {
           AppError.badRequest(
             "Experiment does not have an attached workbook. Attach a workbook first.",
           ),
+        );
+      }
+
+      // The route only guards experiment `manage`, and pinning materialises the
+      // target version's cells into the experiment's flow. So someone who manages
+      // the experiment but has lost read access to the workbook could otherwise
+      // select a version published after their grant went away and capture its
+      // contents. Check before the versions are loaded, so no workbook state is read
+      // on the way to the refusal.
+      const workbookAccess = await this.authz.can(userId, {
+        resourceType: "workbook",
+        resourceId: experiment.workbookId,
+        action: "read",
+      });
+      if (!workbookAccess.allow) {
+        return failure(
+          workbookAccess.reason === "not-found"
+            ? AppError.notFound(`Workbook with ID ${experiment.workbookId} not found`)
+            : AppError.forbidden("You do not have access to this workbook"),
         );
       }
 

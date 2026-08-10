@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
+import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import { InvitationRepository } from "../../../core/repositories/user-invitation.repository";
 
@@ -52,16 +52,30 @@ export class RevokeInvitationUseCase {
       return failure(AppError.forbidden("You do not have access to this experiment"));
     }
 
+    // The status read above is advisory: an acceptance can land in between. `revoke`
+    // claims the row atomically, so a lost claim means it was accepted — report that
+    // rather than stamping `revoked` over a terminal status.
     const revokeResult = await this.invitationRepository.revoke(invitationId);
-
-    if (revokeResult.isSuccess()) {
-      this.logger.log({
-        msg: "Invitation revoked successfully",
-        operation: "revoke-invitation",
-        invitationId,
-      });
+    if (revokeResult.isFailure()) {
+      return failure(revokeResult.error);
     }
 
-    return revokeResult;
+    if (!revokeResult.value) {
+      this.logger.warn({
+        msg: "Invitation was no longer pending when the revoke landed",
+        operation: "revoke-invitation",
+        invitationId,
+        userId,
+      });
+      return failure(AppError.badRequest("Invitation is no longer pending, cannot revoke"));
+    }
+
+    this.logger.log({
+      msg: "Invitation revoked successfully",
+      operation: "revoke-invitation",
+      invitationId,
+    });
+
+    return success(undefined);
   }
 }

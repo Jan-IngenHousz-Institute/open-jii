@@ -2,6 +2,7 @@ import { and, eq, inArray, like } from "drizzle-orm";
 
 import { db } from "../src/database";
 import { ensurePersonalOrganization, personalOrgSlug } from "../src/organizations";
+import { upsertGrant } from "../src/resource-grants";
 import {
   users,
   profiles,
@@ -82,7 +83,8 @@ async function clearSeedData() {
   const seedExpIds = seedExperiments.map((e) => e.id);
 
   if (seedExpIds.length > 0) {
-    // Delete experimentMembers (no cascade) before experiments
+    // experiment_members is dormant, but its rows still have an FK to experiments
+    // with no cascade, so any legacy rows must go before the experiments do.
     await db.delete(experimentMembers).where(inArray(experimentMembers.experimentId, seedExpIds));
     // Mirrored member grants are polymorphic (no FK), so no cascade either
     await db
@@ -497,10 +499,16 @@ async function main() {
       .returning();
     createdExperiments.push(experiment);
 
-    await db.insert(experimentMembers).values({
-      experimentId: experiment.id,
-      userId: user.id,
+    // Access comes from grants alone: the seeded owner gets the admin tier, exactly
+    // as create-experiment does at runtime, and that grant is what the staffing
+    // queries (last-admin protection, the deletion blocker) read.
+    await upsertGrant(db, {
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      granteeType: "user",
+      granteeId: user.id,
       role: "admin",
+      createdBy: user.id,
     });
   }
 
@@ -526,18 +534,23 @@ async function main() {
       activated: true,
     })),
   );
-  await db.insert(experimentMembers).values(
-    CONTRIBUTOR_SEEDS.map((c) => ({
-      experimentId: c.experimentId,
-      userId: c.id,
-      role: "member" as const,
-    })),
-  );
+  // Contributors hold the read-and-contribute tier: they can open their experiment
+  // and add measurements to it, which is exactly what these seeds represent.
+  for (const c of CONTRIBUTOR_SEEDS) {
+    await upsertGrant(db, {
+      resourceType: "experiment",
+      resourceId: c.experimentId,
+      granteeType: "user",
+      granteeId: c.id,
+      role: "viewer",
+      createdBy: c.id,
+    });
+  }
   // Provision each contributor's personal organization (Phase 1 org provisioning).
   for (const c of CONTRIBUTOR_SEEDS) {
     await ensurePersonalOrganization(db, { id: c.id, name: c.name });
   }
-  console.log(`  Created ${CONTRIBUTOR_SEEDS.length} contributor users + members`);
+  console.log(`  Created ${CONTRIBUTOR_SEEDS.length} contributor users + grants`);
 
   // 6. Create flows for 3 experiments
   const ex = createdExperiments;

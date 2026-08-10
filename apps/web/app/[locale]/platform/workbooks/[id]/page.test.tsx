@@ -1,4 +1,4 @@
-import { createMarkdownCell, createWorkbook } from "@/test/factories";
+import { createMarkdownCell, createWorkbookDetail, readOnlyCapabilities } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { use } from "react";
@@ -26,6 +26,8 @@ beforeEach(() => {
   // Pickers fetch lists at mount even when their popovers stay closed.
   server.mount(contract.protocols.listProtocols, { body: [] });
   server.mount(contract.macros.listMacros, { body: [] });
+  // The provenance row lives on this page now, and asks for the version list.
+  server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
 });
 
 function renderPage() {
@@ -35,7 +37,7 @@ function renderPage() {
 describe("WorkbookOverviewPage", () => {
   it("shows the loading text before the workbook arrives", () => {
     server.mount(contract.workbooks.getWorkbook, {
-      body: createWorkbook({ id: "wb-1" }),
+      body: createWorkbookDetail({ id: "wb-1" }),
     });
     renderPage();
     expect(screen.getByText("common.loading")).toBeInTheDocument();
@@ -47,9 +49,29 @@ describe("WorkbookOverviewPage", () => {
     await waitFor(() => expect(screen.getByText("workbooks.errorLoading")).toBeInTheDocument());
   });
 
+  it("carries the description and the provenance row, which the layout no longer does", async () => {
+    server.mount(contract.workbooks.getWorkbook, {
+      body: createWorkbookDetail({
+        id: "wb-1",
+        description: "Measures photosynthetic efficiency",
+        createdByName: "Test User",
+        cells: [],
+      }),
+    });
+
+    renderPage();
+
+    // Everything the Collaborators route must *not* show now belongs here.
+    await waitFor(() =>
+      expect(screen.getByText("Measures photosynthetic efficiency")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Test User")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "workbooks.actions.fork" })).toBeInTheDocument();
+  });
+
   it("renders the workbook's cells in the editor once data loads", async () => {
     server.mount(contract.workbooks.getWorkbook, {
-      body: createWorkbook({
+      body: createWorkbookDetail({
         id: "wb-1",
         name: "Hello",
         cells: [createMarkdownCell({ id: "md-1", content: "<p>cell body</p>" })],
@@ -67,10 +89,10 @@ describe("WorkbookOverviewPage", () => {
     const user = userEvent.setup();
 
     server.mount(contract.workbooks.getWorkbook, {
-      body: createWorkbook({ id: "wb-1", cells: [] }),
+      body: createWorkbookDetail({ id: "wb-1", cells: [] }),
     });
     const updateSpy = server.mount(contract.workbooks.updateWorkbook, {
-      body: createWorkbook({ id: "wb-1" }),
+      body: createWorkbookDetail({ id: "wb-1" }),
     });
 
     renderPage();
@@ -90,7 +112,7 @@ describe("WorkbookOverviewPage", () => {
     const user = userEvent.setup();
 
     server.mount(contract.workbooks.getWorkbook, {
-      body: createWorkbook({ id: "wb-1", cells: [] }),
+      body: createWorkbookDetail({ id: "wb-1", cells: [] }),
     });
     server.mount(contract.workbooks.updateWorkbook, { status: 400 });
 
@@ -105,14 +127,16 @@ describe("WorkbookOverviewPage", () => {
     );
   });
 
-  it("hides add-cell controls when the viewer is not the workbook creator", async () => {
-    vi.mocked(useSession).mockReturnValue({
-      data: { user: { id: "someone-else" } },
-      isPending: false,
-    } as ReturnType<typeof useSession>);
-
+  it("hides add-cell controls when the viewer cannot update the workbook", async () => {
+    // Capability-based: an `admin` grantee edits, a viewer does not —
+    // creator identity no longer decides this.
     server.mount(contract.workbooks.getWorkbook, {
-      body: createWorkbook({ id: "wb-1", createdBy: "user-1", cells: [] }),
+      body: createWorkbookDetail({
+        id: "wb-1",
+        createdBy: "user-1",
+        cells: [],
+        capabilities: readOnlyCapabilities,
+      }),
     });
 
     renderPage();

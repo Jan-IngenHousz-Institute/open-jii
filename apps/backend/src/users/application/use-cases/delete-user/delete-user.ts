@@ -40,20 +40,22 @@ export class DeleteUserUseCase {
         return failure(AppError.notFound(`User with ID ${id} not found`));
       }
 
-      // Check if user is the only admin of any experiments
-      const adminCheckResult = await this.userRepository.isOnlyAdminOfAnyExperiments(id);
+      // Pre-flight blocker: surfaces the hand-off UX before anything is touched.
+      // `UserRepository.delete` re-checks this inside its transaction under row
+      // locks, which is what actually makes the invariant hold.
+      const adminCheckResult = await this.userRepository.isOnlyAdminOfAnyResources(id);
 
       return adminCheckResult.chain(async (isOnlyAdmin: boolean) => {
         if (isOnlyAdmin) {
           this.logger.warn({
-            msg: "Cannot delete user - only admin of experiments",
+            msg: "Cannot delete user - only admin of shared resources",
             errorCode: ErrorCodes.USER_IS_ONLY_ADMIN,
             operation: "deleteUser",
             userId: id,
           });
           return failure(
             AppError.forbidden(
-              `Cannot delete account - you are the only admin of one or more experiments. Please assign other admins before deleting.`,
+              "Cannot delete account - you are the only admin of one or more experiments, macros, protocols, workbooks or devices. Please assign other admins before deleting.",
             ),
           );
         }

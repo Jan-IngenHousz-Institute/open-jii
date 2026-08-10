@@ -4,7 +4,7 @@ import { formatDate } from "@/util/date";
 import type { ComponentProps } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
+import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { useSession } from "@repo/auth/client";
 
 import { ExperimentDetailsCard } from "./experiment-details-card";
@@ -17,16 +17,16 @@ vi.mock("../../experiment-settings/experiment-info-card", () => ({
 
 vi.mock("../experiment-members-trail", () => ({
   ExperimentMembersTrail: ({
-    members,
+    contributors,
     href,
     isLoading,
   }: {
-    members: { user: { id: string } }[];
+    contributors: { userId: string }[];
     href: string;
     isLoading?: boolean;
   }) => (
     <div data-testid="experiment-members-trail" data-href={href}>
-      {isLoading ? "loading" : `${members.length} members`}
+      {isLoading ? "loading" : `${contributors.length} contributors`}
     </div>
   ),
 }));
@@ -79,17 +79,12 @@ const mockLocations = [
   }),
 ];
 
-const mockMembers: ExperimentMember[] = [
+const mockContributors: ExperimentContributor[] = [
   {
-    role: "admin",
-    user: {
-      id: "user-1",
-      firstName: "John",
-      lastName: "Doe",
-      email: "john@example.com",
-      avatarUrl: null,
-    },
-    joinedAt: "2024-01-01T00:00:00.000Z",
+    userId: "user-1",
+    firstName: "John",
+    lastName: "Doe",
+    avatarUrl: null,
   },
 ];
 
@@ -98,9 +93,11 @@ function renderComponent(props: Partial<ComponentProps<typeof ExperimentDetailsC
     experimentId: "exp-123",
     experiment: mockExperiment,
     locations: mockLocations,
-    members: mockMembers,
-    isMembersLoading: false,
+    contributors: mockContributors,
+    isContributorsLoading: false,
     hasAccess: false,
+    // The visibility/danger-zone cards are gated on the server's can(manage).
+    canManage: true,
     isArchived: false,
     ...props,
   };
@@ -150,6 +147,11 @@ describe("ExperimentDetailsCard", () => {
     expect(screen.getByTestId("experiment-info-card")).toBeInTheDocument();
   });
 
+  it("hides the visibility card without can(manage)", () => {
+    renderComponent({ canManage: false });
+    expect(screen.queryByTestId("experiment-visibility-card")).not.toBeInTheDocument();
+  });
+
   it("passes correct props to child components", () => {
     renderComponent({ experimentId: "exp-456", hasAccess: true, isArchived: true });
     expect(screen.getByTestId("experiment-locations-section")).toHaveTextContent("exp-456-1");
@@ -174,8 +176,8 @@ describe("ExperimentDetailsCard", () => {
     expect(button).toBeInTheDocument();
   });
 
-  it("shows loading state for members", () => {
-    renderComponent({ isMembersLoading: true });
+  it("shows loading state for contributors", () => {
+    renderComponent({ isContributorsLoading: true });
     expect(screen.getByText("loading")).toBeInTheDocument();
   });
 

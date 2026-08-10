@@ -5,7 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { iotContract } from "@repo/api/domains/iot/iot.contract";
 
-import { CanContributeToExperiment } from "../../authorization/can-contribute-to-experiment.guard";
+import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { GetIotCredentialsUseCase } from "../application/use-cases/get-iot-credentials/get-iot-credentials";
@@ -33,7 +33,13 @@ export class IotController {
     });
   }
 
-  @CanContributeToExperiment({ source: "body", param: "experimentId" })
+  // The experiment is named in the payload, not the path.
+  @CanAccess({
+    resource: "experiment",
+    action: "contribute",
+    source: "body",
+    param: "experimentId",
+  })
   @Implement(iotContract.getUploadUrl)
   getUploadUrl() {
     return implement(iotContract.getUploadUrl).handler(async ({ input }) => {

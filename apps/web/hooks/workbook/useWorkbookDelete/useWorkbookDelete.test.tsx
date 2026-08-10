@@ -1,5 +1,5 @@
 import { orpc } from "@/lib/orpc";
-import { createWorkbook } from "@/test/factories";
+import { createWorkbookDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
@@ -42,7 +42,7 @@ describe("useWorkbookDelete", () => {
 
     const detailKey = orpc.workbooks.getWorkbook.queryKey({ input: { id: "wb-3" } });
     const queryClient = createTestQueryClient();
-    queryClient.setQueryData(detailKey, createWorkbook({ id: "wb-3" }));
+    queryClient.setQueryData(detailKey, createWorkbookDetail({ id: "wb-3" }));
 
     const { result } = renderHook(() => useWorkbookDelete(), { queryClient });
 

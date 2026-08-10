@@ -1,5 +1,5 @@
 {
-  "id": "0781c7ba-8ff9-4ec0-b0d7-78daaacaed58",
+  "id": "16c69cfe-2180-4005-b17a-07e58dc9852b",
   "prevId": "9bd91674-2ffb-45f6-a622-ea71f8596de5",
   "version": "7",
   "dialect": "postgresql",
@@ -493,115 +493,6 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.experiment_devices": {
-      "name": "experiment_devices",
-      "schema": "",
-      "columns": {
-        "experiment_id": {
-          "name": "experiment_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "device_id": {
-          "name": "device_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "added_by": {
-          "name": "added_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "(now() AT TIME ZONE 'UTC')"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "(now() AT TIME ZONE 'UTC')"
-        }
-      },
-      "indexes": {
-        "experiment_devices_device_idx": {
-          "name": "experiment_devices_device_idx",
-          "columns": [
-            {
-              "expression": "device_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "experiment_devices_experiment_id_experiments_id_fk": {
-          "name": "experiment_devices_experiment_id_experiments_id_fk",
-          "tableFrom": "experiment_devices",
-          "tableTo": "experiments",
-          "columnsFrom": [
-            "experiment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "experiment_devices_device_id_iot_devices_id_fk": {
-          "name": "experiment_devices_device_id_iot_devices_id_fk",
-          "tableFrom": "experiment_devices",
-          "tableTo": "iot_devices",
-          "columnsFrom": [
-            "device_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "experiment_devices_added_by_users_id_fk": {
-          "name": "experiment_devices_added_by_users_id_fk",
-          "tableFrom": "experiment_devices",
-          "tableTo": "users",
-          "columnsFrom": [
-            "added_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "experiment_devices_experiment_id_device_id_pk": {
-          "name": "experiment_devices_experiment_id_device_id_pk",
-          "columns": [
-            "experiment_id",
-            "device_id"
-          ]
-        }
-      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -2574,7 +2465,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'member'"
+          "default": "'viewer'"
         },
         "created_by": {
           "name": "created_by",

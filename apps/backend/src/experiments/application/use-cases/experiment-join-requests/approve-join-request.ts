@@ -1,13 +1,15 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { describeAccess } from "../../../../common/utils/access-wording";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import type { ExperimentJoinRequestDto } from "../../../core/models/experiment-join-request.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
-import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -15,9 +17,10 @@ export class ApproveJoinRequestUseCase {
   private readonly logger = new Logger(ApproveJoinRequestUseCase.name);
 
   constructor(
+    private readonly authz: AuthorizationService,
     private readonly experimentRepository: ExperimentRepository,
-    private readonly memberRepository: ExperimentMemberRepository,
     private readonly joinRequestRepository: ExperimentJoinRequestRepository,
+    private readonly userRepository: UserRepository,
     @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
   ) {}
 
@@ -55,16 +58,15 @@ export class ApproveJoinRequestUseCase {
       if (existing.status !== "pending") {
         return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
       }
-      // If the requester was added while this request was pending, surface that
-      // to the admin and avoid sending a confusing duplicate membership email.
-      const memberRoleResult = await this.memberRepository.getMemberRole(
-        experimentId,
-        existing.user.id,
-      );
-      if (memberRoleResult.isFailure()) {
-        return failure(AppError.internal("Failed to check requester membership"));
-      }
-      if (memberRoleResult.value) {
+      // The requester may have been granted access while this sat pending, which
+      // makes the request moot — say so rather than act on it. `contribute` is the
+      // right check: a public reader lacks it, so their request still stands.
+      const alreadyCollaborator = await this.authz.can(existing.user.id, {
+        resourceType: "experiment",
+        resourceId: experimentId,
+        action: "contribute",
+      });
+      if (alreadyCollaborator.allow) {
         const cancelResult = await this.joinRequestRepository.markDecided(
           requestId,
           "cancelled",
@@ -75,7 +77,7 @@ export class ApproveJoinRequestUseCase {
         }
 
         return failure(
-          AppError.conflict("The user is already a member of the experiment", ErrorCodes.CONFLICT),
+          AppError.conflict("The user already has access to the experiment", ErrorCodes.CONFLICT),
         );
       }
 
@@ -96,13 +98,15 @@ export class ApproveJoinRequestUseCase {
         });
         return failure(AppError.internal("Failed to approve join request"));
       }
+      if (approveResult.value.outcome === "not-pending") {
+        return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
+      }
 
-      const approved = approveResult.value;
+      const approved = approveResult.value.request;
 
       // Send the same membership-change email used by direct invites/adds
       if (approved.user.email) {
-        const actorProfileResult =
-          await this.memberRepository.findUserFullNameFromProfile(currentUserId);
+        const actorProfileResult = await this.userRepository.findUserProfile(currentUserId);
         const actor =
           actorProfileResult.isSuccess() && actorProfileResult.value
             ? `${actorProfileResult.value.firstName} ${actorProfileResult.value.lastName}`
@@ -112,7 +116,7 @@ export class ApproveJoinRequestUseCase {
           experimentId,
           experiment.name,
           actor,
-          "member",
+          describeAccess({ tier: "viewer" }),
           approved.user.email,
         );
         if (emailResult.isFailure()) {

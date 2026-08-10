@@ -1,9 +1,19 @@
 import { faker } from "@faker-js/faker";
+import { StatusCodes } from "http-status-codes";
 
-import { macros as macrosTable, eq } from "@repo/database";
+import { contract } from "@repo/api/contract";
+import {
+  and,
+  macros as macrosTable,
+  eq,
+  organizationMembers,
+  resourceGrants,
+} from "@repo/database";
 
+import { AuthorizationService } from "../../../authorization/authorization.service";
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
+import type { SuperTestResponse } from "../../../test/test-harness";
 import type { CreateMacroDto } from "../models/macro.model";
 import { generateHashedFilename } from "../models/macro.model";
 import type { CachePort } from "../ports/cache.port";
@@ -132,6 +142,58 @@ describe("MacroRepository", () => {
 
       // Assert
       expect(result.isFailure()).toBe(true);
+    });
+  });
+
+  describe("findAll 'my' filter is scoped by access, not just authorship", () => {
+    it("drops a private macro whose creator has lost access to it", async () => {
+      const org = await testApp.createOrganization();
+      const orgOwner = await testApp.createTestUser({ name: "Org Owner" });
+      await testApp.addOrganizationMember(org, orgOwner, "owner");
+      const author = await testApp.createTestUser({ name: "Former Member" });
+      await testApp.addOrganizationMember(org, author, "admin");
+
+      const created = await repository.create(
+        {
+          name: `Departed ${crypto.randomUUID()}`,
+          description: "d",
+          language: "python",
+          code: "eA==",
+        },
+        author,
+        org,
+      );
+      assertSuccess(created);
+      const macro = created.value[0];
+      await testApp.database
+        .update(macrosTable)
+        .set({ visibility: "private" })
+        .where(eq(macrosTable.id, macro.id));
+
+      // They can still see it while they belong to the organization...
+      const before = await repository.findAll({ filter: "my", userId: author });
+      assertSuccess(before);
+      expect(before.value.map((m) => m.id)).toContain(macro.id);
+
+      // ...and once they are removed, with no grant of their own, they cannot.
+      await testApp.database
+        .delete(organizationMembers)
+        .where(
+          and(eq(organizationMembers.organizationId, org), eq(organizationMembers.userId, author)),
+        );
+
+      const after = await repository.findAll({ filter: "my", userId: author });
+      assertSuccess(after);
+      // Authorship is not an access path: "My macros" must narrow what the caller
+      // can already read, never hand back a body `can(read)` would refuse.
+      expect(after.value.map((m) => m.id)).not.toContain(macro.id);
+      expect(
+        (
+          await testApp.module
+            .get(AuthorizationService)
+            .can(author, { resourceType: "macro", resourceId: macro.id, action: "read" })
+        ).allow,
+      ).toBe(false);
     });
   });
 
@@ -1259,5 +1321,275 @@ describe("MacroRepository", () => {
 
       expect(invalidateSpy).toHaveBeenCalledWith(id);
     });
+  });
+
+  describe("grant teardown on delete", () => {
+    let owner: string;
+    let grantee: string;
+
+    beforeEach(async () => {
+      owner = await testApp.createTestUser({ name: "Teardown Owner" });
+      grantee = await testApp.createTestUser({ name: "Teardown Grantee" });
+    });
+
+    /** The grants on one resource — no FK cascade cleans `resource_grants` up. */
+    const grantsFor = (resourceId: string) =>
+      testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(eq(resourceGrants.resourceType, "macro"), eq(resourceGrants.resourceId, resourceId)),
+        );
+
+    async function sharedMacro() {
+      const resource = await testApp.createMacro({ name: "M", createdBy: owner });
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: resource.id,
+        granteeType: "user",
+        granteeId: grantee,
+        role: "viewer",
+      });
+      // Only the share above: a creator holds no grant on what they create.
+      expect(await grantsFor(resource.id)).toHaveLength(1);
+      return resource;
+    }
+
+    it("deletes the macro's grants along with it", async () => {
+      const resource = await sharedMacro();
+
+      assertSuccess(await repository.delete(resource.id));
+
+      expect(await grantsFor(resource.id)).toHaveLength(0);
+    });
+
+    it("leaves other resources' grants untouched", async () => {
+      const doomed = await testApp.createMacro({ name: "Doomed", createdBy: owner });
+      const survivor = await testApp.createMacro({ name: "Survivor", createdBy: owner });
+      for (const id of [doomed.id, survivor.id]) {
+        await testApp.addResourceGrant({
+          resourceType: "macro",
+          resourceId: id,
+          granteeType: "user",
+          granteeId: grantee,
+          role: "viewer",
+        });
+      }
+
+      assertSuccess(await repository.delete(doomed.id));
+
+      expect(await grantsFor(doomed.id)).toHaveLength(0);
+      // The survivor keeps its share.
+      expect(await grantsFor(survivor.id)).toHaveLength(1);
+    });
+  });
+});
+
+/**
+ * Access scoping for macro listing: a private macro is only visible to owning-org
+ * members and grantees; public macros are visible to everyone. Mirrors the experiment `findAll` scoping. Grant tiers are asserted
+ * with hand-inserted grants (the sharing write-path is exercised elsewhere).
+ */
+describe("MacroRepository — list access scoping", () => {
+  const testApp = TestHarness.App;
+  let repository: MacroRepository;
+  let owner: string;
+  let orgId: string;
+  let privateMacroId: string;
+  let publicMacroId: string;
+
+  beforeAll(async () => {
+    await testApp.setup();
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    repository = testApp.module.get(MacroRepository);
+
+    owner = await testApp.createTestUser({ name: "Macro Owner" });
+    orgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(orgId, owner, "owner");
+
+    const priv = await testApp.createMacro({
+      name: "Private macro",
+      createdBy: owner,
+      visibility: "private",
+      organizationId: orgId,
+    });
+    privateMacroId = priv.id;
+
+    const pub = await testApp.createMacro({
+      name: "Public macro",
+      createdBy: owner,
+      visibility: "public",
+      organizationId: orgId,
+    });
+    publicMacroId = pub.id;
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  const listIdsFor = async (userId: string | undefined) => {
+    const result = await repository.findAll({ userId });
+    assertSuccess(result);
+    return result.value.map((m) => m.id);
+  };
+
+  it("hides a private macro from a stranger but shows the public one", async () => {
+    const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+    const ids = await listIdsFor(stranger);
+
+    expect(ids).toContain(publicMacroId);
+    expect(ids).not.toContain(privateMacroId);
+  });
+
+  it("shows a private macro to a member of the owning organization", async () => {
+    const orgMember = await testApp.createTestUser({ name: "Org Member" });
+    await testApp.addOrganizationMember(orgId, orgMember, "member");
+
+    const ids = await listIdsFor(orgMember);
+
+    expect(ids).toContain(privateMacroId);
+    expect(ids).toContain(publicMacroId);
+  });
+
+  it("shows a private macro to a direct user grantee", async () => {
+    const grantee = await testApp.createTestUser({ name: "User Grantee" });
+    await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: privateMacroId,
+      granteeType: "user",
+      granteeId: grantee,
+      role: "viewer",
+    });
+
+    const ids = await listIdsFor(grantee);
+
+    expect(ids).toContain(privateMacroId);
+  });
+
+  it("shows a private macro to a member of a grantee organization", async () => {
+    const orgGrantee = await testApp.createTestUser({ name: "Org Grantee" });
+    const granteeOrgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(granteeOrgId, orgGrantee, "member");
+    await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: privateMacroId,
+      granteeType: "organization",
+      granteeId: granteeOrgId,
+      role: "viewer",
+    });
+
+    const ids = await listIdsFor(orgGrantee);
+
+    expect(ids).toContain(privateMacroId);
+  });
+
+  it("shows the owner both macros", async () => {
+    const ids = await listIdsFor(owner);
+
+    expect(ids).toContain(privateMacroId);
+    expect(ids).toContain(publicMacroId);
+  });
+
+  it("shows only public macros when there is no caller", async () => {
+    const ids = await listIdsFor(undefined);
+
+    expect(ids).toContain(publicMacroId);
+    expect(ids).not.toContain(privateMacroId);
+  });
+
+  it("denies executing a private macro to a stranger (read guard)", async () => {
+    // executeMacro is gated on `read`: a stranger who knows the private
+    // macro's UUID must not be able to run its code.
+    const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+    await testApp
+      .post(testApp.resolveOrpcPath(contract.macros.executeMacro, { id: privateMacroId }))
+      .withAuth(stranger)
+      .send({ data: { x: 1 } })
+      .expect(StatusCodes.FORBIDDEN);
+  });
+
+  it('keeps the "my" filter as an ownership view, unaffected by visibility', async () => {
+    const other = await testApp.createTestUser({ name: "Other Author" });
+    const othersMacro = await testApp.createMacro({
+      name: "Someone else's macro",
+      createdBy: other,
+      visibility: "public",
+    });
+
+    const result = await repository.findAll({ filter: "my", userId: owner });
+    assertSuccess(result);
+    const ids = result.value.map((m) => m.id);
+
+    // Owner authored both (private + public); neither hidden, and another
+    // author's macro is excluded.
+    expect(ids).toEqual(expect.arrayContaining([privateMacroId, publicMacroId]));
+    expect(ids).not.toContain(othersMacro.id);
+  });
+});
+
+/**
+ * Private-at-create round-trip: the create route accepts an optional visibility
+ * (default public) and persists it; the update body never carries visibility.
+ */
+describe("MacroController — create with visibility", () => {
+  const testApp = TestHarness.App;
+  let testUserId: string;
+
+  beforeAll(async () => {
+    await testApp.setup();
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    testUserId = await testApp.createTestUser({ name: "Creator" });
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  const createPath = () => testApp.resolveOrpcPath(contract.macros.createMacro);
+
+  it("persists visibility=private when requested", async () => {
+    const response: SuperTestResponse<{ id: string; visibility: string }> = await testApp
+      .post(createPath())
+      .withAuth(testUserId)
+      .send({
+        name: "Private at create",
+        language: "python",
+        code: "cHJpbnQoJ2hpJyk=",
+        visibility: "private",
+      })
+      .expect(StatusCodes.CREATED);
+
+    expect(response.body.visibility).toBe("private");
+  });
+
+  it("defaults to public when visibility is omitted", async () => {
+    const response: SuperTestResponse<{ id: string; visibility: string }> = await testApp
+      .post(createPath())
+      .withAuth(testUserId)
+      .send({
+        name: "Default visibility",
+        language: "python",
+        code: "cHJpbnQoJ2hpJyk=",
+      })
+      .expect(StatusCodes.CREATED);
+
+    expect(response.body.visibility).toBe("public");
   });
 });

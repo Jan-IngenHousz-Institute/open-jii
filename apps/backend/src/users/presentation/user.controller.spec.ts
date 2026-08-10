@@ -410,7 +410,7 @@ describe("UserController", () => {
   });
 
   describe("deleteUser", () => {
-    it("should successfully soft-delete a user and scrub PII", async () => {
+    it("should successfully soft-delete the caller's own account and scrub PII", async () => {
       const userToDeleteId = await testApp.createTestUser({
         email: "delete-me@example.com",
         name: "User ToDelete",
@@ -420,10 +420,11 @@ describe("UserController", () => {
         id: userToDeleteId,
       });
 
-      // Act
-      await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
+      // Act: account deletion is self-service, so the caller is the account holder.
+      await testApp.delete(path).withAuth(userToDeleteId).expect(StatusCodes.NO_CONTENT);
 
-      // Assert: verify user was soft-deleted (row still exists but PII scrubbed)
+      // Assert: verify user was soft-deleted (row still exists but PII scrubbed).
+      // Read it back as a different, still-live user.
       const getUserPath = testApp.resolveOrpcPath(contract.users.getUser, {
         id: userToDeleteId,
       });
@@ -441,7 +442,41 @@ describe("UserController", () => {
       expect(response.body.name).toBe("Deleted User");
     });
 
-    it("should return 404 when deleting a non-existent user", async () => {
+    it("should return 403 when deleting another user's account, leaving it intact", async () => {
+      const otherUserId = await testApp.createTestUser({
+        email: "not-yours@example.com",
+        name: "Other User",
+      });
+
+      const path = testApp.resolveOrpcPath(contract.users.deleteUser, {
+        id: otherUserId,
+      });
+
+      await testApp
+        .delete(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.FORBIDDEN)
+        .expect(({ body }: { body: ErrorResponse }) => {
+          expect(body.message.toLowerCase()).toContain("your own");
+        });
+
+      // The target account must be untouched — not merely un-erased, but unscrubbed.
+      const getUserPath = testApp.resolveOrpcPath(contract.users.getUser, {
+        id: otherUserId,
+      });
+      const response: SuperTestResponse<User> = await testApp
+        .get(getUserPath)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.email).toBe("not-yours@example.com");
+      expect(response.body.name).toBe("Other User");
+    });
+
+    it("should return 403, not 404, for an account id that does not exist", async () => {
+      // A target that is not the caller is refused before the use case looks it up, so
+      // the response cannot be used to probe which account ids are real. The use case's
+      // own not-found path is covered where it can still be reached, in its unit spec.
       const nonExistentId = faker.string.uuid();
       const path = testApp.resolveOrpcPath(contract.users.deleteUser, {
         id: nonExistentId,
@@ -450,9 +485,9 @@ describe("UserController", () => {
       await testApp
         .delete(path)
         .withAuth(testUserId)
-        .expect(StatusCodes.NOT_FOUND)
+        .expect(StatusCodes.FORBIDDEN)
         .expect(({ body }: { body: ErrorResponse }) => {
-          expect(body.message.toLowerCase()).toContain("not found");
+          expect(body.message.toLowerCase()).not.toContain("not found");
         });
     });
 
@@ -488,16 +523,21 @@ describe("UserController", () => {
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
-      expect(response.body).toEqual({ experiments: [] });
+      expect(response.body).toEqual({ resources: [] });
     });
 
-    it("lists experiments where the user is the only admin, with their members as candidates", async () => {
+    it("lists resources where the user is the only admin, with their collaborators as candidates", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Sole Admin Experiment",
         userId: testUserId,
       });
       const memberId = await testApp.createTestUser({ email: "member@example.com" });
-      await testApp.addExperimentMember(experiment.id, memberId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, memberId);
+      // A macro blocks the same way, and carries no lifecycle status.
+      const macro = await testApp.createMacro({
+        name: `Sole Admin Macro ${crypto.randomUUID()}`,
+        createdBy: testUserId,
+      });
 
       const path = testApp.resolveOrpcPath(contract.users.getDeletionBlockers, {
         id: testUserId,
@@ -508,12 +548,17 @@ describe("UserController", () => {
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
-      expect(response.body.experiments).toHaveLength(1);
-      expect(response.body.experiments[0]).toMatchObject({
+      expect(response.body.resources).toHaveLength(2);
+      const byType = Object.fromEntries(
+        response.body.resources.map((resource) => [resource.resourceType, resource]),
+      );
+      expect(byType.experiment).toMatchObject({
         id: experiment.id,
         name: experiment.name,
+        status: "active",
       });
-      expect(response.body.experiments[0].candidates.map((c) => c.userId)).toEqual([memberId]);
+      expect(byType.experiment.candidates.map((c) => c.userId)).toEqual([memberId]);
+      expect(byType.macro).toMatchObject({ id: macro.id, name: macro.name, status: null });
     });
 
     it("returns 403 when requesting another user's deletion blockers", async () => {

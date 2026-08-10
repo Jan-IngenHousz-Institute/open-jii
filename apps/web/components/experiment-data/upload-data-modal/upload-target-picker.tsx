@@ -20,6 +20,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 export interface UploadTargetPickerProps {
   control: Control<ExperimentUploadFormFields>;
+  canManage: boolean;
   targetKind: "new" | "existing";
   uploadTables: ExperimentTableMetadata[];
   disabled: boolean;
@@ -27,13 +28,14 @@ export interface UploadTargetPickerProps {
 
 export function UploadTargetPicker({
   control,
+  canManage,
   targetKind,
   uploadTables,
   disabled,
 }: UploadTargetPickerProps) {
   const { t } = useTranslation("experimentData");
   const hasExistingTables = uploadTables.length > 0;
-  const isPickingNew = targetKind === "new";
+  const isPickingNew = canManage && targetKind === "new";
 
   const existingLabelClassName = cn(
     "flex cursor-pointer items-center gap-2 rounded-md border p-3",
@@ -50,15 +52,17 @@ export function UploadTargetPicker({
             value={field.value}
             onValueChange={field.onChange}
             disabled={disabled}
-            className="grid grid-cols-2 gap-3"
+            className={cn("grid gap-3", canManage ? "grid-cols-2" : "grid-cols-1")}
           >
-            <Label
-              htmlFor="target-new"
-              className="flex cursor-pointer items-center gap-2 rounded-md border p-3"
-            >
-              <RadioGroupItem id="target-new" value="new" />
-              {t("experimentData.uploadDataModal.targetKind.new")}
-            </Label>
+            {canManage ? (
+              <Label
+                htmlFor="target-new"
+                className="flex cursor-pointer items-center gap-2 rounded-md border p-3"
+              >
+                <RadioGroupItem id="target-new" value="new" />
+                {t("experimentData.uploadDataModal.targetKind.new")}
+              </Label>
+            ) : null}
             <Label htmlFor="target-existing" className={existingLabelClassName}>
               <RadioGroupItem id="target-existing" value="existing" disabled={!hasExistingTables} />
               {t("experimentData.uploadDataModal.targetKind.existing")}
@@ -98,7 +102,11 @@ export function UploadTargetPicker({
               <Label htmlFor="existing-table-name">
                 {t("experimentData.uploadDataModal.existingTable.label")}
               </Label>
-              <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
+              <Select
+                value={field.value}
+                onValueChange={field.onChange}
+                disabled={disabled || !hasExistingTables}
+              >
                 <SelectTrigger id="existing-table-name">
                   <SelectValue
                     placeholder={t("experimentData.uploadDataModal.existingTable.placeholder")}
@@ -110,6 +118,11 @@ export function UploadTargetPicker({
                   ))}
                 </SelectContent>
               </Select>
+              {!hasExistingTables && !canManage ? (
+                <p className="text-muted-foreground text-sm">
+                  {t("experimentData.uploadDataModal.existingTable.noneAvailable")}
+                </p>
+              ) : null}
               {fieldState.error?.message && (
                 <p className="text-destructive text-xs">{fieldState.error.message}</p>
               )}

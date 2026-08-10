@@ -1,4 +1,5 @@
 import { orpc } from "@/lib/orpc";
+import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 
 /**
@@ -14,6 +15,9 @@ export function useWorkbookVersion(
   const query = useQuery(
     orpc.workbooks.getWorkbookVersion.queryOptions({
       input: { id: workbookId, versionId },
+      // A 403 here is an access answer, not a blip: retrying it would leave the
+      // caller staring at a wrong interim state for the length of the backoff.
+      retry: shouldRetryQuery,
       enabled,
     }),
   );

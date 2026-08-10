@@ -1,4 +1,4 @@
-import { createMacro } from "@/test/factories";
+import { createMacroDetail, readOnlyCapabilities } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
@@ -6,7 +6,7 @@ import type React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { MacroDetail } from "@repo/api/domains/macro/macro.schema";
 import { useSession } from "@repo/auth/client";
 
 import { MacroDetailsSidebar } from "../macro-details-sidebar";
@@ -45,6 +45,24 @@ vi.mock("../../macro-settings/macro-compatible-protocols-card", () => ({
 }));
 
 // Mock DetailsSidebarCard - render children directly with the title
+// The publish control renders its own confirm Dialog; this file mocks Dialog by
+// testid, so stub the control out and cover it in its own test file.
+vi.mock("../../visibility/resource-publish-control", () => ({
+  ResourcePublishControl: ({
+    resourceType,
+    canManage,
+  }: {
+    resourceType: string;
+    canManage: boolean;
+  }) => (
+    <div
+      data-testid="resource-publish-control"
+      data-resource-type={resourceType}
+      data-can-manage={String(canManage)}
+    />
+  ),
+}));
+
 vi.mock("../../shared/details-sidebar-card", () => ({
   DetailsSidebarCard: ({
     title,
@@ -211,7 +229,7 @@ vi.mock("@repo/ui/components/select", async (importOriginal) => {
   };
 });
 
-const baseMacro = createMacro({
+const baseMacro = createMacroDetail({
   id: "abc12345-6789-0abc-def0-123456789abc",
   name: "Test Macro",
   filename: "test_macro.py",
@@ -225,9 +243,12 @@ const baseMacro = createMacro({
   updatedAt: "2024-06-20T14:30:00.000Z",
 });
 
-const nonCreatorMacro = createMacro({
+// Gating is capability-based, so the read-only fixture carries no
+// capabilities rather than merely a different `createdBy`.
+const readOnlyMacro = createMacroDetail({
   ...baseMacro,
   createdBy: "other-user-456",
+  capabilities: readOnlyCapabilities,
 });
 
 describe("<MacroDetailsSidebar />", () => {
@@ -313,7 +334,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("displays dash when createdByName is null", () => {
-      const macroNoCreator: Macro = { ...baseMacro, createdByName: undefined };
+      const macroNoCreator: MacroDetail = { ...baseMacro, createdByName: undefined };
       render(<MacroDetailsSidebar macroId="abc12345" macro={macroNoCreator} />);
 
       expect(screen.getByText("-")).toBeInTheDocument();
@@ -352,7 +373,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("shows language as plain text when user is not the creator", () => {
-      render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
+      render(<MacroDetailsSidebar macroId="abc12345" macro={readOnlyMacro} />);
 
       expect(screen.queryByTestId("select-native")).not.toBeInTheDocument();
       expect(screen.getByText("python")).toBeInTheDocument();
@@ -368,7 +389,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("shows compatible protocols count as text when user is not the creator", async () => {
-      render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
+      render(<MacroDetailsSidebar macroId="abc12345" macro={readOnlyMacro} />);
 
       expect(screen.queryByTestId("macro-compatible-protocols-card")).not.toBeInTheDocument();
       expect(screen.getByText("macroSettings.compatibleProtocols")).toBeInTheDocument();
@@ -393,7 +414,7 @@ describe("<MacroDetailsSidebar />", () => {
         ],
       });
 
-      render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
+      render(<MacroDetailsSidebar macroId="abc12345" macro={readOnlyMacro} />);
 
       await waitFor(() => {
         expect(screen.getByText("1 protocol")).toBeInTheDocument();
@@ -403,7 +424,7 @@ describe("<MacroDetailsSidebar />", () => {
     it("shows 'no compatible protocols' text when count is 0 for non-creator", async () => {
       server.mount(contract.macros.listCompatibleProtocols, { body: [] });
 
-      render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
+      render(<MacroDetailsSidebar macroId="abc12345" macro={readOnlyMacro} />);
 
       await waitFor(() => {
         expect(screen.getByText("macroSettings.noCompatibleProtocols")).toBeInTheDocument();
@@ -466,7 +487,7 @@ describe("<MacroDetailsSidebar />", () => {
 
   describe("danger zone / delete functionality", () => {
     it("does not show danger zone when user is not the creator", () => {
-      render(<MacroDetailsSidebar macroId="abc12345" macro={nonCreatorMacro} />);
+      render(<MacroDetailsSidebar macroId="abc12345" macro={readOnlyMacro} />);
 
       expect(screen.queryByText("macroSettings.dangerZone")).not.toBeInTheDocument();
       expect(screen.queryByText("macroSettings.deleteMacro")).not.toBeInTheDocument();
@@ -576,21 +597,21 @@ describe("<MacroDetailsSidebar />", () => {
 
   describe("language display for different languages", () => {
     it("displays 'r' language as plain text for non-creator", () => {
-      const rMacro: Macro = { ...nonCreatorMacro, language: "r" };
+      const rMacro: MacroDetail = { ...readOnlyMacro, language: "r" };
       render(<MacroDetailsSidebar macroId="abc12345" macro={rMacro} />);
 
       expect(screen.getByText("r")).toBeInTheDocument();
     });
 
     it("displays 'javascript' language as plain text for non-creator", () => {
-      const jsMacro: Macro = { ...nonCreatorMacro, language: "javascript" };
+      const jsMacro: MacroDetail = { ...readOnlyMacro, language: "javascript" };
       render(<MacroDetailsSidebar macroId="abc12345" macro={jsMacro} />);
 
       expect(screen.getByText("javascript")).toBeInTheDocument();
     });
 
     it("sets select value to current macro language for creator", () => {
-      const rMacro: Macro = { ...baseMacro, language: "r" };
+      const rMacro: MacroDetail = { ...baseMacro, language: "r" };
       render(<MacroDetailsSidebar macroId="abc12345" macro={rMacro} />);
 
       expect(screen.getByTestId("select-native")).toHaveValue("r");

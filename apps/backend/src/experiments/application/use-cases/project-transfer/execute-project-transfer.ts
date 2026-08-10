@@ -7,6 +7,7 @@ import type {
 } from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.schema";
 import { flowNodesToWorkbookCells } from "@repo/api/transforms/flow-to-workbook-cells";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { CreateMacroUseCase } from "../../../../macros/application/use-cases/create-macro/create-macro";
@@ -21,7 +22,6 @@ import type { CreateLocationDto } from "../../../core/models/experiment-location
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
-import { ExperimentMemberRepository } from "../../../core/repositories/experiment-member.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { CreateFlowUseCase } from "../flows/create-flow";
 
@@ -31,7 +31,6 @@ export class ExecuteProjectTransferUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentMemberRepository: ExperimentMemberRepository,
     private readonly locationRepository: LocationRepository,
     private readonly createFlowUseCase: CreateFlowUseCase,
     private readonly createProtocolUseCase: CreateProtocolUseCase,
@@ -41,6 +40,7 @@ export class ExecuteProjectTransferUseCase {
     private readonly userRepository: UserRepository,
     private readonly workbookRepository: WorkbookRepository,
     private readonly publishVersionUseCase: PublishVersionUseCase,
+    private readonly authz: AuthorizationService,
     @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
   ) {}
 
@@ -58,11 +58,25 @@ export class ExecuteProjectTransferUseCase {
     // 1. Create or reuse Protocol (if provided)
     let protocolId: string | null = null;
     if (data.protocol) {
-      // Check if a protocol with the same name already exists
+      // Names are globally unique, so reuse avoids a collision — but only reuse one
+      // the importer can read, or the import would snapshot a stranger's private
+      // code. Otherwise fall through to create, which fails closed on the clash.
       const existingProtocol = await this.protocolRepository.findByName(data.protocol.name);
+      const reusableProtocol =
+        existingProtocol.isSuccess() && existingProtocol.value
+          ? (
+              await this.authz.can(data.protocol.createdBy, {
+                resourceType: "protocol",
+                resourceId: existingProtocol.value.id,
+                action: "read",
+              })
+            ).allow
+            ? existingProtocol.value
+            : null
+          : null;
 
-      if (existingProtocol.isSuccess() && existingProtocol.value) {
-        protocolId = existingProtocol.value.id;
+      if (reusableProtocol) {
+        protocolId = reusableProtocol.id;
         this.logger.log({
           msg: "Reusing existing protocol with same name",
           operation: "executeProjectTransfer",
@@ -93,13 +107,25 @@ export class ExecuteProjectTransferUseCase {
     let macroFilename: string | null = null;
     let macroName: string | null = null;
     if (data.macro) {
-      // Check if a macro with the same name already exists
+      // Same reasoning as protocols above — never adopt a stranger's private macro.
       const existingMacro = await this.macroRepository.findByName(data.macro.name);
+      const reusableMacro =
+        existingMacro.isSuccess() && existingMacro.value
+          ? (
+              await this.authz.can(data.macro.createdBy, {
+                resourceType: "macro",
+                resourceId: existingMacro.value.id,
+                action: "read",
+              })
+            ).allow
+            ? existingMacro.value
+            : null
+          : null;
 
-      if (existingMacro.isSuccess() && existingMacro.value) {
-        macroId = existingMacro.value.id;
-        macroFilename = existingMacro.value.filename;
-        macroName = existingMacro.value.name;
+      if (reusableMacro) {
+        macroId = reusableMacro.id;
+        macroFilename = reusableMacro.filename;
+        macroName = reusableMacro.name;
         this.logger.log({
           msg: "Reusing existing macro with same name",
           operation: "executeProjectTransfer",
@@ -149,16 +175,7 @@ export class ExecuteProjectTransferUseCase {
 
     const experiment = experimentResult.value[0];
 
-    // 4. Add experiment creator as admin member
-    const addMembersResult = await this.experimentMemberRepository.addMembers(experiment.id, [
-      { userId: data.experiment.createdBy, role: "admin" as const },
-    ]);
-
-    if (addMembersResult.isFailure()) {
-      return addMembersResult;
-    }
-
-    // 5. Add locations if provided
+    // 4. Add locations if provided
     if (data.experiment.locations && data.experiment.locations.length > 0) {
       const locations: CreateLocationDto[] = data.experiment.locations.map((loc) => ({
         ...loc,
@@ -181,7 +198,7 @@ export class ExecuteProjectTransferUseCase {
       }
     }
 
-    // 6. Create flow (non-fatal, requires both protocol and macro)
+    // 5. Create flow (non-fatal, requires both protocol and macro)
     let flowId: string | null = null;
     if (protocolId && macroId) {
       const questionNodes: ExperimentFlowGraph["nodes"] = (data.questions ?? []).map((q, i) => ({
@@ -251,7 +268,7 @@ export class ExecuteProjectTransferUseCase {
         });
       }
 
-      // 7. Materialise a workbook from the same nodes (non-fatal).
+      // 6. Materialise a workbook from the same nodes (non-fatal).
       const cells = flowNodesToWorkbookCells(allNodes, edges);
       if (cells.length > 0) {
         const workbookResult = await this.workbookRepository.create(
@@ -314,7 +331,7 @@ export class ExecuteProjectTransferUseCase {
       flowId,
     });
 
-    // 8. Send project transfer complete email (non-fatal)
+    // 7. Send project transfer complete email (non-fatal)
     const userResult = await this.userRepository.findOne(data.experiment.createdBy);
 
     if (userResult.isSuccess() && userResult.value?.email) {

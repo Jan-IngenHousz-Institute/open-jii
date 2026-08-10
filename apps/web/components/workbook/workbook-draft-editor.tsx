@@ -11,7 +11,6 @@ import { parseApiError } from "~/util/apiError";
 import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
-import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -20,7 +19,8 @@ const AUTO_SAVE_DELAY = 1500;
 interface WorkbookDraftEditorProps {
   id: string;
   initialCells: WorkbookCell[];
-  createdBy: string;
+  /** `can(update)` from the detail response — a "Can edit" grantee edits too. */
+  canEdit: boolean;
   name: string;
   /** Called after each successful autosave. */
   onSaved?: (workbook: Workbook) => void;
@@ -35,11 +35,10 @@ interface WorkbookDraftEditorProps {
 export function WorkbookDraftEditor({
   id,
   initialCells,
-  createdBy,
+  canEdit,
   name,
   onSaved,
 }: WorkbookDraftEditorProps) {
-  const { data: session } = useSession();
   const { t } = useTranslation(["workbook", "common"]);
   const { mutateAsync: updateWorkbook } = useWorkbookUpdate(id, { onSuccess: onSaved });
 
@@ -114,8 +113,6 @@ export function WorkbookDraftEditor({
     onPromptQuestion: handlePromptQuestion,
   });
 
-  const isCreator = session?.user.id === createdBy;
-
   // Trigger the same `connect()` the toolbar uses when the user clicks Run on
   // a Protocol or Command cell with no device. Done before any await so the
   // browser's Web Serial / Web Bluetooth picker still sees a live user gesture.
@@ -143,7 +140,7 @@ export function WorkbookDraftEditor({
     <WorkbookEditor
       cells={cells}
       onCellsChange={handleCellsChange}
-      readOnly={!isCreator}
+      readOnly={!canEdit}
       title={name}
       executionStates={executionStates}
       isConnected={isConnected}

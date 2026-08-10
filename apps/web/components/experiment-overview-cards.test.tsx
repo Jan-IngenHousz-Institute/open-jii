@@ -37,6 +37,18 @@ describe("ExperimentOverviewCards", () => {
     expect(screen.queryByText("status.active")).not.toBeInTheDocument();
   });
 
+  it("badges a private experiment, the way the other resource lists do", () => {
+    render(<ExperimentOverviewCards experiments={[createExperiment({ visibility: "private" })]} />);
+    expect(screen.getByText("resourceVisibility.privateStatus")).toBeInTheDocument();
+  });
+
+  it("leaves a public experiment unbadged", () => {
+    render(<ExperimentOverviewCards experiments={[createExperiment({ visibility: "public" })]} />);
+    // "Public" is the unremarkable default; only the exception is worth marking.
+    expect(screen.queryByText("resourceVisibility.privateStatus")).not.toBeInTheDocument();
+    expect(screen.queryByText("resourceVisibility.publicStatus")).not.toBeInTheDocument();
+  });
+
   it("links to the correct experiment page", () => {
     render(<ExperimentOverviewCards experiments={[createExperiment({ id: "abc-123" })]} />);
     expect(screen.getByRole("link")).toHaveAttribute("href", "/platform/experiments/abc-123");

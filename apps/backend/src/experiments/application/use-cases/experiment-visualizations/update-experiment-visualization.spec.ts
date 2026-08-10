@@ -80,6 +80,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 
@@ -164,6 +165,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 
@@ -217,6 +219,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 
@@ -277,6 +280,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasAccess: false,
           hasArchiveAccess: false,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 
@@ -336,6 +340,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: true,
+          canContribute: true,
         }),
       );
 
@@ -395,6 +400,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasAccess: true,
           hasArchiveAccess: true,
           isAdmin: false,
+          canContribute: true,
         }),
       );
 

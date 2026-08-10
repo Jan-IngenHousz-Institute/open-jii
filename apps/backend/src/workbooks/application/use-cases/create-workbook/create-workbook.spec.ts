@@ -1,4 +1,11 @@
-import { ensurePersonalOrganization, organizationMembers, organizations } from "@repo/database";
+import {
+  and,
+  ensurePersonalOrganization,
+  eq,
+  organizationMembers,
+  organizations,
+  resourceGrants,
+} from "@repo/database";
 
 import {
   assertFailure,
@@ -43,6 +50,24 @@ describe("CreateWorkbookUseCase", () => {
     expect(result.value.createdBy).toBe(userId);
     expect(result.value.cells).toEqual([]);
     expect(result.value.metadata).toEqual({});
+  });
+
+  it("creates no grant at all, the creator included", async () => {
+    const result = await useCase.execute({ name: "Granted Workbook" }, userId);
+    assertSuccess(result);
+
+    // The creator is answerable for the workbook by owning it, so a grant would
+    // only repeat access they already have.
+    const grants = await testApp.database
+      .select()
+      .from(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, "workbook"),
+          eq(resourceGrants.resourceId, result.value.id),
+        ),
+      );
+    expect(grants).toEqual([]);
   });
 
   it("assigns the target organization to the workbook", async () => {

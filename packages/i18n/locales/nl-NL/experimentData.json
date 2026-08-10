@@ -73,6 +73,7 @@
       "existingTable": {
         "label": "Bestaande tabel",
         "placeholder": "Kies een tabel",
+        "noneAvailable": "Er zijn geen uploadtabellen beschikbaar. Vraag een experimentbeheerder om er een aan te maken voordat u uploadt.",
         "rowCount_one": "{{count}} rij",
         "rowCount_other": "{{count}} rijen"
       },

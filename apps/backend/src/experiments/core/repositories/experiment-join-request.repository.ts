@@ -5,9 +5,10 @@ import {
   desc,
   eq,
   experimentJoinRequests,
-  experimentMembers,
+  inArray,
   profiles,
   resourceGrants,
+  STAFFING_GRANT_ROLES,
   users,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
@@ -19,10 +20,18 @@ import {
   getAnonymizedEmail,
   getAnonymizedAvatarUrl,
 } from "../../../common/utils/profile-anonymization";
+import { findOwningOrgOwnerIds } from "../../../sharing/core/resource-staffing";
 import type {
   ExperimentJoinRequestDto,
   JoinRequestStatus,
 } from "../models/experiment-join-request.model";
+
+/** Same role the sharing UI writes for "Can view". */
+const JOIN_APPROVAL_GRANT_ROLE = "viewer";
+
+export type ApproveJoinRequestOutcome =
+  | { outcome: "approved"; request: ExperimentJoinRequestDto }
+  | { outcome: "not-pending" };
 
 const joinRequestSelectFields = {
   id: experimentJoinRequests.id,
@@ -131,37 +140,37 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Approve a join request: mark approved AND insert into experimentMembers atomically.
-   * If the user is somehow already a member, the member insert is a no-op.
+   * Atomically claim a pending request and ensure the requester has at least the
+   * approval tier. The grant insert never overwrites an existing role, so approval
+   * cannot demote an administrator and needs no last-staffing guard.
    */
   async approve(
     requestId: string,
     requesterUserId: string,
     experimentId: string,
     decidedBy: string,
-  ): Promise<Result<ExperimentJoinRequestDto>> {
+  ): Promise<Result<ApproveJoinRequestOutcome>> {
     return tryCatch(async () => {
-      await this.database.transaction(async (tx) => {
-        await tx
+      const claimed = await this.database.transaction(async (tx) => {
+        const updated = await tx
           .update(experimentJoinRequests)
           .set({
             status: "approved",
             decidedBy,
             decidedAt: new Date(),
           })
-          .where(eq(experimentJoinRequests.id, requestId));
+          .where(
+            and(
+              eq(experimentJoinRequests.id, requestId),
+              eq(experimentJoinRequests.status, "pending"),
+            ),
+          )
+          .returning({ id: experimentJoinRequests.id });
 
-        await tx
-          .insert(experimentMembers)
-          .values({
-            experimentId,
-            userId: requesterUserId,
-            role: "member",
-          })
-          .onConflictDoNothing();
+        if (updated.length === 0) {
+          return false;
+        }
 
-        // Mirror the membership into resource_grants so can() authorizes the
-        // new member (read). experiment_members stays the contributor layer.
         await tx
           .insert(resourceGrants)
           .values({
@@ -169,10 +178,17 @@ export class ExperimentJoinRequestRepository {
             resourceId: experimentId,
             granteeType: "user",
             granteeId: requesterUserId,
-            role: "member",
+            role: JOIN_APPROVAL_GRANT_ROLE,
+            createdBy: decidedBy,
           })
           .onConflictDoNothing();
+
+        return true;
       });
+
+      if (!claimed) {
+        return { outcome: "not-pending" };
+      }
 
       const result = await this.database
         .select(joinRequestSelectFields)
@@ -182,7 +198,7 @@ export class ExperimentJoinRequestRepository {
         .where(eq(experimentJoinRequests.id, requestId))
         .limit(1);
 
-      return result[0];
+      return { outcome: "approved", request: result[0] };
     });
   }
 
@@ -214,22 +230,40 @@ export class ExperimentJoinRequestRepository {
   }
 
   /**
-   * Returns email addresses of all admins of the experiment.
+   * Who can decide a join request: admin/owner grant holders plus the owning org's
+   * living owners. The owners are usually the only ones — a creator holds no grant,
+   * so grants alone would notify nobody on a personal-workspace experiment.
+   * Team/org grants are excluded: no individual mailbox behind them.
    */
   async listAdminEmails(experimentId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {
-      const result = await this.database
-        .select({ email: users.email })
-        .from(experimentMembers)
-        .innerJoin(users, eq(experimentMembers.userId, users.id))
-        .where(
-          and(
-            eq(experimentMembers.experimentId, experimentId),
-            eq(experimentMembers.role, "admin"),
+      const [granted, ownerIds] = await Promise.all([
+        this.database
+          .select({ userId: resourceGrants.granteeId })
+          .from(resourceGrants)
+          .where(
+            and(
+              eq(resourceGrants.resourceType, "experiment"),
+              eq(resourceGrants.resourceId, experimentId),
+              eq(resourceGrants.granteeType, "user"),
+              inArray(resourceGrants.role, [...STAFFING_GRANT_ROLES]),
+            ),
           ),
-        );
+        findOwningOrgOwnerIds(this.database, "experiment", experimentId),
+      ]);
 
-      return result.map((row) => row.email);
+      // An owner who also holds an admin grant is in both sets — mail them once.
+      const recipientIds = [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
+      if (recipientIds.length === 0) {
+        return [];
+      }
+
+      const rows = await this.database
+        .select({ email: users.email })
+        .from(users)
+        .where(inArray(users.id, recipientIds));
+
+      return rows.map((row) => row.email);
     });
   }
 }

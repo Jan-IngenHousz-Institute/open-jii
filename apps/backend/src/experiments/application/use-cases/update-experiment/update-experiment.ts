@@ -18,6 +18,10 @@ export class UpdateExperimentUseCase {
       experimentId: id,
     });
 
+    // Publishing is one-way and goes through `setVisibility` only. The DTO still
+    // carries `visibility` because the embargo cron writes it, so strip it here.
+    const { visibility: _visibility, ...updateData } = data;
+
     const experimentResult = await this.experimentRepository.findOne(id);
 
     return experimentResult.chain(async (experiment: ExperimentDto | null) => {
@@ -31,11 +35,28 @@ export class UpdateExperimentUseCase {
         return failure(AppError.notFound(`Experiment with ID ${id} not found`));
       }
 
+      // An embargo only means "stay private until X", so once public there is
+      // nothing left to embargo. Reject rather than silently ignore the change.
+      if (updateData.embargoUntil !== undefined && experiment.visibility === "public") {
+        this.logger.warn({
+          msg: "Attempt to change embargo on a public experiment",
+          errorCode: ErrorCodes.UNPROCESSABLE_ENTITY,
+          operation: "updateExperiment",
+          experimentId: id,
+        });
+        return failure(
+          AppError.badRequest(
+            "Embargo can only be changed while the experiment is private",
+            "EMBARGO_NOT_EDITABLE_WHEN_PUBLIC",
+          ),
+        );
+      }
+
       // Authorization is enforced declaratively by @CanAccess on the route.
       // Archived-state handling remains here because it is a domain rule
       // describing which updates are legal, not who may update.
       if (experiment.status === "archived") {
-        const updateFields = Object.keys(data).filter((key) => data[key] !== undefined);
+        const updateFields = Object.keys(updateData).filter((key) => updateData[key] !== undefined);
         if (updateFields.length !== 1 || updateFields[0] !== "status") {
           this.logger.warn({
             msg: "Attempt to update fields other than status on archived experiment",
@@ -61,7 +82,7 @@ export class UpdateExperimentUseCase {
         });
       }
 
-      const updateResult = await this.experimentRepository.update(id, data);
+      const updateResult = await this.experimentRepository.update(id, updateData);
       return updateResult.chain((updatedExperiments: ExperimentDto[]) => {
         if (updatedExperiments.length === 0) {
           this.logger.error({

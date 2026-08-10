@@ -266,4 +266,28 @@ describe("ExperimentDataTableAnnotationsCell", () => {
     );
     expect(screen.getByText(/common.add/)).toBeInTheDocument();
   });
+
+  describe("without contribute rights", () => {
+    // The table withholds the handlers from a caller who may not contribute, so
+    // their absence is the gate. Existing annotations stay readable.
+    it("shows the annotations but no add or remove controls", async () => {
+      const user = userEvent.setup();
+      render(<ExperimentDataTableAnnotationsCell data={mockProps.data} rowId="row-123" />);
+
+      // The comment badge (one comment in the fixture).
+      await user.click(screen.getByText("1"));
+
+      expect(screen.getByText("This is a comment")).toBeInTheDocument();
+      expect(screen.queryByTitle(/experimentDataAnnotations.addComment/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByTitle(/experimentDataAnnotations.bulkActions.removeAllComments/),
+      ).not.toBeInTheDocument();
+    });
+
+    it("offers nothing at all on a row with no annotations", () => {
+      render(<ExperimentDataTableAnnotationsCell data="[]" rowId="row-123" />);
+
+      expect(screen.queryByText(/common.add/)).not.toBeInTheDocument();
+    });
+  });
 });

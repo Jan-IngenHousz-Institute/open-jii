@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { zResourceCapabilities } from "../authorization/capabilities.schema";
+import { zVisibility } from "../visibility/visibility.schema";
+
 export const zSensorFamily = z.enum(["multispeq", "ambyte", "minipar", "generic", "ambit"]);
 
 // Define Zod schemas for protocol models
@@ -19,6 +22,14 @@ export const zProtocol = z.object({
   visibility: z.enum(["private", "public"]),
 });
 export const zProtocolList = z.array(zProtocol);
+
+/**
+ * A single protocol plus the caller's effective capabilities on it. Detail route
+ * only — see `zMacroDetail` for why list rows stay plain.
+ */
+export const zProtocolDetail = zProtocol.extend({
+  capabilities: zResourceCapabilities,
+});
 
 // Query parameters
 export const zProtocolFilterQuery = z.object({
@@ -46,6 +57,10 @@ export const zCreateProtocolRequestBody = z.object({
   // Optional target organization to create into; defaults to the creator's
   // personal org. The caller must be a member of the given organization.
   organizationId: z.string().uuid().optional(),
+  // Visibility at creation: defaults to public. Post-create changes go through the
+  // dedicated `setVisibility` route only, which is monotonic (private→public); the
+  // update body never carries visibility.
+  visibility: zVisibility.optional(),
 });
 
 export const zUpdateProtocolRequestBody = z.object({
@@ -84,7 +99,9 @@ export const zProtocolMacroEntry = z.object({
 export const zProtocolMacroList = z.array(zProtocolMacroEntry);
 
 export const zAddCompatibleMacrosBody = z.object({
-  macroIds: z.array(z.string().uuid()).min(1),
+  // Capped so a single request can't fan out into an unbounded set of per-id
+  // authorization checks (each link target is read-access validated server-side).
+  macroIds: z.array(z.string().uuid()).min(1).max(100),
 });
 
 export const zProtocolMacroPathParams = z.object({
@@ -95,6 +112,7 @@ export const zProtocolMacroPathParams = z.object({
 // Infer types from Zod schemas
 export type SensorFamily = z.infer<typeof zSensorFamily>;
 export type Protocol = z.infer<typeof zProtocol>;
+export type ProtocolDetail = z.infer<typeof zProtocolDetail>;
 export type ProtocolList = z.infer<typeof zProtocolList>;
 export type ProtocolFilterQuery = z.infer<typeof zProtocolFilterQuery>;
 export type ProtocolFilter = ProtocolFilterQuery["search"];

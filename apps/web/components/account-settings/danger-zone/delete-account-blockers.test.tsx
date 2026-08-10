@@ -31,6 +31,7 @@ const ID_2 = "bbbbbbbb-0000-4000-8000-000000000002";
 
 function makeBlocker(overrides: Partial<DeletionBlocker> = {}): DeletionBlocker {
   return {
+    resourceType: "experiment",
     id: ID_1,
     name: "Climate Study",
     status: "active",
@@ -111,6 +112,47 @@ describe("DeleteAccountBlockers", () => {
       expect(progress).toHaveAttribute("aria-valuemax", "2");
       expect(progress).toHaveAttribute("aria-valuetext", "0/2");
     });
+
+    // Every other type blocks deletion too. They carry no lifecycle status, so the
+    // badge names the type, and each links at its own Collaborators route — the
+    // place the hand-off actually happens, on all of them.
+    it.each([
+      ["macro" as const, `platform/macros/${ID_2}/collaborators`],
+      ["protocol" as const, `platform/protocols/${ID_2}/collaborators`],
+      ["workbook" as const, `platform/workbooks/${ID_2}/collaborators`],
+      ["device" as const, `platform/devices/${ID_2}/collaborators`],
+    ])("labels a %s blocker by type and links to its collaborators route", (resourceType, path) => {
+      renderBlockers({
+        blockers: [makeBlocker({ resourceType, id: ID_2, name: "Leaf Area", status: null })],
+      });
+
+      expect(
+        screen.getByText(`dangerZone.delete.blockers.resourceType.${resourceType}`),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/experiments:status/)).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "dangerZone.delete.blockers.manageLink" }),
+      ).toHaveAttribute("href", `/en-US/${path}`);
+    });
+
+    it("keys rows by type as well as id, so two types sharing an id stay independent", async () => {
+      const user = userEvent.setup();
+      renderBlockers({
+        blockers: [
+          makeBlocker({ resourceType: "experiment", id: ID_1, candidates: [ALICE] }),
+          makeBlocker({ resourceType: "macro", id: ID_1, status: null, candidates: [ALICE] }),
+        ],
+      });
+
+      // Assigning the macro must not count as assigning the experiment.
+      const macroRow = screen
+        .getByText("dangerZone.delete.blockers.resourceType.macro")
+        .closest("li");
+      if (!macroRow) throw new Error("macro row not found");
+      await user.click(within(macroRow).getByRole("button", { name: /alice smith/i }));
+
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "1/2");
+    });
   });
 
   describe("expand toggle", () => {
@@ -135,9 +177,9 @@ describe("DeleteAccountBlockers", () => {
   describe("transferring admin", () => {
     it("selecting a candidate enables the transfer and posts the assignment", async () => {
       const user = userEvent.setup();
-      const spy = server.mount(contract.experiments.transferExperimentAdmin, {
+      const spy = server.mount(contract.sharing.transferResourceAdmin, {
         status: 200,
-        body: { results: [{ experimentId: ID_1, success: true }] },
+        body: { results: [{ resourceType: "experiment", resourceId: ID_1, success: true }] },
       });
 
       renderBlockers({ blockers: [makeBlocker({ id: ID_1, candidates: [ALICE] })] });
@@ -147,7 +189,7 @@ describe("DeleteAccountBlockers", () => {
       });
       expect(transferButton).toBeDisabled();
 
-      // Pick the suggested collaborator chip to assign the experiment to. The
+      // Pick the suggested collaborator chip to assign the resource to. The
       // click flushes its state update, so the selection is reflected at once.
       await user.click(screen.getByRole("button", { name: /alice smith/i }));
       expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
@@ -162,15 +204,19 @@ describe("DeleteAccountBlockers", () => {
         }),
       );
       expect(spy.body).toEqual({
-        transfers: [{ experimentId: ID_1, targetUserId: ALICE.userId }],
+        transfers: [{ resourceType: "experiment", resourceId: ID_1, targetUserId: ALICE.userId }],
       });
     });
 
     it("warns when some transfers fail", async () => {
       const user = userEvent.setup();
-      server.mount(contract.experiments.transferExperimentAdmin, {
+      server.mount(contract.sharing.transferResourceAdmin, {
         status: 200,
-        body: { results: [{ experimentId: ID_1, success: false, error: "boom" }] },
+        body: {
+          results: [
+            { resourceType: "experiment", resourceId: ID_1, success: false, error: "boom" },
+          ],
+        },
       });
 
       renderBlockers({ blockers: [makeBlocker({ id: ID_1, candidates: [ALICE] })] });
@@ -190,9 +236,9 @@ describe("DeleteAccountBlockers", () => {
 
     it("shows the transferring label and keeps the button disabled while the transfer is in flight", async () => {
       const user = userEvent.setup();
-      server.mount(contract.experiments.transferExperimentAdmin, {
+      server.mount(contract.sharing.transferResourceAdmin, {
         status: 200,
-        body: { results: [{ experimentId: ID_1, success: true }] },
+        body: { results: [{ resourceType: "experiment", resourceId: ID_1, success: true }] },
         delay: 200,
       });
 
@@ -211,7 +257,7 @@ describe("DeleteAccountBlockers", () => {
   });
 
   describe("apply to all", () => {
-    // Only candidates present in every blocking experiment are offered as
+    // Only candidates present in every blocking resource are offered as
     // "apply to all" suggestions — Alice is, Bob is not.
     function renderTwoBlockers() {
       return renderBlockers({

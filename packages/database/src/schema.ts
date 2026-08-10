@@ -355,7 +355,15 @@ export const experiments = pgTable("experiments", {
 });
 
 export const experimentMembersEnum = pgEnum("experiment_members_role", ["admin", "member"]);
-// Experiment Members (Associative Table)
+/**
+ * Experiment Members (Associative Table) — **DORMANT**.
+ *
+ * Superseded by `resourceGrants`: access is decided entirely by grants and nothing
+ * reads this table. The only remaining writes are referential cleanup (experiment
+ * delete and account deletion), because the FKs have no cascade. Left physically
+ * intact with its rows frozen until its fate is decided separately — nothing should
+ * start using it again; add a grant instead.
+ */
 export const experimentMembers = pgTable(
   "experiment_members",
   {
@@ -390,6 +398,8 @@ export const invitations = pgTable(
     resourceType: invitationResourceTypeEnum("resource_type").notNull(),
     resourceId: uuid("resource_id"),
     email: text("email").notNull(),
+    // Kept as `member` for the lower tier while older application instances can
+    // accept pending invitations; application reads normalize it to `viewer`.
     role: text("role").default("member").notNull(),
     status: invitationStatusEnum("status").default("pending").notNull(),
     invitedBy: uuid("invited_by")
@@ -691,7 +701,9 @@ export const resourceGrants = pgTable(
     resourceId: uuid("resource_id").notNull(),
     granteeType: granteeTypeEnum("grantee_type").notNull(),
     granteeId: uuid("grantee_id").notNull(),
-    role: text("role").default("member").notNull(),
+    // 'owner'/'admin' confer full control, 'viewer' read plus contributing data on an
+    // experiment. Narrowed to that set by `GrantRole` on the write helpers.
+    role: text("role").default("viewer").notNull(),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     ...timestamps,
   },

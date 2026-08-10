@@ -1,11 +1,18 @@
 import { StatusCodes } from "http-status-codes";
 
-import { ensurePersonalOrganization, organizationMembers, organizations } from "@repo/database";
+import {
+  and,
+  ensurePersonalOrganization,
+  eq,
+  organizationMembers,
+  organizations,
+  resourceGrants,
+} from "@repo/database";
 
 import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
-import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
-import { generateHashedFilename } from "../../../../macros/core/models/macro.model";
 import { TestHarness } from "../../../../test/test-harness";
+import type { CreateMacroDto } from "../../../core/models/macro.model";
+import { generateHashedFilename } from "../../../core/models/macro.model";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { CreateMacroUseCase } from "./create-macro";
 
@@ -55,6 +62,25 @@ describe("CreateMacroUseCase", () => {
         code: mockRequest.code,
         createdBy: testUserId,
       });
+    });
+
+    it("creates no grant at all, the creator included", async () => {
+      const result = await useCase.execute(mockRequest, testUserId);
+      assertSuccess(result);
+
+      // The creator is answerable for the macro by owning it, so a grant would only
+      // repeat access they already have — and would render them as a collaborator
+      // on their own macro beside the synthesized Owner row.
+      const grants = await testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "macro"),
+            eq(resourceGrants.resourceId, result.value.id),
+          ),
+        );
+      expect(grants).toEqual([]);
     });
 
     it("should assign the target organization to the macro", async () => {

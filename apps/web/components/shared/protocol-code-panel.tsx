@@ -9,7 +9,8 @@ export type ProtocolCode = Record<string, unknown>[] | string | undefined;
 
 interface ProtocolCodePanelProps {
   code: Record<string, unknown>[];
-  isCreator: boolean;
+  /** `can(update)`: gating here moved from creator-identity to capability. */
+  canEdit: boolean;
   isEditing: boolean;
   editedCode: ProtocolCode;
   handleChange: (value: ProtocolCode) => void;
@@ -24,7 +25,7 @@ interface ProtocolCodePanelProps {
 
 export function ProtocolCodePanel({
   code,
-  isCreator,
+  canEdit,
   isEditing,
   editedCode,
   handleChange,
@@ -56,7 +57,7 @@ export function ProtocolCodePanel({
       value={code}
       height={height}
       title={title}
-      onEditStart={isCreator ? startEditing : undefined}
+      onEditStart={canEdit ? startEditing : undefined}
       className={borderless ? "h-full rounded-none border-0 shadow-none" : undefined}
     />
   );

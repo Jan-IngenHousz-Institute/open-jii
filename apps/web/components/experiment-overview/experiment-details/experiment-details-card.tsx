@@ -5,9 +5,9 @@ import { formatDate } from "@/util/date";
 import { ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentLocation } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
-import type { ExperimentMember } from "@repo/api/domains/experiment/members/experiment-members.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -48,9 +48,13 @@ interface ExperimentDetailsCardProps {
   experimentId: string;
   experiment: Experiment;
   locations: ExperimentLocation[];
-  members: ExperimentMember[];
-  isMembersLoading: boolean;
+  contributors: ExperimentContributor[];
+  isContributorsLoading: boolean;
   hasAccess?: boolean;
+  /** `can(manage)` from the experiment-access response — gates the admin-only cards. */
+  canManage?: boolean;
+  /** `can(contribute)` — whether this person is already a collaborator. */
+  canContribute?: boolean;
   isArchived?: boolean;
 }
 
@@ -58,9 +62,11 @@ export function ExperimentDetailsCard({
   experimentId,
   experiment,
   locations,
-  members,
-  isMembersLoading,
+  contributors,
+  isContributorsLoading,
   hasAccess = false,
+  canManage = false,
+  canContribute = false,
   isArchived = false,
 }: ExperimentDetailsCardProps) {
   const { t } = useTranslation("experiments");
@@ -71,10 +77,10 @@ export function ExperimentDetailsCard({
   const [transitionsReady, setTransitionsReady] = useState(false);
   const { data: session } = useSession();
   const currentUserId = session?.user.id;
-  const currentMember = members.find((m) => m.user.id === currentUserId);
-  const currentUserRole = currentMember?.role;
+  // Anyone who already contributes has nothing to request; `canContribute` is the
+  // server's answer to "is this person already a collaborator".
   const canRequestToJoin =
-    currentUserId && !currentMember && !isArchived && experiment.visibility === "public";
+    currentUserId && !canContribute && !isArchived && experiment.visibility === "public";
 
   useEffect(() => {
     const stored = localStorage.getItem(DETAILS_PANEL_STORAGE_KEY);
@@ -159,12 +165,10 @@ export function ExperimentDetailsCard({
                 />
 
                 <div className="space-y-1">
-                  <h4 className="text-sm font-medium">
-                    {tSettings("experimentSettings.membersTab")}
-                  </h4>
+                  <h4 className="text-sm font-medium">{tSettings("sharing.collaboratorsTab")}</h4>
                   <ExperimentMembersTrail
-                    members={members}
-                    isLoading={isMembersLoading}
+                    contributors={contributors}
+                    isLoading={isContributorsLoading}
                     href={`/${locale}/platform/experiments${isArchived ? "-archive" : ""}/${experimentId}/collaborators`}
                   />
                 </div>
@@ -197,7 +201,7 @@ export function ExperimentDetailsCard({
                 className="text-muted-foreground mx-4 border-t"
               />
 
-              {currentUserRole === "admin" ? (
+              {canManage ? (
                 <ExperimentVisibilityCard
                   experimentId={experimentId}
                   initialVisibility={experiment.visibility}
@@ -216,7 +220,7 @@ export function ExperimentDetailsCard({
               <ExperimentInfoCard
                 experimentId={experimentId}
                 experiment={experiment}
-                members={members}
+                canManage={canManage}
               />
             </div>
           </div>

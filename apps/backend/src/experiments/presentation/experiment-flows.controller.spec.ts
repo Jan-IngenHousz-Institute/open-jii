@@ -69,7 +69,7 @@ describe("ExperimentFlowsController", () => {
 
     it("returns 403 when non-admin members try to create", async () => {
       const { experiment } = await testApp.createExperiment({ name: "Exp", userId: ownerId });
-      await testApp.addExperimentMember(experiment.id, memberId, "member");
+      await testApp.addExperimentCollaborator(experiment.id, memberId);
       const path = testApp.resolveOrpcPath(contract.experiments.createFlow, {
         id: experiment.id,
       });

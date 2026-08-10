@@ -73,6 +73,7 @@
       "existingTable": {
         "label": "Bestehende Tabelle",
         "placeholder": "Tabelle auswählen",
+        "noneAvailable": "Es sind keine Upload-Tabellen verfügbar. Bitten Sie eine Experimentverwaltung, vor dem Hochladen eine zu erstellen.",
         "rowCount_one": "{{count}} Zeile",
         "rowCount_other": "{{count}} Zeilen"
       },

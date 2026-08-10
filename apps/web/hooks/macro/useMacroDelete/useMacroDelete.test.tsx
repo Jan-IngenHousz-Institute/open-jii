@@ -1,5 +1,5 @@
 import { orpc } from "@/lib/orpc";
-import { createMacro } from "@/test/factories";
+import { createMacroDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
@@ -27,7 +27,7 @@ describe("useMacroDelete", () => {
     const queryClient = createTestQueryClient();
     const detailKey = orpc.macros.getMacro.queryKey({ input: { id: "macro-1" } });
 
-    queryClient.setQueryData(detailKey, createMacro({ id: "macro-1" }));
+    queryClient.setQueryData(detailKey, createMacroDetail({ id: "macro-1" }));
 
     server.mount(contract.macros.deleteMacro);
 

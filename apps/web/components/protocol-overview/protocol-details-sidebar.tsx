@@ -11,8 +11,7 @@ import { parseApiError } from "~/util/apiError";
 import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "~/util/sensor-family";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { Protocol, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
-import { useSession } from "@repo/auth/client";
+import type { ProtocolDetail, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -37,20 +36,21 @@ import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCom
 import { useProtocolDelete } from "../../hooks/protocol/useProtocolDelete/useProtocolDelete";
 import { ProtocolCompatibleMacrosCard } from "../protocol-settings/protocol-compatible-macros-card";
 import { DetailsSidebarCard } from "../shared/details-sidebar-card";
+import { ResourcePublishControl } from "../visibility/resource-publish-control";
 
 interface ProtocolDetailsSidebarProps {
   protocolId: string;
-  protocol: Protocol;
+  protocol: ProtocolDetail;
 }
 
 export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetailsSidebarProps) {
   const { t } = useTranslation();
   const { t: tCommon } = useTranslation("common");
-  const { data: session } = useSession();
   const locale = useLocale();
   const router = useRouter();
 
-  const isCreator = session?.user.id === protocol.createdBy;
+  // Capability, not ownership — see the macro sidebar.
+  const { canUpdate, canManage } = protocol.capabilities;
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_DELETION);
 
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(protocolId);
@@ -95,7 +95,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
 
       <div className="space-y-1">
         <h4 className="text-sm font-medium">{t("protocols.family")}</h4>
-        {isCreator ? (
+        {canUpdate ? (
           <Select value={protocol.family} onValueChange={handleFamilyChange} disabled={isUpdating}>
             <SelectTrigger className="w-full">
               <SelectValue />
@@ -142,6 +142,14 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
         </div>
       ) : null}
 
+      {/* Visibility + the one-way publish action. */}
+      <ResourcePublishControl
+        resourceType="protocol"
+        resourceId={protocolId}
+        visibility={protocol.visibility}
+        canManage={canManage}
+      />
+
       {/* Compatible Macros Section */}
       <div
         role="separator"
@@ -149,7 +157,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
         className="text-muted-foreground border-t"
       />
 
-      {isCreator ? (
+      {canUpdate ? (
         <ProtocolCompatibleMacrosCard protocolId={protocolId} embedded />
       ) : (
         <div className="space-y-1">
@@ -163,7 +171,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       )}
 
       {/* Danger Zone */}
-      {isCreator && isDeletionEnabled && (
+      {canManage && isDeletionEnabled && (
         <>
           <div
             role="separator"

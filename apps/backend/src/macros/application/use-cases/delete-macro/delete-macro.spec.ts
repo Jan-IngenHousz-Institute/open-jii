@@ -1,6 +1,6 @@
 import { assertFailure, assertSuccess, AppError, failure } from "../../../../common/utils/fp-utils";
-import type { CreateMacroDto } from "../../../../macros/core/models/macro.model";
 import { TestHarness } from "../../../../test/test-harness";
+import type { CreateMacroDto } from "../../../core/models/macro.model";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
 import { DeleteMacroUseCase } from "./delete-macro";
 

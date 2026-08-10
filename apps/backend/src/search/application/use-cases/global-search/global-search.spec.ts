@@ -186,4 +186,84 @@ describe("GlobalSearchUseCase", () => {
     assertSuccess(result);
     expect(result.value.results.some((r) => r.title === "Open photosynthesis study")).toBe(true);
   });
+
+  // Global search delegates to the same per-type findAlls, so their access scoping
+  // applies here too: a private macro/protocol/workbook is undiscoverable to a
+  // non-grantee but visible once a grant is held.
+  describe("private macro/protocol/workbook scoping", () => {
+    it("hides private macro/protocol/workbook from a non-grantee", async () => {
+      const orgId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(orgId, otherUserId, "owner");
+      await testApp.createMacro({
+        name: "Hidden photosynthesis macro",
+        createdBy: otherUserId,
+        visibility: "private",
+        organizationId: orgId,
+      });
+      await testApp.createProtocol({
+        name: "Hidden photosynthesis protocol",
+        createdBy: otherUserId,
+        visibility: "private",
+        organizationId: orgId,
+      });
+      await testApp.createWorkbook({
+        name: "Hidden photosynthesis workbook",
+        createdBy: otherUserId,
+        visibility: "private",
+        organizationId: orgId,
+      });
+
+      const result = await useCase.execute(userId, "photosynthesis", 20);
+
+      assertSuccess(result);
+      const titles = result.value.results.map((r) => r.title);
+      expect(titles).not.toContain("Hidden photosynthesis macro");
+      expect(titles).not.toContain("Hidden photosynthesis protocol");
+      expect(titles).not.toContain("Hidden photosynthesis workbook");
+    });
+
+    it("shows a private macro/protocol/workbook to a grantee", async () => {
+      const orgId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(orgId, otherUserId, "owner");
+      const macro = await testApp.createMacro({
+        name: "Shared photosynthesis macro",
+        createdBy: otherUserId,
+        visibility: "private",
+        organizationId: orgId,
+      });
+      const protocol = await testApp.createProtocol({
+        name: "Shared photosynthesis protocol",
+        createdBy: otherUserId,
+        visibility: "private",
+        organizationId: orgId,
+      });
+      const workbook = await testApp.createWorkbook({
+        name: "Shared photosynthesis workbook",
+        createdBy: otherUserId,
+        visibility: "private",
+        organizationId: orgId,
+      });
+      for (const [resourceType, resourceId] of [
+        ["macro", macro.id],
+        ["protocol", protocol.id],
+        ["workbook", workbook.id],
+      ] as const) {
+        await testApp.addResourceGrant({
+          resourceType,
+          resourceId,
+          granteeType: "user",
+          granteeId: userId,
+          role: "viewer",
+        });
+      }
+
+      const result = await useCase.execute(userId, "photosynthesis", 20);
+
+      assertSuccess(result);
+      const titles = result.value.results.map((r) => r.title);
+      expect(titles).toContain("Shared photosynthesis macro");
+      expect(titles).toContain("Shared photosynthesis protocol");
+      expect(titles).toContain("Shared photosynthesis workbook");
+    });
+  });
 });

@@ -33,6 +33,38 @@ describe("ListCompatibleMacrosUseCase", () => {
     await testApp.teardown();
   });
 
+  it("hides a linked private macro the caller cannot read", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Protocol With Mixed Macros",
+      createdBy: testUserId,
+    });
+
+    const publicMacro = await testApp.createMacro({
+      name: `public-macro-${faker.string.alphanumeric(6)}`,
+      createdBy: testUserId,
+    });
+
+    const otherUser = await testApp.createTestUser({});
+    const otherOrgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(otherOrgId, otherUser, "owner");
+    const privateMacro = await testApp.createMacro({
+      name: `private-macro-${faker.string.alphanumeric(6)}`,
+      createdBy: otherUser,
+      visibility: "private",
+      organizationId: otherOrgId,
+    });
+
+    // Link both directly (bypassing the read-checked add use-case) to simulate a
+    // macro that later became inaccessible.
+    await protocolMacroRepository.addMacros(protocol.id, [publicMacro.id, privateMacro.id]);
+
+    const result = await useCase.execute(protocol.id, testUserId);
+    assertSuccess(result);
+    const ids = result.value.map((e) => e.macro.id);
+    expect(ids).toContain(publicMacro.id);
+    expect(ids).not.toContain(privateMacro.id);
+  });
+
   it("should return empty list when no macros are linked", async () => {
     const protocol = await testApp.createProtocol({
       name: "Empty Protocol",
