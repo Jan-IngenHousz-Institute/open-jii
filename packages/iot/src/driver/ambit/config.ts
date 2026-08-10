@@ -25,6 +25,17 @@ export const AMBIT_FRAMING = {
   SLEEP_AFTER_IDLE_MS: 20_000,
   /** `hello` replies `NEW <name> Ready`; the name is firmware-hardcoded, never trust it. */
   READY_SENTINEL: "NEW",
+  /**
+   * JSON-envelope replies end with this constant sentinel before the newline
+   * (same openjii_proto framing as MiniPAR; a fixed footer, not a checksum).
+   */
+  FRAME_FOOTER: "7A1E3AA1",
+  FOOTER_LENGTH: 8,
+  /**
+   * JSON protocol timeout: an arrun runs pulses x tick_factor/freq seconds per
+   * segment and multi-segment traces can take minutes.
+   */
+  PROTOCOL_TIMEOUT: 120_000,
 } as const;
 
 export interface AmbitDriverConfig {
@@ -32,4 +43,6 @@ export interface AmbitDriverConfig {
   timeoutMs?: number;
   /** RX quiet window in ms that completes an unframed reply (default 300). */
   quietWindowMs?: number;
+  /** JSON protocol reply timeout in ms (default 120000). */
+  protocolTimeoutMs?: number;
 }
