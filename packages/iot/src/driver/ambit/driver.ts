@@ -15,7 +15,12 @@
  */
 import type { DeviceIdentity, SensorFamily } from "../../core/families";
 import type { ITransportAdapter } from "../../transport/interface";
-import { extractChecksum } from "../../utils/framing/framing";
+import {
+  collectReply,
+  parseOpenJiiEnvelope,
+  parseOpenJiiTopLevelError,
+} from "../../utils/framing/openjii-envelope";
+import type { RxCollectorHooks } from "../../utils/framing/openjii-envelope";
 import type { Logger } from "../../utils/logger/logger";
 import { DeviceDriver } from "../driver-base";
 import type { CommandResult, ExecuteOptions } from "../driver-base";
@@ -27,7 +32,7 @@ import {
 } from "./commands";
 import { AMBIT_FRAMING } from "./config";
 import type { AmbitDriverConfig } from "./config";
-import type { AmbitMeasurementEnvelope, AmbitStreamEvents } from "./interface";
+import type { AmbitStreamEvents } from "./interface";
 import { AMBIT_REPLY_PARSERS } from "./response-parsers";
 
 function delay(ms: number): Promise<void> {
@@ -85,6 +90,19 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     this.onChunk?.();
   }
 
+  /** RX hooks over this driver's buffer for the shared reply collector. */
+  private readonly rxHooks: RxCollectorHooks = {
+    read: () => this.rxBuffer,
+    take: () => {
+      const reply = this.rxBuffer;
+      this.rxBuffer = "";
+      return reply;
+    },
+    setOnChunk: (cb) => {
+      this.onChunk = cb;
+    },
+  };
+
   /**
    * Send one payload and collect the unframed reply: resolves once data has
    * arrived and `quietWindowMs` passes without more, rejects on `timeoutMs`
@@ -102,39 +120,13 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     this.lastTrafficAt = Date.now();
     await this.transport.send(payload);
 
-    return new Promise<string>((resolve, reject) => {
-      let quietTimer: ReturnType<typeof setTimeout> | undefined;
-
-      const finish = () => {
-        cleanup();
-        const reply = this.rxBuffer;
-        this.rxBuffer = "";
-        void this.emitter.emit("receivedReply", reply);
-        resolve(reply);
-      };
-
-      const overallTimer = setTimeout(() => {
-        if (this.rxBuffer.trim().length > 0) {
-          finish();
-          return;
-        }
-        cleanup();
-        reject(new Error("Response timeout"));
-      }, timeoutMs);
-
-      const cleanup = () => {
-        clearTimeout(overallTimer);
-        if (quietTimer) clearTimeout(quietTimer);
-        this.onChunk = undefined;
-      };
-
-      this.onChunk = () => {
-        if (quietTimer) clearTimeout(quietTimer);
-        quietTimer = setTimeout(() => {
-          if (this.rxBuffer.trim().length > 0) finish();
-        }, quietWindowMs);
-      };
+    const reply = await collectReply(this.rxHooks, {
+      isComplete: () => false,
+      quietMs: quietWindowMs,
+      timeoutMs,
     });
+    void this.emitter.emit("receivedReply", reply);
+    return reply;
   }
 
   /** Poll hello until the ready sentinel answers (Calibratron's wake loop). */
@@ -163,85 +155,6 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     await this.wake();
   }
 
-  /** Strip and verify the constant footer; null when the envelope is not complete yet. */
-  private static parseEnvelope(buffer: string): AmbitMeasurementEnvelope | null {
-    const trimmed = buffer.trim();
-    if (!trimmed.endsWith(AMBIT_FRAMING.FRAME_FOOTER)) return null;
-    const { data } = extractChecksum(trimmed, AMBIT_FRAMING.FOOTER_LENGTH);
-    try {
-      const parsed: unknown = JSON.parse(data);
-      if (parsed !== null && typeof parsed === "object") {
-        return parsed as AmbitMeasurementEnvelope;
-      }
-    } catch {
-      // footer seen but JSON incomplete/corrupt; keep buffering
-    }
-    return null;
-  }
-
-  /**
-   * Top-level protocol errors (json_parse, rx_overflow, json_timeout) are
-   * single JSON lines WITHOUT the footer. In-envelope errors (e.g. bad_arrun
-   * inside `set`) stay inline in the returned data, as with MiniPAR.
-   */
-  private static parseProtocolError(buffer: string): string | null {
-    for (const line of buffer.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('{"error"')) continue;
-      try {
-        const parsed: unknown = JSON.parse(trimmed);
-        if (
-          parsed !== null &&
-          typeof parsed === "object" &&
-          typeof (parsed as Record<string, unknown>).error === "string"
-        ) {
-          return (parsed as Record<string, unknown>).error as string;
-        }
-      } catch {
-        // not a complete error line; keep buffering
-      }
-    }
-    return null;
-  }
-
-  /** Send one payload and collect until `isComplete`; reject on the overall timeout. */
-  private async sendAndCollectUntil(
-    payload: string,
-    isComplete: (buffer: string) => boolean,
-    timeoutMs: number,
-  ): Promise<string> {
-    if (!this.transport) {
-      throw new Error("Transport not initialized");
-    }
-    this.rxBuffer = "";
-    this.lastTrafficAt = Date.now();
-    await this.transport.send(payload);
-
-    return new Promise<string>((resolve, reject) => {
-      const overallTimer = setTimeout(() => {
-        cleanup();
-        reject(new Error("Response timeout"));
-      }, timeoutMs);
-
-      const cleanup = () => {
-        clearTimeout(overallTimer);
-        this.onChunk = undefined;
-      };
-
-      const check = () => {
-        if (!isComplete(this.rxBuffer)) return;
-        cleanup();
-        const reply = this.rxBuffer;
-        this.rxBuffer = "";
-        void this.emitter.emit("receivedReply", reply);
-        resolve(reply);
-      };
-
-      this.onChunk = check;
-      check();
-    });
-  }
-
   /** Run protocol JSON through the firmware's openJII envelope: one write, footer-framed reply. */
   private async executeProtocol<T>(
     command: object,
@@ -250,17 +163,22 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     return this.commandQueue.enqueue(async () => {
       try {
         await this.ensureAwake();
+        if (!this.transport) {
+          throw new Error("Transport not initialized");
+        }
 
-        const payload = `${JSON.stringify(command)}${AMBIT_FRAMING.LINE_ENDING}`;
-        const reply = await this.sendAndCollectUntil(
-          payload,
-          (buffer) =>
-            AmbitDriver.parseEnvelope(buffer) !== null ||
-            AmbitDriver.parseProtocolError(buffer) !== null,
-          options?.timeoutMs ?? this.protocolTimeoutMs,
-        );
+        this.rxBuffer = "";
+        this.lastTrafficAt = Date.now();
+        await this.transport.send(`${JSON.stringify(command)}${AMBIT_FRAMING.LINE_ENDING}`);
+        const reply = await collectReply(this.rxHooks, {
+          isComplete: (buffer) =>
+            parseOpenJiiEnvelope(buffer) !== null || parseOpenJiiTopLevelError(buffer) !== null,
+          timeoutMs: options?.timeoutMs ?? this.protocolTimeoutMs,
+          strictTimeout: true,
+        });
+        void this.emitter.emit("receivedReply", reply);
 
-        const envelope = AmbitDriver.parseEnvelope(reply);
+        const envelope = parseOpenJiiEnvelope(reply);
         if (envelope) {
           void this.emitter.emit("receivedEnvelope", envelope);
           return {
@@ -269,7 +187,7 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
             checksum: AMBIT_FRAMING.FRAME_FOOTER,
           };
         }
-        const errorCode = AmbitDriver.parseProtocolError(reply);
+        const errorCode = parseOpenJiiTopLevelError(reply);
         if (errorCode) {
           throw new Error(`Ambit rejected the protocol: ${errorCode}`);
         }
