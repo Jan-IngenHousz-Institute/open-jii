@@ -1,8 +1,11 @@
+import { normalizeTracePayload } from "@/lib/trace-v3";
 import { createOutputCell, createProtocolCell } from "@/test/factories";
+import liveAmbitEnvelope from "@/test/fixtures/ambit-trace-v3-live.json";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { OutputCellComponent } from "./output-cell";
+import { OutputCellTraceTimeseries } from "./output-cell-trace-timeseries";
 
 const useProtocolMock = vi.hoisted(() => vi.fn());
 vi.mock("@/hooks/protocol/useProtocol/useProtocol", () => ({
@@ -32,26 +35,48 @@ vi.mock("@repo/ui/components/charts/line-chart", async (importOriginal) => {
 
 interface MockPlotlyTrace {
   name?: string;
+  mode?: string;
+  x?: number[];
   y?: number[];
+  line?: { dash?: string };
 }
 
 vi.mock("@repo/ui/components/charts/plotly-chart", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   const { createElement } = await import("react");
+  const serializePoints = (points: number[]) =>
+    JSON.stringify(points.length > 1000 ? [points[0], points.at(-1), points.length] : points);
   return {
     ...actual,
-    PlotlyChart: ({ data }: { data: MockPlotlyTrace[] }) =>
+    PlotlyChart: ({
+      data,
+      layout,
+    }: {
+      data: MockPlotlyTrace[];
+      layout?: {
+        xaxis?: { range?: number[] };
+        yaxis?: { title?: { text?: string } };
+      };
+    }) =>
       createElement(
         "div",
         {
           "data-testid": "plotly-chart",
           "data-series": JSON.stringify(data.map((s) => s.name ?? "")),
+          "data-x-range": JSON.stringify(layout?.xaxis?.range ?? []),
+          "data-yaxis-title": layout?.yaxis?.title?.text ?? "",
         },
         data.map((s) =>
           createElement(
             "div",
-            { key: s.name ?? "", "data-testid": `series-${s.name ?? ""}` },
-            (s.y ?? []).join(","),
+            {
+              key: s.name ?? "",
+              "data-testid": `series-${s.name ?? ""}`,
+              "data-x": serializePoints(s.x ?? []),
+              "data-line-dash": s.line?.dash ?? "",
+              "data-mode": s.mode ?? "",
+            },
+            (s.y ?? []).length > 1000 ? `${s.y?.length ?? 0} points` : (s.y ?? []).join(","),
           ),
         ),
       ),
@@ -783,6 +808,206 @@ describe("OutputCellComponent", () => {
       );
       await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+    });
+  });
+
+  describe("Timeseries tab (self-describing trace v3)", () => {
+    it("renders the exact live T3 envelope from real sourceProtocolId/allCells provenance", async () => {
+      const user = userEvent.setup();
+      const proto = createProtocolCell();
+      const cell = createOutputCell({ data: liveAmbitEnvelope, producedBy: proto.id });
+      useProtocolMock.mockReturnValue({
+        data: { family: "ambit", code: [{ ignored_by_self_describing_trace: true }] },
+        isLoading: false,
+      });
+      render(
+        <OutputCellComponent
+          cell={cell}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          allCells={[proto, cell]}
+        />,
+      );
+
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+
+      expect(screen.getByTestId("trace-timeseries")).toBeInTheDocument();
+      expect(screen.getByTestId("series-fluo_630_signal")).toHaveAttribute(
+        "data-x",
+        JSON.stringify([
+          0, 0.0854, 0.1708, 0.2562, 0.3416, 0.427, 0.5124, 0.5978, 0.6832, 0.854, 1.0248, 1.1956,
+          1.3664, 1.5372, 1.708, 1.8788,
+        ]),
+      );
+      expect(screen.getByTestId("trace-run-1-series-leaf_temp")).toHaveTextContent("Cel");
+      expect(useProtocolMock).toHaveBeenCalledWith(proto.payload.protocolId, true);
+    });
+
+    it("plots regular, subsampled, explicit, and estimated mixed cadences per series", async () => {
+      const user = userEvent.setup();
+      const cell = createOutputCell({
+        data: {
+          schema: "ambit.trace/3",
+          time: { start_utc: 1785965160359 },
+          series: {
+            regular: { u: "count", t0: 0, dt: 0.5, v: [10, 20, 30] },
+            subsampled: { u: "count", t0: 0.35, dt: 0.8, v: [40, 50] },
+            explicit: { u: "Cel", t: [0, 2.1, 4.8], v: [24.1, 24.2, 24.4] },
+            estimated: { u: "Cel", t: [0, 2], t_est: true, v: [25, 25.1] },
+          },
+        },
+      });
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+
+      expect(screen.getByTestId("series-regular")).toHaveAttribute("data-x", "[0,0.5,1]");
+      expect(screen.getByTestId("series-subsampled")).toHaveAttribute("data-x", "[0.35,1.15]");
+      expect(screen.getByTestId("series-explicit")).toHaveAttribute("data-x", "[0,2.1,4.8]");
+      expect(screen.getByTestId("series-regular")).toHaveAttribute("data-mode", "lines");
+      expect(screen.getByTestId("trace-run-1-series-estimated")).toHaveAttribute(
+        "data-estimated-time",
+        "true",
+      );
+      expect(screen.getByTestId("series-estimated")).toHaveAttribute("data-line-dash", "dash");
+      expect(screen.getByTestId("series-estimated")).toHaveAttribute("data-mode", "lines+markers");
+      expect(screen.getByText("output.timeseriesEstimatedTime")).toBeInTheDocument();
+      expect(
+        screen.getAllByTestId("plotly-chart").map((chart) => chart.dataset.yaxisTitle),
+      ).toEqual(["count", "count", "Cel", "Cel"]);
+    });
+
+    it("renders every trace after snapshot/error records as separate runs with one shared range", async () => {
+      const user = userEvent.setup();
+      const cell = createOutputCell({
+        data: {
+          sample: [
+            {
+              set: [
+                { snapshot: { temperature: 21 } },
+                {
+                  schema: "ambit.trace/3",
+                  time: { duration_ms: 1000 },
+                  series: { first: { u: "V", t: [0, 1], v: [1, 2] } },
+                },
+                { error: "prior run failed" },
+                {
+                  schema: "ambit.trace/3",
+                  time: { duration_ms: 5000 },
+                  series: { second: { u: "Cel", t: [0, 3], v: [20, 21] } },
+                },
+              ],
+            },
+          ],
+        },
+      });
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+
+      expect(screen.getAllByTestId(/^trace-run-\d+$/)).toHaveLength(2);
+      expect(screen.getByTestId("trace-run-1-series-first")).toBeInTheDocument();
+      expect(screen.getByTestId("trace-run-2-series-second")).toBeInTheDocument();
+      expect(screen.getByTestId("series-output.timeseriesTraceRun · first")).toHaveTextContent(
+        "1,2",
+      );
+      expect(screen.getByTestId("series-output.timeseriesTraceRun · second")).toHaveTextContent(
+        "20,21",
+      );
+      expect(screen.getAllByTestId("plotly-chart").map((chart) => chart.dataset.xRange)).toEqual([
+        "[-0.05,5.05]",
+        "[-0.05,5.05]",
+      ]);
+    });
+
+    it("renders 7 repeated 40,000-point traces with run-scoped ids and one padded range", () => {
+      const pointCount = 40_000;
+      const times = Array.from({ length: pointCount }, (_, index) => index / 10);
+      const values = Array.from({ length: pointCount }, (_, index) => index % 1000);
+      const normalized = normalizeTracePayload({
+        sample: [
+          {
+            set: Array.from({ length: 7 }, () => ({
+              schema: "ambit.trace/3",
+              time: { duration_ms: 4_000_000 },
+              series: { signal: { u: "count", t: times, v: values } },
+            })),
+          },
+        ],
+      });
+      expect(normalized).not.toBeNull();
+      if (!normalized) throw new Error("Expected the repeated trace fixture to normalize");
+
+      render(<OutputCellTraceTimeseries normalized={normalized} emptyLabel="invalid" />);
+
+      expect(
+        normalized.traces.reduce(
+          (count, run) => count + (run.series[0]?.relativeTimeSeconds.length ?? 0),
+          0,
+        ),
+      ).toBe(280_000);
+      expect(screen.getAllByTestId("plotly-chart")).toHaveLength(7);
+      for (let run = 1; run <= 7; run += 1) {
+        expect(screen.getByTestId(`trace-run-${run}-series-signal`)).toBeInTheDocument();
+      }
+      expect(screen.getAllByTestId("plotly-chart").map((chart) => chart.dataset.xRange)).toEqual(
+        Array.from({ length: 7 }, () => "[-40,4040]"),
+      );
+    });
+
+    it("uses visible markers and a non-degenerate range for a one-point trace", async () => {
+      const user = userEvent.setup();
+      const cell = createOutputCell({
+        data: {
+          schema: "ambit.trace/3",
+          time: { duration_ms: 0 },
+          series: { leaf_temp: { u: "Cel", t: [0], v: [23.4] } },
+        },
+      });
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+
+      expect(screen.getByTestId("series-leaf_temp")).toHaveAttribute("data-mode", "markers");
+      expect(screen.getByTestId("trace-run-1-series-leaf_temp")).toBeInTheDocument();
+      expect(screen.getByTestId("plotly-chart")).toHaveAttribute("data-x-range", "[-0.01,1.01]");
+    });
+
+    it("plots valid malformed subsets and shows localized omission and invalid-series warnings", async () => {
+      const user = userEvent.setup();
+      const cell = createOutputCell({
+        data: {
+          schema: "ambit.trace/3",
+          series: {
+            partial: { u: "count", t: [0, Number.NaN, 2], v: [10, 11, 12, 13] },
+            invalid: { u: "V", t0: 0, dt: 0, v: [1, 2] },
+          },
+        },
+      });
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+
+      expect(screen.getByTestId("series-partial")).toHaveTextContent("10,12");
+      expect(screen.getByRole("alert")).toHaveTextContent("output.timeseriesTraceOmittedPoints");
+      expect(screen.getByRole("alert")).toHaveTextContent("output.timeseriesTraceInvalidSeries");
+    });
+
+    it.each([
+      ["dt=0", { u: "V", t0: 0, dt: 0, v: [1] }],
+      ["empty", { u: "V", t: [], v: [] }],
+      ["non-finite", { u: "V", t: [0], v: [Number.NaN] }],
+    ])("labels an entirely invalid trace payload for %s", async (_label, invalid) => {
+      const user = userEvent.setup();
+      const cell = createOutputCell({
+        data: { schema: "ambit.trace/3", series: { invalid } },
+      });
+      render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+      await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
+
+      expect(screen.getByRole("alert")).toHaveTextContent("output.timeseriesTraceEmpty");
+      expect(screen.queryByTestId("plotly-chart")).not.toBeInTheDocument();
     });
   });
 });

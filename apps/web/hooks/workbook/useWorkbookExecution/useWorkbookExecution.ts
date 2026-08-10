@@ -13,6 +13,7 @@ import {
 } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 import { orpc, orpcClient } from "~/lib/orpc";
 import { getLiveProtocolCode } from "~/lib/protocol-code-registry";
+import { enrichDirectTracePayload } from "~/lib/trace-v3";
 import { parseApiError } from "~/util/apiError";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
@@ -59,18 +60,25 @@ function resolveSensorFamily(_cells: WorkbookCell[]): SensorFamily {
   return "multispeq";
 }
 
-async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unknown>[] | null> {
+interface ProtocolRunContext {
+  code: Record<string, unknown>[];
+  name?: string;
+}
+
+async function getProtocolRunContext(cell: ProtocolCell): Promise<ProtocolRunContext | null> {
   // Prefer the live editor code so the device runs exactly what is on screen,
   // with no redundant backend round-trip. Fall back to the last saved version
   // only when no editor is mounted for this protocol (or it holds invalid code).
   const live = getLiveProtocolCode(cell.payload.protocolId);
-  if (live && live.length > 0) return live;
+  if (live && live.length > 0) {
+    return { code: live, name: cell.payload.name };
+  }
 
   try {
     const result = await orpcClient.protocols.getProtocol({ id: cell.payload.protocolId });
     const code = result.code;
     if (code.length > 0) {
-      return code;
+      return { code, name: result.name || cell.payload.name };
     }
     return null;
   } catch {
@@ -269,8 +277,8 @@ export function useWorkbookExecution({
       currentCells: WorkbookCell[],
       deviceSubset?: IotDeviceConnection[],
     ) => {
-      const protocolCode = await getProtocolCode(cell);
-      if (!protocolCode) {
+      const protocolContext = await getProtocolRunContext(cell);
+      if (!protocolContext) {
         setCellState(cell.id, { status: "error", error: "Invalid or missing protocol code" });
         return insertOutputAfterCell(
           currentCells,
@@ -303,7 +311,20 @@ export function useWorkbookExecution({
       // Each driver runs with the family the handshake identified; switching
       // the toolbar family must not retarget live drivers.
       const settled = await Promise.allSettled(
-        devices.map((d) => executeProtocolWithDriver(d.driver, d.family, protocolCode)),
+        devices.map(async (device) => {
+          const startUtc = Date.now();
+          const data = await executeProtocolWithDriver(
+            device.driver,
+            device.family,
+            protocolContext.code,
+          );
+          return enrichDirectTracePayload(data, {
+            startUtc,
+            endUtc: Date.now(),
+            protocolId: cell.payload.protocolId,
+            protocolName: protocolContext.name,
+          });
+        }),
       );
       return finishDeviceFanOut(
         cell.id,

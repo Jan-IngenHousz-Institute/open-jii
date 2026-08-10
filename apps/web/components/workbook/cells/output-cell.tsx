@@ -3,6 +3,7 @@
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { isMultispeqOutput } from "@/lib/multispeq/detect";
+import { normalizeTracePayload } from "@/lib/trace-v3";
 import {
   AlertCircle,
   Check,
@@ -310,7 +311,9 @@ export function OutputCellComponent({
   );
   const protocolFamily = protocolResponse?.family;
   const protocolCode = protocolResponse?.code;
-  const showTimeseries = protocolFamily === "multispeq" && isMultispeqOutput(cell.data);
+  const showTimeseries =
+    normalizeTracePayload(cell.data) !== null ||
+    (protocolFamily === "multispeq" && isMultispeqOutput(cell.data));
 
   return (
     <div className="group/output relative mt-1 overflow-hidden rounded-[10px] border border-[#EDF2F6] bg-white">
@@ -390,7 +393,8 @@ export function OutputCellComponent({
                     key={result.deviceId}
                     result={result}
                     showTimeseries={
-                      protocolFamily === "multispeq" && isMultispeqOutput(result.data)
+                      normalizeTracePayload(result.data) !== null ||
+                      (protocolFamily === "multispeq" && isMultispeqOutput(result.data))
                     }
                     protocolCode={protocolCode}
                     protocolLoading={protocolLoading}

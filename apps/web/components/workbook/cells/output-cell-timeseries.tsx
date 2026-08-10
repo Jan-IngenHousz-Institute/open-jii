@@ -3,6 +3,7 @@
 import { extractMeasurement } from "@/lib/multispeq/detect";
 import type { InputRecord, OutputRecord, ProtocolJson } from "@/lib/multispeq/pipeline";
 import { LED_COLORS, LED_NAMES, measurementToTimeseries } from "@/lib/multispeq/pipeline";
+import { normalizeTracePayload } from "@/lib/trace-v3";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -11,6 +12,8 @@ import { PlotlyChart } from "@repo/ui/components/charts/plotly-chart";
 // re-export them through the UI charts module so we don't pull plotly.js
 // into web's package.json just to type a layout object.
 import type { Layout, PlotData, Shape } from "@repo/ui/components/charts/types";
+
+import { OutputCellTraceTimeseries } from "./output-cell-trace-timeseries";
 
 interface OutputCellTimeseriesProps {
   data: unknown;
@@ -267,6 +270,7 @@ export function OutputCellTimeseries({
   errorLabel,
 }: OutputCellTimeseriesProps) {
   const { t } = useTranslation("workbook");
+  const normalizedTrace = useMemo(() => normalizeTracePayload(data), [data]);
 
   const decoded = useMemo(() => {
     const measurement = extractMeasurement(data);
@@ -278,6 +282,17 @@ export function OutputCellTimeseries({
       return null;
     }
   }, [data, protocolCode]);
+
+  // Self-describing traces already carry their time model and units. They do
+  // not need the MultispeQ protocol join or wait for that protocol query.
+  if (normalizedTrace) {
+    return (
+      <OutputCellTraceTimeseries
+        normalized={normalizedTrace}
+        emptyLabel={t("output.timeseriesTraceEmpty")}
+      />
+    );
+  }
 
   if (loading) {
     return (

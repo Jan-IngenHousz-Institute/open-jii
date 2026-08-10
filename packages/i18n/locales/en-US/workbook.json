@@ -98,6 +98,13 @@
     "timeseriesYAxis": "Normalized signal",
     "timeseriesActinic": "Actinic light (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "No detector readings to plot",
+    "timeseriesTraceEmpty": "Invalid trace payload: no valid series to plot",
+    "timeseriesTraceRun": "Run {{index}}",
+    "timeseriesTraceOmittedPoints_one": "{{count}} malformed or unmatched point omitted.",
+    "timeseriesTraceOmittedPoints_other": "{{count}} malformed or unmatched points omitted.",
+    "timeseriesTraceInvalidSeries_one": "{{count}} invalid or empty series could not be plotted.",
+    "timeseriesTraceInvalidSeries_other": "{{count}} invalid or empty series could not be plotted.",
+    "timeseriesEstimatedTime": "Estimated timestamps",
     "timeseriesError": "Cannot decode this output against the source protocol"
   },
   "cells": {

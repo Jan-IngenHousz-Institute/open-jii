@@ -90,6 +90,13 @@
     "timeseriesYAxis": "Genormaliseerd signaal",
     "timeseriesActinic": "Actinisch licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Geen detectorwaarden om te plotten",
+    "timeseriesTraceEmpty": "Ongeldige trace-payload: geen geldige reeksen om te plotten",
+    "timeseriesTraceRun": "Run {{index}}",
+    "timeseriesTraceOmittedPoints_one": "{{count}} ongeldig of niet-overeenkomend punt is weggelaten.",
+    "timeseriesTraceOmittedPoints_other": "{{count}} ongeldige of niet-overeenkomende punten zijn weggelaten.",
+    "timeseriesTraceInvalidSeries_one": "{{count}} ongeldige of lege reeks kon niet worden geplot.",
+    "timeseriesTraceInvalidSeries_other": "{{count}} ongeldige of lege reeksen konden niet worden geplot.",
+    "timeseriesEstimatedTime": "Geschatte tijdstempels",
     "timeseriesError": "Deze uitvoer kan niet worden gedecodeerd met het bronprotocol"
   },
   "cells": {

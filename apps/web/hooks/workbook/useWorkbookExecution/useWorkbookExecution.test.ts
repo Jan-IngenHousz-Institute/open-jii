@@ -8,6 +8,7 @@ import {
   createProtocolCell,
   createQuestionCell,
 } from "@/test/factories";
+import liveAmbitEnvelope from "@/test/fixtures/ambit-trace-v3-live.json";
 import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { renderHook, act } from "@/test/test-utils";
@@ -17,6 +18,7 @@ import {
   __resetProtocolCodeRegistry,
   registerProtocolCodeSource,
 } from "~/lib/protocol-code-registry";
+import { normalizeTracePayload } from "~/lib/trace-v3";
 
 import { contract } from "@repo/api/contract";
 import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
@@ -197,6 +199,95 @@ describe("useWorkbookExecution", () => {
       const outputCell = findOutput(updated);
       expect(outputCell?.data).toEqual({ measurement: 42 });
       expect(outputCell?.producedBy).toBe(proto.id);
+    });
+
+    it("anchors and stores every direct v3 trace with fetched protocol provenance", async () => {
+      const base = createProtocolCell();
+      const proto = {
+        ...base,
+        payload: { ...base.payload, name: "Stale workbook snapshot" },
+      };
+      const protocol = createProtocol({
+        id: proto.payload.protocolId,
+        name: "Fresh fetched name",
+        code: [{ _protocol_set_: [] }],
+      });
+      server.mount(contract.protocols.getProtocol, { body: protocol });
+      mockConnections = [
+        {
+          ...mockConnection("ambit-1", "AmbitV003"),
+          family: "ambit",
+          identity: { family: "ambit", name: "AmbitV003", raw: {} },
+        },
+      ];
+      const firstTrace = structuredClone(liveAmbitEnvelope.sample[0]?.set[0]);
+      const secondTrace = structuredClone(liveAmbitEnvelope.sample[0]?.set[0]);
+      const directResponse = {
+        ...structuredClone(liveAmbitEnvelope),
+        sample: [
+          {
+            protocol_id: proto.payload.protocolId,
+            set: [
+              { snapshot: { temperature: 21 } },
+              firstTrace,
+              { error: "prior run failed" },
+              secondTrace,
+            ],
+          },
+        ],
+      };
+      mockExecuteProtocol.mockResolvedValue(directResponse);
+      const now = vi.spyOn(Date, "now").mockReturnValue(1785965160359);
+
+      const { result, onCellsChange } = renderExecution([proto]);
+      await act(() => result.current.runCell(proto.id));
+      now.mockRestore();
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      const outputCell = findOutput(updated);
+      const normalized = normalizeTracePayload(outputCell?.data);
+      const stored = normalizeTracePayload(outputCell?.deviceResults?.[0]?.data);
+      expect(normalized?.traces).toHaveLength(2);
+      expect(stored?.traces).toHaveLength(2);
+      for (const run of [...(normalized?.traces ?? []), ...(stored?.traces ?? [])]) {
+        expect(run.trace.time).toEqual({
+          duration_ms: 1845,
+          start_utc: 1785965160359,
+          end_utc: 1785965160359,
+        });
+        expect(run.trace.protocol).toMatchObject({
+          id: proto.payload.protocolId,
+          name: "Fresh fetched name",
+          cal_version: "439a0ac8",
+        });
+      }
+      expect(firstTrace).not.toHaveProperty("time.start_utc");
+      expect(secondTrace).not.toHaveProperty("protocol.id");
+    });
+
+    it("falls back to the workbook snapshot name when a fetched protocol has no name", async () => {
+      const base = createProtocolCell();
+      const proto = {
+        ...base,
+        payload: { ...base.payload, name: "Workbook snapshot name" },
+      };
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({
+          id: proto.payload.protocolId,
+          name: "",
+          code: [{ _protocol_set_: [] }],
+        }),
+      });
+      setMockConnected(true);
+      mockExecuteProtocol.mockResolvedValue(structuredClone(liveAmbitEnvelope));
+
+      const { result, onCellsChange } = renderExecution([proto]);
+      await act(() => result.current.runCell(proto.id));
+
+      const updated = onCellsChange.mock.calls[0][0] as WorkbookCell[];
+      expect(normalizeTracePayload(findOutput(updated)?.data)?.trace.protocol).toMatchObject({
+        name: "Workbook snapshot name",
+      });
     });
 
     it("fans out to every connected device and records per-device results", async () => {

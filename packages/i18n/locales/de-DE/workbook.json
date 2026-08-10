@@ -90,6 +90,13 @@
     "timeseriesYAxis": "Normalisiertes Signal",
     "timeseriesActinic": "Aktinisches Licht (µmol m⁻² s⁻¹)",
     "timeseriesEmpty": "Keine Detektor-Messwerte zum Plotten",
+    "timeseriesTraceEmpty": "Ungültige Trace-Nutzlast: keine gültigen Reihen zum Plotten",
+    "timeseriesTraceRun": "Durchlauf {{index}}",
+    "timeseriesTraceOmittedPoints_one": "{{count}} fehlerhafter oder nicht zugeordneter Punkt wurde ausgelassen.",
+    "timeseriesTraceOmittedPoints_other": "{{count}} fehlerhafte oder nicht zugeordnete Punkte wurden ausgelassen.",
+    "timeseriesTraceInvalidSeries_one": "{{count}} ungültige oder leere Reihe konnte nicht geplottet werden.",
+    "timeseriesTraceInvalidSeries_other": "{{count}} ungültige oder leere Reihen konnten nicht geplottet werden.",
+    "timeseriesEstimatedTime": "Geschätzte Zeitstempel",
     "timeseriesError": "Diese Ausgabe kann nicht mit dem Quellprotokoll dekodiert werden"
   },
   "cells": {

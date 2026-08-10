@@ -26,7 +26,8 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "test": "vitest"
   },
   "dependencies": {
     "i18next": "^25.10.10",
@@ -38,9 +39,12 @@
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
     "@types/react": "catalog:react19",
+    "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:testing"
   },
   "peerDependencies": {
     "next": "catalog:",
