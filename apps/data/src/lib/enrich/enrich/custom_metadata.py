@@ -8,10 +8,23 @@ MATCHABLE_MEASUREMENT_COLUMNS = ("device_id",)
 _META_RECORDS = "_meta_records"
 _QUESTIONS_DATA = "questions_data"
 
+_ORDERED_METADATA_SQL = """
+    transform(
+        array_sort(
+            collect_list(named_struct(
+                'created_at', created_at,
+                'metadata_id', metadata_id,
+                'json', to_json(metadata)
+            ))
+        ),
+        item -> parse_json(item.json)
+    )
+"""
+
 
 def _group_metadata(metadata_df):
-    """Collapse raw metadata rows into one row per experiment before joining."""
-    return metadata_df.groupBy("experiment_id").agg(F.collect_list("metadata").alias(_META_RECORDS))
+    """Collapse metadata oldest-first; later blobs take precedence when merged."""
+    return metadata_df.groupBy("experiment_id").agg(F.expr(_ORDERED_METADATA_SQL).alias(_META_RECORDS))
 
 
 def _match_value_sql(columns):
@@ -44,6 +57,7 @@ def _match_value_sql(columns):
 
 
 def _merge_sql(columns):
+    """Merge ordered blobs, with each later blob replacing repeated keys."""
     match_value = _match_value_sql(columns)
     return f"""
         aggregate(
@@ -72,7 +86,13 @@ def _merge_sql(columns):
                 WHEN acc IS NULL THEN x
                 WHEN x IS NULL THEN acc
                 ELSE parse_json(to_json(map_concat(
-                    cast(acc AS MAP<STRING, VARIANT>),
+                    map_filter(
+                        cast(acc AS MAP<STRING, VARIANT>),
+                        (k, v) -> NOT array_contains(
+                            map_keys(cast(x AS MAP<STRING, VARIANT>)),
+                            k
+                        )
+                    ),
                     cast(x AS MAP<STRING, VARIANT>)
                 )))
             END

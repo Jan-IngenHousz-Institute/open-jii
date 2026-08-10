@@ -1,6 +1,16 @@
 """Focused tests for custom metadata match-target SQL generation."""
 
-from enrich.custom_metadata import _match_value_sql, _merge_sql
+from enrich.custom_metadata import _ORDERED_METADATA_SQL, _match_value_sql, _merge_sql
+
+
+def test_metadata_blobs_are_ordered_by_persisted_creation_order() -> None:
+    sql = " ".join(_ORDERED_METADATA_SQL.split())
+
+    assert "array_sort( collect_list(named_struct(" in sql
+    assert "'created_at', created_at" in sql
+    assert "'metadata_id', metadata_id" in sql
+    assert "'json', to_json(metadata)" in sql
+    assert "item -> parse_json(item.json)" in sql
 
 
 def test_question_target_reads_questions_data() -> None:
@@ -37,3 +47,10 @@ def test_merge_uses_ansi_safe_first_match() -> None:
     assert "try_element_at(" in sql
     assert "filter(" in sql
     assert "column:device_id" in sql
+
+
+def test_later_blob_explicitly_replaces_repeated_keys() -> None:
+    sql = " ".join(_merge_sql(["questions_data"]).split())
+
+    assert "map_filter( cast(acc AS MAP<STRING, VARIANT>)" in sql
+    assert "map_keys(cast(x AS MAP<STRING, VARIANT>))" in sql
