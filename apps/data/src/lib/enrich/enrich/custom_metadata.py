@@ -21,6 +21,20 @@ _ORDERED_METADATA_SQL = """
     )
 """
 
+# Used inside an aggregate lambda bound as (acc, x), where x is the later blob.
+_MERGE_MAPS_SQL = """
+    map_concat(
+        map_filter(
+            cast(acc AS MAP<STRING, VARIANT>),
+            (k, v) -> NOT array_contains(
+                map_keys(cast(x AS MAP<STRING, VARIANT>)),
+                k
+            )
+        ),
+        cast(x AS MAP<STRING, VARIANT>)
+    )
+"""
+
 
 def _group_metadata(metadata_df):
     """Collapse metadata oldest-first; later blobs take precedence when merged."""
@@ -85,16 +99,7 @@ def _merge_sql(columns):
             (acc, x) -> CASE
                 WHEN acc IS NULL THEN x
                 WHEN x IS NULL THEN acc
-                ELSE parse_json(to_json(map_concat(
-                    map_filter(
-                        cast(acc AS MAP<STRING, VARIANT>),
-                        (k, v) -> NOT array_contains(
-                            map_keys(cast(x AS MAP<STRING, VARIANT>)),
-                            k
-                        )
-                    ),
-                    cast(x AS MAP<STRING, VARIANT>)
-                )))
+                ELSE parse_json(to_json({_MERGE_MAPS_SQL}))
             END
         )
     """
