@@ -71,14 +71,77 @@ describe("AmbitDriver", () => {
     expect(overflow).toHaveBeenCalledWith({ discardedBytes: DEFAULT_MAX_BUFFER_SIZE + 1 });
   });
 
-  it("rejects protocol JSON with a command-cell hint", async () => {
-    const transport = tableTransport({ "hello\n": HELLO_REPLY });
+  it("runs protocol JSON as one write and parses the footer-framed envelope", async () => {
+    const protocol = [{ label: "arrun,1,0,2,0,0,9,0,1,0,1" }];
+    const envelope =
+      '{"device_name":"Ambit","device_version":"1.1.4","device_battery":0,' +
+      '"device_firmware":"1.1.4","sample":[{"protocol_id":"NaN","set":[' +
+      '{"env":[{"temp_c":23.10}],"s_630":[159,164],"r_630":[4605,4604]}]}]}';
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      [`${JSON.stringify(protocol)}\n`]: [envelope.slice(0, 40), envelope.slice(40), "7A1E3AA1\n"],
+    });
     const driver = fastDriver();
     await driver.initialize(transport);
 
-    const result = await driver.execute([{ set: [] }]);
+    const result = await driver.execute<{ sample: { set: unknown[] }[] }>(protocol);
+
+    expect(result.success).toBe(true);
+    expect(result.checksum).toBe("7A1E3AA1");
+    expect(result.data?.sample[0].set).toHaveLength(1);
+    // The protocol went out as ONE write, JSON-serialized.
+    expect(transport.send).toHaveBeenCalledWith(`${JSON.stringify(protocol)}\n`);
+  });
+
+  it("re-wakes the device before a protocol write after console idle", async () => {
+    const protocol = [{ label: "arrun,1,0,2,0,0,9,0,1,0,1" }];
+    const envelope = '{"sample":[{"protocol_id":"NaN","set":[{"s_630":[1]}]}]}7A1E3AA1\n';
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      [`${JSON.stringify(protocol)}\n`]: envelope,
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+    vi.mocked(transport.send).mockClear();
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 30_000);
+
+    const result = await driver.execute(protocol);
+
+    expect(result.success).toBe(true);
+    expect(vi.mocked(transport.send).mock.calls.map(([payload]) => payload)).toEqual([
+      "hello\n",
+      `${JSON.stringify(protocol)}\n`,
+    ]);
+  });
+
+  it("surfaces a footer-less top-level error reply as a protocol failure", async () => {
+    const protocol = [{ label: "arrun,1,0" }];
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      [`${JSON.stringify(protocol)}\n`]: '{"error":"json_parse","detail":"InvalidInput"}\n',
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute(protocol);
+
     expect(result.success).toBe(false);
-    expect(result.error?.message).toMatch(/command cell/);
+    expect(result.error?.message).toMatch(/json_parse/);
+  });
+
+  it("times out a protocol whose envelope never completes", async () => {
+    const protocol = [{ label: "arrun,1,0,2,0,0,9,0,1,0,1" }];
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      [`${JSON.stringify(protocol)}\n`]: '{"sample":[{"set":[', // no footer, ever
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute(protocol, { timeoutMs: 80 });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.message).toBe("Response timeout");
   });
 
   it("parses the two-line get_par reply into par + channels", async () => {
