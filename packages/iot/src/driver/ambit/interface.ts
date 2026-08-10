@@ -1,3 +1,5 @@
+import type { OpenJiiMeasurementEnvelope } from "../../utils/framing/openjii-envelope";
+
 /** Events emitted by the Ambit driver */
 export interface AmbitStreamEvents extends Record<string, unknown> {
   /** A reply finished collecting (quiet window elapsed). */
@@ -12,14 +14,7 @@ export interface AmbitStreamEvents extends Record<string, unknown> {
  * JSON-envelope measurement reply (openjii_proto): `device_*` header fields
  * plus a `sample` array whose `set` carries one value per protocol command.
  */
-export interface AmbitMeasurementEnvelope {
-  device_name?: string;
-  device_version?: string;
-  device_battery?: number;
-  device_firmware?: string;
-  sample?: unknown[];
-  [key: string]: unknown;
-}
+export type AmbitMeasurementEnvelope = OpenJiiMeasurementEnvelope;
 
 /** Parsed `get_par` / `PAR` reply. */
 export interface AmbitParReading {
