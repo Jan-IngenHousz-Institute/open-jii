@@ -2,7 +2,7 @@ import { __resetProtocolCodeRegistry, getLiveProtocolCode } from "@/lib/protocol
 import { createProtocol, createProtocolDetail, readOnlyCapabilities } from "@/test/factories";
 import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -212,7 +212,9 @@ describe("ProtocolCellComponent", () => {
     await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
     await user.click(screen.getByTestId("simulate-change"));
 
-    await vi.advanceTimersByTimeAsync(1100);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1100);
+    });
     await waitFor(() => expect(updateSpy.called).toBe(true));
     expect(updateSpy.body).toEqual({ code: [{ measurement: "new", duration: 10 }] });
     vi.useRealTimers();

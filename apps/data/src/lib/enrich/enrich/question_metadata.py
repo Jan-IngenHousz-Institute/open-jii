@@ -68,18 +68,21 @@ def add_question_columns(df, question_labels):
         # Sanitize the label for use as column name
         sanitized_label = _sanitize_column_name(label)
 
-        # Create a column for each question label by finding the matching answer
-        # Use filter + first to get the answer for the specific question label
+        # Create a column for each question label by finding the matching answer.
+        # try_element_at keeps a missing label NULL under Spark's ANSI behavior.
         # Note: We still use the original label for filtering, but sanitized for column name
         result_df = result_df.withColumn(
             sanitized_label,
             F.when(
                 F.col("questions").isNotNull() & (F.size(F.col("questions")) > 0),
                 F.expr(f"""
-                    transform(
-                        filter(questions, q -> q.question_label = '{label}'),
-                        q -> q.question_answer
-                    )[0]
+                    try_element_at(
+                        transform(
+                            filter(questions, q -> q.question_label = '{label}'),
+                            q -> q.question_answer
+                        ),
+                        1
+                    )
                 """),
             ).otherwise(F.lit(None).cast(StringType())),
         )

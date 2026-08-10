@@ -1,34 +1,27 @@
-"""Focused tests for custom metadata match-target SQL generation."""
+"""Focused tests for custom metadata match and merge behavior."""
 
-import json
 from datetime import datetime
 
 import pytest
-from enrich import custom_metadata
-from enrich.custom_metadata import _MERGE_MAPS_SQL, _ORDERED_METADATA_SQL, _match_value_sql, _merge_sql
+from enrich.custom_metadata import _group_metadata, _match_value_sql, _merge_sql
 from pyspark.sql import functions as F
 
 
 @pytest.mark.spark
-def test_metadata_blobs_are_ordered_by_persisted_creation_order(spark, monkeypatch) -> None:
-    # Apache Spark 3.5 lacks Databricks parse_json/VARIANT. Keep the ordering
-    # expression intact and stub only that conversion boundary for local tests.
-    local_sql = _ORDERED_METADATA_SQL.replace("parse_json(item.json)", "item.json")
-    monkeypatch.setattr(custom_metadata, "_ORDERED_METADATA_SQL", local_sql)
-
+def test_metadata_blobs_are_ordered_by_persisted_creation_order(spark) -> None:
     metadata = spark.createDataFrame(
         [
-            ("experiment-1", datetime(2026, 1, 2), "a", {"value": "newest"}),
-            ("experiment-1", datetime(2026, 1, 1), "b", {"value": "aaa-second"}),
-            ("experiment-1", datetime(2026, 1, 1), "a", {"value": "zzz-first"}),
-            ("experiment-2", datetime(2026, 1, 3), "a", {"value": "only"}),
+            ("experiment-1", datetime(2026, 1, 2), "a", '{"value":"newest"}'),
+            ("experiment-1", datetime(2026, 1, 1), "b", '{"value":"aaa-second"}'),
+            ("experiment-1", datetime(2026, 1, 1), "a", '{"value":"zzz-first"}'),
+            ("experiment-2", datetime(2026, 1, 3), "a", '{"value":"only"}'),
         ],
-        "experiment_id STRING, created_at TIMESTAMP, metadata_id STRING, metadata MAP<STRING, STRING>",
-    )
+        "experiment_id STRING, created_at TIMESTAMP, metadata_id STRING, metadata_json STRING",
+    ).withColumn("metadata", F.parse_json("metadata_json"))
 
     grouped = {
-        row.experiment_id: [json.loads(item)["value"] for item in row._meta_records]
-        for row in custom_metadata._group_metadata(metadata).collect()
+        row.experiment_id: [item.toPython()["value"] for item in row._meta_records]
+        for row in _group_metadata(metadata).collect()
     }
 
     assert grouped == {
@@ -75,46 +68,26 @@ def test_merge_uses_ansi_safe_first_match() -> None:
 
 @pytest.mark.spark
 def test_later_blob_explicitly_replaces_repeated_keys(spark) -> None:
-    # The merge itself is standard Spark SQL; substitute STRING only for the
-    # Databricks-only VARIANT value type used in production.
-    local_merge_sql = _MERGE_MAPS_SQL.replace("VARIANT", "STRING")
     records = spark.createDataFrame(
         [
             (
+                '{"q1":"sample-1"}',
                 [
-                    {"shared": "old", "first_only": "kept"},
-                    {"shared": "new", "second_only": "kept"},
+                    """{"identifierColumnId":"sample","experimentQuestionId":"q1","rows":[{"sample":"sample-1","shared":"old","first_only":"kept"}]}""",
+                    """{"identifierColumnId":"sample","experimentQuestionId":"q1","rows":[{"sample":"sample-1","shared":"new","second_only":"kept"}]}""",
                 ],
             )
         ],
-        "records ARRAY<MAP<STRING, STRING>>",
+        "questions_json STRING, metadata_json ARRAY<STRING>",
+    ).select(
+        F.parse_json("questions_json").alias("questions_data"),
+        F.expr("transform(metadata_json, item -> parse_json(item))").alias("_meta_records"),
     )
 
-    merged = (
-        records.select(
-            F.expr(
-                f"""
-            aggregate(
-                records,
-                cast(map() AS MAP<STRING, STRING>),
-                (acc, x) -> {local_merge_sql}
-            )
-            """
-            ).alias("metadata")
-        )
-        .first()
-        .metadata
-    )
+    merged = records.select(F.expr(_merge_sql(records.columns)).alias("metadata")).first().metadata
 
-    assert merged == {
+    assert merged.toPython() == {
         "shared": "new",
         "first_only": "kept",
         "second_only": "kept",
     }
-
-
-def test_merge_sql_uses_explicit_later_blob_precedence() -> None:
-    sql = " ".join(_merge_sql(["questions_data"]).split())
-
-    assert "map_filter( cast(acc AS MAP<STRING, VARIANT>)" in sql
-    assert "map_keys(cast(x AS MAP<STRING, VARIANT>))" in sql
