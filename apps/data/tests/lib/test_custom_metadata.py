@@ -67,20 +67,29 @@ def test_merge_uses_ansi_safe_first_match() -> None:
 
 
 @pytest.mark.spark
-def test_later_blob_explicitly_replaces_repeated_keys(spark) -> None:
+@pytest.mark.parametrize(
+    ("match_key", "identifier_value"),
+    [
+        ("q1", "sample-1"),
+        ("column:device_id", "device-1"),
+    ],
+)
+def test_later_blob_explicitly_replaces_repeated_keys(spark, match_key, identifier_value) -> None:
     records = spark.createDataFrame(
         [
             (
                 '{"q1":"sample-1"}',
+                "device-1",
                 [
-                    """{"identifierColumnId":"sample","experimentQuestionId":"q1","rows":[{"sample":"sample-1","shared":"old","first_only":"kept"}]}""",
-                    """{"identifierColumnId":"sample","experimentQuestionId":"q1","rows":[{"sample":"sample-1","shared":"new","second_only":"kept"}]}""",
+                    f"""{{"identifierColumnId":"sample","experimentQuestionId":"{match_key}","rows":[{{"sample":"{identifier_value}","shared":"old","first_only":"kept"}}]}}""",
+                    f"""{{"identifierColumnId":"sample","experimentQuestionId":"{match_key}","rows":[{{"sample":"{identifier_value}","shared":"new","second_only":"kept"}}]}}""",
                 ],
             )
         ],
-        "questions_json STRING, metadata_json ARRAY<STRING>",
+        "questions_json STRING, device_id STRING, metadata_json ARRAY<STRING>",
     ).select(
         F.parse_json("questions_json").alias("questions_data"),
+        "device_id",
         F.expr("transform(metadata_json, item -> parse_json(item))").alias("_meta_records"),
     )
 

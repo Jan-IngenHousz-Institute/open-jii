@@ -2,7 +2,7 @@ import { __resetProtocolCodeRegistry, getLiveProtocolCode } from "@/lib/protocol
 import { createProtocol, createProtocolDetail, readOnlyCapabilities } from "@/test/factories";
 import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
-import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -196,7 +196,6 @@ describe("ProtocolCellComponent", () => {
   });
 
   it("debounces and persists protocol code edits when a user with update capability types valid JSON", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.protocols.getProtocol, {
       body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
@@ -204,7 +203,7 @@ describe("ProtocolCellComponent", () => {
       body: createProtocol({ id: "p1" }),
     });
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     render(
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
     );
@@ -212,12 +211,8 @@ describe("ProtocolCellComponent", () => {
     await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
     await user.click(screen.getByTestId("simulate-change"));
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1100);
-    });
-    await waitFor(() => expect(updateSpy.called).toBe(true));
+    await waitFor(() => expect(updateSpy.called).toBe(true), { timeout: 3000 });
     expect(updateSpy.body).toEqual({ code: [{ measurement: "new", duration: 10 }] });
-    vi.useRealTimers();
   });
 
   it("notifies the host after a successful save so the experiment can re-pin", async () => {
