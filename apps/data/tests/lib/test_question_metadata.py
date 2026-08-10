@@ -40,6 +40,7 @@ class TestAddQuestionColumns:
                 "questions": [
                     {"question_label": "Plant Height (cm)", "question_text": "?", "question_answer": "42"},
                     {"question_label": "Leaf Color", "question_text": "?", "question_answer": "green"},
+                    {"question_label": "Farmer's name", "question_text": "?", "question_answer": "Ada"},
                 ],
             },
             {
@@ -50,11 +51,12 @@ class TestAddQuestionColumns:
             },
         ]
         df = spark.createDataFrame(rows)
-        result = add_question_columns(df, ["Plant Height (cm)", "Leaf Color"]).collect()
+        result = add_question_columns(df, ["Plant Height (cm)", "Leaf Color", "Farmer's name"]).collect()
         by_id = {r.id: r.asDict() for r in result}
 
         assert by_id["1"]["plant_height_cm"] == "42"
         assert by_id["1"]["leaf_color"] == "green"
+        assert by_id["1"]["farmer's_name"] == "Ada"
         assert by_id["2"]["plant_height_cm"] == "37"
         assert by_id["2"]["leaf_color"] is None
 

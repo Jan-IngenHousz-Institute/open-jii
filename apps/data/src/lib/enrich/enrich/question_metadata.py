@@ -50,6 +50,16 @@ def _sanitize_column_name(label):
     return sanitized
 
 
+def _answer_for_label(label):
+    return F.try_element_at(
+        F.transform(
+            F.filter(F.col("questions"), lambda question: question.question_label == F.lit(label)),
+            lambda question: question.question_answer,
+        ),
+        F.lit(1),
+    )
+
+
 def add_question_columns(df, question_labels):
     """
     Add individual question columns to a DataFrame by extracting answers
@@ -75,15 +85,7 @@ def add_question_columns(df, question_labels):
             sanitized_label,
             F.when(
                 F.col("questions").isNotNull() & (F.size(F.col("questions")) > 0),
-                F.expr(f"""
-                    try_element_at(
-                        transform(
-                            filter(questions, q -> q.question_label = '{label}'),
-                            q -> q.question_answer
-                        ),
-                        1
-                    )
-                """),
+                _answer_for_label(label),
             ).otherwise(F.lit(None).cast(StringType())),
         )
 
