@@ -60,8 +60,7 @@ channels:
     description: |
       TRANSITIONAL: the legacy ingest shape with a trailing protocolId segment,
       published by fielded mobile builds. New publishers must use the shape
-      without protocolId. Delete this channel once the mobile fleet has rolled
-      over to a template without the protocolId segment.
+      without protocolId.
     parameters:
       experimentId:
         description: Unique identifier of the experiment (e.g., exp123).
