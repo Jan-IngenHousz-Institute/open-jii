@@ -1,13 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import {
-  and,
-  eq,
-  experimentMembers,
-  experiments,
-  resourceGrants,
-  workbookVersions,
-} from "@repo/database";
+import { and, eq, experiments, resourceGrants, workbookVersions } from "@repo/database";
 
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
 import {
@@ -135,10 +128,10 @@ describe("OnboardDeviceUseCase", () => {
     expect(result.value.experiments).toHaveLength(1);
   });
 
-  it("allows a plain member (not admin) to onboard", async () => {
+  it("allows a collaborator (not admin) to onboard", async () => {
     const member = await testApp.createTestUser({});
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
-    await testApp.addExperimentMember(experiment.id, member, "member");
+    await testApp.addExperimentCollaborator(experiment.id, member);
     const device = await createActiveDevice(member);
 
     const result = await useCase.execute(device.id, [experiment.id], member);
@@ -263,21 +256,12 @@ describe("OnboardDeviceUseCase", () => {
   it("refuses to re-issue when the caller lost access to a live binding", async () => {
     const member = await testApp.createTestUser({});
     const { experiment } = await testApp.createExperiment({ name: "Private", userId });
-    await testApp.addExperimentMember(experiment.id, member, "member");
+    await testApp.addExperimentCollaborator(experiment.id, member);
     const device = await createActiveDevice(member);
     await useCase.execute(device.id, [experiment.id], member);
 
-    await testApp.database
-      .delete(experimentMembers)
-      .where(
-        and(
-          eq(experimentMembers.experimentId, experiment.id),
-          eq(experimentMembers.userId, member),
-        ),
-      );
-
-    // Real member removal deletes the membership AND its mirrored grant
-    // (ExperimentMemberRepository does both), so the simulation must too.
+    // Access lives in grants alone: revoking the collaborator grant is what
+    // real collaborator removal does.
     await testApp.database
       .delete(resourceGrants)
       .where(
@@ -332,7 +316,7 @@ describe("OnboardDeviceUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
     expect(result.error.message).toBe(
-      "Only experiment members or managers can onboard a device to it",
+      "Only experiment collaborators or managers can onboard a device to it",
     );
   });
 

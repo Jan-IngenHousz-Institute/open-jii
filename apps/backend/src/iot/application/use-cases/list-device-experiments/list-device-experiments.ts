@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import type { DeviceExperimentDto } from "../../../core/models/experiment-device.model";
@@ -13,7 +12,6 @@ export class ListDeviceExperimentsUseCase {
   constructor(
     private readonly experimentDeviceRepository: ExperimentDeviceRepository,
     private readonly experimentRepository: ExperimentRepository,
-    private readonly authorizationService: AuthorizationService,
   ) {}
 
   async execute(deviceId: string, userId: string): Promise<Result<DeviceExperimentDto[]>> {
@@ -59,15 +57,6 @@ export class ListDeviceExperimentsUseCase {
       return failure(accessResult.error);
     }
 
-    if (accessResult.value.hasAccess) {
-      return success(true);
-    }
-
-    const decision = await this.authorizationService.can(userId, {
-      resourceType: "experiment",
-      resourceId: experimentId,
-      action: "read",
-    });
-    return success(decision.allow);
+    return success(accessResult.value.hasAccess);
   }
 }

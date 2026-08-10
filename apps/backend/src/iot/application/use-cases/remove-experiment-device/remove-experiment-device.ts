@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../../experiments/core/models/experiment.model";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
@@ -13,7 +12,6 @@ export class RemoveExperimentDeviceUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDeviceRepository: ExperimentDeviceRepository,
-    private readonly authorizationService: AuthorizationService,
   ) {}
 
   async execute(experimentId: string, deviceId: string, userId: string): Promise<Result<void>> {
@@ -30,10 +28,10 @@ export class RemoveExperimentDeviceUseCase {
     return accessResult.chain(
       async ({
         experiment,
-        hasAccess,
+        canContribute,
       }: {
         experiment: ExperimentDto | null;
-        hasAccess: boolean;
+        canContribute: boolean;
       }) => {
         if (!experiment) {
           return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
@@ -41,19 +39,12 @@ export class RemoveExperimentDeviceUseCase {
 
         // Detach stays allowed on archived experiments: it is cleanup, and the
         // only way to stop re-issued configs from ever including the binding.
-        // Members and IAM experiment-updaters may detach; the public-read tier
-        // never grants update, so strangers on public experiments cannot.
-        if (!hasAccess) {
-          const decision = await this.authorizationService.can(userId, {
-            resourceType: "experiment",
-            resourceId: experimentId,
-            action: "update",
-          });
-          if (!decision.allow) {
-            return failure(
-              AppError.forbidden("Only experiment members or managers can detach its devices"),
-            );
-          }
+        // The contribute tier (collaborators and managers) may detach; the
+        // public-read tier and plain org membership cannot.
+        if (!canContribute) {
+          return failure(
+            AppError.forbidden("Only experiment collaborators or managers can detach its devices"),
+          );
         }
 
         const removeResult = await this.experimentDeviceRepository.removeDevice(

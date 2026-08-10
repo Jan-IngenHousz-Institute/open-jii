@@ -220,8 +220,8 @@ describe("AnalysisNode macro output", () => {
   it("surfaces an empty sample envelope as a controlled processing failure", () => {
     const raw = { sample: [] };
     useMeasurementFlowStore.setState({
-      scanResult: raw as never,
-      scanResults: [{ result: raw as never }],
+      scanResult: raw,
+      scanResults: [{ result: raw }],
       producerCellId: "p1",
       cells: [
         {

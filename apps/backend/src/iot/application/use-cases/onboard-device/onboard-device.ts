@@ -4,8 +4,6 @@ import type { DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
 import { buildIngestTopicPrefix } from "@repo/api/transforms/iot-topic";
 import { compileDevicePlan } from "@repo/api/transforms/workbook-device-plan";
 
-import { AuthorizationService } from "../../../../authorization/authorization.service";
-import type { AccessDecision } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
@@ -18,8 +16,6 @@ import type { AwsPort } from "../../../core/ports/aws.port";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 
-type ExperimentAccessResult = Awaited<ReturnType<ExperimentRepository["checkAccess"]>>;
-
 @Injectable()
 export class OnboardDeviceUseCase {
   private readonly logger = new Logger(OnboardDeviceUseCase.name);
@@ -30,7 +26,6 @@ export class OnboardDeviceUseCase {
     private readonly deviceRepository: IotDeviceRepository,
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDeviceRepository: ExperimentDeviceRepository,
-    private readonly authorizationService: AuthorizationService,
   ) {}
 
   async execute(
@@ -155,12 +150,11 @@ export class OnboardDeviceUseCase {
     return { workbookVersion: exp.workbook.version, procedures: plan.procedures };
   }
 
-  // Binding requires membership of, or IAM update rights on, every target
-  // experiment; any missing, inaccessible, or archived experiment aborts the
-  // whole onboard. Access is settled before archived status is named, so
-  // lifecycle state never leaks to callers who cannot read the experiment.
-  // The public-read tier never grants update, so public experiments cannot be
-  // bound by strangers.
+  // Binding requires the contribute tier on every target experiment: admins
+  // and shared-with collaborators hold it, the public-read tier and plain org
+  // membership do not. Any missing, inaccessible, or archived experiment
+  // aborts the whole onboard. Access is settled before archived status is
+  // named, so lifecycle state never leaks to callers without access.
   private async checkBindingAccess(
     experimentIds: string[],
     userId: string,
@@ -170,20 +164,21 @@ export class OnboardDeviceUseCase {
         this.experimentRepository.checkAccess(experimentId, userId),
       ),
     );
-    const fallbackDecisions = await this.iamFallbackDecisions(accessResults, userId, "update");
 
     for (const [index, accessResult] of accessResults.entries()) {
       if (accessResult.isFailure()) {
         return accessResult.error;
       }
 
-      const { experiment, hasAccess } = accessResult.value;
+      const { experiment, canContribute } = accessResult.value;
       if (!experiment) {
         return AppError.notFound(`Experiment with ID ${experimentIds[index]} not found`);
       }
 
-      if (!hasAccess && !fallbackDecisions[index]?.allow) {
-        return AppError.forbidden("Only experiment members or managers can onboard a device to it");
+      if (!canContribute) {
+        return AppError.forbidden(
+          "Only experiment collaborators or managers can onboard a device to it",
+        );
       }
 
       if (experiment.status === "archived") {
@@ -207,10 +202,9 @@ export class OnboardDeviceUseCase {
     const accessResults = await Promise.all(
       live.map((binding) => this.experimentRepository.checkAccess(binding.id, userId)),
     );
-    const fallbackDecisions = await this.iamFallbackDecisions(accessResults, userId, "read");
 
     const accessible = new Set<string>();
-    for (const [index, accessResult] of accessResults.entries()) {
+    for (const accessResult of accessResults) {
       if (accessResult.isFailure()) {
         return failure(accessResult.error);
       }
@@ -220,7 +214,7 @@ export class OnboardDeviceUseCase {
         continue;
       }
 
-      if (!hasAccess && !fallbackDecisions[index]?.allow) {
+      if (!hasAccess) {
         return failure(
           AppError.forbidden(
             "The device serves experiments you don't have access to; onboarding requires access to all of them",
@@ -232,31 +226,5 @@ export class OnboardDeviceUseCase {
     }
 
     return success(accessible);
-  }
-
-  // IAM decisions for the callers membership does not cover (e.g. org admins),
-  // evaluated in one parallel batch instead of per-experiment awaits.
-  private iamFallbackDecisions(
-    accessResults: ExperimentAccessResult[],
-    userId: string,
-    action: "update" | "read",
-  ): Promise<(AccessDecision | null)[]> {
-    return Promise.all(
-      accessResults.map(async (accessResult) => {
-        if (
-          accessResult.isFailure() ||
-          !accessResult.value.experiment ||
-          accessResult.value.hasAccess
-        ) {
-          return null;
-        }
-
-        return this.authorizationService.can(userId, {
-          resourceType: "experiment",
-          resourceId: accessResult.value.experiment.id,
-          action,
-        });
-      }),
-    );
   }
 }

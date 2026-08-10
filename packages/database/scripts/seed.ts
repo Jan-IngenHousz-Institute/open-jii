@@ -781,30 +781,7 @@ async function main() {
 
   console.log(`  Created ${workbookSeeds.length} workbooks (pinned versions)`);
 
-  // 8. Mirror memberships into resource_grants the way production member
-  // writes do (ExperimentMemberRepository dual-writes), so guard-level can()
-  // sees the same access locally as it would in production.
-  await db.insert(resourceGrants).values([
-    ...createdExperiments.map((experiment) => ({
-      resourceType: "experiment" as const,
-      resourceId: experiment.id,
-      granteeType: "user" as const,
-      granteeId: user.id,
-      role: "admin",
-      createdBy: user.id,
-    })),
-    ...CONTRIBUTOR_SEEDS.map((c) => ({
-      resourceType: "experiment" as const,
-      resourceId: c.experimentId,
-      granteeType: "user" as const,
-      granteeId: c.id,
-      role: "member",
-      createdBy: user.id,
-    })),
-  ]);
-  console.log(`  Mirrored ${createdExperiments.length + CONTRIBUTOR_SEEDS.length} member grants`);
-
-  // 9. IoT devices across families and statuses. Thing/cert identifiers are
+  // 8. IoT devices across families and statuses. Thing/cert identifiers are
   // fakes; nothing here talks to AWS, so credential flows (issue, rotate,
   // revoke) still need a real device or localstack.
   const certFor = (slug: string) => ({
@@ -865,7 +842,7 @@ async function main() {
 
   console.log(`  Created ${createdDevices.length} IoT devices`);
 
-  // 10. Bind devices to experiments. Ambyte 01 also serves the archived
+  // 9. Bind devices to experiments. Ambyte 01 also serves the archived
   // experiment: it shows the archived badge in the device's list, is excluded
   // from re-issued configs, and stays detachable.
   const d = createdDevices;

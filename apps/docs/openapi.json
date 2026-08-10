@@ -3608,6 +3608,151 @@
         }
       }
     },
+    "/api/v1/experiments/{id}/devices": {
+      "get": {
+        "operationId": "experiments.listExperimentDevices",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "device": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "thingName": {
+                            "type": "string"
+                          },
+                          "serialNumber": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "deviceType": {
+                            "enum": [
+                              "multispeq",
+                              "ambyte",
+                              "minipar",
+                              "generic",
+                              "ambit"
+                            ],
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": [
+                              "pending",
+                              "active",
+                              "rotating",
+                              "revoked"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "thingName",
+                          "serialNumber",
+                          "name",
+                          "deviceType",
+                          "status"
+                        ]
+                      },
+                      "addedBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "device",
+                      "addedBy",
+                      "addedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/devices/{deviceId}": {
+      "delete": {
+        "operationId": "experiments.removeExperimentDevice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/experiments/{id}/metadata": {
       "get": {
         "operationId": "experiments.listExperimentMetadata",
@@ -13484,6 +13629,314 @@
                     "publicKey",
                     "privateKey"
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/onboard": {
+      "post": {
+        "operationId": "iot.onboardDevice",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "experimentIds": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 100,
+                    "description": "Experiments to bind the device to. An empty list re-issues the config."
+                  },
+                  "includeWorkbook": {
+                    "default": true,
+                    "type": "boolean",
+                    "description": "When false, the config carries only the connection and topic contract."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "thingName": {
+                      "type": "string"
+                    },
+                    "deviceType": {
+                      "enum": [
+                        "multispeq",
+                        "ambyte",
+                        "minipar",
+                        "generic",
+                        "ambit"
+                      ],
+                      "type": "string"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "description": "MQTT broker host (AWS IoT ATS data endpoint)"
+                    },
+                    "experiments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "experimentId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "experimentName": {
+                            "type": "string"
+                          },
+                          "topicPrefix": {
+                            "type": "string",
+                            "description": "Ingest topic prefix (experiment/data_ingest/v1/{experimentId}/{sensorType}); the device appends /{sensorVersion}/{sensorId}/{protocolId} per measurement."
+                          },
+                          "workbookVersion": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Pinned workbook version the procedures were compiled from"
+                          },
+                          "procedures": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "protocol"
+                                    },
+                                    "protocolId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "family": {
+                                      "enum": [
+                                        "multispeq",
+                                        "ambyte",
+                                        "minipar",
+                                        "generic",
+                                        "ambit"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "code": {
+                                      "description": "The protocol's executable code, snapshotted at workbook publish"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "protocolId"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "command"
+                                    },
+                                    "format": {
+                                      "enum": [
+                                        "string",
+                                        "json",
+                                        "yaml"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "content": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "format",
+                                    "content"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "question"
+                                    },
+                                    "id": {
+                                      "type": "string",
+                                      "description": "Workbook cell id; delivery-time answers key on it"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "description": "Canonical column key the pipeline uses for this question"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "yes_no",
+                                        "open_ended",
+                                        "multi_choice",
+                                        "number"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "text": {
+                                      "type": "string"
+                                    },
+                                    "options": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": {
+                                      "type": "boolean"
+                                    },
+                                    "answer": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Prefilled at delivery; the device attaches it to every measurement"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "id",
+                                    "name",
+                                    "kind",
+                                    "text",
+                                    "required",
+                                    "answer"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "experimentId",
+                          "experimentName",
+                          "topicPrefix",
+                          "workbookVersion",
+                          "procedures"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "thingName",
+                    "deviceType",
+                    "endpoint",
+                    "experiments"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/experiments": {
+      "get": {
+        "operationId": "iot.listDeviceExperiments",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "active",
+                          "stale",
+                          "archived",
+                          "published"
+                        ],
+                        "type": "string"
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "status",
+                      "addedAt"
+                    ]
+                  }
                 }
               }
             }
