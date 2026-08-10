@@ -411,7 +411,7 @@ dev = [
     { name = "chispa", specifier = ">=0.10" },
     { name = "pyarrow", specifier = ">=10.0" },
     { name = "pyright", specifier = ">=1.1.385" },
-    { name = "pyspark", specifier = ">=3.5,<4" },
+    { name = "pyspark", specifier = "==4.0.1" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-cov", specifier = ">=5.0" },
     { name = "responses", specifier = ">=0.25" },
@@ -591,12 +591,12 @@ wheels = [
 
 [[package]]
 name = "pyspark"
-version = "3.5.8"
+version = "4.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "py4j" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/80/5a/3806f44eb47387e8af803508cdd6bbc0df784febf4dc010700be04a1ff89/pyspark-3.5.8.tar.gz", hash = "sha256:54cca0767b21b40e3953ad1d30f8601c53abf9cbda763653289cdcfcac52313c", size = 317817299, upload-time = "2026-01-15T11:46:14.487Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/40/1414582f16c1d7b051c668c2e19c62d21a18bd181d944cb24f5ddbb2423f/pyspark-4.0.1.tar.gz", hash = "sha256:9d1f22d994f60369228397e3479003ffe2dd736ba79165003246ff7bd48e2c73", size = 434204896, upload-time = "2025-09-06T07:15:57.091Z" }
 
 [[package]]
 name = "pytest"

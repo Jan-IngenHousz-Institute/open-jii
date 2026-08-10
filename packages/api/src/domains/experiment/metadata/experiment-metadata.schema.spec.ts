@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  MATCHABLE_MEASUREMENT_COLUMNS,
   makeCustomMetadataFormSchema,
   zExperimentCustomMetadataPayload,
 } from "./experiment-metadata.schema";
@@ -19,6 +20,29 @@ describe("zExperimentCustomMetadataPayload", () => {
 
   it("accepts a well-formed payload", () => {
     expect(zExperimentCustomMetadataPayload.parse(validBlob)).toEqual(validBlob);
+  });
+
+  it("accepts a supported measurement column target", () => {
+    const blob = { ...validBlob, experimentQuestionId: "column:device_id" };
+
+    expect(zExperimentCustomMetadataPayload.parse(blob)).toEqual(blob);
+    expect(MATCHABLE_MEASUREMENT_COLUMNS).toEqual(["device_id"]);
+  });
+
+  it("keeps an unprefixed device_id as a question target", () => {
+    const blob = { ...validBlob, experimentQuestionId: "device_id" };
+    expect(zExperimentCustomMetadataPayload.safeParse(blob).success).toBe(true);
+  });
+
+  it("rejects an unsupported measurement column target", () => {
+    const blob = { ...validBlob, experimentQuestionId: "column:device_name" };
+    const result = zExperimentCustomMetadataPayload.safeParse(blob);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path.join(".") === "experimentQuestionId");
+      expect(issue?.message).toContain("device_id");
+    }
   });
 
   it("rejects empty/whitespace column names", () => {
