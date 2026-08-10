@@ -69,6 +69,13 @@
                           "type": "string",
                           "format": "uuid"
                         },
+                        "role": {
+                          "enum": [
+                            "admin",
+                            "member"
+                          ],
+                          "type": "string"
+                        },
                         "firstName": {
                           "type": "string"
                         },
@@ -100,7 +107,7 @@
                         "userId"
                       ]
                     },
-                    "description": "Optional collaborators to seed: each listed user receives a contributing grant on the new experiment. Higher tiers are handed out through the sharing endpoints."
+                    "description": "Optional array of member objects with userId and role"
                   },
                   "locations": {
                     "type": "array",
@@ -1000,10 +1007,18 @@
                     "type": "string",
                     "description": "Updated experiment status"
                   },
+                  "visibility": {
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
+                    "type": "string",
+                    "description": "Updated visibility setting"
+                  },
                   "embargoUntil": {
                     "type": "string",
                     "format": "date-time",
-                    "description": "Updated embargo end date and time (ISO datetime string, will be stored as UTC in database). Only editable while the experiment is still private."
+                    "description": "Updated embargo end date and time (ISO datetime string, will be stored as UTC in database)"
                   },
                   "anonymizeContributors": {
                     "type": "boolean",
@@ -1603,108 +1618,12 @@
                     },
                     "isAdmin": {
                       "type": "boolean"
-                    },
-                    "capabilities": {
-                      "type": "object",
-                      "properties": {
-                        "canContribute": {
-                          "type": "boolean"
-                        },
-                        "canUpdate": {
-                          "type": "boolean"
-                        },
-                        "canManage": {
-                          "type": "boolean"
-                        },
-                        "canShare": {
-                          "type": "boolean"
-                        },
-                        "canLeave": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "canContribute",
-                        "canUpdate",
-                        "canManage",
-                        "canShare",
-                        "canLeave"
-                      ]
                     }
                   },
                   "required": [
                     "experiment",
                     "hasAccess",
-                    "isAdmin",
-                    "capabilities"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/experiments/{id}/visibility": {
-      "patch": {
-        "operationId": "experiments.setVisibility",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the experiment"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "visibility": {
-                    "enum": [
-                      "private",
-                      "public"
-                    ],
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "visibility"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "visibility": {
-                      "enum": [
-                        "private",
-                        "public"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "visibility"
+                    "isAdmin"
                   ]
                 }
               }
@@ -3548,9 +3467,9 @@
         }
       }
     },
-    "/api/v1/experiments/{id}/contributors": {
+    "/api/v1/experiments/{id}/members": {
       "get": {
-        "operationId": "experiments.listExperimentContributors",
+        "operationId": "experiments.listExperimentMembers",
         "parameters": [
           {
             "name": "id",
@@ -3573,34 +3492,604 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "userId": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "firstName": {
-                        "type": "string"
-                      },
-                      "lastName": {
-                        "type": "string"
-                      },
-                      "avatarUrl": {
-                        "anyOf": [
-                          {
+                      "user": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "firstName": {
                             "type": "string"
                           },
-                          {
-                            "type": "null"
+                          "lastName": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "avatarUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
+                        },
+                        "required": [
+                          "id",
+                          "firstName",
+                          "lastName",
+                          "email",
+                          "avatarUrl"
                         ]
+                      },
+                      "role": {
+                        "enum": [
+                          "admin",
+                          "member"
+                        ],
+                        "type": "string"
+                      },
+                      "joinedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "experimentId": {
+                        "type": "string",
+                        "format": "uuid"
                       }
                     },
                     "required": [
-                      "userId",
-                      "firstName",
-                      "lastName",
-                      "avatarUrl"
+                      "user",
+                      "role",
+                      "joinedAt"
                     ]
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/members/batch": {
+      "post": {
+        "operationId": "experiments.addExperimentMembers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "members": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "userId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the user to add as a member"
+                        },
+                        "role": {
+                          "default": "member",
+                          "enum": [
+                            "admin",
+                            "member"
+                          ],
+                          "type": "string",
+                          "description": "ExperimentRole to assign to the new member"
+                        }
+                      },
+                      "required": [
+                        "userId"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "members"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "user": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "firstName": {
+                            "type": "string"
+                          },
+                          "lastName": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "avatarUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "firstName",
+                          "lastName",
+                          "email",
+                          "avatarUrl"
+                        ]
+                      },
+                      "role": {
+                        "enum": [
+                          "admin",
+                          "member"
+                        ],
+                        "type": "string"
+                      },
+                      "joinedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "experimentId": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "required": [
+                      "user",
+                      "role",
+                      "joinedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/members/{memberId}": {
+      "delete": {
+        "operationId": "experiments.removeExperimentMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the member"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "experiments.updateExperimentMemberRole",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the member"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "admin",
+                      "member"
+                    ],
+                    "type": "string",
+                    "description": "New role to assign to the member"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "firstName": {
+                          "type": "string"
+                        },
+                        "lastName": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "avatarUrl": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "firstName",
+                        "lastName",
+                        "email",
+                        "avatarUrl"
+                      ]
+                    },
+                    "role": {
+                      "enum": [
+                        "admin",
+                        "member"
+                      ],
+                      "type": "string"
+                    },
+                    "joinedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "role",
+                    "joinedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/transfer-admin": {
+      "post": {
+        "operationId": "experiments.transferExperimentAdmin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "transfers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "experimentId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Experiment to transfer admin rights on"
+                        },
+                        "targetUserId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "User to make an admin of the experiment"
+                        }
+                      },
+                      "required": [
+                        "experimentId",
+                        "targetUserId"
+                      ]
+                    },
+                    "minItems": 1,
+                    "description": "Per-experiment admin assignments"
+                  }
+                },
+                "required": [
+                  "transfers"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "experimentId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "success": {
+                            "type": "boolean"
+                          },
+                          "error": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "experimentId",
+                          "success"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "results"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/devices": {
+      "get": {
+        "operationId": "experiments.listExperimentDevices",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "device": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "thingName": {
+                            "type": "string"
+                          },
+                          "serialNumber": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "deviceType": {
+                            "enum": [
+                              "multispeq",
+                              "ambyte",
+                              "minipar",
+                              "generic",
+                              "ambit"
+                            ],
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": [
+                              "pending",
+                              "active",
+                              "rotating",
+                              "revoked"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "thingName",
+                          "serialNumber",
+                          "name",
+                          "deviceType",
+                          "status"
+                        ]
+                      },
+                      "addedBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "device",
+                      "addedBy",
+                      "addedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/devices/{deviceId}": {
+      "delete": {
+        "operationId": "experiments.removeExperimentDevice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
                 }
               }
             }
@@ -13161,33 +13650,6 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
-                    },
-                    "capabilities": {
-                      "type": "object",
-                      "properties": {
-                        "canContribute": {
-                          "type": "boolean"
-                        },
-                        "canUpdate": {
-                          "type": "boolean"
-                        },
-                        "canManage": {
-                          "type": "boolean"
-                        },
-                        "canShare": {
-                          "type": "boolean"
-                        },
-                        "canLeave": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "canContribute",
-                        "canUpdate",
-                        "canManage",
-                        "canShare",
-                        "canLeave"
-                      ]
                     }
                   },
                   "required": [
@@ -13204,8 +13666,7 @@
                     "organizationId",
                     "visibility",
                     "createdAt",
-                    "updatedAt",
-                    "capabilities"
+                    "updatedAt"
                   ]
                 }
               }
@@ -13491,6 +13952,314 @@
         }
       }
     },
+    "/api/v1/devices/{deviceId}/onboard": {
+      "post": {
+        "operationId": "iot.onboardDevice",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "experimentIds": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 100,
+                    "description": "Experiments to bind the device to. An empty list re-issues the config."
+                  },
+                  "includeWorkbook": {
+                    "default": true,
+                    "type": "boolean",
+                    "description": "When false, the config carries only the connection and topic contract."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "thingName": {
+                      "type": "string"
+                    },
+                    "deviceType": {
+                      "enum": [
+                        "multispeq",
+                        "ambyte",
+                        "minipar",
+                        "generic",
+                        "ambit"
+                      ],
+                      "type": "string"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "description": "MQTT broker host (AWS IoT ATS data endpoint)"
+                    },
+                    "experiments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "experimentId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "experimentName": {
+                            "type": "string"
+                          },
+                          "topicPrefix": {
+                            "type": "string",
+                            "description": "Ingest topic prefix (experiment/data_ingest/v1/{experimentId}/{sensorType}); the device appends /{sensorVersion}/{sensorId}/{protocolId} per measurement."
+                          },
+                          "workbookVersion": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Pinned workbook version the procedures were compiled from"
+                          },
+                          "procedures": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "protocol"
+                                    },
+                                    "protocolId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "family": {
+                                      "enum": [
+                                        "multispeq",
+                                        "ambyte",
+                                        "minipar",
+                                        "generic",
+                                        "ambit"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "code": {
+                                      "description": "The protocol's executable code, snapshotted at workbook publish"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "protocolId"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "command"
+                                    },
+                                    "format": {
+                                      "enum": [
+                                        "string",
+                                        "json",
+                                        "yaml"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "content": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "format",
+                                    "content"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "question"
+                                    },
+                                    "id": {
+                                      "type": "string",
+                                      "description": "Workbook cell id; delivery-time answers key on it"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "description": "Canonical column key the pipeline uses for this question"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "yes_no",
+                                        "open_ended",
+                                        "multi_choice",
+                                        "number"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "text": {
+                                      "type": "string"
+                                    },
+                                    "options": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": {
+                                      "type": "boolean"
+                                    },
+                                    "answer": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Prefilled at delivery; the device attaches it to every measurement"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "id",
+                                    "name",
+                                    "kind",
+                                    "text",
+                                    "required",
+                                    "answer"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "experimentId",
+                          "experimentName",
+                          "topicPrefix",
+                          "workbookVersion",
+                          "procedures"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "thingName",
+                    "deviceType",
+                    "endpoint",
+                    "experiments"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/experiments": {
+      "get": {
+        "operationId": "iot.listDeviceExperiments",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "active",
+                          "stale",
+                          "archived",
+                          "published"
+                        ],
+                        "type": "string"
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "status",
+                      "addedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/macros": {
       "get": {
         "operationId": "macros.listMacros",
@@ -13683,13 +14452,6 @@
                   "organizationId": {
                     "type": "string",
                     "format": "uuid"
-                  },
-                  "visibility": {
-                    "enum": [
-                      "private",
-                      "public"
-                    ],
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -13921,33 +14683,6 @@
                         "public"
                       ],
                       "type": "string"
-                    },
-                    "capabilities": {
-                      "type": "object",
-                      "properties": {
-                        "canContribute": {
-                          "type": "boolean"
-                        },
-                        "canUpdate": {
-                          "type": "boolean"
-                        },
-                        "canManage": {
-                          "type": "boolean"
-                        },
-                        "canShare": {
-                          "type": "boolean"
-                        },
-                        "canLeave": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "canContribute",
-                        "canUpdate",
-                        "canManage",
-                        "canShare",
-                        "canLeave"
-                      ]
                     }
                   },
                   "required": [
@@ -13961,8 +14696,7 @@
                     "createdAt",
                     "updatedAt",
                     "organizationId",
-                    "visibility",
-                    "capabilities"
+                    "visibility"
                   ]
                 }
               }
@@ -14161,73 +14895,6 @@
         }
       }
     },
-    "/api/v1/macros/{id}/visibility": {
-      "patch": {
-        "operationId": "macros.setVisibility",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "visibility": {
-                    "enum": [
-                      "private",
-                      "public"
-                    ],
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "visibility"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "visibility": {
-                      "enum": [
-                        "private",
-                        "public"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "visibility"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/macros/{id}/protocols": {
       "get": {
         "operationId": "macros.listCompatibleProtocols",
@@ -14324,8 +14991,7 @@
                       "type": "string",
                       "format": "uuid"
                     },
-                    "minItems": 1,
-                    "maxItems": 100
+                    "minItems": 1
                   }
                 },
                 "required": [
@@ -14979,13 +15645,6 @@
                   "organizationId": {
                     "type": "string",
                     "format": "uuid"
-                  },
-                  "visibility": {
-                    "enum": [
-                      "private",
-                      "public"
-                    ],
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -15223,33 +15882,6 @@
                         "public"
                       ],
                       "type": "string"
-                    },
-                    "capabilities": {
-                      "type": "object",
-                      "properties": {
-                        "canContribute": {
-                          "type": "boolean"
-                        },
-                        "canUpdate": {
-                          "type": "boolean"
-                        },
-                        "canManage": {
-                          "type": "boolean"
-                        },
-                        "canShare": {
-                          "type": "boolean"
-                        },
-                        "canLeave": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "canContribute",
-                        "canUpdate",
-                        "canManage",
-                        "canShare",
-                        "canLeave"
-                      ]
                     }
                   },
                   "required": [
@@ -15263,8 +15895,7 @@
                     "createdAt",
                     "updatedAt",
                     "organizationId",
-                    "visibility",
-                    "capabilities"
+                    "visibility"
                   ]
                 }
               }
@@ -15472,73 +16103,6 @@
         }
       }
     },
-    "/api/v1/protocols/{id}/visibility": {
-      "patch": {
-        "operationId": "protocols.setVisibility",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "visibility": {
-                    "enum": [
-                      "private",
-                      "public"
-                    ],
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "visibility"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "visibility": {
-                      "enum": [
-                        "private",
-                        "public"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "visibility"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/protocols/{id}/macros": {
       "get": {
         "operationId": "protocols.listCompatibleMacros",
@@ -15644,8 +16208,7 @@
                       "type": "string",
                       "format": "uuid"
                     },
-                    "minItems": 1,
-                    "maxItems": 100
+                    "minItems": 1
                   }
                 },
                 "required": [
@@ -15852,1076 +16415,6 @@
                           "title",
                           "subtitle",
                           "meta"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "results"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/{resourceType}/{id}/collaborators": {
-      "get": {
-        "operationId": "sharing.listGrants",
-        "parameters": [
-          {
-            "name": "resourceType",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "enum": [
-                "experiment",
-                "macro",
-                "protocol",
-                "workbook",
-                "device"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the resource being shared"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "const": "owner"
-                          },
-                          "granteeType": {
-                            "const": "user"
-                          },
-                          "granteeId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "grantee": {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "enum": [
-                                  "user",
-                                  "organization"
-                                ],
-                                "type": "string"
-                              },
-                              "displayName": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "email": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "avatarUrl": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "displayName",
-                              "email",
-                              "avatarUrl"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "granteeType",
-                          "granteeId",
-                          "grantee"
-                        ]
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "resourceType": {
-                            "enum": [
-                              "experiment",
-                              "macro",
-                              "protocol",
-                              "workbook",
-                              "device"
-                            ],
-                            "type": "string"
-                          },
-                          "resourceId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "granteeType": {
-                            "enum": [
-                              "user",
-                              "organization"
-                            ],
-                            "type": "string"
-                          },
-                          "granteeId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "role": {
-                            "enum": [
-                              "owner",
-                              "admin",
-                              "viewer"
-                            ],
-                            "type": "string"
-                          },
-                          "createdAt": {
-                            "type": "string"
-                          },
-                          "createdBy": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "isOutsideCollaborator": {
-                            "type": "boolean"
-                          },
-                          "grantee": {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "enum": [
-                                  "user",
-                                  "organization"
-                                ],
-                                "type": "string"
-                              },
-                              "displayName": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "email": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "avatarUrl": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "displayName",
-                              "email",
-                              "avatarUrl"
-                            ]
-                          },
-                          "kind": {
-                            "const": "grant"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "resourceType",
-                          "resourceId",
-                          "granteeType",
-                          "granteeId",
-                          "role",
-                          "createdAt",
-                          "createdBy",
-                          "isOutsideCollaborator",
-                          "grantee",
-                          "kind"
-                        ]
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "operationId": "sharing.createGrant",
-        "parameters": [
-          {
-            "name": "resourceType",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "enum": [
-                "experiment",
-                "macro",
-                "protocol",
-                "workbook",
-                "device"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the resource being shared"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "granteeType": {
-                    "enum": [
-                      "user",
-                      "organization"
-                    ],
-                    "type": "string"
-                  },
-                  "granteeId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "role": {
-                    "default": "viewer",
-                    "enum": [
-                      "admin",
-                      "viewer"
-                    ],
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "granteeType",
-                  "granteeId"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "const": "owner"
-                          },
-                          "granteeType": {
-                            "const": "user"
-                          },
-                          "granteeId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "grantee": {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "enum": [
-                                  "user",
-                                  "organization"
-                                ],
-                                "type": "string"
-                              },
-                              "displayName": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "email": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "avatarUrl": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "displayName",
-                              "email",
-                              "avatarUrl"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "granteeType",
-                          "granteeId",
-                          "grantee"
-                        ]
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "resourceType": {
-                            "enum": [
-                              "experiment",
-                              "macro",
-                              "protocol",
-                              "workbook",
-                              "device"
-                            ],
-                            "type": "string"
-                          },
-                          "resourceId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "granteeType": {
-                            "enum": [
-                              "user",
-                              "organization"
-                            ],
-                            "type": "string"
-                          },
-                          "granteeId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "role": {
-                            "enum": [
-                              "owner",
-                              "admin",
-                              "viewer"
-                            ],
-                            "type": "string"
-                          },
-                          "createdAt": {
-                            "type": "string"
-                          },
-                          "createdBy": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "isOutsideCollaborator": {
-                            "type": "boolean"
-                          },
-                          "grantee": {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "enum": [
-                                  "user",
-                                  "organization"
-                                ],
-                                "type": "string"
-                              },
-                              "displayName": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "email": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "avatarUrl": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "displayName",
-                              "email",
-                              "avatarUrl"
-                            ]
-                          },
-                          "kind": {
-                            "const": "grant"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "resourceType",
-                          "resourceId",
-                          "granteeType",
-                          "granteeId",
-                          "role",
-                          "createdAt",
-                          "createdBy",
-                          "isOutsideCollaborator",
-                          "grantee",
-                          "kind"
-                        ]
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/{resourceType}/{id}/collaborators/{grantId}": {
-      "patch": {
-        "operationId": "sharing.updateGrant",
-        "parameters": [
-          {
-            "name": "resourceType",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "enum": [
-                "experiment",
-                "macro",
-                "protocol",
-                "workbook",
-                "device"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the resource being shared"
-            }
-          },
-          {
-            "name": "grantId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the grant to modify"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "role": {
-                    "enum": [
-                      "admin",
-                      "viewer"
-                    ],
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "role"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "const": "owner"
-                          },
-                          "granteeType": {
-                            "const": "user"
-                          },
-                          "granteeId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "grantee": {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "enum": [
-                                  "user",
-                                  "organization"
-                                ],
-                                "type": "string"
-                              },
-                              "displayName": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "email": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "avatarUrl": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "displayName",
-                              "email",
-                              "avatarUrl"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "granteeType",
-                          "granteeId",
-                          "grantee"
-                        ]
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "resourceType": {
-                            "enum": [
-                              "experiment",
-                              "macro",
-                              "protocol",
-                              "workbook",
-                              "device"
-                            ],
-                            "type": "string"
-                          },
-                          "resourceId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "granteeType": {
-                            "enum": [
-                              "user",
-                              "organization"
-                            ],
-                            "type": "string"
-                          },
-                          "granteeId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "role": {
-                            "enum": [
-                              "owner",
-                              "admin",
-                              "viewer"
-                            ],
-                            "type": "string"
-                          },
-                          "createdAt": {
-                            "type": "string"
-                          },
-                          "createdBy": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "isOutsideCollaborator": {
-                            "type": "boolean"
-                          },
-                          "grantee": {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "enum": [
-                                  "user",
-                                  "organization"
-                                ],
-                                "type": "string"
-                              },
-                              "displayName": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "email": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "avatarUrl": {
-                                "anyOf": [
-                                  {
-                                    "type": "string"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "displayName",
-                              "email",
-                              "avatarUrl"
-                            ]
-                          },
-                          "kind": {
-                            "const": "grant"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "resourceType",
-                          "resourceId",
-                          "granteeType",
-                          "granteeId",
-                          "role",
-                          "createdAt",
-                          "createdBy",
-                          "isOutsideCollaborator",
-                          "grantee",
-                          "kind"
-                        ]
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "operationId": "sharing.revokeGrant",
-        "parameters": [
-          {
-            "name": "resourceType",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "enum": [
-                "experiment",
-                "macro",
-                "protocol",
-                "workbook",
-                "device"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the resource being shared"
-            }
-          },
-          {
-            "name": "grantId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the grant to modify"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "not": {}
-                    },
-                    {
-                      "not": {}
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/{resourceType}/{id}/collaborators/me": {
-      "delete": {
-        "operationId": "sharing.leaveResource",
-        "parameters": [
-          {
-            "name": "resourceType",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "enum": [
-                "experiment",
-                "macro",
-                "protocol",
-                "workbook",
-                "device"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the resource being shared"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "not": {}
-                    },
-                    {
-                      "not": {}
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/organizations/search": {
-      "get": {
-        "operationId": "sharing.searchGranteeOrganizations",
-        "parameters": [
-          {
-            "name": "query",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "description": "Name substring to match"
-            },
-            "allowEmptyValue": true,
-            "allowReserved": true
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "default": 20,
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "description": "Maximum number of organizations to return"
-            },
-            "allowEmptyValue": true,
-            "allowReserved": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "slug": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "name",
-                      "slug"
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/collaborators/transfer-admin": {
-      "post": {
-        "operationId": "sharing.transferResourceAdmin",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "transfers": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "resourceType": {
-                          "enum": [
-                            "experiment",
-                            "macro",
-                            "protocol",
-                            "workbook",
-                            "device"
-                          ],
-                          "type": "string",
-                          "description": "Type of resource to transfer admin on"
-                        },
-                        "resourceId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "description": "Resource to transfer admin rights on"
-                        },
-                        "targetUserId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "description": "User to make an admin of the resource"
-                        }
-                      },
-                      "required": [
-                        "resourceType",
-                        "resourceId",
-                        "targetUserId"
-                      ]
-                    },
-                    "minItems": 1,
-                    "description": "Per-resource admin assignments"
-                  }
-                },
-                "required": [
-                  "transfers"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "results": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "resourceType": {
-                            "enum": [
-                              "experiment",
-                              "macro",
-                              "protocol",
-                              "workbook",
-                              "device"
-                            ],
-                            "type": "string"
-                          },
-                          "resourceId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "success": {
-                            "type": "boolean"
-                          },
-                          "error": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "resourceType",
-                          "resourceId",
-                          "success"
                         ]
                       }
                     }
@@ -17329,21 +16822,11 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "resources": {
+                    "experiments": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "resourceType": {
-                            "enum": [
-                              "experiment",
-                              "macro",
-                              "protocol",
-                              "workbook",
-                              "device"
-                            ],
-                            "type": "string"
-                          },
                           "id": {
                             "type": "string",
                             "format": "uuid"
@@ -17352,20 +16835,13 @@
                             "type": "string"
                           },
                           "status": {
-                            "anyOf": [
-                              {
-                                "enum": [
-                                  "active",
-                                  "stale",
-                                  "archived",
-                                  "published"
-                                ],
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                            "enum": [
+                              "active",
+                              "stale",
+                              "archived",
+                              "published"
+                            ],
+                            "type": "string"
                           },
                           "candidates": {
                             "type": "array",
@@ -17403,7 +16879,6 @@
                           }
                         },
                         "required": [
-                          "resourceType",
                           "id",
                           "name",
                           "status",
@@ -17413,7 +16888,7 @@
                     }
                   },
                   "required": [
-                    "resources"
+                    "experiments"
                   ]
                 }
               }
@@ -17530,14 +17005,13 @@
                     "type": "string",
                     "format": "email"
                   },
-                  "tier": {
-                    "default": "viewer",
+                  "role": {
+                    "default": "member",
                     "enum": [
                       "admin",
-                      "viewer"
+                      "member"
                     ],
-                    "type": "string",
-                    "description": "Access tier to grant on acceptance"
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -17583,11 +17057,7 @@
                       "type": "string",
                       "format": "email"
                     },
-                    "tier": {
-                      "enum": [
-                        "admin",
-                        "viewer"
-                      ],
+                    "role": {
                       "type": "string"
                     },
                     "status": {
@@ -17622,7 +17092,7 @@
                     "resourceType",
                     "resourceId",
                     "email",
-                    "tier",
+                    "role",
                     "status",
                     "invitedBy",
                     "createdAt",
@@ -17699,11 +17169,7 @@
                         "type": "string",
                         "format": "email"
                       },
-                      "tier": {
-                        "enum": [
-                          "admin",
-                          "viewer"
-                        ],
+                      "role": {
                         "type": "string"
                       },
                       "status": {
@@ -17738,7 +17204,7 @@
                       "resourceType",
                       "resourceId",
                       "email",
-                      "tier",
+                      "role",
                       "status",
                       "invitedBy",
                       "createdAt",
@@ -17753,6 +17219,124 @@
       }
     },
     "/api/v1/invitations/{invitationId}": {
+      "patch": {
+        "operationId": "users.updateInvitationRole",
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the invitation"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "admin",
+                      "member"
+                    ],
+                    "type": "string",
+                    "description": "New role to assign to the invitation"
+                  }
+                },
+                "required": [
+                  "role"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resourceType": {
+                      "enum": [
+                        "platform",
+                        "experiment"
+                      ],
+                      "type": "string"
+                    },
+                    "resourceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "accepted",
+                        "revoked"
+                      ],
+                      "type": "string"
+                    },
+                    "invitedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "invitedByName": {
+                      "type": "string"
+                    },
+                    "resourceName": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "resourceType",
+                    "resourceId",
+                    "email",
+                    "role",
+                    "status",
+                    "invitedBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "operationId": "users.revokeInvitation",
         "parameters": [
@@ -18488,13 +18072,6 @@
                   "organizationId": {
                     "type": "string",
                     "format": "uuid"
-                  },
-                  "visibility": {
-                    "enum": [
-                      "private",
-                      "public"
-                    ],
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -19621,33 +19198,6 @@
                     "experimentCount": {
                       "type": "integer",
                       "minimum": 0
-                    },
-                    "capabilities": {
-                      "type": "object",
-                      "properties": {
-                        "canContribute": {
-                          "type": "boolean"
-                        },
-                        "canUpdate": {
-                          "type": "boolean"
-                        },
-                        "canManage": {
-                          "type": "boolean"
-                        },
-                        "canShare": {
-                          "type": "boolean"
-                        },
-                        "canLeave": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "canContribute",
-                        "canUpdate",
-                        "canManage",
-                        "canShare",
-                        "canLeave"
-                      ]
                     }
                   },
                   "required": [
@@ -19660,8 +19210,7 @@
                     "visibility",
                     "createdBy",
                     "createdAt",
-                    "updatedAt",
-                    "capabilities"
+                    "updatedAt"
                   ]
                 }
               }
@@ -20755,73 +20304,6 @@
                     {
                       "not": {}
                     }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workbooks/{id}/visibility": {
-      "patch": {
-        "operationId": "workbooks.setVisibility",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "visibility": {
-                    "enum": [
-                      "private",
-                      "public"
-                    ],
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "visibility"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "visibility": {
-                      "enum": [
-                        "private",
-                        "public"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "visibility"
                   ]
                 }
               }
