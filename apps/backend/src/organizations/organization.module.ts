@@ -7,6 +7,7 @@ import { MacroModule } from "../macros/macro.module";
 import { ProtocolModule } from "../protocols/protocol.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 import { AcceptPendingOrganizationInvitationsUseCase } from "./application/use-cases/accept-pending-organization-invitations/accept-pending-organization-invitations";
+import { AddOrganizationMemberUseCase } from "./application/use-cases/add-organization-member/add-organization-member";
 import { GetOrganizationDeletionBlockersUseCase } from "./application/use-cases/get-organization-deletion-blockers/get-organization-deletion-blockers";
 import { GetOrganizationUseCase } from "./application/use-cases/get-organization/get-organization";
 import { CancelMyOrganizationJoinRequestUseCase } from "./application/use-cases/join-requests/cancel-my-organization-join-request";
@@ -28,8 +29,10 @@ import { OrganizationJoinRequestsController } from "./presentation/organization-
 import { OrganizationController } from "./presentation/organization.controller";
 
 /**
- * Reads over the Better Auth organization models plus the join-request domain.
- * Writes on those models are Better Auth's, reached from the web through
+ * Reads over the Better Auth organization models plus the join-request domain, and
+ * the two writes on the member model that Better Auth has no path for: approving a
+ * join request and admitting a registered user outright. Everything else — the
+ * invitation lifecycle above all — is reached from the web through
  * `authClient.organization.*`; the hook class holds the shields that Better Auth's
  * own organization hooks do not fire for.
  *
@@ -54,6 +57,7 @@ import { OrganizationController } from "./presentation/organization.controller";
     GetOrganizationDeletionBlockersUseCase,
     ListOrganizationResourcesUseCase,
     ListOrganizationMembersUseCase,
+    AddOrganizationMemberUseCase,
     ListOrganizationTeamsUseCase,
     ListGranteeTeamsUseCase,
     RequestJoinOrganizationUseCase,

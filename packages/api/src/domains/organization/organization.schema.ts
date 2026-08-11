@@ -118,6 +118,19 @@ export const zOrganizationMembers = z.object({
   outsideCollaborators: z.array(zOutsideCollaborator),
 });
 
+/**
+ * Adding somebody who already has an account. An invitation exists to reach an
+ * address with no account behind it, so a registered user needs none: there is a
+ * user id to attach the membership to, and the person doing the adding already
+ * holds the authority to do it.
+ *
+ * `role` is bounded by the caller's own: only an owner may hand out `owner`.
+ */
+export const zAddOrganizationMemberBody = z.object({
+  userId: z.string().uuid().describe("ID of the registered user to admit"),
+  role: zOrganizationRole.default("member"),
+});
+
 export const zOrganizationResourceType = z.enum(["experiment", "macro", "protocol", "workbook"]);
 
 /**
@@ -205,6 +218,7 @@ export type MyOrganizationList = z.infer<typeof zMyOrganizationList>;
 export type OrganizationMember = z.infer<typeof zOrganizationMember>;
 export type OutsideCollaborator = z.infer<typeof zOutsideCollaborator>;
 export type OrganizationMembers = z.infer<typeof zOrganizationMembers>;
+export type AddOrganizationMemberBody = z.infer<typeof zAddOrganizationMemberBody>;
 export type OrganizationResourceType = z.infer<typeof zOrganizationResourceType>;
 export type OrganizationResource = z.infer<typeof zOrganizationResource>;
 export type OrganizationResources = z.infer<typeof zOrganizationResources>;

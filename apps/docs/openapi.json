@@ -15024,6 +15024,9 @@
                           "memberCount": {
                             "type": "integer"
                           },
+                          "resourceCount": {
+                            "type": "integer"
+                          },
                           "membershipStatus": {
                             "enum": [
                               "none",
@@ -15042,6 +15045,7 @@
                           "description",
                           "location",
                           "memberCount",
+                          "resourceCount",
                           "membershipStatus"
                         ]
                       }
@@ -15091,6 +15095,23 @@
                           }
                         ]
                       },
+                      "description": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "visibility": {
+                        "enum": [
+                          "private",
+                          "public"
+                        ],
+                        "type": "string"
+                      },
                       "role": {
                         "enum": [
                           "owner",
@@ -15104,15 +15125,21 @@
                       },
                       "memberCount": {
                         "type": "integer"
+                      },
+                      "resourceCount": {
+                        "type": "integer"
                       }
                     },
                     "required": [
                       "id",
                       "name",
                       "slug",
+                      "description",
+                      "visibility",
                       "role",
                       "isPersonal",
-                      "memberCount"
+                      "memberCount",
+                      "resourceCount"
                     ]
                   }
                 }
@@ -15492,6 +15519,110 @@
                   "required": [
                     "members",
                     "outsideCollaborators"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "organizations.addOrganizationMember",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the registered user to admit"
+                  },
+                  "role": {
+                    "default": "member",
+                    "enum": [
+                      "owner",
+                      "admin",
+                      "member"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "userId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "avatarUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "joinedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "firstName",
+                    "lastName",
+                    "email",
+                    "avatarUrl",
+                    "role",
+                    "joinedAt"
                   ]
                 }
               }

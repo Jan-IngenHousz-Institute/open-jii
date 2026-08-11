@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
@@ -5,12 +6,14 @@ import type {
   GranteeTeamList,
   MyOrganizationList,
   OrganizationDirectory,
+  OrganizationMember,
   OrganizationMembers,
   OrganizationProfile,
   OrganizationDeletionBlockers,
   OrganizationResources,
   OrganizationTeamList,
 } from "@repo/api/domains/organization/organization.schema";
+import { eq, organizationInvitations } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -421,6 +424,209 @@ describe("OrganizationController", () => {
       const privateOrg = await seedPrivateOrg();
 
       await testApp.get(path(privateOrg)).withAuth(outsiderId).expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("addOrganizationMember", () => {
+    const path = (id: string) =>
+      testApp.resolveOrpcPath(contract.organizations.addOrganizationMember, { id });
+
+    let adminId: string;
+
+    beforeEach(async () => {
+      adminId = await testApp.createTestUser({ email: "admin@example.com", name: "Adam Admin" });
+    });
+
+    /** A public organization staffed with an owner, an admin and a plain member. */
+    async function seedStaffedOrg() {
+      const organizationId = await seedPublicOrg();
+      await testApp.addOrganizationMember(organizationId, adminId, "admin");
+      return organizationId;
+    }
+
+    it("admits a registered user straight onto the roster, with no invitation", async () => {
+      const organizationId = await seedStaffedOrg();
+
+      const response: SuperTestResponse<OrganizationMember> = await testApp
+        .post(path(organizationId))
+        .withAuth(ownerId)
+        .send({ userId: outsiderId, role: "admin" })
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body).toMatchObject({
+        userId: outsiderId,
+        firstName: "Otto",
+        lastName: "Outsider",
+        role: "admin",
+      });
+
+      const roster: SuperTestResponse<OrganizationMembers> = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.organizations.listOrganizationMembers, {
+            id: organizationId,
+          }),
+        )
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+      expect(roster.body.members.map((member) => member.userId)).toContain(outsiderId);
+
+      // Instant means instant: nothing is left pending for the new member to accept.
+      const invitations = await testApp.database
+        .select({ id: organizationInvitations.id })
+        .from(organizationInvitations)
+        .where(eq(organizationInvitations.organizationId, organizationId));
+      expect(invitations).toHaveLength(0);
+    });
+
+    it("defaults the role to member", async () => {
+      const organizationId = await seedStaffedOrg();
+
+      const response: SuperTestResponse<OrganizationMember> = await testApp
+        .post(path(organizationId))
+        .withAuth(ownerId)
+        .send({ userId: outsiderId })
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body.role).toBe("member");
+    });
+
+    it("lets an admin admit members and admins", async () => {
+      const organizationId = await seedStaffedOrg();
+      const otherId = await testApp.createTestUser({
+        email: "other@example.com",
+        name: "Ola Other",
+      });
+
+      await testApp
+        .post(path(organizationId))
+        .withAuth(adminId)
+        .send({ userId: outsiderId, role: "member" })
+        .expect(StatusCodes.CREATED);
+      await testApp
+        .post(path(organizationId))
+        .withAuth(adminId)
+        .send({ userId: otherId, role: "admin" })
+        .expect(StatusCodes.CREATED);
+    });
+
+    it("refuses an admin handing out the owner role", async () => {
+      const organizationId = await seedStaffedOrg();
+
+      // Nobody hands out more than they hold — the same bound Better Auth puts on
+      // an invitation, restated because this write never reaches Better Auth.
+      await testApp
+        .post(path(organizationId))
+        .withAuth(adminId)
+        .send({ userId: outsiderId, role: "owner" })
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("lets an owner hand out the owner role", async () => {
+      const organizationId = await seedStaffedOrg();
+
+      const response: SuperTestResponse<OrganizationMember> = await testApp
+        .post(path(organizationId))
+        .withAuth(ownerId)
+        .send({ userId: outsiderId, role: "owner" })
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body.role).toBe("owner");
+    });
+
+    it("403s a plain member of the organization", async () => {
+      const organizationId = await seedStaffedOrg();
+
+      await testApp
+        .post(path(organizationId))
+        .withAuth(memberId)
+        .send({ userId: outsiderId, role: "member" })
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("403s a non-member of a public organization and 404s one of a private organization", async () => {
+      const publicOrg = await seedStaffedOrg();
+      const privateOrg = await seedPrivateOrg();
+      const targetId = await testApp.createTestUser({
+        email: "target@example.com",
+        name: "Tia Target",
+      });
+
+      await testApp
+        .post(path(publicOrg))
+        .withAuth(outsiderId)
+        .send({ userId: targetId, role: "member" })
+        .expect(StatusCodes.FORBIDDEN);
+      // A private organization cannot even confirm it exists.
+      await testApp
+        .post(path(privateOrg))
+        .withAuth(outsiderId)
+        .send({ userId: targetId, role: "member" })
+        .expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("409s somebody who is already on the roster", async () => {
+      const organizationId = await seedStaffedOrg();
+
+      await testApp
+        .post(path(organizationId))
+        .withAuth(ownerId)
+        .send({ userId: memberId, role: "admin" })
+        .expect(StatusCodes.CONFLICT);
+
+      // And their existing role is untouched by the attempt.
+      const roster: SuperTestResponse<OrganizationMembers> = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.organizations.listOrganizationMembers, {
+            id: organizationId,
+          }),
+        )
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+      expect(roster.body.members.find((member) => member.userId === memberId)?.role).toBe("member");
+    });
+
+    it("refuses a personal workspace", async () => {
+      const personalOrgId = await testApp.personalOrganizationId(ownerId);
+
+      // Personal workspaces have no roster to add to, and the whole organization
+      // surface answers not-found for them rather than refusing.
+      await testApp
+        .post(path(personalOrgId))
+        .withAuth(ownerId)
+        .send({ userId: outsiderId, role: "member" })
+        .expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("refuses a user id no discoverable account stands behind", async () => {
+      const organizationId = await seedStaffedOrg();
+      const deactivatedId = await testApp.createTestUser({
+        email: "dormant@example.com",
+        name: "Dora Dormant",
+        activated: false,
+      });
+      const closedId = await testApp.createTestUser({
+        email: "closed@example.com",
+        name: "Cleo Closed",
+        deletedAt: new Date(),
+      });
+
+      // The same set of people the user search offers: an account that never
+      // finished onboarding or has closed is offered by neither.
+      await testApp
+        .post(path(organizationId))
+        .withAuth(ownerId)
+        .send({ userId: deactivatedId, role: "member" })
+        .expect(StatusCodes.BAD_REQUEST);
+      await testApp
+        .post(path(organizationId))
+        .withAuth(ownerId)
+        .send({ userId: closedId, role: "member" })
+        .expect(StatusCodes.BAD_REQUEST);
+      await testApp
+        .post(path(organizationId))
+        .withAuth(ownerId)
+        .send({ userId: faker.string.uuid(), role: "member" })
+        .expect(StatusCodes.BAD_REQUEST);
     });
   });
 

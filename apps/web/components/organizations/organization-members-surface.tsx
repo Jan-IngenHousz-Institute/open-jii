@@ -55,6 +55,7 @@ export function OrganizationMembersSurface({ organizationId }: { organizationId:
   const pendingInvitationEmails = liveInvitations(invitations).map(
     (invitation) => invitation.email,
   );
+  const memberUserIds = members.map((member) => member.userId);
   const memberEmails = members
     .map((member) => member.email)
     .filter((email): email is string => email !== null);
@@ -128,7 +129,9 @@ export function OrganizationMembersSurface({ organizationId }: { organizationId:
           open={isInviteOpen}
           onOpenChange={setIsInviteOpen}
           invitableRoles={invitableRoles(actorRole)}
-          existingEmails={[...memberEmails, ...pendingInvitationEmails]}
+          memberUserIds={memberUserIds}
+          memberEmails={memberEmails}
+          pendingInvitationEmails={pendingInvitationEmails}
         />
       )}
     </div>

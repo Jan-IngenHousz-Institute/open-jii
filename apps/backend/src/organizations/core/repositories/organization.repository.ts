@@ -35,6 +35,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { userIsSelectableGrantee } from "../../../sharing/core/grantee-selectability";
 import { ALL_STAFFED_RESOURCES } from "../../../sharing/core/resource-staffing";
 import type {
   GranteeTeamDto,
@@ -102,6 +103,17 @@ function resourceCountSql(): SQL<number> {
     sql` + `,
   )})`.mapWith(Number);
 }
+
+/**
+ * What admitting a user directly can come to. `organization-gone` covers the whole
+ * class of "the organization stopped being one you may add to between the check and
+ * the write" — deleted, or turned into a personal workspace — because the caller's
+ * answer is the same either way: there is no such organization to add to.
+ */
+export type AddOrganizationMemberOutcome =
+  | { outcome: "added"; member: OrganizationMemberDto }
+  | { outcome: "already-member" }
+  | { outcome: "organization-gone" };
 
 /** Profile columns every people-shaped read in this domain selects. */
 const personFields = {
@@ -356,6 +368,93 @@ export class OrganizationRepository {
         .where(eq(organizationMembers.organizationId, organizationId))
         .orderBy(asc(organizationMembers.createdAt)),
     );
+  }
+
+  /** One roster row, as the roster itself renders it. */
+  private async findMember(
+    organizationId: string,
+    userId: string,
+  ): Promise<OrganizationMemberDto | null> {
+    const rows = await this.database
+      .select({
+        ...personFields,
+        role: organizationMembers.role,
+        joinedAt: organizationMembers.createdAt,
+      })
+      .from(organizationMembers)
+      .innerJoin(users, eq(users.id, organizationMembers.userId))
+      .leftJoin(profiles, eq(profiles.userId, users.id))
+      .where(
+        and(
+          eq(organizationMembers.organizationId, organizationId),
+          eq(organizationMembers.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  /**
+   * Whether a user may be admitted at all: an activated, undeleted account. The
+   * same predicate the grantee pickers select on, so what the invite dialog's
+   * search offers and what this write accepts are the same set of people — an
+   * account that closed or never finished onboarding is offered by neither.
+   */
+  async isAdmittableUser(userId: string): Promise<Result<boolean>> {
+    return tryCatch(() => userIsSelectableGrantee(this.database, userId));
+  }
+
+  /**
+   * Admit a registered user, but only while the organization is still one that may
+   * be added to. This is the second place where the module writes a Better Auth
+   * model directly — there is no Better Auth path that puts somebody on a roster
+   * without an invitation to accept.
+   *
+   * Written as one `INSERT … SELECT … WHERE` for the same reason the join-request
+   * insert is: the organization's state is re-tested by the statement that writes,
+   * so a delete or a slug change landing after the caller's access check cannot
+   * leave a membership behind. The row-share lock the foreign key takes on the
+   * organization row is what orders it against a concurrent deletion — a delete
+   * committed first leaves nothing for the `SELECT` to find, and one arriving after
+   * waits for this statement rather than cascading over a half-written row.
+   *
+   * `ON CONFLICT DO NOTHING` rather than a prior read: two admins adding the same
+   * person at once should both find them a member, not have the loser 500 on the
+   * unique index.
+   */
+  async addMember(
+    organizationId: string,
+    userId: string,
+    role: string,
+  ): Promise<Result<AddOrganizationMemberOutcome>> {
+    return tryCatch(async () => {
+      const inserted = await this.database.execute<{ id: string }>(sql`
+        INSERT INTO ${organizationMembers} ("organization_id", "user_id", "role")
+        SELECT ${organizations.id}, ${userId}::uuid, ${role}
+        FROM ${organizations}
+        WHERE ${organizations.id} = ${organizationId}::uuid
+          AND ${isNotPersonalOrgSql()}
+        ON CONFLICT DO NOTHING
+        RETURNING ${organizationMembers.id}
+      `);
+
+      if (inserted.length === 0) {
+        // Either they were already on the roster (the conflict) or the
+        // organization stopped existing; which of the two decides the answer.
+        const existing = await this.findMember(organizationId, userId);
+        return existing
+          ? { outcome: "already-member" as const }
+          : { outcome: "organization-gone" as const };
+      }
+
+      const member = await this.findMember(organizationId, userId);
+      // The row was just inserted, so it is there; the read is for its profile
+      // columns, not to confirm the write.
+      return member
+        ? { outcome: "added" as const, member }
+        : { outcome: "organization-gone" as const };
+    });
   }
 
   /**

@@ -1,9 +1,11 @@
 import { oc } from "@orpc/contract";
 
 import {
+  zAddOrganizationMemberBody,
   zGranteeTeamList,
   zGranteeTeamsPathParams,
   zMyOrganizationList,
+  zOrganizationMember,
   zOrganizationDeletionBlockers,
   zOrganizationDirectory,
   zOrganizationDirectoryQuery,
@@ -15,9 +17,10 @@ import {
 } from "./organization.schema";
 
 /**
- * Reads over the Better Auth organization models. Every write on those models goes
- * through `authClient.organization.*` instead — the plugin owns their state
- * machines — so this contract is deliberately GET-only.
+ * Reads over the Better Auth organization models, plus the one write on them that
+ * has no Better Auth path: admitting a registered user outright. Everything with a
+ * state machine behind it — invitations above all — still goes through
+ * `authClient.organization.*`, because the plugin owns that machine.
  *
  * Personal workspaces are excluded from all of it except `listMyOrganizations`,
  * which needs them as the default target of the resource create pickers.
@@ -72,6 +75,19 @@ export const organizationContract = {
     })
     .input(zOrganizationIdPathParam)
     .output(zOrganizationDeletionBlockers),
+  /**
+   * Admit a registered user straight onto the roster — the invite dialog's search
+   * result, which is a person with an account rather than an address to reach.
+   *
+   * Owners and admins, bounded by their own role: an admin may admit members and
+   * admins, only an owner may admit an owner. Somebody already on the roster is a
+   * conflict, not a silent no-op — the dialog offered them as addable and needs to
+   * be told it was wrong.
+   */
+  addOrganizationMember: oc
+    .route({ method: "POST", path: "/api/v1/organizations/{id}/members", successStatus: 201 })
+    .input(zOrganizationIdPathParam.merge(zAddOrganizationMemberBody))
+    .output(zOrganizationMember),
   /** Teams with their members, for the teams surface. Members only. */
   listOrganizationTeams: oc
     .route({ method: "GET", path: "/api/v1/organizations/{id}/teams", successStatus: 200 })

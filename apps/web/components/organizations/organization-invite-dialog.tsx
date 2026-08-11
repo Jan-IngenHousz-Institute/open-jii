@@ -1,9 +1,10 @@
 "use client";
 
+import { useAddOrganizationMember } from "@/hooks/organization/useAddOrganizationMember/useAddOrganizationMember";
 import { useInviteOrganizationMember } from "@/hooks/organization/useInviteOrganizationMember/useInviteOrganizationMember";
 import { useState } from "react";
-import { z } from "zod";
 import { authErrorMessage } from "~/hooks/organization/auth-organization-result";
+import { parseApiError } from "~/util/apiError";
 
 import type { OrganizationRole } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
@@ -16,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components/dialog";
-import { Input } from "@repo/ui/components/input";
 import { Label } from "@repo/ui/components/label";
 import {
   Select,
@@ -28,50 +28,57 @@ import {
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { organizationRoleLabelKey } from "./organization-labels";
-
-const emailSchema = z.string().email();
+import type { OrganizationInviteSelection } from "./organization-member-picker";
+import { OrganizationMemberPicker } from "./organization-member-picker";
 
 interface OrganizationInviteDialogProps {
   organizationId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /**
-   * The roles this actor may hand out. Only owners may invite an owner, so an
-   * admin's dialog simply does not offer it.
+   * The roles this actor may hand out. Only owners may make an owner, so an admin's
+   * dialog simply does not offer it.
    */
   invitableRoles: OrganizationRole[];
-  /** Addresses already invited or already members — refused before a round trip. */
-  existingEmails: string[];
+  /** Roster user ids — listed by the search, but not addable again. */
+  memberUserIds: string[];
+  /** Roster addresses, so a member the search cannot return is not invited either. */
+  memberEmails: string[];
+  /** Addresses with a live invitation. */
+  pendingInvitationEmails: string[];
 }
 
 /**
- * Invite by email address. Unlike resource sharing there is no user search here:
- * an organization invitation is addressed to an email, and whether an account
- * exists behind it is Better Auth's business — a new account that signs up with
- * the invited address has the invitation accepted for it automatically.
+ * Search first, invite second — the same two outcomes the sharing dialog offers.
+ *
+ * Somebody with an account is added outright: there is a user to attach the
+ * membership to, and waiting for them to accept an invitation to an organization
+ * whose owner already decided they belong in it is ceremony. An address no account
+ * answers to still gets Better Auth's email invitation, which is what that machinery
+ * is for — and signing up with the invited address still joins them automatically.
  */
 export function OrganizationInviteDialog({
   organizationId,
   open,
   onOpenChange,
   invitableRoles,
-  existingEmails,
+  memberUserIds,
+  memberEmails,
+  pendingInvitationEmails,
 }: OrganizationInviteDialogProps) {
   const { t } = useTranslation();
 
-  const [email, setEmail] = useState("");
+  const [selection, setSelection] = useState<OrganizationInviteSelection | null>(null);
   const [role, setRole] = useState<OrganizationRole>("member");
 
-  const { mutateAsync: invite, isPending } = useInviteOrganizationMember(organizationId);
+  const { mutateAsync: invite, isPending: isInviting } =
+    useInviteOrganizationMember(organizationId);
+  const { mutateAsync: addMember, isPending: isAdding } = useAddOrganizationMember();
 
-  const trimmedEmail = email.trim();
-  const isEmailValid = emailSchema.safeParse(trimmedEmail).success;
-  const isAlreadyPresent = existingEmails.some(
-    (existing) => existing.toLowerCase() === trimmedEmail.toLowerCase(),
-  );
+  const isPending = isInviting || isAdding;
 
   const reset = () => {
-    setEmail("");
+    setSelection(null);
     setRole("member");
   };
 
@@ -84,49 +91,53 @@ export function OrganizationInviteDialog({
   };
 
   const submit = async () => {
-    if (!isEmailValid || isAlreadyPresent) return;
+    if (!selection) return;
+
     try {
-      await invite({ email: trimmedEmail, role });
-      toast({ description: t("organizations.invite.sent", { email: trimmedEmail }) });
-      reset();
-      onOpenChange(false);
+      if (selection.kind === "user") {
+        await addMember({ id: organizationId, userId: selection.userId, role });
+        toast({ description: t("organizations.invite.added", { name: selection.displayName }) });
+      } else {
+        await invite({ email: selection.email, role });
+        toast({ description: t("organizations.invite.sent", { email: selection.email }) });
+      }
     } catch (err) {
-      // Keep the dialog and the typed address so a refusal can be read and fixed.
+      // Keep the dialog — and the picked person — so a refusal can be read and
+      // retried without searching again. The two paths fail through different
+      // clients, so each is unwrapped by its own reader.
       toast({
-        description: authErrorMessage(err) ?? t("organizations.invite.failed"),
+        description:
+          selection.kind === "user"
+            ? (parseApiError(err)?.message ?? t("organizations.invite.addFailed"))
+            : (authErrorMessage(err) ?? t("organizations.invite.failed")),
         variant: "destructive",
       });
+      return;
     }
+
+    reset();
+    onOpenChange(false);
   };
+
+  const isEmailInvite = selection?.kind === "email";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md" showCloseButton={!isPending}>
+      <DialogContent className="sm:max-w-lg" showCloseButton={!isPending}>
         <DialogHeader>
           <DialogTitle>{t("organizations.invite.title")}</DialogTitle>
           <DialogDescription>{t("organizations.invite.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="organization-invite-email">
-              {t("organizations.invite.emailLabel")}
-            </Label>
-            <Input
-              id="organization-invite-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t("organizations.invite.emailPlaceholder")}
-              disabled={isPending}
-              aria-invalid={trimmedEmail.length > 0 && (!isEmailValid || isAlreadyPresent)}
-            />
-            {trimmedEmail.length > 0 && !isEmailValid ? (
-              <p className="text-destructive text-xs">{t("organizations.invite.invalidEmail")}</p>
-            ) : isAlreadyPresent ? (
-              <p className="text-destructive text-xs">{t("organizations.invite.alreadyPresent")}</p>
-            ) : null}
-          </div>
+          <OrganizationMemberPicker
+            selection={selection}
+            onSelectionChange={setSelection}
+            memberUserIds={memberUserIds}
+            memberEmails={memberEmails}
+            pendingInvitationEmails={pendingInvitationEmails}
+            disabled={isPending}
+          />
 
           <div className="space-y-1.5">
             <Label htmlFor="organization-invite-role">{t("organizations.invite.roleLabel")}</Label>
@@ -154,11 +165,16 @@ export function OrganizationInviteDialog({
           <Button variant="ghost" onClick={() => handleOpenChange(false)} disabled={isPending}>
             {t("common.cancel")}
           </Button>
-          <Button
-            onClick={() => void submit()}
-            disabled={isPending || !isEmailValid || isAlreadyPresent}
-          >
-            {isPending ? t("organizations.invite.sending") : t("organizations.invite.submit")}
+          {/* Two outcomes, two labels: an invitation is sent and waited on, a
+              registered person is simply added. */}
+          <Button onClick={() => void submit()} disabled={isPending || !selection}>
+            {isPending
+              ? isEmailInvite
+                ? t("organizations.invite.sending")
+                : t("organizations.invite.adding")
+              : isEmailInvite
+                ? t("organizations.invite.submit")
+                : t("organizations.invite.addSubmit")}
           </Button>
         </DialogFooter>
       </DialogContent>

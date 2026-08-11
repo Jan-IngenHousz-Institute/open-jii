@@ -37,6 +37,20 @@ export function canManageMembership(access: OrganizationAccessRow): boolean {
 }
 
 /**
+ * Whether the caller may hand out `role`. Nobody may hand out more than they hold,
+ * so only an owner grants ownership — the same bound Better Auth puts on an
+ * invitation's role, restated here because admitting a user directly never goes
+ * through Better Auth's own gate.
+ */
+export function canGrantOrganizationRole(
+  access: OrganizationAccessRow,
+  role: "owner" | "admin" | "member",
+): boolean {
+  if (!canManageMembership(access)) return false;
+  return role === "owner" ? normalizeOrgRole(access.memberRole) === "owner" : true;
+}
+
+/**
  * Collapse a stored role string to the single canonical role. Rows written since
  * the organization plugin's role guard landed carry exactly one canonical spelling;
  * older ones may carry a comma-joined list, and the most privileged token in it is

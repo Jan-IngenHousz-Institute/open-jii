@@ -1,6 +1,9 @@
+import { createUserProfile } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { contract } from "@repo/api/contract";
 import { authClient } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -12,11 +15,13 @@ function renderDialog(
   const onOpenChange = vi.fn();
   const result = render(
     <OrganizationInviteDialog
-      organizationId="org-1"
+      organizationId="11111111-1111-4111-8111-111111111111"
       open
       onOpenChange={onOpenChange}
       invitableRoles={["admin", "member"]}
-      existingEmails={[]}
+      memberUserIds={[]}
+      memberEmails={[]}
+      pendingInvitationEmails={[]}
       {...overrides}
     />,
   );
@@ -24,37 +29,99 @@ function renderDialog(
 }
 
 const invite = () => vi.mocked(authClient.organization.inviteMember);
+const search = () => screen.getByLabelText("organizations.invite.searchLabel");
+
+/** Point the user search at one registered person. */
+function mountUserSearch(overrides: Parameters<typeof createUserProfile>[0] = {}) {
+  return server.mount(contract.users.searchUsers, {
+    body: [
+      createUserProfile({
+        userId: "22222222-2222-4222-8222-222222222222",
+        firstName: "Lin",
+        lastName: "Zhao",
+        email: "lin@uni.edu",
+        ...overrides,
+      }),
+    ],
+  });
+}
 
 describe("<OrganizationInviteDialog />", () => {
   afterEach(() => {
     invite().mockResolvedValue({ data: null, error: null });
   });
 
-  it("refuses to submit until an address is a valid one", async () => {
-    const user = userEvent.setup();
+  it("refuses to submit until somebody is picked", () => {
     renderDialog();
 
-    const submit = screen.getByRole("button", { name: "organizations.invite.submit" });
-    expect(submit).toBeDisabled();
-
-    await user.type(screen.getByLabelText("organizations.invite.emailLabel"), "not-an-email");
-    expect(screen.getByText("organizations.invite.invalidEmail")).toBeInTheDocument();
-    expect(submit).toBeDisabled();
-
-    await user.clear(screen.getByLabelText("organizations.invite.emailLabel"));
-    await user.type(screen.getByLabelText("organizations.invite.emailLabel"), "ada@example.com");
-    expect(submit).toBeEnabled();
+    expect(screen.getByRole("button", { name: "organizations.invite.addSubmit" })).toBeDisabled();
   });
 
-  it("refuses an address that is already a member or already invited", async () => {
+  it("adds a registered pick outright, with no invitation", async () => {
     const user = userEvent.setup();
-    renderDialog({ existingEmails: ["Ada@Example.com"] });
+    mountUserSearch();
+    const addSpy = server.mount(contract.organizations.addOrganizationMember, {
+      body: {
+        userId: "22222222-2222-4222-8222-222222222222",
+        firstName: "Lin",
+        lastName: "Zhao",
+        email: "lin@uni.edu",
+        avatarUrl: null,
+        role: "admin",
+        joinedAt: new Date().toISOString(),
+      },
+    });
+    const { onOpenChange } = renderDialog();
 
-    // Case-insensitively: an address is the same address whatever its casing.
-    await user.type(screen.getByLabelText("organizations.invite.emailLabel"), "ada@example.com");
+    await user.type(search(), "lin");
+    await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
+    await user.click(screen.getByText("Lin Zhao"));
 
-    expect(screen.getByText("organizations.invite.alreadyPresent")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "organizations.invite.submit" })).toBeDisabled();
+    await user.click(screen.getByRole("combobox", { name: /roleLabel/u }));
+    await user.click(screen.getByRole("option", { name: "organizations.roles.admin" }));
+
+    await user.click(screen.getByRole("button", { name: "organizations.invite.addSubmit" }));
+
+    // The wire body, not the hook call: a field lost between the pick and the
+    // request would otherwise pass unnoticed.
+    await waitFor(() => expect(addSpy.called).toBe(true));
+    expect(addSpy.body).toEqual({
+      userId: "22222222-2222-4222-8222-222222222222",
+      role: "admin",
+    });
+    expect(addSpy.params).toMatchObject({ id: "11111111-1111-4111-8111-111111111111" });
+    // No invitation is created for somebody who is already a member by now.
+    expect(invite()).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({ description: "organizations.invite.added" }),
+    );
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("sends an invitation for an address no account matches", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.users.searchUsers, { body: [] });
+    const addSpy = server.mount(contract.organizations.addOrganizationMember, { body: null });
+    const { onOpenChange } = renderDialog();
+
+    await user.type(search(), "stranger@uni.edu");
+    await waitFor(() =>
+      expect(screen.getByText("organizations.invite.sendByEmail")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByText("organizations.invite.sendByEmail"));
+
+    // The affordance itself changes: this one is sent and waited on.
+    await user.click(screen.getByRole("button", { name: "organizations.invite.submit" }));
+
+    await waitFor(() => {
+      expect(invite()).toHaveBeenCalledWith({
+        organizationId: "11111111-1111-4111-8111-111111111111",
+        email: "stranger@uni.edu",
+        role: "member",
+      });
+    });
+    expect(addSpy.called).toBe(false);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it("offers only the roles the actor may hand out", async () => {
@@ -70,43 +137,57 @@ describe("<OrganizationInviteDialog />", () => {
     expect(
       within(options).getByRole("option", { name: "organizations.roles.member" }),
     ).toBeVisible();
-    // Only owners grant the owner role, so an admin's dialog must not list it.
+    // Only owners make owners, so an admin's dialog must not list it.
     expect(
       within(options).queryByRole("option", { name: "organizations.roles.owner" }),
     ).not.toBeInTheDocument();
   });
 
-  it("sends the invitation and closes on success", async () => {
+  it("keeps the dialog and the pick when the add is refused", async () => {
     const user = userEvent.setup();
+    mountUserSearch();
+    server.mount(contract.organizations.addOrganizationMember, {
+      status: 409,
+      body: { message: "This person is already a member of this organization" },
+    });
     const { onOpenChange } = renderDialog();
 
-    await user.type(screen.getByLabelText("organizations.invite.emailLabel"), "ada@example.com");
-    await user.click(screen.getByRole("button", { name: "organizations.invite.submit" }));
+    await user.type(search(), "lin");
+    await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
+    await user.click(screen.getByText("Lin Zhao"));
+    await user.click(screen.getByRole("button", { name: "organizations.invite.addSubmit" }));
 
     await waitFor(() => {
-      expect(invite()).toHaveBeenCalledWith({
-        organizationId: "org-1",
-        email: "ada@example.com",
-        role: "member",
-      });
+      // The server's own wording: the reason is the actionable part, and the
+      // client does not restate its rules.
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          description: "This person is already a member of this organization",
+          variant: "destructive",
+        }),
+      );
     });
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(search()).toHaveValue("Lin Zhao");
   });
 
-  it("keeps the dialog and the typed address when the server refuses", async () => {
+  it("keeps the dialog and the address when the invitation is refused", async () => {
     const user = userEvent.setup();
+    server.mount(contract.users.searchUsers, { body: [] });
     invite().mockResolvedValue({
       data: null,
       error: { message: "You cannot invite members to a personal workspace" },
     });
     const { onOpenChange } = renderDialog();
 
-    await user.type(screen.getByLabelText("organizations.invite.emailLabel"), "ada@example.com");
+    await user.type(search(), "stranger@uni.edu");
+    await waitFor(() =>
+      expect(screen.getByText("organizations.invite.sendByEmail")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByText("organizations.invite.sendByEmail"));
     await user.click(screen.getByRole("button", { name: "organizations.invite.submit" }));
 
     await waitFor(() => {
-      // The server's own wording, not a generic failure: the reason is the
-      // actionable part and the client does not restate its rules.
       expect(toast).toHaveBeenCalledWith(
         expect.objectContaining({
           description: "You cannot invite members to a personal workspace",
@@ -115,6 +196,6 @@ describe("<OrganizationInviteDialog />", () => {
       );
     });
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
-    expect(screen.getByLabelText("organizations.invite.emailLabel")).toHaveValue("ada@example.com");
+    expect(search()).toHaveValue("stranger@uni.edu");
   });
 });
