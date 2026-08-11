@@ -58,7 +58,7 @@ vi.mock("@repo/iot", () => ({
 
 // Mock device-type-mapping (web-layer mapping from SensorFamily to DeviceType)
 vi.mock("../device-type-mapping", () => ({
-  sensorFamilyToDeviceType: (family: string) => (family === "ambyte" ? "ambit" : family),
+  sensorFamilyToDeviceType: (family: string) => family,
 }));
 
 // Mock transport adapters
@@ -164,7 +164,7 @@ describe("useIotCommunication", () => {
       });
     });
 
-    it("errors when connecting ambyte via bluetooth (Ambit hardware is serial-only)", async () => {
+    it("errors when connecting ambyte via bluetooth (edge devices are serial-only)", async () => {
       // The hook logs the thrown connection error via console.error; expected here.
       vi.spyOn(console, "error").mockImplementation(() => {
         // no-op

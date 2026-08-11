@@ -20,7 +20,7 @@ export type TransportType = "bluetooth-classic" | "ble" | "usb" | "web-bluetooth
 export type TransportCategory = "bluetooth" | "serial";
 
 /** Supported device types */
-export type DeviceType = "multispeq" | "ambit" | "minipar" | "generic";
+export type DeviceType = "multispeq" | "ambit" | "minipar" | "ambyte" | "generic";
 
 /** Transport support declaration for a device type */
 export interface DeviceTransportSupport {
@@ -67,6 +67,14 @@ export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport
     supportsStoredConfig: false,
   },
   minipar: {
+    supportedTransports: ["serial"],
+    supportsBLE: false,
+    supportsBluetoothClassic: false,
+    supportsStoredConfig: false,
+  },
+  // Ambyte edge devices have no onboarding commands over a direct connection;
+  // their config is loaded at provisioning time, so stored-config push stays off.
+  ambyte: {
     supportedTransports: ["serial"],
     supportsBLE: false,
     supportsBluetoothClassic: false,

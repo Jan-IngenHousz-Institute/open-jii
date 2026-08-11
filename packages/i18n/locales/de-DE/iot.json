@@ -206,6 +206,7 @@
       "loadError": "Experimente konnten nicht geladen werden. Bitte erneut versuchen.",
       "inactiveDevice": "Dieses Gerät hat keine aktiven Zugangsdaten und kann daher nicht onboardet werden. Stellen Sie zuerst Zugangsdaten aus.",
       "inlineProcedureNote": "Dieses Gerät akzeptiert keine gespeicherte Konfiguration; es erhält sein Verfahren pro Messung. Laden Sie die Konfiguration stattdessen herunter.",
+      "provisionNote": "Dieses Gerät kann nicht über eine Direktverbindung konfiguriert werden. Laden Sie die Konfiguration herunter und übertragen Sie sie bei der Bereitstellung auf das Gerät.",
       "includeWorkbook": "Workbook-Prozeduren in die Konfiguration aufnehmen",
       "questionsTitle": "Antworten auf Messfragen vorbelegen",
       "questionsDescription": "Ein Gerät kann Fragen nicht interaktiv beantworten; hier gesetzte Antworten reisen in der Konfiguration mit und werden jeder Messung angehängt.",

@@ -186,10 +186,10 @@ describe("DeviceConfigDelivery", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("is download-only for ambyte, which is Ambit hardware", () => {
+  it("is download-only for ambyte, with the provisioning note", () => {
     render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
 
-    expect(screen.getByText("iot.onboarding.inlineProcedureNote")).toBeInTheDocument();
+    expect(screen.getByText("iot.onboarding.provisionNote")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /iot.onboarding.connect/ }),
     ).not.toBeInTheDocument();

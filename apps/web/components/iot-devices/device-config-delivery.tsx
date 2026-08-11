@@ -12,6 +12,7 @@ import { env } from "~/env";
 
 import type { DeviceOnboardingConfig, IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+import type { DeviceType } from "@repo/iot";
 import { deliverDeviceConfig, supportsConfigDelivery } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -32,6 +33,12 @@ interface DeviceConfigDeliveryProps {
   disabledHint?: string | null;
 }
 
+// Ambyte edge devices load their config at provisioning time; the other
+// download-only families receive their procedure inline per measurement.
+const DOWNLOAD_ONLY_NOTE_KEYS: Partial<Record<DeviceType, string>> = {
+  ambyte: "iot.onboarding.provisionNote",
+};
+
 export function DeviceConfigDelivery({
   device,
   config,
@@ -50,9 +57,12 @@ export function DeviceConfigDelivery({
     connectionType,
   );
 
-  // Families without a stored-config command (MultispeQ, Ambit/Ambyte, MiniPAR)
-  // get their procedure per measurement, so delivery for them is download-only.
-  const supportsPush = supportsConfigDelivery(sensorFamilyToDeviceType(device.deviceType));
+  // Families without a stored-config command are download-only; the note
+  // explains why for that family.
+  const deviceType = sensorFamilyToDeviceType(device.deviceType);
+  const supportsPush = supportsConfigDelivery(deviceType);
+  const downloadOnlyNoteKey =
+    DOWNLOAD_ONLY_NOTE_KEYS[deviceType] ?? "iot.onboarding.inlineProcedureNote";
   const isSelectedTransportSupported =
     connectionType === "bluetooth" ? browserSupport.bluetooth : browserSupport.serial;
   const showConnectError = error !== null && !isConnected && !isConnecting;
@@ -176,9 +186,7 @@ export function DeviceConfigDelivery({
           <p className="text-destructive text-xs">{t("iot.onboarding.connectError")}</p>
         )}
 
-        {!supportsPush && (
-          <p className="text-muted-foreground text-xs">{t("iot.onboarding.inlineProcedureNote")}</p>
-        )}
+        {!supportsPush && <p className="text-muted-foreground text-xs">{t(downloadOnlyNoteKey)}</p>}
       </CardContent>
     </Card>
   );

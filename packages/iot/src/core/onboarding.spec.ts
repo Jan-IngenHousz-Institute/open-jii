@@ -18,6 +18,10 @@ describe("supportsConfigDelivery", () => {
     expect(supportsConfigDelivery("ambit")).toBe(false);
     expect(supportsConfigDelivery("minipar")).toBe(false);
   });
+
+  it("does not support ambyte (config is loaded at provisioning time)", () => {
+    expect(supportsConfigDelivery("ambyte")).toBe(false);
+  });
 });
 
 describe("deliverDeviceConfig", () => {

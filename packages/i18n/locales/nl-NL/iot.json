@@ -206,6 +206,7 @@
       "loadError": "Kon de experimenten niet laden. Probeer het opnieuw.",
       "inactiveDevice": "Dit apparaat heeft geen actieve inloggegevens en kan daarom niet worden onboardet. Geef eerst inloggegevens uit.",
       "inlineProcedureNote": "Dit apparaat accepteert geen opgeslagen configuratie; het ontvangt zijn procedure per meting. Download de configuratie in plaats daarvan.",
+      "provisionNote": "Dit apparaat kan niet via een directe verbinding worden geconfigureerd. Download de configuratie en laad deze op het apparaat tijdens het provisionen.",
       "includeWorkbook": "Workbook-procedures opnemen in de configuratie",
       "questionsTitle": "Antwoorden op meetvragen vooraf invullen",
       "questionsDescription": "Een apparaat kan vragen niet interactief beantwoorden; hier ingevulde antwoorden reizen mee in de configuratie en worden aan elke meting toegevoegd.",

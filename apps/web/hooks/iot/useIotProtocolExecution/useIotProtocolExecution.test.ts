@@ -166,49 +166,50 @@ describe("useIotProtocolExecution", () => {
     });
   });
 
-  describe("ambit/ambyte execution", () => {
-    it.each(["ambit", "ambyte"] as const)(
-      "refuses protocol cells over a direct %s connection",
+  describe("ambit execution", () => {
+    it("refuses protocol cells over a direct ambit connection", async () => {
+      const mockDriver: Partial<IDeviceDriver> = { execute: vi.fn() };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
+      );
+
+      await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
+        /do not run protocol cells/,
+      );
+      expect(mockDriver.execute).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("generic execution", () => {
+    // Ambyte-family protocols keep the generic-driver compatibility path.
+    it.each(["generic", "ambyte"] as const)(
+      "executes SET_CONFIG, RUN, GET_DATA steps in order for %s",
       async (family) => {
-        const mockDriver: Partial<IDeviceDriver> = { execute: vi.fn() };
+        const mockExecute = vi
+          .fn()
+          .mockResolvedValueOnce({ success: true }) // SET_CONFIG
+          .mockResolvedValueOnce({ success: true }) // RUN
+          .mockResolvedValueOnce({ success: true, data: { temperature: 25.5 } }); // GET_DATA
+
+        const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
         const { result } = renderHook(() =>
           useIotProtocolExecution(mockDriver as IDeviceDriver, true, family),
         );
 
-        await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
-          /do not run protocol cells/,
-        );
-        expect(mockDriver.execute).not.toHaveBeenCalled();
+        const data = await result.current.executeProtocol([{ command: "test" }]);
+
+        expect(mockExecute).toHaveBeenCalledTimes(3);
+        expect(mockExecute).toHaveBeenNthCalledWith(1, {
+          command: "SET_CONFIG",
+          params: { protocol: [{ command: "test" }] },
+        });
+        expect(mockExecute).toHaveBeenNthCalledWith(2, { command: "RUN" });
+        expect(mockExecute).toHaveBeenNthCalledWith(3, { command: "GET_DATA" });
+        expect(data).toEqual({ temperature: 25.5 });
       },
     );
-  });
-
-  describe("generic execution", () => {
-    it("executes SET_CONFIG, RUN, GET_DATA steps in order", async () => {
-      const mockExecute = vi
-        .fn()
-        .mockResolvedValueOnce({ success: true }) // SET_CONFIG
-        .mockResolvedValueOnce({ success: true }) // RUN
-        .mockResolvedValueOnce({ success: true, data: { temperature: 25.5 } }); // GET_DATA
-
-      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
-
-      const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
-      );
-
-      const data = await result.current.executeProtocol([{ command: "test" }]);
-
-      expect(mockExecute).toHaveBeenCalledTimes(3);
-      expect(mockExecute).toHaveBeenNthCalledWith(1, {
-        command: "SET_CONFIG",
-        params: { protocol: [{ command: "test" }] },
-      });
-      expect(mockExecute).toHaveBeenNthCalledWith(2, { command: "RUN" });
-      expect(mockExecute).toHaveBeenNthCalledWith(3, { command: "GET_DATA" });
-      expect(data).toEqual({ temperature: 25.5 });
-    });
 
     it("throws error when SET_CONFIG fails", async () => {
       const mockExecute = vi.fn().mockResolvedValueOnce({

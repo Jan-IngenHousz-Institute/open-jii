@@ -3,8 +3,10 @@
  * sync by hand with `zSensorFamily` in @repo/api (schemas/protocol.schema.ts)
  * and the `sensor_family` pg enum in @repo/database; @repo/iot stays
  * dependency-free, so the list is duplicated rather than imported. "ambyte" is
- * absent because Ambyte hardware IS the Ambit family: hosts map the API
- * `ambyte` family to the "ambit" device type and driver.
+ * absent because @repo/iot has no Ambyte identification handshake or driver
+ * (it does have a DEVICE_TRANSPORT_SUPPORT entry); the web host routes the
+ * API `ambyte` family through `GenericDeviceDriver`.
+ * This documents ownership, not driver enablement.
  */
 export const SENSOR_FAMILIES = ["multispeq", "ambit", "minipar", "generic"] as const;
 

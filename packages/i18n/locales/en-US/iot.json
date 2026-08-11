@@ -206,6 +206,7 @@
       "loadError": "Could not load experiments. Try again.",
       "inactiveDevice": "This device has no active credentials, so it cannot be onboarded. Issue credentials first.",
       "inlineProcedureNote": "This device does not accept a stored configuration; it receives its procedure per measurement. Download the configuration instead.",
+      "provisionNote": "This device cannot be configured over a direct connection. Download the configuration and load it onto the device when provisioning it.",
       "includeWorkbook": "Include workbook procedures in the configuration",
       "questionsTitle": "Prefill measurement answers",
       "questionsDescription": "A device cannot answer questions interactively; answers set here travel inside the configuration and the device attaches them to every measurement.",
