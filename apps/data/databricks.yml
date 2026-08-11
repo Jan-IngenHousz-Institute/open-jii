@@ -10,9 +10,16 @@ workspace:
   # Artifact path for wheels
   artifact_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}/artifacts
 
-# Permissions - allow all users to read deployed resources
+# Permissions - allow all users to READ deployed resources.
+#
+# CAN_VIEW, not CAN_MANAGE: this bundle now declares a job that registers Unity
+# Catalog functions and runs DDL, and CAN_MANAGE lets a grantee edit a job's
+# tasks, parameters and permissions. That belongs to the deployment owner, who
+# holds it implicitly as the job's creator, not to every workspace user. (The
+# comment here always said "read"; before the job existed the bundle had no
+# resources for the grant to apply to.)
 permissions:
-  - level: CAN_MANAGE
+  - level: CAN_VIEW
     group_name: users
 
 # Artifacts configuration - Python wheels for custom libraries
@@ -58,13 +65,97 @@ sync:
     - ".gitignore"
     - "src/lib/**" # Library source code (deployed as wheels)
 
+# Resources
+#
+# The DLT pipeline and the operational jobs are owned by Terraform
+# (infrastructure/env/<env>/main.tf). The v3 payload SQL objects are not: they are
+# shared Unity Catalog functions and views whose definitions live in the openjii
+# wheel, so the bundle that ships the wheel is what should register them.
+resources:
+  jobs:
+    centrum_v3_sql_objects:
+      name: ${bundle.target}-centrum-v3-sql-objects
+      description: >-
+        Registers the AMBIT v3 payload SQL objects (trace_points, the v2 compat
+        normalizers, and the trace / telemetry / inventory views) and runs the
+        fixture smoke test against them in a scratch schema.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      # The identity that holds the Unity Catalog grants, not whoever deployed.
+      # Terraform gives this service principal CREATE_FUNCTION, CREATE_SCHEMA,
+      # CREATE_TABLE, SELECT, USE_CATALOG and USE_SCHEMA on the catalog
+      # (infrastructure/env/<env>/main.tf, databricks_catalog grants); the CI
+      # principal that runs `bundle deploy` has none of them, and would be the
+      # default Run as identity if this were omitted.
+      run_as:
+        service_principal_name: ${var.node_service_principal}
+      tasks:
+        - task_key: register
+          notebook_task:
+            notebook_path: ./src/tasks/centrum_v3_sql_objects_task.py
+            base_parameters:
+              CATALOG_NAME: ${var.catalog_name}
+              CENTRAL_SCHEMA: ${var.central_schema}
+          environment_key: default
+        - task_key: smoke
+          depends_on:
+            - task_key: register
+          notebook_task:
+            notebook_path: ./src/tasks/centrum_v3_smoke_task.py
+            # No schema parameter: the smoke test generates, validates and drops
+            # its own scratch schema (openjii.trace.scratch), so no parameter can
+            # aim the DROP at a schema holding data.
+            base_parameters:
+              CATALOG_NAME: ${var.catalog_name}
+              KEEP_SCHEMA: "false"
+          environment_key: default
+      environments:
+        - environment_key: default
+          spec:
+            # Serverless: VARIANT, variant_explode and SQL UDFs need a recent
+            # runtime, and 4 is the version the terraform-owned serverless jobs
+            # already run.
+            environment_version: "4"
+            dependencies:
+              # Where `bundle deploy` puts the openjii_wheel artifact declared
+              # above. The version must track src/lib/openjii/pyproject.toml:
+              # serverless caches an environment per package version, so reusing
+              # 0.1.0 for changed code can serve the old implementation.
+              - ${workspace.artifact_path}/.internal/openjii-0.2.0-py3-none-any.whl
+
+variables:
+  catalog_name:
+    description: Unity Catalog holding the centrum schema.
+    default: open_jii_dev
+  central_schema:
+    description: Schema holding experiment_raw_data and the v3 objects.
+    default: centrum
+  node_service_principal:
+    description: >-
+      Application ID of the node service principal that holds the centrum Unity
+      Catalog grants. Resolved by display name at deploy time, so the id never
+      has to be checked in.
+    lookup:
+      service_principal: node-service-principal-dev
+
 # Deployment targets
 targets:
   # Development environment
   dev:
     mode: production
     default: true
+    variables:
+      catalog_name: open_jii_dev
+      node_service_principal:
+        lookup:
+          service_principal: node-service-principal-dev
 
   # Production environment
   prod:
     mode: production
+    variables:
+      catalog_name: open_jii_prod
+      node_service_principal:
+        lookup:
+          service_principal: node-service-principal-prod

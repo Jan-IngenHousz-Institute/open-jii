@@ -1,0 +1,473 @@
+[
+  {
+    "name": "v3_heartbeat",
+    "generation": "v3",
+    "note": "Native ambyte.telemetry/1: sibling observations and grouped health under one observation time.",
+    "row": {
+      "id": 3001,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:26:53.985Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambyte"
+    },
+    "sample": [
+      {
+        "schema": "ambyte.telemetry/1",
+        "measure_id": 26338,
+        "device": "28:37:2F:FF:E7:04",
+        "tag": "TELEMETRY",
+        "time": {
+          "observed_utc": 1785965213985
+        },
+        "observations": {
+          "air_temperature": {
+            "u": "Cel",
+            "v": 24.67
+          },
+          "relative_humidity": {
+            "u": "%RH",
+            "v": 61.2
+          },
+          "air_pressure": {
+            "u": "Pa",
+            "v": 101325.0
+          }
+        },
+        "health": {
+          "connectivity": {
+            "wifi": true,
+            "provisioned": true,
+            "publish_gate": true,
+            "mqtt_reconnects": 0,
+            "last_disc_reason": "",
+            "conn_age_s": 86400,
+            "pending": 3
+          },
+          "power": {
+            "battery_v": 3.912,
+            "input_v": 5.04,
+            "system_v": 3.92,
+            "input_ma": 518,
+            "charge_ma": 297,
+            "input_present": true,
+            "charge_status": 2
+          },
+          "storage": {
+            "db_online": true,
+            "sd_free_kb": 1832448,
+            "sd_skipped": 0,
+            "sd_dropped": 0,
+            "last_acked_id": 26335,
+            "sd_io_lost": false
+          },
+          "runtime": {
+            "uptime_s": 86400,
+            "psram_free_kb": 7210,
+            "psram_largest_kb": 7168,
+            "psram_size_kb": 8192,
+            "heap_dma_largest_kb": 32,
+            "heap_int_free_kb": 121,
+            "heap_int_largest_kb": 64,
+            "wd_armed": true,
+            "last_wd_reboot_reason": ""
+          },
+          "clock": {
+            "source": "rtc",
+            "suspect": false
+          },
+          "software": {
+            "firmware": "1.6.6",
+            "script_sha256": "7c222fb2927d828af22f592134e8932480637c0d2d88184a5be625042c22a6cd",
+            "script_version": "1.0.0",
+            "script_built_against_fw": "1.6.6",
+            "script_installed_on_fw": "1.6.6",
+            "script_metadata_verified": true
+          },
+          "attached_sensors": [
+            {
+              "channel": "uart_0",
+              "sensor_id": "10:91:A8:4F:4F:D4",
+              "firmware": "0.1.0",
+              "hardware_revision": 1,
+              "name": "AmbitV003",
+              "cal_version": "6a4356a8"
+            }
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "measure_id": 26338,
+      "device": "28:37:2F:FF:E7:04",
+      "observed_utc_ms": 1785965213985,
+      "source_generation": "native",
+      "air_temperature": 24.67,
+      "relative_humidity": 61.2,
+      "air_pressure": 101325.0,
+      "battery_v": 3.912,
+      "clock_source": "rtc",
+      "firmware": "1.6.6",
+      "attached_sensor_count": 1
+    }
+  },
+  {
+    "name": "v2_status_metadata",
+    "generation": "v2",
+    "note": "v2 STATUS heartbeat as the current firmware emits it: BME280 copied into data, health in metadata, attached-AMBIT references as ambitN_* keys.",
+    "row": {
+      "id": 3002,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:26:53.985Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambyte"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26339,
+        "startTicks_UTC": 1785965213985,
+        "endTicks_UTC": 1785965213985,
+        "channel": null,
+        "device": null,
+        "cmd_raw": null,
+        "tag": "STATUS",
+        "data": {
+          "temperature": 24.671,
+          "humidity": 61.204,
+          "pressure": 101325.04
+        },
+        "metadata": {
+          "wifi": true,
+          "provisioned": true,
+          "publish_gate": true,
+          "mqtt_reconnects": 2,
+          "last_disc_reason": "ap_lost",
+          "conn_age_s": 3600,
+          "pending": 3,
+          "battery_v": 3.9124,
+          "input_v": 5.0401,
+          "system_v": 3.9203,
+          "input_ma": 518,
+          "charge_ma": 297,
+          "input_present": true,
+          "charge_status": 2,
+          "db_online": true,
+          "sd_free_kb": 1832448,
+          "sd_skipped": 0,
+          "sd_dropped": 0,
+          "last_acked_id": 26335,
+          "sd_io_lost": false,
+          "uptime_s": 86400,
+          "psram_free_kb": 7210,
+          "psram_largest_kb": 7168,
+          "psram_size_kb": 8192,
+          "heap_dma_largest_kb": 32,
+          "heap_int_free_kb": 121,
+          "heap_int_largest_kb": 64,
+          "wd_armed": true,
+          "last_wd_reboot_reason": "",
+          "clock_src": "rtc",
+          "clock_suspect": false,
+          "app_version": "1.6.5",
+          "script_sha256": "7c222fb2927d828af22f592134e8932480637c0d2d88184a5be625042c22a6cd",
+          "script_version": "1.0.0",
+          "script_built_against_fw": "1.6.5",
+          "script_installed_on_fw": "1.6.5",
+          "script_metadata_verified": true,
+          "ambit0_id": "10:91:A8:4F:4F:D4",
+          "ambit0_fw": "0.1.0",
+          "ambit0_hw": 1,
+          "ambit0_name": "AmbitV003",
+          "ambit0_cal": "6A4356A8",
+          "ambit2_id": "10:91:A8:4F:4F:E1",
+          "ambit2_fw": "0.1.1",
+          "ambit2_hw": 0,
+          "ambit2_name": "AmbitV004",
+          "ambit2_cal": 1782024872
+        }
+      }
+    ],
+    "expect": {
+      "measure_id": 26339,
+      "device": "28:37:2F:FF:E7:04",
+      "observed_utc_ms": 1785965213985,
+      "source_generation": "v2.STATUS",
+      "air_temperature": 24.67,
+      "relative_humidity": 61.2,
+      "air_pressure": 101325.0,
+      "battery_v": 3.912,
+      "input_v": 5.04,
+      "clock_source": "rtc",
+      "firmware": "1.6.5",
+      "attached_sensor_count": 2,
+      "attached_sensors": [
+        {
+          "channel": "uart_0",
+          "sensor_id": "10:91:A8:4F:4F:D4",
+          "cal_version": "6a4356a8",
+          "hardware_revision": 1
+        },
+        {
+          "channel": "uart_2",
+          "sensor_id": "10:91:A8:4F:4F:E1",
+          "cal_version": "6a378aa8",
+          "hardware_revision": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_status_data_only",
+    "generation": "v2",
+    "note": "Older STATUS producer: health keys in data, metadata null. Every health leaf falls back to the same-named data key.",
+    "row": {
+      "id": 3003,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:05",
+      "client_id": "AMBYTE_28372FFFE705",
+      "timestamp": "2026-08-05T21:31:53.985Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambyte"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26340,
+        "startTicks": 1785965513985,
+        "tag": "STATUS",
+        "metadata": null,
+        "data": {
+          "wifi": true,
+          "provisioned": true,
+          "db_online": true,
+          "publish_gate": false,
+          "battery_v": 3.7,
+          "input_v": 0.0,
+          "system_v": 3.71,
+          "input_ma": 0,
+          "charge_ma": 0,
+          "input_present": false,
+          "charge_status": 0
+        }
+      }
+    ],
+    "expect": {
+      "measure_id": 26340,
+      "device": "28:37:2F:FF:E7:05",
+      "observed_utc_ms": 1785965513985,
+      "source_generation": "v2.STATUS",
+      "air_temperature": null,
+      "relative_humidity": null,
+      "air_pressure": null,
+      "battery_v": 3.7,
+      "publish_gate": false,
+      "attached_sensor_count": 0
+    }
+  },
+  {
+    "name": "v2_bme280_snapshot",
+    "generation": "v2",
+    "note": "Standalone device.bme280 read: observations only. Every health group is present and empty, attached_sensors is [].",
+    "row": {
+      "id": 3004,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:28:00.000Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambyte"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26341,
+        "startTicks_UTC": 1785965280000,
+        "channel": null,
+        "device": null,
+        "cmd_raw": "device.bme280",
+        "tag": "MEASUREMENT",
+        "metadata": null,
+        "data": {
+          "temperature": 25.004,
+          "humidity": 59.996,
+          "pressure": 101300.02
+        }
+      }
+    ],
+    "expect": {
+      "measure_id": 26341,
+      "device": "28:37:2F:FF:E7:04",
+      "observed_utc_ms": 1785965280000,
+      "source_generation": "v2.device.bme280",
+      "air_temperature": 25.0,
+      "relative_humidity": 60.0,
+      "air_pressure": 101300.0,
+      "battery_v": null,
+      "attached_sensor_count": 0,
+      "health_is_empty": true
+    }
+  },
+  {
+    "name": "v2_bme280_poisoned",
+    "generation": "v2",
+    "note": "A standalone device.bme280 row whose data AND metadata deliberately carry health-shaped keys and attached-AMBIT references. \u00a711.2 says an explicit environment snapshot samples no health, so none of it may reach the canonical object: health groups stay empty and attached_sensors stays [].",
+    "row": {
+      "id": 3006,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:29:00.000Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambyte"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26342,
+        "startTicks_UTC": 1785965340000,
+        "channel": null,
+        "device": null,
+        "cmd_raw": "device.bme280",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "wifi": true,
+          "publish_gate": true,
+          "battery_v": 3.999,
+          "uptime_s": 12345,
+          "clock_src": "sntp",
+          "app_version": "9.9.9",
+          "ambit0_id": "10:91:A8:4F:4F:FF",
+          "ambit0_cal": "deadbeef"
+        },
+        "data": {
+          "temperature": 25.004,
+          "humidity": 59.996,
+          "pressure": 101300.02,
+          "db_online": true,
+          "input_present": true,
+          "sd_free_kb": 4242,
+          "ambit1_id": "10:91:A8:4F:4F:FE"
+        }
+      }
+    ],
+    "expect": {
+      "measure_id": 26342,
+      "device": "28:37:2F:FF:E7:04",
+      "observed_utc_ms": 1785965340000,
+      "source_generation": "v2.device.bme280",
+      "air_temperature": 25.0,
+      "relative_humidity": 60.0,
+      "air_pressure": 101300.0,
+      "battery_v": null,
+      "attached_sensor_count": 0,
+      "health_is_empty": true
+    }
+  },
+  {
+    "name": "v2_status_negative_air_temperature",
+    "generation": "v2",
+    "note": "Signed rounding on the telemetry side: -24.605 Cel must become -24.61, not -24.60. The humidity and pressure ties (61.205 -> 61.21 at two decimals, 101325.05 -> 101325.1 at one) pin the positive direction of the same rule, and -0.0005 V pins a negative tie on the three-decimal voltage scale.",
+    "row": {
+      "id": 3007,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:36:53.985Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambyte"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26343,
+        "startTicks_UTC": 1785965813985,
+        "channel": null,
+        "device": null,
+        "cmd_raw": null,
+        "tag": "STATUS",
+        "data": {
+          "temperature": -24.605,
+          "humidity": 61.205,
+          "pressure": 101325.05
+        },
+        "metadata": {
+          "wifi": true,
+          "battery_v": -0.0005,
+          "input_v": 3.9125,
+          "clock_src": "rtc"
+        }
+      }
+    ],
+    "expect": {
+      "measure_id": 26343,
+      "device": "28:37:2F:FF:E7:04",
+      "observed_utc_ms": 1785965813985,
+      "source_generation": "v2.STATUS",
+      "air_temperature": -24.61,
+      "relative_humidity": 61.21,
+      "air_pressure": 101325.1,
+      "battery_v": -0.001,
+      "input_v": 3.913,
+      "clock_source": "rtc",
+      "attached_sensor_count": 0
+    }
+  },
+  {
+    "name": "not_telemetry_trace",
+    "generation": "other",
+    "note": "An AMBIT trace must not be normalized as telemetry.",
+    "row": {
+      "id": 3005,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26342,
+        "startTicks_UTC": 1785965160359,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,2,0,1,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 2,
+              "freq": 1,
+              "actinic": 0
+            }
+          ]
+        },
+        "data": {
+          "s_630": [
+            159,
+            164
+          ],
+          "timing": [
+            0,
+            2000000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "normalized_is_null": true
+    }
+  }
+]

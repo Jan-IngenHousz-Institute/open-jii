@@ -23,4 +23,4 @@ __all__ = [
     "load_experiment_table",
     "read_table",
 ]
-__version__ = "0.1.0"
+__version__ = "0.2.0"

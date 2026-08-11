@@ -363,7 +363,7 @@ wheels = [
 
 [[package]]
 name = "openjii"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "src/lib/openjii" }
 dependencies = [
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -393,6 +393,7 @@ dev = [
     { name = "pyspark" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pyyaml" },
     { name = "responses" },
     { name = "ruff" },
 ]
@@ -414,6 +415,7 @@ dev = [
     { name = "pyspark", specifier = ">=3.5,<4" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "responses", specifier = ">=0.25" },
     { name = "ruff", specifier = ">=0.7" },
 ]

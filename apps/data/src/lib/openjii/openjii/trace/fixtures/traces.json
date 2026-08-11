@@ -1,0 +1,1943 @@
+[
+  {
+    "name": "v3_regular",
+    "generation": "v3",
+    "note": "Contract \u00a76 worked example: 1 Hz pulses, dt = tick_factor/freq, device-recorded leaf_temp times.",
+    "row": {
+      "id": 1001,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": "b1946ac9-2b1e-4f2c-9f4a-1a2b3c4d5e6f",
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "schema": "ambit.trace/3",
+        "measure_id": 26337,
+        "device": "AmbitV003",
+        "sensor_id": "10:91:A8:4F:4F:D4",
+        "channel": "uart_1",
+        "tag": "MEASUREMENT",
+        "time": {
+          "start_utc": 1785965160359,
+          "end_utc": 1785965213985,
+          "duration_ms": 10250
+        },
+        "protocol": {
+          "name": "SS",
+          "id": "b1946ac9-2b1e-4f2c-9f4a-1a2b3c4d5e6f",
+          "cmd": "arrun 1,0,2,0,0,12,0,1,0,1",
+          "segments": [
+            {
+              "pulses": 12,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "cal_version": "6a4356a8",
+          "tick_factor": 0.854,
+          "gains": [
+            1,
+            1,
+            2,
+            2,
+            1,
+            1
+          ]
+        },
+        "series": {
+          "fluo_630_signal": {
+            "u": "count",
+            "t0": 0,
+            "dt": 0.854,
+            "v": [
+              159,
+              164,
+              170,
+              175,
+              181,
+              186,
+              192,
+              197,
+              203,
+              208,
+              214,
+              219
+            ]
+          },
+          "fluo_630_ref": {
+            "u": "count",
+            "t0": 0,
+            "dt": 0.854,
+            "v": [
+              4605,
+              4604,
+              4603,
+              4602,
+              4601,
+              4600,
+              4599,
+              4598,
+              4597,
+              4596,
+              4595,
+              4594
+            ]
+          },
+          "ambient_sun_vis": {
+            "u": "count",
+            "t0": 0,
+            "dt": 0.854,
+            "v": [
+              670,
+              678,
+              686,
+              694,
+              702,
+              710,
+              718,
+              726,
+              734,
+              742,
+              750,
+              758
+            ]
+          },
+          "ambient_leaf_ir": {
+            "u": "count",
+            "t0": 0,
+            "dt": 0.854,
+            "v": [
+              760,
+              755,
+              750,
+              745,
+              740,
+              735,
+              730,
+              725,
+              720,
+              715,
+              710,
+              705
+            ]
+          },
+          "leaf_temp": {
+            "u": "Cel",
+            "t": [
+              0.0,
+              8.6,
+              17.1
+            ],
+            "v": [
+              25.29,
+              24.6,
+              24.11
+            ]
+          }
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 51,
+      "leaf_temp_time_estimated": false,
+      "points": [
+        {
+          "series": "fluo_630_signal",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 159.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 10,
+          "t_ms": 1785965168899,
+          "value": 214.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 11,
+          "t_ms": 1785965169753,
+          "value": 219.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_sun_vis",
+          "index": 1,
+          "t_ms": 1785965161213,
+          "value": 678.0,
+          "unit": "count"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 1,
+          "t_ms": 1785965168959,
+          "value": 24.6,
+          "unit": "Cel"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 2,
+          "t_ms": 1785965177459,
+          "value": 24.11,
+          "unit": "Cel"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v3_mixed_explicit",
+    "generation": "v3",
+    "note": "Mixed-frequency run: 3 pulses @1 Hz then 3 @2 Hz, so the producer emits explicit t for the whole series. leaf_temp times are estimated (pre-idx-8 firmware).",
+    "row": {
+      "id": 1002,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "schema": "ambit.trace/3",
+        "measure_id": 26340,
+        "device": "AmbitV003",
+        "sensor_id": "10:91:A8:4F:4F:D4",
+        "channel": "uart_1",
+        "tag": "MEASUREMENT",
+        "time": {
+          "start_utc": 1785965160359,
+          "end_utc": 1785965164000,
+          "duration_ms": 3500
+        },
+        "protocol": {
+          "name": "SS-mixed",
+          "cmd": "arrun 2,0,2,0,0,3,0,1,0,1,2,0,0,3,0,2,0,1",
+          "segments": [
+            {
+              "pulses": 3,
+              "freq": 1,
+              "actinic": 0
+            },
+            {
+              "pulses": 3,
+              "freq": 2,
+              "actinic": 0
+            }
+          ],
+          "cal_version": "6a4356a8",
+          "tick_factor": 0.854
+        },
+        "series": {
+          "fluo_630_signal": {
+            "u": "count",
+            "t": [
+              0,
+              0.854,
+              1.708,
+              2.562,
+              2.989,
+              3.416
+            ],
+            "v": [
+              159,
+              164,
+              170,
+              175,
+              181,
+              186
+            ]
+          },
+          "leaf_temp": {
+            "u": "Cel",
+            "t": [
+              0,
+              1.75,
+              3.5
+            ],
+            "t_est": true,
+            "v": [
+              25.29,
+              24.6,
+              24.11
+            ]
+          }
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 9,
+      "leaf_temp_time_estimated": true,
+      "points": [
+        {
+          "series": "fluo_630_signal",
+          "index": 2,
+          "t_ms": 1785965162067,
+          "value": 170.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 3,
+          "t_ms": 1785965162921,
+          "value": 175.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 5,
+          "t_ms": 1785965163775,
+          "value": 186.0,
+          "unit": "count"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 2,
+          "t_ms": 1785965163859,
+          "value": 24.11,
+          "unit": "Cel"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v3_subsampled",
+    "generation": "v3",
+    "note": "Subsampling = 2: the ambient channels are the mean of 8 pulses, so dt' = 8\u00b7tick/freq and t0' = 3.5\u00b7tick/freq (centre of the window).",
+    "row": {
+      "id": 1003,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "schema": "ambit.trace/3",
+        "measure_id": 26341,
+        "device": "AmbitV003",
+        "sensor_id": "10:91:A8:4F:4F:D4",
+        "channel": "uart_1",
+        "tag": "MEASUREMENT",
+        "time": {
+          "start_utc": 1785965160359,
+          "end_utc": 1785965174000,
+          "duration_ms": 13664
+        },
+        "protocol": {
+          "cmd": "arrun 1,0,2,0,0,16,0,1,0,2",
+          "segments": [
+            {
+              "pulses": 16,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "cal_version": "6a4356a8",
+          "tick_factor": 0.854
+        },
+        "series": {
+          "fluo_630_signal": {
+            "u": "count",
+            "t0": 0,
+            "dt": 0.854,
+            "v": [
+              159,
+              164,
+              170,
+              175,
+              181,
+              186,
+              192,
+              197,
+              203,
+              208,
+              214,
+              219,
+              225,
+              230,
+              236,
+              241
+            ]
+          },
+          "ambient_sun_vis": {
+            "u": "count",
+            "t0": 2.989,
+            "dt": 6.832,
+            "v": [
+              670,
+              678
+            ]
+          },
+          "ambient_leaf_ir": {
+            "u": "count",
+            "t0": 2.989,
+            "dt": 6.832,
+            "v": [
+              760,
+              755
+            ]
+          }
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 20,
+      "leaf_temp_time_estimated": false,
+      "points": [
+        {
+          "series": "ambient_sun_vis",
+          "index": 0,
+          "t_ms": 1785965163348,
+          "value": 670.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_sun_vis",
+          "index": 1,
+          "t_ms": 1785965170180,
+          "value": 678.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_leaf_ir",
+          "index": 1,
+          "t_ms": 1785965170180,
+          "value": 755.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 15,
+          "t_ms": 1785965173169,
+          "value": 241.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_regular_t_est",
+    "generation": "v2",
+    "note": "v2 trace through the compat view. dt = 0.854/freq from metadata.segments; leaf_temp times estimated and clamped into the measured window (\u0394 = 8 s overshoots duration 10.25 s, so \u0394 = 10.25/2).",
+    "row": {
+      "id": 2001,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": "b1946ac9-2b1e-4f2c-9f4a-1a2b3c4d5e6f",
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26337,
+        "startTicks_UTC": 1785965160359,
+        "endTicks_UTC": 1785965213985,
+        "published": "2026-08-05T21:30:00Z",
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,12,0,1,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 12,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "cal_version": "6A4356A8",
+          "protocol": "SS",
+          "sensor_id": "10:91:A8:4F:4F:D4",
+          "gains": [
+            1,
+            1,
+            2,
+            2,
+            1,
+            1
+          ]
+        },
+        "data": {
+          "env": [
+            25.29,
+            24.6,
+            24.11
+          ],
+          "s_630": [
+            159,
+            164,
+            170,
+            175,
+            181,
+            186,
+            192,
+            197,
+            203,
+            208,
+            214,
+            219
+          ],
+          "r_630": [
+            4605,
+            4604,
+            4603,
+            4602,
+            4601,
+            4600,
+            4599,
+            4598,
+            4597,
+            4596,
+            4595,
+            4594
+          ],
+          "sun": [
+            670,
+            678,
+            686,
+            694,
+            702,
+            710,
+            718,
+            726,
+            734,
+            742,
+            750,
+            758
+          ],
+          "leaf": [
+            760,
+            755,
+            750,
+            745,
+            740,
+            735,
+            730,
+            725,
+            720,
+            715,
+            710,
+            705
+          ],
+          "timing": [
+            1000000,
+            11250000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 51,
+      "leaf_temp_time_estimated": true,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "sensor_id": "10:91:A8:4F:4F:D4",
+        "cal_version": "6a4356a8",
+        "duration_ms": 10250,
+        "tick_factor": 0.854,
+        "leaf_temp_t": [
+          0.0,
+          5.125,
+          10.25
+        ],
+        "main_dt": 0.854,
+        "main_t0": 0.0
+      },
+      "points": [
+        {
+          "series": "fluo_630_signal",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 159.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 11,
+          "t_ms": 1785965169753,
+          "value": 219.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_ref",
+          "index": 11,
+          "t_ms": 1785965169753,
+          "value": 4594.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_sun_vis",
+          "index": 11,
+          "t_ms": 1785965169753,
+          "value": 758.0,
+          "unit": "count"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 1,
+          "t_ms": 1785965165484,
+          "value": 24.6,
+          "unit": "Cel"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 2,
+          "t_ms": 1785965170609,
+          "value": 24.11,
+          "unit": "Cel"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_arr8_device_times",
+    "generation": "v2",
+    "note": "idx-8-aware AMBIT behind a pre-v3 Ambyte: arr8 carries real env offsets in ms, so they take precedence over the estimator and t_est is absent.",
+    "row": {
+      "id": 2002,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26342,
+        "startTicks_UTC": 1785965160359,
+        "endTicks_UTC": 1785965171000,
+        "channel": "uart_0",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,12,0,1,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 12,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "cal_version": 1782024872,
+          "deviceID": "10:91:A8:4F:4F:D5"
+        },
+        "data": {
+          "env": [
+            25.29,
+            24.6,
+            24.11
+          ],
+          "arr8": [
+            0,
+            2100,
+            4300
+          ],
+          "s_630": [
+            159,
+            164,
+            170,
+            175,
+            181,
+            186,
+            192,
+            197,
+            203,
+            208,
+            214,
+            219
+          ],
+          "timing": [
+            4294000000,
+            1000000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 15,
+      "leaf_temp_time_estimated": false,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "sensor_id": "10:91:A8:4F:4F:D5",
+        "cal_version": "6a378aa8",
+        "duration_ms": 1967,
+        "leaf_temp_t": [
+          0.0,
+          2.1,
+          4.3
+        ]
+      },
+      "points": [
+        {
+          "series": "leaf_temp",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 25.29,
+          "unit": "Cel"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 1,
+          "t_ms": 1785965162459,
+          "value": 24.6,
+          "unit": "Cel"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 2,
+          "t_ms": 1785965164659,
+          "value": 24.11,
+          "unit": "Cel"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_mixed_subsampled",
+    "generation": "v2",
+    "note": "v2 mixed-frequency run whose ambient channels are also subsampled: the pulse series get an explicit piecewise timeline, and each ambient mean is centred inside its own segment's 8-pulse window (2.989 s on the 1 Hz segment, 8*0.854 + 3.5*(0.854/2) = 8.3265 s on the 2 Hz segment) instead of being frozen to the first segment's period.",
+    "row": {
+      "id": 2003,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26343,
+        "startTicks_UTC": 1785965160359,
+        "endTicks_UTC": 1785965171000,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 2,0,2,0,0,8,0,1,0,2,2,0,0,8,0,2,0,2",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 8,
+              "freq": 1,
+              "actinic": 0
+            },
+            {
+              "pulses": 8,
+              "freq": 2,
+              "actinic": 0
+            }
+          ],
+          "cal_version": "6a4356a8",
+          "sensor_id": "10:91:A8:4F:4F:D4"
+        },
+        "data": {
+          "s_630": [
+            159,
+            164,
+            170,
+            175,
+            181,
+            186,
+            192,
+            197,
+            203,
+            208,
+            214,
+            219,
+            225,
+            230,
+            236,
+            241
+          ],
+          "sun": [
+            670,
+            678
+          ],
+          "leaf": [
+            760,
+            755
+          ],
+          "timing": [
+            0,
+            10000000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 20,
+      "leaf_temp_time_estimated": false,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "mixed_segment_frequencies": true,
+        "ambient_subsampled": true,
+        "main_t": [
+          0.0,
+          0.854,
+          1.708,
+          2.562,
+          3.416,
+          4.27,
+          5.124,
+          5.978,
+          6.832,
+          7.259,
+          7.686,
+          8.113,
+          8.54,
+          8.967,
+          9.394,
+          9.821
+        ],
+        "ambient_t": [
+          2.989,
+          8.3265
+        ]
+      },
+      "points": [
+        {
+          "series": "fluo_630_signal",
+          "index": 7,
+          "t_ms": 1785965166337,
+          "value": 197.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 8,
+          "t_ms": 1785965167191,
+          "value": 203.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 15,
+          "t_ms": 1785965170180,
+          "value": 241.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_sun_vis",
+          "index": 0,
+          "t_ms": 1785965163348,
+          "value": 670.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_sun_vis",
+          "index": 1,
+          "t_ms": 1785965168686,
+          "value": 678.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_leaf_ir",
+          "index": 1,
+          "t_ms": 1785965168686,
+          "value": 755.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_freq40_mixed",
+    "generation": "v2",
+    "note": "Rounding boundary: a 40 Hz then 20 Hz run. Index 7 of the timeline is 7*(0.854/40) = 0.14945 s, where decimal half-up (0.1495 -> 150 ms) and ties-to-even (0.1494 -> 149 ms) disagree; both implementations must land on 0.1495.",
+    "row": {
+      "id": 2005,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26350,
+        "startTicks_UTC": 1785965160359,
+        "endTicks_UTC": 1785965160759,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 2,0,2,0,0,8,0,40,0,1,2,0,0,8,0,20,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 8,
+              "freq": 40,
+              "actinic": 0
+            },
+            {
+              "pulses": 8,
+              "freq": 20,
+              "actinic": 0
+            }
+          ],
+          "cal_version": "6a4356a8",
+          "sensor_id": "10:91:A8:4F:4F:D4"
+        },
+        "data": {
+          "s_630": [
+            159,
+            164,
+            170,
+            175,
+            181,
+            186,
+            192,
+            197,
+            203,
+            208,
+            214,
+            219,
+            225,
+            230,
+            236,
+            241
+          ],
+          "timing": [
+            0,
+            342000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 16,
+      "leaf_temp_time_estimated": false,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "mixed_segment_frequencies": true,
+        "main_t": [
+          0.0,
+          0.0214,
+          0.0427,
+          0.0641,
+          0.0854,
+          0.1068,
+          0.1281,
+          0.1495,
+          0.1708,
+          0.2135,
+          0.2562,
+          0.2989,
+          0.3416,
+          0.3843,
+          0.427,
+          0.4697
+        ]
+      },
+      "points": [
+        {
+          "series": "fluo_630_signal",
+          "index": 1,
+          "t_ms": 1785965160380,
+          "value": 164.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 7,
+          "t_ms": 1785965160509,
+          "value": 197.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 8,
+          "t_ms": 1785965160530,
+          "value": 203.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 15,
+          "t_ms": 1785965160829,
+          "value": 241.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_arr9_unknown",
+    "generation": "v2",
+    "note": "An FSM index nobody has named yet. It keeps the arr<idx> fallback name and the main sample clock rather than being dropped during normalization.",
+    "row": {
+      "id": 2006,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26351,
+        "startTicks_UTC": 1785965160359,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,4,0,1,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 4,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "sensor_id": "10:91:A8:4F:4F:D4"
+        },
+        "data": {
+          "s_630": [
+            159,
+            164,
+            170,
+            175
+          ],
+          "arr9": [
+            11,
+            12,
+            13,
+            14
+          ],
+          "timing": [
+            0,
+            3416000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 8,
+      "leaf_temp_time_estimated": false,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "series_names": [
+          "arr9",
+          "fluo_630_signal"
+        ],
+        "unknown_series": {
+          "arr9": {
+            "u": "count",
+            "t0": 0.0,
+            "dt": 0.854
+          }
+        }
+      },
+      "points": [
+        {
+          "series": "arr9",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 11.0,
+          "unit": "count"
+        },
+        {
+          "series": "arr9",
+          "index": 1,
+          "t_ms": 1785965161213,
+          "value": 12.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 1,
+          "t_ms": 1785965161213,
+          "value": 164.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_ambient_unresolved",
+    "generation": "v2",
+    "note": "Subsampled ambient whose value count does not match the reconstructable 8-pulse windows (3 values, 2 windows). No canonical timestamp is emitted at all: an undatable legacy payload must not be given a plausible wrong date.",
+    "row": {
+      "id": 2007,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26352,
+        "startTicks_UTC": 1785965160359,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,16,0,1,0,2",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 16,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "sensor_id": "10:91:A8:4F:4F:D4"
+        },
+        "data": {
+          "s_630": [
+            159,
+            164,
+            170,
+            175,
+            181,
+            186,
+            192,
+            197,
+            203,
+            208,
+            214,
+            219,
+            225,
+            230,
+            236,
+            241
+          ],
+          "sun": [
+            670,
+            678,
+            686
+          ],
+          "timing": [
+            0,
+            13664000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 19,
+      "leaf_temp_time_estimated": false,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "ambient_subsampled": true,
+        "ambient_time_unresolved": true,
+        "ambient_has_no_time": true
+      },
+      "points": [
+        {
+          "series": "fluo_630_signal",
+          "index": 15,
+          "t_ms": 1785965173169,
+          "value": 241.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_sun_vis",
+          "index": 0,
+          "t_ms": null,
+          "value": 670.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_sun_vis",
+          "index": 2,
+          "t_ms": null,
+          "value": 686.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v3_malformed_time_forms",
+    "generation": "v3",
+    "note": "Producer-violating time forms. An explicit t is authoritative for every sample, so a short array, a null element, and an explicit array beside (t0, dt) all yield NULL rather than a value quietly refilled from the regular form; a series with no time form at all yields NULL throughout.",
+    "row": {
+      "id": 1004,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "schema": "ambit.trace/3",
+        "measure_id": 26353,
+        "device": "AmbitV003",
+        "sensor_id": "10:91:A8:4F:4F:D4",
+        "tag": "MEASUREMENT",
+        "time": {
+          "start_utc": 1785965160359
+        },
+        "protocol": {
+          "cmd": "arrun 1,0",
+          "tick_factor": 0.854
+        },
+        "series": {
+          "fluo_630_signal": {
+            "u": "count",
+            "t": [
+              0.0
+            ],
+            "v": [
+              159,
+              164
+            ]
+          },
+          "fluo_630_ref": {
+            "u": "count",
+            "t": [
+              0.0,
+              null,
+              1.0
+            ],
+            "v": [
+              4605,
+              4604,
+              4603
+            ]
+          },
+          "ambient_sun_vis": {
+            "u": "count",
+            "t": [
+              0.0
+            ],
+            "t0": 0,
+            "dt": 2,
+            "v": [
+              670,
+              678
+            ]
+          },
+          "ambient_leaf_ir": {
+            "u": "count",
+            "v": [
+              760,
+              755
+            ]
+          }
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 9,
+      "leaf_temp_time_estimated": false,
+      "points": [
+        {
+          "series": "fluo_630_signal",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 159.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 1,
+          "t_ms": null,
+          "value": 164.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_ref",
+          "index": 1,
+          "t_ms": null,
+          "value": 4604.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_ref",
+          "index": 2,
+          "t_ms": 1785965161359,
+          "value": 4603.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_sun_vis",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 670.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_sun_vis",
+          "index": 1,
+          "t_ms": null,
+          "value": 678.0,
+          "unit": "count"
+        },
+        {
+          "series": "ambient_leaf_ir",
+          "index": 0,
+          "t_ms": null,
+          "value": 760.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_forced_fallback_new_firmware",
+    "generation": "v2",
+    "note": "A v3-capable Ambyte that fell back to a v2 row for this run because v3-required identity/calibration was unavailable at publish time. It still carries metadata.sensor_id, so the compat path must read the identity from there - in SQL as well as in Python.",
+    "row": {
+      "id": 2008,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26354,
+        "startTicks_UTC": 1785965160359,
+        "endTicks_UTC": 1785965163775,
+        "channel": "uart_0",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,4,0,1,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 4,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "cal_version": "6a4356a8",
+          "sensor_id": "10:91:A8:4F:4F:D4",
+          "protocol": "SS"
+        },
+        "data": {
+          "env": [
+            25.29
+          ],
+          "s_630": [
+            159,
+            164,
+            170,
+            175
+          ],
+          "timing": [
+            0,
+            3416000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 5,
+      "leaf_temp_time_estimated": true,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "sensor_id": "10:91:A8:4F:4F:D4",
+        "cal_version": "6a4356a8",
+        "duration_ms": 3416,
+        "leaf_temp_t": [
+          0.0
+        ],
+        "main_t0": 0.0,
+        "main_dt": 0.854
+      },
+      "points": [
+        {
+          "series": "leaf_temp",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 25.29,
+          "unit": "Cel"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 1,
+          "t_ms": 1785965161213,
+          "value": 164.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_native_legacy_no_identity",
+    "generation": "v2",
+    "note": "A native legacy v2 row from before identity discovery: no sensor_id in any spelling. It stays queryable, but the non-unique human device name must never stand in as a join key (\u00a78).",
+    "row": {
+      "id": 2009,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26355,
+        "startTicks_UTC": 1785965160359,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,4,0,1,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 4,
+              "freq": 1,
+              "actinic": 0
+            }
+          ]
+        },
+        "data": {
+          "s_630": [
+            159,
+            164,
+            170,
+            175
+          ],
+          "timing": [
+            0,
+            3416000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 4,
+      "leaf_temp_time_estimated": false,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "sensor_id": null,
+        "duration_ms": 3416,
+        "main_t0": 0.0,
+        "main_dt": 0.854
+      },
+      "points": [
+        {
+          "series": "fluo_630_signal",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 159.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 3,
+          "t_ms": 1785965162921,
+          "value": 175.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_negative_leaf_temp",
+    "generation": "v2",
+    "note": "Signed rounding boundary. Leaf temperatures -24.605, -0.005, 24.605 and 0.0 must round half AWAY FROM ZERO in both implementations: -24.61, -0.01, 24.61, 0.0. A positive-only floor(x*100+0.5) would give -24.60 and 0.00 for the first two, which is a silent data defect for sub-zero leaves.",
+    "row": {
+      "id": 2010,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26360,
+        "startTicks_UTC": 1785965160359,
+        "endTicks_UTC": 1785965163775,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,4,0,1,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 4,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "sensor_id": "10:91:A8:4F:4F:D4"
+        },
+        "data": {
+          "env": [
+            -24.605,
+            -0.005,
+            24.605,
+            0.0
+          ],
+          "s_630": [
+            159,
+            164,
+            170,
+            175
+          ],
+          "timing": [
+            0,
+            3416000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 8,
+      "leaf_temp_time_estimated": true,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "duration_ms": 3416,
+        "leaf_temp_t": [
+          0.0,
+          1.1387,
+          2.2773,
+          3.416
+        ],
+        "leaf_temp_v": [
+          -24.61,
+          -0.01,
+          24.61,
+          0.0
+        ],
+        "main_t0": 0.0,
+        "main_dt": 0.854
+      },
+      "points": [
+        {
+          "series": "leaf_temp",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": -24.61,
+          "unit": "Cel"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 1,
+          "t_ms": 1785965161498,
+          "value": -0.01,
+          "unit": "Cel"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 2,
+          "t_ms": 1785965162636,
+          "value": 24.61,
+          "unit": "Cel"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 3,
+          "t_ms": 1785965163775,
+          "value": 0.0,
+          "unit": "Cel"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 1,
+          "t_ms": 1785965161213,
+          "value": 164.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_zero_duration_env",
+    "generation": "v2",
+    "note": "A measured duration of exactly zero (identical timing ticks) with three env samples. The normative clamp is applied literally, so every estimated leaf_temp offset collapses onto the run start and all three points share one epoch millisecond.",
+    "row": {
+      "id": 2011,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26361,
+        "startTicks_UTC": 1785965160359,
+        "endTicks_UTC": 1785965160359,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,4,0,1,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 4,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "sensor_id": "10:91:A8:4F:4F:D4"
+        },
+        "data": {
+          "env": [
+            25.29,
+            24.6,
+            24.11
+          ],
+          "s_630": [
+            159,
+            164,
+            170,
+            175
+          ],
+          "timing": [
+            77,
+            77
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 7,
+      "leaf_temp_time_estimated": true,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "duration_ms": 0,
+        "leaf_temp_t": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "main_t0": 0.0,
+        "main_dt": 0.854
+      },
+      "leaf_temp_collapses_to_one_millisecond": true,
+      "points": [
+        {
+          "series": "leaf_temp",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 25.29,
+          "unit": "Cel"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 1,
+          "t_ms": 1785965160359,
+          "value": 24.6,
+          "unit": "Cel"
+        },
+        {
+          "series": "leaf_temp",
+          "index": 2,
+          "t_ms": 1785965160359,
+          "value": 24.11,
+          "unit": "Cel"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 1,
+          "t_ms": 1785965161213,
+          "value": 164.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_legacy_fluo_tags",
+    "generation": "v2",
+    "note": "Historical vintage: FSM idx 1/2 tagged s_fluo/r_fluo before the rename to s_630/r_630. Same indices, same 630 nm channels, so they normalize to fluo_630_signal/fluo_630_ref and a T6 consumer sees one interface. _compat.legacy_fluo_alias records the vintage.",
+    "row": {
+      "id": 2012,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26370,
+        "startTicks_UTC": 1785965160359,
+        "endTicks_UTC": 1785965163775,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,4,0,1,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 4,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "cal_version": "6a4356a8",
+          "sensor_id": "10:91:A8:4F:4F:D4"
+        },
+        "data": {
+          "s_fluo": [
+            159,
+            164,
+            170,
+            175
+          ],
+          "r_fluo": [
+            4605,
+            4604,
+            4603,
+            4602
+          ],
+          "timing": [
+            0,
+            3416000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 8,
+      "leaf_temp_time_estimated": false,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "sensor_id": "10:91:A8:4F:4F:D4",
+        "series_names": [
+          "fluo_630_ref",
+          "fluo_630_signal"
+        ],
+        "legacy_fluo_alias": true,
+        "main_t0": 0.0,
+        "main_dt": 0.854,
+        "fluo_signal_v": [
+          159,
+          164,
+          170,
+          175
+        ],
+        "fluo_ref_v": [
+          4605,
+          4604,
+          4603,
+          4602
+        ]
+      },
+      "points": [
+        {
+          "series": "fluo_630_signal",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 159.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 1,
+          "t_ms": 1785965161213,
+          "value": 164.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_ref",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 4605.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_ref",
+          "index": 3,
+          "t_ms": 1785965162921,
+          "value": 4602.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v2_both_fluo_vintages",
+    "generation": "v2",
+    "note": "Out-of-contract row carrying both spellings. Precedence is deterministic: the canonical s_630/r_630 wins, exactly one series per channel is emitted, and legacy_fluo_alias is absent because the canonical tags supplied the values.",
+    "row": {
+      "id": 2013,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "10:00:3B:72:22:44",
+      "client_id": "AMBYTE_10003B722244",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26371,
+        "startTicks_UTC": 1785965160359,
+        "endTicks_UTC": 1785965163775,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "arrun 1,0,2,0,0,4,0,1,0,1",
+        "tag": "MEASUREMENT",
+        "metadata": {
+          "segments": [
+            {
+              "pulses": 4,
+              "freq": 1,
+              "actinic": 0
+            }
+          ],
+          "cal_version": "6a4356a8",
+          "sensor_id": "10:91:A8:4F:4F:D4"
+        },
+        "data": {
+          "s_630": [
+            159,
+            164,
+            170,
+            175
+          ],
+          "s_fluo": [
+            9,
+            9,
+            9,
+            9
+          ],
+          "r_630": [
+            4605,
+            4604,
+            4603,
+            4602
+          ],
+          "r_fluo": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "timing": [
+            0,
+            3416000
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "point_count": 8,
+      "leaf_temp_time_estimated": false,
+      "normalized": {
+        "schema": "ambit.trace/3",
+        "series_names": [
+          "fluo_630_ref",
+          "fluo_630_signal"
+        ],
+        "legacy_fluo_alias": false,
+        "fluo_signal_v": [
+          159,
+          164,
+          170,
+          175
+        ],
+        "fluo_ref_v": [
+          4605,
+          4604,
+          4603,
+          4602
+        ]
+      },
+      "points": [
+        {
+          "series": "fluo_630_signal",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 159.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_signal",
+          "index": 1,
+          "t_ms": 1785965161213,
+          "value": 164.0,
+          "unit": "count"
+        },
+        {
+          "series": "fluo_630_ref",
+          "index": 0,
+          "t_ms": 1785965160359,
+          "value": 4605.0,
+          "unit": "count"
+        }
+      ]
+    }
+  },
+  {
+    "name": "not_a_trace_multispeq",
+    "generation": "other",
+    "note": "A MultispeQ row on the same table: the trace normalizer must return NULL for it, and the trace view must not contain it.",
+    "row": {
+      "id": 2004,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "multispeq-1",
+      "client_id": "multispeq-1",
+      "timestamp": "2026-08-05T21:26:00.359Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      "sensor_family": "multispeq"
+    },
+    "sample": [
+      {
+        "protocol_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        "set": [
+          {
+            "label": "PAM",
+            "data_raw": [
+              1,
+              2,
+              3
+            ],
+            "temperature": 22.1
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "normalized_is_null": true
+    }
+  }
+]
