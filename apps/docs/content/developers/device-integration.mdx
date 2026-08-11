@@ -96,15 +96,21 @@ For each measurement, build the topic from the experiment's `topicPrefix` plus t
 
 Publish with QoS 1. The payload schema per channel is documented in the [AsyncAPI reference](/api/mqtt); include the question answers from the plan in every payload.
 
-## Receiving the file over a direct connection (SET_CONFIG)
+## How the file reaches the device
 
-Push-capable families receive the file over serial or BLE as one command frame:
+The platform assumes nothing about your hardware beyond storage: the downloaded file is the canonical transport, and how it lands on the device is up to your provisioning flow (flashed during setup, copied to an SD card, written by a vendor tool). Every family supports this path.
+
+Push-capable families can additionally receive the file over a direct serial or BLE connection as one command frame:
 
 ```json
 { "command": "SET_CONFIG", "payload": { "config": { ...the file... }, "id": "<thingName>" } }
 ```
 
-Persist the payload's `config` and treat it as the new full state. MultispeQ, Ambit, and MiniPAR instruments do not accept a stored configuration (their procedure travels inline per measurement); for them, and for any custom build, the downloaded file is the transport.
+Persist the payload's `config` and treat it as the new full state. A custom build that wants the push must accept this frame; today only generic-family devices do.
+
+The other families are download-only, for two different reasons: MultispeQ, Ambit, and MiniPAR instruments do not store a configuration at all (their procedure travels inline per measurement), while Ambyte edge devices load the file at provisioning time and expose no onboarding commands over a direct connection.
+
+How these capabilities are declared inside the platform, and how to add support for a new device, is covered in [Device support](/developers/extending/device-support).
 
 ## Reference implementation (ESP32)
 
