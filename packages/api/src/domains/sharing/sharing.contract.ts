@@ -77,12 +77,16 @@ export const sharingContract = {
    * Organization lookup for the grantee picker. Lives in the sharing domain rather
    * than a general `organizations` one because it exists solely to feed that picker
    * and is scoped accordingly — organizations the caller is a member of, personal
-   * workspaces excluded. A full organizations domain should absorb it later.
+   * workspaces excluded.
+   *
+   * Its own path, not `/organizations/search`: the organizations domain owns
+   * `/organizations/{id}`, and a literal segment inside somebody else's collection
+   * resolves by controller registration order, which nothing here can guarantee.
    */
   searchGranteeOrganizations: oc
     .route({
       method: "GET",
-      path: "/api/v1/organizations/search",
+      path: "/api/v1/grantee-organizations",
       successStatus: 200,
     })
     .input(zSearchGranteeOrganizationsQuery)

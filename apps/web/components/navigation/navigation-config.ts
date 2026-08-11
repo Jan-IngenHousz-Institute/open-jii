@@ -3,6 +3,7 @@ import {
   Leaf,
   Archive,
   BookOpen,
+  Building2,
   CirclePlus,
   Code,
   FileSliders,
@@ -12,6 +13,7 @@ import {
   LogOut,
   RadioReceiver,
   Settings,
+  Users,
   User,
   Webcam,
 } from "lucide-react";
@@ -48,9 +50,11 @@ export const iconMap = {
   BookOpen,
   Library,
   RadioReceiver,
+  Users,
   Webcam,
   LifeBuoy,
   HelpCircle,
+  Building2,
 } as const;
 
 /**
@@ -99,6 +103,29 @@ export const mainNavigation = {
         titleKey: "sidebar.overview",
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/workbooks`,
+      },
+    ] as NavLink[],
+  },
+  organizations: {
+    titleKey: "sidebar.organizations",
+    namespace: "navigation",
+    url: (locale: string) => `/${locale}/platform/organizations`,
+    icon: "Building2",
+    items: [
+      {
+        titleKey: "sidebar.newOrganization",
+        namespace: "navigation",
+        url: (locale: string) => `/${locale}/platform/organizations/new`,
+      },
+      {
+        titleKey: "sidebar.myOrganizations",
+        namespace: "navigation",
+        url: (locale: string) => `/${locale}/platform/organizations`,
+      },
+      {
+        titleKey: "sidebar.organizationDirectory",
+        namespace: "navigation",
+        url: (locale: string) => `/${locale}/platform/organizations?filter=all`,
       },
     ] as NavLink[],
   },

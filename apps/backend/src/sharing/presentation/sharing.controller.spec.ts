@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type { ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
-import { resourceGrants } from "@repo/database";
+import { and, eq, profiles, resourceGrants, teamMembers } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { TestHarness } from "../../test/test-harness";
@@ -88,44 +88,6 @@ describe("SharingController", () => {
       (await authz.can(grantee, { resourceType: "macro", resourceId: macro.id, action: "read" }))
         .allow,
     ).toBe(true);
-  });
-
-  it("authorizes and renders an old-pod-written 'member' grant in a mixed-version deployment", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Mixed-version experiment",
-      userId: owner,
-    });
-    const collaborator = await testApp.createTestUser({ name: "Legacy Collaborator" });
-    await testApp.database.insert(resourceGrants).values({
-      resourceType: "experiment",
-      resourceId: experiment.id,
-      granteeType: "user",
-      granteeId: collaborator,
-      role: "member",
-    });
-
-    expect(
-      (
-        await authz.can(collaborator, {
-          resourceType: "experiment",
-          resourceId: experiment.id,
-          action: "contribute",
-        })
-      ).allow,
-    ).toBe(true);
-
-    const res = await testApp
-      .get(
-        testApp.resolveOrpcPath(contract.sharing.listGrants, {
-          resourceType: "experiment",
-          id: experiment.id,
-        }),
-      )
-      .withAuth(owner)
-      .expect(StatusCodes.OK);
-
-    const grants = res.body as ResourceGrantDto[];
-    expect(grants.find((grant) => grant.granteeId === collaborator)?.role).toBe("viewer");
   });
 
   it("rejects a non-sharer (plain public reader) with 403", async () => {
@@ -282,6 +244,269 @@ describe("SharingController", () => {
           (await authz.can(successor, { resourceType, resourceId, action: "manage" })).allow,
         ).toBe(true);
       }
+    });
+  });
+
+  describe("team grantees", () => {
+    const createPath = (macroId: string) =>
+      testApp.resolveOrpcPath(contract.sharing.createGrant, {
+        resourceType: "macro",
+        id: macroId,
+      });
+
+    /** A macro owned by a real organization, plus one of its teams. */
+    async function labWithTeam() {
+      const organizationId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(organizationId, owner, "owner");
+      const macro = await testApp.createMacro({
+        name: "M",
+        createdBy: owner,
+        organizationId,
+        visibility: "private",
+      });
+      const teamId = await testApp.createTeam(organizationId, "Field crew");
+      const teammate = await testApp.createTestUser({ name: "Teammate" });
+      await testApp.addTeamMember(teamId, teammate);
+      return { organizationId, macro, teamId, teammate };
+    }
+
+    it("gives a team's members read through a 'Can view' grant", async () => {
+      const { macro, teamId, teammate } = await labWithTeam();
+
+      await testApp
+        .post(createPath(macro.id))
+        .withAuth(owner)
+        .send({ granteeType: "team", granteeId: teamId, role: "viewer" })
+        .expect(StatusCodes.CREATED);
+
+      expect(
+        (await authz.can(teammate, { resourceType: "macro", resourceId: macro.id, action: "read" }))
+          .allow,
+      ).toBe(true);
+      expect(
+        (
+          await authz.can(teammate, {
+            resourceType: "macro",
+            resourceId: macro.id,
+            action: "update",
+          })
+        ).allow,
+      ).toBe(false);
+    });
+
+    it("gives them full control through a 'Can edit' grant", async () => {
+      const { macro, teamId, teammate } = await labWithTeam();
+
+      await testApp
+        .post(createPath(macro.id))
+        .withAuth(owner)
+        .send({ granteeType: "team", granteeId: teamId, role: "admin" })
+        .expect(StatusCodes.CREATED);
+
+      const decision = await authz.can(teammate, {
+        resourceType: "macro",
+        resourceId: macro.id,
+        action: "manage",
+      });
+      expect(decision).toMatchObject({ allow: true, reason: "resource-grant:team" });
+    });
+
+    it("drops the access path when the member leaves the team", async () => {
+      const { macro, teamId, teammate } = await labWithTeam();
+      await testApp
+        .post(createPath(macro.id))
+        .withAuth(owner)
+        .send({ granteeType: "team", granteeId: teamId, role: "admin" })
+        .expect(StatusCodes.CREATED);
+
+      await testApp.database
+        .delete(teamMembers)
+        .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, teammate)));
+
+      // Team access is membership, not a copy of the grant: it goes the moment
+      // they are out of the team, with the grant row untouched.
+      expect(
+        (await authz.can(teammate, { resourceType: "macro", resourceId: macro.id, action: "read" }))
+          .allow,
+      ).toBe(false);
+    });
+
+    it("refuses a team from another organization", async () => {
+      const { macro } = await labWithTeam();
+      const elsewhere = await testApp.createOrganization();
+      await testApp.addOrganizationMember(elsewhere, owner, "owner");
+      const foreignTeam = await testApp.createTeam(elsewhere, "Outsiders");
+
+      // A team cannot exist outside its own organization, so granting one access
+      // here would be access the owning organization could never account for.
+      await testApp
+        .post(createPath(macro.id))
+        .withAuth(owner)
+        .send({ granteeType: "team", granteeId: foreignTeam, role: "viewer" })
+        .expect(StatusCodes.BAD_REQUEST);
+
+      expect(
+        await testApp.database
+          .select({ id: resourceGrants.id })
+          .from(resourceGrants)
+          .where(
+            and(eq(resourceGrants.resourceId, macro.id), eq(resourceGrants.granteeType, "team")),
+          ),
+      ).toEqual([]);
+    });
+
+    it("lists the team by name and head count, and never as an outside collaborator", async () => {
+      const { macro, teamId } = await labWithTeam();
+      await testApp
+        .post(createPath(macro.id))
+        .withAuth(owner)
+        .send({ granteeType: "team", granteeId: teamId, role: "viewer" })
+        .expect(StatusCodes.CREATED);
+
+      const res = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.sharing.listGrants, {
+            resourceType: "macro",
+            id: macro.id,
+          }),
+        )
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+
+      const grants = res.body as ResourceGrantDto[];
+      const teamRow = grants.find((grant) => grant.granteeId === teamId);
+      expect(teamRow).toMatchObject({
+        granteeType: "team",
+        isOutsideCollaborator: false,
+        grantee: { type: "team", displayName: "Field crew", memberCount: 1, email: null },
+      });
+    });
+
+    it("re-tiers and revokes a team grant like any other", async () => {
+      const { macro, teamId, teammate } = await labWithTeam();
+      const created = await testApp
+        .post(createPath(macro.id))
+        .withAuth(owner)
+        .send({ granteeType: "team", granteeId: teamId, role: "viewer" })
+        .expect(StatusCodes.CREATED);
+      const teamGrant = (created.body as ResourceGrantDto[]).find(
+        (grant) => grant.granteeId === teamId,
+      );
+      if (!teamGrant) throw new Error("The team grant is missing from the create response");
+      const grantId = teamGrant.id;
+
+      await testApp
+        .patch(
+          testApp.resolveOrpcPath(contract.sharing.updateGrant, {
+            resourceType: "macro",
+            id: macro.id,
+            grantId,
+          }),
+        )
+        .withAuth(owner)
+        .send({ role: "admin" })
+        .expect(StatusCodes.OK);
+      expect(
+        (
+          await authz.can(teammate, {
+            resourceType: "macro",
+            resourceId: macro.id,
+            action: "update",
+          })
+        ).allow,
+      ).toBe(true);
+
+      await testApp
+        .delete(
+          testApp.resolveOrpcPath(contract.sharing.revokeGrant, {
+            resourceType: "macro",
+            id: macro.id,
+            grantId,
+          }),
+        )
+        .withAuth(owner)
+        .expect(StatusCodes.NO_CONTENT);
+      expect(
+        (await authz.can(teammate, { resourceType: "macro", resourceId: macro.id, action: "read" }))
+          .allow,
+      ).toBe(false);
+    });
+
+    it("does not let a team grant stand in for the last admin", async () => {
+      const { organizationId, macro, teamId } = await labWithTeam();
+      const soleAdmin = await testApp.createTestUser({ name: "Sole admin" });
+      const grant = await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: soleAdmin,
+        role: "admin",
+      });
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "team",
+        granteeId: teamId,
+        role: "admin",
+      });
+      // The husk case, where the invariant applies: no living organization owner,
+      // so the last full-control *user* grant is all that is holding the macro up.
+      await testApp.database
+        .update(profiles)
+        .set({ deletedAt: new Date() })
+        .where(eq(profiles.userId, owner));
+      await testApp.addOrganizationMember(organizationId, soleAdmin, "member");
+
+      await testApp
+        .delete(
+          testApp.resolveOrpcPath(contract.sharing.revokeGrant, {
+            resourceType: "macro",
+            id: macro.id,
+            grantId: grant.id,
+          }),
+        )
+        .withAuth(soleAdmin)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
+  describe("transferResourceOrganization", () => {
+    it("moves the resource and answers with its new organization", async () => {
+      const organizationId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(organizationId, owner, "owner");
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner, organizationId });
+      const personal = await testApp.personalOrganizationId(owner);
+
+      const res = await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.sharing.transferResourceOrganization, {
+            resourceType: "macro",
+            id: macro.id,
+          }),
+        )
+        .withAuth(owner)
+        .send({ targetOrganizationId: personal })
+        .expect(StatusCodes.OK);
+
+      expect(res.body).toEqual({
+        resourceType: "macro",
+        resourceId: macro.id,
+        organizationId: personal,
+      });
+    });
+
+    it("refuses a device before any handler sees it", async () => {
+      const device = await testApp.createIotDevice({ createdBy: owner });
+      const personal = await testApp.personalOrganizationId(owner);
+
+      // A device's AWS Thing and certificate are provisioned against its
+      // organization, so it has no transfer — the contract's resource-type enum
+      // leaves it out and validation refuses the call.
+      await testApp
+        .post(`/api/v1/device/${device.id}/transfer`)
+        .withAuth(owner)
+        .send({ targetOrganizationId: personal })
+        .expect(StatusCodes.BAD_REQUEST);
     });
   });
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { GRANT_ROLES, STAFFING_GRANT_ROLES } from "@repo/database";
 
-import { RESOURCE_ACTIONS, RESOURCE_TYPES, grantRoleCan, orgRoleCan } from "./access";
+import { RESOURCE_ACTIONS, RESOURCE_TYPES, grantRoleCan, orgRoleCan, roles } from "./access";
 import type { ResourceAction, ResourceType } from "./access";
 
 /**
@@ -48,15 +48,10 @@ describe("grant roles", () => {
     expectExactly((a) => grantRoleCan("owner", "experiment", a), ALL_ACTIONS);
   });
 
-  it("treats an old-pod-written 'member' grant exactly like 'viewer'", () => {
-    expectExactly((a) => grantRoleCan("member", "experiment", a), ["read", "contribute"]);
-    for (const resourceType of TYPES_WITHOUT_DATA) {
-      expectExactly((a) => grantRoleCan("member", resourceType, a), ["read"]);
-    }
-  });
-
   it("refuses an unknown role outright", () => {
-    for (const role of ["bogus"]) {
+    // `member` is in here as an unknown role, which is what it is: the matrix knows
+    // three grant roles and no stored row can carry the retired spelling.
+    for (const role of ["bogus", "member"]) {
       for (const resourceType of RESOURCE_TYPES) {
         expectExactly((a) => grantRoleCan(role, resourceType, a), []);
       }
@@ -104,6 +99,26 @@ describe("organization roles", () => {
     expectExactly((a) => orgRoleCan("member,admin", "experiment", a), ALL_ACTIONS);
     expectExactly((a) => orgRoleCan("member,bogus", "experiment", a), ["read"]);
   });
+
+  it("keeps the organization's own settings to its owners", () => {
+    // `/organization/update` is gated on exactly this statement, and Better Auth's
+    // default admin role carries it — which would let an admin rename the
+    // organization or change its slug and directory visibility.
+    expect(roles.owner.authorize({ organization: ["update"] }).success).toBe(true);
+    expect(roles.admin.authorize({ organization: ["update"] }).success).toBe(false);
+    expect(roles.member.authorize({ organization: ["update"] }).success).toBe(false);
+  });
+
+  it("leaves the rest of an admin's organization management intact", () => {
+    expect(roles.admin.authorize({ member: ["create", "update", "delete"] }).success).toBe(true);
+    expect(roles.admin.authorize({ invitation: ["create", "cancel"] }).success).toBe(true);
+    expect(roles.admin.authorize({ team: ["create", "update", "delete"] }).success).toBe(true);
+  });
+
+  it("still refuses an admin the organization delete owners hold", () => {
+    expect(roles.owner.authorize({ organization: ["delete"] }).success).toBe(true);
+    expect(roles.admin.authorize({ organization: ["delete"] }).success).toBe(false);
+  });
 });
 
 describe("the grant and organization matrices disagree only about the middle tier", () => {
@@ -149,15 +164,17 @@ describe("GRANT_ROLES agrees with the matrix", () => {
     }
   });
 
-  it("recognizes only the write vocabulary plus the mixed-version read alias", () => {
+  it("holds every role the matrix recognizes", () => {
+    // The other direction: a tier added to `grantRoles` that the writers cannot express
+    // is a tier nothing can ever be granted.
     const recognized = ["owner", "admin", "viewer", "member", "bogus"].filter((role) =>
       grantRoleCan(role, "experiment", "read"),
     );
 
-    expect([...recognized].sort()).toEqual([...GRANT_ROLES, "member"].sort());
+    expect([...recognized].sort()).toEqual([...GRANT_ROLES].sort());
   });
 
-  it("does not let writers mint the compatibility 'member' spelling", () => {
+  it("does not carry the retired 'member' spelling", () => {
     expect(GRANT_ROLES).not.toContain("member");
   });
 });

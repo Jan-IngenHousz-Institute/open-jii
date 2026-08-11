@@ -66,9 +66,20 @@ const statement = {
 export const ac = createAccessControl(statement);
 
 /**
+ * Better Auth's default admin statement is `organization: ["update"]`, and that is
+ * exactly what `/organization/update` checks — so a default admin can rename the
+ * organization and change its slug. Emptied rather than guarded at the call sites
+ * so there is one answer to "may an admin change organization settings": no.
+ */
+const adminOrganizationActions = [] as const;
+
+/**
  * Org roles.
  * - `owner`/`admin`: every action on every resource type (full control), plus
- *   the default org-management verbs (invitations, members, teams).
+ *   the default org-management verbs (invitations, members, teams). `admin` keeps
+ *   all of those except `organization:update` — the organization's own settings
+ *   (name, slug, profile, directory visibility) belong to its owners alone, and
+ *   Better Auth's default admin statement would otherwise hand them over.
  * - `member`: read-only across resource types. This folds the org "base
  *   permission" baseline (default: read) into the role; a configurable per-org
  *   base-permission dial is deferred until multi-member orgs exist.
@@ -84,6 +95,7 @@ export const roles = {
   }),
   admin: ac.newRole({
     ...adminAc.statements,
+    organization: adminOrganizationActions,
     experiment: RESOURCE_ACTIONS,
     protocol: RESOURCE_ACTIONS,
     macro: RESOURCE_ACTIONS,
@@ -112,29 +124,25 @@ export type OrgRole = keyof typeof roles;
  * does a public experiment's passer-by. That is why the grant `viewer` tier cannot be
  * aliased onto the org `member` role the way it was when both meant read-only.
  *
- * `GRANT_ROLES` in `@repo/database` types every write path against the current role
- * names. The additional `member` key below is read-only compatibility for grants
- * written by an older application instance during a rolling deployment.
+ * These keys are the whole set. `GRANT_ROLES` in `@repo/database` types every write
+ * path against them, so anything else reaching `grantRoleCan` is a bug and is refused.
  *
  * `owner`/`admin` mean full control in both matrices, so they are shared.
  */
-const viewerGrantRole = ac.newRole({
-  ...memberAc.statements,
-  experiment: READ_AND_CONTRIBUTE,
-  // Silent on the other types rather than generous: only experiments have data to
-  // contribute to, so a future generic surface cannot read a promise out of this
-  // that nothing enforces.
-  protocol: READ_ONLY,
-  macro: READ_ONLY,
-  workbook: READ_ONLY,
-  device: READ_ONLY,
-});
-
 const grantRoles = {
   owner: roles.owner,
   admin: roles.admin,
-  viewer: viewerGrantRole,
-  member: viewerGrantRole,
+  viewer: ac.newRole({
+    ...memberAc.statements,
+    experiment: READ_AND_CONTRIBUTE,
+    // Silent on the other types rather than generous: only experiments have data to
+    // contribute to, so a future generic surface cannot read a promise out of this
+    // that nothing enforces.
+    protocol: READ_ONLY,
+    macro: READ_ONLY,
+    workbook: READ_ONLY,
+    device: READ_ONLY,
+  }),
 } as const;
 
 type GrantRoleKey = keyof typeof grantRoles;

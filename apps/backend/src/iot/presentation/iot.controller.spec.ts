@@ -164,7 +164,7 @@ describe("IotController", () => {
       const experimentId = "123e4567-e89b-12d3-a456-426614174000";
       const canSpy = vi
         .spyOn(testApp.module.get(AuthorizationService), "can")
-        .mockResolvedValue({ allow: false, reason: "forbidden" });
+        .mockResolvedValue({ allow: false, reason: "forbidden", organizationId: null });
 
       await testApp
         .post(testApp.resolveOrpcPath(contract.iot.getUploadUrl))

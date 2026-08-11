@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { zPublishableResourceType } from "../visibility/visibility.schema";
 import {
   zCreateCollaboratorBody,
+  zGranteeType,
   zGrantRole,
   zResourceGrant,
   zShareableRole,
@@ -34,6 +35,12 @@ describe("zSharingResourceType", () => {
   });
 });
 
+describe("zGranteeType", () => {
+  it("covers every grantee the grants table and the evaluator take", () => {
+    expect([...zGranteeType.options].sort()).toEqual(["organization", "team", "user"]);
+  });
+});
+
 describe("zResourceGrant response schema", () => {
   const base = {
     id: "11111111-1111-1111-1111-111111111111",
@@ -44,7 +51,13 @@ describe("zResourceGrant response schema", () => {
     createdAt: "2026-07-22T00:00:00.000Z",
     createdBy: null,
     isOutsideCollaborator: true,
-    grantee: { type: "user" as const, displayName: null, email: null, avatarUrl: null },
+    grantee: {
+      type: "user" as const,
+      displayName: null,
+      email: null,
+      avatarUrl: null,
+      memberCount: null,
+    },
   };
 
   it("accepts every grant-role enum value", () => {
@@ -57,6 +70,26 @@ describe("zResourceGrant response schema", () => {
     // Nothing writes `owner` and no caller may send it, but rows that hold it have to
     // keep listing — which is the whole reason the response enum stays wider.
     expect(zResourceGrant.safeParse({ ...base, role: "owner" }).success).toBe(true);
+  });
+
+  it("carries a team grantee's head count and no head count for anyone else", () => {
+    const team = {
+      ...base,
+      role: "viewer" as const,
+      granteeType: "team" as const,
+      isOutsideCollaborator: false,
+      grantee: {
+        type: "team" as const,
+        displayName: "Field crew",
+        email: null,
+        avatarUrl: null,
+        memberCount: 4,
+      },
+    };
+    expect(zResourceGrant.safeParse(team).success).toBe(true);
+    // Required, not optional: a missing count would render as an empty team.
+    const { memberCount: _omitted, ...withoutCount } = team.grantee;
+    expect(zResourceGrant.safeParse({ ...team, grantee: withoutCount }).success).toBe(false);
   });
 
   it("rejects a role outside the grant-role enum (no unknown role leaks to clients)", () => {

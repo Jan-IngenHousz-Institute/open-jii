@@ -39,6 +39,7 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
 import MacroCodeEditor from "../macro-code-editor";
 import { getMacroCodeTemplate } from "../macro-code-template";
+import { OrganizationPicker } from "../organizations/organization-picker";
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 import { NewMacroDetailsCard } from "./new-macro-details-card";
 
@@ -126,6 +127,7 @@ export function NewMacroForm() {
       language: data.language,
       code: code,
       visibility: data.visibility,
+      organizationId: data.organizationId,
     });
   }
 
@@ -205,6 +207,22 @@ export function NewMacroForm() {
                       <SelectItem value="private">{t("newMacro.private")}</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Owning organization */}
+            <FormField
+              control={form.control}
+              name="organizationId"
+              render={({ field }) => (
+                <FormItem>
+                  <OrganizationPicker
+                    id="new-macro-organization"
+                    value={field.value ?? undefined}
+                    onChange={(organizationId) => field.onChange(organizationId ?? undefined)}
+                  />
                   <FormMessage />
                 </FormItem>
               )}

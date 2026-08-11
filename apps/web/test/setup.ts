@@ -231,6 +231,31 @@ vi.mock("@repo/auth/client", () => ({
       updatePasskey: vi.fn().mockResolvedValue({ data: null, error: null }),
       deletePasskey: vi.fn().mockResolvedValue({ data: null, error: null }),
     },
+    // Every organization write goes through the Better Auth client, so the whole
+    // surface is stubbed here; a missing method would fail as "not a function"
+    // inside a mutation rather than at the assertion. `data`/`error` mirror the
+    // envelope the real client resolves to, which `unwrapAuthResult` unpacks.
+    organization: {
+      create: vi.fn().mockResolvedValue({ data: null, error: null }),
+      update: vi.fn().mockResolvedValue({ data: null, error: null }),
+      delete: vi.fn().mockResolvedValue({ data: null, error: null }),
+      checkSlug: vi.fn().mockResolvedValue({ data: { status: true }, error: null }),
+      inviteMember: vi.fn().mockResolvedValue({ data: null, error: null }),
+      cancelInvitation: vi.fn().mockResolvedValue({ data: null, error: null }),
+      listInvitations: vi.fn().mockResolvedValue({ data: [], error: null }),
+      listMembers: vi.fn().mockResolvedValue({ data: { members: [], total: 0 }, error: null }),
+      getInvitation: vi.fn().mockResolvedValue({ data: null, error: null }),
+      acceptInvitation: vi.fn().mockResolvedValue({ data: null, error: null }),
+      rejectInvitation: vi.fn().mockResolvedValue({ data: null, error: null }),
+      updateMemberRole: vi.fn().mockResolvedValue({ data: null, error: null }),
+      removeMember: vi.fn().mockResolvedValue({ data: null, error: null }),
+      leave: vi.fn().mockResolvedValue({ data: null, error: null }),
+      createTeam: vi.fn().mockResolvedValue({ data: null, error: null }),
+      updateTeam: vi.fn().mockResolvedValue({ data: null, error: null }),
+      removeTeam: vi.fn().mockResolvedValue({ data: null, error: null }),
+      addTeamMember: vi.fn().mockResolvedValue({ data: null, error: null }),
+      removeTeamMember: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
     getLastUsedLoginMethod: vi.fn(() => null),
     isLastUsedLoginMethod: vi.fn(() => false),
     clearLastUsedLoginMethod: vi.fn(),

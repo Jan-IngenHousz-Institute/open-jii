@@ -23,6 +23,8 @@ export const selectProtocolSchema = createSelectSchema(protocols)
   .omit({ searchVector: true })
   .extend({
     createdByName: z.string().optional(),
+    /** Display name of the owning organization; `null` for a personal workspace. */
+    organizationName: z.string().nullish(),
   });
 
 export type CreateProtocolDto = z.infer<typeof createProtocolSchema>;

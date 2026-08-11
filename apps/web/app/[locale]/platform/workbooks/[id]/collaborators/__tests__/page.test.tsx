@@ -46,7 +46,13 @@ describe("WorkbookCollaboratorsPage", () => {
         createResourceGrant({
           resourceType: "workbook",
           resourceId: "wb-1",
-          grantee: { type: "user", displayName: "Lin Zhao", email: "lin@uni.edu", avatarUrl: null },
+          grantee: {
+            type: "user",
+            displayName: "Lin Zhao",
+            email: "lin@uni.edu",
+            avatarUrl: null,
+            memberCount: null,
+          },
         }),
       ],
     });

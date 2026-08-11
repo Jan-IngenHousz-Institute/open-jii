@@ -36,7 +36,11 @@
     "library": "Bibliotheek",
     "protocol1": "Protocol 1",
     "otherDevices": "Andere apparaten",
-    "otherDevice1": "Ander apparaat 1"
+    "otherDevice1": "Ander apparaat 1",
+    "organizations": "Organisaties",
+    "newOrganization": "Nieuwe organisatie",
+    "myOrganizations": "Mijn organisaties",
+    "organizationDirectory": "Overzicht"
   },
   "breadcrumbs": {
     "home": "Home",

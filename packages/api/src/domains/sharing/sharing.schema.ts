@@ -12,8 +12,12 @@ export const zSharingResourceType = z.enum([
   "device",
 ]);
 
-/** Team grantees arrive with team management; the DB enum and `can()` already take them. */
-export const zGranteeType = z.enum(["user", "organization"]);
+/**
+ * Who a grant can name. A team is always a team of the resource's **owning**
+ * organization — validated on write — which is what keeps a team grantee from ever
+ * being an outside collaborator.
+ */
+export const zGranteeType = z.enum(["user", "organization", "team"]);
 
 /**
  * As stored and returned (mirrors `GRANT_ROLES` in `@repo/database`). `owner` is
@@ -36,17 +40,23 @@ export const zCollaboratorGrantPathParams = zCollaboratorsPathParams.extend({
   grantId: z.string().uuid().describe("ID of the grant to modify"),
 });
 
-/** Display info for a grant's grantee (a user or an organization). */
+/** Display info for a grant's grantee (a user, an organization or a team). */
 export const zGrantee = z.object({
   type: zGranteeType,
   displayName: z.string().nullable(),
   email: z.string().nullable(),
   avatarUrl: z.string().nullable(),
+  /**
+   * How many people a team grantee actually admits — the one thing a team row
+   * carries that a name does not. `null` for every other grantee type.
+   */
+  memberCount: z.number().int().nullable(),
 });
 
 /**
  * A direct grant plus its grantee's display info. `isOutsideCollaborator` is computed:
- * a user not in the owning org, or a grantee org that is not the owning org.
+ * a user not in the owning org, or a grantee org that is not the owning org. A team
+ * is never outside — it belongs to the owning org by construction.
  */
 export const zResourceGrant = z.object({
   id: z.string().uuid(),

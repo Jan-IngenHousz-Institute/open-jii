@@ -34,6 +34,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import { MacroCompatibleProtocolsCard } from "../macro-settings/macro-compatible-protocols-card";
+import { OwningOrganizationField } from "../organizations/owning-organization-field";
 import { DetailsSidebarCard } from "../shared/details-sidebar-card";
 import { ResourcePublishControl } from "../visibility/resource-publish-control";
 
@@ -50,7 +51,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
 
   // Capability, not ownership: an `admin` grantee edits, a `viewer` does
   // not, and deletion/publishing follow `manage` — all decided by the backend.
-  const { canUpdate, canManage } = macro.capabilities;
+  const { canUpdate, canManage, canTransfer } = macro.capabilities;
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION);
 
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(macroId);
@@ -125,6 +126,14 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
         <h4 className="text-sm font-medium">{tCommon("common.createdBy")}</h4>
         <p className="text-muted-foreground text-sm">{macro.createdByName ?? "-"}</p>
       </div>
+
+      <OwningOrganizationField
+        resourceType="macro"
+        resourceId={macroId}
+        organizationId={macro.organizationId}
+        organizationName={macro.organizationName}
+        canTransfer={canTransfer}
+      />
 
       {macro.forkedFrom ? (
         <div className="space-y-1">

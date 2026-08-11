@@ -105,7 +105,7 @@ export class TransferResourceAdminUseCase {
 
     // The target must be someone the caller could have shared with: handing admin to
     // a closed or deactivated account would leave the resource unstaffed again.
-    if (!(await this.repo.granteeIsSelectable("user", targetUserId, currentUserId))) {
+    if (!(await this.repo.granteeIsSelectable("user", targetUserId, currentUserId, null))) {
       return fail("Target user is not available");
     }
 

@@ -19,6 +19,7 @@ import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
+import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -39,6 +40,8 @@ export interface MacroFilter {
   language?: "python" | "r" | "javascript";
   filter?: "my";
   userId?: string;
+  /** Narrow to one owning organization (the org profile's resources showcase). */
+  organizationId?: string;
 }
 
 // All macro columns except the internal full-text `search_vector` (never returned to clients).
@@ -129,6 +132,12 @@ export class MacroRepository {
         conditions.push(scope);
       }
 
+      // Applied on top of the access scope, never instead of it: an org's page shows
+      // each viewer exactly the rows they could already reach.
+      if (filter?.organizationId) {
+        conditions.push(eq(macros.organizationId, filter.organizationId));
+      }
+
       if (filter?.filter === "my" && filter.userId) {
         conditions.push(eq(macros.createdBy, filter.userId));
       }
@@ -168,6 +177,7 @@ export class MacroRepository {
           macros: macroColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
+          organizationName: owningOrganizationNameSql("macros"),
         })
         .from(macros)
         .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
@@ -183,6 +193,7 @@ export class MacroRepository {
       const lastName = result[0].lastName;
       augmentedResult.createdByName =
         firstName && lastName ? `${firstName} ${lastName}` : undefined;
+      augmentedResult.organizationName = result[0].organizationName;
       return augmentedResult;
     });
   }

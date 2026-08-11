@@ -1,7 +1,7 @@
 "use client";
 
 import { UserAvatar } from "@/components/user-avatar";
-import { Building2, LogOut, Trash2 } from "lucide-react";
+import { Building2, LogOut, Trash2, Users } from "lucide-react";
 
 import type {
   ResourceCollaboratorDto,
@@ -45,13 +45,18 @@ export function CollaboratorRow({
     collaborator.grantee.displayName ?? collaborator.grantee.email ?? collaborator.granteeId;
   const { firstName, lastName } = nameParts(displayName);
   const isOrganization = collaborator.granteeType === "organization";
+  const isTeam = collaborator.granteeType === "team";
   const isOwner = collaborator.kind === "owner";
 
   return (
     <div role="listitem" className="flex items-center gap-3 px-3 py-2.5">
-      {isOrganization ? (
+      {isOrganization || isTeam ? (
         <div className="bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
-          <Building2 className="text-muted-foreground h-4 w-4" />
+          {isTeam ? (
+            <Users className="text-muted-foreground h-4 w-4" />
+          ) : (
+            <Building2 className="text-muted-foreground h-4 w-4" />
+          )}
         </div>
       ) : (
         <UserAvatar
@@ -70,15 +75,34 @@ export function CollaboratorRow({
           {isSelf && (
             <span className="text-muted-foreground shrink-0 text-xs">{t("sharing.you")}</span>
           )}
-          {/* Doc 009: informational only — capability comes from the role. */}
-          {collaborator.kind === "grant" && collaborator.isOutsideCollaborator && (
+          {/* A team belongs to the owning organization by construction, so it is
+              never an outside collaborator — the badge says what it is instead. */}
+          {isTeam && (
+            <Badge variant="outline" className="shrink-0 text-xs font-normal">
+              {t("sharing.granteeTypeTeam")}
+            </Badge>
+          )}
+          {/*
+            Informational only — capability comes from the role. Never shown for a
+            team: "outside collaborator" means the grantee is not in the owning
+            organization, which a team cannot be, so the badge could only ever
+            mislead here. Suppressed rather than trusted, because the flag arrives
+            computed and a wrong `true` would otherwise be rendered as fact.
+          */}
+          {collaborator.kind === "grant" && !isTeam && collaborator.isOutsideCollaborator && (
             <Badge variant="outline" className="shrink-0 text-xs font-normal">
               {t("sharing.outsideCollaborator")}
             </Badge>
           )}
         </div>
         <span className="text-muted-foreground truncate text-xs">
-          {isOrganization ? t("sharing.granteeTypeOrganization") : collaborator.grantee.email}
+          {isTeam
+            ? // The head count is the one thing a team row carries that a name does
+              // not: it is how many people this single grant actually admits.
+              t("sharing.teamMemberCount", { count: collaborator.grantee.memberCount ?? 0 })
+            : isOrganization
+              ? t("sharing.granteeTypeOrganization")
+              : collaborator.grantee.email}
         </span>
       </div>
 

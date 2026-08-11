@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { sharingContract } from "@repo/api/domains/sharing/sharing.contract";
 import { sharingTransferAdminContract } from "@repo/api/domains/sharing/transfer-admin/sharing-transfer-admin.contract";
+import { sharingTransferOrgContract } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.contract";
 
 import { formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
@@ -14,6 +15,7 @@ import { ListGrantsUseCase } from "../application/use-cases/list-grants/list-gra
 import { RevokeGrantUseCase } from "../application/use-cases/revoke-grant/revoke-grant";
 import { SearchGranteeOrganizationsUseCase } from "../application/use-cases/search-grantee-organizations/search-grantee-organizations";
 import { TransferResourceAdminUseCase } from "../application/use-cases/transfer-resource-admin/transfer-resource-admin";
+import { TransferResourceOrgUseCase } from "../application/use-cases/transfer-resource-org/transfer-resource-org";
 import { UpdateGrantUseCase } from "../application/use-cases/update-grant/update-grant";
 
 /**
@@ -32,6 +34,7 @@ export class SharingController {
     private readonly leaveResourceUseCase: LeaveResourceUseCase,
     private readonly revokeGrantUseCase: RevokeGrantUseCase,
     private readonly transferResourceAdminUseCase: TransferResourceAdminUseCase,
+    private readonly transferResourceOrgUseCase: TransferResourceOrgUseCase,
     private readonly searchGranteeOrganizationsUseCase: SearchGranteeOrganizationsUseCase,
   ) {}
 
@@ -132,6 +135,29 @@ export class SharingController {
         );
         if (result.isSuccess()) {
           return { results: result.value };
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
+  }
+
+  /**
+   * Move a resource to another organization. No `@CanAccess` guard for the same
+   * reason as the rest of this controller — the resource type is a runtime path
+   * value — and the gate is more than access anyway: see the use-case.
+   */
+  @Implement(sharingTransferOrgContract.transferResourceOrganization)
+  transferResourceOrganization(@Session() session: UserSession) {
+    return implement(sharingTransferOrgContract.transferResourceOrganization).handler(
+      async ({ input }) => {
+        const result = await this.transferResourceOrgUseCase.execute(
+          session.user.id,
+          input.resourceType,
+          input.id,
+          input.targetOrganizationId,
+        );
+        if (result.isSuccess()) {
+          return result.value;
         }
         return throwOrpcFailure(result, this.logger);
       },

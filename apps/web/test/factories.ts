@@ -39,6 +39,14 @@ import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/tra
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type { IotDevice, IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import type { Macro, MacroDetail } from "@repo/api/domains/macro/macro.schema";
+import type { OrganizationJoinRequest } from "@repo/api/domains/organization/join-requests/organization-join-requests.schema";
+import type {
+  MyOrganization,
+  OrganizationDirectoryEntry,
+  OrganizationMember,
+  OrganizationProfile,
+  OrganizationTeam,
+} from "@repo/api/domains/organization/organization.schema";
 import type { Protocol, ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
 import type { ResourceGrantDto, ResourceOwnerDto } from "@repo/api/domains/sharing/sharing.schema";
 import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
@@ -120,6 +128,7 @@ export function createExperimentAccess(
       canManage: false,
       canShare: false,
       canLeave: false,
+      canTransfer: false,
     },
     ...accessOverrides,
   };
@@ -262,6 +271,7 @@ export function createCapabilities(
     canManage: true,
     canShare: true,
     canLeave: true,
+    canTransfer: true,
     ...overrides,
   };
 }
@@ -273,6 +283,7 @@ export const readOnlyCapabilities: ResourceCapabilities = {
   canManage: false,
   canShare: false,
   canLeave: false,
+  canTransfer: false,
 };
 
 export function createMacroDetail(overrides: Partial<MacroDetail> = {}): MacroDetail {
@@ -314,6 +325,7 @@ export function createResourceGrant(overrides: Partial<ResourceGrantDto> = {}): 
       displayName: "Grace Hopper",
       email: "grace@example.com",
       avatarUrl: null,
+      memberCount: null,
     },
     ...overrides,
   };
@@ -335,7 +347,126 @@ export function createResourceOwner(overrides: Partial<ResourceOwnerDto> = {}): 
       displayName: "Ada Lovelace",
       email: "ada@example.com",
       avatarUrl: null,
+      memberCount: null,
     },
+    ...overrides,
+  };
+}
+
+// ── Organizations ───────────────────────────────────────────────
+
+let organizationSeq = 0;
+
+/** An organization profile as `GET /organizations/{id}` returns it. */
+export function createOrganizationProfile(
+  overrides: Partial<OrganizationProfile> = {},
+): OrganizationProfile {
+  organizationSeq++;
+  return {
+    id: `org-${organizationSeq}`,
+    name: "Greenhouse Lab",
+    slug: "greenhouse-lab",
+    logo: null,
+    type: "research_institute",
+    description: null,
+    website: null,
+    location: null,
+    visibility: "private",
+    memberCount: 3,
+    role: "owner",
+    membershipStatus: "member",
+    ...overrides,
+  };
+}
+
+/** A directory row. Defaults to an organization the caller does not belong to. */
+export function createOrganizationDirectoryEntry(
+  overrides: Partial<OrganizationDirectoryEntry> = {},
+): OrganizationDirectoryEntry {
+  organizationSeq++;
+  return {
+    id: `org-${organizationSeq}`,
+    name: "Greenhouse Lab",
+    slug: "greenhouse-lab",
+    logo: null,
+    type: "university",
+    description: null,
+    location: null,
+    memberCount: 4,
+    resourceCount: 0,
+    membershipStatus: "none",
+    ...overrides,
+  };
+}
+
+/** A my-organizations row. Personal workspaces are flagged, not excluded. */
+export function createMyOrganization(overrides: Partial<MyOrganization> = {}): MyOrganization {
+  organizationSeq++;
+  return {
+    id: `org-${organizationSeq}`,
+    name: "Greenhouse Lab",
+    slug: "greenhouse-lab",
+    description: null,
+    visibility: "private",
+    role: "member",
+    isPersonal: false,
+    memberCount: 4,
+    resourceCount: 0,
+    ...overrides,
+  };
+}
+
+/** A roster row. `role` is stored verbatim by Better Auth, hence the plain string. */
+export function createOrganizationMember(
+  overrides: Partial<OrganizationMember> = {},
+): OrganizationMember {
+  organizationSeq++;
+  return {
+    userId: `user-${organizationSeq}`,
+    firstName: "Grace",
+    lastName: "Hopper",
+    email: `grace-${organizationSeq}@example.com`,
+    avatarUrl: null,
+    role: "member",
+    joinedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function createOrganizationTeam(
+  overrides: Partial<OrganizationTeam> = {},
+): OrganizationTeam {
+  organizationSeq++;
+  return {
+    id: `team-${organizationSeq}`,
+    name: "Imaging",
+    organizationId: "org-1",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    members: [],
+    ...overrides,
+  };
+}
+
+export function createOrganizationJoinRequest(
+  overrides: Partial<OrganizationJoinRequest> = {},
+): OrganizationJoinRequest {
+  organizationSeq++;
+  return {
+    id: `request-${organizationSeq}`,
+    organizationId: "org-1",
+    user: {
+      id: `user-${organizationSeq}`,
+      firstName: "Alan",
+      lastName: "Turing",
+      email: `alan-${organizationSeq}@example.com`,
+      avatarUrl: null,
+    },
+    message: null,
+    status: "pending",
+    decidedBy: null,
+    decidedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
 }
@@ -892,4 +1023,5 @@ export function resetFactories() {
   dashboardSeq = 0;
   dashboardWidgetSeq = 0;
   grantSeq = 0;
+  organizationSeq = 0;
 }

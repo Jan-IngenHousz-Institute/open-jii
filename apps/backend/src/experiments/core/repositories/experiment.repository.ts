@@ -29,6 +29,7 @@ import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
+import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedAvatarUrl,
   getAnonymizedFirstName,
@@ -244,6 +245,7 @@ export class ExperimentRepository {
     status?: ExperimentStatus,
     search?: string,
     limit?: number,
+    organizationId?: string,
   ): Promise<Result<ExperimentDto[]>> {
     const experimentFields = {
       id: experiments.id,
@@ -296,6 +298,13 @@ export class ExperimentRepository {
       });
       if (scope) {
         conditions.push(scope);
+      }
+
+      // Narrow to one owning organization (the org profile's resources showcase).
+      // Applied on top of the access scope, never instead of it: an org's page shows
+      // each viewer exactly the rows they could already reach.
+      if (organizationId) {
+        conditions.push(eq(experiments.organizationId, organizationId));
       }
 
       if (filter === "member") {
@@ -480,6 +489,7 @@ export class ExperimentRepository {
         updatedAt: experiments.updatedAt,
         ownerFirstName: getAnonymizedFirstName(),
         ownerLastName: getAnonymizedLastName(),
+        organizationName: owningOrganizationNameSql("experiments"),
       };
 
       const result = await this.database

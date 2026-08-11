@@ -170,13 +170,16 @@ describe("IotDeviceController", () => {
 
       expect(response.body.id).toBe(device.id);
       // The owner of the device's org holds every action through that role, and no
-      // grant of their own — so there is nothing for them to leave.
+      // grant of their own — so there is nothing for them to leave. `canTransfer`
+      // is false even for them: a device's AWS Thing and certificate are
+      // provisioned against its organization, so there is no transfer route.
       expect(response.body.capabilities).toEqual({
         canContribute: true,
         canUpdate: true,
         canManage: true,
         canShare: true,
         canLeave: false,
+        canTransfer: false,
       });
     });
 
@@ -206,6 +209,7 @@ describe("IotDeviceController", () => {
         canManage: false,
         canShare: false,
         canLeave: true,
+        canTransfer: false,
       });
     });
 
@@ -420,7 +424,7 @@ describe("IotDeviceController", () => {
     ])("requires $action access to $name", async ({ action, request }) => {
       const canSpy = vi
         .spyOn(testApp.module.get(AuthorizationService), "can")
-        .mockResolvedValue({ allow: false, reason: "forbidden" });
+        .mockResolvedValue({ allow: false, reason: "forbidden", organizationId: null });
       const deviceId = faker.string.uuid();
 
       await request(deviceId, userId).expect(StatusCodes.FORBIDDEN);

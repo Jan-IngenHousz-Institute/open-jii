@@ -5,6 +5,7 @@ import {
   buildDeviceMetadata,
   buildExperimentMetadata,
   buildMacroMetadata,
+  buildOrganizationMetadata,
   buildProtocolMetadata,
   buildProtocolRunMetadata,
   buildVisualizationMetadata,
@@ -21,6 +22,8 @@ const remote = vi.hoisted(() => ({
   getProtocol: vi.fn(),
   getWorkbook: vi.fn(),
   getIotDevice: vi.fn(),
+  getOrganization: vi.fn(),
+  listOrganizationTeams: vi.fn(),
 }));
 
 // The global test setup stubs initTranslations to an identity `t`; these title
@@ -38,6 +41,10 @@ vi.mock("./server-orpc", () => ({
     protocols: { getProtocol: remote.getProtocol },
     workbooks: { getWorkbook: remote.getWorkbook },
     iot: { getIotDevice: remote.getIotDevice },
+    organizations: {
+      getOrganization: remote.getOrganization,
+      listOrganizationTeams: remote.listOrganizationTeams,
+    },
   })),
 }));
 
@@ -289,5 +296,52 @@ describe("brand template contract", () => {
       expect(title as string).not.toContain("openJII");
       expect(title as string).not.toContain("|");
     }
+  });
+});
+
+describe("organization titles", () => {
+  it("uses the organization name for the overview", async () => {
+    remote.getOrganization.mockResolvedValue({ name: "Greenhouse Lab" });
+    expect((await buildOrganizationMetadata({ locale: EN, id: "o1" })).title).toBe(
+      "Greenhouse Lab",
+    );
+  });
+
+  it("composes a localized section label before the name", async () => {
+    remote.getOrganization.mockResolvedValue({ name: "Greenhouse Lab" });
+    expect(
+      (await buildOrganizationMetadata({ locale: EN, id: "o1", section: "members" })).title,
+    ).toBe("Members · Greenhouse Lab");
+    expect(
+      (await buildOrganizationMetadata({ locale: DE, id: "o1", section: "members" })).title,
+    ).toBe("Mitglieder · Greenhouse Lab");
+  });
+
+  it("leads with the team's own name on a team route", async () => {
+    remote.getOrganization.mockResolvedValue({ name: "Greenhouse Lab" });
+    remote.listOrganizationTeams.mockResolvedValue([{ id: "t1", name: "Imaging" }]);
+    expect(
+      (await buildOrganizationMetadata({ locale: EN, id: "o1", section: "teams", teamId: "t1" }))
+        .title,
+    ).toBe("Imaging · Greenhouse Lab");
+  });
+
+  it("falls back to the section label when the team is gone", async () => {
+    remote.getOrganization.mockResolvedValue({ name: "Greenhouse Lab" });
+    remote.listOrganizationTeams.mockResolvedValue([]);
+    expect(
+      (await buildOrganizationMetadata({ locale: EN, id: "o1", section: "teams", teamId: "t9" }))
+        .title,
+    ).toBe("Teams · Greenhouse Lab");
+  });
+
+  it("discloses no name for an organization the caller cannot see", async () => {
+    // A private organization answers 404 for a non-member; the title must not
+    // confirm that an organization with that id exists.
+    remote.getOrganization.mockRejectedValue(new Error("404"));
+    expect((await buildOrganizationMetadata({ locale: EN, id: "o1" })).title).toBe("Organization");
+    expect(
+      (await buildOrganizationMetadata({ locale: EN, id: "o1", section: "settings" })).title,
+    ).toBe("Settings");
   });
 });

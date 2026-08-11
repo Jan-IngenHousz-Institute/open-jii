@@ -51,7 +51,7 @@ function grantFor(name: string, overrides: Partial<ResourceGrantDto> = {}): Reso
   return createResourceGrant({
     resourceType: "experiment",
     resourceId: "exp-1",
-    grantee: { type: "user", displayName: name, email: null, avatarUrl: null },
+    grantee: { type: "user", displayName: name, email: null, avatarUrl: null, memberCount: null },
     ...overrides,
   });
 }
@@ -81,7 +81,13 @@ describe("<CollaboratorsList />", () => {
   describe("owner rows", () => {
     function ownerFor(name: string): ResourceOwnerDto {
       return createResourceOwner({
-        grantee: { type: "user", displayName: name, email: null, avatarUrl: null },
+        grantee: {
+          type: "user",
+          displayName: name,
+          email: null,
+          avatarUrl: null,
+          memberCount: null,
+        },
       });
     }
 
@@ -158,7 +164,13 @@ describe("<CollaboratorsList />", () => {
       createResourceGrant({
         granteeType: "organization",
         isOutsideCollaborator: true,
-        grantee: { type: "organization", displayName: "Partner Lab", email: null, avatarUrl: null },
+        grantee: {
+          type: "organization",
+          displayName: "Partner Lab",
+          email: null,
+          avatarUrl: null,
+          memberCount: null,
+        },
       }),
     ]);
 

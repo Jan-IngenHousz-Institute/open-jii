@@ -37,6 +37,8 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { OrganizationPicker } from "../organizations/organization-picker";
+
 // Name stays optional without the contract's min(1) so an empty field is valid in the form;
 // it is stripped before submit.
 const registerIotDeviceFormSchema = zRegisterIotDeviceBody.extend({
@@ -77,6 +79,7 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
         serialNumber: values.serialNumber,
         deviceType: values.deviceType,
         ...(name ? { name } : {}),
+        organizationId: values.organizationId,
       },
       {
         onError: () => {
@@ -155,6 +158,23 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
                       value={field.value ?? ""}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="organizationId"
+              disabled={isPending}
+              render={({ field }) => (
+                <FormItem>
+                  <OrganizationPicker
+                    id="register-device-organization"
+                    value={field.value ?? undefined}
+                    onChange={(organizationId) => field.onChange(organizationId ?? undefined)}
+                    disabled={isPending}
+                  />
                   <FormMessage />
                 </FormItem>
               )}

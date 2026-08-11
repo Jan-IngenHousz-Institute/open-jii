@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { locales } from "@repo/i18n/config";
 import deCommon from "@repo/i18n/locales/de-DE/common.json";
 
+import { generateMetadata as generateAcceptInvitationMetadata } from "./accept-invitation/[id]/page";
 import { generateMetadata as generateApiKeysMetadata } from "./account/api-keys/page";
 import { generateMetadata as generateAccountMetadata } from "./account/page";
 import { generateMetadata as generateSecurityMetadata } from "./account/security/page";
@@ -16,6 +17,8 @@ import { generateMetadata as generateNewExperimentMetadata } from "./experiments
 import { generateMetadata as generateExperimentsMetadata } from "./experiments/page";
 import { generateMetadata as generateNewMacroMetadata } from "./macros/new/page";
 import { generateMetadata as generateMacrosMetadata } from "./macros/page";
+import { generateMetadata as generateNewOrganizationMetadata } from "./organizations/new/page";
+import { generateMetadata as generateOrganizationsMetadata } from "./organizations/page";
 import { generateMetadata as generatePlatformMetadata } from "./page";
 import { generateMetadata as generateNewProtocolMetadata } from "./protocols/new/page";
 import { generateMetadata as generateProtocolsMetadata } from "./protocols/page";
@@ -37,6 +40,7 @@ const testedPlatformTitleBuilders = new Set([
   "buildDashboardMetadata",
   "buildDeviceMetadata",
   "buildExperimentMetadata",
+  "buildOrganizationMetadata",
   "buildMacroMetadata",
   "buildProtocolMetadata",
   "buildProtocolRunMetadata",
@@ -157,8 +161,8 @@ function ownsTitleMetadata(source: string): boolean {
 describe("platform metadata ownership inventory", () => {
   const pageRoutes = findPageRoutes(platformDirectory).sort();
 
-  it("covers all 44 current page routes", () => {
-    expect(pageRoutes).toHaveLength(44);
+  it("covers all 52 current page routes", () => {
+    expect(pageRoutes).toHaveLength(52);
   });
 
   it.each(pageRoutes)("gives %s title ownership or a documented redirect exception", (route) => {
@@ -234,6 +238,9 @@ const { translations } = vi.hoisted(() => ({
       "iot:iot.devices.title": "Devices",
       "macro:macros.newMacro": "New Macro",
       "macro:macros.title": "Macros",
+      "common:organizations.acceptInvitation.pageTitle": "Invitation",
+      "common:organizations.createAction": "Create organization",
+      "common:organizations.title": "Organizations",
       "workbook:workbooks.title": "Workbooks",
     },
     "de-DE": {
@@ -251,6 +258,9 @@ const { translations } = vi.hoisted(() => ({
       "iot:iot.devices.title": "Geräte",
       "macro:macros.newMacro": "Neues Makro",
       "macro:macros.title": "Makros",
+      "common:organizations.acceptInvitation.pageTitle": "Einladung",
+      "common:organizations.createAction": "Organisation erstellen",
+      "common:organizations.title": "Organisationen",
       "workbook:workbooks.title": "Arbeitsmappen",
     },
   } as const,
@@ -288,6 +298,9 @@ const routes = [
   ["workbooks", generateWorkbooksMetadata],
   ["transferRequest", generateTransferRequestMetadata],
   ["transferHistory", generateTransferHistoryMetadata],
+  ["organizations", generateOrganizationsMetadata],
+  ["newOrganization", generateNewOrganizationMetadata],
+  ["acceptInvitation", generateAcceptInvitationMetadata],
 ] as const;
 
 const expectedTitles: Record<
@@ -310,6 +323,9 @@ const expectedTitles: Record<
     workbooks: "Workbooks",
     transferRequest: "Request Project Transfer",
     transferHistory: "Your Transfer Requests",
+    organizations: "Organizations",
+    newOrganization: "Create organization",
+    acceptInvitation: "Invitation",
   },
   "de-DE": {
     dashboard: "Dashboard",
@@ -327,13 +343,20 @@ const expectedTitles: Record<
     workbooks: "Arbeitsmappen",
     transferRequest: "Projekttransfer beantragen",
     transferHistory: "Ihre Transferanfragen",
+    organizations: "Organisationen",
+    newOrganization: "Organisation erstellen",
+    acceptInvitation: "Einladung",
   },
 };
 
 async function getTitles(locale: string) {
   const entries = await Promise.all(
     routes.map(async ([route, generateMetadata]) => {
-      const metadata = await generateMetadata({ params: Promise.resolve({ locale }) });
+      // `id` is carried for the routes that have a dynamic segment; the ones
+      // without simply do not declare it.
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ locale, id: "invitation-1" }),
+      });
 
       if (typeof metadata.title !== "string") {
         throw new TypeError(`Expected a string title for ${route}`);

@@ -440,14 +440,15 @@ describe("grants-as-sole-access-source migration data ops (0041)", () => {
   });
 
   it.each(["resource_grants", "invitations"] as const)(
-    "preserves a pre-existing 'member' row in %s for mixed-version deployments",
+    "leaves a pre-existing 'member' row in %s untouched",
     async (table) => {
       const owner = await testApp.createTestUser({ name: "Owner" });
       const subject = await testApp.createTestUser({ name: "Subject" });
       const experiment = await seedExperiment(owner);
 
-      // What 0039's mirror and an older application instance can leave behind.
-      // Inserted directly because current typed grant helpers cannot write the alias.
+      // What 0039's mirror and the release-1 write paths left behind. Inserted
+      // directly because no typed helper can express the retired spelling. 0041 does
+      // not rewrite it — that is 0042's job, mirrored in its own spec.
       if (table === "resource_grants") {
         await testApp.database.insert(resourceGrants).values({
           resourceType: "experiment",
@@ -548,15 +549,14 @@ describe("grants-as-sole-access-source migration end state (0041)", () => {
     expect(checks).toEqual([]);
   });
 
-  it.each([
-    ["resource_grants", "viewer"],
-    ["invitations", "member"],
-  ])("defaults %s.role to %s", async (table, expected) => {
+  it("defaults resource_grants.role to viewer", async () => {
+    // `invitations.role` kept the retired default until the rename's second
+    // release; it is asserted in that migration's own spec.
     const [column] = await testApp.database.execute<{ column_default: string | null }>(
       sql`SELECT column_default FROM information_schema.columns
-          WHERE table_name = ${table} AND column_name = 'role'`,
+          WHERE table_name = 'resource_grants' AND column_name = 'role'`,
     );
-    expect(column.column_default).toBe(`'${expected}'::text`);
+    expect(column.column_default).toBe("'viewer'::text");
   });
 
   it("leaves experiment_members physically intact, role column and enum included", async () => {

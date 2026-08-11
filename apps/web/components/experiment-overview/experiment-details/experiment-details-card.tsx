@@ -17,6 +17,7 @@ import { cn, cva } from "@repo/ui/lib/utils";
 import { ExperimentRequestToJoin } from "../../experiment-settings/collaborators/experiment-request-to-join";
 import { ExperimentInfoCard } from "../../experiment-settings/experiment-info-card";
 import { ExperimentVisibilityCard } from "../../experiment-settings/experiment-visibility-card";
+import { OwningOrganizationField } from "../../organizations/owning-organization-field";
 import { ExperimentMembersTrail } from "../experiment-members-trail";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 
@@ -53,6 +54,11 @@ interface ExperimentDetailsCardProps {
   hasAccess?: boolean;
   /** `can(manage)` from the experiment-access response — gates the admin-only cards. */
   canManage?: boolean;
+  /**
+   * `can(transfer)` — narrower than `canManage`: moving the experiment out of its
+   * organization also takes authority over that organization.
+   */
+  canTransfer?: boolean;
   /** `can(contribute)` — whether this person is already a collaborator. */
   canContribute?: boolean;
   isArchived?: boolean;
@@ -66,6 +72,7 @@ export function ExperimentDetailsCard({
   isContributorsLoading,
   hasAccess = false,
   canManage = false,
+  canTransfer = false,
   canContribute = false,
   isArchived = false,
 }: ExperimentDetailsCardProps) {
@@ -186,6 +193,14 @@ export function ExperimentDetailsCard({
                     {formatDate(experiment.createdAt)}
                   </p>
                 </div>
+
+                <OwningOrganizationField
+                  resourceType="experiment"
+                  resourceId={experimentId}
+                  organizationId={experiment.organizationId}
+                  organizationName={experiment.organizationName}
+                  canTransfer={canTransfer}
+                />
 
                 <div className="space-y-1">
                   <h4 className="text-sm font-medium">{t("createdBy")}</h4>

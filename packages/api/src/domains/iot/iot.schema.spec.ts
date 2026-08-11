@@ -181,6 +181,8 @@ describe("Iot Schema", () => {
       canManage: true,
       canShare: true,
       canLeave: false,
+      // A device is never transferable: its cloud identity belongs to its org.
+      canTransfer: false,
     };
 
     it("accepts a device with its caller capabilities", () => {

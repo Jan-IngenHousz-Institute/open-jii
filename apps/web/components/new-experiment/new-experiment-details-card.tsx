@@ -13,6 +13,7 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/
 import { Input } from "@repo/ui/components/input";
 import { RichTextarea } from "@repo/ui/components/rich-textarea";
 
+import { OrganizationPicker } from "../organizations/organization-picker";
 import { WorkbookSelect } from "../workbook/workbook-select";
 
 interface NewExperimentDetailsCardProps {
@@ -73,6 +74,20 @@ export function NewExperimentDetailsCard({ form }: NewExperimentDetailsCardProps
                 emptyText={t("newExperiment.noWorkbooksFound")}
                 noneLabel={t("newExperiment.noWorkbook")}
                 invalid={!!fieldState.error}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="organizationId"
+          render={({ field }) => (
+            <FormItem>
+              <OrganizationPicker
+                id="new-experiment-organization"
+                value={field.value ?? undefined}
+                onChange={(organizationId) => field.onChange(organizationId ?? undefined)}
               />
               <FormMessage />
             </FormItem>

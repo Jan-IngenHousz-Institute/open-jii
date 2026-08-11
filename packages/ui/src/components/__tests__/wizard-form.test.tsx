@@ -639,3 +639,63 @@ describe("WizardStepButtons", () => {
     expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   });
 });
+
+/**
+ * The wizard validates with a schema built from the union of its steps' shapes, so
+ * any form value no step declares is a value the resolver strips before `onSubmit`
+ * ever sees it. That silently contradicts the typed contract — `onSubmit` receives
+ * `T` — and it is invisible to a test that renders one step's card in isolation,
+ * because the loss happens in the resolver rather than in any card.
+ */
+describe("WizardForm value preservation", () => {
+  interface WithExtra {
+    firstName: string;
+    /** Set by a control on step 1, declared by no step schema. */
+    organizationId?: string;
+  }
+
+  const ExtraStep = ({ form, onNext, stepIndex, totalSteps }: WizardStepProps<WithExtra>) => (
+    <div>
+      <input data-testid="firstName" {...form.register("firstName")} />
+      <button
+        type="button"
+        data-testid="pick-org"
+        onClick={() => form.setValue("organizationId", "org-lab")}
+      >
+        pick
+      </button>
+      <WizardStepButtons
+        onNext={onNext}
+        onPrevious={() => {}}
+        stepIndex={stepIndex}
+        totalSteps={totalSteps}
+        submitLabel="submit"
+      />
+    </div>
+  );
+
+  it("submits a value that no step schema declares", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    render(
+      <WizardForm<WithExtra>
+        steps={[{ title: "Only", validationSchema: step1Schema, component: ExtraStep }]}
+        defaultValues={{ firstName: "" }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.type(screen.getByTestId("firstName"), "Ada");
+    await user.click(screen.getByTestId("pick-org"));
+    await user.click(screen.getByRole("button", { name: "submit" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled();
+    });
+    expect(onSubmit.mock.calls[0]?.[0]).toEqual({
+      firstName: "Ada",
+      organizationId: "org-lab",
+    });
+  });
+});

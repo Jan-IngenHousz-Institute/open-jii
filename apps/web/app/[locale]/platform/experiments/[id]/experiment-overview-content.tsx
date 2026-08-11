@@ -73,6 +73,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         isContributorsLoading={isContributorsLoading}
         hasAccess={hasAccess}
         canManage={accessData.isAdmin}
+        canTransfer={accessData.capabilities.canTransfer}
         canContribute={accessData.capabilities.canContribute}
       />
 

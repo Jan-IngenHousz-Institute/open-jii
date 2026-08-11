@@ -113,7 +113,13 @@ describe("<ResourceCollaborators />", () => {
       createResourceGrant({
         id: "g-lin",
         granteeId: "u-lin",
-        grantee: { type: "user", displayName: "Lin Zhao", email: "lin@uni.edu", avatarUrl: null },
+        grantee: {
+          type: "user",
+          displayName: "Lin Zhao",
+          email: "lin@uni.edu",
+          avatarUrl: null,
+          memberCount: null,
+        },
       }),
       createResourceGrant({
         id: "g-asha",
@@ -123,6 +129,7 @@ describe("<ResourceCollaborators />", () => {
           displayName: "Asha Okafor",
           email: "asha@greenhouse.lab",
           avatarUrl: null,
+          memberCount: null,
         },
       }),
     ];
@@ -201,7 +208,13 @@ describe("<ResourceCollaborators />", () => {
       body: [
         createResourceGrant({
           role: "viewer",
-          grantee: { type: "user", displayName: "Lin Zhao", email: "lin@uni.edu", avatarUrl: null },
+          grantee: {
+            type: "user",
+            displayName: "Lin Zhao",
+            email: "lin@uni.edu",
+            avatarUrl: null,
+            memberCount: null,
+          },
         }),
       ],
     });
@@ -221,7 +234,13 @@ describe("<ResourceCollaborators />", () => {
       granteeId: "u-1",
       role: "viewer",
       isOutsideCollaborator: true,
-      grantee: { type: "user", displayName: "Lin Zhao", email: "lin@uni.edu", avatarUrl: null },
+      grantee: {
+        type: "user",
+        displayName: "Lin Zhao",
+        email: "lin@uni.edu",
+        avatarUrl: null,
+        memberCount: null,
+      },
     });
 
     server.mount(contract.sharing.listGrants, { body: [] });
@@ -284,6 +303,7 @@ describe("<ResourceCollaborators />", () => {
               displayName: "Asha Okafor",
               email: "asha@greenhouse.lab",
               avatarUrl: null,
+              memberCount: null,
             },
           }),
         ],

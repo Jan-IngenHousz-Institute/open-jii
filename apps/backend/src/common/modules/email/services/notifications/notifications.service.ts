@@ -5,6 +5,9 @@ import Mail from "nodemailer/lib/mailer";
 import { renderAddedUserNotification } from "@repo/transactional/render/added-user-notification";
 import { renderJoinRequestRejected } from "@repo/transactional/render/join-request-rejected";
 import { renderJoinRequestSubmitted } from "@repo/transactional/render/join-request-submitted";
+import { renderOrganizationJoinRequestApproved } from "@repo/transactional/render/organization-join-request-approved";
+import { renderOrganizationJoinRequestRejected } from "@repo/transactional/render/organization-join-request-rejected";
+import { renderOrganizationJoinRequestSubmitted } from "@repo/transactional/render/organization-join-request-submitted";
 import { renderProjectTransferComplete } from "@repo/transactional/render/project-transfer-complete";
 import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
 
@@ -54,6 +57,208 @@ export class NotificationsService {
   /* v8 ignore next 5 */
   protected renderJoinRequestRejectedEmail(...args: Parameters<typeof renderJoinRequestRejected>) {
     return renderJoinRequestRejected(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderOrganizationJoinRequestSubmittedEmail(
+    ...args: Parameters<typeof renderOrganizationJoinRequestSubmitted>
+  ) {
+    return renderOrganizationJoinRequestSubmitted(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderOrganizationJoinRequestApprovedEmail(
+    ...args: Parameters<typeof renderOrganizationJoinRequestApproved>
+  ) {
+    return renderOrganizationJoinRequestApproved(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderOrganizationJoinRequestRejectedEmail(
+    ...args: Parameters<typeof renderOrganizationJoinRequestRejected>
+  ) {
+    return renderOrganizationJoinRequestRejected(...args);
+  }
+
+  /**
+   * Hand a rendered email to the transport and treat any address it rejected or
+   * left pending as a failure — a partially delivered send is not a success.
+   */
+  private async dispatch(params: {
+    to: string;
+    subject: string;
+    html: string;
+    text: string;
+  }): Promise<void> {
+    const transport = this.createMailTransport(this.emailConfigService.getServer());
+
+    const result = await transport.sendMail({
+      to: params.to,
+      from: { name: "openJII", address: this.emailConfigService.getFrom() },
+      subject: params.subject,
+      html: params.html,
+      text: params.text,
+    });
+
+    const rejected: (string | Mail.Address)[] = result.rejected;
+    const pending: (string | Mail.Address)[] = result.pending;
+    const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
+
+    if (failed.length > 0) {
+      const failedAddresses = failed.map((address) =>
+        typeof address === "object" && "address" in address ? address.address : address,
+      );
+      throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
+    }
+  }
+
+  /** Where an organization lives in the web app — the link every org email points at. */
+  private organizationUrl(organizationId: string): { host: string; url: string; baseUrl: string } {
+    const baseUrl = this.emailConfigService.getBaseUrl();
+    const { host } = new URL(baseUrl);
+    const { href } = new URL(`/platform/organizations/${organizationId}`, baseUrl);
+    return { host, url: href, baseUrl };
+  }
+
+  async sendOrganizationJoinRequestSubmittedNotification(
+    organizationId: string,
+    organizationName: string,
+    requesterName: string,
+    recipientEmail: string,
+    message?: string,
+  ) {
+    return await tryCatch(
+      async () => {
+        const { host, url, baseUrl } = this.organizationUrl(organizationId);
+        const { html, text } = await this.renderOrganizationJoinRequestSubmittedEmail({
+          host,
+          organizationName,
+          organizationUrl: url,
+          requesterName,
+          message,
+          baseUrl,
+        });
+
+        await this.dispatch({
+          to: recipientEmail,
+          subject: `New request to join ${organizationName} on openJII`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Organization join request submitted notification sent",
+          operation: "sendOrganizationJoinRequestSubmittedNotification",
+          email: recipientEmail,
+          organizationId,
+          status: "success",
+        });
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to send organization join request submitted notification",
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
+          operation: "sendOrganizationJoinRequestSubmittedNotification",
+          email: recipientEmail,
+          organizationId,
+          error,
+        });
+        return apiErrorMapper(
+          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      },
+    );
+  }
+
+  async sendOrganizationJoinRequestApprovedNotification(
+    organizationId: string,
+    organizationName: string,
+    requesterEmail: string,
+  ) {
+    return await tryCatch(
+      async () => {
+        const { host, url, baseUrl } = this.organizationUrl(organizationId);
+        const { html, text } = await this.renderOrganizationJoinRequestApprovedEmail({
+          host,
+          organizationName,
+          organizationUrl: url,
+          baseUrl,
+        });
+
+        await this.dispatch({
+          to: requesterEmail,
+          subject: `You have joined ${organizationName} on openJII`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Organization join request approved notification sent",
+          operation: "sendOrganizationJoinRequestApprovedNotification",
+          email: requesterEmail,
+          organizationId,
+          status: "success",
+        });
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to send organization join request approved notification",
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
+          operation: "sendOrganizationJoinRequestApprovedNotification",
+          email: requesterEmail,
+          organizationId,
+          error,
+        });
+        return apiErrorMapper(
+          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      },
+    );
+  }
+
+  async sendOrganizationJoinRequestRejectedNotification(
+    organizationId: string,
+    organizationName: string,
+    requesterEmail: string,
+  ) {
+    return await tryCatch(
+      async () => {
+        const { host, baseUrl } = this.organizationUrl(organizationId);
+        const { html, text } = await this.renderOrganizationJoinRequestRejectedEmail({
+          host,
+          organizationName,
+          baseUrl,
+        });
+
+        await this.dispatch({
+          to: requesterEmail,
+          subject: `Update on your request to join ${organizationName}`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Organization join request rejected notification sent",
+          operation: "sendOrganizationJoinRequestRejectedNotification",
+          email: requesterEmail,
+          organizationId,
+          status: "success",
+        });
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to send organization join request rejected notification",
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
+          operation: "sendOrganizationJoinRequestRejectedNotification",
+          email: requesterEmail,
+          organizationId,
+          error,
+        });
+        return apiErrorMapper(
+          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      },
+    );
   }
 
   async sendAddedUserNotification(

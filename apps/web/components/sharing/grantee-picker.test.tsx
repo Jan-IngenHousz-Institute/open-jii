@@ -12,7 +12,13 @@ import { GranteePicker } from "./grantee-picker";
 function renderPicker(overrides: Partial<React.ComponentProps<typeof GranteePicker>> = {}) {
   const onSelectionChange = vi.fn();
   const result = render(
-    <GranteePicker selection={null} onSelectionChange={onSelectionChange} {...overrides} />,
+    <GranteePicker
+      resourceType="experiment"
+      resourceId="exp-1"
+      selection={null}
+      onSelectionChange={onSelectionChange}
+      {...overrides}
+    />,
   );
   return { ...result, onSelectionChange };
 }
@@ -254,7 +260,14 @@ describe("<GranteePicker />", () => {
     // must not carry across a sign-out → sign-in on a shared QueryClient.
     const queryClient = createTestQueryClient();
     const onSelectionChange = vi.fn();
-    const element = () => <GranteePicker selection={null} onSelectionChange={onSelectionChange} />;
+    const element = () => (
+      <GranteePicker
+        resourceType="experiment"
+        resourceId="exp-1"
+        selection={null}
+        onSelectionChange={onSelectionChange}
+      />
+    );
 
     mockSession({ id: "user-a" });
     server.mount(contract.sharing.searchGranteeOrganizations, {

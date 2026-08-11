@@ -1,14 +1,18 @@
 "use client";
 
 import { UserAvatar } from "@/components/user-avatar";
+import { useGranteeTeams } from "@/hooks/organization/useGranteeTeams/useGranteeTeams";
 import { useGranteeOrganizationSearch } from "@/hooks/sharing/useGranteeOrganizationSearch/useGranteeOrganizationSearch";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUserSearch } from "@/hooks/useUserSearch";
-import { Building2, Mail, Search, X } from "lucide-react";
+import { Building2, Mail, Search, Users, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 
-import type { SharingGranteeType } from "@repo/api/domains/sharing/sharing.schema";
+import type {
+  SharingGranteeType,
+  SharingResourceType,
+} from "@repo/api/domains/sharing/sharing.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -38,9 +42,14 @@ interface GranteeResultRow extends SelectedGrantee {
   avatarUrl?: string | null;
   firstName?: string;
   lastName?: string;
+  /** Team rows only: how many people the grant would actually admit. */
+  memberCount?: number;
 }
 
 interface GranteePickerProps {
+  /** The resource being shared — the teams source is scoped to its owning org. */
+  resourceType: SharingResourceType;
+  resourceId: string;
   selection: GranteeSelection | null;
   onSelectionChange: (selection: GranteeSelection | null) => void;
   /** Only hosts that can persist pending invitations opt into email results. */
@@ -53,11 +62,18 @@ interface GranteePickerProps {
 }
 
 /**
- * Team grants wait on team management, so this searches users, organizations, and
- * optionally unregistered email addresses. The host owns the tier selector so all
- * collaborator pages share one search surface.
+ * Searches users, teams of the resource's owning organization, the caller's
+ * organizations, and optionally unregistered email addresses. The host owns the
+ * tier selector so all collaborator pages share one search surface.
+ *
+ * The Teams source appears only when the owning organization actually has teams:
+ * an empty source reads as a broken picker, and most resources belong to an
+ * organization with none. It is scoped to the owning organization server-side,
+ * which is what keeps a team grant from ever amounting to outside access.
  */
 export function GranteePicker({
+  resourceType,
+  resourceId,
   selection,
   onSelectionChange,
   allowEmailInvite = false,
@@ -81,9 +97,26 @@ export function GranteePicker({
     debouncedSearch,
     { enabled: granteeType === "organization" },
   );
+  // Fetched up front rather than on switching to the tab: whether the option
+  // exists at all is decided by whether this comes back with anything.
+  const { data: teams, isFetching: isFetchingTeams } = useGranteeTeams(resourceType, resourceId);
+  const hasTeams = (teams ?? []).length > 0;
 
   const results = useMemo<GranteeResultRow[]>(() => {
     const existing = new Set(existingGranteeIds);
+    if (granteeType === "team") {
+      // The teams endpoint takes no query, so the term filters what it returned.
+      const term = debouncedSearch.trim().toLowerCase();
+      return (teams ?? [])
+        .filter((team) => !existing.has(team.id))
+        .filter((team) => term === "" || team.name.toLowerCase().includes(term))
+        .map((team) => ({
+          type: "team" as const,
+          id: team.id,
+          displayName: team.name,
+          memberCount: team.memberCount,
+        }));
+    }
     if (granteeType === "user") {
       return (users ?? [])
         .filter((u) => !existing.has(u.userId))
@@ -100,10 +133,15 @@ export function GranteePicker({
     return (organizations ?? [])
       .filter((o) => !existing.has(o.id))
       .map((o) => ({ type: "organization" as const, id: o.id, displayName: o.name }));
-  }, [granteeType, users, organizations, existingGranteeIds]);
+  }, [granteeType, users, organizations, teams, debouncedSearch, existingGranteeIds]);
 
   const isLoading =
-    (granteeType === "user" ? isFetchingUsers : isFetchingOrgs) || (!isDebounced && !!search);
+    (granteeType === "user"
+      ? isFetchingUsers
+      : granteeType === "team"
+        ? isFetchingTeams
+        : isFetchingOrgs) ||
+    (!isDebounced && !!search);
 
   const typedEmail = search.trim();
   const isEmailTerm = emailSchema.safeParse(typedEmail).success;
@@ -152,6 +190,7 @@ export function GranteePicker({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="user">{t("sharing.granteeTypeUser")}</SelectItem>
+          {hasTeams && <SelectItem value="team">{t("sharing.granteeTypeTeam")}</SelectItem>}
           <SelectItem value="organization">{t("sharing.granteeTypeOrganization")}</SelectItem>
         </SelectContent>
       </Select>
@@ -170,18 +209,20 @@ export function GranteePicker({
                   ? allowEmailInvite
                     ? t("sharing.searchUsersOrEmailPlaceholder")
                     : t("sharing.searchUsersPlaceholder")
-                  : t("sharing.searchOrganizationsPlaceholder")
+                  : granteeType === "team"
+                    ? t("sharing.searchTeamsPlaceholder")
+                    : t("sharing.searchOrganizationsPlaceholder")
               }
               aria-label={t("sharing.granteeSearchLabel")}
               className="pl-9 pr-9"
               onFocus={() => {
-                // Organizations are browsable without a search term.
-                if (selection === null && granteeType === "organization") setOpen(true);
+                // Organizations and teams are browsable without a search term.
+                if (selection === null && granteeType !== "user") setOpen(true);
               }}
               onChange={(e) => {
                 if (selection !== null) return;
                 setSearch(e.target.value);
-                setOpen(granteeType === "organization" || e.target.value.length > 0);
+                setOpen(granteeType !== "user" || e.target.value.length > 0);
               }}
             />
             {(selection !== null || search.length > 0) && (
@@ -285,7 +326,11 @@ function GranteeResults({
     }
     return (
       <div className="text-muted-foreground p-4 text-center text-sm">
-        {granteeType === "user" ? t("sharing.noUsersFound") : t("sharing.noOrganizationsFound")}
+        {granteeType === "user"
+          ? t("sharing.noUsersFound")
+          : granteeType === "team"
+            ? t("sharing.noTeamsFound")
+            : t("sharing.noOrganizationsFound")}
       </div>
     );
   }
@@ -310,13 +355,21 @@ function GranteeResults({
             />
           ) : (
             <div className="bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
-              <Building2 className="text-muted-foreground h-4 w-4" />
+              {result.type === "team" ? (
+                <Users className="text-muted-foreground h-4 w-4" />
+              ) : (
+                <Building2 className="text-muted-foreground h-4 w-4" />
+              )}
             </div>
           )}
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">{result.displayName}</div>
             {result.type === "user" ? (
               <div className="text-muted-foreground truncate text-xs">{result.email}</div>
+            ) : result.type === "team" ? (
+              <div className="text-muted-foreground truncate text-xs">
+                {t("sharing.teamMemberCount", { count: result.memberCount ?? 0 })}
+              </div>
             ) : (
               <div className="text-muted-foreground truncate text-xs">
                 {t("sharing.granteeTypeOrganization")}

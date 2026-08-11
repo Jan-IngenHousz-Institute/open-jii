@@ -31,6 +31,7 @@ import {
 } from "@repo/ui/components/select";
 
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
+import { OrganizationPicker } from "../organizations/organization-picker";
 
 interface NewProtocolDetailsCardProps {
   form: UseFormReturn<CreateProtocolRequestBody>;
@@ -123,6 +124,21 @@ export function NewProtocolDetailsCard({
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="organizationId"
+          render={({ field }) => (
+            <FormItem>
+              <OrganizationPicker
+                id="new-protocol-organization"
+                value={field.value ?? undefined}
+                onChange={(organizationId) => field.onChange(organizationId ?? undefined)}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Visibility */}
         <FormField

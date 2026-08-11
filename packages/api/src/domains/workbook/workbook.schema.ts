@@ -11,6 +11,12 @@ export const zWorkbook = z.object({
   cells: zWorkbookCellArray,
   metadata: z.record(z.string(), z.unknown()),
   organizationId: z.string().uuid().nullable(),
+  /**
+   * Display name of the owning organization, `null` for a personal workspace.
+   * Populated by the detail read only — the lists have no room for it — which is
+   * why it is optional rather than required.
+   */
+  organizationName: z.string().nullish(),
   visibility: z.enum(["private", "public"]),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),

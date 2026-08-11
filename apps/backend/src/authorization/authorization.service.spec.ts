@@ -87,7 +87,7 @@ describe("AuthorizationService.can", () => {
       resourceId: crypto.randomUUID(),
       action: "read",
     });
-    expect(decision).toEqual({ allow: false, reason: "not-found" });
+    expect(decision).toEqual({ allow: false, reason: "not-found", organizationId: null });
   });
 
   it("grants an org owner full access to the org's resources", async () => {
@@ -506,7 +506,13 @@ describe("can() — the right to contribute, by access path", () => {
         resourceId: experiment.id,
         action: "contribute",
       });
-      expect(decision).toEqual({ allow: false, reason: "forbidden" });
+      // The owning org rides along on every decision so callers acting on it cannot
+      // re-read a resource that moved since.
+      expect(decision).toEqual({
+        allow: false,
+        reason: "forbidden",
+        organizationId: experiment.organizationId,
+      });
     });
   });
 });

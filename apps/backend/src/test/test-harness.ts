@@ -26,6 +26,10 @@ import {
   protocols,
   organizations,
   organizationMembers,
+  organizationInvitations,
+  organizationJoinRequests,
+  teams,
+  teamMembers,
   flows,
   macros,
   workbooks,
@@ -37,6 +41,7 @@ import {
   resourceGrants,
   ensurePersonalOrganization,
   eq,
+  verifications,
 } from "@repo/database";
 
 import { AppModule } from "../app.module";
@@ -217,6 +222,9 @@ export class TestHarness {
     // Sessions/accounts reference users, delete before users
     await this.database.delete(sessions).execute();
     await this.database.delete(accounts).execute();
+    // Verifications key off an email rather than a user id, so nothing cascades
+    // them; a real sign-in writes them and they would otherwise accumulate.
+    await this.database.delete(verifications).execute();
     await this.database.delete(users).execute();
   }
 
@@ -376,8 +384,10 @@ export class TestHarness {
     visibility?: "private" | "public";
     embargoUntil?: Date;
     anonymizeContributors?: boolean;
+    organizationId?: string;
   }) {
-    const organizationId = await ensurePersonalOrganization(this.database, { id: data.userId });
+    const organizationId =
+      data.organizationId ?? (await ensurePersonalOrganization(this.database, { id: data.userId }));
     const [experiment] = await this.database
       .insert(experiments)
       .values({
@@ -446,12 +456,85 @@ export class TestHarness {
   /**
    * Create a standalone (non-personal) organization for testing. Returns its id.
    */
-  public async createOrganization(name = `Org ${faker.string.uuid()}`): Promise<string> {
+  public async createOrganization(
+    name = `Org ${faker.string.uuid()}`,
+    options: {
+      slug?: string;
+      visibility?: "private" | "public";
+      description?: string | null;
+      type?:
+        | "research_institute"
+        | "non_profit"
+        | "private_company"
+        | "government_agency"
+        | "university";
+    } = {},
+  ): Promise<string> {
     const [org] = await this.database
       .insert(organizations)
-      .values({ name, slug: `org-${faker.string.uuid()}` })
+      .values({
+        name,
+        slug: options.slug ?? `org-${faker.string.uuid()}`,
+        ...(options.visibility ? { visibility: options.visibility } : {}),
+        ...(options.description === undefined ? {} : { description: options.description }),
+        ...(options.type ? { type: options.type } : {}),
+      })
       .returning();
     return org.id;
+  }
+
+  /** Create a team inside an organization. Returns its id. */
+  public async createTeam(organizationId: string, name = `Team ${faker.string.uuid()}`) {
+    const [team] = await this.database.insert(teams).values({ organizationId, name }).returning();
+    return team.id;
+  }
+
+  public async addTeamMember(teamId: string, userId: string) {
+    const [member] = await this.database.insert(teamMembers).values({ teamId, userId }).returning();
+    return member;
+  }
+
+  /** Seed a pending organization join request straight into the table. */
+  public async addOrganizationJoinRequest(
+    organizationId: string,
+    userId: string,
+    options: { message?: string; status?: "pending" | "approved" | "rejected" | "cancelled" } = {},
+  ) {
+    const [row] = await this.database
+      .insert(organizationJoinRequests)
+      .values({
+        organizationId,
+        userId,
+        message: options.message ?? null,
+        ...(options.status ? { status: options.status } : {}),
+      })
+      .returning();
+    return row;
+  }
+
+  /** Seed a Better Auth organization invitation. Defaults to pending, 48h out. */
+  public async addOrganizationInvitation(data: {
+    organizationId: string;
+    email: string;
+    inviterId: string;
+    role?: string | null;
+    teamId?: string | null;
+    status?: string;
+    expiresAt?: Date;
+  }) {
+    const [invitation] = await this.database
+      .insert(organizationInvitations)
+      .values({
+        organizationId: data.organizationId,
+        email: data.email.toLowerCase(),
+        inviterId: data.inviterId,
+        role: data.role === undefined ? "member" : data.role,
+        teamId: data.teamId ?? null,
+        ...(data.status ? { status: data.status } : {}),
+        expiresAt: data.expiresAt ?? new Date(Date.now() + 48 * 60 * 60 * 1000),
+      })
+      .returning();
+    return invitation;
   }
 
   /** The user's personal organization id, provisioning it if needed. */

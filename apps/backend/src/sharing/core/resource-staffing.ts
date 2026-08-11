@@ -229,7 +229,7 @@ export async function lockStaffedResource(
  * needs none; creating into an org you are merely a `member` of does, since
  * `member` is read-only.
  */
-async function orgRoleConfersFullControl(
+export async function orgRoleConfersFullControl(
   tx: DbOrTx,
   organizationId: string | null,
   userId: string,
@@ -334,23 +334,57 @@ export async function seedCreatorControl(
 }
 
 /**
- * The living owners of an organization — the single definition of who is answerable
- * for what it owns, shared by the staffing invariant, both deletion prongs, the
- * Owner rows and join-request notifications.
+ * Members of an organization holding one of `roles` whose account is still open.
  *
  * The profile join is LEFT deliberately: personal orgs are provisioned at sign-up,
  * before the profile row exists, so an inner join would declare every
- * pre-onboarding owner dead. A NULL `organizationId` matches nothing, i.e. a husk.
+ * pre-onboarding member dead. A NULL `organizationId` matches nothing.
  */
-export function livingOrgOwnerIdsSql(organizationId: SQL): SQL {
+function livingOrgMemberIdsSql(organizationId: SQL, roles: readonly string[]): SQL {
   return sql`
     SELECT ${organizationMembers.userId} AS "user_id"
     FROM ${organizationMembers}
     LEFT JOIN ${profiles} ON ${profiles.userId} = ${organizationMembers.userId}
     WHERE ${organizationMembers.organizationId} = ${organizationId}
-      AND ${orgRoleIncludes(organizationMembers.role, [ORG_OWNER_ROLE])}
+      AND ${orgRoleIncludes(organizationMembers.role, roles)}
       AND ${profiles.deletedAt} IS NULL
   `;
+}
+
+/**
+ * The living owners of an organization — the single definition of who is answerable
+ * for what it owns, shared by the staffing invariant, both deletion prongs, the
+ * Owner rows and join-request notifications. No living owner means a husk: an
+ * organization nobody can be held answerable for. A NULL `organizationId` is one.
+ *
+ * Owner and not admin, deliberately: an admin has full access, but ownership is what
+ * another member cannot take away, so answerability hangs on it.
+ */
+export function livingOrgOwnerIdsSql(organizationId: SQL): SQL {
+  return livingOrgMemberIdsSql(organizationId, [ORG_OWNER_ROLE]);
+}
+
+/**
+ * Whether anybody inside the organization can still act on what it owns — its living
+ * owners **and** admins.
+ *
+ * A deliberately different question from {@link livingOrgOwnerIdsSql}, and the only
+ * place the wider set is right. Answerability is about who cannot be displaced, so it
+ * counts owners alone; this asks whether the organization is operable at all, and an
+ * admin makes it so. Reading the narrower one here would treat an organization that
+ * merely lost its owner as abandoned, and hand its resources to any outside
+ * collaborator who could already edit them.
+ */
+export async function orgHasLivingFullControlMember(
+  tx: DbOrTx,
+  organizationId: string | null,
+): Promise<boolean> {
+  if (!organizationId) return false;
+
+  const rows = await tx.execute<{ user_id: string }>(
+    livingOrgMemberIdsSql(sql`${organizationId}::uuid`, ORG_FULL_CONTROL_ROLES),
+  );
+  return rows.length > 0;
 }
 
 /** The owning organization of a resource, as a scalar subquery. */

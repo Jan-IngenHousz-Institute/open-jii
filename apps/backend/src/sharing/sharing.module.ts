@@ -6,6 +6,7 @@ import { ListGrantsUseCase } from "./application/use-cases/list-grants/list-gran
 import { RevokeGrantUseCase } from "./application/use-cases/revoke-grant/revoke-grant";
 import { SearchGranteeOrganizationsUseCase } from "./application/use-cases/search-grantee-organizations/search-grantee-organizations";
 import { TransferResourceAdminUseCase } from "./application/use-cases/transfer-resource-admin/transfer-resource-admin";
+import { TransferResourceOrgUseCase } from "./application/use-cases/transfer-resource-org/transfer-resource-org";
 import { UpdateGrantUseCase } from "./application/use-cases/update-grant/update-grant";
 import { SharingRepository } from "./core/repositories/sharing.repository";
 import { SharingController } from "./presentation/sharing.controller";
@@ -24,6 +25,7 @@ import { SharingController } from "./presentation/sharing.controller";
     LeaveResourceUseCase,
     RevokeGrantUseCase,
     TransferResourceAdminUseCase,
+    TransferResourceOrgUseCase,
     SearchGranteeOrganizationsUseCase,
   ],
 })

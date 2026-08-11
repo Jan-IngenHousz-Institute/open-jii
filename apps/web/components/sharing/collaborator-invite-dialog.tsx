@@ -127,6 +127,8 @@ export function CollaboratorInviteDialog({
 
         <div className="space-y-3 py-2">
           <GranteePicker
+            resourceType={resourceType}
+            resourceId={resourceId}
             selection={selection}
             onSelectionChange={setSelection}
             allowEmailInvite={!!onEmailInvite}

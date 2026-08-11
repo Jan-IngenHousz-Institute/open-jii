@@ -102,6 +102,25 @@ const fetchDeviceSummary = cache(async (deviceId: string) => {
   }
 });
 
+const fetchOrganizationSummary = cache(async (id: string) => {
+  try {
+    const client = await createServerOrpcClient();
+    return await client.organizations.getOrganization({ id });
+  } catch {
+    return null;
+  }
+});
+
+const fetchOrganizationTeamName = cache(async (organizationId: string, teamId: string) => {
+  try {
+    const client = await createServerOrpcClient();
+    const teams = await client.organizations.listOrganizationTeams({ id: organizationId });
+    return teams.find((team) => team.id === teamId)?.name ?? null;
+  } catch {
+    return null;
+  }
+});
+
 // --- experiment overview + sections -----------------------------------------
 
 /** Localized experiment section labels, mapped to `t()` keys. */
@@ -294,6 +313,52 @@ export async function buildWorkbookMetadata({
   const sectionLabel = section === "overview" ? null : t(SHARED_RESOURCE_SECTION_KEY[section]);
   const lead =
     nonEmpty(workbook?.name) ?? (section === "overview" ? t("workbook:workbooks.workbook") : null);
+
+  return { title: joinTitleParts([sectionLabel, lead]) };
+}
+
+// --- organizations ----------------------------------------------------------
+
+/** Localized organization tab labels, mapped to `t()` keys (the strip's own copy). */
+type OrganizationSection = "overview" | "members" | "teams" | "settings";
+
+const ORGANIZATION_SECTION_KEY: Record<Exclude<OrganizationSection, "overview">, string> = {
+  members: "common:organizations.tabs.members",
+  teams: "common:organizations.tabs.teams",
+  settings: "common:organizations.tabs.settings",
+};
+
+/**
+ * Title for an organization overview or section route.
+ *
+ * - overview: `{name}` (or the generic `Organization` noun when inaccessible)
+ * - section: `{Section} · {name}` (or `{Section}` alone when inaccessible)
+ *
+ * A private organization answers 404 for a non-member, so an inaccessible one
+ * yields no name — which is the point: the title must not disclose that an
+ * organization with that id exists.
+ */
+export async function buildOrganizationMetadata({
+  locale,
+  id,
+  section = "overview",
+  teamId,
+}: {
+  locale: string;
+  id: string;
+  section?: OrganizationSection;
+  /** A team detail route: its own name leads instead of the section label. */
+  teamId?: string;
+}): Promise<Metadata> {
+  const { t } = await initTranslations({ locale, namespaces: ["common"] });
+  const organization = await fetchOrganizationSummary(id);
+
+  const teamName = teamId ? nonEmpty(await fetchOrganizationTeamName(id, teamId)) : null;
+  const sectionLabel =
+    teamName ?? (section === "overview" ? null : t(ORGANIZATION_SECTION_KEY[section]));
+  const lead =
+    nonEmpty(organization?.name) ??
+    (section === "overview" && !teamName ? t("common:organizations.organization") : null);
 
   return { title: joinTitleParts([sectionLabel, lead]) };
 }
