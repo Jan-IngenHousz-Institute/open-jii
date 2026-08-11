@@ -12,11 +12,12 @@ export function sensorFamilyToDeviceType(sensorFamily: SensorFamily): DeviceType
   switch (sensorFamily) {
     case "multispeq":
       return "multispeq";
+    // Ambyte hardware is the Ambit family under its product name.
     case "ambit":
+    case "ambyte":
       return "ambit";
     case "minipar":
       return "minipar";
-    case "ambyte":
     case "generic":
       return "generic";
   }

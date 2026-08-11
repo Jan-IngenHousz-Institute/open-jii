@@ -50,18 +50,19 @@ vi.mock("@repo/iot", async (importOriginal) => {
   return { ...actual, deliverDeviceConfig: vi.fn() };
 });
 
+const genericDevice = createIotDevice({ deviceType: "generic" });
 const ambyteDevice = createIotDevice({ deviceType: "ambyte" });
 const multispeqDevice = createIotDevice({ deviceType: "multispeq" });
 
 const config = {
-  thingName: ambyteDevice.thingName,
-  deviceType: "ambyte" as const,
+  thingName: genericDevice.thingName,
+  deviceType: "generic" as const,
   endpoint: "abc-ats.iot.eu-central-1.amazonaws.com",
   experiments: [
     {
       experimentId: "11111111-1111-4111-8111-111111111111",
       experimentName: "E",
-      topicPrefix: "experiment/data_ingest/v1/11111111-1111-4111-8111-111111111111/ambyte",
+      topicPrefix: "experiment/data_ingest/v1/11111111-1111-4111-8111-111111111111/generic",
       workbookVersion: null,
       procedures: [],
     },
@@ -90,7 +91,7 @@ describe("DeviceConfigDelivery", () => {
   });
 
   it("renders the endpoint and per-experiment topics", () => {
-    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+    render(<DeviceConfigDelivery device={genericDevice} config={config} />);
 
     expect(screen.getByText(config.endpoint)).toBeInTheDocument();
     expect(screen.getByText(config.experiments[0].topicPrefix)).toBeInTheDocument();
@@ -98,15 +99,15 @@ describe("DeviceConfigDelivery", () => {
 
   it("downloads the config as a JSON named after the device", async () => {
     const user = userEvent.setup();
-    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+    render(<DeviceConfigDelivery device={genericDevice} config={config} />);
 
     await user.click(screen.getByRole("button", { name: /iot.onboarding.download/ }));
 
-    expect(downloads.at(-1)).toBe(`${ambyteDevice.thingName}-config.json`);
+    expect(downloads.at(-1)).toBe(`${genericDevice.thingName}-config.json`);
   });
 
   it("offers connect before pushing for a pushable family", () => {
-    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+    render(<DeviceConfigDelivery device={genericDevice} config={config} />);
 
     expect(screen.getByRole("button", { name: /iot.onboarding.connect/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /iot.onboarding.push/ })).not.toBeInTheDocument();
@@ -115,7 +116,7 @@ describe("DeviceConfigDelivery", () => {
   it("pushes the config through the device driver when connected", async () => {
     const user = userEvent.setup();
     communication.isConnected = true;
-    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+    render(<DeviceConfigDelivery device={genericDevice} config={config} />);
 
     await user.click(screen.getByRole("button", { name: /iot.onboarding.push/ }));
 
@@ -130,14 +131,14 @@ describe("DeviceConfigDelivery", () => {
   });
 
   it("disables Connect while the selected transport is unsupported in this browser", () => {
-    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+    render(<DeviceConfigDelivery device={genericDevice} config={config} />);
 
     expect(screen.getByRole("button", { name: /iot.onboarding.connect/ })).toBeDisabled();
   });
 
   it("enables Connect when the selected transport is supported", () => {
     setBrowserSupport(false, true);
-    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+    render(<DeviceConfigDelivery device={genericDevice} config={config} />);
 
     expect(screen.getByRole("button", { name: /iot.onboarding.connect/ })).toBeEnabled();
   });
@@ -146,7 +147,7 @@ describe("DeviceConfigDelivery", () => {
     // Default selection is serial; with only bluetooth available, the
     // auto-select must switch to it or Connect would stay disabled.
     setBrowserSupport(true, false);
-    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+    render(<DeviceConfigDelivery device={genericDevice} config={config} />);
 
     expect(screen.getByRole("button", { name: /iot.onboarding.connect/ })).toBeEnabled();
   });
@@ -155,7 +156,7 @@ describe("DeviceConfigDelivery", () => {
     const user = userEvent.setup();
     communication.isConnected = true;
     vi.mocked(deliverDeviceConfig).mockRejectedValueOnce(new Error("SET_CONFIG unsupported"));
-    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
+    render(<DeviceConfigDelivery device={genericDevice} config={config} />);
 
     await user.click(screen.getByRole("button", { name: /iot.onboarding.push/ }));
 
@@ -170,7 +171,7 @@ describe("DeviceConfigDelivery", () => {
 
   it("disables download and push while delivery is locked", () => {
     communication.isConnected = true;
-    render(<DeviceConfigDelivery device={ambyteDevice} config={config} disabled />);
+    render(<DeviceConfigDelivery device={genericDevice} config={config} disabled />);
 
     expect(screen.getByRole("button", { name: /iot.onboarding.download/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: /iot.onboarding.push/ })).toBeDisabled();
@@ -178,6 +179,15 @@ describe("DeviceConfigDelivery", () => {
 
   it("is download-only for multispeq", () => {
     render(<DeviceConfigDelivery device={multispeqDevice} config={config} />);
+
+    expect(screen.getByText("iot.onboarding.inlineProcedureNote")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /iot.onboarding.connect/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("is download-only for ambyte, which is Ambit hardware", () => {
+    render(<DeviceConfigDelivery device={ambyteDevice} config={config} />);
 
     expect(screen.getByText("iot.onboarding.inlineProcedureNote")).toBeInTheDocument();
     expect(

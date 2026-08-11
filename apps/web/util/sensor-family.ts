@@ -14,8 +14,7 @@ const GENERIC_LABEL = "Generic";
 /**
  * Families not offered as a local-connection target in this authoring selector.
  * Ambyte is presented as a gateway; its measurement data arrives via ingest.
- * (Web protocol testing separately preserves a generic-driver compatibility
- * path for existing Ambyte-family protocols.)
+ * (Locally it is Ambit hardware: command/response console, no protocol cells.)
  */
 const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte"]);
 

@@ -62,6 +62,7 @@ export function createDriver(sensorFamily: SensorFamily): IDeviceDriver {
     case "multispeq":
       return new MultispeqDriver();
     case "ambit":
+    case "ambyte":
       return new AmbitDriver();
     case "minipar":
       return new MiniParDriver();

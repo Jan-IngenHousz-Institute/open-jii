@@ -166,7 +166,25 @@ describe("useIotProtocolExecution", () => {
     });
   });
 
-  describe("generic/ambyte execution", () => {
+  describe("ambit/ambyte execution", () => {
+    it.each(["ambit", "ambyte"] as const)(
+      "refuses protocol cells over a direct %s connection",
+      async (family) => {
+        const mockDriver: Partial<IDeviceDriver> = { execute: vi.fn() };
+
+        const { result } = renderHook(() =>
+          useIotProtocolExecution(mockDriver as IDeviceDriver, true, family),
+        );
+
+        await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
+          /do not run protocol cells/,
+        );
+        expect(mockDriver.execute).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  describe("generic execution", () => {
     it("executes SET_CONFIG, RUN, GET_DATA steps in order", async () => {
       const mockExecute = vi
         .fn()
@@ -177,7 +195,7 @@ describe("useIotProtocolExecution", () => {
       const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambyte"),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
       );
 
       const data = await result.current.executeProtocol([{ command: "test" }]);
@@ -201,7 +219,7 @@ describe("useIotProtocolExecution", () => {
       const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambyte"),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
@@ -221,7 +239,7 @@ describe("useIotProtocolExecution", () => {
       const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambyte"),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
@@ -242,7 +260,7 @@ describe("useIotProtocolExecution", () => {
       const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambyte"),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
@@ -260,7 +278,7 @@ describe("useIotProtocolExecution", () => {
       const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambyte"),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
       );
 
       const data = await result.current.executeProtocol([{ command: "measure" }]);
@@ -277,7 +295,7 @@ describe("useIotProtocolExecution", () => {
       const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambyte"),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
       );
 
       const data = await result.current.executeProtocol([{ command: "measure" }]);
@@ -295,7 +313,7 @@ describe("useIotProtocolExecution", () => {
       const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambyte"),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
       );
 
       const data = await result.current.executeProtocol([{ command: "measure" }]);
@@ -311,7 +329,7 @@ describe("useIotProtocolExecution", () => {
       const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambyte"),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
@@ -328,7 +346,7 @@ describe("useIotProtocolExecution", () => {
       const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambyte"),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
@@ -349,7 +367,7 @@ describe("useIotProtocolExecution", () => {
       const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
-        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambyte"),
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "generic"),
       );
 
       await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(

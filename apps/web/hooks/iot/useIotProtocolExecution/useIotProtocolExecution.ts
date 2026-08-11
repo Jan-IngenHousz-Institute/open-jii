@@ -44,7 +44,7 @@ export async function executeProtocolWithDriver(
     return parseResponseData(unwrap(result, "Protocol execution failed"));
   }
 
-  if (sensorFamily === "ambit") {
+  if (sensorFamily === "ambit" || sensorFamily === "ambyte") {
     // Ambit measures via its Ambyte gateway; a direct session is command/response.
     throw new Error(
       "Ambit devices do not run protocol cells over a direct connection. Use a command cell instead.",

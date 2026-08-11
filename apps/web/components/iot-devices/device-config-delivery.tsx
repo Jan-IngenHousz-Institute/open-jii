@@ -50,8 +50,8 @@ export function DeviceConfigDelivery({
     connectionType,
   );
 
-  // Families without a stored-config command (MultispeQ, Ambit, MiniPAR) get
-  // their procedure per measurement, so delivery for them is download-only.
+  // Families without a stored-config command (MultispeQ, Ambit/Ambyte, MiniPAR)
+  // get their procedure per measurement, so delivery for them is download-only.
   const supportsPush = supportsConfigDelivery(sensorFamilyToDeviceType(device.deviceType));
   const isSelectedTransportSupported =
     connectionType === "bluetooth" ? browserSupport.bluetooth : browserSupport.serial;
