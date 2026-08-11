@@ -2,6 +2,13 @@
 # DBTITLE 1,Gold Layer - Experiment Raw Data
 # Gold: per-experiment raw sample data with VARIANT support, sanitized question
 # labels, and inline-repair application.
+#
+# `data` holds the measurement OBJECT, not the firmware's one-element sample
+# array (mqtt-payload.md §2). This is an append-only streaming table, so rows
+# already written keep the array they were written with: every consumer must
+# accept both shapes, which is what measurement_object() / trace_points() do.
+# A full refresh would restate history into the unwrapped shape - correct, but a
+# rewrite of the whole table, so do it deliberately and not as a side effect.
 
 # COMMAND ----------
 import dlt
@@ -12,6 +19,7 @@ from pyspark.sql.types import ArrayType, StringType, StructField, StructType
 from data_repair import apply_inline_repairs
 from openjii.centrum import EXPERIMENT_RAW_DATA_TABLE
 from openjii.centrum.runtime import SILVER_TABLE
+from openjii.trace.sql_objects import MEASUREMENT_OBJECT_EXPR
 
 # COMMAND ----------
 
@@ -112,7 +120,7 @@ def experiment_raw_data():
     return (
         dlt.read_stream(SILVER_TABLE)
         .filter("experiment_id IS NOT NULL")
-        .withColumn("data", F.expr("parse_json(sample)"))
+        .withColumn("data", F.expr(MEASUREMENT_OBJECT_EXPR))
         .withColumn("output_data", F.expr("try_parse_json(output)"))
         .withColumn(
             "questions_sanitized",
@@ -150,6 +158,7 @@ def experiment_raw_data():
             "annotations",
             "user_id",
             "protocol_id",
+            "sensor_family",
             "workbook_run_id",
             "workbook_version_id",
             "macro_context",

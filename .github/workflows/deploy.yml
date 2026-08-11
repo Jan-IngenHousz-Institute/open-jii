@@ -101,10 +101,88 @@ jobs:
       - name: Await Approval for Deployment
         run: echo "Approved deployment for ${{ inputs.environment }} environment."
 
+  # Refuses the one ordering this orchestrator gets wrong: it applies the whole
+  # Terraform root (deploy-infrastructure, below) BEFORE deploy-databricks uploads
+  # the bundle's wheels. For an OpenJII wheel version bump that points the centrum
+  # cluster policy and the Data Export job at a file that does not exist yet, and
+  # the breakage surfaces later, on the next cluster start.
+  #
+  # What it detects is the transition itself, not a path filter: the wheel version
+  # this commit builds, compared against the wheel the two live resources actually
+  # reference. That needs no diff against a previous commit (so manual releases are
+  # covered), it clears itself once the rollout has happened, and it catches a
+  # hand-edited reference to a version nobody built.
+  #
+  # It runs whenever an infrastructure apply OR a Databricks deploy could happen --
+  # a data-only bundle deploy can prune artifacts, which is the path fixup 03 left
+  # open -- and both of those jobs require it to have passed. Neither
+  # deploy_infrastructure=false nor the change-detection route can slip past it:
+  # those inputs decide whether a job runs, not whether it is allowed to.
+  #
+  # It binds the target environment, so it reads with the same credentials the
+  # established Databricks deployment uses. Environments whose Terraform names no
+  # OpenJII wheel exit before any workspace call.
+  guard-data-wheel:
+    name: Guard Data Wheel Transition
+    needs: [detect, approval-gate]
+    if: >-
+      inputs.deploy_infrastructure ||
+      needs.detect.outputs.infra_changed == 'true' ||
+      inputs.deploy_all ||
+      contains(inputs.deploy_app, 'databricks') ||
+      contains(fromJSON(needs.detect.outputs.affected_apps), 'data')
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+
+      - name: Refuse an OpenJII wheel transition on the ordinary path
+        working-directory: apps/data
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE/infrastructure/env/${{ inputs.environment }}"
+          if [ ! -d "$ROOT" ] || ! grep -rqE 'openjii-[0-9][^"]*\.whl' "$ROOT"; then
+            echo "${{ inputs.environment }} Terraform names no OpenJII wheel; nothing to guard."
+            exit 0
+          fi
+          VERSION=$(grep -m1 -E '^version = ' src/lib/openjii/pyproject.toml | cut -d'"' -f2)
+          if [ -z "$VERSION" ]; then
+            echo "::error::could not read the openjii version from the committed pyproject.toml"
+            exit 1
+          fi
+          echo "this commit builds openjii-$VERSION-py3-none-any.whl"
+          # Fails with the two-phase pointer when live does not already match.
+          python scripts/live_wheel_refs.py \
+            --environment "${{ inputs.environment }}" \
+            --expect-committed "$VERSION" \
+            --pointer
+
   deploy-infrastructure:
     name: Deploy Infrastructure
-    needs: [detect, approval-gate]
-    if: inputs.deploy_infrastructure || needs.detect.outputs.infra_changed == 'true'
+    # guard-data-wheel must have run and passed. Its `if` is identical to this
+    # job's, so "skipped" is never a legitimate state here: if this job runs, the
+    # guard ran, and it has to have succeeded.
+    needs: [detect, approval-gate, guard-data-wheel]
+    if: >-
+      (inputs.deploy_infrastructure || needs.detect.outputs.infra_changed == 'true') &&
+      needs.guard-data-wheel.result == 'success'
     permissions:
       id-token: write
       contents: read
@@ -194,11 +272,17 @@ jobs:
     name: Deploy Databricks
     # Mixed-version macro rollout: backend normalization lands before the
     # Databricks producer adapter. A skipped backend still permits data-only deploys.
-    needs: [deploy-infrastructure, deploy-backend, detect, approval-gate]
+    #
+    # The wheel guard must have PASSED, not merely not-failed. It runs for every
+    # deploy that could reach the bundle, including a data-only one, because an
+    # upload can prune the artifact a live reference still names. A wheel transition
+    # belongs to data-wheel-rollout.yml as a whole, never half of it here.
+    needs: [deploy-infrastructure, deploy-backend, detect, approval-gate, guard-data-wheel]
     if: >-
       always() &&
       needs.detect.result == 'success' &&
       needs.approval-gate.result == 'success' &&
+      needs.guard-data-wheel.result == 'success' &&
       contains('success,skipped', needs.deploy-infrastructure.result) &&
       contains('success,skipped', needs.deploy-backend.result) &&
       (inputs.deploy_all || contains(inputs.deploy_app, 'databricks') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'data')))

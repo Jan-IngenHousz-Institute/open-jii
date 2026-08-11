@@ -1,0 +1,274 @@
+[
+  {
+    "name": "v2_device_info_tuple_a_first",
+    "generation": "v2",
+    "note": "v2 DEVICE_INFO: announced once per UART connection, so the same (sensor_id, firmware, cal_version) tuple repeats in the raw data.",
+    "row": {
+      "id": 4001,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:00:00.000Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26301,
+        "startTicks_UTC": 1785963600000,
+        "channel": "uart_0",
+        "device": "AmbitV003",
+        "cmd_raw": "get_info",
+        "tag": "DEVICE_INFO",
+        "metadata": { "hw_rev": 1 },
+        "data": {
+          "device_id": "10:91:A8:4F:4F:D4",
+          "fw": "0.1.0",
+          "cal_version": "6A4356A8",
+          "mlx_coef": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+          "adpd": [100, 101, 102, 103, 104, 105],
+          "temp_offset": 0.0,
+          "temp_slope": 1.0,
+          "actinic_coef": 0.012345,
+          "spec_coef": 1.0,
+          "act": [12, 24, 36, 48, 60],
+          "mlx_emissivity": 0.98,
+          "sun_coef": 1.0,
+          "tick_factor": 0.854
+        }
+      }
+    ],
+    "expect": {
+      "sensor_id": "10:91:A8:4F:4F:D4",
+      "cal_version": "6a4356a8",
+      "firmware": "0.1.0",
+      "hardware_revision": 1,
+      "channel": "uart_0",
+      "observed_utc_ms": 1785963600000,
+      "source_generation": "v2.DEVICE_INFO",
+      "calibration_complete": true
+    }
+  },
+  {
+    "name": "v2_device_info_tuple_a_repeat",
+    "generation": "v2",
+    "note": "Same tuple, later reconnect. Must collapse into the tuple_a record, not create a second inventory record.",
+    "row": {
+      "id": 4002,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:10:00.000Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26302,
+        "startTicks_UTC": 1785964200000,
+        "channel": "uart_0",
+        "device": "AmbitV003",
+        "cmd_raw": "get_info",
+        "tag": "DEVICE_INFO",
+        "metadata": { "hw_rev": 1 },
+        "data": {
+          "device_id": "10:91:A8:4F:4F:D4",
+          "fw": "0.1.0",
+          "cal_version": "6A4356A8",
+          "mlx_coef": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+          "adpd": [100, 101, 102, 103, 104, 105],
+          "temp_offset": 0.0,
+          "temp_slope": 1.0,
+          "actinic_coef": 0.012345,
+          "spec_coef": 1.0,
+          "act": [12, 24, 36, 48, 60],
+          "mlx_emissivity": 0.98,
+          "sun_coef": 1.0,
+          "tick_factor": 0.854
+        }
+      }
+    ],
+    "expect": {
+      "sensor_id": "10:91:A8:4F:4F:D4",
+      "cal_version": "6a4356a8",
+      "firmware": "0.1.0",
+      "observed_utc_ms": 1785964200000,
+      "source_generation": "v2.DEVICE_INFO",
+      "calibration_complete": true
+    }
+  },
+  {
+    "name": "v2_device_info_tuple_b_recalibrated",
+    "generation": "v2",
+    "note": "Same sensor after a calibration change: a new tuple, and the one the latest view must show. It also moved port, which is not identity.",
+    "row": {
+      "id": 4003,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:20:00.000Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26303,
+        "startTicks_UTC": 1785964800000,
+        "channel": "uart_1",
+        "device": "AmbitV003",
+        "cmd_raw": "get_info",
+        "tag": "DEVICE_INFO",
+        "metadata": { "hw_rev": 1 },
+        "data": {
+          "device_id": "10:91:A8:4F:4F:D4",
+          "fw": "0.1.0",
+          "cal_version": "AABBCCDD",
+          "mlx_coef": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+          "adpd": [100, 101, 102, 103, 104, 105],
+          "temp_offset": 0.25,
+          "temp_slope": 1.0,
+          "actinic_coef": 0.012345,
+          "spec_coef": 1.0,
+          "act": [12, 24, 36, 48, 60],
+          "mlx_emissivity": 0.98,
+          "sun_coef": 1.0,
+          "tick_factor": 0.854
+        }
+      }
+    ],
+    "expect": {
+      "sensor_id": "10:91:A8:4F:4F:D4",
+      "cal_version": "aabbccdd",
+      "firmware": "0.1.0",
+      "channel": "uart_1",
+      "observed_utc_ms": 1785964800000,
+      "source_generation": "v2.DEVICE_INFO",
+      "calibration_complete": true,
+      "is_latest_for_sensor": true
+    }
+  },
+  {
+    "name": "v3_device_native",
+    "generation": "v3",
+    "note": "Native ambit.device/1 for a second sensor.",
+    "row": {
+      "id": 4004,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:26:54.102Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "schema": "ambit.device/1",
+        "measure_id": 26339,
+        "channel": "uart_2",
+        "device": "AmbitV004",
+        "tag": "DEVICE_INFO",
+        "time": { "observed_utc": 1785965214102 },
+        "identity": {
+          "sensor_id": "10:91:A8:4F:4F:E1",
+          "name": "AmbitV004",
+          "firmware": "0.1.1",
+          "hardware_revision": 1,
+          "cal_version": "6a378aa8"
+        },
+        "calibration": {
+          "mlx_coef": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+          "adpd": [100, 101, 102, 103, 104, 105],
+          "temp_offset": 0.0,
+          "temp_slope": 1.0,
+          "actinic_coef": 0.012345,
+          "spec_coef": 1.0,
+          "act": [12, 24, 36, 48, 60],
+          "mlx_emissivity": 0.98,
+          "sun_coef": 1.0,
+          "tick_factor": 0.854
+        }
+      }
+    ],
+    "expect": {
+      "sensor_id": "10:91:A8:4F:4F:E1",
+      "cal_version": "6a378aa8",
+      "firmware": "0.1.1",
+      "channel": "uart_2",
+      "observed_utc_ms": 1785965214102,
+      "source_generation": "native",
+      "calibration_complete": true,
+      "is_latest_for_sensor": true
+    }
+  },
+  {
+    "name": "v2_device_info_incomplete",
+    "generation": "v2",
+    "note": "Legacy DEVICE_INFO without the full coefficient set: queryable as legacy inventory, flagged incomplete, never completed with invented numbers (§11.3).",
+    "row": {
+      "id": 4005,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T20:00:00.000Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambit"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26200,
+        "startTicks": 1785960000000,
+        "channel": "uart_3",
+        "device": "AmbitV002",
+        "cmd_raw": "get_info",
+        "tag": "DEVICE_INFO",
+        "data": { "device_id": "10:91:A8:4F:4F:E2", "fw": "0.0.9", "cal_version": 3735928559 }
+      }
+    ],
+    "expect": {
+      "sensor_id": "10:91:A8:4F:4F:E2",
+      "cal_version": "deadbeef",
+      "firmware": "0.0.9",
+      "hardware_revision": null,
+      "channel": "uart_3",
+      "observed_utc_ms": 1785960000000,
+      "source_generation": "v2.DEVICE_INFO",
+      "calibration_complete": false,
+      "is_latest_for_sensor": true
+    }
+  },
+  {
+    "name": "not_device_info",
+    "generation": "other",
+    "note": "A telemetry heartbeat must not be normalized as inventory.",
+    "row": {
+      "id": 4006,
+      "experiment_id": "exp-t5-fixture",
+      "device_id": "28:37:2F:FF:E7:04",
+      "client_id": "AMBYTE_28372FFFE704",
+      "timestamp": "2026-08-05T21:26:53.985Z",
+      "timezone": "Europe/Amsterdam",
+      "protocol_id": null,
+      "sensor_family": "ambyte"
+    },
+    "sample": [
+      {
+        "v": 2,
+        "measure_id": 26399,
+        "startTicks_UTC": 1785965213985,
+        "tag": "STATUS",
+        "metadata": { "wifi": true },
+        "data": { "temperature": 24.67 }
+      }
+    ],
+    "expect": { "normalized_is_null": true }
+  }
+]

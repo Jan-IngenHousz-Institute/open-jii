@@ -288,6 +288,41 @@ module "github_cicd_service_principal" {
   }
 }
 
+# Run-as authorization for the Databricks Asset Bundle deployer.
+#
+# apps/data/databricks.yml runs the v3 SQL-object job as the node service
+# principal, because that is the identity holding the Unity Catalog grants
+# (CREATE_FUNCTION, CREATE_SCHEMA, CREATE_TABLE, SELECT) this DDL needs. The
+# bundle itself is deployed by the GitHub CI service principal.
+#
+# Databricks requires the *deploying* identity to hold the Service Principal User
+# role on the principal named by `run_as`. Ordinary workspace membership does not
+# confer it, and Service Principal Manager does not inherit it, so without the
+# rule below the deploy validates and then fails when it creates or updates the
+# job. The grant is one role for one principal: the CI principal may act as the
+# node principal, and nothing more.
+#
+# A rule set is AUTHORITATIVE for the object it names, so applying this replaces
+# any rule set previously configured out of band on this service principal.
+# Account administrators keep access regardless of rule sets, so the single grant
+# below cannot lock anyone out of managing the principal.
+resource "databricks_access_control_rule_set" "node_service_principal_run_as" {
+  provider = databricks.mws
+  name     = "accounts/${var.databricks_account_id}/servicePrincipals/${module.node_service_principal.service_principal_application_id}/ruleSets/default"
+
+  grant_rules {
+    principals = [
+      "servicePrincipals/${module.github_cicd_service_principal.service_principal_application_id}",
+    ]
+    role = "roles/servicePrincipal.user"
+  }
+
+  depends_on = [
+    module.node_service_principal,
+    module.github_cicd_service_principal,
+  ]
+}
+
 # Cluster policy for cost control and resource management
 module "node_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
@@ -315,7 +350,7 @@ module "node_cluster_policy" {
       whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
     },
     {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.2.0-py3-none-any.whl"
     },
     {
       whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/data_repair-0.1.0-py3-none-any.whl"
@@ -1031,7 +1066,7 @@ module "data_export_job" {
       spec = {
         environment_version = "4"
         dependencies = [
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.2.0-py3-none-any.whl",
           # openpyxl backs the pandas Excel writer used for xlsx exports
           "openpyxl==3.1.5"
         ]

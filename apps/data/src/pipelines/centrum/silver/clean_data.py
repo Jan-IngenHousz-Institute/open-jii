@@ -15,6 +15,11 @@ from openjii.centrum import (
     RAW_LARGE_DATA_TABLE,
     question_schema,
 )
+from openjii.centrum.attribution import (
+    payload_protocol_id,
+    protocol_id,
+    sensor_family,
+)
 from openjii.centrum.runtime import (
     BRONZE_TABLE,
     LEGACY_MACRO_ID_MAP,
@@ -72,15 +77,12 @@ def clean_data():
         .withColumn("user_id", F.col("parsed_data.user_id"))
         # Which protocol produced the row. Only the legacy 8-segment topic
         # (.../{sensorId}/{protocolId}) carries it, as its trailing segment; the
-        # lean 7-segment shape has no protocol in the topic. The previous
-        # extraction read segment 4, which is the sensor family, not a protocol.
-        .withColumn(
-            "protocol_id",
-            F.expr(
-                r"CASE WHEN size(split(parsed_data.topic, '/')) = 8 "
-                r"THEN element_at(split(parsed_data.topic, '/'), 8) ELSE NULL END"
-            )
-        )
+        # lean 7-segment shape has no protocol in the topic, so a v3 payload's
+        # protocol.id is the attribution there.
+        .withColumn("protocol_id", protocol_id(F.col("parsed_data.topic"), F.col("sample")))
+        # Sensor family (topic segment 5) in its own column: the same position in
+        # both topic shapes, and the discriminator the payload-family views need.
+        .withColumn("sensor_family", sensor_family(F.col("parsed_data.topic")))
         # Null on single-device uploads; rows of one multi-device workbook
         # run share it and can be joined back on it.
         .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
@@ -209,6 +211,7 @@ def clean_data():
         "timezone",
         "experiment_id",
         "protocol_id",
+        "sensor_family",
         "workbook_run_id",
         "workbook_version_id",
         "macro_context",
@@ -261,6 +264,7 @@ def clean_data():
         .withColumn("annotations", F.array())
         # Imported/legacy data has no topic and no workbook-run concept.
         .withColumn("protocol_id", F.lit(None).cast("string"))
+        .withColumn("sensor_family", F.lit(None).cast("string"))
         .withColumn("workbook_run_id", F.lit(None).cast("string"))
         .withColumn("workbook_version_id", F.lit(None).cast("string"))
         .withColumn("macro_context", F.lit(None).cast("string"))
@@ -283,6 +287,7 @@ def clean_data():
             "timezone",
             "experiment_id",
             "protocol_id",
+            "sensor_family",
             "workbook_run_id",
             "workbook_version_id",
             "macro_context",
@@ -368,8 +373,11 @@ def clean_data_large_iot():
             """)
         )
         .withColumn("skip_macro_processing", F.lit(None).cast("boolean"))
-        # No MQTT topic, so no protocol to extract.
-        .withColumn("protocol_id", F.lit(None).cast("string"))
+        # No MQTT topic here, so the payload is the only possible attribution -
+        # the same v3 protocol.id the lean topic relies on. Pre-signed uploads
+        # also carry no sensor family.
+        .withColumn("protocol_id", payload_protocol_id(F.col("sample")))
+        .withColumn("sensor_family", F.lit(None).cast("string"))
         # Pre-signed S3 uploads never touch the broker, so there is no
         # clientid()-derived identity. The payload's device_id is self-reported
         # and must not be promoted to the trusted client_id.
@@ -391,6 +399,7 @@ def clean_data_large_iot():
             "timezone",
             "experiment_id",
             "protocol_id",
+            "sensor_family",
             "workbook_run_id",
             "workbook_version_id",
             "macro_context",

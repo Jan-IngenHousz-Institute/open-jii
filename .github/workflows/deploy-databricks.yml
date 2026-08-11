@@ -79,6 +79,26 @@ jobs:
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
 
+      # Fails before `bundle deploy` mutates anything. The bundle's jobs run as the
+      # node service principal (the identity holding the Unity Catalog grants), and
+      # assigning that run_as requires this CI principal to hold
+      # roles/servicePrincipal.user on it — codified as a
+      # databricks_access_control_rule_set in infrastructure/env/<env>/main.tf.
+      # `bundle validate` cannot prove that role, so the probe creates and deletes a
+      # disposable paused job carrying only run_as. It touches no data or schema.
+      - name: Preflight run-as authorization
+        working-directory: apps/data
+        run: |
+          echo "Preflighting ${{ inputs.environment }} as the CI service principal..."
+          python scripts/preflight_dab_run_as.py \
+            --target ${{ inputs.environment }} \
+            --prove-run-as \
+            --probe-token "gha${{ github.run_id }}"
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+
       - name: Deploy bundle
         id: deploy-bundle
         working-directory: apps/data

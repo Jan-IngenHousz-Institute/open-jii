@@ -24,8 +24,9 @@ channels:
     x-infra-name: experiment_data_ingest_v1_lean
     description: |
       Channel for ingesting experiment sensor data. This shape carries no
-      protocol attribution in the topic; the pipeline records a null protocol_id
-      for rows ingested on it.
+      protocol attribution in the topic: the pipeline reads protocol_id from the
+      payload instead, from a v3 measurement object's protocol.id, and records a
+      null protocol_id when the payload does not carry one.
       The path parameters represent:
       <ul>
         <li><strong>experimentId:</strong> Unique identifier of the experiment (e.g., exp123).</li>

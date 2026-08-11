@@ -1,0 +1,1200 @@
+# Data wheel rollout (two-phase)
+#
+# The safe path for a change that moves a live Terraform OpenJII wheel reference,
+# and for the one-time run-as ACL bootstrap. Both live references -- the centrum
+# cluster policy and the Data Export job -- name the wheel by filename, so an apply
+# that moves them before the bundle has uploaded that file strands them.
+#
+# The ordinary deployment workflow applies the whole Terraform root *before* it
+# deploys the bundle, which is exactly the wrong order here. Its Guard Data Wheel
+# Transition job refuses that class of change and points at this workflow.
+#
+# Phases, in order, each one gated:
+#
+#   0  preconditions       wheel version, config digest, and for prod: the dev
+#                          attestation cross-checked against the dev run's own
+#                          Actions record
+#   1  acl-inventory       READ-ONLY: the node SP's authoritative rule set + etag
+#   2  acl-plan            targeted plan, `tofu show -json` address/action gate, bound
+#                          to environment + SHA + run/attempt + config digest + etag
+#   3  acl-approval        approval AFTER the plan artifact exists
+#   4  acl-apply           fresh live etag GET, re-verify the binding, apply that plan
+#   5  bundle-plan         derive the outgoing wheel from BOTH live refs, back it up,
+#                          `bundle validate` + machine-readable `bundle plan`, bound
+#   6  bundle-approval     approval AFTER the bundle plan artifact exists
+#   7  bundle-deploy       re-verify the bundle plan, prove run_as, deploy, dual-wheel
+#                          proof, and always re-list/restore the outgoing wheel
+#   8  full-plan           full plan, JSON-gated to the approved addresses/actions
+#   9  full-approval       approval AFTER that plan artifact exists
+#  10  full-apply          apply the exact plan, then read BOTH live refs back
+#  11  pipeline-update     explicit {"full_refresh": false}, polled to terminal
+#  12  smoke               the SQL/replay smoke job, by real run id, polled
+#  13  attest              dev only: publish the immutable attestation prod needs
+#
+# NO CALLER-CONTROLLED SHELL. Dispatch inputs and job outputs reach `run:` blocks
+# through `env:` and are referenced quoted ("$VAR"), never spliced into the script
+# text by `${{ }}`. Resource addresses are not inputs at all: the approved addresses
+# live in `apps/data/scripts/check_tofu_plan.py` as exact strings, selected here by
+# phase name (`--allow-set acl` / `--allow-set full`).
+#
+# DO NOT HARD-CANCEL PHASE 7. Cancelling a workflow run skips remaining steps
+# including cleanup, so a cancel between the artifact upload and the retention proof
+# can leave the outgoing wheel pruned while the live references still name it. Let
+# the phase fail on its own: its cleanup step runs on `always()` and restores the
+# outgoing wheel. If it was cancelled anyway, re-upload the backup artifact by hand
+# before touching Terraform (apps/data/README.md).
+#
+# FIRST ACTIVATION: GitHub only registers `workflow_dispatch` for workflow files
+# that exist on the default branch, so this cannot be dispatched until it is merged.
+# Pre-merge evidence is the offline static/unit matrix only. Do not add a `push`,
+# `pull_request` or `repository_dispatch` trigger to demonstrate it.
+
+name: Data wheel rollout
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options: [dev, prod]
+      dev_run_id:
+        description: "For prod: the dev run id of this workflow whose attestation covers this commit"
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: data-wheel-rollout-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  # One place for the artifact names, all bound to environment + run + attempt so an
+  # artifact from another environment, run or retry cannot be consumed by mistake.
+  ACL_PLAN_ARTIFACT: acl-plan-${{ inputs.environment }}-${{ github.run_id }}-${{ github.run_attempt }}
+  BUNDLE_PLAN_ARTIFACT: bundle-plan-${{ inputs.environment }}-${{ github.run_id }}-${{ github.run_attempt }}
+  WHEEL_BACKUP_ARTIFACT: outgoing-wheel-${{ inputs.environment }}-${{ github.run_id }}-${{ github.run_attempt }}
+  FULL_PLAN_ARTIFACT: full-plan-${{ inputs.environment }}-${{ github.run_id }}-${{ github.run_attempt }}
+  INVENTORY_ARTIFACT: run-as-acl-inventory-${{ inputs.environment }}-${{ github.run_id }}-${{ github.run_attempt }}
+  ATTESTATION_ARTIFACT: dev-rollout-attestation
+
+jobs:
+  preconditions:
+    name: Phase 0 - preconditions
+    runs-on: ubuntu-latest
+    # actions: read for the Actions API cross-check and the cross-run attestation
+    # download; no other job reads the Actions API.
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      wheel_version: ${{ steps.version.outputs.version }}
+      new_wheel: ${{ steps.version.outputs.wheel }}
+      config_digest: ${{ steps.digest.outputs.digest }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Resolve the expected wheel version
+        id: version
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -m1 -E '^version = ' apps/data/src/lib/openjii/pyproject.toml | cut -d'"' -f2)
+          if [ -z "$VERSION" ]; then
+            echo "::error::could not read the openjii version from the committed pyproject.toml"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "wheel=openjii-$VERSION-py3-none-any.whl" >> "$GITHUB_OUTPUT"
+          echo "Rolling out openjii-$VERSION-py3-none-any.whl to $TARGET_ENV"
+
+      - name: Digest the Terraform configuration
+        id: digest
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          DIGEST=$(find "infrastructure/env/$TARGET_ENV" -name '*.tf' -type f \
+            | sort | xargs sha256sum | sha256sum | cut -d' ' -f1)
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "config digest: $DIGEST"
+
+      - name: Validate the dev attestation against the dev run itself (prod only)
+        if: ${{ inputs.environment == 'prod' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEV_RUN_ID: ${{ inputs.dev_run_id }}
+          HEAD_SHA: ${{ github.sha }}
+          NEW_WHEEL: ${{ steps.version.outputs.wheel }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DEV_RUN_ID" ]; then
+            echo "::error::prod requires dev_run_id: the dev run of this workflow whose"
+            echo "::error::attestation covers this commit. Roll dev out first."
+            exit 1
+          fi
+          case "$DEV_RUN_ID" in
+            ''|*[!0-9]*)
+              echo "::error::dev_run_id must be a numeric Actions run id"; exit 1 ;;
+          esac
+
+          # The run record, read from the API rather than taken from the artifact:
+          # `gh run view --json` cannot report which workflow *file* a run is, nor the
+          # dispatch inputs, so the API's `path`/`event`/`conclusion`/`head_sha`/
+          # `run_attempt` are what tie the attestation to a real dev rollout.
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$DEV_RUN_ID" > dev-run.json
+          RUN_PATH=$(jq -r '.path // empty' dev-run.json)
+          RUN_EVENT=$(jq -r '.event // empty' dev-run.json)
+          RUN_CONCLUSION=$(jq -r '.conclusion // empty' dev-run.json)
+          RUN_HEAD_SHA=$(jq -r '.head_sha // empty' dev-run.json)
+          RUN_ATTEMPT=$(jq -r '.run_attempt // empty' dev-run.json)
+          RUN_ID=$(jq -r '.id // empty' dev-run.json)
+          echo "dev run $RUN_ID: $RUN_PATH ($RUN_EVENT) $RUN_CONCLUSION @ $RUN_HEAD_SHA attempt $RUN_ATTEMPT"
+
+          gh run download "$DEV_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name "$ATTESTATION_ARTIFACT" --dir dev-attestation
+
+          python apps/data/scripts/dev_attestation.py verify \
+            --attestation dev-attestation/attestation.json \
+            --sha "$HEAD_SHA" \
+            --new-wheel "$NEW_WHEEL" \
+            --dev-run-id "$DEV_RUN_ID" \
+            --run-id "$RUN_ID" \
+            --run-path "$RUN_PATH" \
+            --run-event "$RUN_EVENT" \
+            --run-conclusion "$RUN_CONCLUSION" \
+            --run-head-sha "$RUN_HEAD_SHA" \
+            --run-attempt "$RUN_ATTEMPT"
+
+  acl-inventory:
+    name: Phase 1 - ACL inventory (read-only)
+    needs: [preconditions]
+    runs-on: ubuntu-latest
+    # The target environment, for its account credentials. Read-only: this job
+    # inventories, it does not reconcile.
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      inventory_etag: ${{ steps.inventory.outputs.etag }}
+      node_application_id: ${{ steps.inventory.outputs.node_application_id }}
+      ci_application_id: ${{ steps.inventory.outputs.ci_application_id }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+
+      - name: Read the node service principal rule set
+        id: inventory
+        working-directory: apps/data
+        env:
+          # Account-level read with the Terraform account provider's credentials,
+          # not the bundle deployer's.
+          DATABRICKS_HOST: https://accounts.cloud.databricks.com
+          DATABRICKS_ACCOUNT_ID: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+          NODE_SP_NAME: node-service-principal-${{ inputs.environment }}
+          CI_SP_NAME: github-cicd-service-principal-${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          resolve() {
+            databricks account service-principals list --output json \
+              | jq -r --arg name "$1" '.[] | select(.displayName == $name) | .applicationId'
+          }
+          NODE_IDS=$(resolve "$NODE_SP_NAME"); CI_IDS=$(resolve "$CI_SP_NAME")
+          # Exactly one of each: two principals with the same display name would make
+          # "the node service principal" ambiguous.
+          [ "$(echo "$NODE_IDS" | grep -c .)" = "1" ] || { echo "::error::expected exactly one $NODE_SP_NAME"; exit 1; }
+          [ "$(echo "$CI_IDS" | grep -c .)" = "1" ] || { echo "::error::expected exactly one $CI_SP_NAME"; exit 1; }
+          echo "node_application_id=$NODE_IDS" >> "$GITHUB_OUTPUT"
+          echo "ci_application_id=$CI_IDS" >> "$GITHUB_OUTPUT"
+
+          # No acknowledgement flag. The rule set is authoritative, so any grant the
+          # Terraform does not declare would be silently removed by the apply; the
+          # only way past this is to codify the grant and have that change reviewed.
+          python scripts/inventory_run_as_acl.py \
+            --account-id "$DATABRICKS_ACCOUNT_ID" \
+            --node-application-id "$NODE_IDS" \
+            --ci-application-id "$CI_IDS" \
+            --output run-as-acl-inventory.json \
+            --etag-output run-as-acl-etag.txt
+          echo "etag=$(cat run-as-acl-etag.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the inventory for the record
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.INVENTORY_ARTIFACT }}
+          path: |
+            apps/data/run-as-acl-inventory.json
+            apps/data/run-as-acl-etag.txt
+          if-no-files-found: error
+
+  acl-plan:
+    name: Phase 2 - targeted ACL plan
+    needs: [preconditions, acl-inventory]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      plan_digest: ${{ steps.gate.outputs.plan_digest }}
+    env:
+      environment: ${{ inputs.environment }}
+      TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
+      TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      TF_VAR_databricks_host: ${{ secrets.DATABRICKS_HOST }}
+      TF_VAR_auth_secret: ${{ secrets.AUTH_SECRET }}
+      TF_VAR_github_oauth_client_id: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+      TF_VAR_github_oauth_client_secret: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+      TF_VAR_backend_webhook_api_key_id: ${{ secrets.BACKEND_WEBHOOK_API_KEY_ID }}
+      TF_VAR_backend_webhook_api_key: ${{ secrets.BACKEND_WEBHOOK_API_KEY }}
+      TF_VAR_backend_webhook_secret: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
+      TF_VAR_backend_databricks_warehouse_id: ${{ secrets.BACKEND_DATABRICKS_WAREHOUSE_ID }}
+      TF_VAR_contentful_space_id: ${{ secrets.CONTENTFUL_SPACE_ID }}
+      TF_VAR_contentful_access_token: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
+      TF_VAR_contentful_preview_access_token: ${{ secrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN }}
+      TF_VAR_contentful_preview_secret: ${{ secrets.CONTENTFUL_PREVIEW_SECRET }}
+      TF_VAR_mailchimp_api_key: ${{ secrets.MAILCHIMP_API_KEY }}
+      TF_VAR_mailchimp_server_prefix: ${{ secrets.MAILCHIMP_SERVER_PREFIX }}
+      TF_VAR_mailchimp_audience_id: ${{ secrets.MAILCHIMP_AUDIENCE_ID }}
+      TF_VAR_mailchimp_community_kind: ${{ secrets.MAILCHIMP_COMMUNITY_KIND }}
+      TF_VAR_mailchimp_community_id: ${{ secrets.MAILCHIMP_COMMUNITY_ID }}
+      TF_VAR_mailchimp_community_name: ${{ secrets.MAILCHIMP_COMMUNITY_NAME }}
+      TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
+      TF_VAR_orcid_oauth_client_id: ${{ secrets.ORCID_OAUTH_CLIENT_ID }}
+      TF_VAR_orcid_oauth_client_secret: ${{ secrets.ORCID_OAUTH_CLIENT_SECRET }}
+      TF_VAR_posthog_key: ${{ secrets.POSTHOG_KEY }}
+      TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
+      TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
+      TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Setup OpenTofu and AWS Credentials
+        uses: ./.github/actions/tofu/tofu-setup
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          tofu_version: "1.9.0"
+
+      - name: OpenTofu Init and Validate
+        uses: ./.github/actions/tofu/tofu-init-validate
+
+      - name: Targeted plan, JSON-gated to the ACL resource
+        id: gate
+        working-directory: infrastructure/env/${{ inputs.environment }}
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          HEAD_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          CONFIG_DIGEST: ${{ needs.preconditions.outputs.config_digest }}
+          INVENTORY_ETAG: ${{ needs.acl-inventory.outputs.inventory_etag }}
+        run: |
+          set -euo pipefail
+          tofu plan \
+            -target=databricks_access_control_rule_set.node_service_principal_run_as \
+            -out=t5-runas-bootstrap.tfplan
+          tofu show -json t5-runas-bootstrap.tfplan > t5-runas-bootstrap.plan.json
+          # Addresses and actions from the plan JSON, compared for exact equality
+          # against the addresses the gate hard-codes. A -target plan may include the
+          # target's dependencies, so "no wheel string in the text" proves nothing.
+          python "$GITHUB_WORKSPACE/apps/data/scripts/check_tofu_plan.py" gate \
+            --plan-json t5-runas-bootstrap.plan.json \
+            --allow-set acl
+          DIGEST=$(sha256sum t5-runas-bootstrap.tfplan | cut -d' ' -f1)
+          echo "plan_digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          python "$GITHUB_WORKSPACE/apps/data/scripts/check_tofu_plan.py" bind \
+            --output t5-runas-bootstrap.binding.json \
+            --environment "$TARGET_ENV" \
+            --sha "$HEAD_SHA" \
+            --run-id "$RUN_ID" \
+            --run-attempt "$RUN_ATTEMPT" \
+            --config-digest "$CONFIG_DIGEST" \
+            --inventory-etag "$INVENTORY_ETAG" \
+            --plan-digest "$DIGEST"
+
+      - name: Upload the saved plan and its binding
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ACL_PLAN_ARTIFACT }}
+          path: |
+            infrastructure/env/${{ inputs.environment }}/t5-runas-bootstrap.tfplan
+            infrastructure/env/${{ inputs.environment }}/t5-runas-bootstrap.plan.json
+            infrastructure/env/${{ inputs.environment }}/t5-runas-bootstrap.binding.json
+          if-no-files-found: error
+
+  acl-approval:
+    name: Phase 3 - approve the ACL plan
+    # The approval exists to review the artifact, so it comes after the artifact.
+    needs: [acl-plan]
+    runs-on: ubuntu-latest
+    environment: approval-gate
+    permissions:
+      contents: read
+    steps:
+      - name: Await approval of the saved ACL plan
+        env:
+          PLAN_ARTIFACT: ${{ env.ACL_PLAN_ARTIFACT }}
+          PLAN_DIGEST: ${{ needs.acl-plan.outputs.plan_digest }}
+        run: |
+          echo "Approving saved plan $PLAN_ARTIFACT"
+          echo "digest $PLAN_DIGEST"
+
+  acl-apply:
+    name: Phase 4 - apply the approved ACL plan
+    needs: [preconditions, acl-inventory, acl-plan, acl-approval]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      environment: ${{ inputs.environment }}
+      TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
+      TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      TF_VAR_databricks_host: ${{ secrets.DATABRICKS_HOST }}
+      TF_VAR_auth_secret: ${{ secrets.AUTH_SECRET }}
+      TF_VAR_github_oauth_client_id: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+      TF_VAR_github_oauth_client_secret: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+      TF_VAR_backend_webhook_api_key_id: ${{ secrets.BACKEND_WEBHOOK_API_KEY_ID }}
+      TF_VAR_backend_webhook_api_key: ${{ secrets.BACKEND_WEBHOOK_API_KEY }}
+      TF_VAR_backend_webhook_secret: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
+      TF_VAR_backend_databricks_warehouse_id: ${{ secrets.BACKEND_DATABRICKS_WAREHOUSE_ID }}
+      TF_VAR_contentful_space_id: ${{ secrets.CONTENTFUL_SPACE_ID }}
+      TF_VAR_contentful_access_token: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
+      TF_VAR_contentful_preview_access_token: ${{ secrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN }}
+      TF_VAR_contentful_preview_secret: ${{ secrets.CONTENTFUL_PREVIEW_SECRET }}
+      TF_VAR_mailchimp_api_key: ${{ secrets.MAILCHIMP_API_KEY }}
+      TF_VAR_mailchimp_server_prefix: ${{ secrets.MAILCHIMP_SERVER_PREFIX }}
+      TF_VAR_mailchimp_audience_id: ${{ secrets.MAILCHIMP_AUDIENCE_ID }}
+      TF_VAR_mailchimp_community_kind: ${{ secrets.MAILCHIMP_COMMUNITY_KIND }}
+      TF_VAR_mailchimp_community_id: ${{ secrets.MAILCHIMP_COMMUNITY_ID }}
+      TF_VAR_mailchimp_community_name: ${{ secrets.MAILCHIMP_COMMUNITY_NAME }}
+      TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
+      TF_VAR_orcid_oauth_client_id: ${{ secrets.ORCID_OAUTH_CLIENT_ID }}
+      TF_VAR_orcid_oauth_client_secret: ${{ secrets.ORCID_OAUTH_CLIENT_SECRET }}
+      TF_VAR_posthog_key: ${{ secrets.POSTHOG_KEY }}
+      TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
+      TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
+      TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+
+      - name: Setup OpenTofu and AWS Credentials
+        uses: ./.github/actions/tofu/tofu-setup
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          tofu_version: "1.9.0"
+
+      - name: OpenTofu Init and Validate
+        uses: ./.github/actions/tofu/tofu-init-validate
+
+      - name: Fresh live GET - the ACL must still be what was reviewed
+        working-directory: apps/data
+        env:
+          DATABRICKS_HOST: https://accounts.cloud.databricks.com
+          DATABRICKS_ACCOUNT_ID: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+          NODE_APPLICATION_ID: ${{ needs.acl-inventory.outputs.node_application_id }}
+          CI_APPLICATION_ID: ${{ needs.acl-inventory.outputs.ci_application_id }}
+          INVENTORY_ETAG: ${{ needs.acl-inventory.outputs.inventory_etag }}
+        run: |
+          set -euo pipefail
+          # A human sat between phase 2 and here. An account admin could have added a
+          # grant in that window, and this resource is authoritative, so applying the
+          # reviewed plan would delete it. Read live again, now, and require the etag
+          # to still be the one the plan was bound to.
+          python scripts/inventory_run_as_acl.py \
+            --account-id "$DATABRICKS_ACCOUNT_ID" \
+            --node-application-id "$NODE_APPLICATION_ID" \
+            --ci-application-id "$CI_APPLICATION_ID" \
+            --output run-as-acl-preapply.json \
+            --require-etag "$INVENTORY_ETAG"
+
+      - name: Download the approved plan
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ACL_PLAN_ARTIFACT }}
+          path: infrastructure/env/${{ inputs.environment }}
+
+      - name: Re-verify the artifact before applying it
+        working-directory: infrastructure/env/${{ inputs.environment }}
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          HEAD_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          CONFIG_DIGEST: ${{ needs.preconditions.outputs.config_digest }}
+          INVENTORY_ETAG: ${{ needs.acl-inventory.outputs.inventory_etag }}
+        run: |
+          set -euo pipefail
+          DIGEST=$(sha256sum t5-runas-bootstrap.tfplan | cut -d' ' -f1)
+          python "$GITHUB_WORKSPACE/apps/data/scripts/check_tofu_plan.py" verify-binding \
+            --binding t5-runas-bootstrap.binding.json \
+            --environment "$TARGET_ENV" \
+            --sha "$HEAD_SHA" \
+            --run-id "$RUN_ID" \
+            --run-attempt "$RUN_ATTEMPT" \
+            --config-digest "$CONFIG_DIGEST" \
+            --inventory-etag "$INVENTORY_ETAG" \
+            --plan-digest "$DIGEST"
+          # Re-gate the JSON too: the approval reviewed this content, not the file name.
+          python "$GITHUB_WORKSPACE/apps/data/scripts/check_tofu_plan.py" gate \
+            --plan-json t5-runas-bootstrap.plan.json \
+            --allow-set acl
+
+      - name: Apply that exact plan
+        working-directory: infrastructure/env/${{ inputs.environment }}
+        run: tofu apply -no-color t5-runas-bootstrap.tfplan
+
+  bundle-plan:
+    name: Phase 5 - outgoing wheel backup and bundle plan
+    # acl-inventory for its etag: the bundle plan is bound to the same ACL state as
+    # the Terraform plans, so one binding covers the whole rollout.
+    needs: [preconditions, acl-inventory, acl-apply]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      old_wheel: ${{ steps.outgoing.outputs.wheel }}
+      bundle_plan_digest: ${{ steps.plan.outputs.plan_digest }}
+    env:
+      # The bundle deployer: the GitHub CI service principal, not the account admin.
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install Python build tool
+        run: pip install --upgrade pip build
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+
+      - name: Derive the outgoing wheel from both live references
+        id: outgoing
+        working-directory: apps/data
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          NEW_WHEEL: ${{ needs.preconditions.outputs.new_wheel }}
+        run: |
+          set -euo pipefail
+          # Not a caller input: a free-text "previous wheel" can be satisfied by any
+          # file that happens to be in .internal/, which proves nothing about live.
+          python scripts/live_wheel_refs.py --environment "$TARGET_ENV" --output outgoing-wheel.txt
+          OLD=$(cat outgoing-wheel.txt)
+          if [ "$OLD" = "$NEW_WHEEL" ]; then
+            echo "::error::live resources already reference $NEW_WHEEL;"
+            echo "::error::there is no wheel transition to roll out."
+            exit 1
+          fi
+          echo "wheel=$OLD" >> "$GITHUB_OUTPUT"
+
+      - name: Back up the outgoing wheel before anything can prune it
+        working-directory: apps/data
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          OLD_WHEEL: ${{ steps.outgoing.outputs.wheel }}
+        run: |
+          set -euo pipefail
+          DIR="/Workspace/Shared/.bundle/open-jii/$TARGET_ENV/artifacts/.internal"
+          mkdir -p wheel-backup
+          databricks workspace export "$DIR/$OLD_WHEEL" --file "wheel-backup/$OLD_WHEEL" --format RAW
+          test -s "wheel-backup/$OLD_WHEEL"
+          echo "Backed up $OLD_WHEEL ($(stat -c%s "wheel-backup/$OLD_WHEEL") bytes)"
+
+      - name: Upload the outgoing-wheel backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.WHEEL_BACKUP_ARTIFACT }}
+          path: apps/data/wheel-backup/
+          if-no-files-found: error
+
+      - name: Validate the bundle and record a machine-readable plan
+        id: plan
+        working-directory: apps/data
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          WHEEL_VERSION: ${{ needs.preconditions.outputs.wheel_version }}
+          HEAD_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          CONFIG_DIGEST: ${{ needs.preconditions.outputs.config_digest }}
+          INVENTORY_ETAG: ${{ needs.acl-inventory.outputs.inventory_etag }}
+        run: |
+          set -euo pipefail
+          databricks bundle validate -t "$TARGET_ENV" --output json > bundle-validate.json
+          # `bundle plan` is evidence, not console output: it is parsed here, digested,
+          # bound to this environment/commit/run, and re-verified by the deploy job
+          # after approval. A plan nobody can compare is not an approval gate.
+          databricks bundle plan -t "$TARGET_ENV" --output json > bundle-plan.json
+          jq -e 'type == "object" or type == "array"' bundle-plan.json > /dev/null
+          test -s bundle-plan.json
+          databricks bundle summary -t "$TARGET_ENV" --output json > bundle-summary.json
+
+          # Resolved run_as and wheel version, from the plan-time summary: this is the
+          # last point before deployment where a wrong run_as or a stale wheel
+          # reference can be caught without having changed anything.
+          python scripts/preflight_dab_run_as.py \
+            --target "$TARGET_ENV" \
+            --summary-file bundle-summary.json \
+            --wheel-version "$WHEEL_VERSION"
+
+          DIGEST=$(sha256sum bundle-plan.json | cut -d' ' -f1)
+          echo "plan_digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          python scripts/check_tofu_plan.py bind \
+            --output bundle-plan.binding.json \
+            --environment "$TARGET_ENV" \
+            --sha "$HEAD_SHA" \
+            --run-id "$RUN_ID" \
+            --run-attempt "$RUN_ATTEMPT" \
+            --config-digest "$CONFIG_DIGEST" \
+            --inventory-etag "$INVENTORY_ETAG" \
+            --plan-digest "$DIGEST"
+
+      - name: Upload the bundle plan and its binding
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BUNDLE_PLAN_ARTIFACT }}
+          path: |
+            apps/data/bundle-plan.json
+            apps/data/bundle-plan.binding.json
+            apps/data/bundle-summary.json
+            apps/data/bundle-validate.json
+          if-no-files-found: error
+
+  bundle-approval:
+    name: Phase 6 - approve the bundle plan
+    needs: [bundle-plan]
+    runs-on: ubuntu-latest
+    environment: approval-gate
+    permissions:
+      contents: read
+    steps:
+      - name: Await approval of the recorded bundle plan
+        env:
+          PLAN_ARTIFACT: ${{ env.BUNDLE_PLAN_ARTIFACT }}
+          PLAN_DIGEST: ${{ needs.bundle-plan.outputs.bundle_plan_digest }}
+          OLD_WHEEL: ${{ needs.bundle-plan.outputs.old_wheel }}
+        run: |
+          echo "Approving bundle plan $PLAN_ARTIFACT"
+          echo "digest $PLAN_DIGEST"
+          echo "outgoing wheel $OLD_WHEEL (backed up, restored on any failure)"
+
+  bundle-deploy:
+    name: Phase 7 - prove run_as, deploy the bundle, prove both wheels
+    needs: [preconditions, acl-inventory, bundle-plan, bundle-approval]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install Python build tool
+        run: pip install --upgrade pip build
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+
+      - name: Download the approved bundle plan
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BUNDLE_PLAN_ARTIFACT }}
+          path: apps/data
+
+      - name: Download the outgoing-wheel backup
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.WHEEL_BACKUP_ARTIFACT }}
+          path: apps/data/wheel-backup
+
+      - name: Re-verify the approved bundle plan
+        working-directory: apps/data
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          HEAD_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          CONFIG_DIGEST: ${{ needs.preconditions.outputs.config_digest }}
+          INVENTORY_ETAG: ${{ needs.acl-inventory.outputs.inventory_etag }}
+          OLD_WHEEL: ${{ needs.bundle-plan.outputs.old_wheel }}
+        run: |
+          set -euo pipefail
+          test -s bundle-plan.json
+          test -s "wheel-backup/$OLD_WHEEL"
+          DIGEST=$(sha256sum bundle-plan.json | cut -d' ' -f1)
+          python scripts/check_tofu_plan.py verify-binding \
+            --binding bundle-plan.binding.json \
+            --environment "$TARGET_ENV" \
+            --sha "$HEAD_SHA" \
+            --run-id "$RUN_ID" \
+            --run-attempt "$RUN_ATTEMPT" \
+            --config-digest "$CONFIG_DIGEST" \
+            --inventory-etag "$INVENTORY_ETAG" \
+            --plan-digest "$DIGEST"
+
+      - name: Preflight run-as authorization as the CI principal
+        working-directory: apps/data
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          WHEEL_VERSION: ${{ needs.preconditions.outputs.wheel_version }}
+          PROBE_TOKEN: roll${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          python scripts/preflight_dab_run_as.py \
+            --target "$TARGET_ENV" \
+            --prove-run-as \
+            --wheel-version "$WHEEL_VERSION" \
+            --probe-token "$PROBE_TOKEN"
+
+      - name: Deploy the bundle
+        working-directory: apps/data
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: databricks bundle deploy -t "$TARGET_ENV"
+
+      - name: Dual-wheel proof
+        working-directory: apps/data
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          OLD_WHEEL: ${{ needs.bundle-plan.outputs.old_wheel }}
+        run: |
+          set -euo pipefail
+          python scripts/check_wheel_artifacts.py \
+            --environment "$TARGET_ENV" \
+            --require-previous "$OLD_WHEEL"
+
+      - name: Always re-list, restore the outgoing wheel if pruned, and prove it
+        # always(), not failure(): a deploy that "succeeded" while retention pruned the
+        # outgoing wheel is exactly as broken as one that failed, and the live
+        # references still name it until phase 10 lands.
+        if: always()
+        working-directory: apps/data
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          OLD_WHEEL: ${{ needs.bundle-plan.outputs.old_wheel }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -uo pipefail
+          # Explicitly not -e: every step below is checked by exit code, because
+          # cleanup that aborts halfway is worse than no cleanup at all. (Actions
+          # invokes `run` with bash -e, so relying on the absence of -e would be a
+          # bug; nothing here does.)
+          set +e
+          if [ -z "${OLD_WHEEL:-}" ]; then
+            echo "::error::no outgoing wheel was derived; nothing can be proven about retention."
+            exit 1
+          fi
+          DIR="/Workspace/Shared/.bundle/open-jii/$TARGET_ENV/artifacts/.internal"
+          python scripts/check_wheel_artifacts.py \
+            --environment "$TARGET_ENV" --require-previous "$OLD_WHEEL" --previous-only
+          PRESENT=$?
+          if [ "$PRESENT" -eq 0 ]; then
+            echo "$OLD_WHEEL is still present in $DIR."
+          elif [ -s "wheel-backup/$OLD_WHEEL" ]; then
+            echo "::warning::restoring $OLD_WHEEL; live references still name it."
+            databricks workspace import "$DIR/$OLD_WHEEL" --file "wheel-backup/$OLD_WHEEL" \
+              --format RAW --overwrite
+            # Prove it is back before this job is allowed to end.
+            python scripts/check_wheel_artifacts.py \
+              --environment "$TARGET_ENV" --require-previous "$OLD_WHEEL" --previous-only
+            if [ $? -ne 0 ]; then
+              echo "::error::$OLD_WHEEL could not be restored; live references are broken."
+              echo "::error::re-import it from the $WHEEL_BACKUP_ARTIFACT artifact by hand."
+              exit 1
+            fi
+            echo "::error::$OLD_WHEEL had been pruned and was restored from the backup."
+            exit 1
+          else
+            echo "::error::$OLD_WHEEL is gone and no backup is available in this job."
+            echo "::error::download the $WHEEL_BACKUP_ARTIFACT artifact and re-import it before"
+            echo "::error::running Terraform: the live references still resolve to it."
+            exit 1
+          fi
+          if [ "$JOB_STATUS" != "success" ]; then
+            echo "::error::the deployment phase failed ($JOB_STATUS); $OLD_WHEEL is intact."
+            exit 1
+          fi
+
+  full-plan:
+    name: Phase 8 - full plan
+    needs: [preconditions, acl-inventory, bundle-plan, bundle-deploy]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      plan_digest: ${{ steps.gate.outputs.plan_digest }}
+    env:
+      environment: ${{ inputs.environment }}
+      TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
+      TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      TF_VAR_databricks_host: ${{ secrets.DATABRICKS_HOST }}
+      TF_VAR_auth_secret: ${{ secrets.AUTH_SECRET }}
+      TF_VAR_github_oauth_client_id: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+      TF_VAR_github_oauth_client_secret: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+      TF_VAR_backend_webhook_api_key_id: ${{ secrets.BACKEND_WEBHOOK_API_KEY_ID }}
+      TF_VAR_backend_webhook_api_key: ${{ secrets.BACKEND_WEBHOOK_API_KEY }}
+      TF_VAR_backend_webhook_secret: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
+      TF_VAR_backend_databricks_warehouse_id: ${{ secrets.BACKEND_DATABRICKS_WAREHOUSE_ID }}
+      TF_VAR_contentful_space_id: ${{ secrets.CONTENTFUL_SPACE_ID }}
+      TF_VAR_contentful_access_token: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
+      TF_VAR_contentful_preview_access_token: ${{ secrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN }}
+      TF_VAR_contentful_preview_secret: ${{ secrets.CONTENTFUL_PREVIEW_SECRET }}
+      TF_VAR_mailchimp_api_key: ${{ secrets.MAILCHIMP_API_KEY }}
+      TF_VAR_mailchimp_server_prefix: ${{ secrets.MAILCHIMP_SERVER_PREFIX }}
+      TF_VAR_mailchimp_audience_id: ${{ secrets.MAILCHIMP_AUDIENCE_ID }}
+      TF_VAR_mailchimp_community_kind: ${{ secrets.MAILCHIMP_COMMUNITY_KIND }}
+      TF_VAR_mailchimp_community_id: ${{ secrets.MAILCHIMP_COMMUNITY_ID }}
+      TF_VAR_mailchimp_community_name: ${{ secrets.MAILCHIMP_COMMUNITY_NAME }}
+      TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
+      TF_VAR_orcid_oauth_client_id: ${{ secrets.ORCID_OAUTH_CLIENT_ID }}
+      TF_VAR_orcid_oauth_client_secret: ${{ secrets.ORCID_OAUTH_CLIENT_SECRET }}
+      TF_VAR_posthog_key: ${{ secrets.POSTHOG_KEY }}
+      TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
+      TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
+      TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+
+      - name: Re-prove the wheel is uploaded before planning Terraform
+        working-directory: apps/data
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+          TARGET_ENV: ${{ inputs.environment }}
+          OLD_WHEEL: ${{ needs.bundle-plan.outputs.old_wheel }}
+        run: |
+          set -euo pipefail
+          python scripts/check_wheel_artifacts.py \
+            --environment "$TARGET_ENV" \
+            --require-previous "$OLD_WHEEL"
+
+      - name: Setup OpenTofu and AWS Credentials
+        uses: ./.github/actions/tofu/tofu-setup
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          tofu_version: "1.9.0"
+
+      - name: OpenTofu Init and Validate
+        uses: ./.github/actions/tofu/tofu-init-validate
+
+      - name: Full plan, JSON-gated to the approved changes
+        id: gate
+        working-directory: infrastructure/env/${{ inputs.environment }}
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          HEAD_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          CONFIG_DIGEST: ${{ needs.preconditions.outputs.config_digest }}
+          INVENTORY_ETAG: ${{ needs.acl-inventory.outputs.inventory_etag }}
+        run: |
+          set -euo pipefail
+          tofu plan -out=t5-full.tfplan
+          tofu show -json t5-full.tfplan > t5-full.plan.json
+          # The approved set for this phase is fixed in the gate: the cluster policy,
+          # the Data Export job, the already-applied ACL, action `update` only, and
+          # both wheel references required to actually change. Delete and replace are
+          # refused unconditionally. There is no way to widen it from here -- an
+          # additive change needs a code change to the gate, reviewed like any other.
+          python "$GITHUB_WORKSPACE/apps/data/scripts/check_tofu_plan.py" gate \
+            --plan-json t5-full.plan.json \
+            --allow-set full
+          DIGEST=$(sha256sum t5-full.tfplan | cut -d' ' -f1)
+          echo "plan_digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          python "$GITHUB_WORKSPACE/apps/data/scripts/check_tofu_plan.py" bind \
+            --output t5-full.binding.json \
+            --environment "$TARGET_ENV" \
+            --sha "$HEAD_SHA" \
+            --run-id "$RUN_ID" \
+            --run-attempt "$RUN_ATTEMPT" \
+            --config-digest "$CONFIG_DIGEST" \
+            --inventory-etag "$INVENTORY_ETAG" \
+            --plan-digest "$DIGEST"
+
+      - name: Upload the saved full plan and its binding
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.FULL_PLAN_ARTIFACT }}
+          path: |
+            infrastructure/env/${{ inputs.environment }}/t5-full.tfplan
+            infrastructure/env/${{ inputs.environment }}/t5-full.plan.json
+            infrastructure/env/${{ inputs.environment }}/t5-full.binding.json
+          if-no-files-found: error
+
+  full-approval:
+    name: Phase 9 - approve the full plan
+    needs: [full-plan]
+    runs-on: ubuntu-latest
+    environment: approval-gate
+    permissions:
+      contents: read
+    steps:
+      - name: Await approval of the saved full plan
+        env:
+          PLAN_ARTIFACT: ${{ env.FULL_PLAN_ARTIFACT }}
+          PLAN_DIGEST: ${{ needs.full-plan.outputs.plan_digest }}
+        run: |
+          echo "Approving saved plan $PLAN_ARTIFACT"
+          echo "digest $PLAN_DIGEST"
+
+  full-apply:
+    name: Phase 10 - apply the full plan and read both references back
+    needs: [preconditions, acl-inventory, bundle-plan, full-plan, full-approval]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      policy_wheel: ${{ steps.readback.outputs.policy_wheel }}
+      job_wheel: ${{ steps.readback.outputs.job_wheel }}
+    env:
+      environment: ${{ inputs.environment }}
+      TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
+      TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      TF_VAR_databricks_host: ${{ secrets.DATABRICKS_HOST }}
+      TF_VAR_auth_secret: ${{ secrets.AUTH_SECRET }}
+      TF_VAR_github_oauth_client_id: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+      TF_VAR_github_oauth_client_secret: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+      TF_VAR_backend_webhook_api_key_id: ${{ secrets.BACKEND_WEBHOOK_API_KEY_ID }}
+      TF_VAR_backend_webhook_api_key: ${{ secrets.BACKEND_WEBHOOK_API_KEY }}
+      TF_VAR_backend_webhook_secret: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
+      TF_VAR_backend_databricks_warehouse_id: ${{ secrets.BACKEND_DATABRICKS_WAREHOUSE_ID }}
+      TF_VAR_contentful_space_id: ${{ secrets.CONTENTFUL_SPACE_ID }}
+      TF_VAR_contentful_access_token: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
+      TF_VAR_contentful_preview_access_token: ${{ secrets.CONTENTFUL_PREVIEW_ACCESS_TOKEN }}
+      TF_VAR_contentful_preview_secret: ${{ secrets.CONTENTFUL_PREVIEW_SECRET }}
+      TF_VAR_mailchimp_api_key: ${{ secrets.MAILCHIMP_API_KEY }}
+      TF_VAR_mailchimp_server_prefix: ${{ secrets.MAILCHIMP_SERVER_PREFIX }}
+      TF_VAR_mailchimp_audience_id: ${{ secrets.MAILCHIMP_AUDIENCE_ID }}
+      TF_VAR_mailchimp_community_kind: ${{ secrets.MAILCHIMP_COMMUNITY_KIND }}
+      TF_VAR_mailchimp_community_id: ${{ secrets.MAILCHIMP_COMMUNITY_ID }}
+      TF_VAR_mailchimp_community_name: ${{ secrets.MAILCHIMP_COMMUNITY_NAME }}
+      TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
+      TF_VAR_orcid_oauth_client_id: ${{ secrets.ORCID_OAUTH_CLIENT_ID }}
+      TF_VAR_orcid_oauth_client_secret: ${{ secrets.ORCID_OAUTH_CLIENT_SECRET }}
+      TF_VAR_posthog_key: ${{ secrets.POSTHOG_KEY }}
+      TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
+      TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
+      TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+
+      - name: Setup OpenTofu and AWS Credentials
+        uses: ./.github/actions/tofu/tofu-setup
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
+          tofu_version: "1.9.0"
+
+      - name: OpenTofu Init and Validate
+        uses: ./.github/actions/tofu/tofu-init-validate
+
+      - name: Download the approved full plan
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.FULL_PLAN_ARTIFACT }}
+          path: infrastructure/env/${{ inputs.environment }}
+
+      - name: Re-verify the artifact before applying it
+        working-directory: infrastructure/env/${{ inputs.environment }}
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          HEAD_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          CONFIG_DIGEST: ${{ needs.preconditions.outputs.config_digest }}
+          INVENTORY_ETAG: ${{ needs.acl-inventory.outputs.inventory_etag }}
+        run: |
+          set -euo pipefail
+          DIGEST=$(sha256sum t5-full.tfplan | cut -d' ' -f1)
+          python "$GITHUB_WORKSPACE/apps/data/scripts/check_tofu_plan.py" verify-binding \
+            --binding t5-full.binding.json \
+            --environment "$TARGET_ENV" \
+            --sha "$HEAD_SHA" \
+            --run-id "$RUN_ID" \
+            --run-attempt "$RUN_ATTEMPT" \
+            --config-digest "$CONFIG_DIGEST" \
+            --inventory-etag "$INVENTORY_ETAG" \
+            --plan-digest "$DIGEST"
+          python "$GITHUB_WORKSPACE/apps/data/scripts/check_tofu_plan.py" gate \
+            --plan-json t5-full.plan.json \
+            --allow-set full
+
+      - name: Apply that exact plan
+        working-directory: infrastructure/env/${{ inputs.environment }}
+        run: tofu apply -no-color t5-full.tfplan
+
+      - name: Read both live references back
+        id: readback
+        working-directory: apps/data
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+          TARGET_ENV: ${{ inputs.environment }}
+          NEW_WHEEL: ${{ needs.preconditions.outputs.new_wheel }}
+        run: |
+          set -euo pipefail
+          # Both resources, each required to name exactly the uploaded wheel. The
+          # cluster policy alone is half the reason this rollout exists.
+          python scripts/live_wheel_refs.py --environment "$TARGET_ENV" --expect "$NEW_WHEEL"
+          echo "policy_wheel=$NEW_WHEEL" >> "$GITHUB_OUTPUT"
+          echo "job_wheel=$NEW_WHEEL" >> "$GITHUB_OUTPUT"
+
+  pipeline-update:
+    name: Phase 11 - pipeline update (explicit full_refresh false)
+    needs: [preconditions, full-apply]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      update_id: ${{ steps.update.outputs.update_id }}
+      update_state: ${{ steps.update.outputs.state }}
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+    steps:
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+
+      - name: Start the update and poll it to a terminal state
+        id: update
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          NAME="Centrum-DLT-Pipeline-$(echo "$TARGET_ENV" | tr '[:lower:]' '[:upper:]')"
+          PIPELINE_ID=$(databricks pipelines list-pipelines --output json \
+            | jq -r --arg n "$NAME" '.[] | select(.name == $n) | .pipeline_id' | head -n1)
+          [ -n "$PIPELINE_ID" ] || { echo "::error::could not find pipeline $NAME"; exit 1; }
+
+          # Explicit request body: there is no --no-full-refresh flag, and relying on
+          # a default for something that would restate history is not good enough.
+          START=$(databricks pipelines start-update "$PIPELINE_ID" \
+            --json '{"full_refresh": false}' --output json)
+          echo "$START"
+          UPDATE_ID=$(echo "$START" | jq -r '.update_id // empty')
+          [ -n "$UPDATE_ID" ] || { echo "::error::no update_id in the start response"; exit 1; }
+          echo "update_id=$UPDATE_ID" >> "$GITHUB_OUTPUT"
+
+          # Terminal success, not merely "started": prod must not open while dev is
+          # still running or has failed.
+          for attempt in $(seq 1 180); do
+            STATE=$(databricks pipelines get-update "$PIPELINE_ID" "$UPDATE_ID" --output json \
+              | jq -r '.update.state // empty')
+            echo "attempt $attempt: $STATE"
+            case "$STATE" in
+              COMPLETED)
+                echo "state=$STATE" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              FAILED|CANCELED|CANCELLED)
+                echo "state=$STATE" >> "$GITHUB_OUTPUT"
+                echo "::error::update $UPDATE_ID ended $STATE"; exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "::error::update $UPDATE_ID did not reach a terminal state in time"
+          exit 1
+
+  smoke:
+    name: Phase 12 - SQL and replay smoke
+    needs: [preconditions, pipeline-update]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      smoke_run_id: ${{ steps.smoke.outputs.run_id }}
+      smoke_state: ${{ steps.smoke.outputs.state }}
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_GHA_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_GHA_CLIENT_SECRET }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+
+      - name: Register the SQL objects and replay the shared fixtures
+        id: smoke
+        working-directory: apps/data
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          # NOT `bundle run --no-wait`: on the pinned CLI that branch returns no run
+          # output, so there is no id on stdout to record. The job is resolved from
+          # the machine-readable summary and started through `jobs run-now`, whose
+          # documented response carries `run_id`; that exact id is then polled to a
+          # terminal state. Nothing defaults to SUCCESS or to the Actions run id.
+          databricks bundle summary -t "$TARGET_ENV" --output json > smoke-summary.json
+          python scripts/smoke_job_run.py \
+            --summary-file smoke-summary.json \
+            --job-key centrum_v3_sql_objects \
+            --output-file "$GITHUB_OUTPUT"
+
+  attest:
+    name: Phase 13 - publish the dev attestation
+    needs: [preconditions, acl-plan, bundle-plan, full-plan, full-apply, pipeline-update, smoke]
+    # Only dev publishes, and only after every required phase succeeded: this
+    # artifact is the thing prod validates.
+    if: ${{ inputs.environment == 'dev' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Write the attestation
+        working-directory: apps/data
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          HEAD_SHA: ${{ github.sha }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          OLD_WHEEL: ${{ needs.bundle-plan.outputs.old_wheel }}
+          NEW_WHEEL: ${{ needs.preconditions.outputs.new_wheel }}
+          ACL_PLAN_DIGEST: ${{ needs.acl-plan.outputs.plan_digest }}
+          FULL_PLAN_DIGEST: ${{ needs.full-plan.outputs.plan_digest }}
+          POLICY_WHEEL: ${{ needs.full-apply.outputs.policy_wheel }}
+          JOB_WHEEL: ${{ needs.full-apply.outputs.job_wheel }}
+          UPDATE_ID: ${{ needs.pipeline-update.outputs.update_id }}
+          UPDATE_STATE: ${{ needs.pipeline-update.outputs.update_state }}
+          SMOKE_RUN_ID: ${{ needs.smoke.outputs.smoke_run_id }}
+          SMOKE_STATE: ${{ needs.smoke.outputs.smoke_state }}
+        run: |
+          set -euo pipefail
+          python scripts/dev_attestation.py write \
+            --output attestation.json \
+            --target "$TARGET_ENV" \
+            --sha "$HEAD_SHA" \
+            --workflow-path "$WORKFLOW_REF" \
+            --run-id "$RUN_ID" \
+            --run-attempt "$RUN_ATTEMPT" \
+            --old-wheel "$OLD_WHEEL" \
+            --new-wheel "$NEW_WHEEL" \
+            --acl-plan-digest "$ACL_PLAN_DIGEST" \
+            --full-plan-digest "$FULL_PLAN_DIGEST" \
+            --policy-wheel "$POLICY_WHEEL" \
+            --job-wheel "$JOB_WHEEL" \
+            --update-id "$UPDATE_ID" \
+            --update-state "$UPDATE_STATE" \
+            --full-refresh false \
+            --smoke-run-id "$SMOKE_RUN_ID" \
+            --smoke-state "$SMOKE_STATE"
+
+      - name: Upload the attestation
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-rollout-attestation
+          path: apps/data/attestation.json
+          if-no-files-found: error
