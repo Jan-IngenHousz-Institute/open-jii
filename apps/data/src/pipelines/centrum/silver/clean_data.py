@@ -70,10 +70,16 @@ def clean_data():
         )
         .withColumn("output", F.col("parsed_data.output"))
         .withColumn("user_id", F.col("parsed_data.user_id"))
-        # Which protocol produced the row; topic = experiment/data_ingest/v1/<experiment>/<protocol>/...
+        # Which protocol produced the row. Only the legacy 8-segment topic
+        # (.../{sensorId}/{protocolId}) carries it, as its trailing segment; the
+        # lean 7-segment shape has no protocol in the topic. The previous
+        # extraction read segment 4, which is the sensor family, not a protocol.
         .withColumn(
             "protocol_id",
-            F.expr(r"nullif(regexp_extract(parsed_data.topic, 'experiment/data_ingest/v1/[^/]+/([^/]+)', 1), '')")
+            F.expr(
+                r"CASE WHEN size(split(parsed_data.topic, '/')) = 8 "
+                r"THEN element_at(split(parsed_data.topic, '/'), 8) ELSE NULL END"
+            )
         )
         # Null on single-device uploads; rows of one multi-device workbook
         # run share it and can be joined back on it.
