@@ -80,7 +80,8 @@ export function VariantExpandedContent({ data }: { data: string }) {
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await copyToClipboard(data);
+    // What is on screen, matching the other JSON surfaces.
+    await copyToClipboard(formatted);
   };
 
   return (

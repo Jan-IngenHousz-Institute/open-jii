@@ -70,6 +70,27 @@ describe("useJsonFormatStyle", () => {
     expect(result.current.style).toBe("expanded");
   });
 
+  it("ignores another tab writing an unrelated key", async () => {
+    // A blocked write leaves the choice in memory only; re-reading storage for
+    // somebody else's key would silently discard it.
+    const { result } = renderHook(() => useJsonFormatStyle());
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => result.current.toggleStyle());
+    expect(result.current.style).toBe("expanded");
+
+    localStorage.removeItem(KEY);
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: "openjii.sidebar", newValue: "collapsed" }),
+      );
+    });
+
+    expect(result.current.style).toBe("expanded");
+  });
+
   it("picks up a change made in another tab", async () => {
     const { result } = renderHook(() => useJsonFormatStyle());
     await act(async () => {

@@ -1,6 +1,7 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { reformatJsonString } from "~/lib/json-format";
 
 import {
   ExperimentDataTableVariantCell,
@@ -174,7 +175,9 @@ describe("VariantExpandedContent", () => {
 
   it("should copy JSON to clipboard when copy button is clicked", async () => {
     const user = userEvent.setup();
-    const jsonData = '{"name": "John", "age": 30}';
+    // Deliberately not already-canonical, so copying the source rather than the
+    // rendered text would be visible here.
+    const jsonData = '{"name":"John","age":30}';
     render(<VariantExpandedContent data={jsonData} />);
 
     const copyButton = screen.getByText("common.copy").closest("button");
@@ -185,7 +188,8 @@ describe("VariantExpandedContent", () => {
     }
 
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(jsonData);
+      // Copy yields what is displayed, not the raw source.
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(reformatJsonString(jsonData));
     });
   });
 

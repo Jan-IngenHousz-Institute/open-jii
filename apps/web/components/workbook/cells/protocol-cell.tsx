@@ -63,6 +63,7 @@ export function ProtocolCellComponent({
   const protocolId = cell.payload.protocolId;
   const { copy, copied } = useCopyToClipboard();
   const { style, isHydrated, setStyle } = useJsonFormatStyle();
+  const appliedStyleRef = useRef<JsonFormatStyle | null>(null);
   const { t } = useTranslation("iot");
   const { t: tWorkbook } = useTranslation("workbook");
 
@@ -100,8 +101,19 @@ export function ProtocolCellComponent({
   useEffect(() => {
     if (isHydrated && protocolCode != null && localCode == null) {
       setLocalCode(protocolCode);
+      appliedStyleRef.current = style;
     }
-  }, [isHydrated, protocolCode, localCode]);
+  }, [isHydrated, protocolCode, localCode, style]);
+
+  // `localCode` shadows `protocolCode` once seeded, so a preference change made
+  // in another cell or tab would update this header's icon while leaving the
+  // document in the old layout. Reflow in place: it round-trips through
+  // JSON.parse, and `jsonDocKey` keeps the result out of autosave.
+  useEffect(() => {
+    if (!isHydrated || localCode == null || appliedStyleRef.current === style) return;
+    appliedStyleRef.current = style;
+    setLocalCode((current) => (current == null ? current : reformatJsonString(current, { style })));
+  }, [isHydrated, style, localCode]);
 
   // Mirror the standalone protocol/macro editors: persist via the shared
   // `useAutosave` hook so debounce, status and flush behave identically across
@@ -128,6 +140,7 @@ export function ProtocolCellComponent({
   const handleToggleFormat = useCallback(() => {
     const next: JsonFormatStyle = style === "compact" ? "expanded" : "compact";
     setStyle(next);
+    appliedStyleRef.current = next;
     setLocalCode((current) =>
       current == null ? current : reformatJsonString(current, { style: next }),
     );
@@ -335,7 +348,8 @@ export function ProtocolCellComponent({
           <JsonFormatToggle
             style={style}
             onToggle={handleToggleFormat}
-            disabled={localCode == null}
+            disabled={localCode == null || !isValidCode(localCode)}
+            disabledLabel="Fix the JSON syntax to reformat"
           />
           <Button
             asChild

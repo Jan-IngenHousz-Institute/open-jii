@@ -38,8 +38,13 @@ export function useJsonFormatStyle() {
       const detail = (event as CustomEvent<JsonFormatStyle>).detail;
       setStyle(isJsonFormatStyle(detail) ? detail : read());
     };
-    // Another tab wrote storage, so reading it is the only way to learn the value.
-    const onStorage = () => setStyle(read());
+    // Another tab wrote storage, so reading it is the only way to learn the
+    // value. Only for our own key, though: any other tab writing any other key
+    // would otherwise re-read, and if our own write had been blocked that would
+    // discard the in-memory choice. A null key means the tab cleared storage.
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY || event.key === null) setStyle(read());
+    };
     window.addEventListener(CHANGE_EVENT, onChange);
     window.addEventListener("storage", onStorage);
     return () => {

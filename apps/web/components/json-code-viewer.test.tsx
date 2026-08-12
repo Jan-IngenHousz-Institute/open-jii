@@ -138,13 +138,18 @@ describe("JsonCodeViewer", () => {
     expect(mockClipboard.writeText).toHaveBeenCalledTimes(1);
   });
 
-  it("should copy string value as-is to clipboard", async () => {
-    render(<JsonCodeViewer value={sampleString} />);
+  it("should copy the displayed text, not the source string", async () => {
+    // Deliberately not already-canonical: copying the source rather than the
+    // rendered text would be invisible with a value that reformats to itself.
+    const source = '{"key":"value","n":[1,2,3]}';
+    render(<JsonCodeViewer value={source} />);
 
     const copyButton = screen.getByTestId("json-copy-button");
     await user.click(copyButton);
 
-    expect(mockClipboard.writeText).toHaveBeenCalledWith(sampleString);
+    const displayed = screen.getByTestId<HTMLTextAreaElement>("code-editor-textarea").value;
+    expect(displayed).not.toBe(source);
+    expect(mockClipboard.writeText).toHaveBeenCalledWith(displayed);
   });
 
   it("should show check icon after successful copy", async () => {

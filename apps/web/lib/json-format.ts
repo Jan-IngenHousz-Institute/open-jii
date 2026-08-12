@@ -46,6 +46,11 @@ export function formatJson(value: unknown, options: FormatJsonOptions = {}): str
  * same value produce the same key, so change detection (autosave) ignores a pure
  * reflow. Text that does not parse yet keys off itself, so a half-typed edit
  * still registers as a change once it becomes valid.
+ *
+ * Reordering keys counts as an edit, except for integer-like keys, which the
+ * round-trip sorts ascending. That asymmetry is tolerable here: key order is not
+ * significant in JSON, and protocol code is stored as `jsonb`, which does not
+ * preserve it either, so the reorder would not survive a save regardless.
  */
 export function jsonDocKey(source: string): string {
   try {
@@ -77,7 +82,10 @@ function stringify(value: unknown, indent?: number): string | undefined {
  * `stringify(entry) === undefined` would walk the whole subtree.
  */
 function isOmitted(value: unknown): boolean {
-  return value === undefined || typeof value === "function" || typeof value === "symbol";
+  if (value === undefined || typeof value === "function" || typeof value === "symbol") return true;
+  // A `toJSON` returning undefined drops the member too. Serializing to find out
+  // is only reachable for the rare value that carries `toJSON` at all.
+  return hasToJson(value) && stringify(value) === undefined;
 }
 
 /**
