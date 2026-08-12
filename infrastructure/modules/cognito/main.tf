@@ -45,9 +45,13 @@ resource "aws_iam_policy" "unauth_iot" {
         Resource = "arn:aws:iot:${var.region}:${data.aws_caller_identity.current.account_id}:client/*"
       },
       {
-        Effect   = "Allow"
-        Action   = ["iot:Publish"]
-        Resource = "arn:aws:iot:${var.region}:${data.aws_caller_identity.current.account_id}:topic/experiment/data_ingest/v1/*/*/*/*/*"
+        Effect = "Allow"
+        Action = ["iot:Publish"]
+        # Lean (4 params) and transitional legacy (5 params) ingest topic shapes.
+        Resource = [
+          "arn:aws:iot:${var.region}:${data.aws_caller_identity.current.account_id}:topic/experiment/data_ingest/v1/*/*/*/*",
+          "arn:aws:iot:${var.region}:${data.aws_caller_identity.current.account_id}:topic/experiment/data_ingest/v1/*/*/*/*/*"
+        ]
       }
     ]
   })
@@ -101,9 +105,13 @@ resource "aws_iam_policy" "auth_iot" {
         Resource = "arn:aws:iot:${var.region}:${data.aws_caller_identity.current.account_id}:client/*"
       },
       {
-        Effect   = "Allow"
-        Action   = ["iot:Publish"]
-        Resource = "arn:aws:iot:${var.region}:${data.aws_caller_identity.current.account_id}:topic/experiment/data_ingest/v1/*/*/*/*/*"
+        Effect = "Allow"
+        Action = ["iot:Publish"]
+        # Lean (4 params) and transitional legacy (5 params) ingest topic shapes.
+        Resource = [
+          "arn:aws:iot:${var.region}:${data.aws_caller_identity.current.account_id}:topic/experiment/data_ingest/v1/*/*/*/*",
+          "arn:aws:iot:${var.region}:${data.aws_caller_identity.current.account_id}:topic/experiment/data_ingest/v1/*/*/*/*/*"
+        ]
       }
     ]
   })

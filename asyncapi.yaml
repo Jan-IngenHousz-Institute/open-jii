@@ -20,16 +20,18 @@ servers:
     description: AWS IoT Core production endpoint
 
 channels:
-  experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}/{protocolId}:
+  experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}:
+    x-infra-name: experiment_data_ingest_v1_lean
     description: |
-      Channel for ingesting experiment sensor data.
+      Channel for ingesting experiment sensor data. This shape carries no
+      protocol attribution in the topic; the pipeline records a null protocol_id
+      for rows ingested on it.
       The path parameters represent:
       <ul>
         <li><strong>experimentId:</strong> Unique identifier of the experiment (e.g., exp123).</li>
         <li><strong>sensorType:</strong> The type or family of sensor (e.g., MutlispeQ, Ambit...).</li>
         <li><strong>sensorVersion:</strong> Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).</li>
         <li><strong>sensorId:</strong> Unique sensor identifier (UUID format recommended).</li>
-        <li><strong>protocolId:</strong> Unique identifier for the sampling or measurement protocol (e.g., protoA).</li>
       </ul>
     parameters:
       experimentId:
@@ -41,7 +43,35 @@ channels:
         schema:
           type: string
       sensorVersion:
-        description: Sensor firmware/hardware revision (e.g., v1, v2.1).
+        description: Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).
+        schema:
+          type: string
+      sensorId:
+        description: Unique sensor identifier (UUID format recommended).
+        schema:
+          type: string
+    subscribe:
+      operationId: ingestExperimentData
+      summary: Ingest experiment sensor data.
+      message:
+        $ref: "#/components/messages/ExperimentDataMessage"
+
+  experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}/{protocolId}:
+    description: |
+      TRANSITIONAL: the legacy ingest shape with a trailing protocolId segment,
+      published by fielded mobile builds. New publishers must use the shape
+      without protocolId.
+    parameters:
+      experimentId:
+        description: Unique identifier of the experiment (e.g., exp123).
+        schema:
+          type: string
+      sensorType:
+        description: The type or family of sensor (e.g., MutlispeQ, Ambit...).
+        schema:
+          type: string
+      sensorVersion:
+        description: Sensor firmware/hardware revision (without the 'v' prefix, e.g., 1, 2.1).
         schema:
           type: string
       sensorId:
@@ -49,12 +79,12 @@ channels:
         schema:
           type: string
       protocolId:
-        description: Unique identifier for the sampling or measurement protocol (e.g., protoA).
+        description: Legacy protocol identifier carried in the trailing topic segment; the lean topic shape omits it.
         schema:
           type: string
     subscribe:
-      operationId: ingestExperimentData
-      summary: Ingest experiment sensor data.
+      operationId: ingestExperimentDataLegacy
+      summary: Ingest experiment sensor data (legacy topic shape).
       message:
         $ref: "#/components/messages/ExperimentDataMessage"
 
