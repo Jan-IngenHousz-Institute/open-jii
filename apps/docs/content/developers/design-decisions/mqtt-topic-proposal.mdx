@@ -6,6 +6,8 @@ description: "Historical proposal for the standardized experiment data-ingestion
 {/* verified: code@12a361a74966 2026-07-19 */}
 
 > Historical record: the proposal text below is preserved without changing its substance. The topic is represented in the current `asyncapi.yaml`; use the [MQTT API reference](/api/mqtt) for the live contract.
+>
+> Superseded in part: the trailing `<protocolId>` segment was removed from the ingest topic. It carried no routing or policy value; the lean shape carries no protocol attribution in the topic and the pipeline records a null protocol_id for it. The original 8-segment shape remains temporarily as a transitional channel for fielded mobile builds.
 
 ## Overview
 

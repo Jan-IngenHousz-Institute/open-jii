@@ -85,6 +85,44 @@ describe("cellsToFlowGraph", () => {
     expect(nodes[0].name).toBe("Step 1: prepare sample");
   });
 
+  it("skips blank markdown cells and starts the flow at the next real node", () => {
+    const cells: WorkbookCell[] = [
+      { id: "md1", type: "markdown", isCollapsed: false, content: "" },
+      { id: "md2", type: "markdown", isCollapsed: false, content: "  \n\n " },
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1 },
+      },
+    ];
+    const { nodes, edges } = cellsToFlowGraph(cells);
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].id).toBe("p1");
+    expect(nodes[0].isStart).toBe(true);
+    expect(edges).toHaveLength(0);
+  });
+
+  it("falls back to generated names for empty-string protocol and macro payload names", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1, name: "" },
+      },
+      {
+        id: "m1",
+        type: "macro",
+        isCollapsed: false,
+        payload: { macroId: uuidB, language: "python", name: " " },
+      },
+    ];
+    const { nodes } = cellsToFlowGraph(cells);
+    expect(nodes[0].name).toBe(`Protocol ${uuidA.slice(0, 8)}`);
+    expect(nodes[1].name).toBe(`Macro ${uuidB.slice(0, 8)}`);
+  });
+
   it("skips output cells", () => {
     const cells: WorkbookCell[] = [
       { id: "o1", type: "output", isCollapsed: false, producedBy: "p1" },
@@ -188,6 +226,66 @@ describe("cellsToFlowGraph", () => {
     expect(loopEdge?.label).toBe("Retry");
 
     expect(edges.find((e) => e.source === "b1" && e.target === "md-end")).toBeTruthy();
+  });
+
+  it("redirects a gotoCellId pointing at a blank markdown cell to the next emitted node", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "b1",
+        type: "branch",
+        isCollapsed: false,
+        paths: [
+          {
+            id: "path1",
+            label: "Skip ahead",
+            color: "#10b981",
+            conditions: [
+              { id: "c1", sourceCellId: "p1", field: "count", operator: "gte", value: "10" },
+            ],
+            gotoCellId: "md-blank",
+          },
+        ],
+      },
+      { id: "md-blank", type: "markdown", isCollapsed: false, content: "  " },
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1 },
+      },
+    ];
+    const { nodes, edges } = cellsToFlowGraph(cells);
+
+    expect(nodes.map((n) => n.id)).toEqual(["b1", "p1"]);
+
+    const gotoEdge = edges.find((e) => e.sourceHandle === "path1");
+    expect(gotoEdge?.target).toBe("p1");
+    expect(gotoEdge?.label).toBe("Skip ahead");
+  });
+
+  it("drops a gotoCellId edge when no emitted node follows the blank markdown target", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "b1",
+        type: "branch",
+        isCollapsed: false,
+        paths: [
+          {
+            id: "path1",
+            label: "Skip ahead",
+            color: "#10b981",
+            conditions: [
+              { id: "c1", sourceCellId: "p1", field: "count", operator: "gte", value: "10" },
+            ],
+            gotoCellId: "md-blank",
+          },
+        ],
+      },
+      { id: "md-blank", type: "markdown", isCollapsed: false, content: "" },
+    ];
+    const { edges } = cellsToFlowGraph(cells);
+
+    expect(edges).toHaveLength(0);
   });
 
   it("handles a branch cell without gotoCellId", () => {
