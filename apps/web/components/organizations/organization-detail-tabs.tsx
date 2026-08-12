@@ -62,10 +62,11 @@ export function OrganizationDetailTabs({ organization, children }: OrganizationD
 
   return (
     <NavTabs value={activeTab} className="flex w-full flex-1 flex-col">
-      {/* The strip's own bottom rule doubles as the band's, so the two do not stack. */}
-      <div className="border-border flex flex-col gap-4 border-b pt-1">
+      {/* No rule on the band: the strip carries its own, which spans the tabs rather
+          than the page — the same treatment every other detail tab strip has. */}
+      <div className="flex flex-col gap-4 pt-1">
         <OrganizationHeader organization={organization} />
-        <NavTabsList className="border-b-0">
+        <NavTabsList>
           <NavTabsTrigger value="overview" asChild>
             <Link href={organizationPath(locale, organization.id)}>{t("common.overview")}</Link>
           </NavTabsTrigger>

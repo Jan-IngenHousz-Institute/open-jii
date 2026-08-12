@@ -914,7 +914,8 @@
       "sortType": "Typ",
       "noMatchesTitle": "Keine Ressource entspricht diesen Filtern",
       "noMatchesHint": "Versuche eine kürzere Suche oder erweitere den Typfilter.",
-      "clearFilters": "Filter zurücksetzen"
+      "clearFilters": "Filter zurücksetzen",
+      "noDescription": "Keine Beschreibung vorhanden"
     },
     "members": {
       "title": "Mitglieder",

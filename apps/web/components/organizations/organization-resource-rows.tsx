@@ -44,24 +44,13 @@ const SORT_OPTIONS: readonly { value: ResourceSort; labelKey: string }[] = [
   { value: "type", labelKey: "organizations.resources.sortType" },
 ];
 
-/** A row's one type-specific fact, with the colour that fact already has. */
-interface ResourceMeta {
-  label: string;
-  colorClass: string;
-}
-
-/**
- * The one extra fact worth putting on a row, different per type, each wearing the badge
- * that value already wears on its own listing. A status is a word so it is translated;
- * a sensor family, macro language and device class are product names, so they are not.
- */
+/** A row's one type-specific fact, in the colour that value wears on its own listing. */
 function metaBadge(
   resource: OrganizationResource,
   t: (key: string) => string,
-): ResourceMeta | null {
+): { label: string; colorClass: string } | null {
   switch (resource.type) {
     case "experiment":
-      // All four statuses: "stale" and "published" say more than their absence would.
       return {
         label: t(`organizations.resources.status.${resource.status}`),
         colorClass: getExperimentStatusBadgeColor(resource.status),
@@ -77,8 +66,6 @@ function metaBadge(
         colorClass: getMacroLanguageBadgeColor(resource.language),
       };
     case "device":
-      // `deviceType` is `zSensorFamily` under another name, so a MultispeQ device and a
-      // MultispeQ protocol wear the identical badge.
       return {
         label: getSensorFamilyLabel(resource.deviceType),
         colorClass: getSensorFamilyBadgeColor(resource.deviceType),
@@ -89,13 +76,9 @@ function metaBadge(
 }
 
 /**
- * Everything the organization owns that the caller can open, as one filtered list. Flat
- * rather than grouped: the sidebar's estate bar states the per-type counts the group
- * headers used to, and a flat list can answer "what was touched most recently here".
- *
- * The type options and the type sort both come off {@link GROUP_ORDER}, so neither can
- * drift from the featured card or the estate bar. `totals` is deliberately not a prop —
- * it existed for the group headers.
+ * Everything the organization owns that the caller can open, as one filtered list. The
+ * type options and the type sort come off {@link GROUP_ORDER}, so neither can drift from
+ * the featured card or the estate bar.
  */
 export function OrganizationResourceRows({ resources }: { resources: OrganizationResource[] }) {
   const { t } = useTranslation();
@@ -137,7 +120,6 @@ export function OrganizationResourceRows({ resources }: { resources: Organizatio
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("organizations.resources.allTypes")}</SelectItem>
-              {/* Five options from the one shared order, not a hand-written list. */}
               {GROUP_ORDER.map((resourceType) => (
                 <SelectItem key={resourceType} value={resourceType}>
                   {t(`organizations.resources.types.${resourceType}`, { count: 2 })}
@@ -171,8 +153,7 @@ export function OrganizationResourceRows({ resources }: { resources: Organizatio
             <p className="text-muted-foreground mx-auto mt-1 max-w-[320px] text-xs leading-relaxed">
               {t("organizations.resources.noMatchesHint")}
             </p>
-            {/* Only when something is actually narrowing the list — a reset that resets
-                nothing is a dead control. */}
+            {/* A reset that resets nothing is a dead control. */}
             {hasActiveFilters({ query, type, sort }) ? (
               <Button variant="outline" size="sm" className="mt-3.5" onClick={clearFilters}>
                 {t("organizations.resources.clearFilters")}
@@ -206,8 +187,7 @@ function ResourceRow({ resource }: { resource: OrganizationResource }) {
         >
           {resource.name}
         </Link>
-        {/* Only when private: public is the unremarkable default, so a badge for it
-            would be noise on most rows. */}
+        {/* Private only: public is the default, so marking it would be noise. */}
         {resource.visibility === "private" ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -223,16 +203,8 @@ function ResourceRow({ resource }: { resource: OrganizationResource }) {
         ) : null}
       </span>
 
-      {/*
-        Tags stripped, not rendered. A description is authored in a rich editor, so
-        interpolating it raw prints literal `<p>` markup — and rendering it as real rich
-        text would be wrong here anyway: bold, links and lists have no business in a
-        one-line row. `RichTextRenderer` also ignores line clamping on plain-text
-        content, so a plain description would blow the row height with no warning.
-
-        Absent entirely for a device, which has no `description` column at all — the
-        guard is what keeps that from reserving an empty line on every device row.
-      */}
+      {/* Stripped, not rendered: a rich-editor description interpolated raw prints
+          literal `<p>`. A device has no such column, hence the guard. */}
       {resource.description ? (
         <p className="text-muted-foreground mt-1 truncate text-xs">
           {stripHtml(resource.description)}
@@ -240,7 +212,7 @@ function ResourceRow({ resource }: { resource: OrganizationResource }) {
       ) : null}
 
       <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1.5 whitespace-nowrap">
           <span
             className={`h-2 w-2 shrink-0 rounded-full ${RESOURCE_TYPE_COLOR[resource.type]}`}
             aria-hidden
@@ -248,21 +220,14 @@ function ResourceRow({ resource }: { resource: OrganizationResource }) {
           {t(`organizations.resources.types.${resource.type}`, { count: 1 })}
         </span>
 
-        {/* Default variant, colour class only: the pale `badge-*` fills are designed to
-            sit under its `text-black`, which is how every other consumer pairs them.
-            Absent for a workbook, which has no second fact worth a badge. */}
-        {meta ? <Badge className={`shrink-0 ${meta.colorClass}`}>{meta.label}</Badge> : null}
+        {meta ? (
+          <Badge className={`shrink-0 rounded px-1.5 py-0 font-medium ${meta.colorClass}`}>
+            {meta.label}
+          </Badge>
+        ) : null}
 
-        {/*
-          Labelled, because a bare "2 days ago" does not say what happened then, and a
-          row carries two plausible timestamps. Built as one string rather than two JSX
-          expressions with a space between them: that space is whitespace between
-          siblings, and it vanishes the moment the line is wrapped.
-
-          A relative time is also lossy on its own — "2 days ago" is not something you
-          can act on or cite — so the absolute date rides along as the title, and
-          `dateTime` gives assistive tech and any scraper the unambiguous instant.
-        */}
+        {/* One string, so the space survives a wrap. The absolute date rides as the
+            title, since a relative time alone cannot be cited. */}
         <time
           dateTime={resource.updatedAt}
           title={`${t("common.updated")} ${formatShortDate(resource.updatedAt, locale)}`}

@@ -86,12 +86,18 @@ function FeaturedResourceCard({ resource }: { resource: OrganizationResource }) 
         </div>
 
         {/* Tags stripped, not rendered: a description is authored in a rich editor, so
-            interpolating it raw prints literal `<p>` markup. */}
+            interpolating it raw prints literal `<p>` markup. Placeholder rather than
+            nothing, so a device — which has no description column — keeps the card's
+            height instead of reading as a shorter card in the grid. */}
         {resource.description ? (
           <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
             {stripHtml(resource.description)}
           </p>
-        ) : null}
+        ) : (
+          <p className="text-muted-foreground/70 text-xs italic leading-relaxed">
+            {t("organizations.resources.noDescription")}
+          </p>
+        )}
 
         <div className="text-muted-foreground mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs">
           <span className="flex items-center gap-1.5">

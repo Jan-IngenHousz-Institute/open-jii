@@ -76,6 +76,24 @@ describe("<OrganizationFeaturedResources />", () => {
     expect(container.querySelector("strong")).toBeNull();
   });
 
+  it("stands a placeholder in for a missing description, so cards keep one height", () => {
+    const { container } = render(
+      <OrganizationFeaturedResources
+        resources={[
+          createOrganizationResource({ type: "device", name: "Ambyte 04", description: null }),
+          createOrganizationResource({ name: "Drought stress", description: "Rain-out shelter" }),
+        ]}
+      />,
+    );
+
+    // A device has no description column at all, so this is the one that would otherwise
+    // render a shorter card than its neighbour in the grid.
+    expect(within(container).getByText("organizations.resources.noDescription")).toBeVisible();
+    // Not vacuous: a resource that has a description shows it rather than the placeholder.
+    expect(within(container).getByText("Rain-out shelter")).toBeVisible();
+    expect(within(container).getAllByText("organizations.resources.noDescription")).toHaveLength(1);
+  });
+
   it("marks a private resource with the lock, and says nothing about a public one", () => {
     const { container } = render(
       <OrganizationFeaturedResources

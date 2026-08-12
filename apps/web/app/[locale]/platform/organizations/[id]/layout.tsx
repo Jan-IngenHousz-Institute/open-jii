@@ -18,11 +18,11 @@ import { useTranslation } from "@repo/i18n";
 export default function OrganizationLayout({ children }: { children: React.ReactNode }) {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation("common");
-  const { data, isLoading, error } = useOrganization(id);
+  const { data, isPending, error } = useOrganization(id);
 
   return (
     <EntityLayoutShell
-      isLoading={isLoading}
+      isLoading={isPending}
       error={error}
       hasData={!!data}
       loadingMessage={t("common.loading")}

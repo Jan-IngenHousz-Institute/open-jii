@@ -589,7 +589,8 @@
       "sortType": "Type",
       "noMatchesTitle": "No resource matches those filters",
       "noMatchesHint": "Try a shorter search, or widen the type filter.",
-      "clearFilters": "Clear filters"
+      "clearFilters": "Clear filters",
+      "noDescription": "No description provided"
     },
     "members": {
       "title": "Members",

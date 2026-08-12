@@ -702,7 +702,8 @@
       "sortType": "Type",
       "noMatchesTitle": "Geen resource komt overeen met deze filters",
       "noMatchesHint": "Probeer een kortere zoekopdracht of verbreed het typefilter.",
-      "clearFilters": "Filters wissen"
+      "clearFilters": "Filters wissen",
+      "noDescription": "Geen beschrijving opgegeven"
     },
     "members": {
       "title": "Leden",
