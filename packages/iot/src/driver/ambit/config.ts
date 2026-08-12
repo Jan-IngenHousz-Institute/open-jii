@@ -1,3 +1,5 @@
+import { OPENJII_FRAME_FOOTER } from "../../utils/framing/openjii-envelope";
+
 /** Ambit serial defaults (ESP32 USB-CDC console). */
 export const AMBIT_SERIAL_DEFAULTS = {
   baudRate: 115200,
@@ -25,6 +27,16 @@ export const AMBIT_FRAMING = {
   SLEEP_AFTER_IDLE_MS: 20_000,
   /** `hello` replies `NEW <name> Ready`; the name is firmware-hardcoded, never trust it. */
   READY_SENTINEL: "NEW",
+  /**
+   * JSON-envelope replies end with this constant sentinel before the newline
+   * (same openjii_proto framing as MiniPAR; a fixed footer, not a checksum).
+   */
+  FRAME_FOOTER: OPENJII_FRAME_FOOTER,
+  /**
+   * JSON protocol timeout: an arrun runs pulses x tick_factor/freq seconds per
+   * segment and multi-segment traces can take minutes.
+   */
+  PROTOCOL_TIMEOUT: 120_000,
 } as const;
 
 export interface AmbitDriverConfig {
@@ -32,4 +44,6 @@ export interface AmbitDriverConfig {
   timeoutMs?: number;
   /** RX quiet window in ms that completes an unframed reply (default 300). */
   quietWindowMs?: number;
+  /** JSON protocol reply timeout in ms (default 120000). */
+  protocolTimeoutMs?: number;
 }

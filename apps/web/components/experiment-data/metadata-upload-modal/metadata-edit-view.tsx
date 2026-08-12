@@ -14,6 +14,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 
+import { MATCHABLE_MEASUREMENT_COLUMNS } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
@@ -23,7 +24,9 @@ import { Label } from "@repo/ui/components/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
@@ -47,6 +50,11 @@ interface MetadataEditViewProps {
   questionOptions: QuestionOption[];
   onBack: () => void;
 }
+
+const measurementColumnOptions = MATCHABLE_MEASUREMENT_COLUMNS.map((column) => ({
+  label: column,
+  value: `column:${column}`,
+}));
 
 export function MetadataEditView({
   experimentId,
@@ -283,21 +291,16 @@ export function MetadataEditView({
           )}
 
           <div className="grid gap-2">
-            <Label htmlFor="experiment-question">
-              {t("uploadModal.metadata.experimentQuestionLabel", {
-                defaultValue: "Identifier column from experiment question",
+            <Label htmlFor="metadata-match-target">
+              {t("uploadModal.metadata.matchTargetLabel", {
+                defaultValue: "Match target",
               })}
             </Label>
             <p className="text-muted-foreground text-xs">
-              {questionOptions.length > 0
-                ? t("uploadModal.metadata.experimentQuestionHint", {
-                    defaultValue:
-                      "Select the experiment question whose answers should match the metadata identifier column (e.g., a plot question).",
-                  })
-                : t("uploadModal.metadata.experimentQuestionNoQuestions", {
-                    defaultValue:
-                      "No questions found. Add question nodes to the experiment flow first.",
-                  })}
+              {t("uploadModal.metadata.matchTargetHint", {
+                defaultValue:
+                  "Select the experiment question or measurement column whose values should match the metadata identifier column.",
+              })}
             </p>
             <Controller
               control={control}
@@ -306,27 +309,44 @@ export function MetadataEditView({
                 <Select
                   value={field.value}
                   onValueChange={field.onChange}
-                  disabled={questionOptions.length === 0}
+                  disabled={questionOptions.length === 0 && measurementColumnOptions.length === 0}
                 >
-                  <SelectTrigger id="experiment-question">
+                  <SelectTrigger id="metadata-match-target">
                     <SelectValue
-                      placeholder={
-                        questionOptions.length === 0
-                          ? t("uploadModal.metadata.experimentQuestionNoQuestionsPlaceholder", {
-                              defaultValue: "No questions available",
-                            })
-                          : t("uploadModal.metadata.experimentQuestionPlaceholder", {
-                              defaultValue: "Select a question",
-                            })
-                      }
+                      placeholder={t("uploadModal.metadata.matchTargetPlaceholder", {
+                        defaultValue: "Select a match target",
+                      })}
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {questionOptions.map((q) => (
-                      <SelectItem key={q.id} value={q.id}>
-                        {q.name}
-                      </SelectItem>
-                    ))}
+                    {questionOptions.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>
+                          {t("uploadModal.metadata.matchTargetQuestionsGroup", {
+                            defaultValue: "Questions",
+                          })}
+                        </SelectLabel>
+                        {questionOptions.map((question) => (
+                          <SelectItem key={question.id} value={question.id}>
+                            {question.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {measurementColumnOptions.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>
+                          {t("uploadModal.metadata.matchTargetMeasurementColumnsGroup", {
+                            defaultValue: "Measurement columns",
+                          })}
+                        </SelectLabel>
+                        {measurementColumnOptions.map((target) => (
+                          <SelectItem key={target.value} value={target.value}>
+                            {target.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
                   </SelectContent>
                 </Select>
               )}

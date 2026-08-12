@@ -1,16 +1,26 @@
 /**
- * Ambit driver: plain-text serial console, command/response only.
+ * Ambit driver: dual-mode serial session, like MiniPAR.
  *
- * The firmware has NO reply framing (free-text lines, silent writers, no
- * terminator), so replies are collected until an RX quiet window elapses.
- * The device light-sleeps after console idle and prints a wake byte >127;
- * `initialize()`/`ensureAwake()` run the Calibratron-style hello poll until
- * the `NEW ... Ready` sentinel answers. Protocol JSON is rejected outright:
- * an Ambit measures via its Ambyte gateway, a direct session is for
- * calibration commands and spot readings.
+ * Text console (string commands): the firmware has NO reply framing
+ * (free-text lines, silent writers, no terminator), so replies are collected
+ * until an RX quiet window elapses. The device light-sleeps after console
+ * idle and prints a wake byte >127; `initialize()`/`ensureAwake()` run the
+ * Calibratron-style hello poll until the `NEW ... Ready` sentinel answers.
+ *
+ * JSON envelope (object/array commands): the firmware's openJII protocol
+ * module runs measurements (`arrun`) sent as protocol JSON and replies one
+ * envelope of `device_*` header fields plus a `sample` array, terminated by
+ * the constant `7A1E3AA1` footer. The wake poll still runs first: a
+ * protocol write must not race the sleep loop.
  */
 import type { DeviceIdentity, SensorFamily } from "../../core/families";
 import type { ITransportAdapter } from "../../transport/interface";
+import {
+  collectReply,
+  parseOpenJiiEnvelope,
+  parseOpenJiiTopLevelError,
+} from "../../utils/framing/openjii-envelope";
+import type { RxCollectorHooks } from "../../utils/framing/openjii-envelope";
 import type { Logger } from "../../utils/logger/logger";
 import { DeviceDriver } from "../driver-base";
 import type { CommandResult, ExecuteOptions } from "../driver-base";
@@ -34,6 +44,7 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
 
   private readonly defaultTimeoutMs: number;
   private readonly quietWindowMs: number;
+  private readonly protocolTimeoutMs: number;
 
   private rxBuffer = "";
   private onChunk: (() => void) | undefined;
@@ -43,6 +54,7 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     super(logger);
     this.defaultTimeoutMs = config?.timeoutMs ?? AMBIT_FRAMING.DEFAULT_TIMEOUT;
     this.quietWindowMs = config?.quietWindowMs ?? AMBIT_FRAMING.QUIET_WINDOW_MS;
+    this.protocolTimeoutMs = config?.protocolTimeoutMs ?? AMBIT_FRAMING.PROTOCOL_TIMEOUT;
   }
 
   override async initialize(transport: ITransportAdapter): Promise<void> {
@@ -78,6 +90,19 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     this.onChunk?.();
   }
 
+  /** RX hooks over this driver's buffer for the shared reply collector. */
+  private readonly rxHooks: RxCollectorHooks = {
+    read: () => this.rxBuffer,
+    take: () => {
+      const reply = this.rxBuffer;
+      this.rxBuffer = "";
+      return reply;
+    },
+    setOnChunk: (cb) => {
+      this.onChunk = cb;
+    },
+  };
+
   /**
    * Send one payload and collect the unframed reply: resolves once data has
    * arrived and `quietWindowMs` passes without more, rejects on `timeoutMs`
@@ -95,39 +120,13 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     this.lastTrafficAt = Date.now();
     await this.transport.send(payload);
 
-    return new Promise<string>((resolve, reject) => {
-      let quietTimer: ReturnType<typeof setTimeout> | undefined;
-
-      const finish = () => {
-        cleanup();
-        const reply = this.rxBuffer;
-        this.rxBuffer = "";
-        void this.emitter.emit("receivedReply", reply);
-        resolve(reply);
-      };
-
-      const overallTimer = setTimeout(() => {
-        if (this.rxBuffer.trim().length > 0) {
-          finish();
-          return;
-        }
-        cleanup();
-        reject(new Error("Response timeout"));
-      }, timeoutMs);
-
-      const cleanup = () => {
-        clearTimeout(overallTimer);
-        if (quietTimer) clearTimeout(quietTimer);
-        this.onChunk = undefined;
-      };
-
-      this.onChunk = () => {
-        if (quietTimer) clearTimeout(quietTimer);
-        quietTimer = setTimeout(() => {
-          if (this.rxBuffer.trim().length > 0) finish();
-        }, quietWindowMs);
-      };
+    const reply = await collectReply(this.rxHooks, {
+      isComplete: () => false,
+      quietMs: quietWindowMs,
+      timeoutMs,
     });
+    void this.emitter.emit("receivedReply", reply);
+    return reply;
   }
 
   /** Poll hello until the ready sentinel answers (Calibratron's wake loop). */
@@ -156,6 +155,53 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     await this.wake();
   }
 
+  /** Run protocol JSON through the firmware's openJII envelope: one write, footer-framed reply. */
+  private async executeProtocol<T>(
+    command: object,
+    options?: ExecuteOptions,
+  ): Promise<CommandResult<T>> {
+    return this.commandQueue.enqueue(async () => {
+      try {
+        await this.ensureAwake();
+        if (!this.transport) {
+          throw new Error("Transport not initialized");
+        }
+
+        this.rxBuffer = "";
+        this.lastTrafficAt = Date.now();
+        await this.transport.send(`${JSON.stringify(command)}${AMBIT_FRAMING.LINE_ENDING}`);
+        const reply = await collectReply(this.rxHooks, {
+          isComplete: (buffer) =>
+            parseOpenJiiEnvelope(buffer) !== null || parseOpenJiiTopLevelError(buffer) !== null,
+          timeoutMs: options?.timeoutMs ?? this.protocolTimeoutMs,
+          strictTimeout: true,
+        });
+        void this.emitter.emit("receivedReply", reply);
+
+        const envelope = parseOpenJiiEnvelope(reply);
+        if (envelope) {
+          void this.emitter.emit("receivedEnvelope", envelope);
+          return {
+            success: true,
+            data: envelope as T,
+            checksum: AMBIT_FRAMING.FRAME_FOOTER,
+          };
+        }
+        const errorCode = parseOpenJiiTopLevelError(reply);
+        if (errorCode) {
+          throw new Error(`Ambit rejected the protocol: ${errorCode}`);
+        }
+        void this.emitter.emit("parseError", { line: reply, error: "incomplete envelope" });
+        throw new Error("Ambit reply was not a complete measurement envelope");
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+        };
+      }
+    });
+  }
+
   async execute<T = unknown>(
     command: string | object,
     options?: ExecuteOptions,
@@ -163,12 +209,7 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     this.ensureInitialized();
 
     if (typeof command !== "string") {
-      return {
-        success: false,
-        error: new Error(
-          "Ambit does not accept protocol JSON. Use a command cell (hello, get_par, set_spec, ...)",
-        ),
-      };
+      return this.executeProtocol<T>(command, options);
     }
 
     return this.commandQueue.enqueue(async () => {

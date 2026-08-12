@@ -10,14 +10,15 @@
  */
 import type { DeviceIdentity, SensorFamily } from "../../core/families";
 import type { ITransportAdapter } from "../../transport/interface";
-import { extractChecksum } from "../../utils/framing/framing";
+import { collectReply, parseOpenJiiEnvelope } from "../../utils/framing/openjii-envelope";
+import type { RxCollectorHooks } from "../../utils/framing/openjii-envelope";
 import type { Logger } from "../../utils/logger/logger";
 import { DeviceDriver } from "../driver-base";
 import type { CommandResult, ExecuteOptions } from "../driver-base";
 import { MINIPAR_COMMANDS } from "./commands";
 import { MINIPAR_FRAMING } from "./config";
 import type { MiniParDriverConfig } from "./config";
-import type { MiniParMeasurementEnvelope, MiniParStreamEvents } from "./interface";
+import type { MiniParStreamEvents } from "./interface";
 
 /** RX silence that completes a LINE-mode reply lacking a newline. */
 const LINE_QUIET_MS = 200;
@@ -54,69 +55,26 @@ export class MiniParDriver extends DeviceDriver<MiniParStreamEvents> {
     this.onChunk?.();
   }
 
+  /** RX hooks over this driver's buffer for the shared reply collector. */
+  private readonly rxHooks: RxCollectorHooks = {
+    read: () => this.rxBuffer,
+    take: () => {
+      const reply = this.rxBuffer;
+      this.rxBuffer = "";
+      return reply;
+    },
+    setOnChunk: (cb) => {
+      this.onChunk = cb;
+    },
+  };
+
   /** Buffer until `isComplete` or a quiet window with data; reject on empty timeout. */
   private collect(
     isComplete: (buffer: string) => boolean,
     timeoutMs: number,
     quietMs?: number,
   ): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
-      let quietTimer: ReturnType<typeof setTimeout> | undefined;
-
-      const finish = () => {
-        cleanup();
-        const reply = this.rxBuffer;
-        this.rxBuffer = "";
-        resolve(reply);
-      };
-
-      const overallTimer = setTimeout(() => {
-        if (this.rxBuffer.trim().length > 0) {
-          finish();
-          return;
-        }
-        cleanup();
-        reject(new Error("Response timeout"));
-      }, timeoutMs);
-
-      const cleanup = () => {
-        clearTimeout(overallTimer);
-        if (quietTimer) clearTimeout(quietTimer);
-        this.onChunk = undefined;
-      };
-
-      const check = () => {
-        if (isComplete(this.rxBuffer)) {
-          finish();
-          return;
-        }
-        if (quietMs !== undefined) {
-          if (quietTimer) clearTimeout(quietTimer);
-          quietTimer = setTimeout(() => {
-            if (this.rxBuffer.trim().length > 0) finish();
-          }, quietMs);
-        }
-      };
-
-      this.onChunk = check;
-      check();
-    });
-  }
-
-  /** Strip and verify the constant footer; null when the envelope is not complete yet. */
-  private static parseEnvelope(buffer: string): MiniParMeasurementEnvelope | null {
-    const trimmed = buffer.trim();
-    if (!trimmed.endsWith(MINIPAR_FRAMING.FRAME_FOOTER)) return null;
-    const { data } = extractChecksum(trimmed, MINIPAR_FRAMING.FOOTER_LENGTH);
-    try {
-      const parsed: unknown = JSON.parse(data);
-      if (parsed !== null && typeof parsed === "object") {
-        return parsed as MiniParMeasurementEnvelope;
-      }
-    } catch {
-      // footer seen but JSON incomplete/corrupt; keep buffering
-    }
-    return null;
+    return collectReply(this.rxHooks, { isComplete, timeoutMs, quietMs });
   }
 
   async execute<T = unknown>(
@@ -155,10 +113,10 @@ export class MiniParDriver extends DeviceDriver<MiniParStreamEvents> {
         // JSON protocol: one write, envelope + footer reply.
         await this.transport.send(`${JSON.stringify(command)}${MINIPAR_FRAMING.LINE_ENDING}`);
         const reply = await this.collect(
-          (buffer) => MiniParDriver.parseEnvelope(buffer) !== null,
+          (buffer) => parseOpenJiiEnvelope(buffer) !== null,
           options?.timeoutMs ?? this.protocolTimeoutMs,
         );
-        const envelope = MiniParDriver.parseEnvelope(reply);
+        const envelope = parseOpenJiiEnvelope(reply);
         if (!envelope) {
           void this.emitter.emit("parseError", { line: reply, error: "incomplete envelope" });
           throw new Error("MiniPAR reply was not a complete measurement envelope");

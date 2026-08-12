@@ -167,17 +167,37 @@ describe("useIotProtocolExecution", () => {
   });
 
   describe("ambit execution", () => {
-    it("refuses protocol cells over a direct ambit connection", async () => {
-      const mockDriver: Partial<IDeviceDriver> = { execute: vi.fn() };
+    it("sends protocol JSON directly as a single command (no command-cell rejection)", async () => {
+      const envelope = { sample: [{ protocol_id: "NaN", set: [{ s_630: [159] }] }] };
+      const mockExecute = vi.fn().mockResolvedValueOnce({ success: true, data: envelope });
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
 
       const { result } = renderHook(() =>
         useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
 
-      await expect(result.current.executeProtocol([{ command: "test" }])).rejects.toThrow(
-        /do not run protocol cells/,
+      const protocolCode = [{ label: "arrun,1,0,2,0,0,9,0,1,0,1" }];
+      const data = await result.current.executeProtocol(protocolCode);
+
+      expect(mockExecute).toHaveBeenCalledTimes(1);
+      expect(mockExecute).toHaveBeenCalledWith(protocolCode);
+      expect(data).toEqual(envelope);
+    });
+
+    it("throws the device error when execution fails", async () => {
+      const mockExecute = vi.fn().mockResolvedValueOnce({
+        success: false,
+        error: { message: "Ambit rejected the protocol: json_parse" },
+      });
+      const mockDriver: Partial<IDeviceDriver> = { execute: mockExecute };
+
+      const { result } = renderHook(() =>
+        useIotProtocolExecution(mockDriver as IDeviceDriver, true, "ambit"),
       );
-      expect(mockDriver.execute).not.toHaveBeenCalled();
+
+      await expect(result.current.executeProtocol([{ label: "arrun,1,0" }])).rejects.toThrow(
+        "Ambit rejected the protocol: json_parse",
+      );
     });
   });
 
