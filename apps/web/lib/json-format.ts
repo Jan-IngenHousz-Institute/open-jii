@@ -71,17 +71,44 @@ function stringify(value: unknown, indent?: number): string | undefined {
   return JSON.stringify(value, null, indent);
 }
 
+/**
+ * True for the values JSON.stringify drops entirely: omitted from an object,
+ * rendered as `null` inside an array. Checking the type is O(1), where asking
+ * `stringify(entry) === undefined` would walk the whole subtree.
+ */
+function isOmitted(value: unknown): boolean {
+  return value === undefined || typeof value === "function" || typeof value === "symbol";
+}
+
+/**
+ * `toJSON` (Date, and anything custom) makes the serialized form a *replacement*
+ * for the value. Laying it out would mean walking the original object, which is
+ * not what was serialized, so such nodes are emitted verbatim.
+ */
+function hasToJson(value: unknown): boolean {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    typeof (value as { toJSON?: unknown }).toJSON === "function"
+  );
+}
+
 /** Single-line JSON, but spaced after separators so it stays readable. */
 function inline(value: unknown): string | undefined {
-  const plain = stringify(value);
-  if (plain === undefined) return undefined;
+  if (isOmitted(value)) return undefined;
+  if (hasToJson(value)) return stringify(value);
 
-  if (Array.isArray(value) && plain.startsWith("[")) {
-    return `[${value.map((item) => inline(item) ?? "null").join(", ")}]`;
+  if (Array.isArray(value)) {
+    // for-of, not `.map`: map skips holes and joining the resulting sparse array
+    // yields `[, , ]`, which is not JSON. A hole serializes as `null`.
+    const parts: string[] = [];
+    for (const item of value as unknown[]) {
+      parts.push(inline(item) ?? "null");
+    }
+    return `[${parts.join(", ")}]`;
   }
 
-  // A `toJSON` result (Date) does not stringify as an object; keep it verbatim.
-  if (value !== null && typeof value === "object" && plain.startsWith("{")) {
+  if (value !== null && typeof value === "object") {
     const parts: string[] = [];
     for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
       const rendered = inline(entry);
@@ -90,7 +117,7 @@ function inline(value: unknown): string | undefined {
     return `{${parts.join(", ")}}`;
   }
 
-  return plain;
+  return stringify(value);
 }
 
 function isScalar(value: unknown): boolean {
@@ -114,33 +141,57 @@ interface WriteOptions {
 
 function write(value: unknown, level: number, prefixLength: number, opts: WriteOptions): string {
   const { indent, maxLineWidth, dataArrayMaxWidth } = opts;
-  const oneLine = inline(value);
-  if (oneLine === undefined) return "null";
 
-  const budget = isDataArray(value) ? dataArrayMaxWidth : maxLineWidth;
-  if (prefixLength + oneLine.length <= budget) return oneLine;
+  // A scalar has no layout, so skip the budget machinery. This is the hot path:
+  // expanding one large data array runs it once per element.
+  if (value === null || typeof value !== "object") {
+    return stringify(value) ?? "null";
+  }
+
+  // Not our layout to break up: the serialized form replaced the value, so
+  // walking the original would emit something else entirely.
+  if (hasToJson(value)) return stringify(value) ?? "null";
+
+  // Every element costs at least one character plus a two-character separator,
+  // so `3 * length` is a lower bound on the inline form. Checking it first keeps
+  // a huge array from being serialized and scanned just to be rejected.
+  const cannotInline =
+    Array.isArray(value) && value.length > 0 && prefixLength + 3 * value.length > dataArrayMaxWidth;
+
+  if (!cannotInline) {
+    const plain = stringify(value);
+    if (plain === undefined) return "null";
+    // `plain` is a lower bound on the spaced form, which only ever adds a space
+    // after `,` and `:`. Rejecting on it avoids building (and then discarding)
+    // the spaced string for a subtree that was never going to fit.
+    const budget = isDataArray(value) ? dataArrayMaxWidth : maxLineWidth;
+    if (prefixLength + plain.length <= budget) {
+      const oneLine = inline(value);
+      if (oneLine !== undefined && prefixLength + oneLine.length <= budget) return oneLine;
+    }
+  }
 
   const closePad = " ".repeat(level * indent);
   const pad = " ".repeat((level + 1) * indent);
 
   if (Array.isArray(value)) {
     if (value.length === 0) return "[]";
-    const items = value.map((item) => pad + write(item, level + 1, pad.length, opts));
+    // for-of, unlike `.map`, still yields a hole (as undefined) rather than
+    // skipping it, which keeps a sparse array serializing as `null` entries.
+    const items: string[] = [];
+    for (const item of value as unknown[]) {
+      items.push(pad + write(item, level + 1, pad.length, opts));
+    }
     return `[\n${items.join(",\n")}\n${closePad}]`;
   }
 
-  if (value !== null && typeof value === "object" && oneLine.startsWith("{")) {
-    const entries = Object.entries(value as Record<string, unknown>).filter(
-      ([, entry]) => inline(entry) !== undefined,
-    );
-    if (entries.length === 0) return "{}";
-    const items = entries.map(([key, entry]) => {
-      const keyPart = `${JSON.stringify(key)}: `;
-      return pad + keyPart + write(entry, level + 1, pad.length + keyPart.length, opts);
-    });
-    return `{\n${items.join(",\n")}\n${closePad}}`;
-  }
-
-  // A single long string or number; there is nothing left to break onto its own line.
-  return oneLine;
+  const entries = Object.entries(value as Record<string, unknown>).filter(
+    ([, entry]) => !isOmitted(entry),
+  );
+  if (entries.length === 0) return "{}";
+  const items = entries.map(([key, entry]) => {
+    const keyPart = `${JSON.stringify(key)}: `;
+    return pad + keyPart + write(entry, level + 1, pad.length + keyPart.length, opts);
+  });
+  return `{\n${items.join(",\n")}\n${closePad}}`;
 }

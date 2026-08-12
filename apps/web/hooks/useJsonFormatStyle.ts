@@ -31,12 +31,20 @@ export function useJsonFormatStyle() {
   useEffect(() => {
     setStyle(read());
     setIsHydrated(true);
-    const sync = () => setStyle(read());
-    window.addEventListener(CHANGE_EVENT, sync);
-    window.addEventListener("storage", sync);
+    // Same-tab peers take the value off the event. Re-reading storage here would
+    // hand back the default whenever storage access throws, cancelling the
+    // choice the user just made.
+    const onChange = (event: Event) => {
+      const detail = (event as CustomEvent<JsonFormatStyle>).detail;
+      setStyle(isJsonFormatStyle(detail) ? detail : read());
+    };
+    // Another tab wrote storage, so reading it is the only way to learn the value.
+    const onStorage = () => setStyle(read());
+    window.addEventListener(CHANGE_EVENT, onChange);
+    window.addEventListener("storage", onStorage);
     return () => {
-      window.removeEventListener(CHANGE_EVENT, sync);
-      window.removeEventListener("storage", sync);
+      window.removeEventListener(CHANGE_EVENT, onChange);
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
@@ -47,7 +55,7 @@ export function useJsonFormatStyle() {
     } catch {
       // Private mode or blocked storage; the in-memory preference still applies.
     }
-    window.dispatchEvent(new Event(CHANGE_EVENT));
+    window.dispatchEvent(new CustomEvent<JsonFormatStyle>(CHANGE_EVENT, { detail: next }));
   }, []);
 
   const toggleStyle = useCallback(() => {
