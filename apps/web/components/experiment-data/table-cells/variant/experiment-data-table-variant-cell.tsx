@@ -104,7 +104,7 @@ export function VariantExpandedContent({ data }: { data: string }) {
           </>
         )}
       </Button>
-      <pre className="max-h-96 w-full overflow-x-auto overflow-y-auto rounded border border-gray-200 bg-white p-3 font-mono text-xs dark:border-gray-700 dark:bg-gray-900">
+      <pre className="max-h-96 w-full overflow-y-auto whitespace-pre-wrap break-words rounded border border-gray-200 bg-white p-3 font-mono text-xs dark:border-gray-700 dark:bg-gray-900">
         <code className="text-gray-800 dark:text-gray-200">{formatted}</code>
       </pre>
     </div>

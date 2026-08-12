@@ -1,6 +1,7 @@
 import { createOutputCell, createProtocolCell } from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { formatJson } from "~/lib/json-format";
 
 import { OutputCellComponent } from "./output-cell";
 
@@ -487,7 +488,28 @@ describe("OutputCellComponent", () => {
     await waitFor(() => {
       expect(copyButton.querySelector(".lucide-check")).toBeInTheDocument();
     });
-    expect(writeText).toHaveBeenCalledWith(JSON.stringify(cell.data, null, 2));
+    expect(writeText).toHaveBeenCalledWith(formatJson(cell.data));
+  });
+
+  it("switches the JSON view between the compact and expanded layouts", async () => {
+    localStorage.clear();
+    const user = userEvent.setup();
+    const cell = createOutputCell({
+      data: [{ time: 1, samples: Array.from({ length: 40 }, (_, i) => i) }],
+    });
+    render(<OutputCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} />);
+
+    await user.click(screen.getByRole("tab", { name: "output.tabJson" }));
+    const compact = formatJson(cell.data, { style: "compact" });
+    const expanded = formatJson(cell.data, { style: "expanded" });
+    expect(expanded.split("\n").length).toBeGreaterThan(compact.split("\n").length);
+
+    // The rendered text is whitespace-significant, so read the <pre> directly
+    // rather than going through getByText, which normalises it.
+    const pre = () => document.querySelector("pre")?.textContent;
+    expect(pre()).toBe(compact);
+    await user.click(screen.getByTestId("json-format-toggle"));
+    await waitFor(() => expect(pre()).toBe(expanded));
   });
 
   it("uses local state to collapse in readOnly mode without mutating persisted state", async () => {
