@@ -42,7 +42,9 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       return makeNode(
         cell.id,
         "measurement",
-        cell.payload.name ?? `Protocol ${cell.payload.protocolId.slice(0, 8)}`,
+        cell.payload.name?.trim()
+          ? cell.payload.name
+          : `Protocol ${cell.payload.protocolId.slice(0, 8)}`,
         { protocolId: cell.payload.protocolId },
         isStart,
       );
@@ -69,7 +71,7 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       return makeNode(
         cell.id,
         "analysis",
-        cell.payload.name ?? `Macro ${cell.payload.macroId.slice(0, 8)}`,
+        cell.payload.name?.trim() ? cell.payload.name : `Macro ${cell.payload.macroId.slice(0, 8)}`,
         { macroId: cell.payload.macroId },
         isStart,
       );
@@ -79,6 +81,11 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       return makeNode(cell.id, "question", cell.name, cell.question, isStart);
 
     case "markdown":
+      // Blank markdown has no instruction to give; an empty name/text node
+      // violates the flow contract and 500s every subsequent flow read.
+      if (cell.content.trim().length === 0) {
+        return null;
+      }
       return makeNode(
         cell.id,
         "instruction",

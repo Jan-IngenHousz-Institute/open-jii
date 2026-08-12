@@ -85,6 +85,44 @@ describe("cellsToFlowGraph", () => {
     expect(nodes[0].name).toBe("Step 1: prepare sample");
   });
 
+  it("skips blank markdown cells and starts the flow at the next real node", () => {
+    const cells: WorkbookCell[] = [
+      { id: "md1", type: "markdown", isCollapsed: false, content: "" },
+      { id: "md2", type: "markdown", isCollapsed: false, content: "  \n\n " },
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1 },
+      },
+    ];
+    const { nodes, edges } = cellsToFlowGraph(cells);
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0].id).toBe("p1");
+    expect(nodes[0].isStart).toBe(true);
+    expect(edges).toHaveLength(0);
+  });
+
+  it("falls back to generated names for empty-string protocol and macro payload names", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1, name: "" },
+      },
+      {
+        id: "m1",
+        type: "macro",
+        isCollapsed: false,
+        payload: { macroId: uuidB, language: "python", name: " " },
+      },
+    ];
+    const { nodes } = cellsToFlowGraph(cells);
+    expect(nodes[0].name).toBe(`Protocol ${uuidA.slice(0, 8)}`);
+    expect(nodes[1].name).toBe(`Macro ${uuidB.slice(0, 8)}`);
+  });
+
   it("skips output cells", () => {
     const cells: WorkbookCell[] = [
       { id: "o1", type: "output", isCollapsed: false, producedBy: "p1" },
