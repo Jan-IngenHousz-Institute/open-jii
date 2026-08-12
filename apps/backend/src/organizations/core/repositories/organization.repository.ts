@@ -1,6 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import type { OrganizationResourceType } from "@repo/api/domains/organization/organization.schema";
 import {
   and,
   asc,
@@ -59,6 +58,9 @@ import { normalizeOrgRole } from "../organization-access";
  * agree: this one decides whether the danger zone offers deletion, that one decides
  * whether the delete succeeds, and a type missing here would offer a delete the
  * server then refuses.
+ *
+ * The constraint names the columns {@link accessibleResourceCondition} needs, so every
+ * owned type is scopeable by the shared read predicate.
  */
 const OWNED_RESOURCE_TABLES = {
   experiment: experiments,
@@ -66,20 +68,8 @@ const OWNED_RESOURCE_TABLES = {
   protocol: protocols,
   workbook: workbooks,
   device: iotDevices,
-} as const satisfies Record<ResourceType, { organizationId: unknown }>;
-
-/**
- * The four types the resources showcase covers, keyed by the showcase enum — devices
- * are absent because they have no page to show. A total `Record`, so a fifth
- * showcased type cannot be added without being counted here too.
- */
-const SHOWCASE_RESOURCE_TABLES = {
-  experiment: experiments,
-  macro: macros,
-  protocol: protocols,
-  workbook: workbooks,
 } as const satisfies Record<
-  OrganizationResourceType,
+  ResourceType,
   { id: AnyColumn; organizationId: AnyColumn; visibility: AnyColumn }
 >;
 
@@ -135,21 +125,55 @@ function memberCountSql(): SQL<number> {
 }
 
 /**
- * How much the organization owns, summed across every type it can own — one
- * correlated count per table rather than a join, so a listing pays for the sum
- * once per row instead of fanning its rows out five times.
+ * The one definition of "resources of this type, in this organization, that this caller
+ * may read". Every count builds from here, so the directory pill, the profile and the
+ * per-type totals cannot disagree.
  *
- * Counts what the organization holds, not what the caller may read: an aggregate
- * over its whole estate is what the listing states, and scoping it per caller
- * would make the same organization claim a different size to each reader.
+ * Cheaper per listing row than it looks: the grant arms depend only on `userId`, so
+ * Postgres hash-builds them once per statement rather than per row. Do not hand-roll a
+ * member/non-member `CASE` to help — that is what the planner already does.
  */
-function resourceCountSql(): SQL<number> {
+function accessibleResourceCountSql(params: {
+  database: DatabaseInstance;
+  resourceType: ResourceType;
+  organizationIdSql: SQL;
+  userId: string | undefined;
+}): SQL<number> {
+  const table = OWNED_RESOURCE_TABLES[params.resourceType];
+  const scope = accessibleResourceCondition({
+    database: params.database,
+    resourceType: params.resourceType,
+    resourceIdColumn: table.id,
+    organizationIdColumn: table.organizationId,
+    visibilityColumn: table.visibility,
+    userId: params.userId,
+  });
+
+  return sql<number>`(
+    SELECT COUNT(*)::int FROM ${table}
+    WHERE ${qualified(getTableName(table), "organization_id")} = ${params.organizationIdSql}
+      AND ${scope}
+  )`.mapWith(Number);
+}
+
+/**
+ * How much of the organization the caller can actually reach, summed across every type
+ * it can own — one correlated count per table rather than a join, so a listing pays for
+ * the sum once per row instead of fanning its rows out five times.
+ *
+ * Scoped, not absolute: the unscoped total promised a visitor 43 resources and then
+ * showed them 3. So the same organization reports a different size to different
+ * readers, which is accepted — the alternative is wrong for every non-member.
+ */
+function resourceCountSql(database: DatabaseInstance, userId: string | undefined): SQL<number> {
   return sql<number>`(${sql.join(
-    Object.values(OWNED_RESOURCE_TABLES).map(
-      (table) => sql`(
-        SELECT COUNT(*)::int FROM ${table}
-        WHERE ${qualified(getTableName(table), "organization_id")} = ${qualified("organizations", "id")}
-      )`,
+    Object.keys(OWNED_RESOURCE_TABLES).map((resourceType) =>
+      accessibleResourceCountSql({
+        database,
+        resourceType: resourceType as ResourceType,
+        organizationIdSql: qualified("organizations", "id"),
+        userId,
+      }),
     ),
     sql` + `,
   )})`.mapWith(Number);
@@ -261,7 +285,10 @@ export class OrganizationRepository {
     });
   }
 
-  async findProfileFields(organizationId: string): Promise<
+  async findProfileFields(
+    organizationId: string,
+    viewerUserId: string | undefined,
+  ): Promise<
     Result<{
       id: string;
       name: string;
@@ -290,9 +317,9 @@ export class OrganizationRepository {
           location: organizations.location,
           visibility: organizations.visibility,
           memberCount: memberCountSql(),
-          // The directory's own sum, so the profile's tile and the listing's pill
-          // report the same number for the same organization.
-          resourceCount: resourceCountSql(),
+          // The directory's own sum, so the profile and the listing pill report the
+          // same number for the same caller.
+          resourceCount: resourceCountSql(this.database, viewerUserId),
           createdAt: organizations.createdAt,
         })
         .from(organizations)
@@ -367,7 +394,7 @@ export class OrganizationRepository {
           description: organizations.description,
           location: organizations.location,
           memberCount: memberCountSql(),
-          resourceCount: resourceCountSql(),
+          resourceCount: resourceCountSql(this.database, userId),
           // Selected rather than assumed: the set is no longer public-only, so a row
           // that did not carry this would be rendered as public.
           visibility: organizations.visibility,
@@ -400,8 +427,10 @@ export class OrganizationRepository {
           description: organizations.description,
           visibility: organizations.visibility,
           role: organizationMembers.role,
+          // A plain count in practice — the caller belongs to every row here. Still
+          // routed through the scoped fragment: one definition, no exceptions.
+          resourceCount: resourceCountSql(this.database, userId),
           memberCount: memberCountSql(),
-          resourceCount: resourceCountSql(),
         })
         .from(organizationMembers)
         .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
@@ -522,34 +551,26 @@ export class OrganizationRepository {
   }
 
   /**
-   * How many resources of each showcase type the caller may read in this
-   * organization — the totals beside the capped rows.
+   * How many resources of each owned type the caller may read in this organization.
+   * The per-type breakdown of {@link resourceCountSql}, from the same fragment, so the
+   * profile's single number and these five agree by construction. One statement.
    *
-   * Counted through {@link accessibleResourceCondition}, the very predicate every
-   * type's `findAll` scopes itself with, so a group header can never claim a row the
-   * listing behind it would withhold. One statement, so four counts cost one trip.
+   * Devices are permanently private, so a non-member always counts zero of them.
    */
   async countAccessibleResources(
     organizationId: string,
     userId: string,
   ): Promise<Result<OrganizationResourceTotalsDto>> {
     return tryCatch(async () => {
-      const counts = Object.entries(SHOWCASE_RESOURCE_TABLES).map(([resourceType, table]) => {
-        const scope = accessibleResourceCondition({
-          database: this.database,
-          resourceType: resourceType as OrganizationResourceType,
-          resourceIdColumn: table.id,
-          organizationIdColumn: table.organizationId,
-          visibilityColumn: table.visibility,
-          userId,
-        });
-
-        return sql`(
-          SELECT COUNT(*)::int FROM ${table}
-          WHERE ${table.organizationId} = ${organizationId}::uuid
-            AND ${scope}
-        ) AS ${sql.identifier(resourceType)}`;
-      });
+      const counts = Object.keys(OWNED_RESOURCE_TABLES).map(
+        (resourceType) =>
+          sql`${accessibleResourceCountSql({
+            database: this.database,
+            resourceType: resourceType as ResourceType,
+            organizationIdSql: sql`${organizationId}::uuid`,
+            userId,
+          })} AS ${sql.identifier(resourceType)}`,
+      );
 
       // Partial, not total: the row is whatever the driver hands back, and the
       // defaults below are what make an organization owning nothing report zeros
@@ -564,6 +585,7 @@ export class OrganizationRepository {
         protocol: row.protocol ?? 0,
         macro: row.macro ?? 0,
         workbook: row.workbook ?? 0,
+        device: row.device ?? 0,
       };
     });
   }

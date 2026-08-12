@@ -88,6 +88,34 @@ describe("<ListOrganizations />", () => {
       expect(within_.getByText("resourceVisibility.privateStatus")).toBeVisible();
     });
 
+    /**
+     * A plain-text description used to render untruncated while the identical call on
+     * the experiment cards clamped — the renderer applied `truncate` only on its
+     * rich-text branch. Asserting the clamp itself, not that the text is present: the
+     * test above says the text is present and stayed green throughout.
+     */
+    it("clamps a plain-text description, which does not arrive with markup", async () => {
+      mockSession({ id: "user-1" });
+      mountMyOrganizations([
+        createMyOrganization({
+          name: "Greenhouse Lab",
+          description:
+            "A field group studying canopy photosynthesis across three continents, " +
+            "with a long enough profile to run past three lines in a card column.",
+        }),
+      ]);
+
+      render(<ListOrganizations />);
+
+      await screen.findByText("Greenhouse Lab");
+      const description = within(cardFor("Greenhouse Lab")).getByText(/A field group studying/u);
+      expect(description.style.display).toBe("-webkit-box");
+      expect(description.style.overflow).toBe("hidden");
+      // Two, like the experiment, macro and protocol listing cards — this card is not
+      // the one that gets to be different.
+      expect(description.style.getPropertyValue("-webkit-line-clamp")).toBe("2");
+    });
+
     it("falls back to the shared placeholder when an organization has no description", async () => {
       mockSession({ id: "user-1" });
       mountMyOrganizations([createMyOrganization({ name: "Greenhouse Lab", description: null })]);

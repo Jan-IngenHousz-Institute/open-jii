@@ -2,17 +2,19 @@
 
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
+import { useOrganizationMembers } from "@/hooks/organization/useOrganizationMembers/useOrganizationMembers";
 import { useOrganizationResources } from "@/hooks/organization/useOrganizationResources/useOrganizationResources";
 import { useOrganizationTeams } from "@/hooks/organization/useOrganizationTeams/useOrganizationTeams";
-import { FolderOpen, Info, Network, Users } from "lucide-react";
+import { FolderOpen, Info } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { OrganizationAboutCard } from "./organization-about-card";
+import { OrganizationFeaturedResources } from "./organization-featured-resources";
+import { OrganizationResourceMix } from "./organization-resource-mix";
 import { OrganizationResourceRows } from "./organization-resource-rows";
-import { OrganizationStatTile } from "./organization-stat-tile";
 
 /**
  * The organization's front page: what it owns on the left, what it is on the right.
@@ -22,11 +24,9 @@ import { OrganizationStatTile } from "./organization-stat-tile";
  * access to. The client draws no distinction; there is nothing here it could filter
  * that the server has not already decided.
  *
- * The sidebar carries About *and* the counts rather than the counts running across
- * the top: with three tiles instead of four and no activity feed under About, a
- * separate tile row would leave the right-hand column stranded beside a long
- * resources card. They are all facts about the organization, so they read as one
- * column.
+ * The sidebar carries About, who is in the organization and the shape of its estate,
+ * rather than a row of counts across the top — all facts about the organization, so
+ * they read as one column.
  */
 export function OrganizationOverview({ organizationId }: { organizationId: string }) {
   const { t } = useTranslation();
@@ -35,21 +35,27 @@ export function OrganizationOverview({ organizationId }: { organizationId: strin
   const { data, isPending, isError } = useOrganizationResources(organizationId);
 
   const isMember = organization?.role != null;
-  // Members only, like the endpoint behind it — an outsider gets no teams tile
-  // rather than a tile that would have to guess.
-  const { data: teams } = useOrganizationTeams(organizationId, { enabled: isMember });
+  // Members only, like the endpoints behind them.
+  const { data: teams, isPending: isTeamsPending } = useOrganizationTeams(organizationId, {
+    enabled: isMember,
+  });
+  const { data: roster, isPending: isMembersPending } = useOrganizationMembers(organizationId, {
+    enabled: isMember,
+  });
 
   const resources = data?.resources ?? [];
 
   return (
     <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-      <div className="flex min-w-0 flex-col gap-4 lg:col-span-2">
+      <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
         {organization && !isMember ? (
           <Card className="text-muted-foreground flex items-start gap-3 p-4 text-sm">
             <Info className="text-primary mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <p className="leading-relaxed">{t("organizations.overview.visitorNotice")}</p>
           </Card>
         ) : null}
+
+        <OrganizationFeaturedResources resources={resources} />
 
         <Card className="p-5">
           <div className="mb-4 space-y-1">
@@ -100,27 +106,17 @@ export function OrganizationOverview({ organizationId }: { organizationId: strin
       </div>
 
       <div className="flex min-w-0 flex-col gap-4">
-        {organization ? <OrganizationAboutCard organization={organization} /> : null}
-
-        {organization && isMember ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
-            <OrganizationStatTile
-              label={t("organizations.tabs.members")}
-              value={organization.memberCount}
-              icon={Users}
-            />
-            <OrganizationStatTile
-              label={t("organizations.tabs.teams")}
-              value={teams?.length ?? 0}
-              icon={Network}
-            />
-            <OrganizationStatTile
-              label={t("organizations.resources.title")}
-              value={organization.resourceCount}
-              icon={FolderOpen}
-            />
-          </div>
+        {organization ? (
+          <OrganizationAboutCard
+            organization={organization}
+            members={roster?.members}
+            teams={teams}
+            isMembersPending={isMember && isMembersPending}
+            isTeamsPending={isMember && isTeamsPending}
+          />
         ) : null}
+
+        {data ? <OrganizationResourceMix totals={data.totals} /> : null}
       </div>
     </div>
   );

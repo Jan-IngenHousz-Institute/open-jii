@@ -1,12 +1,12 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import {
+  and,
   desc,
   deleteResourceGrants,
   eq,
   inArray,
   iotDevices,
-  or,
   ensurePersonalOrganization,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
@@ -49,10 +49,21 @@ export class IotDeviceRepository {
     });
   }
 
-  // `createdBy` is an extra tier on the shared predicate, so a creator later removed
-  // from the owning org still sees devices they registered. The predicate's public
-  // arm is unreachable — devices are permanently private.
-  async listAccessible(userId: string): Promise<Result<IotDeviceDto[]>> {
+  /**
+   * Devices the caller may read — every one of them, or one organization's.
+   *
+   * `accessibleResourceCondition` and nothing else, which is what makes the two callers
+   * one method. Authorship was an extra arm here until it was cut: it dated from when
+   * the registry shipped standalone and `created_by` was the access model, and left
+   * devices as the only type where creating something granted a permanent read.
+   *
+   * The predicate's public arm is unreachable for devices — `zPublishableResourceType`
+   * excludes them, so a non-member sees one only through a grant.
+   */
+  async listAccessible(
+    userId: string,
+    options?: { organizationId?: string },
+  ): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(async () => {
       const scope = accessibleResourceCondition({
         database: this.database,
@@ -62,12 +73,12 @@ export class IotDeviceRepository {
         visibilityColumn: iotDevices.visibility,
         userId,
       });
-      const results = await this.database
+      const organizationId = options?.organizationId;
+      return this.database
         .select()
         .from(iotDevices)
-        .where(or(eq(iotDevices.createdBy, userId), scope))
+        .where(organizationId ? and(eq(iotDevices.organizationId, organizationId), scope) : scope)
         .orderBy(desc(iotDevices.createdAt));
-      return results;
     });
   }
 

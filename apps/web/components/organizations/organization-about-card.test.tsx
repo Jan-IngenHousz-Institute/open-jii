@@ -1,5 +1,9 @@
-import { createOrganizationProfile } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
+import {
+  createOrganizationMember,
+  createOrganizationProfile,
+  createOrganizationTeam,
+} from "@/test/factories";
+import { render, screen, within } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { OrganizationAboutCard } from "./organization-about-card";
@@ -56,5 +60,74 @@ describe("<OrganizationAboutCard />", () => {
     const link = screen.getByRole("link", { name: /canopylab\.example\.org/u });
     expect(link).toHaveAttribute("href", "https://canopylab.example.org/about/team");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("stacks each label over its value rather than beside it", () => {
+    render(<OrganizationAboutCard organization={createOrganizationProfile({ type: null })} />);
+
+    // The idiom every resource detail overview uses: the label is its own line, the
+    // value below it — so neither is squeezed into a fixed-width column.
+    const label = screen.getByText("organizations.about.onOpenJii");
+    expect(label.tagName).toBe("DT");
+    expect(label.className).not.toMatch(/w-\d/u);
+  });
+
+  describe("the people entries", () => {
+    it("shows a face per member, capped, and links through to the members tab", () => {
+      const members = Array.from({ length: 7 }, (_, index) =>
+        createOrganizationMember({ userId: `u-${index}`, firstName: "Ada", lastName: "Lovelace" }),
+      );
+
+      render(
+        <OrganizationAboutCard
+          organization={createOrganizationProfile({ id: "org-9", memberCount: 7 })}
+          members={members}
+        />,
+      );
+
+      const trail = screen.getByRole("link", { name: /organizations\.memberCount/u });
+      expect(trail).toHaveAttribute("href", "/en-US/platform/organizations/org-9/members");
+      // Five faces plus the remainder bubble, not seven faces in a 336px column.
+      expect(within(trail).getByText("+2")).toBeVisible();
+    });
+
+    it("gives a team its initials, since a team has no picture of its own", () => {
+      render(
+        <OrganizationAboutCard
+          organization={createOrganizationProfile({ id: "org-9" })}
+          teams={[createOrganizationTeam({ id: "t-1", name: "Field crew" })]}
+        />,
+      );
+
+      const trail = screen.getByRole("link", { name: /organizations\.about\.teamCount/u });
+      expect(trail).toHaveAttribute("href", "/en-US/platform/organizations/org-9/teams");
+      expect(within(trail).getByText("FC")).toBeVisible();
+    });
+
+    it("still states the counts before the rosters have arrived", () => {
+      render(
+        <OrganizationAboutCard
+          organization={createOrganizationProfile({ memberCount: 4 })}
+          isMembersPending
+          isTeamsPending
+        />,
+      );
+
+      // The profile carries the member count, so the caption does not wait on the
+      // roster read — only the faces do.
+      expect(screen.getByRole("link", { name: /organizations\.memberCount/u })).toBeVisible();
+      expect(screen.getByRole("link", { name: /organizations\.about\.teamCount/u })).toBeVisible();
+    });
+
+    it("shows neither to a visitor, matching the endpoints behind them", () => {
+      render(
+        <OrganizationAboutCard
+          organization={createOrganizationProfile({ role: null, membershipStatus: "none" })}
+        />,
+      );
+
+      expect(screen.queryByText("organizations.tabs.members")).toBeNull();
+      expect(screen.queryByText("organizations.tabs.teams")).toBeNull();
+    });
   });
 });

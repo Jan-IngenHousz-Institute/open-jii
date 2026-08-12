@@ -55,12 +55,13 @@ describe("<OrganizationDangerZone />", () => {
   });
 
   /**
-   * The finding this read exists for. Devices are absent from the resources
-   * showcase — they have no sharing surface — but the server's delete guard counts
-   * them, so deriving the block from the showcase offered an enabled Delete that
-   * failed only after the confirmation.
+   * The finding this read exists for. It used to be that devices were absent from the
+   * resources showcase entirely; they are listed there now, so the difference that still
+   * matters is scoping — the showcase counts what *this caller* may read, while the
+   * server's delete guard counts the organization's whole estate. Deriving the block
+   * from the showcase offered an enabled Delete that failed only after the confirmation.
    */
-  it("blocks on devices, which never appear in the resources showcase", async () => {
+  it("blocks on devices, which the caller-scoped showcase can under-report", async () => {
     mockSession({ id: "user-1" });
     mountBlockers([{ resourceType: "device", count: 1 }]);
 

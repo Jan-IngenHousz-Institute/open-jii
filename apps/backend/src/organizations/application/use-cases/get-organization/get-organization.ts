@@ -37,7 +37,10 @@ export class GetOrganizationUseCase {
       return failure(AppError.notFound(`Organization with ID ${organizationId} not found`));
     }
 
-    const fieldsResult = await this.organizationRepository.findProfileFields(organizationId);
+    const fieldsResult = await this.organizationRepository.findProfileFields(
+      organizationId,
+      userId,
+    );
     if (fieldsResult.isFailure() || !fieldsResult.value) {
       return failure(AppError.internal("Failed to load organization"));
     }

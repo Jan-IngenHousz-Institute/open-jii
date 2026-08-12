@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { zExperimentStatus } from "../experiment/experiment.schema";
+import { zDeviceType } from "../iot/iot.schema";
 import { zMacroLanguage } from "../macro/macro.schema";
 import { zSensorFamily } from "../protocol/protocol.schema";
 import { zGrantRole, zSharingResourceType } from "../sharing/sharing.schema";
@@ -139,8 +140,6 @@ export const zAddOrganizationMemberBody = z.object({
   role: zOrganizationRole.default("member"),
 });
 
-export const zOrganizationResourceType = z.enum(["experiment", "macro", "protocol", "workbook"]);
-
 /** What every showcase row carries, whatever its type. */
 const zOrganizationResourceBase = z.object({
   id: z.string().uuid(),
@@ -148,18 +147,22 @@ const zOrganizationResourceBase = z.object({
   description: z.string().nullable(),
   visibility: zOrganizationVisibility,
   updatedAt: z.string().datetime(),
+  /**
+   * How many people and groups hold this resource, by the same definition the
+   * collaborators surface lists: the org's living owners plus every grant, a team or
+   * org grant counting as the one grantee it is.
+   */
+  collaboratorCount: z.number().int(),
 });
 
 /**
- * One row of the organization's resources showcase. Still thin — the showcase links
- * out to each resource's own page, which is where the full detail lives — but
- * discriminated on `type` rather than flattened, because the one extra fact worth
- * showing per row is a different fact for each type: an experiment's lifecycle
- * status, a protocol's sensor family, a macro's language. A single stringly `meta`
- * would have the four pretend to share a vocabulary they do not.
+ * One row of the organization's resources showcase — all five owned types, keyed by
+ * {@link zSharingResourceType} so the rows and the counts cannot cover different sets.
  *
- * A workbook adds nothing: there is no second column on its table worth a row.
- * Every field here is on the resource's own table, so nothing is cross-fetched.
+ * Discriminated rather than flattened because the one extra fact worth showing differs
+ * per type: an experiment's status, a protocol's family, a macro's language, a device's
+ * class. A workbook adds nothing, and a device's `description` is structurally `null` —
+ * no such column.
  */
 export const zOrganizationResource = z.discriminatedUnion("type", [
   zOrganizationResourceBase.extend({
@@ -175,22 +178,32 @@ export const zOrganizationResource = z.discriminatedUnion("type", [
     language: zMacroLanguage,
   }),
   zOrganizationResourceBase.extend({ type: z.literal("workbook") }),
+  zOrganizationResourceBase.extend({
+    type: z.literal("device"),
+    /**
+     * The device's class — `zSensorFamily` under another name, so a device row wears
+     * the same badge a protocol row does for the same value. Chosen over its lifecycle
+     * `status`: a showcase asks what the org owns, not what a certificate is doing.
+     */
+    deviceType: zDeviceType,
+  }),
 ]);
 
 /**
- * How many of each type the caller may read, alongside the capped rows. Scoped to
- * the caller exactly as the rows are, so a group header can never promise more than
- * the "view all" behind it would show.
+ * How many of each owned type the caller may read, alongside the rows. Scoped exactly
+ * as the rows are, so a group header cannot promise more than "view all" would show.
  *
- * A total `Record` over the four showcase types: a fifth type added to the enum
- * fails to compile until it is counted too.
+ * Total over {@link zSharingResourceType} — the same five {@link zOrganizationResource}
+ * carries, so every total has rows behind it and a newly owned type cannot be added
+ * without being counted.
  */
 export const zOrganizationResourceTotals = z.object({
   experiment: z.number().int(),
   protocol: z.number().int(),
   macro: z.number().int(),
   workbook: z.number().int(),
-}) satisfies z.ZodType<Record<z.infer<typeof zOrganizationResourceType>, number>>;
+  device: z.number().int(),
+}) satisfies z.ZodType<Record<z.infer<typeof zSharingResourceType>, number>>;
 
 export const zOrganizationResources = z.object({
   resources: z.array(zOrganizationResource),
@@ -201,13 +214,12 @@ export const zOrganizationResources = z.object({
  * What still stands between an organization and deletion, one row per resource type
  * that holds at least one of its resources.
  *
- * Deliberately not the resources showcase: that is access-scoped and covers four
- * types, while the delete guard counts all five — devices included, which have no
- * sharing surface to appear in a showcase at all. An organization owning nothing but
- * a device would otherwise look deletable right up to the confirmation.
+ * Deliberately not the resources showcase: that is access-scoped, while the delete
+ * guard counts the whole estate. An organization holding one private resource the
+ * caller cannot read would otherwise look deletable right up to the confirmation.
  *
  * Counts, not rows: the remedy is per resource type ("transfer or delete your
- * devices"), and a device has no page to link to anyway.
+ * devices").
  */
 export const zOrganizationDeletionBlocker = z.object({
   resourceType: zSharingResourceType,
@@ -236,9 +248,8 @@ export const zOrganizationTeamList = z.array(zOrganizationTeam);
  * One resource a team can reach because the team itself was named on a grant — the
  * team → resources direction, which `listGranteeTeams` answers in reverse.
  *
- * `resourceType` is the grant enum rather than the showcase's four: a team can hold
- * a grant on a device too, and a footer counting "N resources" that quietly omitted
- * one would understate what deleting the team withdraws.
+ * `resourceType` is the grant enum: a footer counting "N resources" that quietly
+ * omitted a type would understate what deleting the team withdraws.
  */
 export const zOrganizationTeamGrant = z.object({
   id: z.string().uuid().describe("ID of the grant row"),
@@ -268,11 +279,12 @@ export const zGranteeTeam = z.object({
 export const zGranteeTeamList = z.array(zGranteeTeam);
 
 /**
- * Path params for the share-gated team picker. `resourceType` excludes devices —
- * they have no sharing surface — and mirrors the sharing contract's path shape.
+ * Path params for the share-gated team picker. {@link zSharingResourceType} itself
+ * rather than a copy of its values, so it mirrors the sharing contract by construction.
+ * Devices included — a team can hold a grant on one like anything else.
  */
 export const zGranteeTeamsPathParams = z.object({
-  resourceType: z.enum(["experiment", "macro", "protocol", "workbook", "device"]),
+  resourceType: zSharingResourceType,
   id: z.string().uuid().describe("ID of the resource being shared"),
 });
 
@@ -289,7 +301,6 @@ export type MyOrganizationList = z.infer<typeof zMyOrganizationList>;
 export type OrganizationMember = z.infer<typeof zOrganizationMember>;
 export type OrganizationMembers = z.infer<typeof zOrganizationMembers>;
 export type AddOrganizationMemberBody = z.infer<typeof zAddOrganizationMemberBody>;
-export type OrganizationResourceType = z.infer<typeof zOrganizationResourceType>;
 export type OrganizationResource = z.infer<typeof zOrganizationResource>;
 export type OrganizationResourceTotals = z.infer<typeof zOrganizationResourceTotals>;
 export type OrganizationResources = z.infer<typeof zOrganizationResources>;

@@ -141,7 +141,8 @@ export class RequestJoinOrganizationUseCase {
     joinRequest: OrganizationJoinRequestDto,
   ): Promise<void> {
     const [profileResult, emailsResult] = await Promise.all([
-      this.organizationRepository.findProfileFields(organizationId),
+      // Name only, for the notification email; see the note on the decide path.
+      this.organizationRepository.findProfileFields(organizationId, undefined),
       this.organizationRepository.listDeciderEmails(organizationId),
     ]);
 

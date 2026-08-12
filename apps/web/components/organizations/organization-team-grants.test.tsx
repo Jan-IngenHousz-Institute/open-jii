@@ -1,5 +1,5 @@
 import { createOrganizationTeamGrant } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
+import { render, screen, within } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { OrganizationTeamGrants } from "./organization-team-grants";
@@ -44,8 +44,43 @@ describe("<OrganizationTeamGrants />", () => {
     expect(href("Dark adaptation")).toBe("/en-US/platform/protocols/pro-1");
     expect(href("Batch fit")).toBe("/en-US/platform/macros/mac-1");
     expect(href("Synthesis")).toBe("/en-US/platform/workbooks/wor-1");
-    // A device has no sharing surface but does have a detail page.
+    // A device takes grants like the rest and has a detail page to link to; what it
+    // cannot do is be published.
     expect(href("Canopy MultispeQ 01")).toBe("/en-US/platform/devices/dev-1");
+  });
+
+  it("marks each row with its type's own icon, and hides it from assistive tech", () => {
+    const { container } = render(
+      <OrganizationTeamGrants
+        grants={[
+          createOrganizationTeamGrant({ resourceType: "experiment", resourceName: "Canopy" }),
+          createOrganizationTeamGrant({ resourceType: "protocol", resourceName: "Dark" }),
+          createOrganizationTeamGrant({ resourceType: "macro", resourceName: "Fit" }),
+          createOrganizationTeamGrant({ resourceType: "workbook", resourceName: "Synthesis" }),
+          createOrganizationTeamGrant({ resourceType: "device", resourceName: "Ambyte" }),
+        ]}
+      />,
+    );
+
+    // The marks the sidebar and the command palette already use for these five types,
+    // so a row here is recognisable from anywhere else the type shows up.
+    const iconFor = (name: string) =>
+      within(container)
+        .getByRole("link", { name })
+        .closest("[role='listitem']")
+        ?.querySelector("svg.lucide");
+
+    expect(iconFor("Canopy")).toHaveClass("lucide-leaf");
+    expect(iconFor("Dark")).toHaveClass("lucide-file-sliders");
+    expect(iconFor("Fit")).toHaveClass("lucide-code");
+    expect(iconFor("Synthesis")).toHaveClass("lucide-book-open");
+    expect(iconFor("Ambyte")).toHaveClass("lucide-radio-receiver");
+
+    // The type is already stated in words on the right of the row; an accessible name
+    // here would have it announced twice.
+    for (const icon of container.querySelectorAll("svg.lucide")) {
+      expect(icon).toHaveAttribute("aria-hidden", "true");
+    }
   });
 
   it("still links a device whose name fell back to its thing name", () => {

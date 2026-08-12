@@ -17,8 +17,10 @@ import type {
 import { eq, organizationInvitations } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import { assertSuccess } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import { OrganizationRepository } from "../core/repositories/organization.repository";
 
 describe("OrganizationController", () => {
   const testApp = TestHarness.App;
@@ -235,7 +237,18 @@ describe("OrganizationController", () => {
       await testApp.get(path(personalOrgId)).withAuth(ownerId).expect(StatusCodes.NOT_FOUND);
     });
 
-    it("carries the whole estate and the creation date, whatever the caller may read", async () => {
+    /**
+     * This asserted the opposite until the count was scoped — "the whole estate,
+     * whatever the caller may read", on the reasoning that a size is a fact about the
+     * organization and should not shrink per reader.
+     *
+     * Reversed deliberately. The number is rendered on a card as "how much of this is
+     * here for me", and every other count on the surface is access-scoped, so the
+     * unscoped one promised a visitor resources that then were not there — off by
+     * exactly the private estate. Reporting a different size to different readers is
+     * the accepted cost; the previous behaviour was wrong for everyone outside.
+     */
+    it("counts only what the caller may read, and carries the creation date", async () => {
       const publicOrg = await seedPublicOrg();
       const { experiment } = await testApp.createExperiment({
         name: "Closed experiment",
@@ -250,15 +263,21 @@ describe("OrganizationController", () => {
         `UPDATE iot_devices SET organization_id = '${publicOrg}' WHERE id = '${device.id}'`,
       );
 
-      // The outsider is the interesting caller: the count is a fact about the
-      // organization, so it must not shrink to what they happen to be able to open.
-      const response: SuperTestResponse<OrganizationProfile> = await testApp
+      const asOutsider: SuperTestResponse<OrganizationProfile> = await testApp
         .get(path(publicOrg))
         .withAuth(outsiderId)
         .expect(StatusCodes.OK);
+      const asMember: SuperTestResponse<OrganizationProfile> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
 
-      expect(response.body.resourceCount).toBe(2);
-      expect(Number.isNaN(Date.parse(response.body.createdAt))).toBe(false);
+      // The outsider is the interesting caller: a private experiment and a device that
+      // can never be public are both invisible to them, so there is nothing to count.
+      expect(asOutsider.body.resourceCount).toBe(0);
+      // And not simply broken — a member of the same organization counts both.
+      expect(asMember.body.resourceCount).toBe(2);
+      expect(Number.isNaN(Date.parse(asOutsider.body.createdAt))).toBe(false);
     });
   });
 
@@ -373,6 +392,7 @@ describe("OrganizationController", () => {
       expect(byId.get(macro.id)).toMatchObject({ type: "macro", language: "r" });
       // A workbook's row has no meta of its own, and no other type's either.
       expect(Object.keys(byId.get(workbook.id) ?? {}).sort()).toEqual([
+        "collaboratorCount",
         "description",
         "id",
         "name",
@@ -380,6 +400,59 @@ describe("OrganizationController", () => {
         "updatedAt",
         "visibility",
       ]);
+    });
+
+    /**
+     * Asserted on the wire rather than on the use-case result: the field has to survive
+     * the contract's response validation and the controller's date formatting, and a
+     * base-schema field dropped from either would still read fine one layer down.
+     */
+    it("carries a collaborator count on every type, agreeing with the collaborators list", async () => {
+      const publicOrg = await seedPublicOrg();
+      const outsider2 = await testApp.createTestUser({ email: "o2@example.com", name: "O Two" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought stress",
+        userId: ownerId,
+        visibility: "public",
+      });
+      await reassign("experiments", experiment.id, publicOrg);
+      const workbook = await testApp.createWorkbook({
+        name: "Canopy synthesis",
+        createdBy: ownerId,
+        organizationId: publicOrg,
+      });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: outsider2,
+        role: "viewer",
+        createdBy: ownerId,
+      });
+
+      const response: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      const byId = new Map(response.body.resources.map((row) => [row.id, row]));
+      // The organization's one owner, plus the granted outsider on the experiment.
+      expect(byId.get(experiment.id)?.collaboratorCount).toBe(2);
+      expect(byId.get(workbook.id)?.collaboratorCount).toBe(1);
+
+      // The number the card would show, against the tab it links to.
+      const collaborators = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.sharing.listGrants, {
+            resourceType: "experiment",
+            id: experiment.id,
+          }),
+        )
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+      expect(byId.get(experiment.id)?.collaboratorCount).toBe(
+        (collaborators.body as unknown[]).length,
+      );
     });
 
     /**
@@ -419,17 +492,26 @@ describe("OrganizationController", () => {
       });
       await testApp.createMacro({ name: "Batch fit", createdBy: ownerId, organizationId });
       await testApp.createWorkbook({ name: "Synthesis", createdBy: ownerId, organizationId });
+      await testApp.createIotDevice({ createdBy: ownerId, organizationId });
 
       return { live, archived };
     }
 
-    /** Rows of each type, keyed the same way `totals` is. */
+    /**
+     * Rows of each owned type, keyed the same way `totals` is — **all five**.
+     *
+     * There was briefly a `showcaseTotals()` helper here that destructured `device` out,
+     * because devices were counted and never listed. They are listed now, so the
+     * exemption is gone and the invariant covers every type it counts. An exemption is
+     * exactly where the two sides drift.
+     */
     function rowsPerType(body: OrganizationResources) {
       return {
         experiment: body.resources.filter((row) => row.type === "experiment").length,
         protocol: body.resources.filter((row) => row.type === "protocol").length,
         macro: body.resources.filter((row) => row.type === "macro").length,
         workbook: body.resources.filter((row) => row.type === "workbook").length,
+        device: body.resources.filter((row) => row.type === "device").length,
       };
     }
 
@@ -449,6 +531,7 @@ describe("OrganizationController", () => {
         protocol: 1,
         macro: 1,
         workbook: 1,
+        device: 1,
       });
       // The archived row carries its status, which is the only surface that shows it.
       expect(response.body.resources.find((row) => row.id === archived.id)).toMatchObject({
@@ -534,10 +617,308 @@ describe("OrganizationController", () => {
         protocol: 1,
         macro: 0,
         workbook: 0,
+        device: 0,
       });
       // Scoped exactly like the rows: the private experiment is behind neither.
       expect(asOutsider.body.totals.experiment).toBe(1);
       expect(asOutsider.body.resources).toHaveLength(2);
+    });
+
+    /**
+     * This asserted the opposite — that devices are counted and never listed. They were,
+     * briefly, and it showed as a Devices segment on the estate bar with no Devices
+     * group in the list beneath it. A member reaches the organization's devices through
+     * the same owning-org arm that gets them every other private resource, so a device
+     * is a resource they can see and the card that lists what the organization owns
+     * lists it.
+     */
+    it("lists an organization's devices as well as counting them", async () => {
+      const publicOrg = await seedPublicOrg();
+      await testApp.createIotDevice({ createdBy: ownerId, organizationId: publicOrg });
+      await testApp.createIotDevice({ createdBy: ownerId, organizationId: publicOrg });
+      await testApp.createWorkbook({
+        name: "Synthesis",
+        createdBy: ownerId,
+        organizationId: publicOrg,
+      });
+
+      const response: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.totals.device).toBe(2);
+      // Two device rows to go with the count of two, alongside the workbook.
+      expect(response.body.resources.filter((row) => row.type === "device")).toHaveLength(2);
+      expect(response.body.totals.workbook).toBe(1);
+    });
+
+    it("lists a member's devices as rows, and falls back to the thing name", async () => {
+      const publicOrg = await seedPublicOrg();
+      const named = await testApp.createIotDevice({
+        createdBy: ownerId,
+        organizationId: publicOrg,
+        name: "Canopy MultispeQ 01",
+        deviceType: "multispeq",
+      });
+      // `name` is nullable and `thing_name` is not, so an unnamed device still has
+      // something to render — deliberately another identifier, not a placeholder.
+      const nameless = await testApp.createIotDevice({
+        createdBy: ownerId,
+        organizationId: publicOrg,
+        name: null,
+        thingName: "orgseed-canopy-ambyte-01",
+        deviceType: "ambyte",
+      });
+
+      const response: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+
+      const devices = response.body.resources.filter((row) => row.type === "device");
+      expect(devices).toHaveLength(2);
+      expect(devices.find((row) => row.id === named.id)).toMatchObject({
+        type: "device",
+        name: "Canopy MultispeQ 01",
+        deviceType: "multispeq",
+        // No `description` column on the table, so the field is structurally null.
+        description: null,
+      });
+      expect(devices.find((row) => row.id === nameless.id)?.name).toBe("orgseed-canopy-ambyte-01");
+    });
+
+    /**
+     * A creator since removed from the owning organization. This case used to separate
+     * the device read from every other type's: an authorship arm listed the device while
+     * `accessibleResourceCondition` — which the totals use — denied it. The arm is gone,
+     * so rows and count now narrow together here like everywhere else, and this is the
+     * test that would catch it coming back.
+     */
+    it("does not list a device to its creator once they have left the organization", async () => {
+      const publicOrg = await seedPublicOrg();
+      const leaver = await testApp.createTestUser({
+        email: "leaver@example.com",
+        name: "Lee Leaver",
+      });
+      await testApp.addOrganizationMember(publicOrg, leaver, "member");
+      await testApp.createIotDevice({ createdBy: leaver, organizationId: publicOrg });
+
+      const whileMember: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(leaver)
+        .expect(StatusCodes.OK);
+      expect(whileMember.body.resources.filter((row) => row.type === "device")).toHaveLength(1);
+      expect(whileMember.body.totals.device).toBe(1);
+
+      await testApp.database.execute(
+        `DELETE FROM organization_members WHERE organization_id = '${publicOrg}' AND user_id = '${leaver}'`,
+      );
+
+      const afterLeaving: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(leaver)
+        .expect(StatusCodes.OK);
+
+      // Rows and count agree on zero, which is the whole property.
+      expect(afterLeaving.body.resources.filter((row) => row.type === "device")).toHaveLength(0);
+      expect(afterLeaving.body.totals.device).toBe(0);
+    });
+
+    it("shows an outsider no device rows while still showing the public groups", async () => {
+      const publicOrg = await seedPublicOrg();
+      await testApp.createIotDevice({ createdBy: ownerId, organizationId: publicOrg });
+      const { experiment: open } = await testApp.createExperiment({
+        name: "Open experiment",
+        userId: ownerId,
+        visibility: "public",
+      });
+      await reassign("experiments", open.id, publicOrg);
+
+      const response: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(outsiderId)
+        .expect(StatusCodes.OK);
+
+      // Four groups and four segments for a visitor, five and five for a member — the
+      // rows and the counts narrow together.
+      expect(response.body.resources.map((row) => row.type)).toEqual(["experiment"]);
+      expect(response.body.totals.device).toBe(0);
+    });
+
+    it("shows a non-member no devices, since a device can never be public", async () => {
+      const publicOrg = await seedPublicOrg();
+      await testApp.createIotDevice({ createdBy: ownerId, organizationId: publicOrg });
+      const { experiment: open } = await testApp.createExperiment({
+        name: "Open experiment",
+        userId: ownerId,
+        visibility: "public",
+      });
+      await reassign("experiments", open.id, publicOrg);
+
+      const asMember: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+      const asOutsider: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(outsiderId)
+        .expect(StatusCodes.OK);
+
+      // `zPublishableResourceType` excludes devices, so nothing can publish one and the
+      // shared predicate's public arm is unreachable for them. A member counts it
+      // through their membership; an outsider has no arm left that could.
+      expect(asMember.body.totals.device).toBe(1);
+      expect(asOutsider.body.totals.device).toBe(0);
+      // Not vacuous — the outsider does reach this organization and sees its public work.
+      expect(asOutsider.body.totals.experiment).toBe(1);
+    });
+  });
+
+  /**
+   * **The count agreement.** Every surface that says how big an organization is has to
+   * say the same thing to the same caller.
+   *
+   * This is the invariant that was broken: `resourceCount` was a bare `COUNT(*)` while
+   * the per-type totals were access-scoped, so a visitor read 43 on the directory card
+   * and 3 in the mix header one click later — off by exactly the private estate. Both
+   * now build from one SQL fragment, and this pins the consequence rather than the
+   * implementation, so it holds however either side is rewritten.
+   */
+  describe("resourceCount agrees with the per-type totals", () => {
+    const profilePath = (id: string) =>
+      testApp.resolveOrpcPath(contract.organizations.getOrganization, { id });
+    const resourcesPath = (id: string) =>
+      testApp.resolveOrpcPath(contract.organizations.listOrganizationResources, { id });
+    const directoryPath = () => testApp.resolveOrpcPath(contract.organizations.listOrganizations);
+
+    /**
+     * One public organization holding four things: a public experiment anyone may read,
+     * two private experiments, and a private device. Four callers will each see a
+     * different number of them.
+     */
+    async function seedMixedEstate(organizationId: string) {
+      const { experiment: open } = await testApp.createExperiment({
+        name: "Open experiment",
+        userId: ownerId,
+        visibility: "public",
+      });
+      const { experiment: shared } = await testApp.createExperiment({
+        name: "Shared experiment",
+        userId: ownerId,
+        visibility: "private",
+      });
+      const { experiment: closed } = await testApp.createExperiment({
+        name: "Closed experiment",
+        userId: ownerId,
+        visibility: "private",
+      });
+      await testApp.database.execute(
+        `UPDATE experiments SET organization_id = '${organizationId}'
+         WHERE id IN ('${open.id}', '${shared.id}', '${closed.id}')`,
+      );
+      await testApp.createIotDevice({ createdBy: ownerId, organizationId });
+      return { shared };
+    }
+
+    /** The profile's single number and the showcase's five, for one caller. */
+    async function countsFor(organizationId: string, userId: string) {
+      const profile: SuperTestResponse<OrganizationProfile> = await testApp
+        .get(profilePath(organizationId))
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+      const resources: SuperTestResponse<OrganizationResources> = await testApp
+        .get(resourcesPath(organizationId))
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      const totalsSum = Object.values(resources.body.totals).reduce((sum, n) => sum + n, 0);
+      return { resourceCount: profile.body.resourceCount, totalsSum };
+    }
+
+    it("agrees for a member, who can read the whole estate", async () => {
+      const publicOrg = await seedPublicOrg();
+      await seedMixedEstate(publicOrg);
+
+      const { resourceCount, totalsSum } = await countsFor(publicOrg, memberId);
+
+      expect(resourceCount).toBe(totalsSum);
+      // Not vacuous: three experiments and a device, all reachable through membership.
+      expect(resourceCount).toBe(4);
+    });
+
+    it("agrees for an outsider, who can read one of the four", async () => {
+      const publicOrg = await seedPublicOrg();
+      await seedMixedEstate(publicOrg);
+
+      const { resourceCount, totalsSum } = await countsFor(publicOrg, outsiderId);
+
+      expect(resourceCount).toBe(totalsSum);
+      // The number that used to be 4 here, promising three resources this caller
+      // cannot open — the two private experiments and the device.
+      expect(resourceCount).toBe(1);
+    });
+
+    it("agrees for an outsider holding a grant, who can read two", async () => {
+      const publicOrg = await seedPublicOrg();
+      const { shared } = await seedMixedEstate(publicOrg);
+      const grantee = await testApp.createTestUser({
+        email: "grantee@example.com",
+        name: "Gina Grantee",
+      });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: shared.id,
+        granteeType: "user",
+        granteeId: grantee,
+        role: "viewer",
+        createdBy: ownerId,
+      });
+
+      const { resourceCount, totalsSum } = await countsFor(publicOrg, grantee);
+
+      expect(resourceCount).toBe(totalsSum);
+      // The public one plus the one shared with them — a grant is a read tier, so it
+      // has to lift the count as well as the rows.
+      expect(resourceCount).toBe(2);
+    });
+
+    it("reports the same scoped number on the directory card as on the profile", async () => {
+      const publicOrg = await seedPublicOrg();
+      await seedMixedEstate(publicOrg);
+
+      const directory: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(directoryPath())
+        .withAuth(outsiderId)
+        .expect(StatusCodes.OK);
+      const card = directory.body.organizations.find((row) => row.id === publicOrg);
+
+      const { resourceCount } = await countsFor(publicOrg, outsiderId);
+      // The card is what a visitor reads before clicking, so it is the surface the old
+      // number was most wrong on.
+      expect(card?.resourceCount).toBe(resourceCount);
+      expect(card?.resourceCount).toBe(1);
+    });
+
+    /**
+     * The no-caller arm, which no route can reach — every organization endpoint takes a
+     * session — but the join-request email paths hit `findProfileFields` with no viewer,
+     * so the predicate has to collapse to public-only rather than throw or count
+     * everything. Exercised on the repository because there is no HTTP surface for it.
+     */
+    it("collapses to public-only when there is no caller at all", async () => {
+      const publicOrg = await seedPublicOrg();
+      await seedMixedEstate(publicOrg);
+      const repository = testApp.module.get(OrganizationRepository);
+
+      const anonymous = await repository.findProfileFields(publicOrg, undefined);
+      assertSuccess(anonymous);
+      const asOwner = await repository.findProfileFields(publicOrg, ownerId);
+      assertSuccess(asOwner);
+
+      expect(anonymous.value?.resourceCount).toBe(1);
+      // Not a constant: the same read with a member counts all four.
+      expect(asOwner.value?.resourceCount).toBe(4);
     });
   });
 
@@ -564,11 +945,14 @@ describe("OrganizationController", () => {
     });
 
     /**
-     * The reason the showcase cannot serve this purpose: devices are absent from it
-     * — they have no sharing surface — but the delete guard counts them, so an
-     * organization owning only a device would otherwise look deletable.
+     * The reason the showcase cannot serve this purpose. It used to be that devices were
+     * absent from the showcase entirely; they are listed there now, so the remaining —
+     * and load-bearing — difference is scoping: the showcase counts what *this caller*
+     * may read, while the delete guard counts the organization's whole estate. An owner
+     * sees the same number from both, which is why the sibling test below exercises the
+     * unscoped path with resources the caller cannot read.
      */
-    it("counts devices, which the resources showcase never lists", async () => {
+    it("counts a device that the showcase shows this caller too", async () => {
       const org = await seedPrivateOrg();
       const device = await testApp.createIotDevice({ createdBy: ownerId });
       await reassign("iot_devices", device.id, org);
@@ -577,7 +961,7 @@ describe("OrganizationController", () => {
         .get(testApp.resolveOrpcPath(contract.organizations.listOrganizationResources, { id: org }))
         .withAuth(ownerId)
         .expect(StatusCodes.OK);
-      expect(showcase.body.resources).toEqual([]);
+      expect(showcase.body.resources.map((row) => row.type)).toEqual(["device"]);
 
       const response: SuperTestResponse<OrganizationDeletionBlockers> = await testApp
         .get(path(org))

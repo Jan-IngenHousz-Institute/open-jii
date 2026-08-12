@@ -118,11 +118,13 @@ describe("organization strings", () => {
       ...["pending", "approved", "rejected", "cancelled"].map(
         (status) => `organizations.requests.status.${status}`,
       ),
-      ...["experiment", "macro", "protocol", "workbook"].map(
+      // Built from a template literal, so the source scan above cannot see these.
+      // This list is the only thing standing between a missing label and a row
+      // rendering its own key.
+      ...["experiment", "macro", "protocol", "workbook", "device"].map(
         (type) => `organizations.resources.types.${type}`,
       ),
-      // The delete-blocker breakdown names every owned type, devices included —
-      // the one the resources showcase never lists.
+      // The delete-blocker breakdown names every owned type.
       ...["experiment", "macro", "protocol", "workbook", "device"].map(
         (type) => `organizations.delete.owned.${type}`,
       ),

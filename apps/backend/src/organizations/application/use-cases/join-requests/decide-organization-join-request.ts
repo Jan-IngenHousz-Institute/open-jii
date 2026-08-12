@@ -146,7 +146,11 @@ export class DecideOrganizationJoinRequestUseCase {
   ): Promise<void> {
     if (!request.user.email) return;
 
-    const profileResult = await this.organizationRepository.findProfileFields(organizationId);
+    // No viewer: this reads the name to compose an email and discards the count.
+    const profileResult = await this.organizationRepository.findProfileFields(
+      organizationId,
+      undefined,
+    );
     if (profileResult.isFailure() || !profileResult.value) {
       this.logger.error({
         msg: "Failed to load the organization for a join request decision email",

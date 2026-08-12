@@ -2,8 +2,13 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { AppError, Result, failure, isFailure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
+import { IotDeviceRepository } from "../../../../iot/core/repositories/iot-device.repository";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
+import {
+  SharingRepository,
+  collaboratorCountKey,
+} from "../../../../sharing/core/repositories/sharing.repository";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import type {
   OrganizationResourceDto,
@@ -22,6 +27,14 @@ interface ShowcaseRow {
 }
 
 /**
+ * A device's display name. `name` is nullable and `thing_name` is not — the same
+ * fallback `RESOURCE_NAME_SQL` applies for the team-grants list.
+ */
+function deviceName(device: { name: string | null; thingName: string }): string {
+  return device.name ?? device.thingName;
+}
+
+/**
  * The organization's resources showcase. Each type's own access-scoped `findAll` does
  * the filtering, so there is no second definition of "visible" to drift from `can()`.
  *
@@ -29,6 +42,9 @@ interface ShowcaseRow {
  * "view all" has to mean all of it. `totals` is still counted separately because a
  * group header needs the honest number, and that second computation is the seam a row
  * filter added later would reopen.
+ *
+ * Collaborator counts are one grouped read over every id at once, joined onto the rows
+ * here — per-resource would scale with an uncapped view.
  */
 @Injectable()
 export class ListOrganizationResourcesUseCase {
@@ -40,6 +56,8 @@ export class ListOrganizationResourcesUseCase {
     private readonly protocolRepository: ProtocolRepository,
     private readonly macroRepository: MacroRepository,
     private readonly workbookRepository: WorkbookRepository,
+    private readonly iotDeviceRepository: IotDeviceRepository,
+    private readonly sharingRepository: SharingRepository,
   ) {}
 
   async execute(
@@ -64,7 +82,7 @@ export class ListOrganizationResourcesUseCase {
       return failure(AppError.notFound(`Organization with ID ${organizationId} not found`));
     }
 
-    const [experiments, protocols, macros, workbooks, totals] = await Promise.all([
+    const [experiments, protocols, macros, workbooks, devices, totals] = await Promise.all([
       // Archived stay in: every other count of what an organization owns includes them,
       // so dropping them here would let a group header promise a row the list cannot show.
       this.experimentRepository.findAll(userId, undefined, undefined, undefined, undefined, {
@@ -74,6 +92,7 @@ export class ListOrganizationResourcesUseCase {
       this.protocolRepository.findAll(undefined, undefined, userId, undefined, organizationId),
       this.macroRepository.findAll({ userId, organizationId }),
       this.workbookRepository.findAll({ userId, organizationId }),
+      this.iotDeviceRepository.listAccessible(userId, { organizationId }),
       this.organizationRepository.countAccessibleResources(organizationId, userId),
     ]);
 
@@ -81,27 +100,55 @@ export class ListOrganizationResourcesUseCase {
     if (isFailure(protocols)) return failure(protocols.error);
     if (isFailure(macros)) return failure(macros.error);
     if (isFailure(workbooks)) return failure(workbooks.error);
+    if (isFailure(devices)) return failure(devices.error);
     if (totals.isFailure()) {
       return failure(AppError.internal("Failed to count an organization's resources"));
     }
 
+    const collaborators = await this.sharingRepository.countCollaborators(organizationId, [
+      ...experiments.value.map((row) => ({
+        resourceType: "experiment" as const,
+        resourceId: row.id,
+      })),
+      ...protocols.value.map((row) => ({ resourceType: "protocol" as const, resourceId: row.id })),
+      ...macros.value.map((row) => ({ resourceType: "macro" as const, resourceId: row.id })),
+      ...workbooks.value.map((row) => ({ resourceType: "workbook" as const, resourceId: row.id })),
+      ...devices.value.map((row) => ({ resourceType: "device" as const, resourceId: row.id })),
+    ]);
+    if (collaborators.isFailure()) {
+      return failure(AppError.internal("Failed to count an organization's collaborators"));
+    }
+
+    // Zero rather than a hole: every id asked about comes back, so a miss means the
+    // resource was deleted between the two reads.
+    const countFor = (type: OrganizationResourceDto["type"], id: string) =>
+      collaborators.value.get(collaboratorCountKey(type, id)) ?? 0;
+
     const resources = [
       ...experiments.value.map((row) => ({
-        ...base(row),
+        ...base(row, countFor("experiment", row.id)),
         type: "experiment" as const,
         status: row.status,
       })),
       ...protocols.value.map((row) => ({
-        ...base(row),
+        ...base(row, countFor("protocol", row.id)),
         type: "protocol" as const,
         family: row.family,
       })),
       ...macros.value.map((row) => ({
-        ...base(row),
+        ...base(row, countFor("macro", row.id)),
         type: "macro" as const,
         language: row.language,
       })),
-      ...workbooks.value.map((row) => ({ ...base(row), type: "workbook" as const })),
+      ...workbooks.value.map((row) => ({
+        ...base(row, countFor("workbook", row.id)),
+        type: "workbook" as const,
+      })),
+      ...devices.value.map((row) => ({
+        ...base({ ...row, name: deviceName(row), description: null }, countFor("device", row.id)),
+        type: "device" as const,
+        deviceType: row.deviceType,
+      })),
     ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
     return success({ resources, totals: totals.value });
@@ -109,12 +156,16 @@ export class ListOrganizationResourcesUseCase {
 }
 
 /** The columns every showcased type contributes, whatever its own meta is. */
-function base(row: ShowcaseRow): Omit<ShowcaseRow, "description"> & { description: string | null } {
+function base(
+  row: ShowcaseRow,
+  collaboratorCount: number,
+): Omit<ShowcaseRow, "description"> & { description: string | null; collaboratorCount: number } {
   return {
     id: row.id,
     name: row.name,
     description: row.description ?? null,
     visibility: row.visibility,
     updatedAt: row.updatedAt,
+    collaboratorCount,
   };
 }

@@ -3,8 +3,10 @@ import { Module } from "@nestjs/common";
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { ExperimentModule } from "../experiments/experiment.module";
+import { IotModule } from "../iot/iot.module";
 import { MacroModule } from "../macros/macro.module";
 import { ProtocolModule } from "../protocols/protocol.module";
+import { SharingModule } from "../sharing/sharing.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 import { AcceptPendingOrganizationInvitationsUseCase } from "./application/use-cases/accept-pending-organization-invitations/accept-pending-organization-invitations";
 import { AddOrganizationMemberUseCase } from "./application/use-cases/add-organization-member/add-organization-member";
@@ -37,12 +39,19 @@ import { OrganizationController } from "./presentation/organization.controller";
  * `authClient.organization.*`; the hook class holds the shields that Better Auth's
  * own organization hooks do not fire for.
  *
- * The four resource modules are imported for their access-scoped `findAll`s, which
- * the organization profile's resources showcase delegates to rather than
- * re-deriving what a viewer may see.
+ * The resource modules and sharing are imported so the showcase delegates to their
+ * access-scoped reads rather than re-deriving what a viewer may see.
  */
 @Module({
-  imports: [EmailModule, ExperimentModule, ProtocolModule, MacroModule, WorkbookModule],
+  imports: [
+    EmailModule,
+    ExperimentModule,
+    ProtocolModule,
+    MacroModule,
+    WorkbookModule,
+    IotModule,
+    SharingModule,
+  ],
   controllers: [OrganizationController, OrganizationJoinRequestsController],
   providers: [
     OrganizationRepository,

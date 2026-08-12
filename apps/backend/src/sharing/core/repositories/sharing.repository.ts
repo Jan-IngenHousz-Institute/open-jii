@@ -148,10 +148,89 @@ function teamMemberCountSql() {
   )`.mapWith(Number);
 }
 
+/** One resource to count collaborators on. */
+export interface CollaboratorCountTarget {
+  resourceType: SharingResourceType;
+  resourceId: string;
+}
+
+/**
+ * How {@link SharingRepository.countCollaborators} keys its answer. A grant table is
+ * polymorphic, so neither half identifies a resource on its own.
+ */
+export function collaboratorCountKey(resourceType: SharingResourceType, resourceId: string) {
+  return `${resourceType}:${resourceId}`;
+}
+
 /** Data access for the sharing module, over the shared `@repo/database` helpers. */
 @Injectable()
 export class SharingRepository {
   constructor(@Inject("DATABASE") private readonly db: DatabaseInstance) {}
+
+  /**
+   * How many collaborators each of `resources` has, by {@link list}'s own definition:
+   * the owning org's living owners, plus every grant, minus the user grants those
+   * owners hold. A team or org grantee counts as the one grantee it is, not expanded
+   * to its members — the same arithmetic as the collaborators surface.
+   *
+   * One statement for the whole page. The asked-for pairs go in as a `VALUES` list and
+   * are left-joined, so the grants read is one grouped scan and a resource with no
+   * grants still comes back. All of `resources` must belong to `owningOrganizationId`.
+   */
+  countCollaborators(
+    owningOrganizationId: string,
+    resources: readonly CollaboratorCountTarget[],
+  ): Promise<Result<Map<string, number>>> {
+    return tryCatch(async () => {
+      const counts = new Map<string, number>();
+      if (resources.length === 0) return counts;
+
+      const asked = sql.join(
+        resources.map(
+          (resource) =>
+            sql`(${resource.resourceType}::"resource_type", ${resource.resourceId}::uuid)`,
+        ),
+        sql`, `,
+      );
+
+      const rows = await this.db.execute<{
+        resource_type: SharingResourceType;
+        resource_id: string;
+        collaborator_count: number;
+      }>(sql`
+        WITH "owners" AS (${livingOrgOwnerIdsSql(sql`${owningOrganizationId}::uuid`)}),
+        "asked" ("resource_type", "resource_id") AS (VALUES ${asked}),
+        "granted" AS (
+          SELECT ${resourceGrants.resourceType} AS "resource_type",
+                 ${resourceGrants.resourceId} AS "resource_id",
+                 COUNT(*)::int AS "n"
+          FROM ${resourceGrants}
+          JOIN "asked" ON "asked"."resource_type" = ${resourceGrants.resourceType}
+                      AND "asked"."resource_id" = ${resourceGrants.resourceId}
+          WHERE NOT (
+            ${resourceGrants.granteeType} = 'user'
+            AND ${resourceGrants.granteeId} IN (SELECT "user_id" FROM "owners")
+          )
+          GROUP BY 1, 2
+        )
+        SELECT "asked"."resource_type"::text AS "resource_type",
+               "asked"."resource_id"::text AS "resource_id",
+               (SELECT COUNT(*)::int FROM "owners") + COALESCE("granted"."n", 0)
+                 AS "collaborator_count"
+        FROM "asked"
+        LEFT JOIN "granted" ON "granted"."resource_type" = "asked"."resource_type"
+                           AND "granted"."resource_id" = "asked"."resource_id"
+      `);
+
+      for (const row of rows) {
+        counts.set(
+          collaboratorCountKey(row.resource_type, row.resource_id),
+          Number(row.collaborator_count),
+        );
+      }
+      return counts;
+    });
+  }
 
   /**
    * Grants on a resource with their grantee's display info. `isOutsideCollaborator`

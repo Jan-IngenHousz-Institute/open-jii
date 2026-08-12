@@ -13,8 +13,8 @@ import { useState } from "react";
 import type {
   OrganizationResource,
   OrganizationResourceTotals,
-  OrganizationResourceType,
 } from "@repo/api/domains/organization/organization.schema";
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import {
@@ -29,21 +29,7 @@ import {
   TooltipTrigger,
 } from "@repo/ui/components/tooltip";
 
-/** Where each showcased resource type lives on the platform. */
-const RESOURCE_SEGMENT: Record<OrganizationResourceType, string> = {
-  experiment: "experiments",
-  macro: "macros",
-  protocol: "protocols",
-  workbook: "workbooks",
-};
-
-/** The order the groups read in: the two things you make, then the two you write. */
-const GROUP_ORDER: readonly OrganizationResourceType[] = [
-  "experiment",
-  "protocol",
-  "macro",
-  "workbook",
-];
+import { GROUP_ORDER, RESOURCE_SEGMENT } from "./organization-resource-meta";
 
 /** Rows a group shows before it has to be asked to expand. */
 const PREVIEW_ROW_COUNT = 3;
@@ -85,6 +71,13 @@ function metaBadge(
       return {
         label: getMacroLanguageLabel(resource.language),
         colorClass: getMacroLanguageBadgeColor(resource.language),
+      };
+    case "device":
+      // `deviceType` is `zSensorFamily` under another name, so a MultispeQ device and a
+      // MultispeQ protocol wear the identical badge. A product name, so untranslated.
+      return {
+        label: getSensorFamilyLabel(resource.deviceType),
+        colorClass: getSensorFamilyBadgeColor(resource.deviceType),
       };
     case "workbook":
       return null;
@@ -140,7 +133,7 @@ function ResourceGroup({
   total,
   items,
 }: {
-  type: OrganizationResourceType;
+  type: SharingResourceType;
   total: number;
   items: OrganizationResource[];
 }) {

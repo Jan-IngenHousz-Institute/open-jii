@@ -675,7 +675,9 @@
         "macro_one": "Macro",
         "macro_other": "Macro's",
         "workbook_one": "Werkmap",
-        "workbook_other": "Werkmappen"
+        "workbook_other": "Werkmappen",
+        "device_one": "Apparaat",
+        "device_other": "Apparaten"
       },
       "emptyTitle": "Nog niets te zien",
       "emptyMemberHint": "Resources die in deze organisatie worden aangemaakt, staan hier.",
@@ -902,7 +904,17 @@
       "title": "Over",
       "noDescription": "Deze organisatie heeft zichzelf nog niet beschreven.",
       "onOpenJii": "Op openJII",
-      "since": "Sinds {{date}}"
+      "since": "Sinds {{date}}",
+      "teamCount_one": "{{count}} team",
+      "teamCount_other": "{{count}} teams"
+    },
+    "featured": {
+      "title": "Uitgelichte resources",
+      "collaboratorCount_one": "{{count}} samenwerker",
+      "collaboratorCount_other": "{{count}} samenwerkers"
+    },
+    "mix": {
+      "title": "Samenstelling van resources"
     },
     "overview": {
       "visitorNotice": "Je bekijkt een openbaar profiel. Leden zien alles waartoe ze toegang hebben; vraag om lid te worden en een eigenaar beslist."

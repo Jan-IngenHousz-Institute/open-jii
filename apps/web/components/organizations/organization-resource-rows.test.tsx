@@ -11,6 +11,7 @@ const NO_TOTALS: OrganizationResourceTotals = {
   protocol: 0,
   macro: 0,
   workbook: 0,
+  device: 0,
 };
 
 /** `n` experiments, named so the row order is checkable. */
@@ -201,5 +202,77 @@ describe("<OrganizationResourceRows />", () => {
     // A language is a proper noun, so it is not translated and `r` is "R".
     expect(screen.getByText("R")).toHaveClass("bg-badge-stale");
     expect(screen.getByLabelText("resourceVisibility.privateStatus")).toBeVisible();
+  });
+
+  describe("devices", () => {
+    it("gets its own group, with the badge a protocol wears for the same value", () => {
+      const { container } = render(
+        <OrganizationResourceRows
+          resources={[
+            createOrganizationResource({
+              type: "device",
+              id: "dev-1",
+              name: "Canopy MultispeQ 01",
+              deviceType: "multispeq",
+            }),
+          ]}
+          totals={{ ...NO_TOTALS, device: 1 }}
+        />,
+      );
+
+      expect(
+        within(container).getByRole("heading", { name: /organizations.resources.types.device/u }),
+      ).toBeVisible();
+      // `deviceType` is `zSensorFamily` under another name, so the label and colour are
+      // the platform's existing ones — a MultispeQ device reads like a MultispeQ protocol.
+      expect(within(container).getByText("MultispeQ")).toHaveClass("bg-badge-published");
+      expect(within(container).getByRole("link", { name: "Canopy MultispeQ 01" })).toHaveAttribute(
+        "href",
+        "/en-US/platform/devices/dev-1",
+      );
+    });
+
+    /**
+     * A device has no `description` column at all, so the field is structurally null
+     * rather than merely empty. The row must render no description element — not an
+     * empty one that reserves a line's height on every device row.
+     */
+    it("renders no description element, since a device has no description column", () => {
+      const { container } = render(
+        <OrganizationResourceRows
+          resources={[
+            createOrganizationResource({ type: "device", name: "Ambyte 04", description: null }),
+          ]}
+          totals={{ ...NO_TOTALS, device: 1 }}
+        />,
+      );
+
+      const row = within(container).getByRole("listitem");
+      expect(row.querySelector("p")).toBeNull();
+    });
+
+    it("reads last, after the four types that are made and written", () => {
+      const { container } = render(
+        <OrganizationResourceRows
+          resources={[
+            createOrganizationResource({ type: "device", name: "Sensor" }),
+            createOrganizationResource({ name: "Campaign" }),
+            createOrganizationResource({ type: "workbook", name: "Synthesis" }),
+          ]}
+          totals={{ ...NO_TOTALS, experiment: 1, workbook: 1, device: 1 }}
+        />,
+      );
+
+      // The order the estate bar segments by and the featured card rotates through.
+      expect(
+        within(container)
+          .getAllByRole("heading")
+          .map((heading) => heading.textContent),
+      ).toEqual([
+        "organizations.resources.types.experiment",
+        "organizations.resources.types.workbook",
+        "organizations.resources.types.device",
+      ]);
+    });
   });
 });

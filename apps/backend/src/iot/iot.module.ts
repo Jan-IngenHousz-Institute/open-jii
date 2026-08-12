@@ -46,5 +46,7 @@ import { IotController } from "./presentation/iot.controller";
       useExisting: AnalyticsAdapter,
     },
   ],
+  // For the organization showcase's device rows, scoped by the shared read predicate.
+  exports: [IotDeviceRepository],
 })
 export class IotModule {}

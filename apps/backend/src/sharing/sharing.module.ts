@@ -28,5 +28,8 @@ import { SharingController } from "./presentation/sharing.controller";
     TransferResourceOrgUseCase,
     SearchGranteeOrganizationsUseCase,
   ],
+  // For the organization showcase's collaborator counts, read from the same place the
+  // collaborators surface does.
+  exports: [SharingRepository],
 })
 export class SharingModule {}

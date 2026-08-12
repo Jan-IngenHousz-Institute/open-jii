@@ -562,7 +562,9 @@
         "macro_one": "Macro",
         "macro_other": "Macros",
         "workbook_one": "Workbook",
-        "workbook_other": "Workbooks"
+        "workbook_other": "Workbooks",
+        "device_one": "Device",
+        "device_other": "Devices"
       },
       "emptyTitle": "Nothing to show yet",
       "emptyMemberHint": "Resources created in this organization appear here.",
@@ -789,7 +791,17 @@
       "title": "About",
       "noDescription": "This organization has not described itself yet.",
       "onOpenJii": "On openJII",
-      "since": "Since {{date}}"
+      "since": "Since {{date}}",
+      "teamCount_one": "{{count}} team",
+      "teamCount_other": "{{count}} teams"
+    },
+    "featured": {
+      "title": "Featured resources",
+      "collaboratorCount_one": "{{count}} collaborator",
+      "collaboratorCount_other": "{{count}} collaborators"
+    },
+    "mix": {
+      "title": "Resource mix"
     },
     "overview": {
       "visitorNotice": "You are looking at a public profile. Members see everything they have access to; ask to join and an owner decides."

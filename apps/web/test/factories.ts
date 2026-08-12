@@ -455,19 +455,35 @@ export function createOrganizationTeam(
 /**
  * A showcase row. Defaults to an experiment, since that is the only type carrying
  * meta a caller is likely to want to override; pass `type` for the others.
+ *
+ * Per-type meta is picked by type, not merged: a `device` with no `deviceType` reaches
+ * `getSensorFamilyLabel(undefined)`, which throws rather than degrading.
  */
 export function createOrganizationResource(
   overrides: Partial<OrganizationResource> = {},
 ): OrganizationResource {
   organizationSeq++;
+  const type = overrides.type ?? "experiment";
+  const meta =
+    type === "experiment"
+      ? { status: "active" }
+      : type === "protocol"
+        ? { family: "multispeq" }
+        : type === "macro"
+          ? { language: "python" }
+          : type === "device"
+            ? { deviceType: "multispeq" }
+            : {};
+
   return {
-    type: "experiment",
+    type,
     id: `resource-${organizationSeq}`,
     name: `Canopy series ${organizationSeq}`,
     description: null,
     visibility: "public",
     updatedAt: "2026-01-01T00:00:00.000Z",
-    status: "active",
+    collaboratorCount: 1,
+    ...meta,
     ...overrides,
   } as OrganizationResource;
 }

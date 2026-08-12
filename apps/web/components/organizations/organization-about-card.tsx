@@ -3,22 +3,47 @@
 import { useLocale } from "@/hooks/useLocale";
 import { ExternalLink } from "lucide-react";
 
-import type { OrganizationProfile } from "@repo/api/domains/organization/organization.schema";
+import type {
+  OrganizationMember,
+  OrganizationProfile,
+  OrganizationTeam,
+} from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card } from "@repo/ui/components/card";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 
+import { OrganizationAvatarTrail, teamAsTrailFace } from "./organization-avatar-trail";
 import { organizationTypeLabelKey } from "./organization-labels";
+import { organizationMembersPath, organizationTeamsPath } from "./organization-routes";
+
+interface OrganizationAboutCardProps {
+  organization: OrganizationProfile;
+  /** Member-only reads, so both are absent for a visitor and while either is in flight. */
+  members?: OrganizationMember[];
+  teams?: OrganizationTeam[];
+  isMembersPending?: boolean;
+  isTeamsPending?: boolean;
+}
 
 /**
  * What the organization says about itself, plus the handful of facts a visitor
  * deciding whether to ask to join actually wants. The description lives here rather
  * than in the header band because here it has room to be read.
  *
+ * Who is in it lives here too, as two more entries rather than as tiles above — a face
+ * says more about a roster than a number does. Member-only, matching the teams
+ * endpoint.
+ *
  * A row is present only when the field is set: an unfilled profile should read as a
  * short one, not as a list of blanks.
  */
-export function OrganizationAboutCard({ organization }: { organization: OrganizationProfile }) {
+export function OrganizationAboutCard({
+  organization,
+  members,
+  teams,
+  isMembersPending = false,
+  isTeamsPending = false,
+}: OrganizationAboutCardProps) {
   const { t } = useTranslation();
   const locale = useLocale();
 
@@ -27,10 +52,11 @@ export function OrganizationAboutCard({ organization }: { organization: Organiza
     month: "long",
     year: "numeric",
   });
+  const isMember = organization.role != null;
 
   return (
     <Card className="p-5">
-      <h2 className="text-sm font-semibold">{t("organizations.about.title")}</h2>
+      <h2 className="text-lg font-semibold tracking-tight">{t("organizations.about.title")}</h2>
 
       {/*
         Rendered as rich text, matching the listing card — this is a roomy paragraph, so
@@ -51,7 +77,9 @@ export function OrganizationAboutCard({ organization }: { organization: Organiza
         </p>
       )}
 
-      <dl className="border-border mt-4 border-t text-xs">
+      {/* Stacked label over value at `DetailsSidebarCard`'s scale — stacked rather than
+          a fixed label column, so nothing competes for width here. */}
+      <dl className="border-border mt-4 space-y-3 border-t pt-4">
         {organization.type ? (
           <Row label={t("organizations.fields.type")}>
             {t(organizationTypeLabelKey(organization.type))}
@@ -66,7 +94,7 @@ export function OrganizationAboutCard({ organization }: { organization: Organiza
               href={website}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary inline-flex items-center gap-1 hover:underline"
+              className="text-primary inline-flex max-w-full items-center gap-1 hover:underline"
             >
               {/* The host alone: a full URL wraps out of a narrow column. */}
               <span className="truncate">{websiteHost(website)}</span>
@@ -77,6 +105,33 @@ export function OrganizationAboutCard({ organization }: { organization: Organiza
         <Row label={t("organizations.about.onOpenJii")}>
           {t("organizations.about.since", { date: since })}
         </Row>
+
+        {isMember ? (
+          <>
+            <Row label={t("organizations.tabs.members")}>
+              <OrganizationAvatarTrail
+                faces={(members ?? []).map((member) => ({
+                  id: member.userId,
+                  firstName: member.firstName,
+                  lastName: member.lastName,
+                  avatarUrl: member.avatarUrl,
+                }))}
+                // The profile's own count, so the caption does not wait on the roster.
+                label={t("organizations.memberCount", { count: organization.memberCount })}
+                href={organizationMembersPath(locale, organization.id)}
+                isPending={isMembersPending}
+              />
+            </Row>
+            <Row label={t("organizations.tabs.teams")}>
+              <OrganizationAvatarTrail
+                faces={(teams ?? []).map(teamAsTrailFace)}
+                label={t("organizations.about.teamCount", { count: teams?.length ?? 0 })}
+                href={organizationTeamsPath(locale, organization.id)}
+                isPending={isTeamsPending}
+              />
+            </Row>
+          </>
+        ) : null}
       </dl>
     </Card>
   );
@@ -84,9 +139,9 @@ export function OrganizationAboutCard({ organization }: { organization: Organiza
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="border-border/60 flex items-baseline gap-3 border-b py-2 last:border-b-0">
-      <dt className="text-muted-foreground w-20 shrink-0">{label}</dt>
-      <dd className="min-w-0 flex-1">{children}</dd>
+    <div className="space-y-1">
+      <dt className="text-sm font-medium">{label}</dt>
+      <dd className="text-muted-foreground min-w-0 text-sm">{children}</dd>
     </div>
   );
 }

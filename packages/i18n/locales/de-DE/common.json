@@ -887,7 +887,9 @@
         "macro_one": "Makro",
         "macro_other": "Makros",
         "workbook_one": "Arbeitsmappe",
-        "workbook_other": "Arbeitsmappen"
+        "workbook_other": "Arbeitsmappen",
+        "device_one": "Gerät",
+        "device_other": "Geräte"
       },
       "emptyTitle": "Noch nichts zu sehen",
       "emptyMemberHint": "In dieser Organisation erstellte Ressourcen erscheinen hier.",
@@ -1114,7 +1116,17 @@
       "title": "Über uns",
       "noDescription": "Diese Organisation hat sich noch nicht beschrieben.",
       "onOpenJii": "Auf openJII",
-      "since": "Seit {{date}}"
+      "since": "Seit {{date}}",
+      "teamCount_one": "{{count}} Team",
+      "teamCount_other": "{{count}} Teams"
+    },
+    "featured": {
+      "title": "Hervorgehobene Ressourcen",
+      "collaboratorCount_one": "{{count}} Mitwirkender",
+      "collaboratorCount_other": "{{count}} Mitwirkende"
+    },
+    "mix": {
+      "title": "Zusammensetzung der Ressourcen"
     },
     "overview": {
       "visitorNotice": "Du siehst ein öffentliches Profil. Mitglieder sehen alles, worauf sie Zugriff haben; stelle eine Anfrage, und ein Inhaber entscheidet."

@@ -1,6 +1,8 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
+import type { LucideIcon } from "lucide-react";
+import { BookOpen, Code, FileSliders, Leaf, RadioReceiver } from "lucide-react";
 import Link from "next/link";
 
 import type { OrganizationTeamGrant } from "@repo/api/domains/organization/organization.schema";
@@ -9,16 +11,19 @@ import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Card } from "@repo/ui/components/card";
 
+import { RESOURCE_SEGMENT } from "./organization-resource-meta";
+
 /**
- * Where each grantable type lives on the platform. Five, not the showcase's four:
- * a team can hold a grant on a device, and a device has a detail page like the rest.
+ * The mark each type already wears in the sidebar and the command palette. Total, so a
+ * sixth owned type has to be given one rather than inheriting another's. Local: one
+ * consumer.
  */
-const RESOURCE_SEGMENT: Record<SharingResourceType, string> = {
-  experiment: "experiments",
-  protocol: "protocols",
-  macro: "macros",
-  workbook: "workbooks",
-  device: "devices",
+const RESOURCE_ICON: Record<SharingResourceType, LucideIcon> = {
+  experiment: Leaf,
+  protocol: FileSliders,
+  macro: Code,
+  workbook: BookOpen,
+  device: RadioReceiver,
 };
 
 /**
@@ -54,25 +59,30 @@ export function OrganizationTeamGrants({ grants }: { grants: OrganizationTeamGra
           role="list"
           className="bg-muted/40 divide-border divide-y overflow-hidden shadow-none"
         >
-          {grants.map((grant) => (
-            <div role="listitem" key={grant.id} className="flex items-center gap-3 px-5 py-2.5">
-              {/* The name is always populated — an unnamed device arrives carrying its
-                  thing name — and the link routes on the id either way, so a device
-                  with no name of its own is still reachable from here. */}
-              <Link
-                href={`/${locale}/platform/${RESOURCE_SEGMENT[grant.resourceType]}/${grant.resourceId}`}
-                className="min-w-0 flex-1 truncate text-sm hover:underline"
-              >
-                {grant.resourceName}
-              </Link>
-              <span className="text-muted-foreground shrink-0 text-xs">
-                {t(`organizations.delete.owned.${grant.resourceType}`, { count: 1 })}
-              </span>
-              <Badge variant="outline" className="shrink-0 text-xs font-normal">
-                {t(grantRoleLabelKey(grant.role))}
-              </Badge>
-            </div>
-          ))}
+          {grants.map((grant) => {
+            const Icon = RESOURCE_ICON[grant.resourceType];
+            return (
+              <div role="listitem" key={grant.id} className="flex items-center gap-3 px-5 py-2.5">
+                {/* Decorative: the row states the type in words on the right. */}
+                <Icon className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
+                {/* The name is always populated — an unnamed device arrives carrying its
+                    thing name — and the link routes on the id either way, so a device
+                    with no name of its own is still reachable from here. */}
+                <Link
+                  href={`/${locale}/platform/${RESOURCE_SEGMENT[grant.resourceType]}/${grant.resourceId}`}
+                  className="min-w-0 flex-1 truncate text-sm hover:underline"
+                >
+                  {grant.resourceName}
+                </Link>
+                <span className="text-muted-foreground shrink-0 text-xs">
+                  {t(`organizations.delete.owned.${grant.resourceType}`, { count: 1 })}
+                </span>
+                <Badge variant="outline" className="shrink-0 text-xs font-normal">
+                  {t(grantRoleLabelKey(grant.role))}
+                </Badge>
+              </div>
+            );
+          })}
         </Card>
       )}
     </section>
