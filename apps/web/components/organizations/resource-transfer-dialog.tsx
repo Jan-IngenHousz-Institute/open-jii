@@ -2,6 +2,7 @@
 
 import { useMyOrganizations } from "@/hooks/organization/useMyOrganizations/useMyOrganizations";
 import { useTransferResourceOrganization } from "@/hooks/sharing/useTransferResourceOrganization/useTransferResourceOrganization";
+import { UserRound } from "lucide-react";
 import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
@@ -19,7 +20,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
@@ -67,6 +70,12 @@ export function ResourceTransferDialog({
   const targets = (organizations ?? []).filter(
     (organization) => organization.id !== currentOrganizationId,
   );
+  // Split so the workspace reads as its own kind of destination rather than as one more
+  // organization in the list — it is the only option that takes the resource away from
+  // everybody but the caller.
+  const shared = targets.filter((organization) => !organization.isPersonal);
+  const personal = targets.find((organization) => organization.isPersonal);
+  const isPersonalSelected = personal?.id === targetOrganizationId;
 
   const close = (next: boolean) => {
     // Escape, the close button and an outside click all route here, so a request in
@@ -115,13 +124,42 @@ export function ResourceTransferDialog({
               />
             </SelectTrigger>
             <SelectContent>
-              {targets.map((organization) => (
+              {shared.map((organization) => (
                 <SelectItem key={organization.id} value={organization.id}>
-                  {organization.isPersonal ? t("organizations.picker.personal") : organization.name}
+                  {organization.name}
                 </SelectItem>
               ))}
+
+              {personal ? (
+                <>
+                  {shared.length > 0 ? <SelectSeparator className="my-1.5" /> : null}
+                  <SelectGroup className="bg-muted/50 -mx-1 -mb-1 block border-t px-1 pb-1 pt-1">
+                    <SelectItem value={personal.id} className="py-2">
+                      <span className="flex items-center gap-2">
+                        <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        {t("organizations.transfer.personalOption")}
+                      </span>
+                    </SelectItem>
+                    <p className="text-muted-foreground px-2 pb-1 text-xs leading-relaxed">
+                      {t("organizations.transfer.personalCaption")}
+                    </p>
+                  </SelectGroup>
+                </>
+              ) : null}
             </SelectContent>
           </Select>
+
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            {t("organizations.transfer.membershipHint")}
+          </p>
+
+          {/* Only once chosen: the workspace is the one destination that removes everyone
+              else, and that is worth saying at the moment it is picked. */}
+          {isPersonalSelected ? (
+            <p className="bg-muted/40 text-muted-foreground rounded-md border px-3 py-2 text-xs leading-relaxed">
+              {t("organizations.transfer.personalNote")}
+            </p>
+          ) : null}
 
           <p className="text-muted-foreground text-xs leading-relaxed">
             {t("organizations.transfer.note")}

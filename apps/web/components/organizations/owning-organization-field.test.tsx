@@ -117,8 +117,9 @@ describe("<OwningOrganizationField />", () => {
     expect(options.map((option) => option.textContent)).toEqual([
       "Other Lab",
       // A personal workspace is a legitimate destination — it is the way out for a
-      // resource stranded in an organization with no owners left.
-      "organizations.picker.personal",
+      // resource stranded in an organization with no owners left. Labelled distinctly
+      // here, and grouped apart, because it is the one target that removes everyone else.
+      "organizations.transfer.personalOption",
     ]);
   });
 

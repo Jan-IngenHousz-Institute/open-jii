@@ -1100,7 +1100,11 @@
       "confirm": "Übertragen",
       "transferring": "Wird übertragen…",
       "transferred": "Übertragen",
-      "failed": "Diese Ressource konnte nicht übertragen werden."
+      "failed": "Diese Ressource konnte nicht übertragen werden.",
+      "personalOption": "Persönlicher Arbeitsbereich",
+      "membershipHint": "Du kannst nur an eine Organisation übertragen, der du angehörst.",
+      "personalNote": "Dein persönlicher Arbeitsbereich gehört dir allein. Alle, die über die aktuelle Organisation Zugriff haben, verlieren ihn — nur direkt geteilte Personen behalten ihn.",
+      "personalCaption": "Nur du. Keine Organisationsmitglieder kommen mit."
     },
     "acceptInvitation": {
       "pageTitle": "Einladung",
