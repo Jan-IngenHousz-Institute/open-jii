@@ -89,6 +89,12 @@ export function InlineEditableDescription({
     handleCancel();
   };
 
+  const handleEditActionMouseDown = (e: React.MouseEvent) => {
+    // Safari may omit relatedTarget when a button click blurs the editor,
+    // causing handleBlur to cancel the edit before the click can save it.
+    e.preventDefault();
+  };
+
   return (
     <div className="space-y-0">
       <h2 className="font-bold">{title}</h2>
@@ -107,13 +113,19 @@ export function InlineEditableDescription({
             <Button
               variant="secondary"
               onClick={handleCancel}
+              onMouseDown={handleEditActionMouseDown}
               disabled={isPending}
               data-role="edit-action"
             >
               <X className="h-4 w-4" />
               <span>{cancelLabel}</span>
             </Button>
-            <Button onClick={handleSave} disabled={isPending} data-role="edit-action">
+            <Button
+              onClick={handleSave}
+              onMouseDown={handleEditActionMouseDown}
+              disabled={isPending}
+              data-role="edit-action"
+            >
               <Check className="h-4 w-4" />
               <span>{saveLabel}</span>
             </Button>
