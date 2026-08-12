@@ -29,3 +29,12 @@ variable "additional_policy_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "additional_bucket_access" {
+  description = "Extra S3 buckets this role should reach, keyed by a short name used in the policy name. Renders and attaches one IAM policy per bucket. Use for buckets owned outside Terraform or by a module that does not emit its own policy; buckets whose owning module already exposes a policy ARN belong in additional_policy_arns instead."
+  type = map(object({
+    bucket_name = string
+    read_only   = optional(bool, false)
+  }))
+  default = {}
+}
