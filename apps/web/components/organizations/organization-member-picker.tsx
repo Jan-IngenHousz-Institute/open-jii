@@ -21,12 +21,20 @@ export type OrganizationInviteSelection =
 interface OrganizationMemberPickerProps {
   selection: OrganizationInviteSelection | null;
   onSelectionChange: (selection: OrganizationInviteSelection | null) => void;
-  /** Roster user ids: still listed, but not addable a second time. */
+  /** Roster user ids: dropped from the results, since they cannot be added again. */
   memberUserIds: string[];
   /** Roster addresses, for a member the user search cannot return. */
   memberEmails: string[];
   /** Addresses with a live invitation: neither addable nor invitable again. */
   pendingInvitationEmails: string[];
+  /**
+   * How to explain a typed address that belongs to somebody the results excluded, when
+   * "already a member" is not yet true of them. The create wizard collects people for
+   * an organization that does not exist, so its exclusions are people it has already
+   * collected — and telling somebody they are "already a member" of nothing reads as
+   * a bug.
+   */
+  excludedLabel?: string;
   disabled?: boolean;
 }
 
@@ -37,8 +45,6 @@ interface UserResultRow {
   firstName: string;
   lastName: string;
   avatarUrl: string | null;
-  /** Why this row cannot be picked, or `null` when it can. */
-  unavailable: "member" | "invited" | null;
 }
 
 /**
@@ -50,9 +56,11 @@ interface UserResultRow {
  * one has exactly one source and a second outcome (an invitation) that sharing's
  * hosts do not all have.
  *
- * People already on the roster or already invited stay in the results, disabled with
- * the reason: dropping them makes the search look like it cannot find somebody who
- * is plainly there.
+ * Whoever is already on the roster or already invited is dropped from the results
+ * rather than listed unpickably, the same as the sharing picker: a row that cannot be
+ * picked is noise in a list whose only purpose is picking. The reason is not lost — it
+ * moves to where somebody actually needs it, the empty state for a typed address, so
+ * "nothing found" is never the whole answer.
  */
 export function OrganizationMemberPicker({
   selection,
@@ -60,6 +68,7 @@ export function OrganizationMemberPicker({
   memberUserIds,
   memberEmails,
   pendingInvitationEmails,
+  excludedLabel,
   disabled = false,
 }: OrganizationMemberPickerProps) {
   const { t } = useTranslation();
@@ -74,19 +83,16 @@ export function OrganizationMemberPicker({
     const members = new Set(memberUserIds);
     const invited = new Set(pendingInvitationEmails.map((email) => email.toLowerCase()));
 
-    return (users ?? []).map((user) => ({
-      userId: user.userId,
-      displayName: `${user.firstName} ${user.lastName}`.trim() || (user.email ?? user.userId),
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      avatarUrl: user.avatarUrl ?? null,
-      unavailable: members.has(user.userId)
-        ? "member"
-        : invited.has((user.email ?? "").toLowerCase())
-          ? "invited"
-          : null,
-    }));
+    return (users ?? [])
+      .filter((user) => !members.has(user.userId) && !invited.has((user.email ?? "").toLowerCase()))
+      .map((user) => ({
+        userId: user.userId,
+        displayName: `${user.firstName} ${user.lastName}`.trim() || (user.email ?? user.userId),
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatarUrl: user.avatarUrl ?? null,
+      }));
   }, [users, memberUserIds, pendingInvitationEmails]);
 
   const isLoading = isFetching || (!isDebounced && !!search);
@@ -97,8 +103,10 @@ export function OrganizationMemberPicker({
     addresses.some((address) => address.toLowerCase() === typedEmail.toLowerCase());
   const isMemberAddress = isEmailTerm && matchesEmail(memberEmails);
   const isInvitedAddress = isEmailTerm && matchesEmail(pendingInvitationEmails);
-  // Only an address no account answers to is worth an invitation; a registered one
-  // is the row above, which adds them outright.
+  // Only an address no account answers to is worth an invitation; a registered one is
+  // the row above, which adds them outright. Read from the unfiltered answer on
+  // purpose: an address belonging to somebody the results dropped is then explained
+  // rather than reported as no match.
   const isRegisteredAddress =
     isEmailTerm &&
     (users ?? []).some((user) => (user.email ?? "").toLowerCase() === typedEmail.toLowerCase());
@@ -160,7 +168,19 @@ export function OrganizationMemberPicker({
           isLoading={isLoading}
           email={typedEmail}
           canInviteByEmail={canInviteByEmail}
-          emptyReason={isMemberAddress ? "member" : isInvitedAddress ? "invited" : "noMatch"}
+          excludedLabel={excludedLabel}
+          // Roster first, then a live invitation, then the fallback: a registered
+          // address with nothing left to show belongs to somebody the results dropped,
+          // which is the same answer as a roster address.
+          emptyReason={
+            isMemberAddress
+              ? "member"
+              : isInvitedAddress
+                ? "invited"
+                : isRegisteredAddress
+                  ? "member"
+                  : "noMatch"
+          }
           onSelect={(result) => {
             onSelectionChange({
               kind: "user",
@@ -187,6 +207,7 @@ function PickerResults({
   email,
   canInviteByEmail,
   emptyReason,
+  excludedLabel,
   onSelect,
   onSelectEmail,
 }: {
@@ -195,6 +216,7 @@ function PickerResults({
   email: string;
   canInviteByEmail: boolean;
   emptyReason: "member" | "invited" | "noMatch";
+  excludedLabel?: string;
   onSelect: (result: UserResultRow) => void;
   onSelectEmail: () => void;
 }) {
@@ -217,9 +239,9 @@ function PickerResults({
     return (
       <div className="text-muted-foreground p-4 text-center text-sm">
         {emptyReason === "member"
-          ? t("organizations.invite.alreadyMember")
+          ? (excludedLabel ?? t("organizations.invite.alreadyMember"))
           : emptyReason === "invited"
-            ? t("organizations.invite.alreadyInvited")
+            ? (excludedLabel ?? t("organizations.invite.alreadyInvited"))
             : t("organizations.invite.noMatches")}
       </div>
     );
@@ -232,7 +254,6 @@ function PickerResults({
           key={result.userId}
           type="button"
           variant="ghost"
-          disabled={result.unavailable !== null}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onSelect(result)}
           className="hover:bg-surface flex h-auto w-full items-center gap-3 px-3 py-2.5 text-left"
@@ -245,13 +266,7 @@ function PickerResults({
           />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">{result.displayName}</div>
-            <div className="text-muted-foreground truncate text-xs">
-              {result.unavailable === "member"
-                ? t("organizations.invite.alreadyMember")
-                : result.unavailable === "invited"
-                  ? t("organizations.invite.alreadyInvited")
-                  : result.email}
-            </div>
+            <div className="text-muted-foreground truncate text-xs">{result.email}</div>
           </div>
         </Button>
       ))}

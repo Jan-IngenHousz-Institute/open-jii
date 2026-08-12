@@ -11,6 +11,7 @@ import type {
   OrganizationProfile,
   OrganizationDeletionBlockers,
   OrganizationResources,
+  OrganizationTeamGrantList,
   OrganizationTeamList,
 } from "@repo/api/domains/organization/organization.schema";
 import { eq, organizationInvitations } from "@repo/database";
@@ -75,12 +76,12 @@ describe("OrganizationController", () => {
         .withAuth(memberId)
         .expect(StatusCodes.OK);
 
-      expect(response.body.total).toBe(1);
       expect(response.body.organizations).toHaveLength(1);
       expect(response.body.organizations[0]).toMatchObject({
         id: publicOrg,
         name: "Photosynthesis Lab",
         memberCount: 2,
+        visibility: "public",
         membershipStatus: "member",
       });
     });
@@ -97,12 +98,33 @@ describe("OrganizationController", () => {
       expect(response.body.organizations[0].membershipStatus).toBe("pending_request");
     });
 
-    it("omits private organizations even from their own members", async () => {
-      await seedPrivateOrg();
+    it("includes a private organization the caller belongs to, flagged private", async () => {
+      // "All organizations" means all the ones you can see: a private organization you
+      // are a member of is not a secret from you. It has to say it is private, though,
+      // or the card renders it as public.
+      const privateOrg = await seedPrivateOrg();
 
       const response: SuperTestResponse<OrganizationDirectory> = await testApp
         .get(path())
         .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.organizations).toHaveLength(1);
+      expect(response.body.organizations[0]).toMatchObject({
+        id: privateOrg,
+        visibility: "private",
+        membershipStatus: "member",
+      });
+    });
+
+    it("omits a private organization the caller does not belong to", async () => {
+      // The other half of the boundary, and the half that matters: widening the
+      // directory to a member's own private organizations must not widen it further.
+      await seedPrivateOrg();
+
+      const response: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(path())
+        .withAuth(outsiderId)
         .expect(StatusCodes.OK);
 
       expect(response.body.organizations).toHaveLength(0);
@@ -143,18 +165,22 @@ describe("OrganizationController", () => {
       expect(byDescription.body.organizations.map((o) => o.name)).toEqual(["Soil Institute"]);
     });
 
-    it("pages with limit and offset while reporting the full total", async () => {
+    it("returns every matching organization, unpaged", async () => {
+      // This is the only listing of organizations there is, so it shows all of them.
       for (const name of ["Alpha Org", "Beta Org", "Gamma Org"]) {
         await testApp.createOrganization(name, { visibility: "public" });
       }
 
       const response: SuperTestResponse<OrganizationDirectory> = await testApp
-        .get(`${path()}?limit=2&offset=1`)
+        .get(path())
         .withAuth(outsiderId)
         .expect(StatusCodes.OK);
 
-      expect(response.body.total).toBe(3);
-      expect(response.body.organizations.map((o) => o.name)).toEqual(["Beta Org", "Gamma Org"]);
+      expect(response.body.organizations.map((o) => o.name)).toEqual([
+        "Alpha Org",
+        "Beta Org",
+        "Gamma Org",
+      ]);
     });
   });
 
@@ -207,6 +233,32 @@ describe("OrganizationController", () => {
       const personalOrgId = await testApp.personalOrganizationId(ownerId);
 
       await testApp.get(path(personalOrgId)).withAuth(ownerId).expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("carries the whole estate and the creation date, whatever the caller may read", async () => {
+      const publicOrg = await seedPublicOrg();
+      const { experiment } = await testApp.createExperiment({
+        name: "Closed experiment",
+        userId: ownerId,
+        visibility: "private",
+      });
+      const device = await testApp.createIotDevice({ createdBy: ownerId });
+      await testApp.database.execute(
+        `UPDATE experiments SET organization_id = '${publicOrg}' WHERE id = '${experiment.id}'`,
+      );
+      await testApp.database.execute(
+        `UPDATE iot_devices SET organization_id = '${publicOrg}' WHERE id = '${device.id}'`,
+      );
+
+      // The outsider is the interesting caller: the count is a fact about the
+      // organization, so it must not shrink to what they happen to be able to open.
+      const response: SuperTestResponse<OrganizationProfile> = await testApp
+        .get(path(publicOrg))
+        .withAuth(outsiderId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.resourceCount).toBe(2);
+      expect(Number.isNaN(Date.parse(response.body.createdAt))).toBe(false);
     });
   });
 
@@ -281,6 +333,211 @@ describe("OrganizationController", () => {
       const privateOrg = await seedPrivateOrg();
 
       await testApp.get(path(privateOrg)).withAuth(outsiderId).expect(StatusCodes.NOT_FOUND);
+    });
+
+    it("carries the meta worth showing per type, and nothing another type's", async () => {
+      const publicOrg = await seedPublicOrg();
+      const { experiment } = await testApp.createExperiment({
+        name: "Drought stress",
+        userId: ownerId,
+        visibility: "public",
+      });
+      const protocol = await testApp.createProtocol({
+        name: "MultispeQ field run",
+        createdBy: ownerId,
+        family: "minipar",
+        organizationId: publicOrg,
+      });
+      const macro = await testApp.createMacro({
+        name: "Fv/Fm correction",
+        createdBy: ownerId,
+        language: "r",
+        organizationId: publicOrg,
+      });
+      const workbook = await testApp.createWorkbook({
+        name: "Canopy synthesis",
+        createdBy: ownerId,
+        organizationId: publicOrg,
+      });
+      await reassign("experiments", experiment.id, publicOrg);
+
+      const response: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      const byId = new Map(response.body.resources.map((row) => [row.id, row]));
+
+      expect(byId.get(experiment.id)).toMatchObject({ type: "experiment", status: "active" });
+      expect(byId.get(protocol.id)).toMatchObject({ type: "protocol", family: "minipar" });
+      expect(byId.get(macro.id)).toMatchObject({ type: "macro", language: "r" });
+      // A workbook's row has no meta of its own, and no other type's either.
+      expect(Object.keys(byId.get(workbook.id) ?? {}).sort()).toEqual([
+        "description",
+        "id",
+        "name",
+        "type",
+        "updatedAt",
+        "visibility",
+      ]);
+    });
+
+    /**
+     * **The showcase invariant.** `totals[type]` equals the number of returned rows of
+     * that type, for every type and for every caller.
+     *
+     * `totals` is a second computation of a number the rows also carry, which is the
+     * seam that produced the original defect: `findAll` hid archived experiments while
+     * every count of what an organization owns included them, so both sides were
+     * internally consistent and disagreed only across the join. Asserting the agreement
+     * — rather than either number — is what catches the next filter added to one side.
+     *
+     * Exercised for a member who can see everything **and** an outsider who cannot, so
+     * it cannot pass merely because both sides happen to be unscoped.
+     */
+    async function seedOneOfEveryType(organizationId: string) {
+      const { experiment: live } = await testApp.createExperiment({
+        name: "Running campaign",
+        userId: ownerId,
+        visibility: "public",
+      });
+      const { experiment: archived } = await testApp.createExperiment({
+        name: "Greenhouse calibration 2024",
+        userId: ownerId,
+        visibility: "private",
+      });
+      await reassign("experiments", live.id, organizationId);
+      await reassign("experiments", archived.id, organizationId);
+      await testApp.database.execute(
+        `UPDATE experiments SET status = 'archived' WHERE id = '${archived.id}'`,
+      );
+
+      await testApp.createProtocol({
+        name: "Dark adaptation",
+        createdBy: ownerId,
+        organizationId,
+      });
+      await testApp.createMacro({ name: "Batch fit", createdBy: ownerId, organizationId });
+      await testApp.createWorkbook({ name: "Synthesis", createdBy: ownerId, organizationId });
+
+      return { live, archived };
+    }
+
+    /** Rows of each type, keyed the same way `totals` is. */
+    function rowsPerType(body: OrganizationResources) {
+      return {
+        experiment: body.resources.filter((row) => row.type === "experiment").length,
+        protocol: body.resources.filter((row) => row.type === "protocol").length,
+        macro: body.resources.filter((row) => row.type === "macro").length,
+        workbook: body.resources.filter((row) => row.type === "workbook").length,
+      };
+    }
+
+    it("holds the totals-equal-rows invariant for a member, archived included", async () => {
+      const publicOrg = await seedPublicOrg();
+      const { archived } = await seedOneOfEveryType(publicOrg);
+
+      const response: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+
+      expect(rowsPerType(response.body)).toEqual(response.body.totals);
+      // Not vacuous: a member sees both experiments, the archived one among them.
+      expect(response.body.totals).toEqual({
+        experiment: 2,
+        protocol: 1,
+        macro: 1,
+        workbook: 1,
+      });
+      // The archived row carries its status, which is the only surface that shows it.
+      expect(response.body.resources.find((row) => row.id === archived.id)).toMatchObject({
+        type: "experiment",
+        status: "archived",
+        visibility: "private",
+      });
+    });
+
+    it("holds the same invariant for an outsider, who sees strictly less", async () => {
+      const publicOrg = await seedPublicOrg();
+      await seedOneOfEveryType(publicOrg);
+
+      const response: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(outsiderId)
+        .expect(StatusCodes.OK);
+
+      expect(rowsPerType(response.body)).toEqual(response.body.totals);
+      // The private archived experiment is behind neither the rows nor the count, so
+      // the invariant is holding on a genuinely narrower set rather than on the same one.
+      expect(response.body.totals.experiment).toBe(1);
+    });
+
+    it("still hides archived experiments from the experiments listing", async () => {
+      // The opt-in must not have changed the default: the listing deliberately hides
+      // archived, and this is the assertion that stops the fix leaking into it.
+      const { experiment: live } = await testApp.createExperiment({
+        name: "Running campaign",
+        userId: ownerId,
+      });
+      const { experiment: archived } = await testApp.createExperiment({
+        name: "Greenhouse calibration 2024",
+        userId: ownerId,
+      });
+      await testApp.database.execute(
+        `UPDATE experiments SET status = 'archived' WHERE id = '${archived.id}'`,
+      );
+
+      const listing: SuperTestResponse<{ id: string }[]> = await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      const ids = listing.body.map((row) => row.id);
+      // The live row proves the listing reaches these experiments at all, so the
+      // exclusion below cannot pass by the listing being empty for another reason.
+      expect(ids).toContain(live.id);
+      expect(ids).not.toContain(archived.id);
+    });
+
+    it("totals what the caller may read, per type, past the row cap", async () => {
+      const publicOrg = await seedPublicOrg();
+      const { experiment: open } = await testApp.createExperiment({
+        name: "Open experiment",
+        userId: ownerId,
+        visibility: "public",
+      });
+      const { experiment: closed } = await testApp.createExperiment({
+        name: "Closed experiment",
+        userId: ownerId,
+        visibility: "private",
+      });
+      await reassign("experiments", open.id, publicOrg);
+      await reassign("experiments", closed.id, publicOrg);
+      await testApp.createProtocol({
+        name: "Dark adaptation",
+        createdBy: ownerId,
+        organizationId: publicOrg,
+      });
+
+      const asMember: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+      const asOutsider: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(outsiderId)
+        .expect(StatusCodes.OK);
+
+      expect(asMember.body.totals).toEqual({
+        experiment: 2,
+        protocol: 1,
+        macro: 0,
+        workbook: 0,
+      });
+      // Scoped exactly like the rows: the private experiment is behind neither.
+      expect(asOutsider.body.totals.experiment).toBe(1);
+      expect(asOutsider.body.resources).toHaveLength(2);
     });
   });
 
@@ -388,10 +645,9 @@ describe("OrganizationController", () => {
       expect(response.body.members).toHaveLength(2);
       expect(response.body.members.map((m) => m.role).sort()).toEqual(["member", "owner"]);
       expect(response.body.members.map((m) => m.firstName).sort()).toEqual(["Mel", "Olive"]);
-      expect(response.body.outsideCollaborators).toHaveLength(0);
     });
 
-    it("derives outside collaborators from grants on the org's resources", async () => {
+    it("carries nothing but the roster — a grant holder is not a roster row", async () => {
       const publicOrg = await seedPublicOrg();
       const { experiment } = await testApp.createExperiment({
         name: "Shared experiment",
@@ -401,17 +657,14 @@ describe("OrganizationController", () => {
         `UPDATE experiments SET organization_id = '${publicOrg}' WHERE id = '${experiment.id}'`,
       );
       await testApp.addExperimentCollaborator(experiment.id, outsiderId);
-      // A member holding a grant is still a member, not an outside collaborator.
-      await testApp.addExperimentCollaborator(experiment.id, memberId);
 
       const response: SuperTestResponse<OrganizationMembers> = await testApp
         .get(path(publicOrg))
         .withAuth(ownerId)
         .expect(StatusCodes.OK);
 
-      expect(response.body.outsideCollaborators).toEqual([
-        expect.objectContaining({ userId: outsiderId, resourceCount: 1 }),
-      ]);
+      expect(Object.keys(response.body)).toEqual(["members"]);
+      expect(response.body.members.map((m) => m.userId)).not.toContain(outsiderId);
     });
 
     it("403s a non-member of a public organization", async () => {
@@ -745,6 +998,121 @@ describe("OrganizationController", () => {
       const publicOrg = await seedPublicOrg();
 
       await testApp.get(path(publicOrg)).withAuth(outsiderId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("listOrganizationTeamGrants", () => {
+    const path = (id: string) =>
+      testApp.resolveOrpcPath(contract.organizations.listOrganizationTeamGrants, { id });
+
+    it("reports what each team reaches, across every grantable type", async () => {
+      const publicOrg = await seedPublicOrg();
+      const fieldCrew = await testApp.createTeam(publicOrg, "Field crew");
+      const analysts = await testApp.createTeam(publicOrg, "Analysts");
+      const { experiment } = await testApp.createExperiment({
+        name: "Canopy series",
+        userId: ownerId,
+      });
+      const device = await testApp.createIotDevice({ createdBy: ownerId, name: "Node 4" });
+
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "team",
+        granteeId: fieldCrew,
+        role: "admin",
+      });
+      // A device grant counts too: deleting the team withdraws it like any other.
+      await testApp.addResourceGrant({
+        resourceType: "device",
+        resourceId: device.id,
+        granteeType: "team",
+        granteeId: analysts,
+        role: "viewer",
+      });
+
+      const response: SuperTestResponse<OrganizationTeamGrantList> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            teamId: fieldCrew,
+            resourceType: "experiment",
+            resourceId: experiment.id,
+            resourceName: "Canopy series",
+            role: "admin",
+          }),
+          expect.objectContaining({
+            teamId: analysts,
+            resourceType: "device",
+            resourceName: "Node 4",
+            role: "viewer",
+          }),
+        ]),
+      );
+      expect(response.body).toHaveLength(2);
+    });
+
+    it("names a nameless device by its thing name rather than dropping the row", async () => {
+      const publicOrg = await seedPublicOrg();
+      const analysts = await testApp.createTeam(publicOrg, "Analysts");
+      // `iot_devices.name` is nullable. The row still has to reach the client, or the
+      // team-card count would disagree with the table under it — and because the read
+      // inner-joins the resource, a blank name means unnamed and never "gone", so the
+      // fallback is another identifier rather than a placeholder.
+      const device = await testApp.createIotDevice({ createdBy: ownerId, name: null });
+      await testApp.addResourceGrant({
+        resourceType: "device",
+        resourceId: device.id,
+        granteeType: "team",
+        granteeId: analysts,
+        role: "viewer",
+      });
+
+      const response: SuperTestResponse<OrganizationTeamGrantList> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([
+        expect.objectContaining({ resourceType: "device", resourceName: device.thingName }),
+      ]);
+    });
+
+    it("ignores grants to users and to other organizations' teams", async () => {
+      const publicOrg = await seedPublicOrg();
+      const elsewhere = await testApp.createOrganization("Elsewhere", { visibility: "public" });
+      const otherTeam = await testApp.createTeam(elsewhere, "Elsewhere crew");
+      const { experiment } = await testApp.createExperiment({
+        name: "Canopy series",
+        userId: ownerId,
+      });
+      await testApp.addExperimentCollaborator(experiment.id, memberId);
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "team",
+        granteeId: otherTeam,
+        role: "viewer",
+      });
+
+      const response: SuperTestResponse<OrganizationTeamGrantList> = await testApp
+        .get(path(publicOrg))
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([]);
+    });
+
+    it("403s a non-member of a public organization and 404s one of a private organization", async () => {
+      const publicOrg = await seedPublicOrg();
+      const privateOrg = await seedPrivateOrg();
+
+      await testApp.get(path(publicOrg)).withAuth(outsiderId).expect(StatusCodes.FORBIDDEN);
+      await testApp.get(path(privateOrg)).withAuth(outsiderId).expect(StatusCodes.NOT_FOUND);
     });
   });
 

@@ -67,6 +67,7 @@ function renderRoster(
       organizationId="org-1"
       members={members}
       actorRole="owner"
+      teamNamesByUserId={new Map()}
       isPending={false}
       isError={false}
       {...overrides}
@@ -202,6 +203,7 @@ describe("<OrganizationRoster />", () => {
         organizationId="org-1"
         members={[ownerRow, memberRow]}
         actorRole="owner"
+        teamNamesByUserId={new Map()}
         isPending={false}
         isError={false}
       />,
@@ -251,6 +253,43 @@ describe("<OrganizationRoster />", () => {
         organizationId: "org-1",
         memberIdOrEmail: "member-row-user-member",
       });
+    });
+  });
+
+  describe("team badges", () => {
+    it("names the set as teams and keeps a truncated name reachable", async () => {
+      mockSession({ id: "user-owner" });
+      renderRoster([ownerRow, memberRow], {
+        teamNamesByUserId: new Map([
+          ["user-member", ["Field Operations \u2014 Rhine Delta 2026", "Data Platform"]],
+        ]),
+      });
+
+      await screen.findByText("Grace Hopper");
+      const row = rowFor("Grace Hopper");
+
+      // Labelled on the group, so the set is announced once rather than "Team" per name.
+      const badges = within(row).getByLabelText("organizations.teams.title");
+      expect(badges).toBeVisible();
+
+      // The full name survives truncation as the title — an ellipsis alone would leave
+      // a long team name unidentifiable.
+      const long = within(row).getByText("Field Operations \u2014 Rhine Delta 2026");
+      expect(long.closest("[title]")).toHaveAttribute(
+        "title",
+        "Field Operations \u2014 Rhine Delta 2026",
+      );
+    });
+
+    it("renders no team region for somebody on no team", async () => {
+      mockSession({ id: "user-owner" });
+      renderRoster([ownerRow, memberRow]);
+
+      await screen.findByText("Grace Hopper");
+      // Absent rather than an empty group.
+      expect(
+        within(rowFor("Grace Hopper")).queryByLabelText("organizations.teams.title"),
+      ).toBeNull();
     });
   });
 });

@@ -14,6 +14,7 @@ import { ListGranteeTeamsUseCase } from "../application/use-cases/list-grantee-t
 import { ListMyOrganizationsUseCase } from "../application/use-cases/list-my-organizations/list-my-organizations";
 import { ListOrganizationMembersUseCase } from "../application/use-cases/list-organization-members/list-organization-members";
 import { ListOrganizationResourcesUseCase } from "../application/use-cases/list-organization-resources/list-organization-resources";
+import { ListOrganizationTeamGrantsUseCase } from "../application/use-cases/list-organization-team-grants/list-organization-team-grants";
 import { ListOrganizationTeamsUseCase } from "../application/use-cases/list-organization-teams/list-organization-teams";
 import { ListOrganizationsUseCase } from "../application/use-cases/list-organizations/list-organizations";
 
@@ -29,6 +30,7 @@ export class OrganizationController {
     private readonly listOrganizationMembersUseCase: ListOrganizationMembersUseCase,
     private readonly addOrganizationMemberUseCase: AddOrganizationMemberUseCase,
     private readonly listOrganizationTeamsUseCase: ListOrganizationTeamsUseCase,
+    private readonly listOrganizationTeamGrantsUseCase: ListOrganizationTeamGrantsUseCase,
     private readonly listGranteeTeamsUseCase: ListGranteeTeamsUseCase,
     private readonly getOrganizationDeletionBlockersUseCase: GetOrganizationDeletionBlockersUseCase,
   ) {}
@@ -38,8 +40,6 @@ export class OrganizationController {
     return implement(organizationContract.listOrganizations).handler(async ({ input }) => {
       const result = await this.listOrganizationsUseCase.execute(session.user.id, {
         search: input.search,
-        limit: input.limit,
-        offset: input.offset,
       });
 
       if (result.isSuccess()) {
@@ -69,7 +69,7 @@ export class OrganizationController {
       const result = await this.getOrganizationUseCase.execute(input.id, session.user.id);
 
       if (result.isSuccess()) {
-        return result.value;
+        return formatDates(result.value);
       }
 
       return throwOrpcFailure(result, this.logger);
@@ -100,7 +100,10 @@ export class OrganizationController {
       const result = await this.listOrganizationResourcesUseCase.execute(input.id, session.user.id);
 
       if (result.isSuccess()) {
-        return { resources: formatDatesList(result.value.resources) };
+        return {
+          resources: formatDatesList(result.value.resources),
+          totals: result.value.totals,
+        };
       }
 
       return throwOrpcFailure(result, this.logger);
@@ -113,10 +116,7 @@ export class OrganizationController {
       const result = await this.listOrganizationMembersUseCase.execute(input.id, session.user.id);
 
       if (result.isSuccess()) {
-        return {
-          members: formatDatesList(result.value.members),
-          outsideCollaborators: result.value.outsideCollaborators,
-        };
+        return { members: formatDatesList(result.value.members) };
       }
 
       return throwOrpcFailure(result, this.logger);
@@ -148,6 +148,22 @@ export class OrganizationController {
 
       if (result.isSuccess()) {
         return formatDatesList(result.value);
+      }
+
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  @Implement(organizationContract.listOrganizationTeamGrants)
+  listOrganizationTeamGrants(@Session() session: UserSession) {
+    return implement(organizationContract.listOrganizationTeamGrants).handler(async ({ input }) => {
+      const result = await this.listOrganizationTeamGrantsUseCase.execute(
+        input.id,
+        session.user.id,
+      );
+
+      if (result.isSuccess()) {
+        return result.value;
       }
 
       return throwOrpcFailure(result, this.logger);

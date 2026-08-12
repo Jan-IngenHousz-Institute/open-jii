@@ -596,8 +596,8 @@
       }
     },
     "slug": {
-      "hint": "Wordt gebruikt in links en uitnodigingen. Kleine letters, cijfers en losse koppeltekens.",
-      "renameHint": "Een andere slug verandert niets aan de toegang, maar oude links ermee werken niet meer.",
+      "hint": "Een unieke naam voor je organisatie. Kleine letters, cijfers en losse koppeltekens.",
+      "renameHint": "Een unieke naam voor deze organisatie. Links gebruiken de id, dus hernoemen breekt niets.",
       "checking": "Beschikbaarheid controleren",
       "available": "Deze slug is beschikbaar"
     },
@@ -605,7 +605,37 @@
       "creating": "Aanmaken…",
       "created": "{{name}} is aangemaakt",
       "failed": "Deze organisatie kon niet worden aangemaakt.",
-      "privacyNote": "Nieuwe organisaties zijn privé. Je kunt de jouwe later via de instellingen openbaar maken."
+      "privacyNote": "Nieuwe organisaties zijn privé. Je kunt de jouwe later via de instellingen openbaar maken.",
+      "next": "Volgende",
+      "identityStep": "Identiteit",
+      "identityTitle": "Identiteit",
+      "identityDescription": "Hoe deze organisatie heet en via welke slug ze bereikbaar is.",
+      "profileStep": "Profiel",
+      "profileTitle": "Profiel",
+      "profileDescription": "Hoe deze organisatie zich voorstelt. Alles is optioneel en later aan te passen.",
+      "peopleStep": "Mensen",
+      "peopleTitle": "Mensen",
+      "peopleDescription": "Wie er vanaf het begin bij is. Iemand met een account wordt direct toegevoegd; een adres zonder account krijgt een uitnodiging.",
+      "reviewStep": "Controleren",
+      "reviewDescription": "Controleer alles voordat de organisatie wordt aangemaakt.",
+      "reviewHeading": "Deze organisatie controleren",
+      "reviewHint": "Er is nog niets aangemaakt. Ga terug naar een stap om iets te wijzigen.",
+      "unsavedChangesTitle": "Niet-opgeslagen wijzigingen",
+      "unsavedChangesMessage": "Je bent begonnen met het aanmaken van een nieuwe organisatie. Weet je zeker dat je wilt vertrekken? Alle voortgang gaat verloren.",
+      "unsavedStay": "Op pagina blijven",
+      "unsavedLeave": "Pagina verlaten",
+      "people": {
+        "count_one": "{{count}} persoon",
+        "count_other": "{{count}} personen",
+        "empty": "Nog niemand. Je kunt de organisatie alleen aanmaken en later mensen toevoegen via het tabblad Leden.",
+        "alreadyAdded": "Deze persoon is al toegevoegd",
+        "invitedByEmail": "Uitgenodigd per e-mail",
+        "emailRole": "{{role}} · uitgenodigd per e-mail",
+        "addTitle": "Iemand toevoegen",
+        "listTitle": "Toe te voegen mensen",
+        "teamsNote": "Teams stel je in via het tabblad Teams van de organisatie, zodra die bestaat — een team is een groep van haar leden en kan er dus niet eerder zijn.",
+        "failed": "De organisatie is aangemaakt, maar {{names}} kon niet worden toegevoegd. Probeer het opnieuw via het tabblad Leden."
+      }
     },
     "mine": {
       "emptyTitle": "Je zit nog in geen enkele organisatie",
@@ -615,10 +645,7 @@
     "directory": {
       "emptyTitle": "Nog geen openbare organisaties",
       "emptyHint": "Hier staan alleen organisaties die zichzelf openbaar hebben gemaakt.",
-      "loadFailed": "Het overzicht kon niet worden geladen.",
-      "showing": "{{from}}–{{to}} van {{total}}",
-      "previous": "Vorige",
-      "next": "Volgende"
+      "loadFailed": "Het overzicht kon niet worden geladen."
     },
     "join": {
       "requestAction": "Lidmaatschap aanvragen",
@@ -641,20 +668,36 @@
       "memberDescription": "Alles in deze organisatie waar je toegang tot hebt.",
       "visitorDescription": "Wat deze organisatie openbaar heeft gemaakt.",
       "types": {
-        "experiment": "Experiment",
-        "macro": "Macro",
-        "protocol": "Protocol",
-        "workbook": "Werkmap"
+        "experiment_one": "Experiment",
+        "experiment_other": "Experimenten",
+        "protocol_one": "Protocol",
+        "protocol_other": "Protocollen",
+        "macro_one": "Macro",
+        "macro_other": "Macro's",
+        "workbook_one": "Werkmap",
+        "workbook_other": "Werkmappen"
       },
       "emptyTitle": "Nog niets te zien",
       "emptyMemberHint": "Resources die in deze organisatie worden aangemaakt, staan hier.",
       "emptyVisitorHint": "Deze organisatie heeft nog niets gepubliceerd.",
-      "loadFailed": "De resources van deze organisatie konden niet worden geladen."
+      "loadFailed": "De resources van deze organisatie konden niet worden geladen.",
+      "privateTooltip": "Privé – alleen wie het gedeeld heeft gekregen kan het openen.",
+      "status": {
+        "active": "Actief",
+        "stale": "Verouderd",
+        "archived": "Gearchiveerd",
+        "published": "Gepubliceerd"
+      },
+      "showLess": "Minder weergeven",
+      "showLessLabel": "Minder {{group}} weergeven",
+      "showMore_one": "Nog {{count}} weergeven",
+      "showMore_other": "Nog {{count}} weergeven",
+      "showMoreLabel_one": "Nog {{count}} {{group}} weergeven",
+      "showMoreLabel_other": "Nog {{count}} {{group}} weergeven"
     },
     "members": {
       "title": "Leden",
       "description": "Wie er bij deze organisatie hoort, wie er is uitgenodigd en wie zich wil aansluiten.",
-      "tab": "Leden ({{count}})",
       "roleForLabel": "Rol van {{name}}",
       "removeForLabel": "{{name}} verwijderen",
       "roleUpdated": "Rol bijgewerkt",
@@ -674,10 +717,10 @@
       "leaveFailed": "Deze organisatie kon niet worden verlaten.",
       "lastOwnerReason": "Een organisatie heeft minstens één eigenaar nodig.",
       "lastOwnerLeaveReason": "Je bent de enige eigenaar. Maak eerst iemand anders eigenaar.",
-      "loadFailed": "De leden van deze organisatie konden niet worden geladen."
+      "loadFailed": "De leden van deze organisatie konden niet worden geladen.",
+      "memberDescription": "Wie bij deze organisatie hoort."
     },
     "invite": {
-      "tab": "Uitgenodigd ({{count}})",
       "action": "Uitnodigen",
       "title": "Iemand uitnodigen",
       "description": "Zoek iemand met een account om die direct toe te voegen, of nodig een adres zonder account uit.",
@@ -697,16 +740,17 @@
       "searchLabel": "Zoek iemand om toe te voegen",
       "clearSelection": "Selectie wissen",
       "noMatches": "Geen overeenkomende gebruikers",
-      "alreadyMember": "Al lid",
-      "alreadyInvited": "Al uitgenodigd",
+      "alreadyMember": "Deze persoon is al lid van deze organisatie",
+      "alreadyInvited": "Voor dit adres is al een uitnodiging verstuurd",
       "sendByEmail": "Uitnodiging per e-mail sturen",
       "addSubmit": "Toevoegen",
       "adding": "Toevoegen …",
       "added": "{{name}} is toegevoegd aan de organisatie",
-      "addFailed": "Deze persoon kon niet worden toegevoegd."
+      "addFailed": "Deze persoon kon niet worden toegevoegd.",
+      "label": "Uitgenodigd",
+      "invitedByAndExpiry": "Uitgenodigd door {{name}} · {{expiry}}"
     },
     "requests": {
-      "tab": "Aanvragen ({{count}})",
       "approveAction": "Goedkeuren",
       "rejectAction": "Afwijzen",
       "approved": "{{name}} is lid geworden van de organisatie",
@@ -724,13 +768,8 @@
       },
       "emptyTitle": "Niemand heeft lidmaatschap aangevraagd",
       "emptyHint": "Aanvragen komen alleen binnen zolang de organisatie openbaar is.",
-      "loadFailed": "De aanvragen konden niet worden geladen."
-    },
-    "outsideCollaborators": {
-      "title": "Externe medewerkers",
-      "description": "Mensen met toegang tot iets van deze organisatie zonder er lid van te zijn. Hun toegang zit op de resource zelf en wordt daar gewijzigd.",
-      "resourceCount_one": "{{count}} resource",
-      "resourceCount_other": "{{count}} resources"
+      "loadFailed": "De aanvragen konden niet worden geladen.",
+      "label": "Verzoeken"
     },
     "teams": {
       "title": "Teams",
@@ -744,7 +783,6 @@
       "renameLabel": "{{name}} hernoemen",
       "renamed": "Hernoemd naar {{name}}",
       "renameFailed": "Dit team kon niet worden hernoemd.",
-      "deleteLabel": "{{name}} verwijderen",
       "deleteTitle": "Team verwijderen?",
       "deleteDescription": "{{name}} wordt verwijderd.",
       "deleteNote": "Wat met dit team gedeeld is, is daarna niet meer met het team gedeeld. De leden houden toegang die ze zelf hebben.",
@@ -768,13 +806,22 @@
       "memberRemoved": "Verwijderd uit het team",
       "membershipFailed": "De teamsamenstelling kon niet worden gewijzigd.",
       "noMembersTitle": "Nog niemand in dit team",
-      "noMembersHint": "Een team geeft alleen toegang aan de leden die erin zitten."
+      "noMembersHint": "Een team geeft alleen toegang aan de leden die erin zitten.",
+      "deleteAction": "Team verwijderen",
+      "grantCount_one": "{{count}} resource",
+      "grantCount_other": "{{count}} resources",
+      "grantsTitle": "Waar dit team bij kan",
+      "grantsDescription": "Gedeeld met het team, niet met de personen erin. Als het team wordt verwijderd, vervalt deze toegang.",
+      "grantsEmpty": "Er is nog niets met dit team gedeeld."
     },
     "settings": {
       "profileTitle": "Profiel",
       "profileDescription": "Hoe deze organisatie eruitziet voor haar leden en, als ze openbaar is, in het overzicht.",
       "saved": "Organisatie bijgewerkt",
-      "saveFailed": "Deze wijzigingen konden niet worden opgeslagen."
+      "saveFailed": "Deze wijzigingen konden niet worden opgeslagen.",
+      "title": "Instellingen",
+      "description": "Alleen eigenaren kunnen dit wijzigen. Beheerders beheren personen en teams.",
+      "unsaved": "Niet-opgeslagen wijzigingen in het profiel."
     },
     "visibility": {
       "title": "Zichtbaarheid",
@@ -785,7 +832,9 @@
       "publicBadge": "Openbaar",
       "nowPublic": "Deze organisatie is nu openbaar",
       "nowPrivate": "Deze organisatie is nu privé",
-      "changeFailed": "De zichtbaarheid van de organisatie kon niet worden gewijzigd."
+      "changeFailed": "De zichtbaarheid van de organisatie kon niet worden gewijzigd.",
+      "privateHint": "Onzichtbaar van buiten. Niet-leden krijgen een niet-gevonden-pagina en niemand kan lidmaatschap aanvragen.",
+      "publicHint": "Vermeld in de directory. Iedereen die is ingelogd ziet het profiel en de openbare resources, en kan lidmaatschap aanvragen."
     },
     "delete": {
       "description": "Een organisatie verwijderen kan niet worden teruggedraaid. Wat ze bezit wordt niet meeverwijderd, dus ze moet eerst leeg zijn.",
@@ -809,7 +858,8 @@
       "confirmNote": "Wat met deze organisatie of haar teams gedeeld was, is daarna niet meer gedeeld.",
       "deleting": "Verwijderen…",
       "deleted": "{{name}} is verwijderd",
-      "failed": "Deze organisatie kon niet worden verwijderd."
+      "failed": "Deze organisatie kon niet worden verwijderd.",
+      "stillOwned": "Nog in bezit"
     },
     "picker": {
       "label": "Eigenaar-organisatie",
@@ -847,6 +897,15 @@
       "wrongAccountTitle": "Deze uitnodiging is voor een ander account",
       "wrongAccountHint": "Ze is naar een ander e-mailadres gestuurd dan waarmee je bent ingelogd. Log in met het uitgenodigde adres om ze te aanvaarden.",
       "switchAccount": "Inloggen met een ander account"
+    },
+    "about": {
+      "title": "Over",
+      "noDescription": "Deze organisatie heeft zichzelf nog niet beschreven.",
+      "onOpenJii": "Op openJII",
+      "since": "Sinds {{date}}"
+    },
+    "overview": {
+      "visitorNotice": "Je bekijkt een openbaar profiel. Leden zien alles waartoe ze toegang hebben; vraag om lid te worden en een eigenaar beslist."
     }
   }
 }

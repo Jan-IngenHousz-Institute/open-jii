@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
+import type { OrganizationResourceType } from "@repo/api/domains/organization/organization.schema";
 import {
   and,
   asc,
@@ -16,6 +17,7 @@ import {
   organizationJoinRequests,
   organizationMembers,
   organizations,
+  or,
   profiles,
   protocols,
   resourceGrants,
@@ -25,7 +27,7 @@ import {
   users,
   workbooks,
 } from "@repo/database";
-import type { DatabaseInstance, ResourceType, SQL } from "@repo/database";
+import type { AnyColumn, DatabaseInstance, ResourceType, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike } from "../../../common/utils/fts";
@@ -35,8 +37,8 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { userIsSelectableGrantee } from "../../../sharing/core/grantee-selectability";
-import { ALL_STAFFED_RESOURCES } from "../../../sharing/core/resource-staffing";
 import type {
   GranteeTeamDto,
   MembershipStatus,
@@ -44,8 +46,9 @@ import type {
   OrganizationAccessRow,
   OrganizationDirectoryEntryDto,
   OrganizationMemberDto,
+  OrganizationResourceTotalsDto,
   OrganizationTeamDto,
-  OutsideCollaboratorDto,
+  OrganizationTeamGrantDto,
 } from "../models/organization.model";
 import { normalizeOrgRole } from "../organization-access";
 
@@ -64,6 +67,54 @@ const OWNED_RESOURCE_TABLES = {
   workbook: workbooks,
   device: iotDevices,
 } as const satisfies Record<ResourceType, { organizationId: unknown }>;
+
+/**
+ * The four types the resources showcase covers, keyed by the showcase enum — devices
+ * are absent because they have no page to show. A total `Record`, so a fifth
+ * showcased type cannot be added without being counted here too.
+ */
+const SHOWCASE_RESOURCE_TABLES = {
+  experiment: experiments,
+  macro: macros,
+  protocol: protocols,
+  workbook: workbooks,
+} as const satisfies Record<
+  OrganizationResourceType,
+  { id: AnyColumn; organizationId: AnyColumn; visibility: AnyColumn }
+>;
+
+/**
+ * What each owned type is called — the one column a table of grants cannot supply on
+ * its own.
+ *
+ * A device is the only type whose `name` is nullable, so it falls back to its thing
+ * name, which is not. The fallback is deliberately another identifier and not a
+ * placeholder: {@link OrganizationRepository.listTeamGrants} inner-joins the resource,
+ * so a device reaching this expression exists and merely has not been named.
+ */
+const RESOURCE_NAME_SQL: Record<ResourceType, SQL> = {
+  experiment: sql`${experiments.name}`,
+  macro: sql`${macros.name}`,
+  protocol: sql`${protocols.name}`,
+  workbook: sql`${workbooks.name}`,
+  device: sql`COALESCE(${iotDevices.name}, ${iotDevices.thingName})`,
+};
+
+/**
+ * Every resource a grant can name, with the name to show for it —
+ * {@link ALL_STAFFED_RESOURCES} plus that column. Generated from the same total map,
+ * so a sixth grantable type joins this set by being added there.
+ */
+const ALL_NAMED_RESOURCES: SQL = sql.join(
+  Object.entries(OWNED_RESOURCE_TABLES).map(
+    ([resourceType, table]) =>
+      sql`SELECT ${resourceType}::"resource_type" AS "resource_type",
+                 ${table.id} AS "id",
+                 ${RESOURCE_NAME_SQL[resourceType as ResourceType]} AS "name"
+          FROM ${table}`,
+  ),
+  sql` UNION ALL `,
+);
 
 /**
  * A column reference that survives being embedded in a raw `sql` fragment. Drizzle
@@ -222,6 +273,8 @@ export class OrganizationRepository {
       location: string | null;
       visibility: "private" | "public";
       memberCount: number;
+      resourceCount: number;
+      createdAt: Date;
     } | null>
   > {
     return tryCatch(async () => {
@@ -237,6 +290,10 @@ export class OrganizationRepository {
           location: organizations.location,
           visibility: organizations.visibility,
           memberCount: memberCountSql(),
+          // The directory's own sum, so the profile's tile and the listing's pill
+          // report the same number for the same organization.
+          resourceCount: resourceCountSql(),
+          createdAt: organizations.createdAt,
         })
         .from(organizations)
         .where(eq(organizations.id, organizationId))
@@ -247,23 +304,24 @@ export class OrganizationRepository {
   }
 
   /**
-   * The directory. Public and non-personal only, so nothing here depends on the
-   * caller except `membershipStatus`, which is what the join CTA renders from.
+   * The directory: every non-personal organization the caller may see — public ones,
+   * plus the private ones they belong to. "All organizations" means all of the ones
+   * they can see, the same promise the experiments listing makes.
+   *
+   * So the row *set* depends on the caller now, not only `membershipStatus`. The
+   * membership test is built once and used for both, which is the point: two copies
+   * could drift, and a drift here would either hide an organization from its own
+   * member or reveal a private one to an outsider.
+   *
+   * Personal workspaces stay out regardless — they are not organizations in product
+   * terms. Unpaged: every matching row comes back, so the payload is unbounded in the
+   * number of organizations. Accepted, as with the resources showcase.
    */
   async listDirectory(
     userId: string,
-    params: { search?: string; limit: number; offset: number },
-  ): Promise<Result<{ organizations: OrganizationDirectoryEntryDto[]; total: number }>> {
+    params: { search?: string },
+  ): Promise<Result<{ organizations: OrganizationDirectoryEntryDto[] }>> {
     return tryCatch(async () => {
-      const like = params.search ? `%${escapeLike(params.search)}%` : undefined;
-      const where = and(
-        eq(organizations.visibility, "public"),
-        isNotPersonalOrgSql(),
-        like
-          ? sql`(${ilike(organizations.name, like)} OR ${ilike(organizations.description, like)})`
-          : undefined,
-      );
-
       const isMember = exists(
         this.database
           .select()
@@ -288,36 +346,42 @@ export class OrganizationRepository {
           ),
       );
 
-      const [rows, totals] = await Promise.all([
-        this.database
-          .select({
-            id: organizations.id,
-            name: organizations.name,
-            slug: organizations.slug,
-            logo: organizations.logo,
-            type: organizations.type,
-            description: organizations.description,
-            location: organizations.location,
-            memberCount: memberCountSql(),
-            resourceCount: resourceCountSql(),
-            membershipStatus: sql<MembershipStatus>`CASE
-              WHEN ${isMember} THEN 'member'
-              WHEN ${hasPendingRequest} THEN 'pending_request'
-              ELSE 'none'
-            END`,
-          })
-          .from(organizations)
-          .where(where)
-          .orderBy(asc(organizations.name))
-          .limit(params.limit)
-          .offset(params.offset),
-        this.database
-          .select({ total: sql<number>`COUNT(*)::int` })
-          .from(organizations)
-          .where(where),
-      ]);
+      const like = params.search ? `%${escapeLike(params.search)}%` : undefined;
+      const where = and(
+        // Public, or the caller's own. A private organization they do not belong to
+        // stays invisible — this is the visibility boundary, not a convenience.
+        or(eq(organizations.visibility, "public"), isMember),
+        isNotPersonalOrgSql(),
+        like
+          ? sql`(${ilike(organizations.name, like)} OR ${ilike(organizations.description, like)})`
+          : undefined,
+      );
 
-      return { organizations: rows, total: totals[0]?.total ?? 0 };
+      const rows = await this.database
+        .select({
+          id: organizations.id,
+          name: organizations.name,
+          slug: organizations.slug,
+          logo: organizations.logo,
+          type: organizations.type,
+          description: organizations.description,
+          location: organizations.location,
+          memberCount: memberCountSql(),
+          resourceCount: resourceCountSql(),
+          // Selected rather than assumed: the set is no longer public-only, so a row
+          // that did not carry this would be rendered as public.
+          visibility: organizations.visibility,
+          membershipStatus: sql<MembershipStatus>`CASE
+            WHEN ${isMember} THEN 'member'
+            WHEN ${hasPendingRequest} THEN 'pending_request'
+            ELSE 'none'
+          END`,
+        })
+        .from(organizations)
+        .where(where)
+        .orderBy(asc(organizations.name));
+
+      return { organizations: rows };
     });
   }
 
@@ -458,46 +522,82 @@ export class OrganizationRepository {
   }
 
   /**
-   * Outside collaborators (doc 005): people holding a direct grant on something the
-   * organization owns without belonging to it. Purely derived — there is nothing to
-   * manage here, the access lives on each resource — and swept across every staffed
-   * type, so a newly shareable type is covered without touching this query.
+   * How many resources of each showcase type the caller may read in this
+   * organization — the totals beside the capped rows.
+   *
+   * Counted through {@link accessibleResourceCondition}, the very predicate every
+   * type's `findAll` scopes itself with, so a group header can never claim a row the
+   * listing behind it would withhold. One statement, so four counts cost one trip.
    */
-  async listOutsideCollaborators(
+  async countAccessibleResources(
     organizationId: string,
-  ): Promise<Result<OutsideCollaboratorDto[]>> {
+    userId: string,
+  ): Promise<Result<OrganizationResourceTotalsDto>> {
     return tryCatch(async () => {
-      const rows = await this.database.execute<{
-        userId: string;
-        firstName: string;
-        lastName: string;
-        email: string | null;
-        avatarUrl: string | null;
-        resourceCount: number;
-      }>(sql`
+      const counts = Object.entries(SHOWCASE_RESOURCE_TABLES).map(([resourceType, table]) => {
+        const scope = accessibleResourceCondition({
+          database: this.database,
+          resourceType: resourceType as OrganizationResourceType,
+          resourceIdColumn: table.id,
+          organizationIdColumn: table.organizationId,
+          visibilityColumn: table.visibility,
+          userId,
+        });
+
+        return sql`(
+          SELECT COUNT(*)::int FROM ${table}
+          WHERE ${table.organizationId} = ${organizationId}::uuid
+            AND ${scope}
+        ) AS ${sql.identifier(resourceType)}`;
+      });
+
+      // Partial, not total: the row is whatever the driver hands back, and the
+      // defaults below are what make an organization owning nothing report zeros
+      // rather than a hole in the totals object.
+      const rows = await this.database.execute<Partial<OrganizationResourceTotalsDto>>(
+        sql`SELECT ${sql.join(counts, sql`, `)}`,
+      );
+
+      const row: Partial<OrganizationResourceTotalsDto> = rows.length > 0 ? rows[0] : {};
+      return {
+        experiment: row.experiment ?? 0,
+        protocol: row.protocol ?? 0,
+        macro: row.macro ?? 0,
+        workbook: row.workbook ?? 0,
+      };
+    });
+  }
+
+  /**
+   * Every grant naming one of this organization's teams, across all of them.
+   *
+   * The reverse of {@link listTeamsForGranteePicker}: that answers "which teams may
+   * be granted this resource", this answers "which resources does a team already
+   * reach". Swept across every staffed type, devices included — a footer counting
+   * what deleting a team withdraws has to count all of it.
+   *
+   * The resource join is inner: a grant whose resource is gone reaches nothing, and
+   * counting it would overstate the team's reach — which is also why every row that
+   * does come back has a name to show, per {@link RESOURCE_NAME_SQL}.
+   */
+  async listTeamGrants(organizationId: string): Promise<Result<OrganizationTeamGrantDto[]>> {
+    return tryCatch(async () => {
+      const rows = await this.database.execute<OrganizationTeamGrantDto>(sql`
         SELECT
-          ${users.id} AS "userId",
-          ${getAnonymizedFirstName()} AS "firstName",
-          ${getAnonymizedLastName()} AS "lastName",
-          ${getAnonymizedEmail()} AS "email",
-          ${getAnonymizedAvatarUrl()} AS "avatarUrl",
-          COUNT(*)::int AS "resourceCount"
+          ${resourceGrants.id} AS "id",
+          ${teams.id} AS "teamId",
+          ${resourceGrants.resourceType} AS "resourceType",
+          ${resourceGrants.resourceId} AS "resourceId",
+          named."name" AS "resourceName",
+          ${resourceGrants.role} AS "role"
         FROM ${resourceGrants}
-        JOIN (${ALL_STAFFED_RESOURCES}) AS owned
-          ON owned."resource_type" = ${resourceGrants.resourceType}
-         AND owned."id" = ${resourceGrants.resourceId}
-        JOIN ${users} ON ${users.id} = ${resourceGrants.granteeId}
-        LEFT JOIN ${profiles} ON ${profiles.userId} = ${users.id}
-        WHERE owned."organization_id" = ${organizationId}::uuid
-          AND ${resourceGrants.granteeType} = 'user'
-          AND NOT EXISTS (
-            SELECT 1 FROM ${organizationMembers}
-            WHERE ${organizationMembers.organizationId} = ${organizationId}::uuid
-              AND ${organizationMembers.userId} = ${resourceGrants.granteeId}
-          )
-        GROUP BY ${users.id}, ${profiles.activated}, ${profiles.firstName},
-                 ${profiles.lastName}, ${profiles.avatarUrl}, ${users.email}
-        ORDER BY "firstName", "lastName"
+        JOIN ${teams} ON ${teams.id} = ${resourceGrants.granteeId}
+        JOIN (${ALL_NAMED_RESOURCES}) AS named
+          ON named."resource_type" = ${resourceGrants.resourceType}
+         AND named."id" = ${resourceGrants.resourceId}
+        WHERE ${resourceGrants.granteeType} = 'team'
+          AND ${teams.organizationId} = ${organizationId}::uuid
+        ORDER BY named."name"
       `);
 
       return [...rows];

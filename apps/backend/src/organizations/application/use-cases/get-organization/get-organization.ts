@@ -1,8 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { OrganizationProfile } from "@repo/api/domains/organization/organization.schema";
-
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import type { OrganizationProfileDto } from "../../../core/models/organization.model";
 import {
   canViewOrganization,
   isOrganizationMember,
@@ -20,7 +19,7 @@ export class GetOrganizationUseCase {
 
   constructor(private readonly organizationRepository: OrganizationRepository) {}
 
-  async execute(organizationId: string, userId: string): Promise<Result<OrganizationProfile>> {
+  async execute(organizationId: string, userId: string): Promise<Result<OrganizationProfileDto>> {
     this.logger.log({
       msg: "Reading an organization profile",
       operation: "get-organization",

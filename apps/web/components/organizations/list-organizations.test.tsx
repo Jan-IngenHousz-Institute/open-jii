@@ -29,10 +29,8 @@ function landOnDirectory() {
   vi.mocked(useSearchParams).mockReturnValue(new ReadonlyURLSearchParams("filter=all"));
 }
 
-function mountDirectory(organizations: OrganizationDirectoryEntry[], total = organizations.length) {
-  return server.mount(contract.organizations.listOrganizations, {
-    body: { organizations, total },
-  });
+function mountDirectory(organizations: OrganizationDirectoryEntry[]) {
+  return server.mount(contract.organizations.listOrganizations, { body: { organizations } });
 }
 
 function mountMyOrganizations(organizations: MyOrganization[]) {
@@ -236,31 +234,49 @@ describe("<ListOrganizations />", () => {
       expect(await screen.findByText("organizations.noMatches")).toBeVisible();
     });
 
-    it("pages without letting the previous page's number outlive its result set", async () => {
-      const user = userEvent.setup();
+    it("renders every organization at once, with no pager", async () => {
       mockSession({ id: "user-1" });
       landOnDirectory();
-      const spy = mountDirectory(
-        [createOrganizationDirectoryEntry({ name: "Greenhouse Lab" })],
-        60,
+      mountDirectory(
+        ["Alpha Org", "Beta Org", "Gamma Org"].map((name) =>
+          createOrganizationDirectoryEntry({ name }),
+        ),
       );
 
       render(<ListOrganizations />);
 
-      await screen.findByText("Greenhouse Lab");
-      await user.click(screen.getByRole("button", { name: "organizations.directory.next" }));
+      await screen.findByText("Alpha Org");
+      expect(screen.getByText("Beta Org")).toBeVisible();
+      expect(screen.getByText("Gamma Org")).toBeVisible();
+      // The only listing of organizations there is, so it shows all of them.
+      expect(screen.queryByRole("button", { name: /previous|next/iu })).toBeNull();
+    });
 
-      await waitFor(() => {
-        expect(spy.calls.at(-1)?.query.offset).toBe("20");
-      });
+    it("badges a private organization the caller belongs to", async () => {
+      mockSession({ id: "user-1" });
+      landOnDirectory();
+      // "All organizations" now includes the caller's own private ones, so the row's
+      // visibility has to come from the row — hardcoding "public" would strip the badge
+      // and present a private organization as a listed one.
+      mountDirectory([
+        createOrganizationDirectoryEntry({
+          name: "Secret Lab",
+          visibility: "private",
+          membershipStatus: "member",
+        }),
+        createOrganizationDirectoryEntry({ name: "Open Lab", visibility: "public" }),
+      ]);
 
-      // A new search is a new result set; page 2 of the old one says nothing about it.
-      await user.type(screen.getByLabelText("organizations.searchLabel"), "lab");
+      render(<ListOrganizations />);
 
-      await waitFor(() => {
-        expect(spy.calls.at(-1)?.query.search).toBe("lab");
-      });
-      expect(spy.calls.at(-1)?.query.offset).toBe("0");
+      await screen.findByText("Secret Lab");
+      expect(
+        within(cardFor("Secret Lab")).getByText("resourceVisibility.privateStatus"),
+      ).toBeVisible();
+      // Public is the unremarkable default and carries no badge.
+      expect(
+        within(cardFor("Open Lab")).queryByText("resourceVisibility.privateStatus"),
+      ).toBeNull();
     });
 
     it("keeps the current cards on screen while a new search term loads", async () => {
@@ -279,7 +295,7 @@ describe("<ListOrganizations />", () => {
       // drops to its pending state and unmounts every card, so the reader watches the
       // page they were reading disappear on every keystroke.
       const searchSpy = server.mount(contract.organizations.listOrganizations, {
-        body: { organizations: [], total: 0 },
+        body: { organizations: [] },
         delay: "infinite",
       });
       await user.type(screen.getByLabelText("organizations.searchLabel"), "green");

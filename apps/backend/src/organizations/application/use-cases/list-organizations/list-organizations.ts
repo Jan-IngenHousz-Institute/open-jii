@@ -6,9 +6,16 @@ import { Result } from "../../../../common/utils/fp-utils";
 import { OrganizationRepository } from "../../../core/repositories/organization.repository";
 
 /**
- * The organization directory. Public, non-personal organizations only — the
- * exclusions live in the query rather than in a caller check, so there is no
- * listing path on which a private or personal organization can appear.
+ * The organization directory: every non-personal organization the caller may see —
+ * public ones, plus the private ones they belong to.
+ *
+ * The scoping lives in the query rather than in a caller check, so there is no listing
+ * path on which a personal organization, or a private one the caller is not a member
+ * of, can appear.
+ *
+ * Unpaged, and deliberately so: this is the only listing of organizations there is, so
+ * "all organizations" has to mean all of them. The payload is unbounded in the number
+ * of organizations — an accepted trade, the same one the resources showcase makes.
  */
 @Injectable()
 export class ListOrganizationsUseCase {
@@ -18,7 +25,7 @@ export class ListOrganizationsUseCase {
 
   async execute(
     userId: string,
-    params: { search?: string; limit: number; offset: number },
+    params: { search?: string },
   ): Promise<Result<OrganizationDirectory>> {
     this.logger.log({
       msg: "Listing the organization directory",

@@ -13,6 +13,7 @@ import {
   zOrganizationMembers,
   zOrganizationProfile,
   zOrganizationResources,
+  zOrganizationTeamGrantList,
   zOrganizationTeamList,
 } from "./organization.schema";
 
@@ -27,8 +28,13 @@ import {
  */
 export const organizationContract = {
   /**
-   * The directory: public, non-personal organizations, whether or not the caller
-   * belongs to them. `membershipStatus` per row is what the join CTA keys off.
+   * The directory: non-personal organizations the caller may see — every public one,
+   * plus the private ones they belong to. `membershipStatus` per row is what the join
+   * CTA keys off.
+   *
+   * Unpaged, and every matching row comes back: this is the only listing of
+   * organizations there is, so "all" has to mean all. The payload is therefore
+   * unbounded in the number of organizations — an accepted trade.
    */
   listOrganizations: oc
     .route({ method: "GET", path: "/api/v1/organizations", successStatus: 200 })
@@ -52,12 +58,13 @@ export const organizationContract = {
   /**
    * Resources showcase. Each type's access-scoped `findAll` does the filtering, so
    * an outsider sees the public rows and a member sees everything they may read.
+   * `totals` counts the same access-scoped set the capped rows come from.
    */
   listOrganizationResources: oc
     .route({ method: "GET", path: "/api/v1/organizations/{id}/resources", successStatus: 200 })
     .input(zOrganizationIdPathParam)
     .output(zOrganizationResources),
-  /** Roster plus the derived outside-collaborator view. Members only. */
+  /** The roster. Members only: who belongs to an organization is not public. */
   listOrganizationMembers: oc
     .route({ method: "GET", path: "/api/v1/organizations/{id}/members", successStatus: 200 })
     .input(zOrganizationIdPathParam)
@@ -93,6 +100,18 @@ export const organizationContract = {
     .route({ method: "GET", path: "/api/v1/organizations/{id}/teams", successStatus: 200 })
     .input(zOrganizationIdPathParam)
     .output(zOrganizationTeamList),
+  /**
+   * What the organization's teams can reach: every grant naming one of them, across
+   * all its teams in one read. Members only, the same gate as the teams themselves.
+   *
+   * One read for the whole organization rather than one per team, because both
+   * callers want it that way — the teams grid needs a count on every card at once,
+   * and a team's own page is a filter over the same answer.
+   */
+  listOrganizationTeamGrants: oc
+    .route({ method: "GET", path: "/api/v1/organizations/{id}/team-grants", successStatus: 200 })
+    .input(zOrganizationIdPathParam)
+    .output(zOrganizationTeamGrantList),
   /**
    * The grantee picker's team source: teams of the resource's **owning** org, so a
    * team can never be granted access outside the organization it belongs to. Gated

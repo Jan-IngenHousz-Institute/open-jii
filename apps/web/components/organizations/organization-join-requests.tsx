@@ -12,6 +12,7 @@ import type { OrganizationJoinRequest } from "@repo/api/domains/organization/joi
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -60,12 +61,9 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
 
   if (isPending) {
     return (
-      <div
-        aria-busy="true"
-        className="border-border divide-border divide-y overflow-hidden rounded-lg border"
-      >
+      <Card aria-busy="true" className="divide-border divide-y overflow-hidden">
         {[0, 1].map((row) => (
-          <div key={row} className="flex items-center gap-3 px-4 py-3">
+          <div key={row} className="flex items-center gap-3 px-5 py-3">
             <Skeleton className="h-9 w-9 rounded-full" />
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <Skeleton className="h-4 w-40" />
@@ -74,15 +72,15 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
             <Skeleton className="h-8 w-40" />
           </div>
         ))}
-      </div>
+      </Card>
     );
   }
 
   if (requests.length === 0) {
     return (
-      <div className="border-border rounded-lg border px-6 py-10 text-center">
+      <Card className="px-6 py-11 text-center">
         <div className="text-muted-foreground bg-muted mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full">
-          <Inbox className="h-5 w-5" />
+          <Inbox className="h-5 w-5" aria-hidden />
         </div>
         <p className="text-foreground text-sm font-semibold">
           {t("organizations.requests.emptyTitle")}
@@ -90,18 +88,15 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
         <p className="text-muted-foreground mx-auto mt-1 max-w-[380px] text-xs leading-relaxed">
           {t("organizations.requests.emptyHint")}
         </p>
-      </div>
+      </Card>
     );
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div
-        role="list"
-        className="border-border divide-border divide-y overflow-hidden rounded-lg border"
-      >
+      <div role="list" className="flex flex-col gap-3">
         {pending.map((request) => (
-          <div role="listitem" key={request.id} className="flex items-start gap-3 px-4 py-3">
+          <Card role="listitem" key={request.id} className="flex items-start gap-3.5 p-5">
             <UserAvatar
               avatarUrl={request.user.avatarUrl}
               firstName={request.user.firstName}
@@ -109,16 +104,20 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
               className="h-9 w-9"
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{requesterName(request)}</p>
-              <p className="text-muted-foreground truncate text-xs">{request.user.email}</p>
+              <div className="flex flex-wrap items-center gap-x-2">
+                <p className="truncate text-sm font-semibold">{requesterName(request)}</p>
+                <p className="text-muted-foreground truncate text-xs">{request.user.email}</p>
+              </div>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                {t("organizations.requests.requestedOn", { date: formatDate(request.createdAt) })}
+              </p>
+              {/* The note the requester wrote, set apart so it reads as their words
+                  rather than as more metadata about them. */}
               {request.message ? (
-                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                <p className="bg-muted/60 text-muted-foreground mt-2.5 rounded-md px-3 py-2.5 text-xs leading-relaxed">
                   {request.message}
                 </p>
               ) : null}
-              <p className="text-muted-foreground mt-1 text-xs">
-                {t("organizations.requests.requestedOn", { date: formatDate(request.createdAt) })}
-              </p>
             </div>
             <div className="flex shrink-0 gap-2">
               <Button
@@ -137,40 +136,40 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
                 {t("organizations.requests.rejectAction")}
               </Button>
             </div>
-          </div>
+          </Card>
         ))}
         {pending.length === 0 ? (
-          <p className="text-muted-foreground px-4 py-6 text-center text-sm">
+          <Card className="text-muted-foreground px-6 py-8 text-center text-sm">
             {t("organizations.requests.noPending")}
-          </p>
+          </Card>
         ) : null}
       </div>
 
       {decided.length > 0 ? (
         <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">{t("organizations.requests.historyTitle")}</h3>
-          <div
+          {/* Deliberately not "earlier decisions": a withdrawn request is in here
+              too, and nobody in the organization decided that one. */}
+          <h3 className="text-sm font-semibold">{t("organizations.requests.historyTitle")}</h3>
+          <Card
             role="list"
-            className="border-border divide-border divide-y overflow-hidden rounded-lg border"
+            className="bg-muted/40 divide-border divide-y overflow-hidden shadow-none"
           >
             {decided.map((request) => (
-              <div role="listitem" key={request.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm">{requesterName(request)}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {request.decidedAt
-                      ? t("organizations.requests.decidedOn", {
-                          date: formatDate(request.decidedAt),
-                        })
-                      : null}
-                  </p>
-                </div>
-                <Badge variant="outline" className="shrink-0 text-xs font-normal">
+              <div role="listitem" key={request.id} className="flex items-center gap-3 px-5 py-2.5">
+                <p className="min-w-0 flex-1 truncate text-sm">{requesterName(request)}</p>
+                <p className="text-muted-foreground shrink-0 text-xs">
+                  {request.decidedAt
+                    ? t("organizations.requests.decidedOn", {
+                        date: formatDate(request.decidedAt),
+                      })
+                    : null}
+                </p>
+                <Badge variant="outline" className="bg-card shrink-0 text-xs font-normal">
                   {t(`organizations.requests.status.${request.status}`)}
                 </Badge>
               </div>
             ))}
-          </div>
+          </Card>
         </div>
       ) : null}
     </div>

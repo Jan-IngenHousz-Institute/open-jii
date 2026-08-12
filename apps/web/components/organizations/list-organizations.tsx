@@ -36,13 +36,6 @@ export function ListOrganizations() {
     organizations,
     isPending,
     isError,
-    isPaged,
-    isFetching,
-    page,
-    setPage,
-    offset,
-    total,
-    isLastPage,
   } = useOrganizationsList();
 
   return (
@@ -78,39 +71,8 @@ export function ListOrganizations() {
       ) : !isPending && organizations.length === 0 ? (
         <EmptyState filter={filter} isSearch={debouncedSearch.trim() !== ""} />
       ) : (
-        <>
-          <OrganizationOverviewCards organizations={organizations} isPending={isPending} />
-
-          {isPaged && !isPending && (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-muted-foreground text-xs">
-                {t("organizations.directory.showing", {
-                  from: offset + 1,
-                  to: offset + organizations.length,
-                  total,
-                })}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page - 1)}
-                  disabled={page === 1 || isFetching}
-                >
-                  {t("organizations.directory.previous")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page + 1)}
-                  disabled={isLastPage || isFetching}
-                >
-                  {t("organizations.directory.next")}
-                </Button>
-              </div>
-            </div>
-          )}
-        </>
+        // Unpaged: both reads come back whole, so there is nothing below the grid.
+        <OrganizationOverviewCards organizations={organizations} isPending={isPending} />
       )}
     </div>
   );

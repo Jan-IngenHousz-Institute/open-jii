@@ -18,6 +18,7 @@ import { ListGranteeTeamsUseCase } from "./application/use-cases/list-grantee-te
 import { ListMyOrganizationsUseCase } from "./application/use-cases/list-my-organizations/list-my-organizations";
 import { ListOrganizationMembersUseCase } from "./application/use-cases/list-organization-members/list-organization-members";
 import { ListOrganizationResourcesUseCase } from "./application/use-cases/list-organization-resources/list-organization-resources";
+import { ListOrganizationTeamGrantsUseCase } from "./application/use-cases/list-organization-team-grants/list-organization-team-grants";
 import { ListOrganizationTeamsUseCase } from "./application/use-cases/list-organization-teams/list-organization-teams";
 import { ListOrganizationsUseCase } from "./application/use-cases/list-organizations/list-organizations";
 import { ORGANIZATION_EMAIL_PORT } from "./core/ports/email.port";
@@ -59,6 +60,7 @@ import { OrganizationController } from "./presentation/organization.controller";
     ListOrganizationMembersUseCase,
     AddOrganizationMemberUseCase,
     ListOrganizationTeamsUseCase,
+    ListOrganizationTeamGrantsUseCase,
     ListGranteeTeamsUseCase,
     RequestJoinOrganizationUseCase,
     ListOrganizationJoinRequestsUseCase,

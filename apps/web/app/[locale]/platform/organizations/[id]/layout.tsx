@@ -1,7 +1,6 @@
 "use client";
 
 import { OrganizationDetailTabs } from "@/components/organizations/organization-detail-tabs";
-import { OrganizationHeader } from "@/components/organizations/organization-header";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
 import { useParams } from "next/navigation";
@@ -28,12 +27,7 @@ export default function OrganizationLayout({ children }: { children: React.React
       hasData={!!data}
       loadingMessage={t("common.loading")}
     >
-      {data && (
-        <div className="flex flex-1 flex-col gap-6">
-          <OrganizationHeader organization={data} />
-          <OrganizationDetailTabs organization={data}>{children}</OrganizationDetailTabs>
-        </div>
-      )}
+      {data && <OrganizationDetailTabs organization={data}>{children}</OrganizationDetailTabs>}
     </EntityLayoutShell>
   );
 }

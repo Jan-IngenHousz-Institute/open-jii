@@ -1,21 +1,16 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { OrganizationResourceType } from "@repo/api/domains/organization/organization.schema";
-
 import { AppError, Result, failure, isFailure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
-import type { OrganizationResourceDto } from "../../../core/models/organization.model";
+import type {
+  OrganizationResourceDto,
+  OrganizationResourceTotalsDto,
+} from "../../../core/models/organization.model";
 import { canViewOrganization } from "../../../core/organization-access";
 import { OrganizationRepository } from "../../../core/repositories/organization.repository";
-
-/**
- * Rows taken per type before merging. The showcase is a shop window, not a
- * browsable list — each type has its own paginated listing elsewhere.
- */
-const PER_TYPE_LIMIT = 25;
 
 /** The subset of every resource DTO the showcase renders from. */
 interface ShowcaseRow {
@@ -27,12 +22,13 @@ interface ShowcaseRow {
 }
 
 /**
- * The organization's resources showcase.
+ * The organization's resources showcase. Each type's own access-scoped `findAll` does
+ * the filtering, so there is no second definition of "visible" to drift from `can()`.
  *
- * Every type's own access-scoped `findAll` does the filtering — this use-case only
- * adds the owning-organization narrowing — so an outsider on a public organization
- * sees exactly its public rows while a member sees everything they may read, with
- * no second definition of "visible" to drift from `can()`.
+ * Uncapped on purpose — this is the only view of everything an organization owns, so
+ * "view all" has to mean all of it. `totals` is still counted separately because a
+ * group header needs the honest number, and that second computation is the seam a row
+ * filter added later would reopen.
  */
 @Injectable()
 export class ListOrganizationResourcesUseCase {
@@ -49,7 +45,9 @@ export class ListOrganizationResourcesUseCase {
   async execute(
     organizationId: string,
     userId: string,
-  ): Promise<Result<{ resources: OrganizationResourceDto[] }>> {
+  ): Promise<
+    Result<{ resources: OrganizationResourceDto[]; totals: OrganizationResourceTotalsDto }>
+  > {
     this.logger.log({
       msg: "Listing an organization's resources",
       operation: "list-organization-resources",
@@ -66,46 +64,57 @@ export class ListOrganizationResourcesUseCase {
       return failure(AppError.notFound(`Organization with ID ${organizationId} not found`));
     }
 
-    const [experiments, protocols, macros, workbooks] = await Promise.all([
-      this.experimentRepository.findAll(
-        userId,
-        undefined,
-        undefined,
-        undefined,
-        PER_TYPE_LIMIT,
+    const [experiments, protocols, macros, workbooks, totals] = await Promise.all([
+      // Archived stay in: every other count of what an organization owns includes them,
+      // so dropping them here would let a group header promise a row the list cannot show.
+      this.experimentRepository.findAll(userId, undefined, undefined, undefined, undefined, {
         organizationId,
-      ),
-      this.protocolRepository.findAll(undefined, undefined, userId, PER_TYPE_LIMIT, organizationId),
-      this.macroRepository.findAll({ userId, organizationId }, PER_TYPE_LIMIT),
-      this.workbookRepository.findAll({ userId, organizationId }, PER_TYPE_LIMIT),
+        includeArchived: true,
+      }),
+      this.protocolRepository.findAll(undefined, undefined, userId, undefined, organizationId),
+      this.macroRepository.findAll({ userId, organizationId }),
+      this.workbookRepository.findAll({ userId, organizationId }),
+      this.organizationRepository.countAccessibleResources(organizationId, userId),
     ]);
 
     if (isFailure(experiments)) return failure(experiments.error);
     if (isFailure(protocols)) return failure(protocols.error);
     if (isFailure(macros)) return failure(macros.error);
     if (isFailure(workbooks)) return failure(workbooks.error);
+    if (totals.isFailure()) {
+      return failure(AppError.internal("Failed to count an organization's resources"));
+    }
 
     const resources = [
-      ...toResources(experiments.value, "experiment"),
-      ...toResources(protocols.value, "protocol"),
-      ...toResources(macros.value, "macro"),
-      ...toResources(workbooks.value, "workbook"),
+      ...experiments.value.map((row) => ({
+        ...base(row),
+        type: "experiment" as const,
+        status: row.status,
+      })),
+      ...protocols.value.map((row) => ({
+        ...base(row),
+        type: "protocol" as const,
+        family: row.family,
+      })),
+      ...macros.value.map((row) => ({
+        ...base(row),
+        type: "macro" as const,
+        language: row.language,
+      })),
+      ...workbooks.value.map((row) => ({ ...base(row), type: "workbook" as const })),
     ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
-    return success({ resources });
+    return success({ resources, totals: totals.value });
   }
 }
 
-function toResources(
-  rows: ShowcaseRow[],
-  type: OrganizationResourceType,
-): OrganizationResourceDto[] {
-  return rows.map((row) => ({
-    type,
+/** The columns every showcased type contributes, whatever its own meta is. */
+function base(row: ShowcaseRow): Omit<ShowcaseRow, "description"> & { description: string | null } {
+  return {
     id: row.id,
     name: row.name,
     description: row.description ?? null,
     visibility: row.visibility,
     updatedAt: row.updatedAt,
-  }));
+  };
 }

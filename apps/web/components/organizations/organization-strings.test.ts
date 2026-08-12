@@ -135,6 +135,33 @@ describe("organization strings", () => {
     expect(missing).toEqual([]);
   });
 
+  /**
+   * The expand control interpolates a count, so both plural forms have to exist and
+   * both have to carry `{{count}}` — a form missing the placeholder renders "Show more"
+   * with no number, which is exactly the information the control exists to give.
+   *
+   * Asserted here rather than in the component test because the component test's `t()`
+   * is a stub that returns the key: the interpolation is not observable there.
+   */
+  it.each(localeNames)("%s pluralizes the resource expand control with a count", (locale) => {
+    const resources = LOCALES[locale].common.organizations.resources;
+
+    for (const form of [
+      resources.showMore_one,
+      resources.showMore_other,
+      resources.showMoreLabel_one,
+      resources.showMoreLabel_other,
+    ]) {
+      expect(form, `${locale} expand control`).toContain("{{count}}");
+    }
+    // The accessible name also names the group; the visible text deliberately does not,
+    // so that a narrow column shows "Show 3 more" rather than wrapping the type onto it.
+    expect(resources.showMoreLabel_one).toContain("{{group}}");
+    expect(resources.showMoreLabel_other).toContain("{{group}}");
+    expect(resources.showMore_one).not.toContain("{{group}}");
+    expect(resources.showLessLabel).toContain("{{group}}");
+  });
+
   it.each(localeNames)("%s translates the team grantee strings", (locale) => {
     const missing = [
       "sharing.granteeTypeTeam",

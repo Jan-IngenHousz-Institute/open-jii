@@ -1,32 +1,40 @@
 "use client";
 
+import { UserAvatar } from "@/components/user-avatar";
 import { useCreateOrganizationTeam } from "@/hooks/organization/useCreateOrganizationTeam/useCreateOrganizationTeam";
-import { useDeleteOrganizationTeam } from "@/hooks/organization/useDeleteOrganizationTeam/useDeleteOrganizationTeam";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
+import { useOrganizationTeamGrants } from "@/hooks/organization/useOrganizationTeamGrants/useOrganizationTeamGrants";
 import { useOrganizationTeams } from "@/hooks/organization/useOrganizationTeams/useOrganizationTeams";
-import { useUpdateOrganizationTeam } from "@/hooks/organization/useUpdateOrganizationTeam/useUpdateOrganizationTeam";
 import { useLocale } from "@/hooks/useLocale";
-import { Pencil, Trash2, Users, UsersRound } from "lucide-react";
+import { FolderOpen, Network, Plus } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { authErrorMessage } from "~/hooks/organization/auth-organization-result";
 
-import type { OrganizationTeam } from "@repo/api/domains/organization/organization.schema";
+import type { OrganizationTeamMember } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import { Input } from "@repo/ui/components/input";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { OrganizationConfirmDialog } from "./organization-confirm-dialog";
 import { canManageRoster } from "./organization-roster-rules";
 import { organizationTeamPath } from "./organization-routes";
 
+/** How many faces a card shows before the rest become a count. */
+const AVATAR_LIMIT = 4;
+
 /**
  * Teams of one organization. A team is a named subset of its members and nothing
- * more: it exists to be granted access to resources as a unit, which is why
- * deleting one also removes the grants naming it — done server-side, so a team
- * never leaves a ghost collaborator row behind.
+ * more: it exists to be granted access to resources as a unit, which is why deleting
+ * one also removes the grants naming it — done server-side, so a team never leaves a
+ * ghost collaborator row behind.
+ *
+ * Cards rather than list rows, because what matters about a team is its shape — who
+ * is on it and how much it reaches — and a row has nowhere to put either. Renaming
+ * and deleting live on the team's own page: they are decisions about one team, and a
+ * grid of cards each carrying two icon buttons invites the wrong click.
  */
 export function OrganizationTeamsSurface({ organizationId }: { organizationId: string }) {
   const { t } = useTranslation();
@@ -36,18 +44,22 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
   const canManage = canManageRoster(organization?.role ?? null);
 
   const { data, isPending, isError } = useOrganizationTeams(organizationId);
+  const { data: grants } = useOrganizationTeamGrants(organizationId);
   const { mutateAsync: createTeam, isPending: isCreating } =
     useCreateOrganizationTeam(organizationId);
-  const { mutateAsync: renameTeam } = useUpdateOrganizationTeam(organizationId);
-  const { mutateAsync: deleteTeam, isPending: isDeleting } =
-    useDeleteOrganizationTeam(organizationId);
 
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
-  const [renamingTeamId, setRenamingTeamId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-  const [pendingDeletion, setPendingDeletion] = useState<OrganizationTeam | null>(null);
 
   const teams = data ?? [];
+
+  const grantCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const grant of grants ?? []) {
+      counts.set(grant.teamId, (counts.get(grant.teamId) ?? 0) + 1);
+    }
+    return counts;
+  }, [grants]);
 
   const submitNewTeam = async () => {
     const name = newTeamName.trim();
@@ -56,41 +68,10 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
       await createTeam({ name });
       toast({ description: t("organizations.teams.created", { name }) });
       setNewTeamName("");
+      setIsCreateOpen(false);
     } catch (err) {
       toast({
         description: authErrorMessage(err) ?? t("organizations.teams.createFailed"),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const submitRename = async (team: OrganizationTeam) => {
-    const name = renameValue.trim();
-    if (name.length === 0 || name === team.name) {
-      setRenamingTeamId(null);
-      return;
-    }
-    try {
-      await renameTeam({ teamId: team.id, name });
-      toast({ description: t("organizations.teams.renamed", { name }) });
-      setRenamingTeamId(null);
-    } catch (err) {
-      toast({
-        description: authErrorMessage(err) ?? t("organizations.teams.renameFailed"),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const confirmDeletion = async () => {
-    if (!pendingDeletion) return;
-    try {
-      await deleteTeam({ teamId: pendingDeletion.id });
-      toast({ description: t("organizations.teams.deleted", { name: pendingDeletion.name }) });
-      setPendingDeletion(null);
-    } catch (err) {
-      toast({
-        description: authErrorMessage(err) ?? t("organizations.teams.deleteFailed"),
         variant: "destructive",
       });
     }
@@ -101,53 +82,31 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="space-y-1">
-        <h2 className="text-lg font-semibold">{t("organizations.teams.title")}</h2>
-        <p className="text-muted-foreground text-sm">{t("organizations.teams.description")}</p>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold tracking-tight">{t("organizations.teams.title")}</h2>
+          <p className="text-muted-foreground text-sm">{t("organizations.teams.description")}</p>
+        </div>
+
+        {canManage && !isCreateOpen && (
+          <Button className="shrink-0" onClick={() => setIsCreateOpen(true)}>
+            <Plus className="h-4 w-4" />
+            {t("organizations.teams.createAction")}
+          </Button>
+        )}
       </div>
 
-      {canManage && (
-        <form
-          className="flex flex-col gap-2 sm:flex-row"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submitNewTeam();
-          }}
-        >
-          <Input
-            value={newTeamName}
-            onChange={(e) => setNewTeamName(e.target.value)}
-            placeholder={t("organizations.teams.namePlaceholder")}
-            aria-label={t("organizations.teams.nameLabel")}
-            disabled={isCreating}
-            className="sm:max-w-sm"
-          />
-          <Button type="submit" disabled={isCreating || newTeamName.trim().length === 0}>
-            {isCreating ? t("organizations.teams.creating") : t("organizations.teams.createAction")}
-          </Button>
-        </form>
-      )}
-
       {isPending ? (
-        <div
-          aria-busy="true"
-          className="border-border divide-border divide-y overflow-hidden rounded-lg border"
-        >
-          {[0, 1].map((row) => (
-            <div key={row} className="flex items-center gap-3 px-4 py-3">
-              <Skeleton className="h-9 w-9 rounded-full" />
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-            </div>
+        <div aria-busy="true" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((card) => (
+            <Skeleton key={card} className="h-[148px]" />
           ))}
         </div>
-      ) : teams.length === 0 ? (
-        <div className="border-border rounded-lg border px-6 py-10 text-center">
+      ) : teams.length === 0 && !isCreateOpen ? (
+        <Card className="px-6 py-11 text-center">
           <div className="text-muted-foreground bg-muted mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full">
-            <UsersRound className="h-5 w-5" />
+            <Network className="h-5 w-5" aria-hidden />
           </div>
           <p className="text-foreground text-sm font-semibold">
             {t("organizations.teams.emptyTitle")}
@@ -157,105 +116,115 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
               ? t("organizations.teams.emptyManagerHint")
               : t("organizations.teams.emptyMemberHint")}
           </p>
-        </div>
+        </Card>
       ) : (
-        <div
-          role="list"
-          className="border-border divide-border divide-y overflow-hidden rounded-lg border"
-        >
-          {teams.map((team) => (
-            <div role="listitem" key={team.id} className="flex items-center gap-3 px-4 py-3">
-              <div className="bg-surface text-muted-foreground grid h-9 w-9 shrink-0 place-items-center rounded-full border">
-                <Users className="h-4 w-4" />
-              </div>
-
-              {renamingTeamId === team.id ? (
-                <form
-                  className="flex min-w-0 flex-1 items-center gap-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void submitRename(team);
-                  }}
-                >
-                  <Input
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    aria-label={t("organizations.teams.renameLabel", { name: team.name })}
-                    autoFocus
-                  />
-                  <Button type="submit" size="sm">
-                    {t("common.save")}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* The new team takes a slot in the grid rather than a form above it, so the
+              card being filled in sits where the card will be. */}
+          {canManage && isCreateOpen && (
+            <Card className="border-primary bg-primary/5 border-dashed p-5 shadow-none">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submitNewTeam();
+                }}
+              >
+                <span className="text-primary mb-2.5 block text-[11px] font-semibold uppercase tracking-wider">
+                  {t("organizations.teams.createAction")}
+                </span>
+                <Input
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                  placeholder={t("organizations.teams.namePlaceholder")}
+                  aria-label={t("organizations.teams.nameLabel")}
+                  disabled={isCreating}
+                  autoFocus
+                />
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isCreating || newTeamName.trim().length === 0}
+                  >
+                    {isCreating
+                      ? t("organizations.teams.creating")
+                      : t("organizations.teams.createAction")}
                   </Button>
                   <Button
                     type="button"
                     size="sm"
                     variant="ghost"
-                    onClick={() => setRenamingTeamId(null)}
+                    disabled={isCreating}
+                    onClick={() => {
+                      setIsCreateOpen(false);
+                      setNewTeamName("");
+                    }}
                   >
                     {t("common.cancel")}
                   </Button>
-                </form>
-              ) : (
-                <>
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={organizationTeamPath(locale, organizationId, team.id)}
-                      className="text-sm font-medium hover:underline"
-                    >
-                      {team.name}
-                    </Link>
-                    <p className="text-muted-foreground text-xs">
-                      {t("organizations.teams.memberCount", { count: team.members.length })}
-                    </p>
-                  </div>
+                </div>
+              </form>
+            </Card>
+          )}
 
-                  {canManage && (
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          setRenamingTeamId(team.id);
-                          setRenameValue(team.name);
-                        }}
-                        aria-label={t("organizations.teams.renameLabel", { name: team.name })}
-                        className="text-muted-foreground"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setPendingDeletion(team)}
-                        aria-label={t("organizations.teams.deleteLabel", { name: team.name })}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+          {teams.map((team) => (
+            <Link
+              key={team.id}
+              href={organizationTeamPath(locale, organizationId, team.id)}
+              // The platform's card hover, verbatim: every listing card — experiments,
+              // protocols, macros, organizations — lifts and shadows without changing
+              // its border. The design's border tint was prototype styling.
+              className="bg-card shadow-xs flex flex-col gap-3.5 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg"
+            >
+              <div className="min-w-0">
+                <span className="block truncate text-base font-semibold tracking-tight">
+                  {team.name}
+                </span>
+                <span className="text-muted-foreground mt-0.5 block text-xs">
+                  {t("organizations.teams.memberCount", { count: team.members.length })}
+                </span>
+              </div>
+
+              <AvatarStack members={team.members} />
+
+              <div className="text-muted-foreground flex items-center gap-1.5 border-t pt-3 text-xs">
+                <FolderOpen className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {t("organizations.teams.grantCount", { count: grantCounts.get(team.id) ?? 0 })}
+              </div>
+            </Link>
           ))}
         </div>
       )}
+    </div>
+  );
+}
 
-      <OrganizationConfirmDialog
-        open={pendingDeletion !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingDeletion(null);
-        }}
-        title={t("organizations.teams.deleteTitle")}
-        description={t("organizations.teams.deleteDescription", {
-          name: pendingDeletion?.name ?? "",
-        })}
-        note={t("organizations.teams.deleteNote")}
-        confirmLabel={t("common.delete")}
-        pendingLabel={t("organizations.teams.deleting")}
-        isPending={isDeleting}
-        onConfirm={() => void confirmDeletion()}
-      />
+/**
+ * The first few faces on a team, overlapped. Purely decorative: the count beside it
+ * says the same thing in words, so the stack is hidden from assistive tech rather
+ * than read out as a list of unlabelled images.
+ */
+function AvatarStack({ members }: { members: OrganizationTeamMember[] }) {
+  const shown = members.slice(0, AVATAR_LIMIT);
+  const extra = members.length - shown.length;
+
+  // An empty team has no stack, and mt-auto keeps the footer on the card's bottom.
+  if (shown.length === 0) return <div className="mt-auto" />;
+
+  return (
+    <div className="mt-auto flex items-center" aria-hidden>
+      {shown.map((member) => (
+        <UserAvatar
+          key={member.userId}
+          avatarUrl={member.avatarUrl}
+          firstName={member.firstName}
+          lastName={member.lastName}
+          className="ring-card -mr-1.5 h-7 w-7 ring-2"
+        />
+      ))}
+      {extra > 0 ? (
+        <span className="text-muted-foreground ml-3 text-[11px] tabular-nums">+{extra}</span>
+      ) : null}
     </div>
   );
 }

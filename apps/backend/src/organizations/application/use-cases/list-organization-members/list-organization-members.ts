@@ -1,17 +1,13 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
-import type {
-  OrganizationMemberDto,
-  OutsideCollaboratorDto,
-} from "../../../core/models/organization.model";
+import type { OrganizationMemberDto } from "../../../core/models/organization.model";
 import { canViewOrganization, isOrganizationMember } from "../../../core/organization-access";
 import { OrganizationRepository } from "../../../core/repositories/organization.repository";
 
 /**
- * The roster plus the derived outside-collaborator view. Members only: who belongs
- * to an organization is not public, and the same 404 as the profile keeps a private
- * organization's existence undisclosed.
+ * The roster. Members only: who belongs to an organization is not public, and the
+ * same 404 as the profile keeps a private organization's existence undisclosed.
  */
 @Injectable()
 export class ListOrganizationMembersUseCase {
@@ -22,9 +18,7 @@ export class ListOrganizationMembersUseCase {
   async execute(
     organizationId: string,
     userId: string,
-  ): Promise<
-    Result<{ members: OrganizationMemberDto[]; outsideCollaborators: OutsideCollaboratorDto[] }>
-  > {
+  ): Promise<Result<{ members: OrganizationMemberDto[] }>> {
     this.logger.log({
       msg: "Listing organization members",
       operation: "list-organization-members",
@@ -44,21 +38,11 @@ export class ListOrganizationMembersUseCase {
       return failure(AppError.forbidden("Only members can see this organization's members"));
     }
 
-    const [membersResult, collaboratorsResult] = await Promise.all([
-      this.organizationRepository.listMembers(organizationId),
-      this.organizationRepository.listOutsideCollaborators(organizationId),
-    ]);
-
+    const membersResult = await this.organizationRepository.listMembers(organizationId);
     if (membersResult.isFailure()) {
       return failure(AppError.internal("Failed to load organization members"));
     }
-    if (collaboratorsResult.isFailure()) {
-      return failure(AppError.internal("Failed to load outside collaborators"));
-    }
 
-    return success({
-      members: membersResult.value,
-      outsideCollaborators: collaboratorsResult.value,
-    });
+    return success({ members: membersResult.value });
   }
 }

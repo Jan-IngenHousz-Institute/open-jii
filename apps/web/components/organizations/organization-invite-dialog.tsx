@@ -71,8 +71,7 @@ export function OrganizationInviteDialog({
   const [selection, setSelection] = useState<OrganizationInviteSelection | null>(null);
   const [role, setRole] = useState<OrganizationRole>("member");
 
-  const { mutateAsync: invite, isPending: isInviting } =
-    useInviteOrganizationMember(organizationId);
+  const { mutateAsync: invite, isPending: isInviting } = useInviteOrganizationMember();
   const { mutateAsync: addMember, isPending: isAdding } = useAddOrganizationMember();
 
   const isPending = isInviting || isAdding;
@@ -98,7 +97,7 @@ export function OrganizationInviteDialog({
         await addMember({ id: organizationId, userId: selection.userId, role });
         toast({ description: t("organizations.invite.added", { name: selection.displayName }) });
       } else {
-        await invite({ email: selection.email, role });
+        await invite({ organizationId, email: selection.email, role });
         toast({ description: t("organizations.invite.sent", { email: selection.email }) });
       }
     } catch (err) {

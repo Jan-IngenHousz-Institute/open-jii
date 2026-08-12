@@ -3,11 +3,13 @@
 import { useDeleteOrganization } from "@/hooks/organization/useDeleteOrganization/useDeleteOrganization";
 import { useOrganizationDeletionBlockers } from "@/hooks/organization/useOrganizationDeletionBlockers/useOrganizationDeletionBlockers";
 import { useLocale } from "@/hooks/useLocale";
+import { TriangleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { authErrorMessage } from "~/hooks/organization/auth-organization-result";
 
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -67,25 +69,45 @@ export function OrganizationDangerZone({
   // The breakdown names each type in the caller's language, so "transfer or delete
   // them first" points somewhere specific — a device in particular has no page in
   // the showcase to have been noticed on.
-  const blockedBreakdown = (blockers?.blockers ?? [])
-    .map(
-      ({ resourceType, count }) =>
-        `${count} ${t(`organizations.delete.owned.${resourceType}`, { count })}`,
-    )
-    .join(", ");
+  const breakdown = (blockers?.blockers ?? []).map(
+    ({ resourceType, count }) =>
+      `${count} ${t(`organizations.delete.owned.${resourceType}`, { count })}`,
+  );
   const blockedReason = t("organizations.delete.blockedReason", {
     count: resourceCount,
-    breakdown: blockedBreakdown,
+    breakdown: breakdown.join(", "),
   });
 
   return (
-    <section className="border-destructive/40 flex flex-col gap-3 rounded-lg border p-4">
+    <section className="border-destructive/40 bg-destructive/5 flex flex-col gap-3 rounded-lg border p-5">
       <div className="space-y-1">
-        <h3 className="text-destructive text-base font-medium">{t("common.dangerZone")}</h3>
-        <p className="text-muted-foreground text-sm leading-relaxed">
+        <div className="flex items-center gap-2">
+          <TriangleAlert className="text-destructive h-3.5 w-3.5 shrink-0" aria-hidden />
+          <h3 className="text-destructive text-sm font-semibold">
+            {t("organizations.delete.action")}
+          </h3>
+        </div>
+        <p className="text-muted-foreground text-xs leading-relaxed">
           {t("organizations.delete.description")}
         </p>
       </div>
+
+      {/* One chip per type still held, rather than the same list buried in a
+          sentence: the remedy is per type, so the list is the instruction. */}
+      {isBlocked ? (
+        <div className="bg-card rounded-md border p-3">
+          <span className="text-muted-foreground mb-2 block text-[11px] font-semibold uppercase tracking-wider">
+            {t("organizations.delete.stillOwned")}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {breakdown.map((entry) => (
+              <Badge key={entry} variant="outline" className="bg-card font-normal">
+                {entry}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex flex-col items-start gap-2">
         <Button

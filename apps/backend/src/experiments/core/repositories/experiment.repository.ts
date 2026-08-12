@@ -245,8 +245,13 @@ export class ExperimentRepository {
     status?: ExperimentStatus,
     search?: string,
     limit?: number,
-    organizationId?: string,
+    options?: {
+      organizationId?: string;
+      includeArchived?: boolean;
+    },
   ): Promise<Result<ExperimentDto[]>> {
+    const { organizationId, includeArchived = false } = options ?? {};
+
     const experimentFields = {
       id: experiments.id,
       name: experiments.name,
@@ -266,8 +271,9 @@ export class ExperimentRepository {
     return tryCatch(async () => {
       const conditions: (SQL | undefined)[] = [];
 
-      // Always exclude archived experiments unless explicitly requested
-      if (status !== "archived") {
+      // Archived rows are hidden unless asked for, either by filtering to them or by
+      // opting in: a listing is a place to work, and archived means finished.
+      if (!includeArchived && status !== "archived") {
         conditions.push(ne(experiments.status, "archived"));
       }
 

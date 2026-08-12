@@ -7,8 +7,9 @@ import type {
   OrganizationMembershipStatus,
   OrganizationProfile,
   OrganizationResource,
+  OrganizationResourceTotals,
   OrganizationTeam,
-  OutsideCollaborator,
+  OrganizationTeamGrant,
 } from "@repo/api/domains/organization/organization.schema";
 
 /**
@@ -18,14 +19,22 @@ import type {
  * serialize.
  */
 export type OrganizationDirectoryEntryDto = OrganizationDirectoryEntry;
-export type OrganizationProfileDto = OrganizationProfile;
+export type OrganizationProfileDto = Omit<OrganizationProfile, "createdAt"> & { createdAt: Date };
 export type MyOrganizationDto = MyOrganization;
-export type OrganizationResourceDto = Omit<OrganizationResource, "updatedAt"> & {
-  updatedAt: Date;
-};
+/**
+ * Distributed over the union rather than mapped across it: `Omit` on a discriminated
+ * union collapses it into one object with every type's meta optional, which would let
+ * a protocol row carry a `status`.
+ */
+export type OrganizationResourceDto = OrganizationResource extends infer Row
+  ? Row extends { updatedAt: string }
+    ? Omit<Row, "updatedAt"> & { updatedAt: Date }
+    : never
+  : never;
+export type OrganizationResourceTotalsDto = OrganizationResourceTotals;
 export type OrganizationMemberDto = Omit<OrganizationMember, "joinedAt"> & { joinedAt: Date };
-export type OutsideCollaboratorDto = OutsideCollaborator;
 export type OrganizationTeamDto = Omit<OrganizationTeam, "createdAt"> & { createdAt: Date };
+export type OrganizationTeamGrantDto = OrganizationTeamGrant;
 export type GranteeTeamDto = GranteeTeam;
 export type OrganizationDeletionBlockersDto = OrganizationDeletionBlockers;
 export type MembershipStatus = OrganizationMembershipStatus;

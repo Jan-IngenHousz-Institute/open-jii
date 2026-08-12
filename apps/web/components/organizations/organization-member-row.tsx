@@ -1,7 +1,7 @@
 "use client";
 
 import { UserAvatar } from "@/components/user-avatar";
-import { LogOut, Trash2 } from "lucide-react";
+import { LogOut, Network, Trash2 } from "lucide-react";
 
 import type { OrganizationRole } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
@@ -26,6 +26,8 @@ interface OrganizationMemberRowProps {
   lastName: string;
   role: OrganizationRole;
   isSelf: boolean;
+  /** Teams this member is on. Read-only here; a team's own page is where it changes. */
+  teamNames: string[];
   /** Empty when the actor may not change this member's role — the badge stands in. */
   assignableRoles: OrganizationRole[];
   /** Why removal is unavailable, or `null` when it is offered. */
@@ -52,6 +54,7 @@ export function OrganizationMemberRow({
   lastName,
   role,
   isSelf,
+  teamNames,
   assignableRoles,
   removeRejection,
   leaveRejection,
@@ -68,7 +71,7 @@ export function OrganizationMemberRow({
     leaveRejection === "lastOwner" ? t("organizations.members.lastOwnerLeaveReason") : null;
 
   return (
-    <div role="listitem" className="flex items-center gap-3 px-4 py-3">
+    <div role="listitem" className="flex items-center gap-3 px-5 py-3">
       <UserAvatar
         avatarUrl={avatarUrl}
         firstName={firstName}
@@ -87,6 +90,36 @@ export function OrganizationMemberRow({
         </div>
         <span className="text-muted-foreground truncate text-xs">{email}</span>
       </div>
+
+      {/*
+        Which teams this person is on, read-only: a team's membership is changed on the
+        team, not on the roster. Absent rather than empty for somebody on none.
+
+        The icon and the group's label both earn their place — a bare badge here could
+        as easily be a department or a job title, and unlabelled it read as one. The
+        label goes on the group rather than on each badge so assistive tech announces
+        one set instead of repeating "Team" per name.
+      */}
+      {teamNames.length > 0 && (
+        <div
+          className="hidden shrink-0 items-center gap-1 md:flex"
+          aria-label={t("organizations.teams.title")}
+        >
+          {teamNames.map((teamName) => (
+            <Badge
+              key={teamName}
+              variant="outline"
+              // The name is truncated to keep a three-team row readable, so the full
+              // one has to stay reachable — an ellipsis alone is unidentifiable.
+              title={teamName}
+              className="text-muted-foreground max-w-[10rem] gap-1 font-normal"
+            >
+              <Network className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="truncate">{teamName}</span>
+            </Badge>
+          ))}
+        </div>
+      )}
 
       <div className="flex shrink-0 items-center gap-1">
         {assignableRoles.length > 0 ? (

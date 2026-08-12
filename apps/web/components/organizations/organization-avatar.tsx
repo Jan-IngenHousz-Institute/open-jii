@@ -23,7 +23,10 @@ export function OrganizationAvatar({ logo, name, className }: OrganizationAvatar
   return (
     <div
       aria-hidden="true"
-      className={cn(size, "bg-surface text-muted-foreground grid place-items-center border")}
+      // Pale teal, not grey: this is the organization's identity mark, and the one
+      // icon container the design deliberately treats as a brand moment. #005e5e on
+      // #E2FCFC is 7.08:1, past AAA for text and well past the 3:1 an icon needs.
+      className={cn(size, "bg-quaternary text-primary grid place-items-center border")}
       title={name}
     >
       <Building2 className="h-5 w-5" />

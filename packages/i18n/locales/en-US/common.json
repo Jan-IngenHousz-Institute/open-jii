@@ -483,8 +483,8 @@
       }
     },
     "slug": {
-      "hint": "Used in links and invitations. Lowercase letters, numbers and single hyphens.",
-      "renameHint": "Renaming the slug changes nothing about access, but old links using it stop working.",
+      "hint": "A unique handle for your organization. Lowercase letters, numbers and single hyphens.",
+      "renameHint": "A unique handle for this organization. Links use its id, so renaming this breaks nothing.",
       "checking": "Checking availability",
       "available": "This slug is available"
     },
@@ -492,7 +492,37 @@
       "creating": "Creating…",
       "created": "{{name}} created",
       "failed": "Could not create this organization.",
-      "privacyNote": "New organizations are private. You can make yours public later, from its settings."
+      "privacyNote": "New organizations are private. You can make yours public later, from its settings.",
+      "next": "Next",
+      "identityStep": "Identity",
+      "identityTitle": "Identity",
+      "identityDescription": "What this organization is called, and the handle it is reached by.",
+      "profileStep": "Profile",
+      "profileTitle": "Profile",
+      "profileDescription": "How this organization introduces itself. All of it is optional and editable later.",
+      "peopleStep": "People",
+      "peopleTitle": "People",
+      "peopleDescription": "Who joins from the start. Someone with an account is added straight away; an address with none is sent an invitation.",
+      "reviewStep": "Review",
+      "reviewDescription": "Check everything before creating the organization.",
+      "reviewHeading": "Review this organization",
+      "reviewHint": "Nothing has been created yet. Go back to any step to change it.",
+      "unsavedChangesTitle": "Unsaved Changes",
+      "unsavedChangesMessage": "You started creating a new organization. Are you sure you want to leave? All progress will be lost.",
+      "unsavedStay": "Stay on Page",
+      "unsavedLeave": "Leave Page",
+      "people": {
+        "count_one": "{{count}} person",
+        "count_other": "{{count}} people",
+        "empty": "Nobody yet. You can create the organization on your own and add people from its Members tab.",
+        "alreadyAdded": "This person has already been added",
+        "invitedByEmail": "Invited by email",
+        "emailRole": "{{role}} · invited by email",
+        "addTitle": "Add someone",
+        "listTitle": "People to add",
+        "teamsNote": "Teams are set up from the organization's Teams tab once it exists — a team is a group of its members, so it cannot come first.",
+        "failed": "The organization was created, but {{names}} could not be added. Try again from its Members tab."
+      }
     },
     "mine": {
       "emptyTitle": "You are not in any organization yet",
@@ -502,10 +532,7 @@
     "directory": {
       "emptyTitle": "No public organizations yet",
       "emptyHint": "Only organizations that have made themselves public appear here.",
-      "loadFailed": "Could not load the directory.",
-      "showing": "Showing {{from}}–{{to}} of {{total}}",
-      "previous": "Previous",
-      "next": "Next"
+      "loadFailed": "Could not load the directory."
     },
     "join": {
       "requestAction": "Request to join",
@@ -528,20 +555,36 @@
       "memberDescription": "Everything in this organization you have access to.",
       "visitorDescription": "What this organization has made public.",
       "types": {
-        "experiment": "Experiment",
-        "macro": "Macro",
-        "protocol": "Protocol",
-        "workbook": "Workbook"
+        "experiment_one": "Experiment",
+        "experiment_other": "Experiments",
+        "protocol_one": "Protocol",
+        "protocol_other": "Protocols",
+        "macro_one": "Macro",
+        "macro_other": "Macros",
+        "workbook_one": "Workbook",
+        "workbook_other": "Workbooks"
       },
       "emptyTitle": "Nothing to show yet",
       "emptyMemberHint": "Resources created in this organization appear here.",
       "emptyVisitorHint": "This organization has not published anything yet.",
-      "loadFailed": "Could not load this organization's resources."
+      "loadFailed": "Could not load this organization's resources.",
+      "privateTooltip": "Private — only people it has been shared with can open it.",
+      "status": {
+        "active": "Active",
+        "stale": "Stale",
+        "archived": "Archived",
+        "published": "Published"
+      },
+      "showLess": "Show less",
+      "showLessLabel": "Show fewer {{group}}",
+      "showMore_one": "Show {{count}} more",
+      "showMore_other": "Show {{count}} more",
+      "showMoreLabel_one": "Show {{count}} more {{group}}",
+      "showMoreLabel_other": "Show {{count}} more {{group}}"
     },
     "members": {
       "title": "Members",
       "description": "Who belongs to this organization, who has been invited, and who has asked to join.",
-      "tab": "Members ({{count}})",
       "roleForLabel": "Role for {{name}}",
       "removeForLabel": "Remove {{name}}",
       "roleUpdated": "Role updated",
@@ -561,10 +604,10 @@
       "leaveFailed": "Could not leave this organization.",
       "lastOwnerReason": "An organization needs at least one owner.",
       "lastOwnerLeaveReason": "You are the only owner. Make someone else an owner first.",
-      "loadFailed": "Could not load the members of this organization."
+      "loadFailed": "Could not load the members of this organization.",
+      "memberDescription": "Who belongs to this organization."
     },
     "invite": {
-      "tab": "Invited ({{count}})",
       "action": "Invite",
       "title": "Invite someone",
       "description": "Search for someone with an account to add them straight away, or invite an address that has none.",
@@ -584,16 +627,17 @@
       "searchLabel": "Search for someone to add",
       "clearSelection": "Clear selection",
       "noMatches": "No matching users",
-      "alreadyMember": "Already a member",
-      "alreadyInvited": "Already invited",
+      "alreadyMember": "This person is already a member of this organization",
+      "alreadyInvited": "This address already has a pending invitation",
       "sendByEmail": "Send invite by email",
       "addSubmit": "Add",
       "adding": "Adding…",
       "added": "{{name}} was added to the organization",
-      "addFailed": "Could not add this person."
+      "addFailed": "Could not add this person.",
+      "label": "Invited",
+      "invitedByAndExpiry": "Invited by {{name}} · {{expiry}}"
     },
     "requests": {
-      "tab": "Requests ({{count}})",
       "approveAction": "Approve",
       "rejectAction": "Reject",
       "approved": "{{name}} joined the organization",
@@ -611,13 +655,8 @@
       },
       "emptyTitle": "No one has asked to join",
       "emptyHint": "Requests only arrive while the organization is public.",
-      "loadFailed": "Could not load the join requests."
-    },
-    "outsideCollaborators": {
-      "title": "Outside collaborators",
-      "description": "People who were given access to something this organization owns without being a member of it. Their access lives on each resource, so it is changed there.",
-      "resourceCount_one": "{{count}} resource",
-      "resourceCount_other": "{{count}} resources"
+      "loadFailed": "Could not load the join requests.",
+      "label": "Requests"
     },
     "teams": {
       "title": "Teams",
@@ -631,7 +670,6 @@
       "renameLabel": "Rename {{name}}",
       "renamed": "Renamed to {{name}}",
       "renameFailed": "Could not rename this team.",
-      "deleteLabel": "Delete {{name}}",
       "deleteTitle": "Delete team?",
       "deleteDescription": "{{name}} will be deleted.",
       "deleteNote": "Anything shared with this team stops being shared with it. Its members keep any access they hold in their own right.",
@@ -655,13 +693,22 @@
       "memberRemoved": "Removed from the team",
       "membershipFailed": "Could not change who is on this team.",
       "noMembersTitle": "Nobody on this team yet",
-      "noMembersHint": "A team only grants access to the members on it."
+      "noMembersHint": "A team only grants access to the members on it.",
+      "deleteAction": "Delete team",
+      "grantCount_one": "{{count}} resource",
+      "grantCount_other": "{{count}} resources",
+      "grantsTitle": "What this team can reach",
+      "grantsDescription": "Shared with the team, not with its people. Deleting the team withdraws these.",
+      "grantsEmpty": "Nothing has been shared with this team yet."
     },
     "settings": {
       "profileTitle": "Profile",
       "profileDescription": "How this organization appears to its members and, if it is public, in the directory.",
       "saved": "Organization updated",
-      "saveFailed": "Could not save these changes."
+      "saveFailed": "Could not save these changes.",
+      "title": "Settings",
+      "description": "Only owners can change these. Admins manage people and teams.",
+      "unsaved": "Unsaved changes to the profile."
     },
     "visibility": {
       "title": "Visibility",
@@ -672,7 +719,9 @@
       "publicBadge": "Public",
       "nowPublic": "This organization is now public",
       "nowPrivate": "This organization is now private",
-      "changeFailed": "Could not change the organization's visibility."
+      "changeFailed": "Could not change the organization's visibility.",
+      "privateHint": "Invisible from outside. A non-member gets a not-found page, and nobody can ask to join.",
+      "publicHint": "Listed in the directory. Anyone signed in sees the profile and its public resources, and can ask to join."
     },
     "delete": {
       "description": "Deleting an organization cannot be undone. Nothing it owns is deleted with it, so it has to be empty first.",
@@ -696,7 +745,8 @@
       "confirmNote": "Anything that was shared with this organization or its teams stops being shared.",
       "deleting": "Deleting…",
       "deleted": "{{name}} deleted",
-      "failed": "Could not delete this organization."
+      "failed": "Could not delete this organization.",
+      "stillOwned": "Still owned"
     },
     "picker": {
       "label": "Owning organization",
@@ -734,6 +784,15 @@
       "wrongAccountTitle": "This invitation is for another account",
       "wrongAccountHint": "It was sent to a different email address than the one you are signed in with. Sign in with the invited address to accept it.",
       "switchAccount": "Sign in with another account"
+    },
+    "about": {
+      "title": "About",
+      "noDescription": "This organization has not described itself yet.",
+      "onOpenJii": "On openJII",
+      "since": "Since {{date}}"
+    },
+    "overview": {
+      "visitorNotice": "You are looking at a public profile. Members see everything they have access to; ask to join and an owner decides."
     }
   },
   "dashboard": {

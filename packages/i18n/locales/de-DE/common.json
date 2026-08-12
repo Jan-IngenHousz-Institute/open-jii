@@ -808,8 +808,8 @@
       }
     },
     "slug": {
-      "hint": "Wird in Links und Einladungen verwendet. Kleinbuchstaben, Zahlen und einzelne Bindestriche.",
-      "renameHint": "Ein neuer Kurzname ändert nichts am Zugriff, aber alte Links damit funktionieren nicht mehr.",
+      "hint": "Ein eindeutiges Kürzel für deine Organisation. Kleinbuchstaben, Zahlen und einzelne Bindestriche.",
+      "renameHint": "Ein eindeutiges Kürzel für diese Organisation. Links verwenden ihre ID, eine Umbenennung macht also nichts kaputt.",
       "checking": "Verfügbarkeit wird geprüft",
       "available": "Dieser Kurzname ist verfügbar"
     },
@@ -817,7 +817,37 @@
       "creating": "Wird erstellt…",
       "created": "{{name}} wurde erstellt",
       "failed": "Diese Organisation konnte nicht erstellt werden.",
-      "privacyNote": "Neue Organisationen sind privat. Sie können Ihre später in den Einstellungen öffentlich machen."
+      "privacyNote": "Neue Organisationen sind privat. Sie können Ihre später in den Einstellungen öffentlich machen.",
+      "next": "Weiter",
+      "identityStep": "Identität",
+      "identityTitle": "Identität",
+      "identityDescription": "Wie diese Organisation heißt und über welches Kürzel sie erreichbar ist.",
+      "profileStep": "Profil",
+      "profileTitle": "Profil",
+      "profileDescription": "Wie sich diese Organisation vorstellt. Alles ist optional und später änderbar.",
+      "peopleStep": "Personen",
+      "peopleTitle": "Personen",
+      "peopleDescription": "Wer von Anfang an dabei ist. Wer ein Konto hat, wird direkt hinzugefügt; eine Adresse ohne Konto erhält eine Einladung.",
+      "reviewStep": "Prüfen",
+      "reviewDescription": "Prüfen Sie alles, bevor die Organisation erstellt wird.",
+      "reviewHeading": "Diese Organisation prüfen",
+      "reviewHint": "Es wurde noch nichts erstellt. Gehen Sie zu einem beliebigen Schritt zurück, um etwas zu ändern.",
+      "unsavedChangesTitle": "Ungespeicherte Änderungen",
+      "unsavedChangesMessage": "Sie haben begonnen, eine neue Organisation zu erstellen. Möchten Sie die Seite wirklich verlassen? Alle Fortschritte gehen verloren.",
+      "unsavedStay": "Auf der Seite bleiben",
+      "unsavedLeave": "Seite verlassen",
+      "people": {
+        "count_one": "{{count}} Person",
+        "count_other": "{{count}} Personen",
+        "empty": "Noch niemand. Sie können die Organisation allein erstellen und Personen später über den Tab „Mitglieder“ hinzufügen.",
+        "alreadyAdded": "Diese Person wurde bereits hinzugefügt",
+        "invitedByEmail": "Per E-Mail eingeladen",
+        "emailRole": "{{role}} · per E-Mail eingeladen",
+        "addTitle": "Person hinzufügen",
+        "listTitle": "Hinzuzufügende Personen",
+        "teamsNote": "Teams werden im Tab „Teams“ der Organisation eingerichtet, sobald sie existiert – ein Team ist eine Gruppe ihrer Mitglieder und kann deshalb nicht vorher entstehen.",
+        "failed": "Die Organisation wurde erstellt, aber {{names}} konnte nicht hinzugefügt werden. Versuchen Sie es im Tab „Mitglieder“ erneut."
+      }
     },
     "mine": {
       "emptyTitle": "Sie sind noch in keiner Organisation",
@@ -827,10 +857,7 @@
     "directory": {
       "emptyTitle": "Noch keine öffentliche Organisation",
       "emptyHint": "Hier erscheinen nur Organisationen, die sich öffentlich gemacht haben.",
-      "loadFailed": "Das Verzeichnis konnte nicht geladen werden.",
-      "showing": "{{from}}–{{to}} von {{total}}",
-      "previous": "Zurück",
-      "next": "Weiter"
+      "loadFailed": "Das Verzeichnis konnte nicht geladen werden."
     },
     "join": {
       "requestAction": "Mitgliedschaft anfragen",
@@ -853,20 +880,36 @@
       "memberDescription": "Alles in dieser Organisation, worauf Sie Zugriff haben.",
       "visitorDescription": "Was diese Organisation öffentlich gemacht hat.",
       "types": {
-        "experiment": "Experiment",
-        "macro": "Makro",
-        "protocol": "Protokoll",
-        "workbook": "Arbeitsmappe"
+        "experiment_one": "Experiment",
+        "experiment_other": "Experimente",
+        "protocol_one": "Protokoll",
+        "protocol_other": "Protokolle",
+        "macro_one": "Makro",
+        "macro_other": "Makros",
+        "workbook_one": "Arbeitsmappe",
+        "workbook_other": "Arbeitsmappen"
       },
       "emptyTitle": "Noch nichts zu sehen",
       "emptyMemberHint": "In dieser Organisation erstellte Ressourcen erscheinen hier.",
       "emptyVisitorHint": "Diese Organisation hat noch nichts veröffentlicht.",
-      "loadFailed": "Die Ressourcen dieser Organisation konnten nicht geladen werden."
+      "loadFailed": "Die Ressourcen dieser Organisation konnten nicht geladen werden.",
+      "privateTooltip": "Privat – nur wer sie geteilt bekommen hat, kann sie öffnen.",
+      "status": {
+        "active": "Aktiv",
+        "stale": "Veraltet",
+        "archived": "Archiviert",
+        "published": "Veröffentlicht"
+      },
+      "showLess": "Weniger anzeigen",
+      "showLessLabel": "Weniger {{group}} anzeigen",
+      "showMore_one": "{{count}} weiteres anzeigen",
+      "showMore_other": "{{count}} weitere anzeigen",
+      "showMoreLabel_one": "{{count}} weiteres {{group}} anzeigen",
+      "showMoreLabel_other": "{{count}} weitere {{group}} anzeigen"
     },
     "members": {
       "title": "Mitglieder",
       "description": "Wer zu dieser Organisation gehört, wer eingeladen wurde und wer beitreten möchte.",
-      "tab": "Mitglieder ({{count}})",
       "roleForLabel": "Rolle von {{name}}",
       "removeForLabel": "{{name}} entfernen",
       "roleUpdated": "Rolle aktualisiert",
@@ -886,10 +929,10 @@
       "leaveFailed": "Die Organisation konnte nicht verlassen werden.",
       "lastOwnerReason": "Eine Organisation braucht mindestens einen Eigentümer.",
       "lastOwnerLeaveReason": "Sie sind der einzige Eigentümer. Machen Sie zuerst jemand anderen zum Eigentümer.",
-      "loadFailed": "Die Mitglieder dieser Organisation konnten nicht geladen werden."
+      "loadFailed": "Die Mitglieder dieser Organisation konnten nicht geladen werden.",
+      "memberDescription": "Wer zu dieser Organisation gehört."
     },
     "invite": {
-      "tab": "Eingeladen ({{count}})",
       "action": "Einladen",
       "title": "Jemanden einladen",
       "description": "Suche nach einer Person mit Konto, um sie direkt hinzuzufügen, oder lade eine Adresse ohne Konto ein.",
@@ -909,16 +952,17 @@
       "searchLabel": "Nach einer Person zum Hinzufügen suchen",
       "clearSelection": "Auswahl aufheben",
       "noMatches": "Keine passenden Nutzer",
-      "alreadyMember": "Bereits Mitglied",
-      "alreadyInvited": "Bereits eingeladen",
+      "alreadyMember": "Diese Person ist bereits Mitglied dieser Organisation",
+      "alreadyInvited": "Für diese Adresse liegt bereits eine Einladung vor",
       "sendByEmail": "Einladung per E-Mail senden",
       "addSubmit": "Hinzufügen",
       "adding": "Wird hinzugefügt …",
       "added": "{{name}} wurde der Organisation hinzugefügt",
-      "addFailed": "Diese Person konnte nicht hinzugefügt werden."
+      "addFailed": "Diese Person konnte nicht hinzugefügt werden.",
+      "label": "Eingeladen",
+      "invitedByAndExpiry": "Eingeladen von {{name}} · {{expiry}}"
     },
     "requests": {
-      "tab": "Anfragen ({{count}})",
       "approveAction": "Annehmen",
       "rejectAction": "Ablehnen",
       "approved": "{{name}} ist der Organisation beigetreten",
@@ -936,13 +980,8 @@
       },
       "emptyTitle": "Noch keine Beitrittsanfragen",
       "emptyHint": "Anfragen kommen nur, solange die Organisation öffentlich ist.",
-      "loadFailed": "Die Beitrittsanfragen konnten nicht geladen werden."
-    },
-    "outsideCollaborators": {
-      "title": "Externe Mitarbeitende",
-      "description": "Personen mit Zugriff auf etwas, das dieser Organisation gehört, ohne selbst Mitglied zu sein. Ihr Zugriff liegt an der jeweiligen Ressource und wird dort geändert.",
-      "resourceCount_one": "{{count}} Ressource",
-      "resourceCount_other": "{{count}} Ressourcen"
+      "loadFailed": "Die Beitrittsanfragen konnten nicht geladen werden.",
+      "label": "Anfragen"
     },
     "teams": {
       "title": "Teams",
@@ -956,7 +995,6 @@
       "renameLabel": "{{name}} umbenennen",
       "renamed": "Umbenannt in {{name}}",
       "renameFailed": "Dieses Team konnte nicht umbenannt werden.",
-      "deleteLabel": "{{name}} löschen",
       "deleteTitle": "Team löschen?",
       "deleteDescription": "{{name}} wird gelöscht.",
       "deleteNote": "Mit diesem Team geteilte Inhalte sind nicht mehr mit ihm geteilt. Die Mitglieder behalten Zugriff, den sie selbst haben.",
@@ -980,13 +1018,22 @@
       "memberRemoved": "Aus dem Team entfernt",
       "membershipFailed": "Die Teamzugehörigkeit konnte nicht geändert werden.",
       "noMembersTitle": "Noch niemand in diesem Team",
-      "noMembersHint": "Ein Team gibt nur den Mitgliedern Zugriff, die darin sind."
+      "noMembersHint": "Ein Team gibt nur den Mitgliedern Zugriff, die darin sind.",
+      "deleteAction": "Team löschen",
+      "grantCount_one": "{{count}} Ressource",
+      "grantCount_other": "{{count}} Ressourcen",
+      "grantsTitle": "Worauf dieses Team zugreifen kann",
+      "grantsDescription": "Mit dem Team geteilt, nicht mit seinen Mitgliedern. Wird das Team gelöscht, entfällt dieser Zugriff.",
+      "grantsEmpty": "Mit diesem Team wurde noch nichts geteilt."
     },
     "settings": {
       "profileTitle": "Profil",
       "profileDescription": "Wie diese Organisation ihren Mitgliedern und — wenn sie öffentlich ist — im Verzeichnis erscheint.",
       "saved": "Organisation aktualisiert",
-      "saveFailed": "Diese Änderungen konnten nicht gespeichert werden."
+      "saveFailed": "Diese Änderungen konnten nicht gespeichert werden.",
+      "title": "Einstellungen",
+      "description": "Nur Inhaber können diese ändern. Administratoren verwalten Personen und Teams.",
+      "unsaved": "Nicht gespeicherte Änderungen am Profil."
     },
     "visibility": {
       "title": "Sichtbarkeit",
@@ -997,7 +1044,9 @@
       "publicBadge": "Öffentlich",
       "nowPublic": "Diese Organisation ist jetzt öffentlich",
       "nowPrivate": "Diese Organisation ist jetzt privat",
-      "changeFailed": "Die Sichtbarkeit der Organisation konnte nicht geändert werden."
+      "changeFailed": "Die Sichtbarkeit der Organisation konnte nicht geändert werden.",
+      "privateHint": "Von außen unsichtbar. Nichtmitglieder erhalten eine „Nicht gefunden“-Seite, und niemand kann eine Beitrittsanfrage stellen.",
+      "publicHint": "Im Verzeichnis aufgeführt. Alle angemeldeten Personen sehen das Profil und seine öffentlichen Ressourcen und können eine Beitrittsanfrage stellen."
     },
     "delete": {
       "description": "Das Löschen einer Organisation kann nicht rückgängig gemacht werden. Ihre Inhalte werden nicht mitgelöscht, sie muss also zuerst leer sein.",
@@ -1021,7 +1070,8 @@
       "confirmNote": "Was mit dieser Organisation oder ihren Teams geteilt war, ist danach nicht mehr geteilt.",
       "deleting": "Wird gelöscht…",
       "deleted": "{{name}} wurde gelöscht",
-      "failed": "Diese Organisation konnte nicht gelöscht werden."
+      "failed": "Diese Organisation konnte nicht gelöscht werden.",
+      "stillOwned": "Noch im Besitz"
     },
     "picker": {
       "label": "Besitzende Organisation",
@@ -1059,6 +1109,15 @@
       "wrongAccountTitle": "Diese Einladung gilt für ein anderes Konto",
       "wrongAccountHint": "Sie wurde an eine andere E-Mail-Adresse gesendet als die, mit der Sie angemeldet sind. Melden Sie sich mit der eingeladenen Adresse an, um sie anzunehmen.",
       "switchAccount": "Mit einem anderen Konto anmelden"
+    },
+    "about": {
+      "title": "Über uns",
+      "noDescription": "Diese Organisation hat sich noch nicht beschrieben.",
+      "onOpenJii": "Auf openJII",
+      "since": "Seit {{date}}"
+    },
+    "overview": {
+      "visitorNotice": "Du siehst ein öffentliches Profil. Mitglieder sehen alles, worauf sie Zugriff haben; stelle eine Anfrage, und ein Inhaber entscheidet."
     }
   }
 }

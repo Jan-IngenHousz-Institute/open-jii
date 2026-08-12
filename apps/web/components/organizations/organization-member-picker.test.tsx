@@ -69,7 +69,7 @@ describe("<OrganizationMemberPicker />", () => {
     expect(userSpy.called).toBe(false);
   });
 
-  it("lists an existing member with the reason, but refuses to pick them", async () => {
+  it("drops an existing member from the results, keeping the rest pickable", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, {
       body: [
@@ -82,13 +82,10 @@ describe("<OrganizationMemberPicker />", () => {
 
     await user.type(search(), "e");
 
-    // Still listed — dropping them makes the search look broken to somebody who
-    // can see them on the roster one tab away.
-    await waitFor(() => expect(screen.getByText("Mel Member")).toBeInTheDocument());
-    expect(screen.getByText("organizations.invite.alreadyMember")).toBeInTheDocument();
-
-    await user.click(screen.getByText("Mel Member"));
-    expect(onSelectionChange).not.toHaveBeenCalled();
+    // Filtered out rather than listed unpickably, matching the sharing picker: a row
+    // that cannot be picked is noise in a list whose only purpose is picking.
+    await waitFor(() => expect(screen.getByText("New Person")).toBeInTheDocument());
+    expect(screen.queryByText("Mel Member")).not.toBeInTheDocument();
 
     await user.click(screen.getByText("New Person"));
     expect(onSelectionChange).toHaveBeenCalledWith(
@@ -96,7 +93,7 @@ describe("<OrganizationMemberPicker />", () => {
     );
   });
 
-  it("marks a registered user who already has a pending invitation", async () => {
+  it("drops a registered user who already has a pending invitation", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, {
       body: [
@@ -109,16 +106,64 @@ describe("<OrganizationMemberPicker />", () => {
       ],
     });
 
-    const { onSelectionChange } = renderPicker({ pendingInvitationEmails: ["Ada@Uni.edu"] });
+    renderPicker({ pendingInvitationEmails: ["Ada@Uni.edu"] });
 
     await user.type(search(), "ada");
 
     // Case-insensitively: an address is the same address whatever its casing.
     await waitFor(() =>
-      expect(screen.getByText("organizations.invite.alreadyInvited")).toBeInTheDocument(),
+      expect(screen.getByText("organizations.invite.noMatches")).toBeInTheDocument(),
     );
-    await user.click(screen.getByText("Ada Waiting"));
-    expect(onSelectionChange).not.toHaveBeenCalled();
+    expect(screen.queryByText("Ada Waiting")).not.toBeInTheDocument();
+  });
+
+  it("explains a typed address whose owner the results dropped, rather than saying nothing was found", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.users.searchUsers, {
+      body: [
+        createUserProfile({
+          userId: "u-1",
+          firstName: "Mel",
+          lastName: "Member",
+          email: "mel@uni.edu",
+        }),
+      ],
+    });
+
+    renderPicker({ memberUserIds: ["u-1"] });
+
+    await user.type(search(), "mel@uni.edu");
+
+    // The exclusion check reads the unfiltered answer, so this address is neither
+    // reported as unknown nor offered as an invitation to somebody already inside.
+    await waitFor(() =>
+      expect(screen.getByText("organizations.invite.alreadyMember")).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
+    expect(screen.queryByText("organizations.invite.noMatches")).not.toBeInTheDocument();
+  });
+
+  it("uses the caller's own wording for an exclusion when it is given one", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.users.searchUsers, {
+      body: [
+        createUserProfile({
+          userId: "u-1",
+          firstName: "Mel",
+          lastName: "Member",
+          email: "mel@uni.edu",
+        }),
+      ],
+    });
+
+    // What the create wizard passes: it collects people for an organization that does
+    // not exist, so "already a member" would be false of them.
+    renderPicker({ memberUserIds: ["u-1"], excludedLabel: "Already added" });
+
+    await user.type(search(), "mel@uni.edu");
+
+    await waitFor(() => expect(screen.getByText("Already added")).toBeInTheDocument());
+    expect(screen.queryByText("organizations.invite.alreadyMember")).not.toBeInTheDocument();
   });
 
   it("offers an unmatched address as an email invitation", async () => {

@@ -15,6 +15,7 @@ import type {
 } from "@repo/api/domains/organization/organization.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
+import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -34,6 +35,8 @@ interface OrganizationRosterProps {
   members: OrganizationMember[];
   /** The signed-in caller's own role in this organization. */
   actorRole: OrganizationRole;
+  /** Which teams each member is on, joined client-side from the teams list. */
+  teamNamesByUserId: Map<string, string[]>;
   isPending: boolean;
   isError: boolean;
 }
@@ -48,6 +51,7 @@ export function OrganizationRoster({
   organizationId,
   members,
   actorRole,
+  teamNamesByUserId,
   isPending,
   isError,
 }: OrganizationRosterProps) {
@@ -149,12 +153,9 @@ export function OrganizationRoster({
 
   if (isPending) {
     return (
-      <div
-        aria-busy="true"
-        className="border-border divide-border divide-y overflow-hidden rounded-lg border"
-      >
+      <Card aria-busy="true" className="divide-border divide-y overflow-hidden">
         {[0, 1, 2].map((row) => (
-          <div key={row} className="flex items-center gap-3 px-4 py-3">
+          <div key={row} className="flex items-center gap-3 px-5 py-3">
             <Skeleton className="h-9 w-9 rounded-full" />
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <Skeleton className="h-4 w-40" />
@@ -163,16 +164,13 @@ export function OrganizationRoster({
             <Skeleton className="h-8 w-28" />
           </div>
         ))}
-      </div>
+      </Card>
     );
   }
 
   return (
     <>
-      <div
-        role="list"
-        className="border-border divide-border divide-y overflow-hidden rounded-lg border"
-      >
+      <Card role="list" className="divide-border divide-y overflow-hidden">
         {normalized.map((member) => {
           const target = { userId: member.userId, role: member.orgRole };
           const isSelf = member.userId === currentUserId;
@@ -191,6 +189,7 @@ export function OrganizationRoster({
               lastName={member.lastName}
               role={member.orgRole}
               isSelf={isSelf}
+              teamNames={teamNamesByUserId.get(member.userId) ?? []}
               assignableRoles={canAddressRow ? assignableRoles(actor, target, ownerCount) : []}
               removeRejection={removeRejection(actor, target, ownerCount)}
               leaveRejection={isSelf ? leaveRejection(member.orgRole, ownerCount) : null}
@@ -201,7 +200,7 @@ export function OrganizationRoster({
             />
           );
         })}
-      </div>
+      </Card>
 
       <OrganizationConfirmDialog
         open={pendingRemoval !== null}

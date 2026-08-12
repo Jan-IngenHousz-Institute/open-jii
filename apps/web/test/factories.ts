@@ -45,7 +45,9 @@ import type {
   OrganizationDirectoryEntry,
   OrganizationMember,
   OrganizationProfile,
+  OrganizationResource,
   OrganizationTeam,
+  OrganizationTeamGrant,
 } from "@repo/api/domains/organization/organization.schema";
 import type { Protocol, ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
 import type { ResourceGrantDto, ResourceOwnerDto } from "@repo/api/domains/sharing/sharing.schema";
@@ -373,6 +375,8 @@ export function createOrganizationProfile(
     location: null,
     visibility: "private",
     memberCount: 3,
+    resourceCount: 7,
+    createdAt: "2024-03-04T09:00:00.000Z",
     role: "owner",
     membershipStatus: "member",
     ...overrides,
@@ -394,6 +398,7 @@ export function createOrganizationDirectoryEntry(
     location: null,
     memberCount: 4,
     resourceCount: 0,
+    visibility: "public",
     membershipStatus: "none",
     ...overrides,
   };
@@ -443,6 +448,42 @@ export function createOrganizationTeam(
     organizationId: "org-1",
     createdAt: "2026-01-01T00:00:00.000Z",
     members: [],
+    ...overrides,
+  };
+}
+
+/**
+ * A showcase row. Defaults to an experiment, since that is the only type carrying
+ * meta a caller is likely to want to override; pass `type` for the others.
+ */
+export function createOrganizationResource(
+  overrides: Partial<OrganizationResource> = {},
+): OrganizationResource {
+  organizationSeq++;
+  return {
+    type: "experiment",
+    id: `resource-${organizationSeq}`,
+    name: `Canopy series ${organizationSeq}`,
+    description: null,
+    visibility: "public",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    status: "active",
+    ...overrides,
+  } as OrganizationResource;
+}
+
+/** A grant naming one of the organization's teams. */
+export function createOrganizationTeamGrant(
+  overrides: Partial<OrganizationTeamGrant> = {},
+): OrganizationTeamGrant {
+  organizationSeq++;
+  return {
+    id: `grant-${organizationSeq}`,
+    teamId: "team-1",
+    resourceType: "experiment",
+    resourceId: `resource-${organizationSeq}`,
+    resourceName: `Canopy series ${organizationSeq}`,
+    role: "viewer",
     ...overrides,
   };
 }

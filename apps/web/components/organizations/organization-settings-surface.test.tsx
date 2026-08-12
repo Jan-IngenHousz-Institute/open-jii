@@ -40,7 +40,15 @@ describe("<OrganizationSettingsSurface />", () => {
     render(<OrganizationSettingsSurface organizationId="org-1" />);
 
     expect(await screen.findByLabelText("organizations.fields.name")).toHaveValue("Greenhouse Lab");
-    expect(screen.getByLabelText("organizations.visibility.toggleLabel")).toBeVisible();
+    // Visibility is two radio cards, not a switch: each state needs a sentence.
+    expect(
+      screen.getByRole("radio", { name: /organizations.visibility.privateLabel/u }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("radio", { name: /organizations.visibility.publicLabel/u }),
+    ).not.toBeChecked();
+    // Nothing is dirty yet, so there is nothing to save.
+    expect(screen.queryByRole("button", { name: "common.save" })).toBeNull();
   });
 
   it.each(["admin", "member"] as const)(
@@ -93,7 +101,7 @@ describe("<OrganizationSettingsSurface />", () => {
     });
   });
 
-  it("sends only the visibility change when the directory toggle is flipped", async () => {
+  it("sends only the visibility change when the other card is chosen", async () => {
     const user = userEvent.setup();
     mockSession({ id: "user-1" });
     mountProfile({ role: "owner", visibility: "private" });
@@ -101,7 +109,9 @@ describe("<OrganizationSettingsSurface />", () => {
 
     render(<OrganizationSettingsSurface organizationId="org-1" />);
 
-    await user.click(await screen.findByLabelText("organizations.visibility.toggleLabel"));
+    await user.click(
+      await screen.findByRole("radio", { name: /organizations.visibility.publicLabel/u }),
+    );
 
     await waitFor(() => {
       // `visibility` only reaches the database because it is registered as an
