@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatJson, isJsonFormatStyle, reformatJsonString } from "./json-format";
+import { formatJson, isJsonFormatStyle, jsonDocKey, reformatJsonString } from "./json-format";
 
 describe("formatJson", () => {
   it("matches JSON.stringify indentation in expanded style", () => {
@@ -122,6 +122,38 @@ describe("reformatJsonString", () => {
 
   it("leaves blank input untouched", () => {
     expect(reformatJsonString("   ")).toBe("   ");
+  });
+});
+
+describe("jsonDocKey", () => {
+  const protocol = [
+    { label: "PAM", pulses: Array.from({ length: 40 }, () => 20), detectors: [[1], [1]] },
+  ];
+
+  it("gives both layouts of the same protocol one key", () => {
+    const compact = formatJson(protocol, { style: "compact" });
+    const expanded = formatJson(protocol, { style: "expanded" });
+
+    expect(compact).not.toBe(expanded);
+    expect(jsonDocKey(compact)).toBe(jsonDocKey(expanded));
+  });
+
+  it("is insensitive to indentation and separator whitespace", () => {
+    expect(jsonDocKey('{"a":1,"b":[1,2]}')).toBe(jsonDocKey('{\n  "a": 1,\n  "b": [ 1, 2 ]\n}'));
+  });
+
+  it("changes when a value changes", () => {
+    const edited = [{ ...protocol[0], pulses: [1] }];
+    expect(jsonDocKey(formatJson(protocol))).not.toBe(jsonDocKey(formatJson(edited)));
+  });
+
+  it("changes when keys are reordered, which is a real edit", () => {
+    expect(jsonDocKey('{"a":1,"b":2}')).not.toBe(jsonDocKey('{"b":2,"a":1}'));
+  });
+
+  it("keys unparseable text off itself so a half-typed edit still registers", () => {
+    expect(jsonDocKey("{ not json")).toBe("{ not json");
+    expect(jsonDocKey("{ not json")).not.toBe(jsonDocKey("{ not json yet"));
   });
 });
 

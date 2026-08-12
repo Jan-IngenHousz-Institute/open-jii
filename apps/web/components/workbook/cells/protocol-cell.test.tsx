@@ -306,6 +306,63 @@ describe("ProtocolCellComponent", () => {
     vi.useRealTimers();
   });
 
+  it("reflows the code without persisting when the format is toggled", async () => {
+    // Layout is not content: autosave keys off the parsed protocol, so switching
+    // between compact and expanded must not write to the server.
+    localStorage.clear();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light", duration: 5 }] }),
+    });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("json-format-toggle")).toBeEnabled());
+    const before = screen.getByTestId("code-editor").textContent;
+
+    await user.click(screen.getByTestId("json-format-toggle"));
+    await vi.advanceTimersByTimeAsync(1500);
+
+    const after = screen.getByTestId("code-editor").textContent;
+    expect(after).not.toBe(before);
+    expect(JSON.parse(after)).toEqual(JSON.parse(before));
+    expect(updateSpy.called).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("still persists a real edit made after the format was toggled", async () => {
+    localStorage.clear();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light", duration: 5 }] }),
+    });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("json-format-toggle")).toBeEnabled());
+    await user.click(screen.getByTestId("json-format-toggle"));
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(updateSpy.called).toBe(false);
+
+    await user.click(screen.getByTestId("simulate-change"));
+    await vi.advanceTimersByTimeAsync(1500);
+
+    await waitFor(() => expect(updateSpy.called).toBe(true));
+    vi.useRealTimers();
+  });
+
   it("exposes the latest edited code to the run flow immediately, before the debounce", async () => {
     // The run flow reads the live editor code rather than re-fetching from the
     // server, so an edit is runnable straight away (no waiting out the 1000ms

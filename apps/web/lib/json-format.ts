@@ -41,6 +41,20 @@ export function formatJson(value: unknown, options: FormatJsonOptions = {}): str
   return write(value, 0, 0, { indent, maxLineWidth, dataArrayMaxWidth });
 }
 
+/**
+ * Layout-insensitive identity for a JSON document: two texts that parse to the
+ * same value produce the same key, so change detection (autosave) ignores a pure
+ * reflow. Text that does not parse yet keys off itself, so a half-typed edit
+ * still registers as a change once it becomes valid.
+ */
+export function jsonDocKey(source: string): string {
+  try {
+    return stringify(JSON.parse(source)) ?? source;
+  } catch {
+    return source;
+  }
+}
+
 /** Reformats a JSON document, returning it untouched when it does not parse. */
 export function reformatJsonString(source: string, options: FormatJsonOptions = {}): string {
   if (!source.trim()) return source;

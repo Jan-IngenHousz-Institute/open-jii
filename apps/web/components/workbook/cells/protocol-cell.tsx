@@ -10,7 +10,7 @@ import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useJsonFormatStyle } from "@/hooks/useJsonFormatStyle";
 import type { JsonFormatStyle } from "@/lib/json-format";
-import { formatJson, reformatJsonString } from "@/lib/json-format";
+import { formatJson, jsonDocKey, reformatJsonString } from "@/lib/json-format";
 import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Check, Copy, ExternalLink, GitFork, Hand, Loader2, Microscope } from "lucide-react";
@@ -123,8 +123,8 @@ export function ProtocolCellComponent({
     [protocolId, saveProtocol, onEntitySaved],
   );
 
-  // Rewrites the document, so it only ever runs on an explicit click. On an
-  // editable cell this counts as an edit and autosave will persist the reflow.
+  // Rewrites the document, so it only ever runs on an explicit click. Autosave
+  // keys off the parsed value, so a pure reflow is not persisted.
   const handleToggleFormat = useCallback(() => {
     const next: JsonFormatStyle = style === "compact" ? "expanded" : "compact";
     setStyle(next);
@@ -143,7 +143,8 @@ export function ProtocolCellComponent({
 
   const autosave = useAutosave<string>({
     value: localCode ?? "",
-    toKey: (code) => code,
+    // Identity is the parsed protocol, not the text: reformatting must not save.
+    toKey: jsonDocKey,
     isValid: isValidCode,
     save,
     enabled: isEditable && localCode != null,
