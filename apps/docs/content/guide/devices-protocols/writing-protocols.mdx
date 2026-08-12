@@ -3,7 +3,7 @@ title: "Writing protocols"
 description: "Create, validate, and test a device measurement recipe before field use."
 ---
 
-{/* verified: code@147e5cf48 2026-07-22 */}
+{/* verified: code@c0c805857 2026-08-12 */}
 
 A protocol is the JSON measurement recipe that openJII sends to connected
 hardware. For MultispeQ, it is a JSON array in the MultispeQ protocol format.
@@ -79,6 +79,34 @@ time, and compare its output and run time with the original.
   Pulse timing, light intensity, detector choice, repeats, and pre-illumination can change both the
   result and the stress placed on a sample. Do not turn the structure example above into a field
   method without a device-appropriate protocol and scientific review.
+</Callout>
+
+## Change how the JSON is laid out
+
+Real protocols are mostly long numeric arrays. Written one value per line, a
+40-pulse block becomes 40 lines, and a field protocol can run past a thousand.
+
+Every JSON view in the platform therefore has two layouts, switched with the
+fold/unfold button next to **Copy**:
+
+| Layout       | What it does                                                                |
+| ------------ | --------------------------------------------------------------------------- |
+| **Compact**  | Keeps a whole data array on one line and lets it wrap. This is the default. |
+| **Expanded** | One value per line, the classic `JSON.stringify` indentation.               |
+
+Compact only collapses arrays of plain values, such as `pulses`,
+`pulse_distance`, `detectors`, and `pulsed_lights`. Nested structure is still
+broken across lines, so the shape of `_protocol_set_` stays readable. A very
+long array falls back to one value per line so the editor stays responsive.
+
+The choice is yours, not the protocol's: it is stored in your browser and
+applies to every JSON view you open, including the workbook protocol and output
+cells and the raw JSON in experiment data. It never changes what is saved, so
+switching layouts is not an edit and does not create a new version.
+
+<Callout type="info">
+  Switching to Expanded is worth it when you are counting positions in an array, for example
+  matching a `pulses` entry against the `pulse_distance` at the same index.
 </Callout>
 
 ## Target the right device family
