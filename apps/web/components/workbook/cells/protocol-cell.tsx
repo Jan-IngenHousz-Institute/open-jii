@@ -2,11 +2,15 @@
 
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
+import { JsonFormatToggle } from "@/components/shared/json-format-toggle";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useJsonFormatStyle } from "@/hooks/useJsonFormatStyle";
+import type { JsonFormatStyle } from "@/lib/json-format";
+import { formatJson, reformatJsonString } from "@/lib/json-format";
 import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Check, Copy, ExternalLink, GitFork, Hand, Loader2, Microscope } from "lucide-react";
@@ -58,6 +62,7 @@ export function ProtocolCellComponent({
 }: ProtocolCellProps) {
   const protocolId = cell.payload.protocolId;
   const { copy, copied } = useCopyToClipboard();
+  const { style, isHydrated, setStyle } = useJsonFormatStyle();
   const { t } = useTranslation("iot");
   const { t: tWorkbook } = useTranslation("workbook");
 
@@ -68,13 +73,13 @@ export function ProtocolCellComponent({
   // Newly-created protocols have an empty code array; render that as "[]" so owners can fill it in
   // rather than treating it as a load failure.
   const protocolCode = useSnapshot
-    ? JSON.stringify(snapshot.code ?? [], null, 2)
+    ? formatJson(snapshot.code ?? [], { style })
     : protocolData?.code
-      ? JSON.stringify(protocolData.code, null, 2)
+      ? formatJson(protocolData.code, { style })
       : null;
 
   const protocolFamily = useSnapshot ? snapshot.family : protocolData?.family;
-  // Capability, not ownership: see the macro cell — the detail payload
+  // Capability, not ownership: see the macro cell, the detail payload
   // carries the caller's `can(update)`, so a "Can edit" grantee edits here too.
   const canUpdateProtocol = protocolData?.capabilities.canUpdate ?? false;
   const isEditable = canUpdateProtocol && !readOnly;
@@ -90,11 +95,13 @@ export function ProtocolCellComponent({
 
   const [localCode, setLocalCode] = useState<string | null>(null);
 
+  // Seeded only once the stored format preference is known, so the text is never
+  // rewritten under the user (which autosave would read as an edit).
   useEffect(() => {
-    if (protocolCode != null && localCode == null) {
+    if (isHydrated && protocolCode != null && localCode == null) {
       setLocalCode(protocolCode);
     }
-  }, [protocolCode, localCode]);
+  }, [isHydrated, protocolCode, localCode]);
 
   // Mirror the standalone protocol/macro editors: persist via the shared
   // `useAutosave` hook so debounce, status and flush behave identically across
@@ -115,6 +122,16 @@ export function ProtocolCellComponent({
     },
     [protocolId, saveProtocol, onEntitySaved],
   );
+
+  // Rewrites the document, so it only ever runs on an explicit click. On an
+  // editable cell this counts as an edit and autosave will persist the reflow.
+  const handleToggleFormat = useCallback(() => {
+    const next: JsonFormatStyle = style === "compact" ? "expanded" : "compact";
+    setStyle(next);
+    setLocalCode((current) =>
+      current == null ? current : reformatJsonString(current, { style: next }),
+    );
+  }, [style, setStyle]);
 
   const isValidCode = useCallback((code: string) => {
     try {
@@ -313,6 +330,11 @@ export function ProtocolCellComponent({
             iconOnly
             path="/guide/devices-protocols/writing-protocols"
             className="h-7 w-7 justify-center"
+          />
+          <JsonFormatToggle
+            style={style}
+            onToggle={handleToggleFormat}
+            disabled={localCode == null}
           />
           <Button
             asChild

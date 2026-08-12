@@ -9,7 +9,11 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FC } from "react";
 import { CodeEditor } from "~/components/shared/code-editor";
+import { JsonFormatToggle } from "~/components/shared/json-format-toggle";
 import { useDebounce } from "~/hooks/useDebounce";
+import { useJsonFormatStyle } from "~/hooks/useJsonFormatStyle";
+import type { JsonFormatStyle } from "~/lib/json-format";
+import { formatJson, reformatJsonString } from "~/lib/json-format";
 
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 import {
@@ -94,6 +98,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const [editorCode, setEditorCode] = useState<string | undefined>(undefined);
   const [debouncedEditorCode] = useDebounce(editorCode, 200);
   const isUserEditingRef = useRef(false);
+  const { style, isHydrated, setStyle } = useJsonFormatStyle();
 
   // Stable refs for callbacks to avoid infinite effect re-runs
   const onChangeRef = useRef(onChange);
@@ -106,14 +111,15 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
     FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING];
 
   // Convert array to JSON string for editor if needed
-  const initialEditorValue = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  const initialEditorValue = typeof value === "string" ? value : formatJson(value, { style });
 
-  // Initialize editor code from props only once
+  // Initialize editor code from props only once, and only once the stored format
+  // preference is known so the text is not relaid out a frame later.
   useEffect(() => {
-    if (editorCode === undefined && !isUserEditingRef.current) {
+    if (isHydrated && editorCode === undefined && !isUserEditingRef.current) {
       setEditorCode(initialEditorValue);
     }
-  }, [initialEditorValue, editorCode]);
+  }, [isHydrated, initialEditorValue, editorCode]);
 
   // Use editor code for display, or fall back to prop value
   const editorValue = editorCode ?? initialEditorValue;
@@ -185,6 +191,13 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
     setEditorCode(val);
   }, []);
 
+  // Reformatting is a rewrite of the document, so it only ever runs on an explicit click.
+  const handleToggleFormat = useCallback(() => {
+    const next: JsonFormatStyle = style === "compact" ? "expanded" : "compact";
+    setStyle(next);
+    setEditorCode((current) => reformatJsonString(current ?? "", { style: next }));
+  }, [style, setStyle]);
+
   // Stable ref for the validation mode so lint source can read it without recreating
   const validationAsWarningRef = useRef(validationAsWarning);
   validationAsWarningRef.current = validationAsWarning;
@@ -240,6 +253,12 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
           </div>
           <div className="flex items-center gap-2">
             {headerActions}
+            <JsonFormatToggle
+              style={style}
+              onToggle={handleToggleFormat}
+              disabled={!isValidJson || readOnly}
+              disabledLabel={isValidJson ? "Read-only" : "Fix the JSON syntax to reformat"}
+            />
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>

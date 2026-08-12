@@ -1,6 +1,8 @@
 "use client";
 
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useJsonFormatStyle } from "@/hooks/useJsonFormatStyle";
+import { reformatJsonString } from "@/lib/json-format";
 import { Check, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import React from "react";
 
@@ -18,7 +20,7 @@ interface ExperimentDataTableVariantCellProps {
 
 /**
  * Check if a string is structured JSON (object or array).
- * Returns true only for JSON objects and arrays — not for scalar values
+ * Returns true only for JSON objects and arrays, not for scalar values
  * like numbers, strings, booleans, or null which are valid JSON but should
  * be displayed as plain text.
  */
@@ -72,13 +74,8 @@ export function ExperimentDataTableVariantCell({
 export function VariantExpandedContent({ data }: { data: string }) {
   const { t } = useTranslation();
   const { copy: copyToClipboard, copied } = useCopyToClipboard();
-  let formatted: string;
-  try {
-    const parsed: unknown = JSON.parse(data);
-    formatted = JSON.stringify(parsed, null, 2);
-  } catch {
-    formatted = data;
-  }
+  const { style } = useJsonFormatStyle();
+  const formatted = reformatJsonString(data, { style });
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();

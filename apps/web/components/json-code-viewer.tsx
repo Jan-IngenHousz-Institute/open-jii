@@ -2,8 +2,12 @@
 
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { Check, Copy, Pencil } from "lucide-react";
+import { useMemo } from "react";
 import type { FC } from "react";
 import { CodeEditor } from "~/components/shared/code-editor";
+import { JsonFormatToggle } from "~/components/shared/json-format-toggle";
+import { useJsonFormatStyle } from "~/hooks/useJsonFormatStyle";
+import { formatJson, reformatJsonString } from "~/lib/json-format";
 
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
@@ -24,9 +28,16 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
   onEditStart,
 }) => {
   const { copy: copyToClipboard, copied } = useCopyToClipboard();
+  const { style, toggleStyle } = useJsonFormatStyle();
 
   // Convert value to formatted JSON string
-  const jsonString = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  const jsonString = useMemo(
+    () =>
+      typeof value === "string"
+        ? reformatJsonString(value, { style })
+        : formatJson(value, { style }),
+    [value, style],
+  );
 
   const handleCopy = async () => {
     await copyToClipboard(jsonString);
@@ -74,9 +85,11 @@ export const JsonCodeViewer: FC<JsonCodeViewerProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <JsonFormatToggle style={style} onToggle={toggleStyle} />
           <Button
             variant="ghost"
             size="sm"
+            data-testid="json-copy-button"
             onClick={(e) => {
               e.stopPropagation();
               void handleCopy();
