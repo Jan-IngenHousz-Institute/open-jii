@@ -228,6 +228,66 @@ describe("cellsToFlowGraph", () => {
     expect(edges.find((e) => e.source === "b1" && e.target === "md-end")).toBeTruthy();
   });
 
+  it("redirects a gotoCellId pointing at a blank markdown cell to the next emitted node", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "b1",
+        type: "branch",
+        isCollapsed: false,
+        paths: [
+          {
+            id: "path1",
+            label: "Skip ahead",
+            color: "#10b981",
+            conditions: [
+              { id: "c1", sourceCellId: "p1", field: "count", operator: "gte", value: "10" },
+            ],
+            gotoCellId: "md-blank",
+          },
+        ],
+      },
+      { id: "md-blank", type: "markdown", isCollapsed: false, content: "  " },
+      {
+        id: "p1",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: uuidA, version: 1 },
+      },
+    ];
+    const { nodes, edges } = cellsToFlowGraph(cells);
+
+    expect(nodes.map((n) => n.id)).toEqual(["b1", "p1"]);
+
+    const gotoEdge = edges.find((e) => e.sourceHandle === "path1");
+    expect(gotoEdge?.target).toBe("p1");
+    expect(gotoEdge?.label).toBe("Skip ahead");
+  });
+
+  it("drops a gotoCellId edge when no emitted node follows the blank markdown target", () => {
+    const cells: WorkbookCell[] = [
+      {
+        id: "b1",
+        type: "branch",
+        isCollapsed: false,
+        paths: [
+          {
+            id: "path1",
+            label: "Skip ahead",
+            color: "#10b981",
+            conditions: [
+              { id: "c1", sourceCellId: "p1", field: "count", operator: "gte", value: "10" },
+            ],
+            gotoCellId: "md-blank",
+          },
+        ],
+      },
+      { id: "md-blank", type: "markdown", isCollapsed: false, content: "" },
+    ];
+    const { edges } = cellsToFlowGraph(cells);
+
+    expect(edges).toHaveLength(0);
+  });
+
   it("handles a branch cell without gotoCellId", () => {
     const cells: WorkbookCell[] = [
       {
