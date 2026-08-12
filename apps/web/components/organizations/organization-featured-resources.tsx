@@ -43,7 +43,11 @@ export function OrganizationFeaturedResources({
           {t("organizations.featured.title")}
         </h2>
 
-        <ul role="list" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <ul
+          role="list"
+          aria-label={t("organizations.featured.title")}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+        >
           {featured.map((resource) => (
             <FeaturedResourceCard key={`${resource.type}-${resource.id}`} resource={resource} />
           ))}

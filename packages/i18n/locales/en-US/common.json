@@ -760,8 +760,9 @@
     },
     "picker": {
       "label": "Owning organization",
-      "personal": "Personal",
-      "hint": "Members of the organization you choose can read what you create in it."
+      "personal": "Personal workspace",
+      "hint": "Members of the organization you choose can read what you create in it.",
+      "personalCaption": "Only you. No organization members get access."
     },
     "transfer": {
       "label": "Owning organization",
@@ -776,7 +777,6 @@
       "transferring": "Transferring…",
       "transferred": "Transferred",
       "failed": "Could not transfer this resource.",
-      "personalOption": "Personal workspace",
       "membershipHint": "You can only transfer to an organization you belong to.",
       "personalNote": "Your personal workspace is yours alone. Everyone who reaches this through the current organization loses access — only people it is shared with directly keep it.",
       "personalCaption": "Only you. No organization members come with it."

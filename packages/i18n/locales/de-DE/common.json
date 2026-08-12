@@ -1085,8 +1085,9 @@
     },
     "picker": {
       "label": "Besitzende Organisation",
-      "personal": "Persönlich",
-      "hint": "Mitglieder der gewählten Organisation können lesen, was Sie darin erstellen."
+      "personal": "Persönlicher Arbeitsbereich",
+      "hint": "Mitglieder der gewählten Organisation können lesen, was Sie darin erstellen.",
+      "personalCaption": "Nur du. Keine Organisationsmitglieder erhalten Zugriff."
     },
     "transfer": {
       "label": "Besitzende Organisation",
@@ -1101,7 +1102,6 @@
       "transferring": "Wird übertragen…",
       "transferred": "Übertragen",
       "failed": "Diese Ressource konnte nicht übertragen werden.",
-      "personalOption": "Persönlicher Arbeitsbereich",
       "membershipHint": "Du kannst nur an eine Organisation übertragen, der du angehörst.",
       "personalNote": "Dein persönlicher Arbeitsbereich gehört dir allein. Alle, die über die aktuelle Organisation Zugriff haben, verlieren ihn — nur direkt geteilte Personen behalten ihn.",
       "personalCaption": "Nur du. Keine Organisationsmitglieder kommen mit."

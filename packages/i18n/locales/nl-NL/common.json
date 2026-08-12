@@ -873,8 +873,9 @@
     },
     "picker": {
       "label": "Eigenaar-organisatie",
-      "personal": "Persoonlijk",
-      "hint": "Leden van de gekozen organisatie kunnen lezen wat je erin aanmaakt."
+      "personal": "Persoonlijke werkruimte",
+      "hint": "Leden van de gekozen organisatie kunnen lezen wat je erin aanmaakt.",
+      "personalCaption": "Alleen jij. Geen organisatieleden krijgen toegang."
     },
     "transfer": {
       "label": "Eigenaar-organisatie",
@@ -889,7 +890,6 @@
       "transferring": "Overdragen…",
       "transferred": "Overgedragen",
       "failed": "Deze resource kon niet worden overgedragen.",
-      "personalOption": "Persoonlijke werkruimte",
       "membershipHint": "Je kunt alleen overdragen aan een organisatie waar je bij hoort.",
       "personalNote": "Je persoonlijke werkruimte is alleen van jou. Iedereen die hier via de huidige organisatie bij kan, verliest de toegang — alleen wie het direct gedeeld heeft, behoudt die.",
       "personalCaption": "Alleen jij. Er komen geen organisatieleden mee."

@@ -1,13 +1,16 @@
 "use client";
 
 import { useMyOrganizations } from "@/hooks/organization/useMyOrganizations/useMyOrganizations";
+import { UserRound } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import { Label } from "@repo/ui/components/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
@@ -56,7 +59,20 @@ export function OrganizationPicker({
         </SelectTrigger>
         <SelectContent>
           {personal ? (
-            <SelectItem value={personal.id}>{t("organizations.picker.personal")}</SelectItem>
+            <>
+              <SelectGroup className="bg-muted/50 -mx-1 -mt-1 block border-b px-1 pb-1 pt-1">
+                <SelectItem value={personal.id} className="py-2">
+                  <span className="flex items-center gap-2">
+                    <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    {t("organizations.picker.personal")}
+                  </span>
+                </SelectItem>
+                <p className="text-muted-foreground px-2 pb-1 text-xs leading-relaxed">
+                  {t("organizations.picker.personalCaption")}
+                </p>
+              </SelectGroup>
+              {shared.length > 0 ? <SelectSeparator className="my-1.5" /> : null}
+            </>
           ) : null}
           {shared.map((organization) => (
             <SelectItem key={organization.id} value={organization.id}>

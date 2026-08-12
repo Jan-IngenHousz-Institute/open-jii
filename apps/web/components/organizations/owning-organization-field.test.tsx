@@ -119,7 +119,7 @@ describe("<OwningOrganizationField />", () => {
       // A personal workspace is a legitimate destination — it is the way out for a
       // resource stranded in an organization with no owners left. Labelled distinctly
       // here, and grouped apart, because it is the one target that removes everyone else.
-      "organizations.transfer.personalOption",
+      "organizations.picker.personal",
     ]);
   });
 

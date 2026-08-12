@@ -161,7 +161,11 @@ export function OrganizationResourceRows({ resources }: { resources: Organizatio
             ) : null}
           </div>
         ) : (
-          <ul role="list" className="border-border border-t">
+          <ul
+            role="list"
+            aria-label={t("organizations.resources.title")}
+            className="border-border border-t"
+          >
             {visible.map((resource) => (
               <ResourceRow key={`${resource.type}-${resource.id}`} resource={resource} />
             ))}

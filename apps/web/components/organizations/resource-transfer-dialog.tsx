@@ -137,7 +137,7 @@ export function ResourceTransferDialog({
                     <SelectItem value={personal.id} className="py-2">
                       <span className="flex items-center gap-2">
                         <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                        {t("organizations.transfer.personalOption")}
+                        {t("organizations.picker.personal")}
                       </span>
                     </SelectItem>
                     <p className="text-muted-foreground px-2 pb-1 text-xs leading-relaxed">
