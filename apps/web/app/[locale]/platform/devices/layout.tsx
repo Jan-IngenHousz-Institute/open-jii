@@ -7,12 +7,19 @@ import {
 import { PageContainer } from "@/components/page-container";
 import { useLocale } from "@/hooks/useLocale";
 import { Plus } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { notFound, usePathname } from "next/navigation";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
 export default function DevicesLayout({ children }: { children: React.ReactNode }) {
+  // undefined while flags load; render nothing to avoid flashing a gated page
+  const devicesEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES);
+  if (devicesEnabled === false) notFound();
+  if (!devicesEnabled) return null;
+
   return (
     <DevicesRegisterProvider>
       <DevicesLayoutInner>{children}</DevicesLayoutInner>
