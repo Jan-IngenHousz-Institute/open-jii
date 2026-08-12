@@ -38,7 +38,19 @@ export function formatJson(value: unknown, options: FormatJsonOptions = {}): str
 
   if (value === undefined) return "";
   if (style === "expanded") return stringify(value, indent) ?? "";
-  return write(value, 0, 0, { indent, maxLineWidth, dataArrayMaxWidth });
+
+  /**
+   * Lay out the serializer's own output, not the original value. Walking the
+   * original cannot reproduce it: `toJSON` is handed the property key its value
+   * sits under, so calling it on a detached node returns something else. The
+   * round-trip also fills array holes and drops undefined, function and symbol
+   * members, leaving `write` nothing but plain JSON to think about.
+   */
+  const serialized = stringify(value);
+  if (serialized === undefined) return "";
+  const plainJson: unknown = JSON.parse(serialized);
+
+  return write(plainJson, 0, 0, { indent, maxLineWidth, dataArrayMaxWidth });
 }
 
 /**
@@ -76,56 +88,20 @@ function stringify(value: unknown, indent?: number): string | undefined {
   return JSON.stringify(value, null, indent);
 }
 
-/**
- * True for the values JSON.stringify drops entirely: omitted from an object,
- * rendered as `null` inside an array. Checking the type is O(1), where asking
- * `stringify(entry) === undefined` would walk the whole subtree.
- */
-function isOmitted(value: unknown): boolean {
-  if (value === undefined || typeof value === "function" || typeof value === "symbol") return true;
-  // A `toJSON` returning undefined drops the member too. Serializing to find out
-  // is only reachable for the rare value that carries `toJSON` at all.
-  return hasToJson(value) && stringify(value) === undefined;
-}
-
-/**
- * `toJSON` (Date, and anything custom) makes the serialized form a *replacement*
- * for the value. Laying it out would mean walking the original object, which is
- * not what was serialized, so such nodes are emitted verbatim.
- */
-function hasToJson(value: unknown): boolean {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    typeof (value as { toJSON?: unknown }).toJSON === "function"
-  );
-}
-
 /** Single-line JSON, but spaced after separators so it stays readable. */
-function inline(value: unknown): string | undefined {
-  if (isOmitted(value)) return undefined;
-  if (hasToJson(value)) return stringify(value);
-
+function inline(value: unknown): string {
   if (Array.isArray(value)) {
-    // for-of, not `.map`: map skips holes and joining the resulting sparse array
-    // yields `[, , ]`, which is not JSON. A hole serializes as `null`.
-    const parts: string[] = [];
-    for (const item of value as unknown[]) {
-      parts.push(inline(item) ?? "null");
-    }
-    return `[${parts.join(", ")}]`;
+    return `[${value.map((item) => inline(item)).join(", ")}]`;
   }
 
   if (value !== null && typeof value === "object") {
-    const parts: string[] = [];
-    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-      const rendered = inline(entry);
-      if (rendered !== undefined) parts.push(`${JSON.stringify(key)}: ${rendered}`);
-    }
+    const parts = Object.entries(value as Record<string, unknown>).map(
+      ([key, entry]) => `${JSON.stringify(key)}: ${inline(entry)}`,
+    );
     return `{${parts.join(", ")}}`;
   }
 
-  return stringify(value);
+  return JSON.stringify(value);
 }
 
 function isScalar(value: unknown): boolean {
@@ -153,12 +129,8 @@ function write(value: unknown, level: number, prefixLength: number, opts: WriteO
   // A scalar has no layout, so skip the budget machinery. This is the hot path:
   // expanding one large data array runs it once per element.
   if (value === null || typeof value !== "object") {
-    return stringify(value) ?? "null";
+    return JSON.stringify(value);
   }
-
-  // Not our layout to break up: the serialized form replaced the value, so
-  // walking the original would emit something else entirely.
-  if (hasToJson(value)) return stringify(value) ?? "null";
 
   // Every element costs at least one character plus a two-character separator,
   // so `3 * length` is a lower bound on the inline form. Checking it first keeps
@@ -167,15 +139,14 @@ function write(value: unknown, level: number, prefixLength: number, opts: WriteO
     Array.isArray(value) && value.length > 0 && prefixLength + 3 * value.length > dataArrayMaxWidth;
 
   if (!cannotInline) {
-    const plain = stringify(value);
-    if (plain === undefined) return "null";
+    const plain = JSON.stringify(value);
     // `plain` is a lower bound on the spaced form, which only ever adds a space
     // after `,` and `:`. Rejecting on it avoids building (and then discarding)
     // the spaced string for a subtree that was never going to fit.
     const budget = isDataArray(value) ? dataArrayMaxWidth : maxLineWidth;
     if (prefixLength + plain.length <= budget) {
       const oneLine = inline(value);
-      if (oneLine !== undefined && prefixLength + oneLine.length <= budget) return oneLine;
+      if (prefixLength + oneLine.length <= budget) return oneLine;
     }
   }
 
@@ -184,18 +155,13 @@ function write(value: unknown, level: number, prefixLength: number, opts: WriteO
 
   if (Array.isArray(value)) {
     if (value.length === 0) return "[]";
-    // for-of, unlike `.map`, still yields a hole (as undefined) rather than
-    // skipping it, which keeps a sparse array serializing as `null` entries.
-    const items: string[] = [];
-    for (const item of value as unknown[]) {
-      items.push(pad + write(item, level + 1, pad.length, opts));
-    }
+    const items = (value as unknown[]).map(
+      (item) => pad + write(item, level + 1, pad.length, opts),
+    );
     return `[\n${items.join(",\n")}\n${closePad}]`;
   }
 
-  const entries = Object.entries(value as Record<string, unknown>).filter(
-    ([, entry]) => !isOmitted(entry),
-  );
+  const entries = Object.entries(value as Record<string, unknown>);
   if (entries.length === 0) return "{}";
   const items = entries.map(([key, entry]) => {
     const keyPart = `${JSON.stringify(key)}: `;

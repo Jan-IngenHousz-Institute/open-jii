@@ -86,18 +86,23 @@ time, and compare its output and run time with the original.
 Real protocols are mostly long numeric arrays. Written one value per line, a
 40-pulse block becomes 40 lines, and a field protocol can run past a thousand.
 
-Every JSON view in the platform therefore has two layouts, switched with the
-fold/unfold button next to **Copy**:
+Every JSON view in the platform therefore has two layouts. Views with an action
+row, such as the protocol viewer and editor and the workbook protocol and output
+cells, switch between them with the fold/unfold button next to **Copy**. Read-only
+previews, such as the review step of the new-protocol wizard, follow whichever
+layout you last chose without offering their own button:
 
 | Layout       | What it does                                                                |
 | ------------ | --------------------------------------------------------------------------- |
 | **Compact**  | Keeps a whole data array on one line and lets it wrap. This is the default. |
 | **Expanded** | One value per line, the classic `JSON.stringify` indentation.               |
 
-Compact only collapses arrays of plain values, such as `pulses`,
-`pulse_distance`, `detectors`, and `pulsed_lights`. Nested structure is still
-broken across lines, so the shape of `_protocol_set_` stays readable. A very
-long array falls back to one value per line so the editor stays responsive.
+Compact collapses an array whose entries are all plain values, and also one
+whose entries are all arrays of plain values, so both `pulses: [20, 50, 20]` and
+`detectors: [[3], [3]]` come back to a single line. Anything holding further
+structure, such as `_protocol_set_`, is still broken across lines, so the shape
+of the protocol stays readable. A very long array falls back to one value per
+line so the editor stays responsive.
 
 The choice is yours, not the protocol's: it is stored in your browser and
 applies to every JSON view you open, including the workbook protocol and output

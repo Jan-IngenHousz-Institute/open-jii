@@ -91,6 +91,32 @@ describe("useJsonFormatStyle", () => {
     expect(result.current.style).toBe("expanded");
   });
 
+  it("keeps the choice for a component mounted after storage started failing", async () => {
+    // Blocked storage: the choice lives only in memory, so a later mount would
+    // otherwise ask storage, be refused, and render the default next to peers
+    // already showing the chosen layout.
+    const first = renderHook(() => useJsonFormatStyle());
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    act(() => first.result.current.toggleStyle());
+    expect(first.result.current.style).toBe("expanded");
+
+    const later = renderHook(() => useJsonFormatStyle());
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(later.result.current.style).toBe("expanded");
+  });
+
   it("picks up a change made in another tab", async () => {
     const { result } = renderHook(() => useJsonFormatStyle());
     await act(async () => {

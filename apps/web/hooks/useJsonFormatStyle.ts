@@ -7,12 +7,22 @@ import { DEFAULT_JSON_FORMAT_STYLE, isJsonFormatStyle } from "~/lib/json-format"
 const STORAGE_KEY = "openjii.json-format-style";
 const CHANGE_EVENT = "openjii:json-format-style";
 
+/**
+ * Where the preference lives when storage is unavailable (private mode, blocked
+ * cookies). Without it a choice would survive only in the components mounted at
+ * the time: the next one to mount would ask storage, be refused, and render the
+ * default alongside them.
+ */
+let volatileStyle: JsonFormatStyle | null = null;
+
 function read(): JsonFormatStyle {
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     return isJsonFormatStyle(stored) ? stored : DEFAULT_JSON_FORMAT_STYLE;
   } catch {
-    return DEFAULT_JSON_FORMAT_STYLE;
+    // Only when storage is genuinely unreachable. Consulting the fallback while
+    // storage works would let a stale session value outrank an empty store.
+    return volatileStyle ?? DEFAULT_JSON_FORMAT_STYLE;
   }
 }
 
@@ -57,8 +67,10 @@ export function useJsonFormatStyle() {
     setStyle(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
+      volatileStyle = null;
     } catch {
-      // Private mode or blocked storage; the in-memory preference still applies.
+      // Private mode or blocked storage; `volatileStyle` carries it instead.
+      volatileStyle = next;
     }
     window.dispatchEvent(new CustomEvent<JsonFormatStyle>(CHANGE_EVENT, { detail: next }));
   }, []);
