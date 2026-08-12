@@ -126,6 +126,19 @@ describe("<ListOrganizations />", () => {
       expect(within(cardFor("Greenhouse Lab")).getByText("No description provided")).toBeVisible();
     });
 
+    /** The my-organizations branch is all memberships, so always the plain label. */
+    it("labels the resource count plainly, since every row here is one you belong to", async () => {
+      mockSession({ id: "user-1" });
+      mountMyOrganizations([createMyOrganization({ name: "Greenhouse Lab", resourceCount: 7 })]);
+
+      render(<ListOrganizations />);
+
+      await screen.findByText("Greenhouse Lab");
+      const card = within(cardFor("Greenhouse Lab"));
+      expect(card.getByText("organizations.resourceCount")).toBeVisible();
+      expect(card.queryByText("organizations.visibleResourceCount")).toBeNull();
+    });
+
     it("carries no membership badge or in-card action", async () => {
       mockSession({ id: "user-1" });
       mountMyOrganizations([createMyOrganization({ name: "Greenhouse Lab", role: "owner" })]);
@@ -244,7 +257,8 @@ describe("<ListOrganizations />", () => {
       await screen.findByText("Greenhouse Lab");
       const card = within(cardFor("Greenhouse Lab"));
       expect(card.getByText("organizations.memberCount")).toBeVisible();
-      expect(card.getByText("organizations.resourceCount")).toBeVisible();
+      // The factory defaults to `membershipStatus: "none"`, so the count is qualified.
+      expect(card.getByText("organizations.visibleResourceCount")).toBeVisible();
     });
 
     it("distinguishes an empty directory from one with no matches", async () => {
@@ -334,6 +348,52 @@ describe("<ListOrganizations />", () => {
         expect(searchSpy.called).toBe(true);
       });
       expect(screen.getByText("Greenhouse Lab")).toBeVisible();
+    });
+  });
+
+  describe("the scoped resource-count label", () => {
+    /** Membership decides the wording. `pending_request` is not membership. */
+    it.each([
+      ["member", "organizations.resourceCount", "organizations.visibleResourceCount"],
+      ["none", "organizations.visibleResourceCount", "organizations.resourceCount"],
+      ["pending_request", "organizations.visibleResourceCount", "organizations.resourceCount"],
+    ] as const)("a %s row uses %s", async (membershipStatus, shown, hidden) => {
+      mockSession({ id: "user-1" });
+      landOnDirectory();
+      mountDirectory([
+        createOrganizationDirectoryEntry({
+          name: "Photosynthesis Lab",
+          resourceCount: 3,
+          membershipStatus,
+        }),
+      ]);
+
+      render(<ListOrganizations />);
+
+      await screen.findByText("Photosynthesis Lab");
+      const card = within(cardFor("Photosynthesis Lab"));
+      expect(card.getByText(shown)).toBeVisible();
+      expect(card.queryByText(hidden)).toBeNull();
+    });
+
+    it("shows no denominator and never says public", async () => {
+      mockSession({ id: "user-1" });
+      landOnDirectory();
+      mountDirectory([
+        createOrganizationDirectoryEntry({
+          name: "Photosynthesis Lab",
+          resourceCount: 3,
+          membershipStatus: "none",
+        }),
+      ]);
+
+      render(<ListOrganizations />);
+
+      await screen.findByText("Photosynthesis Lab");
+      // No denominator (that gap is the private estate's size) and not "public".
+      const card = cardFor("Photosynthesis Lab");
+      expect(card.textContent).not.toMatch(/\bof\b|43/u);
+      expect(card.textContent).not.toMatch(/public/iu);
     });
   });
 });

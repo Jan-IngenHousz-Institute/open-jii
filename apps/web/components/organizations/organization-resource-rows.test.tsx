@@ -2,277 +2,308 @@ import { createOrganizationResource } from "@/test/factories";
 import { render, screen, userEvent, within } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import type { OrganizationResourceTotals } from "@repo/api/domains/organization/organization.schema";
-
 import { OrganizationResourceRows } from "./organization-resource-rows";
 
-const NO_TOTALS: OrganizationResourceTotals = {
-  experiment: 0,
-  protocol: 0,
-  macro: 0,
-  workbook: 0,
-  device: 0,
-};
-
-/** `n` experiments, named so the row order is checkable. */
-function experiments(n: number) {
-  return Array.from({ length: n }, (_, index) =>
-    createOrganizationResource({ id: `exp-${index}`, name: `Experiment ${index}` }),
-  );
+/** The rows, scoped to the render — the suite shares one jsdom document. */
+function rowsIn(container: HTMLElement): HTMLElement[] {
+  return within(container).queryAllByRole("listitem");
 }
 
-function group(): HTMLElement {
-  // The group is the only section; its heading names the type.
-  const heading = screen.getByRole("heading", {
-    name: /organizations.resources.types.experiment/u,
-  });
-  const section = heading.closest("section");
-  if (!section) throw new Error("No resource group section found");
-  return section;
+const rowNames = (container: HTMLElement) =>
+  rowsIn(container).map((row) => row.querySelector("a")?.textContent);
+
+/** A mixed estate: one of each type, distinct names and timestamps. */
+function mixedEstate() {
+  return [
+    createOrganizationResource({
+      type: "experiment",
+      id: "e1",
+      name: "Drought stress",
+      description: "<p>Rain-out shelter, 12 plots</p>",
+      status: "stale",
+      updatedAt: "2026-05-01T00:00:00.000Z",
+    }),
+    createOrganizationResource({
+      type: "protocol",
+      id: "p1",
+      name: "Dark adaptation",
+      family: "minipar",
+      updatedAt: "2026-04-01T00:00:00.000Z",
+    }),
+    createOrganizationResource({
+      type: "macro",
+      id: "m1",
+      name: "Batch fit",
+      language: "r",
+      updatedAt: "2026-03-01T00:00:00.000Z",
+    }),
+    createOrganizationResource({
+      type: "workbook",
+      id: "w1",
+      name: "Canopy synthesis",
+      updatedAt: "2026-02-01T00:00:00.000Z",
+    }),
+    createOrganizationResource({
+      type: "device",
+      id: "d1",
+      name: "Ambyte 04",
+      deviceType: "ambyte",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    }),
+  ];
 }
 
 describe("<OrganizationResourceRows />", () => {
-  it("shows three rows and offers what is hidden, not the group's size", async () => {
-    const user = userEvent.setup();
-    // 6 rows: 3 shown, so the control offers the 3 it will reveal — not "6", which the
-    // header already states.
-    render(
-      <OrganizationResourceRows
-        resources={experiments(6)}
-        totals={{ ...NO_TOTALS, experiment: 6 }}
-      />,
-    );
+  it("renders one flat list, with no group headers or per-group counts", () => {
+    const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
 
-    expect(within(group()).getAllByRole("listitem")).toHaveLength(3);
-
-    const trigger = screen.getByRole("button", {
-      name: /organizations.resources.showMoreLabel/u,
-    });
-    expect(trigger).toHaveAttribute("aria-expanded", "false");
-
-    await user.click(trigger);
-
-    expect(within(group()).getAllByRole("listitem")).toHaveLength(6);
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
-    // The control becomes the way back.
-    expect(
-      screen.getByRole("button", { name: /organizations.resources.showLessLabel/u }),
-    ).toBeVisible();
-
-    await user.click(trigger);
-    expect(within(group()).getAllByRole("listitem")).toHaveLength(3);
+    // The grouped card put a heading and a count above each type. Both are gone; the
+    // estate bar in the sidebar reports counts now.
+    expect(within(container).queryAllByRole("heading")).toHaveLength(0);
+    expect(rowsIn(container)).toHaveLength(5);
+    // Default order is most recently updated first.
+    expect(rowNames(container)).toEqual([
+      "Drought stress",
+      "Dark adaptation",
+      "Batch fit",
+      "Canopy synthesis",
+      "Ambyte 04",
+    ]);
   });
 
-  it("expands to exactly the total, with nothing left to disclose", async () => {
-    const user = userEvent.setup();
-    // The read is uncapped, so rows and total agree and expanding reveals all of them.
-    render(
-      <OrganizationResourceRows
-        resources={experiments(5)}
-        totals={{ ...NO_TOTALS, experiment: 5 }}
-      />,
-    );
+  it("has no status filter — it would only ever apply to experiments", () => {
+    const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
 
-    await user.click(
-      screen.getByRole("button", { name: /organizations.resources.showMoreLabel/u }),
-    );
-
-    const rows = within(group()).getAllByRole("listitem");
-    expect(rows).toHaveLength(5);
-    // No shortfall note, because a shortfall can no longer occur.
-    expect(within(group()).queryByText(/showing/iu)).toBeNull();
+    // Two selects: type and sort. A third would be the status filter.
+    expect(within(container).getAllByRole("combobox")).toHaveLength(2);
   });
 
-  it("labels the timestamp and carries the absolute date for it", () => {
-    render(
-      <OrganizationResourceRows
-        resources={[
-          createOrganizationResource({ name: "Dated run", updatedAt: "2026-03-12T09:00:00.000Z" }),
-        ]}
-        totals={{ ...NO_TOTALS, experiment: 1 }}
-      />,
-    );
+  describe("search", () => {
+    it("narrows by name as you type", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
 
-    // "2 days ago" alone does not say what happened then, and a row has two plausible
-    // timestamps — so the word is part of the visible text.
-    const stamp = within(group()).getByText(/common\.updated/u);
-    expect(stamp).toHaveAttribute("dateTime", "2026-03-12T09:00:00.000Z");
-    // A relative time is lossy on its own, so the exact date rides along.
-    expect(stamp.getAttribute("title")).toMatch(/common\.updated .*2026/u);
-  });
-
-  it("reveals a single hidden row as readily as many", async () => {
-    const user = userEvent.setup();
-    // Four rows past a three-row preview is exactly one hidden — the case the seeded
-    // organization produces, so it is the one worth pinning.
-    render(
-      <OrganizationResourceRows
-        resources={experiments(4)}
-        totals={{ ...NO_TOTALS, experiment: 4 }}
-      />,
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: /organizations.resources.showMoreLabel/u }),
-    );
-
-    expect(within(group()).getAllByRole("listitem")).toHaveLength(4);
-  });
-
-  it("offers no control for a group that fits in the preview", () => {
-    render(
-      <OrganizationResourceRows
-        resources={experiments(3)}
-        totals={{ ...NO_TOTALS, experiment: 3 }}
-      />,
-    );
-
-    expect(screen.queryByRole("button")).toBeNull();
-    expect(within(group()).getAllByRole("listitem")).toHaveLength(3);
-  });
-
-  it("expands each group independently", async () => {
-    const user = userEvent.setup();
-    render(
-      <OrganizationResourceRows
-        resources={[
-          ...experiments(5),
-          ...Array.from({ length: 5 }, (_, index) =>
-            createOrganizationResource({
-              type: "protocol",
-              id: `pro-${index}`,
-              name: `Protocol ${index}`,
-              family: "multispeq",
-            }),
-          ),
-        ]}
-        totals={{ ...NO_TOTALS, experiment: 5, protocol: 5 }}
-      />,
-    );
-
-    const triggers = screen.getAllByRole("button", {
-      name: /organizations.resources.showMoreLabel/u,
-    });
-    expect(triggers).toHaveLength(2);
-
-    await user.click(triggers[0]);
-
-    // The experiments group opened; the protocols group did not.
-    expect(triggers[0]).toHaveAttribute("aria-expanded", "true");
-    expect(triggers[1]).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("strips markup out of a description rather than printing it", () => {
-    render(
-      <OrganizationResourceRows
-        resources={[
-          createOrganizationResource({
-            name: "Rich run",
-            // Experiment descriptions are authored in a rich editor, so this is the
-            // shape that actually arrives — interpolated raw it printed literal tags.
-            description: "<p>Twelve wheat plots, <strong>paired</strong> PAR logging.</p>",
-          }),
-        ]}
-        totals={{ ...NO_TOTALS, experiment: 1 }}
-      />,
-    );
-
-    expect(within(group()).getByText("Twelve wheat plots, paired PAR logging.")).toBeVisible();
-    expect(within(group()).queryByText(/<p>|<strong>/u)).toBeNull();
-  });
-
-  it("carries each type's own meta and a lock only on private rows", () => {
-    render(
-      <OrganizationResourceRows
-        resources={[
-          createOrganizationResource({ name: "Stale run", status: "stale", visibility: "private" }),
-          createOrganizationResource({
-            type: "macro",
-            name: "Batch fit",
-            language: "r",
-          }),
-        ]}
-        totals={{ ...NO_TOTALS, experiment: 1, macro: 1 }}
-      />,
-    );
-
-    // All four statuses render, not only archived/active — and each meta badge wears
-    // the colour that value already has elsewhere on the platform, not a plain outline.
-    expect(screen.getByText("organizations.resources.status.stale")).toHaveClass("bg-badge-stale");
-    // A language is a proper noun, so it is not translated and `r` is "R".
-    expect(screen.getByText("R")).toHaveClass("bg-badge-stale");
-    expect(screen.getByLabelText("resourceVisibility.privateStatus")).toBeVisible();
-  });
-
-  describe("devices", () => {
-    it("gets its own group, with the badge a protocol wears for the same value", () => {
-      const { container } = render(
-        <OrganizationResourceRows
-          resources={[
-            createOrganizationResource({
-              type: "device",
-              id: "dev-1",
-              name: "Canopy MultispeQ 01",
-              deviceType: "multispeq",
-            }),
-          ]}
-          totals={{ ...NO_TOTALS, device: 1 }}
-        />,
+      await user.type(
+        within(container).getByRole("textbox", {
+          name: "organizations.resources.searchLabel",
+        }),
+        "canopy",
       );
 
-      expect(
-        within(container).getByRole("heading", { name: /organizations.resources.types.device/u }),
-      ).toBeVisible();
-      // `deviceType` is `zSensorFamily` under another name, so the label and colour are
-      // the platform's existing ones — a MultispeQ device reads like a MultispeQ protocol.
-      expect(within(container).getByText("MultispeQ")).toHaveClass("bg-badge-published");
-      expect(within(container).getByRole("link", { name: "Canopy MultispeQ 01" })).toHaveAttribute(
-        "href",
-        "/en-US/platform/devices/dev-1",
-      );
+      expect(rowNames(container)).toEqual(["Canopy synthesis"]);
     });
 
     /**
-     * A device has no `description` column at all, so the field is structurally null
-     * rather than merely empty. The row must render no description element — not an
-     * empty one that reserves a line's height on every device row.
+     * Names only. "shelter" appears in the experiment's description and nowhere in any
+     * name, so it must find nothing — the assertion that pins the decision rather than
+     * one that would pass whichever field were searched.
      */
-    it("renders no description element, since a device has no description column", () => {
-      const { container } = render(
-        <OrganizationResourceRows
-          resources={[
-            createOrganizationResource({ type: "device", name: "Ambyte 04", description: null }),
-          ]}
-          totals={{ ...NO_TOTALS, device: 1 }}
-        />,
+    it("does not match a word that appears only in a description", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      await user.type(
+        within(container).getByRole("textbox", {
+          name: "organizations.resources.searchLabel",
+        }),
+        "shelter",
       );
 
-      const row = within(container).getByRole("listitem");
-      expect(row.querySelector("p")).toBeNull();
+      expect(rowsIn(container)).toHaveLength(0);
+      expect(within(container).getByText("organizations.resources.noMatchesTitle")).toBeVisible();
+    });
+  });
+
+  describe("the empty state", () => {
+    it("appears when nothing matches, and Clear filters restores the list", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      const search = within(container).getByRole("textbox", {
+        name: "organizations.resources.searchLabel",
+      });
+      await user.type(search, "nothing here is called this");
+
+      expect(rowsIn(container)).toHaveLength(0);
+      const clear = within(container).getByRole("button", {
+        name: "organizations.resources.clearFilters",
+      });
+
+      await user.click(clear);
+
+      expect(rowsIn(container)).toHaveLength(5);
+      expect(search).toHaveValue("");
     });
 
-    it("reads last, after the four types that are made and written", () => {
-      const { container } = render(
-        <OrganizationResourceRows
-          resources={[
-            createOrganizationResource({ type: "device", name: "Sensor" }),
-            createOrganizationResource({ name: "Campaign" }),
-            createOrganizationResource({ type: "workbook", name: "Synthesis" }),
-          ]}
-          totals={{ ...NO_TOTALS, experiment: 1, workbook: 1, device: 1 }}
-        />,
+    it("says nothing about status, which this list does not filter on", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      await user.type(
+        within(container).getByRole("textbox", {
+          name: "organizations.resources.searchLabel",
+        }),
+        "zzz",
       );
 
-      // The order the estate bar segments by and the featured card rotates through.
-      expect(
-        within(container)
-          .getAllByRole("heading")
-          .map((heading) => heading.textContent),
-      ).toEqual([
+      // The design's own copy offered to "widen the type and status"; there is no status
+      // control here, so promising one would send the reader looking for it.
+      expect(within(container).queryByText(/status/iu)).toBeNull();
+    });
+  });
+
+  describe("the type filter and sort controls", () => {
+    /**
+     * The ordering and narrowing logic is covered exhaustively in
+     * `organization-resource-filter.test.ts`. What can only be checked here is that the
+     * controls are actually wired to that logic — a select that renders its options and
+     * changes nothing would pass every pure test.
+     */
+    it("narrows the list when a type is chosen", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      await user.click(
+        within(container).getByRole("combobox", {
+          name: "organizations.resources.typeFilterLabel",
+        }),
+      );
+      await user.click(
+        await screen.findByRole("option", { name: "organizations.resources.types.protocol" }),
+      );
+
+      expect(rowNames(container)).toEqual(["Dark adaptation"]);
+    });
+
+    it("reorders the list when a sort is chosen", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      await user.click(
+        within(container).getByRole("combobox", { name: "organizations.resources.sortLabel" }),
+      );
+      await user.click(
+        await screen.findByRole("option", { name: "organizations.resources.sortName" }),
+      );
+
+      expect(rowNames(container)).toEqual([
+        "Ambyte 04",
+        "Batch fit",
+        "Canopy synthesis",
+        "Dark adaptation",
+        "Drought stress",
+      ]);
+    });
+
+    it("offers one option per owned type plus All types, from the shared order", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      await user.click(
+        within(container).getByRole("combobox", {
+          name: "organizations.resources.typeFilterLabel",
+        }),
+      );
+
+      // Five types and no sixth, in GROUP_ORDER — a hand-written list could drift.
+      expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual([
+        "organizations.resources.allTypes",
         "organizations.resources.types.experiment",
+        "organizations.resources.types.protocol",
+        "organizations.resources.types.macro",
         "organizations.resources.types.workbook",
         "organizations.resources.types.device",
       ]);
     });
+  });
+
+  describe("rows", () => {
+    it("links each type to its own platform section", () => {
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+      const href = (name: string) =>
+        within(container).getByRole("link", { name }).getAttribute("href");
+
+      expect(href("Drought stress")).toBe("/en-US/platform/experiments/e1");
+      expect(href("Dark adaptation")).toBe("/en-US/platform/protocols/p1");
+      expect(href("Batch fit")).toBe("/en-US/platform/macros/m1");
+      expect(href("Canopy synthesis")).toBe("/en-US/platform/workbooks/w1");
+      expect(href("Ambyte 04")).toBe("/en-US/platform/devices/d1");
+    });
+
+    it("carries each type's meta badge in the platform's own colour", () => {
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      expect(within(container).getByText("organizations.resources.status.stale")).toHaveClass(
+        "bg-badge-stale",
+      );
+      // A language and a sensor family are product names, so neither is translated.
+      expect(within(container).getByText("R")).toHaveClass("bg-badge-stale");
+      // A device wears the badge a protocol wears for the same value.
+      expect(within(container).getByText("Ambyte")).toHaveClass("bg-badge-active");
+    });
+
+    it("renders no meta badge for a workbook and no description for a device", () => {
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      const rowFor = (name: string) => {
+        const row = within(container).getByRole("link", { name }).closest("li");
+        if (!row) throw new Error(`no row for ${name}`);
+        return row;
+      };
+
+      // A workbook has no second fact worth a badge — and no empty badge either.
+      expect(rowFor("Canopy synthesis").querySelector(".bg-badge-stale")).toBeNull();
+      // A device has no `description` column, so there must be no paragraph at all
+      // rather than an empty one reserving a line on every device row.
+      expect(rowFor("Ambyte 04").querySelector("p")).toBeNull();
+      // Not vacuous: a row that does have a description renders one.
+      expect(rowFor("Drought stress").querySelector("p")?.textContent).toBe(
+        "Rain-out shelter, 12 plots",
+      );
+    });
+
+    it("strips markup out of a description rather than printing it", () => {
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      expect(within(container).getByText("Rain-out shelter, 12 plots")).toBeVisible();
+      expect(within(container).queryByText(/<p>/u)).toBeNull();
+      expect(container.querySelector("p strong")).toBeNull();
+    });
+
+    it("keeps the timestamp machine-readable and the absolute date on the title", () => {
+      const { container } = render(
+        <OrganizationResourceRows
+          resources={[
+            createOrganizationResource({ name: "Campaign", updatedAt: "2026-05-01T00:00:00.000Z" }),
+          ]}
+        />,
+      );
+
+      const time = container.querySelector("time");
+      expect(time).toHaveAttribute("dateTime", "2026-05-01T00:00:00.000Z");
+      expect(time?.getAttribute("title")).toContain("common.updated");
+    });
+
+    it("marks a private row with the lock and leaves a public one unmarked", () => {
+      const { container } = render(
+        <OrganizationResourceRows
+          resources={[
+            createOrganizationResource({ id: "a", name: "Closed", visibility: "private" }),
+            createOrganizationResource({ id: "b", name: "Open", visibility: "public" }),
+          ]}
+        />,
+      );
+
+      expect(within(container).getAllByLabelText("resourceVisibility.privateStatus")).toHaveLength(
+        1,
+      );
+    });
+  });
+
+  it("carries no measurement count or sparkline — no data source for either", () => {
+    const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+    expect(within(container).queryByText(/measurement/iu)).toBeNull();
+    expect(container.querySelector("polyline")).toBeNull();
   });
 });

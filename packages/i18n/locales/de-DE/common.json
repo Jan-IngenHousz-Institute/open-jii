@@ -757,6 +757,8 @@
     "memberCount_other": "{{count}} Mitglieder",
     "resourceCount_one": "{{count}} Ressource",
     "resourceCount_other": "{{count}} Ressourcen",
+    "visibleResourceCount_one": "{{count}} für dich sichtbare Ressource",
+    "visibleResourceCount_other": "{{count}} für dich sichtbare Ressourcen",
     "searchPlaceholder": "Organisationen suchen…",
     "searchLabel": "Organisationen durchsuchen",
     "noMatches": "Keine Organisation passt zu Ihrer Suche",
@@ -902,12 +904,17 @@
         "archived": "Archiviert",
         "published": "Veröffentlicht"
       },
-      "showLess": "Weniger anzeigen",
-      "showLessLabel": "Weniger {{group}} anzeigen",
-      "showMore_one": "{{count}} weiteres anzeigen",
-      "showMore_other": "{{count}} weitere anzeigen",
-      "showMoreLabel_one": "{{count}} weiteres {{group}} anzeigen",
-      "showMoreLabel_other": "{{count}} weitere {{group}} anzeigen"
+      "searchPlaceholder": "Ressource finden…",
+      "searchLabel": "Ressourcen dieser Organisation durchsuchen",
+      "typeFilterLabel": "Nach Typ filtern",
+      "allTypes": "Alle Typen",
+      "sortLabel": "Ressourcen sortieren",
+      "sortRecent": "Zuletzt aktualisiert",
+      "sortName": "Name",
+      "sortType": "Typ",
+      "noMatchesTitle": "Keine Ressource entspricht diesen Filtern",
+      "noMatchesHint": "Versuche eine kürzere Suche oder erweitere den Typfilter.",
+      "clearFilters": "Filter zurücksetzen"
     },
     "members": {
       "title": "Mitglieder",

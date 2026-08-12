@@ -74,7 +74,14 @@ export function OrganizationOverviewCards({
               </Badge>
               <Badge variant="secondary" className="gap-1 font-normal">
                 <FolderOpen className="h-3 w-3" aria-hidden />
-                {t("organizations.resourceCount", { count: organization.resourceCount })}
+                {/* Qualified for a non-member: the count is access-scoped. Not "public"
+                    (it includes granted rows) and no denominator (that gap is the private
+                    estate's size). */}
+                {organization.isMember
+                  ? t("organizations.resourceCount", { count: organization.resourceCount })
+                  : t("organizations.visibleResourceCount", {
+                      count: organization.resourceCount,
+                    })}
               </Badge>
             </div>
             <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />

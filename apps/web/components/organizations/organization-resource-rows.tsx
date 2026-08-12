@@ -6,22 +6,22 @@ import { getExperimentStatusBadgeColor } from "@/util/experiment-status";
 import { getMacroLanguageBadgeColor, getMacroLanguageLabel } from "@/util/macro-language";
 import { getSensorFamilyBadgeColor, getSensorFamilyLabel } from "@/util/sensor-family";
 import { stripHtml } from "@/util/strip-html";
-import { ChevronDown, ChevronUp, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import type {
-  OrganizationResource,
-  OrganizationResourceTotals,
-} from "@repo/api/domains/organization/organization.schema";
-import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import type { OrganizationResource } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
+import { SearchInput } from "@repo/ui/components/search-input";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@repo/ui/components/collapsible";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
 import {
   Tooltip,
   TooltipContent,
@@ -29,10 +29,20 @@ import {
   TooltipTrigger,
 } from "@repo/ui/components/tooltip";
 
-import { GROUP_ORDER, RESOURCE_SEGMENT } from "./organization-resource-meta";
+import type { ResourceSort, ResourceTypeFilter } from "./organization-resource-filter";
+import {
+  DEFAULT_RESOURCE_FILTER,
+  filterAndSortResources,
+  hasActiveFilters,
+} from "./organization-resource-filter";
+import { GROUP_ORDER, RESOURCE_SEGMENT, RESOURCE_TYPE_COLOR } from "./organization-resource-meta";
 
-/** Rows a group shows before it has to be asked to expand. */
-const PREVIEW_ROW_COUNT = 3;
+/** The sort options, in the order they are offered. */
+const SORT_OPTIONS: readonly { value: ResourceSort; labelKey: string }[] = [
+  { value: "recent", labelKey: "organizations.resources.sortRecent" },
+  { value: "name", labelKey: "organizations.resources.sortName" },
+  { value: "type", labelKey: "organizations.resources.sortType" },
+];
 
 /** A row's one type-specific fact, with the colour that fact already has. */
 interface ResourceMeta {
@@ -41,14 +51,9 @@ interface ResourceMeta {
 }
 
 /**
- * The one extra fact worth putting on a row, which is a different fact per type — and
- * in each case a fact the platform already has a colour for, so the badge is the same
- * badge these values wear on the experiments, protocols and macros listings rather
- * than a plain outline unique to this surface.
- *
- * An experiment's lifecycle status is a word, so it is translated; a sensor family and
- * a macro language are product names, so they are not. A workbook has none — its row
- * is its title and its description.
+ * The one extra fact worth putting on a row, different per type, each wearing the badge
+ * that value already wears on its own listing. A status is a word so it is translated;
+ * a sensor family, macro language and device class are product names, so they are not.
  */
 function metaBadge(
   resource: OrganizationResource,
@@ -56,8 +61,7 @@ function metaBadge(
 ): ResourceMeta | null {
   switch (resource.type) {
     case "experiment":
-      // All four statuses, not just the alarming ones: "stale" and "published" say
-      // more about an experiment than their absence would.
+      // All four statuses: "stale" and "published" say more than their absence would.
       return {
         label: t(`organizations.resources.status.${resource.status}`),
         colorClass: getExperimentStatusBadgeColor(resource.status),
@@ -74,7 +78,7 @@ function metaBadge(
       };
     case "device":
       // `deviceType` is `zSensorFamily` under another name, so a MultispeQ device and a
-      // MultispeQ protocol wear the identical badge. A product name, so untranslated.
+      // MultispeQ protocol wear the identical badge.
       return {
         label: getSensorFamilyLabel(resource.deviceType),
         colorClass: getSensorFamilyBadgeColor(resource.deviceType),
@@ -85,127 +89,105 @@ function metaBadge(
 }
 
 /**
- * The showcase, grouped by type. Grouping rather than one merged list because the
- * per-group count is the fact a visitor is actually after — how much of each kind of
- * work this organization does — and a recency-sorted mix cannot state it.
+ * Everything the organization owns that the caller can open, as one filtered list. Flat
+ * rather than grouped: the sidebar's estate bar states the per-type counts the group
+ * headers used to, and a flat list can answer "what was touched most recently here".
  *
- * Within a group the rows stay in the recency order the server sorted them into.
+ * The type options and the type sort both come off {@link GROUP_ORDER}, so neither can
+ * drift from the featured card or the estate bar. `totals` is deliberately not a prop —
+ * it existed for the group headers.
  */
-export function OrganizationResourceRows({
-  resources,
-  totals,
-}: {
-  resources: OrganizationResource[];
-  totals: OrganizationResourceTotals;
-}) {
-  const groups = GROUP_ORDER.map((type) => ({
-    type,
-    total: totals[type],
-    items: resources.filter((resource) => resource.type === type),
-  })).filter((group) => group.items.length > 0);
+export function OrganizationResourceRows({ resources }: { resources: OrganizationResource[] }) {
+  const { t } = useTranslation();
+
+  const [query, setQuery] = useState(DEFAULT_RESOURCE_FILTER.query);
+  const [type, setType] = useState<ResourceTypeFilter>(DEFAULT_RESOURCE_FILTER.type);
+  const [sort, setSort] = useState<ResourceSort>(DEFAULT_RESOURCE_FILTER.sort);
+
+  // The read is uncapped, so without this it re-runs over everything on every keystroke.
+  const visible = useMemo(
+    () => filterAndSortResources(resources, { query, type, sort }),
+    [resources, query, type, sort],
+  );
+
+  // Sort is not reset: it arranges rather than narrows.
+  const clearFilters = () => {
+    setQuery(DEFAULT_RESOURCE_FILTER.query);
+    setType(DEFAULT_RESOURCE_FILTER.type);
+  };
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col gap-6">
-        {groups.map((group) => (
-          // Keyed by type, so expanding a group survives the query refetching under it.
-          <ResourceGroup
-            key={group.type}
-            type={group.type}
-            total={group.total}
-            items={group.items}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder={t("organizations.resources.searchPlaceholder")}
+            aria-label={t("organizations.resources.searchLabel")}
+            className="sm:flex-1"
           />
-        ))}
+
+          <Select value={type} onValueChange={(next) => setType(next as ResourceTypeFilter)}>
+            <SelectTrigger
+              className="w-full sm:w-40"
+              aria-label={t("organizations.resources.typeFilterLabel")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("organizations.resources.allTypes")}</SelectItem>
+              {/* Five options from the one shared order, not a hand-written list. */}
+              {GROUP_ORDER.map((resourceType) => (
+                <SelectItem key={resourceType} value={resourceType}>
+                  {t(`organizations.resources.types.${resourceType}`, { count: 2 })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={sort} onValueChange={(next) => setSort(next as ResourceSort)}>
+            <SelectTrigger
+              className="w-full sm:w-44"
+              aria-label={t("organizations.resources.sortLabel")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {t(option.labelKey)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {visible.length === 0 ? (
+          <div className="border-border border-t py-10 text-center">
+            <p className="text-foreground text-sm font-semibold">
+              {t("organizations.resources.noMatchesTitle")}
+            </p>
+            <p className="text-muted-foreground mx-auto mt-1 max-w-[320px] text-xs leading-relaxed">
+              {t("organizations.resources.noMatchesHint")}
+            </p>
+            {/* Only when something is actually narrowing the list — a reset that resets
+                nothing is a dead control. */}
+            {hasActiveFilters({ query, type, sort }) ? (
+              <Button variant="outline" size="sm" className="mt-3.5" onClick={clearFilters}>
+                {t("organizations.resources.clearFilters")}
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <ul role="list" className="border-border border-t">
+            {visible.map((resource) => (
+              <ResourceRow key={`${resource.type}-${resource.id}`} resource={resource} />
+            ))}
+          </ul>
+        )}
       </div>
     </TooltipProvider>
-  );
-}
-
-/**
- * One type's rows: a three-row preview that expands in place.
- *
- * Expanding shows every row there is. The read is uncapped, so `total` and the rows
- * agree by construction and "View all (40)" opens onto forty — there is no shortfall
- * left for this component to have to disclose.
- */
-function ResourceGroup({
-  type,
-  total,
-  items,
-}: {
-  type: SharingResourceType;
-  total: number;
-  items: OrganizationResource[];
-}) {
-  const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
-
-  const groupLabel = t(`organizations.resources.types.${type}`, { count: total });
-  const preview = items.slice(0, PREVIEW_ROW_COUNT);
-  const rest = items.slice(PREVIEW_ROW_COUNT);
-
-  return (
-    <section>
-      <div className="mb-1 flex items-center gap-3">
-        <h3 className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
-          {groupLabel}
-        </h3>
-        <span className="text-muted-foreground/70 text-[11px] font-semibold tabular-nums">
-          {total}
-        </span>
-        <span className="bg-border h-px flex-1" aria-hidden />
-      </div>
-
-      <ul role="list">
-        {preview.map((resource) => (
-          <ResourceRow key={resource.id} resource={resource} />
-        ))}
-      </ul>
-
-      {rest.length > 0 ? (
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CollapsibleContent>
-            <ul role="list">
-              {rest.map((resource) => (
-                <ResourceRow key={resource.id} resource={resource} />
-              ))}
-            </ul>
-          </CollapsibleContent>
-
-          {/*
-            The count is what clicking gains you, not the group's size — the header
-            already states that a few pixels above, and with four rows you are looking
-            at three while "View all (4)" would offer one more than it reveals.
-
-            `rest.length` rather than a subtraction from `total`: `rest` *is* the hidden
-            set, so the number cannot drift from the rows the control opens onto.
-
-            Radix supplies aria-expanded and aria-controls; the accessible name adds
-            which group, since "Show 3 more" alone does not say of what.
-          */}
-          <CollapsibleTrigger
-            className="text-primary mt-2 flex items-center gap-1 text-xs hover:underline"
-            aria-label={
-              isOpen
-                ? t("organizations.resources.showLessLabel", { group: groupLabel })
-                : t("organizations.resources.showMoreLabel", {
-                    group: groupLabel,
-                    count: rest.length,
-                  })
-            }
-          >
-            {isOpen ? (
-              <ChevronUp className="h-3 w-3" aria-hidden />
-            ) : (
-              <ChevronDown className="h-3 w-3" aria-hidden />
-            )}
-            {isOpen
-              ? t("organizations.resources.showLess")
-              : t("organizations.resources.showMore", { count: rest.length })}
-          </CollapsibleTrigger>
-        </Collapsible>
-      ) : null}
-    </section>
   );
 }
 
@@ -216,69 +198,79 @@ function ResourceRow({ resource }: { resource: OrganizationResource }) {
   const meta = metaBadge(resource, t);
 
   return (
-    <li className="border-border/60 flex items-center gap-3 border-b py-2.5 last:border-b-0">
-      <div className="min-w-0 flex-1">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <Link
-            href={`/${locale}/platform/${RESOURCE_SEGMENT[resource.type]}/${resource.id}`}
-            className="truncate text-sm font-medium hover:underline"
-          >
-            {resource.name}
-          </Link>
-          {/* Only when private: public is the unremarkable default, so a badge for it
-              would be noise on most rows. */}
-          {resource.visibility === "private" ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className="text-muted-foreground shrink-0"
-                  aria-label={t("resourceVisibility.privateStatus")}
-                >
-                  <Lock className="h-3 w-3" />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{t("organizations.resources.privateTooltip")}</TooltipContent>
-            </Tooltip>
-          ) : null}
-        </span>
-        {/*
-          Tags stripped, not rendered. An experiment's description is authored in a rich
-          editor, so interpolating it raw prints literal `<p>` markup — and rendering it
-          as real rich text would be wrong here anyway: bold, links and lists have no
-          business in a one-line row.
-
-          `stripHtml` plus a CSS clamp also behaves identically whatever the content is.
-          `RichTextRenderer` silently ignores `truncate` on non-HTML content, so a
-          plain-text description would blow the row height with no warning.
-        */}
-        {resource.description ? (
-          <p className="text-muted-foreground truncate text-xs">
-            {stripHtml(resource.description)}
-          </p>
+    <li className="border-border/60 border-b py-3 last:border-b-0">
+      <span className="flex min-w-0 items-center gap-1.5">
+        <Link
+          href={`/${locale}/platform/${RESOURCE_SEGMENT[resource.type]}/${resource.id}`}
+          className="truncate text-sm font-medium hover:underline"
+        >
+          {resource.name}
+        </Link>
+        {/* Only when private: public is the unremarkable default, so a badge for it
+            would be noise on most rows. */}
+        {resource.visibility === "private" ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className="text-muted-foreground shrink-0"
+                aria-label={t("resourceVisibility.privateStatus")}
+              >
+                <Lock className="h-3 w-3" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{t("organizations.resources.privateTooltip")}</TooltipContent>
+          </Tooltip>
         ) : null}
-      </div>
-
-      {/* Default variant, colour class only: the pale `badge-*` fills are designed to
-          sit under its `text-black`, which is how every other consumer pairs them. */}
-      {meta ? <Badge className={`shrink-0 ${meta.colorClass}`}>{meta.label}</Badge> : null}
+      </span>
 
       {/*
-        Labelled, because a bare "2 days ago" does not say what happened then, and a
-        row carries two plausible timestamps. Built as one string rather than two JSX
-        expressions with a space between them: that space is whitespace between
-        siblings, and it vanishes the moment the line is wrapped.
+        Tags stripped, not rendered. A description is authored in a rich editor, so
+        interpolating it raw prints literal `<p>` markup — and rendering it as real rich
+        text would be wrong here anyway: bold, links and lists have no business in a
+        one-line row. `RichTextRenderer` also ignores line clamping on plain-text
+        content, so a plain description would blow the row height with no warning.
 
-        A relative time is also lossy on its own — "2 days ago" is not something you
-        can act on or cite — so the absolute date rides along as the title, and
-        `dateTime` gives assistive tech and any scraper the unambiguous instant.
+        Absent entirely for a device, which has no `description` column at all — the
+        guard is what keeps that from reserving an empty line on every device row.
       */}
-      <time
-        dateTime={resource.updatedAt}
-        title={`${t("common.updated")} ${formatShortDate(resource.updatedAt, locale)}`}
-        className="text-muted-foreground shrink-0 text-xs"
-      >
-        {`${t("common.updated")} ${formatRelativeTime(resource.updatedAt, locale)}`}
-      </time>
+      {resource.description ? (
+        <p className="text-muted-foreground mt-1 truncate text-xs">
+          {stripHtml(resource.description)}
+        </p>
+      ) : null}
+
+      <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+        <span className="flex items-center gap-1.5">
+          <span
+            className={`h-2 w-2 shrink-0 rounded-full ${RESOURCE_TYPE_COLOR[resource.type]}`}
+            aria-hidden
+          />
+          {t(`organizations.resources.types.${resource.type}`, { count: 1 })}
+        </span>
+
+        {/* Default variant, colour class only: the pale `badge-*` fills are designed to
+            sit under its `text-black`, which is how every other consumer pairs them.
+            Absent for a workbook, which has no second fact worth a badge. */}
+        {meta ? <Badge className={`shrink-0 ${meta.colorClass}`}>{meta.label}</Badge> : null}
+
+        {/*
+          Labelled, because a bare "2 days ago" does not say what happened then, and a
+          row carries two plausible timestamps. Built as one string rather than two JSX
+          expressions with a space between them: that space is whitespace between
+          siblings, and it vanishes the moment the line is wrapped.
+
+          A relative time is also lossy on its own — "2 days ago" is not something you
+          can act on or cite — so the absolute date rides along as the title, and
+          `dateTime` gives assistive tech and any scraper the unambiguous instant.
+        */}
+        <time
+          dateTime={resource.updatedAt}
+          title={`${t("common.updated")} ${formatShortDate(resource.updatedAt, locale)}`}
+          className="shrink-0 sm:ml-auto"
+        >
+          {`${t("common.updated")} ${formatRelativeTime(resource.updatedAt, locale)}`}
+        </time>
+      </div>
     </li>
   );
 }

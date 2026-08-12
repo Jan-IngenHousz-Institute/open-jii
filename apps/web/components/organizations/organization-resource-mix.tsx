@@ -16,7 +16,14 @@ import { GROUP_ORDER, RESOURCE_TYPE_COLOR } from "./organization-resource-meta";
  * Access-scoped: this is what *this caller* can see, deliberately not
  * `organization.resourceCount`. Renders nothing when there is nothing to proportion.
  */
-export function OrganizationResourceMix({ totals }: { totals: OrganizationResourceTotals }) {
+export function OrganizationResourceMix({
+  totals,
+  isMember,
+}: {
+  totals: OrganizationResourceTotals;
+  /** Labels the total; does not change what it counts. */
+  isMember: boolean;
+}) {
   const { t } = useTranslation();
 
   const segments = GROUP_ORDER.map((type) => ({ type, count: totals[type] })).filter(
@@ -30,9 +37,11 @@ export function OrganizationResourceMix({ totals }: { totals: OrganizationResour
     <Card className="p-5">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight">{t("organizations.mix.title")}</h2>
-        {/* One step under the title, as it was under the old `text-sm` one. */}
+        {/* See the same label on the directory card for why it is qualified. */}
         <span className="text-muted-foreground text-sm tabular-nums">
-          {t("organizations.resourceCount", { count: total })}
+          {isMember
+            ? t("organizations.resourceCount", { count: total })
+            : t("organizations.visibleResourceCount", { count: total })}
         </span>
       </div>
 

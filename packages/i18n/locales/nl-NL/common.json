@@ -545,6 +545,8 @@
     "memberCount_other": "{{count}} leden",
     "resourceCount_one": "{{count}} resource",
     "resourceCount_other": "{{count}} resources",
+    "visibleResourceCount_one": "{{count}} voor jou zichtbare resource",
+    "visibleResourceCount_other": "{{count}} voor jou zichtbare resources",
     "searchPlaceholder": "Organisaties zoeken…",
     "searchLabel": "Organisaties doorzoeken",
     "noMatches": "Geen organisatie past bij je zoekopdracht",
@@ -690,12 +692,17 @@
         "archived": "Gearchiveerd",
         "published": "Gepubliceerd"
       },
-      "showLess": "Minder weergeven",
-      "showLessLabel": "Minder {{group}} weergeven",
-      "showMore_one": "Nog {{count}} weergeven",
-      "showMore_other": "Nog {{count}} weergeven",
-      "showMoreLabel_one": "Nog {{count}} {{group}} weergeven",
-      "showMoreLabel_other": "Nog {{count}} {{group}} weergeven"
+      "searchPlaceholder": "Zoek een resource…",
+      "searchLabel": "Zoek in de resources van deze organisatie",
+      "typeFilterLabel": "Filter op type",
+      "allTypes": "Alle typen",
+      "sortLabel": "Resources sorteren",
+      "sortRecent": "Recent bijgewerkt",
+      "sortName": "Naam",
+      "sortType": "Type",
+      "noMatchesTitle": "Geen resource komt overeen met deze filters",
+      "noMatchesHint": "Probeer een kortere zoekopdracht of verbreed het typefilter.",
+      "clearFilters": "Filters wissen"
     },
     "members": {
       "title": "Leden",

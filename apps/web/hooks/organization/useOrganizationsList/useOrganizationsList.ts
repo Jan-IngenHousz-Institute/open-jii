@@ -17,6 +17,8 @@ export interface OrganizationListItem {
   memberCount: number;
   resourceCount: number;
   visibility: OrganizationVisibility;
+  /** Labels the resource count. Derived once here, so `pending_request` is excluded in one place. */
+  isMember: boolean;
 }
 
 function matches(organization: OrganizationListItem, term: string): boolean {
@@ -71,6 +73,8 @@ export function useOrganizationsList() {
       memberCount: organization.memberCount,
       resourceCount: organization.resourceCount,
       visibility: organization.visibility,
+      // This read is the caller's own memberships.
+      isMember: true,
     }))
     .filter((organization) => matches(organization, debouncedSearch));
 
@@ -84,6 +88,8 @@ export function useOrganizationsList() {
       // Read from the row, not assumed: the directory now carries the caller's own
       // private organizations, so hardcoding "public" here would strip their badge.
       visibility: organization.visibility,
+      // `pending_request` is not membership.
+      isMember: organization.membershipStatus === "member",
     }),
   );
 

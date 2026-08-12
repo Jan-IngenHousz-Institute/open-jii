@@ -14919,29 +14919,6 @@
             },
             "allowEmptyValue": true,
             "allowReserved": true
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "default": 20,
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50
-            },
-            "allowEmptyValue": true,
-            "allowReserved": true
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "schema": {
-              "default": 0,
-              "type": "integer",
-              "minimum": 0
-            },
-            "allowEmptyValue": true,
-            "allowReserved": true
           }
         ],
         "responses": {
@@ -15027,6 +15004,13 @@
                           "resourceCount": {
                             "type": "integer"
                           },
+                          "visibility": {
+                            "enum": [
+                              "private",
+                              "public"
+                            ],
+                            "type": "string"
+                          },
                           "membershipStatus": {
                             "enum": [
                               "none",
@@ -15046,17 +15030,14 @@
                           "location",
                           "memberCount",
                           "resourceCount",
+                          "visibility",
                           "membershipStatus"
                         ]
                       }
-                    },
-                    "total": {
-                      "type": "integer"
                     }
                   },
                   "required": [
-                    "organizations",
-                    "total"
+                    "organizations"
                   ]
                 }
               }
@@ -15256,6 +15237,13 @@
                     "memberCount": {
                       "type": "integer"
                     },
+                    "resourceCount": {
+                      "type": "integer"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
                     "role": {
                       "anyOf": [
                         {
@@ -15291,6 +15279,8 @@
                     "location",
                     "visibility",
                     "memberCount",
+                    "resourceCount",
+                    "createdAt",
                     "role",
                     "membershipStatus"
                   ]
@@ -15327,59 +15317,322 @@
                     "resources": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "properties": {
-                          "type": {
-                            "enum": [
-                              "experiment",
-                              "macro",
-                              "protocol",
-                              "workbook"
-                            ],
-                            "type": "string"
-                          },
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "description": {
-                            "anyOf": [
-                              {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
                                 "type": "string"
                               },
-                              {
-                                "type": "null"
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "experiment"
+                              },
+                              "status": {
+                                "enum": [
+                                  "active",
+                                  "stale",
+                                  "archived",
+                                  "published"
+                                ],
+                                "type": "string"
                               }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "status"
                             ]
                           },
-                          "visibility": {
-                            "enum": [
-                              "private",
-                              "public"
-                            ],
-                            "type": "string"
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "protocol"
+                              },
+                              "family": {
+                                "enum": [
+                                  "multispeq",
+                                  "ambyte",
+                                  "minipar",
+                                  "generic",
+                                  "ambit"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "family"
+                            ]
                           },
-                          "updatedAt": {
-                            "type": "string",
-                            "format": "date-time"
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "macro"
+                              },
+                              "language": {
+                                "enum": [
+                                  "python",
+                                  "r",
+                                  "javascript"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "language"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "workbook"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "device"
+                              },
+                              "deviceType": {
+                                "enum": [
+                                  "multispeq",
+                                  "ambyte",
+                                  "minipar",
+                                  "generic",
+                                  "ambit"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "deviceType"
+                            ]
                           }
-                        },
-                        "required": [
-                          "type",
-                          "id",
-                          "name",
-                          "description",
-                          "visibility",
-                          "updatedAt"
                         ]
                       }
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "experiment": {
+                          "type": "integer"
+                        },
+                        "protocol": {
+                          "type": "integer"
+                        },
+                        "macro": {
+                          "type": "integer"
+                        },
+                        "workbook": {
+                          "type": "integer"
+                        },
+                        "device": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "experiment",
+                        "protocol",
+                        "macro",
+                        "workbook",
+                        "device"
+                      ]
                     }
                   },
                   "required": [
-                    "resources"
+                    "resources",
+                    "totals"
                   ]
                 }
               }
@@ -15464,61 +15717,10 @@
                           "joinedAt"
                         ]
                       }
-                    },
-                    "outsideCollaborators": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "userId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "firstName": {
-                            "type": "string"
-                          },
-                          "lastName": {
-                            "type": "string"
-                          },
-                          "email": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "avatarUrl": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "resourceCount": {
-                            "type": "integer",
-                            "description": "How many of the org's resources they hold a grant on"
-                          }
-                        },
-                        "required": [
-                          "userId",
-                          "firstName",
-                          "lastName",
-                          "email",
-                          "avatarUrl",
-                          "resourceCount"
-                        ]
-                      }
                     }
                   },
                   "required": [
-                    "members",
-                    "outsideCollaborators"
+                    "members"
                   ]
                 }
               }
@@ -15787,6 +15989,82 @@
                       "organizationId",
                       "createdAt",
                       "members"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}/team-grants": {
+      "get": {
+        "operationId": "organizations.listOrganizationTeamGrants",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the grant row"
+                      },
+                      "teamId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "resourceType": {
+                        "enum": [
+                          "experiment",
+                          "macro",
+                          "protocol",
+                          "workbook",
+                          "device"
+                        ],
+                        "type": "string"
+                      },
+                      "resourceId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "resourceName": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "enum": [
+                          "owner",
+                          "admin",
+                          "viewer"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "teamId",
+                      "resourceType",
+                      "resourceId",
+                      "resourceName",
+                      "role"
                     ]
                   }
                 }

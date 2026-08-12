@@ -100,7 +100,7 @@ export function OrganizationOverview({ organizationId }: { organizationId: strin
             </div>
           ) : (
             // Neither pending nor errored, so the query has narrowed `data`.
-            <OrganizationResourceRows resources={data.resources} totals={data.totals} />
+            <OrganizationResourceRows resources={data.resources} />
           )}
         </Card>
       </div>
@@ -116,7 +116,7 @@ export function OrganizationOverview({ organizationId }: { organizationId: strin
           />
         ) : null}
 
-        {data ? <OrganizationResourceMix totals={data.totals} /> : null}
+        {data ? <OrganizationResourceMix totals={data.totals} isMember={isMember} /> : null}
       </div>
     </div>
   );

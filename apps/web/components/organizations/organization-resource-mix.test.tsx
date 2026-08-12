@@ -26,7 +26,7 @@ function segmentWidths(container: HTMLElement): string[] {
 
 describe("<OrganizationResourceMix />", () => {
   it("renders nothing when the organization owns nothing to proportion", () => {
-    const { container } = render(<OrganizationResourceMix totals={NO_TOTALS} />);
+    const { container } = render(<OrganizationResourceMix totals={NO_TOTALS} isMember />);
 
     expect(container).toBeEmptyDOMElement();
   });
@@ -35,6 +35,7 @@ describe("<OrganizationResourceMix />", () => {
     render(
       <OrganizationResourceMix
         totals={{ experiment: 4, protocol: 2, macro: 1, workbook: 1, device: 0 }}
+        isMember
       />,
     );
 
@@ -46,6 +47,7 @@ describe("<OrganizationResourceMix />", () => {
     const { container } = render(
       <OrganizationResourceMix
         totals={{ experiment: 5, protocol: 3, macro: 1, workbook: 1, device: 0 }}
+        isMember
       />,
     );
 
@@ -54,7 +56,7 @@ describe("<OrganizationResourceMix />", () => {
 
   it("leaves out the types the organization has none of", () => {
     const { container } = render(
-      <OrganizationResourceMix totals={{ ...NO_TOTALS, experiment: 3, workbook: 1 }} />,
+      <OrganizationResourceMix totals={{ ...NO_TOTALS, experiment: 3, workbook: 1 }} isMember />,
     );
 
     // Two segments and two legend entries, not four of each with two at zero width.
@@ -71,6 +73,7 @@ describe("<OrganizationResourceMix />", () => {
     const { container } = render(
       <OrganizationResourceMix
         totals={{ experiment: 1, protocol: 1, macro: 1, workbook: 1, device: 1 }}
+        isMember
       />,
     );
 
@@ -95,7 +98,9 @@ describe("<OrganizationResourceMix />", () => {
    * yet", which between them claimed it owned nothing.
    */
   it("renders a full bar for an organization that owns only devices", () => {
-    const { container } = render(<OrganizationResourceMix totals={{ ...NO_TOTALS, device: 4 }} />);
+    const { container } = render(
+      <OrganizationResourceMix totals={{ ...NO_TOTALS, device: 4 }} isMember />,
+    );
 
     expect(segmentWidths(container)).toEqual(["100%"]);
     const legend = within(container).getAllByRole("listitem");
@@ -107,7 +112,7 @@ describe("<OrganizationResourceMix />", () => {
 
   it("counts devices into the header total alongside the listed types", () => {
     const { container } = render(
-      <OrganizationResourceMix totals={{ ...NO_TOTALS, experiment: 3, device: 1 }} />,
+      <OrganizationResourceMix totals={{ ...NO_TOTALS, experiment: 3, device: 1 }} isMember />,
     );
 
     // 3 of 4 and 1 of 4 — the device is in the denominator, so the bar and the header
@@ -117,15 +122,56 @@ describe("<OrganizationResourceMix />", () => {
 
   it("omits devices like any other type when the organization owns none", () => {
     const { container } = render(
-      <OrganizationResourceMix totals={{ ...NO_TOTALS, experiment: 2, device: 0 }} />,
+      <OrganizationResourceMix totals={{ ...NO_TOTALS, experiment: 2, device: 0 }} isMember />,
     );
 
     expect(segmentWidths(container)).toEqual(["100%"]);
     expect(within(container).queryByText(/types\.device/u)).toBeNull();
   });
 
+  describe("the header label", () => {
+    const SAME_TOTALS = { ...NO_TOTALS, experiment: 3 };
+
+    /** Same count either way; only the wording changes. */
+    it("qualifies the count for a non-member and leaves it plain for a member", () => {
+      const asMember = render(<OrganizationResourceMix totals={SAME_TOTALS} isMember />);
+      expect(within(asMember.container).getByText("organizations.resourceCount")).toBeVisible();
+      expect(
+        within(asMember.container).queryByText("organizations.visibleResourceCount"),
+      ).toBeNull();
+
+      // Same totals, so the label is the only difference.
+      const asVisitor = render(<OrganizationResourceMix totals={SAME_TOTALS} isMember={false} />);
+      expect(
+        within(asVisitor.container).getByText("organizations.visibleResourceCount"),
+      ).toBeVisible();
+      expect(within(asVisitor.container).queryByText("organizations.resourceCount")).toBeNull();
+    });
+
+    it("shows no denominator or total to either caller", () => {
+      // A denominator would disclose the private estate's size.
+      for (const isMember of [true, false]) {
+        const { container } = render(
+          <OrganizationResourceMix totals={SAME_TOTALS} isMember={isMember} />,
+        );
+        expect(container.textContent).not.toMatch(/\bof\b|\/|43/u);
+      }
+    });
+
+    it("never says public, which would be false for a caller holding a grant", () => {
+      // A non-member's count includes granted rows, so "public" would be false.
+      const { container } = render(
+        <OrganizationResourceMix totals={SAME_TOTALS} isMember={false} />,
+      );
+
+      expect(container.textContent).not.toMatch(/public/iu);
+    });
+  });
+
   it("survives a single type owning everything", () => {
-    const { container } = render(<OrganizationResourceMix totals={{ ...NO_TOTALS, macro: 2 }} />);
+    const { container } = render(
+      <OrganizationResourceMix totals={{ ...NO_TOTALS, macro: 2 }} isMember />,
+    );
 
     expect(segmentWidths(container)).toEqual(["100%"]);
   });
