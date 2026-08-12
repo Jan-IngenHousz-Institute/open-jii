@@ -79,7 +79,7 @@ channels:
         schema:
           type: string
       protocolId:
-        description: Legacy topic-carried protocol identifier; superseded by the payload protocol_id.
+        description: Legacy protocol identifier carried in the trailing topic segment; the lean topic shape omits it.
         schema:
           type: string
     subscribe:
