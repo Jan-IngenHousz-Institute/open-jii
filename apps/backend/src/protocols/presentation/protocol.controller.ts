@@ -6,6 +6,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-validator";
 import { protocolContract } from "@repo/api/domains/protocol/protocol.contract";
+import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
@@ -28,18 +29,16 @@ import { CreateProtocolDto } from "../core/models/protocol.model";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
 
-export function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknown>[] {
+export function parseProtocolCode(code: unknown, logger: Logger): JsonValue {
   if (!code) {
     return [{}];
   }
 
-  if (typeof code === "object" && Array.isArray(code)) {
-    return code as Record<string, unknown>[];
-  }
-
+  // Legacy rows hold the document as a JSON-encoded string (double-encoding,
+  // OJD-1711); decode those. Anything else is already a valid JSON value.
   if (typeof code === "string") {
     try {
-      return JSON.parse(code) as Record<string, unknown>[];
+      return JSON.parse(code) as JsonValue;
     } catch (error) {
       logger.error({
         msg: "Failed to parse protocol code",
@@ -51,16 +50,12 @@ export function parseProtocolCode(code: unknown, logger: Logger): Record<string,
     }
   }
 
-  return [{}];
+  return code as JsonValue;
 }
 
 function validateJsonStructure(code: unknown, logger: Logger) {
   if (!code) {
     return failure(AppError.badRequest("Protocol code is required"));
-  }
-
-  if (!Array.isArray(code)) {
-    return failure(AppError.badRequest("Protocol code must be an array"));
   }
 
   try {
@@ -187,7 +182,10 @@ export class ProtocolController {
       const createDto: CreateProtocolDto = {
         name: input.name,
         description: input.description,
-        code: JSON.stringify(input.code),
+        // Not stringified: `code` is a jsonb column and Drizzle serializes it.
+        // Doing it here too stored the document double-encoded, as a jsonb
+        // string rather than an array. See OJD-1711.
+        code: input.code,
         family: input.family,
         forkedFrom: input.forkedFrom,
         // Visibility at create (defaults to public via the column default when omitted).
@@ -240,7 +238,8 @@ export class ProtocolController {
       const updateDto = {
         name: body.name,
         description: body.description,
-        code: body.code ? JSON.stringify(body.code) : undefined,
+        // See the note in createProtocol: jsonb serializes this, we must not.
+        code: body.code,
         family: body.family,
       };
 

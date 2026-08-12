@@ -6,10 +6,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronsUpDown, MonitorX } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import type { Resolver } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type {
   UpdateProtocolRequestBody,
+  JsonValue,
   SensorFamily,
 } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
@@ -52,9 +54,18 @@ interface ProtocolDetailsCardProps {
   protocolId: string;
   initialName: string;
   initialDescription: string;
-  initialCode: Record<string, unknown>[];
+  initialCode: JsonValue;
   initialFamily: SensorFamily;
 }
+
+// react-hook-form's utility types (DeepPartial, FieldErrors) cannot recurse
+// into the contract's JsonValue, so the form carries `code` as `unknown`; the
+// resolver schema still validates it on submit.
+type ProtocolDetailsFormValues = Omit<UpdateProtocolRequestBody, "code"> & {
+  name: string;
+  family: SensorFamily;
+  code?: unknown;
+};
 
 export function ProtocolDetailsCard({
   protocolId,
@@ -70,10 +81,12 @@ export function ProtocolDetailsCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const browserSupport = useIotBrowserSupport();
 
-  const form = useForm<UpdateProtocolRequestBody & { name: string; family: SensorFamily }>({
+  const form = useForm<ProtocolDetailsFormValues>({
     resolver: zodResolver(
       editProtocolFormSchema.pick({ name: true, description: true, code: true, family: true }),
-    ),
+      // See ProtocolDetailsFormValues: the schema output carries the recursive
+      // JsonValue, which RHF cannot represent.
+    ) as unknown as Resolver<ProtocolDetailsFormValues>,
     defaultValues: {
       name: initialName,
       description: initialDescription,
@@ -82,15 +95,19 @@ export function ProtocolDetailsCard({
     },
   });
 
-  async function onSubmit(
-    data: UpdateProtocolRequestBody & { name: string; family: SensorFamily },
-  ) {
+  async function onSubmit(data: ProtocolDetailsFormValues) {
     await updateProtocol({
       id: protocolId,
       ...data,
+      code: data.code as JsonValue,
     });
     toast({ description: t("protocols.protocolUpdated") });
   }
+
+  // The on-device runner only understands MultispeQ-style arrays; a non-array
+  // document (raw text mid-keystroke, or another family's shape) can't run.
+  const watchedCode = form.watch("code");
+  const runnerCode = (Array.isArray(watchedCode) ? watchedCode : [{}]) as Record<string, unknown>[];
 
   return (
     <Form {...form}>
@@ -245,7 +262,7 @@ export function ProtocolDetailsCard({
               <div className="flex flex-1 flex-col overflow-y-auto p-2.5 sm:p-4">
                 {browserSupport.any ? (
                   <IotProtocolRunner
-                    protocolCode={form.watch("code") ?? [{}]}
+                    protocolCode={runnerCode}
                     sensorFamily={form.watch("family")}
                     layout="vertical"
                   />

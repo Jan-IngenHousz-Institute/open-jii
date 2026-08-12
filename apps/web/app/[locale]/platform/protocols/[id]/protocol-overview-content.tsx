@@ -33,7 +33,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
       try {
         await updateProtocol({
           id,
-          code: code as Record<string, unknown>[],
+          code,
         });
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });

@@ -4,10 +4,10 @@ import { useForm } from "react-hook-form";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { CreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { Form } from "@repo/ui/components/form";
 
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
+import type { NewProtocolFormValues } from "./new-protocol-form-values";
 
 // Mock MacroSearchWithDropdown
 vi.mock("../macro-search-with-dropdown", () => ({
@@ -43,8 +43,8 @@ vi.mock("@repo/ui/components/rich-textarea", async (importOriginal) => {
   };
 });
 
-const TestWrapper = ({ defaultValues }: { defaultValues?: Partial<CreateProtocolRequestBody> }) => {
-  const form = useForm<CreateProtocolRequestBody>({
+const TestWrapper = ({ defaultValues }: { defaultValues?: Partial<NewProtocolFormValues> }) => {
+  const form = useForm<NewProtocolFormValues>({
     defaultValues: {
       name: "",
       description: "",

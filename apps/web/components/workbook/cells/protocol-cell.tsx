@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { JsonValue, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { protocolRequiresInteraction } from "@repo/iot";
@@ -117,14 +117,14 @@ export function ProtocolCellComponent({
 
   // Mirror the standalone protocol/macro editors: persist via the shared
   // `useAutosave` hook so debounce, status and flush behave identically across
-  // all three editors. Protocol code is a JSON array; `isValid` skips saves
+  // all three editors. Protocol code is a JSON document; `isValid` skips saves
   // while the editor is mid-keystroke with text that does not yet parse.
   const save = useCallback(
     async (code: string) => {
       try {
         await saveProtocol({
           id: protocolId,
-          code: JSON.parse(code) as Record<string, unknown>[],
+          code: JSON.parse(code) as JsonValue,
         });
         onEntitySaved();
       } catch (err) {

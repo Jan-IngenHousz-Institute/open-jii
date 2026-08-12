@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import { and, protocols as protocolsTable, eq, resourceGrants } from "@repo/database";
+import { and, protocols as protocolsTable, eq, resourceGrants, sql } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -88,7 +88,7 @@ describe("ProtocolRepository", () => {
       const protocol2 = {
         name: "Protocol 2",
         description: "Description 2",
-        code: JSON.stringify({ steps: [{ name: "Step 2", action: "test" }] }),
+        code: [{ steps: [{ name: "Step 2", action: "test" }] }],
         family: "multispeq" as const,
       };
 
@@ -300,7 +300,7 @@ describe("ProtocolRepository", () => {
       const protocol2 = {
         name: "Different Protocol 2",
         description: "Description 2",
-        code: JSON.stringify({ steps: [{ name: "Step 2", action: "test" }] }),
+        code: [{ steps: [{ name: "Step 2", action: "test" }] }],
         family: "multispeq" as const,
       };
 
@@ -972,6 +972,95 @@ describe("ProtocolController — create with visibility", () => {
   });
 
   const createPath = () => testApp.resolveOrpcPath(contract.protocols.createProtocol);
+
+  // `code` is a jsonb column. Serializing before handing it to Drizzle, which
+  // serializes jsonb itself, stored a jsonb *string* holding the document. The
+  // API hid it because the read path parses either shape, so nothing but the
+  // stored type catches a regression here. See OJD-1711.
+  const storedCodeType = async (id: string) => {
+    const [row] = await testApp.database
+      .select({ kind: sql<string>`jsonb_typeof(${protocolsTable.code})` })
+      .from(protocolsTable)
+      .where(eq(protocolsTable.id, id));
+    return row.kind;
+  };
+
+  it("stores created code as a jsonb array, not a double-encoded string", async () => {
+    const response: SuperTestResponse<{ id: string }> = await testApp
+      .post(createPath())
+      .withAuth(testUserId)
+      .send({
+        name: `Stored shape on create ${faker.string.uuid()}`,
+        description: "x",
+        code: [{ label: "PAM", pulses: [10, 20] }],
+        family: "multispeq",
+      })
+      .expect(StatusCodes.CREATED);
+
+    expect(await storedCodeType(response.body.id)).toBe("array");
+  });
+
+  it("stores updated code as a jsonb array, and keeps it queryable from SQL", async () => {
+    const created: SuperTestResponse<{ id: string }> = await testApp
+      .post(createPath())
+      .withAuth(testUserId)
+      .send({
+        name: `Stored shape on update ${faker.string.uuid()}`,
+        description: "x",
+        code: [{ label: "before" }],
+        family: "multispeq",
+      })
+      .expect(StatusCodes.CREATED);
+
+    await testApp
+      .patch(testApp.resolveOrpcPath(contract.protocols.updateProtocol, { id: created.body.id }))
+      .withAuth(testUserId)
+      .send({ code: [{ label: "after", pulses: [1, 2, 3] }] })
+      .expect(StatusCodes.OK);
+
+    expect(await storedCodeType(created.body.id)).toBe("array");
+
+    // The point of storing an array: jsonb operators reach into it. Against a
+    // double-encoded row both of these come back null.
+    const [row] = await testApp.database
+      .select({
+        label: sql<string | null>`${protocolsTable.code} -> 0 ->> 'label'`,
+        pulses: sql<number | null>`jsonb_array_length(${protocolsTable.code} -> 0 -> 'pulses')`,
+      })
+      .from(protocolsTable)
+      .where(eq(protocolsTable.id, created.body.id));
+
+    expect(row.label).toBe("after");
+    expect(row.pulses).toBe(3);
+  });
+
+  it("still returns an array for a legacy double-encoded row", async () => {
+    // Rows written before the fix, and any the backfill could not decode, must
+    // keep reading correctly through the API.
+    const created: SuperTestResponse<{ id: string }> = await testApp
+      .post(createPath())
+      .withAuth(testUserId)
+      .send({
+        name: `Legacy encoding ${faker.string.uuid()}`,
+        description: "x",
+        code: [{ label: "legacy" }],
+        family: "multispeq",
+      })
+      .expect(StatusCodes.CREATED);
+
+    await testApp.database
+      .update(protocolsTable)
+      .set({ code: sql`to_jsonb(${JSON.stringify([{ label: "legacy" }])}::text)` })
+      .where(eq(protocolsTable.id, created.body.id));
+    expect(await storedCodeType(created.body.id)).toBe("string");
+
+    const response: SuperTestResponse<{ code: unknown }> = await testApp
+      .get(testApp.resolveOrpcPath(contract.protocols.getProtocol, { id: created.body.id }))
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(response.body.code).toEqual([{ label: "legacy" }]);
+  });
 
   it("persists visibility=private when requested", async () => {
     const response: SuperTestResponse<{ id: string; visibility: string }> = await testApp

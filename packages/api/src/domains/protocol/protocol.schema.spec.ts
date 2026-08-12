@@ -82,32 +82,39 @@ describe("Protocol Schema", () => {
       expect(() => zProtocol.parse(bad)).toThrow();
     });
 
-    it("rejects non-array code", () => {
-      const bad = {
+    it("accepts non-array code", () => {
+      // Protocol shape is device-defined: any JSON document is valid.
+      const p = {
         id: uuidA,
         name: "Not Array",
+        organizationId: null,
+        visibility: "public",
         description: null,
-        code: { step: 1 }, // should be array of records
+        code: { step: 1 },
         family: "multispeq",
+        sortOrder: 1,
         createdBy: uuidB,
         createdAt: iso,
         updatedAt: iso2,
-      } as unknown;
-      expect(() => zProtocol.parse(bad)).toThrow();
+      };
+      expect(zProtocol.parse(p)).toEqual(p);
     });
 
-    it("rejects array with non-record element in code", () => {
-      const bad = {
+    it("accepts mixed JSON arrays in code", () => {
+      const p = {
         id: uuidA,
-        name: "Mixed Bad",
+        name: "Mixed",
+        organizationId: null,
+        visibility: "public",
         description: null,
         code: [{ ok: true }, "nope"],
         family: "multispeq",
+        sortOrder: 1,
         createdBy: uuidB,
         createdAt: iso,
         updatedAt: iso2,
-      } as unknown;
-      expect(() => zProtocol.parse(bad)).toThrow();
+      };
+      expect(zProtocol.parse(p)).toEqual(p);
     });
 
     it("zProtocolList accepts array of valid protocols", () => {
@@ -188,7 +195,7 @@ describe("Protocol Schema", () => {
       expect(parsed.name).toBe("Ambient Protocol");
       expect(parsed.description).toBe("Trimmed name allowed; not auto-trimmed in output");
       expect(parsed.family).toBe("multispeq");
-      expect(parsed.code.length).toBe(2);
+      expect(parsed.code).toEqual([{ a: 1 }, { b: 2 }]);
     });
 
     it("rejects empty/whitespace name", () => {
@@ -197,9 +204,12 @@ describe("Protocol Schema", () => {
       ).toThrow();
     });
 
-    it("rejects code not array", () => {
-      const bad = { name: "X", code: { step: 1 }, family: "multispeq" };
-      expect(() => zCreateProtocolRequestBody.parse(bad)).toThrow();
+    it("accepts any JSON document as code", () => {
+      // Protocol shape is device-defined: arrays for MultispeQ, anything else
+      // for other families. Non-JSON values (undefined) are still rejected.
+      const obj = { name: "X", code: { step: 1 }, family: "multispeq" };
+      expect(zCreateProtocolRequestBody.parse(obj)).toEqual(obj);
+      expect(() => zCreateProtocolRequestBody.parse({ name: "X", family: "multispeq" })).toThrow();
     });
 
     it("rejects invalid family", () => {
@@ -232,8 +242,9 @@ describe("Protocol Schema", () => {
       expect(zUpdateProtocolRequestBody.parse(b)).toEqual(b);
     });
 
-    it("rejects non-array code", () => {
-      expect(() => zUpdateProtocolRequestBody.parse({ code: {} })).toThrow();
+    it("accepts non-array code", () => {
+      const b = { code: { protocol_json: [{ step: 1 }] } };
+      expect(zUpdateProtocolRequestBody.parse(b)).toEqual(b);
     });
 
     it("rejects invalid family", () => {

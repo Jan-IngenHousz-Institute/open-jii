@@ -2,11 +2,13 @@ import { fireEvent, render, screen, waitFor } from "@/test/test-utils";
 import { useState } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
+
 import ProtocolCodeEditor from "../protocol-code-editor";
 
 const PROTOCOL = [{ label: "PAM", pulses: [10, 20, 30], detectors: [[1], [1]] }];
 
-type Code = Record<string, unknown>[] | string | undefined;
+type Code = JsonValue | undefined;
 
 /**
  * Mirrors `protocol-overview-content.tsx`: the editor's `onChange` feeds straight

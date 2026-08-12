@@ -13,7 +13,7 @@ import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 interface JsonCodeViewerProps {
-  value: Record<string, unknown>[] | Record<string, unknown> | string;
+  value: unknown;
   height?: string;
   className?: string;
   title?: React.ReactNode;

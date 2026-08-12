@@ -21,6 +21,7 @@ import {
   getErrorMessage,
   validateProtocolJson,
 } from "@repo/api/domains/protocol/protocol-validator";
+import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";
 import {
@@ -32,8 +33,10 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 interface ProtocolCodeEditorProps {
-  value: Record<string, unknown>[] | string;
-  onChange: (value: Record<string, unknown>[] | string | undefined) => void;
+  // Anything JSON-serializable: a protocol's shape is device-defined. Raw text
+  // while the user is mid-keystroke arrives through `onChange` as a string.
+  value: unknown;
+  onChange: (value: JsonValue | undefined) => void;
   onValidationChange?: (isValid: boolean) => void;
   label: string;
   placeholder?: string;
@@ -189,7 +192,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
 
       // Return parsed value
       if (Array.isArray(parsedValue)) {
-        onChangeRef.current(parsedValue as Record<string, unknown>[]);
+        onChangeRef.current(parsedValue as JsonValue);
       } else {
         onChangeRef.current(debouncedEditorCode);
       }

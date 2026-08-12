@@ -68,11 +68,10 @@ async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unkno
 
   try {
     const result = await orpcClient.protocols.getProtocol({ id: cell.payload.protocolId });
+    // Only MultispeQ-style arrays can run on a device; a non-array document
+    // from another family has nothing to run here.
     const code = result.code;
-    if (code.length > 0) {
-      return code;
-    }
-    return null;
+    return Array.isArray(code) && code.length > 0 ? (code as Record<string, unknown>[]) : null;
   } catch {
     return null;
   }

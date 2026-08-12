@@ -35,7 +35,7 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
       try {
         await updateProtocol({
           id: protocolId,
-          code: code as Record<string, unknown>[],
+          code,
         });
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
@@ -83,7 +83,14 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
   }
 
   const rawCode = isEditing ? editedCode : protocol.code;
-  const protocolCode = Array.isArray(rawCode) ? rawCode : protocol.code;
+  // The on-device runner only understands MultispeQ-style arrays. While the
+  // editor holds raw text, or the stored code is a non-array document from
+  // another device family, fall back to the last stored code if it is one.
+  const fallbackCode = Array.isArray(rawCode) ? rawCode : protocol.code;
+  const protocolCode = (Array.isArray(fallbackCode) ? fallbackCode : []) as Record<
+    string,
+    unknown
+  >[];
 
   const codePanel = (
     <ProtocolCodePanel

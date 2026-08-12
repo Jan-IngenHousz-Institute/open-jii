@@ -362,7 +362,7 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       // Pre-create the protocol
       const preCreated = await protocolRepo.create(
-        { name: protocolName, description: null, code: "[]", family: "multispeq" },
+        { name: protocolName, description: null, code: [], family: "multispeq" },
         testUserId,
       );
       assertSuccess(preCreated);
@@ -424,7 +424,7 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       // Pre-create protocol and macro
       const preProtocol = await protocolRepo.create(
-        { name: protocolName, description: null, code: "[]", family: "multispeq" },
+        { name: protocolName, description: null, code: [], family: "multispeq" },
         testUserId,
       );
       assertSuccess(preProtocol);
