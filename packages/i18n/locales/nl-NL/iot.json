@@ -220,7 +220,7 @@
         "step2": "Maak verbinding met het onderstaande broker-eindpunt via MQTT over TLS, met de apparaatnaam als client-id.",
         "step3": "Zet deze configuratie op het apparaat: download de JSON of push hem via een directe verbinding.",
         "step4": "Voer de procedures van elk experiment op volgorde uit.",
-        "step5": "Publiceer elke meting naar het topic-prefix van het experiment plus /{{sensorVersion}}/{{sensorId}}/{{protocolId}}.",
+        "step5": "Publiceer elke meting naar het topic-prefix van het experiment plus /{{sensorVersion}}/{{sensorId}}.",
         "step6": "Voeg de vooraf ingevulde antwoorden toe aan elke gepubliceerde meting.",
         "docsLink": "Lees de volledige handleiding voor apparaatintegratie"
       }

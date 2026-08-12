@@ -84,15 +84,14 @@ The plan is deliberately flat. Workbook concepts that need interactivity or plat
 
 ## Publishing measurements
 
-For each measurement, build the topic from the experiment's `topicPrefix` plus three segments the device chooses:
+For each measurement, build the topic from the experiment's `topicPrefix` plus two segments the device chooses:
 
 ```
-<topicPrefix>/<sensorVersion>/<sensorId>/<protocolId>
+<topicPrefix>/<sensorVersion>/<sensorId>
 ```
 
 - `sensorVersion`: hardware or firmware revision of the sensor, e.g. `v1`.
 - `sensorId`: stable identifier of the individual sensor, e.g. its MAC.
-- `protocolId`: the `protocolId` of the procedure that produced the measurement.
 
 Publish with QoS 1. The payload schema per channel is documented in the [AsyncAPI reference](/api/mqtt); include the question answers from the plan in every payload.
 
@@ -175,9 +174,8 @@ void publishExperiment(JsonObjectConst experiment) {
         }
       }
 
-      // <topicPrefix>/<sensorVersion>/<sensorId>/<protocolId>
-      String topic = String(prefix) + "/v1/" + WiFi.macAddress() + "/" +
-                     procedure["protocolId"].as<const char*>();
+      // <topicPrefix>/<sensorVersion>/<sensorId>
+      String topic = String(prefix) + "/v1/" + WiFi.macAddress();
       String body;
       serializeJson(payload, body);
       mqtt.publish(topic.c_str(), body.c_str());

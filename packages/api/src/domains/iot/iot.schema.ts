@@ -168,7 +168,7 @@ export const zDeviceOnboardingExperiment = z.object({
   topicPrefix: z
     .string()
     .describe(
-      "Ingest topic prefix (experiment/data_ingest/v1/{experimentId}/{sensorType}); the device appends /{sensorVersion}/{sensorId}/{protocolId} per measurement.",
+      "Ingest topic prefix (experiment/data_ingest/v1/{experimentId}/{sensorType}); the device appends /{sensorVersion}/{sensorId} per measurement.",
     ),
   workbookVersion: z
     .number()

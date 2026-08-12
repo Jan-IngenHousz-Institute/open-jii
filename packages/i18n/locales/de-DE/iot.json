@@ -220,7 +220,7 @@
         "step2": "Verbinden Sie sich per MQTT über TLS mit dem unten stehenden Broker-Endpunkt; Client-ID ist der Gerätename.",
         "step3": "Übertragen Sie diese Konfiguration auf das Gerät: JSON herunterladen oder über eine Direktverbindung übertragen.",
         "step4": "Führen Sie die Prozeduren jedes Experiments der Reihe nach aus.",
-        "step5": "Veröffentlichen Sie jede Messung unter dem Topic-Präfix des Experiments plus /{{sensorVersion}}/{{sensorId}}/{{protocolId}}.",
+        "step5": "Veröffentlichen Sie jede Messung unter dem Topic-Präfix des Experiments plus /{{sensorVersion}}/{{sensorId}}.",
         "step6": "Hängen Sie die vorbelegten Antworten an jede veröffentlichte Messung an.",
         "docsLink": "Vollständigen Geräteintegrations-Leitfaden lesen"
       }

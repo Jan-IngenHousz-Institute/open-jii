@@ -220,7 +220,7 @@
         "step2": "Connect to the broker endpoint below via MQTT over TLS, with the thing name as client id.",
         "step3": "Load this configuration onto the device: download the JSON or push it over a direct connection.",
         "step4": "Run the procedures of each experiment in order.",
-        "step5": "Publish each measurement to the experiment's topic prefix plus /{{sensorVersion}}/{{sensorId}}/{{protocolId}}.",
+        "step5": "Publish each measurement to the experiment's topic prefix plus /{{sensorVersion}}/{{sensorId}}.",
         "step6": "Attach the prefilled answers to every published measurement.",
         "docsLink": "Read the full device integration guide"
       }

@@ -114,7 +114,7 @@ export class OnboardDeviceUseCase {
         experimentId: exp.experimentId,
         experimentName: exp.experimentName,
         // The sensorType segment is the device's family; the device appends
-        // /{sensorVersion}/{sensorId}/{protocolId} per measurement.
+        // /{sensorVersion}/{sensorId} per measurement.
         topicPrefix: buildIngestTopicPrefix(exp.experimentId, device.deviceType),
         ...this.compileProcedures(exp, includeWorkbook),
       }));
