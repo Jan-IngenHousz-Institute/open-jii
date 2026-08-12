@@ -41,9 +41,9 @@ variable "file_share_bucket_name" {
 }
 
 variable "file_share_grant_principals" {
-  description = "Databricks principals (group names, user emails, or service principal application IDs) granted READ_FILES/WRITE_FILES on the file-share external location. Defaults to the built-in all-users group; narrow this to a dedicated group once one exists."
+  description = "Databricks principals (group names, user emails, or service principal application IDs) granted READ_FILES/WRITE_FILES on the file-share external location. Empty by default: grants are managed manually in Databricks"
   type        = list(string)
-  default     = ["account users"]
+  default     = []
 }
 
 variable "centralized_metastore_bucket_name" {
