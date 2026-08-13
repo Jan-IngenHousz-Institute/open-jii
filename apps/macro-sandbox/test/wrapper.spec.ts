@@ -110,6 +110,7 @@ function fixtureItems() {
     id: `row-${index}`,
     macro_id: `macro-${index}`,
     workbook_version_id: "workbook-version-456",
+    operation: "executeMacroBatch",
     data: testCase.data,
   }));
 }
@@ -117,7 +118,9 @@ function fixtureItems() {
 function expectedFingerprints() {
   return fixture.cases.map((testCase, index) => ({
     msg: "Macro input shape fingerprint",
-    operation: "executeMacro",
+    // Distinct from the backend's single-execution operation, proving the
+    // wrappers stamp the per-item value rather than a hardcoded one.
+    operation: "executeMacroBatch",
     boundary: "sandbox-pre-execution",
     ...testCase.expected,
     macro_id: `macro-${index}`,
@@ -167,6 +170,8 @@ describe("JavaScript macro wrapper diagnostics", () => {
         {
           boundary: "sandbox-pre-execution",
           macro_id: "macro-123",
+          // No operation on the item (older payload) surfaces as null.
+          operation: null,
           setTypeof: "array",
         },
       ],

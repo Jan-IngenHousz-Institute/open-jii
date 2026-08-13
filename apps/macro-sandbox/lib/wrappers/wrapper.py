@@ -346,7 +346,7 @@ def _build_shape_fingerprint(item):
 
     return {
         "msg": "Macro input shape fingerprint",
-        "operation": "executeMacro",
+        "operation": item.get("operation") if isinstance(item.get("operation"), str) else None,
         "boundary": "sandbox-pre-execution",
         "typeof": _json_typeof(data),
         "isArray": is_array,

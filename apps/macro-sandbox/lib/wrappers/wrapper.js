@@ -133,7 +133,7 @@ function buildShapeFingerprint(item) {
 
   return {
     msg: "Macro input shape fingerprint",
-    operation: "executeMacro",
+    operation: typeof item.operation === "string" ? item.operation : null,
     boundary: "sandbox-pre-execution",
     typeof: typeof data,
     isArray,

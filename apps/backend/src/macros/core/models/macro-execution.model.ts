@@ -117,6 +117,10 @@ export interface LambdaExecutionItem {
   // Diagnostic identifiers only. They are not exposed to user macro code.
   macro_id: string;
   workbook_version_id?: string;
+  // Calling operation ("executeMacro" or "executeMacroBatch"); the wrappers
+  // stamp it onto sandbox-side fingerprints so they tell batch from single
+  // runs the same way the backend logs do.
+  operation: string;
   // Measurement value produced by the shared normalizer. Direct JSON values
   // and root arrays pass unchanged; a sample envelope can select any JSON
   // value. The public request schema is not broadened.

@@ -268,6 +268,7 @@ export class ExecuteMacroBatchUseCase {
         id: item.id,
         macro_id: macroId,
         workbook_version_id: workbookVersionId,
+        operation: "executeMacroBatch",
         data,
         context: item.context,
       })),

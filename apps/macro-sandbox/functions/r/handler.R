@@ -7,10 +7,15 @@ suppressPackageStartupMessages({
 })
 
 # The base image defaults to the C locale, where jsonlite treats non-ASCII UTF-8
-# bytes as separate characters. Use Debian's built-in UTF-8 locale so JSON
+# bytes as separate characters. Prefer Debian's built-in UTF-8 locale so JSON
 # strings survive the handler-to-wrapper file boundary as Unicode code points.
+# Warn and continue rather than fail: a missing locale degrades non-ASCII
+# strings, but stopping here would take down all R macro execution.
 if (identical(Sys.setlocale("LC_CTYPE", "C.UTF-8"), "")) {
-  stop("C.UTF-8 locale is required for canonical JSON string handling")
+  writeLines(
+    "[handler] C.UTF-8 locale unavailable; non-ASCII JSON strings may be mangled",
+    con = stderr()
+  )
 }
 
 # Limits

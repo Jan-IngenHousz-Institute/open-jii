@@ -101,6 +101,7 @@ export class ExecuteMacroUseCase {
         {
           id: itemId,
           macro_id: macroId,
+          operation: "executeMacro",
           data: normalized.value,
           context: request.context,
         },

@@ -550,6 +550,7 @@ describe("ExecuteMacroBatchUseCase", () => {
             expect.objectContaining({
               macro_id: macro.id,
               workbook_version_id: workbookVersionId,
+              operation: "executeMacroBatch",
             }),
           ],
         }),

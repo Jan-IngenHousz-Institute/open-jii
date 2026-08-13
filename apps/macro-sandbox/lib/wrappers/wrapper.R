@@ -171,7 +171,7 @@ build_shape_fingerprint <- function(item) {
 
   list(
     msg = "Macro input shape fingerprint",
-    operation = "executeMacro",
+    operation = if (is.character(item$operation) && length(item$operation) == 1) item$operation else NULL,
     boundary = "sandbox-pre-execution",
     typeof = json_typeof(data),
     isArray = is_array,

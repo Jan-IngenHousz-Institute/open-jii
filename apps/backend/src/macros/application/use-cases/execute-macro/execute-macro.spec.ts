@@ -365,7 +365,9 @@ describe("ExecuteMacroUseCase", () => {
       });
       expect(invokeSpy).toHaveBeenCalledWith(
         "test-fn",
-        expect.objectContaining({ items: [expect.objectContaining({ data: measurement })] }),
+        expect.objectContaining({
+          items: [expect.objectContaining({ data: measurement, operation: "executeMacro" })],
+        }),
       );
 
       const serialized = JSON.stringify(logSpy.mock.calls);
