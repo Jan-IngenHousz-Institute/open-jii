@@ -36,7 +36,9 @@ export function OrganizationResourceMix({
   return (
     <Card className="p-5">
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold tracking-tight">{t("organizations.mix.title")}</h2>
+        <h2 id="organization-mix-title" className="text-lg font-semibold tracking-tight">
+          {t("organizations.mix.title")}
+        </h2>
         {/* See the same label on the directory card for why it is qualified. */}
         <span className="text-muted-foreground text-sm tabular-nums">
           {isMember
@@ -57,7 +59,11 @@ export function OrganizationResourceMix({
         ))}
       </div>
 
-      <ul role="list" className="mt-3.5 flex flex-wrap gap-x-4 gap-y-2">
+      <ul
+        role="list"
+        aria-labelledby="organization-mix-title"
+        className="mt-3.5 flex flex-wrap gap-x-4 gap-y-2"
+      >
         {segments.map((segment) => (
           <li key={segment.type} className="flex items-center gap-1.5 text-xs">
             <span

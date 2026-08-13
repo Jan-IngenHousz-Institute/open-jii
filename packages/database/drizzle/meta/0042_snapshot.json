@@ -1,5 +1,5 @@
 {
-  "id": "c72e6752-01a2-4301-98ab-fb3b6671a8c6",
+  "id": "915d4fda-cd17-4d2c-b938-211809e2f0d3",
   "prevId": "16c69cfe-2180-4005-b17a-07e58dc9852b",
   "version": "7",
   "dialect": "postgresql",
@@ -2075,7 +2075,7 @@
           "name": "slug",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "logo": {
           "name": "logo",

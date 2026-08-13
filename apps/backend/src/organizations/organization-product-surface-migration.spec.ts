@@ -15,10 +15,12 @@ import { TestHarness } from "../test/test-harness";
 
 /**
  * These statements mirror the data migration hand-written in
- * `packages/database/drizzle/0042_iam_org_product_surface.sql`, the second release
- * of the grant-role rename: release 1 stopped writing `member` and started reading
- * `viewer`, and this rewrites the rows release 1 deliberately left alone. Duplicated
- * here so the migration's data ops are locked by tests — update both together.
+ * `packages/database/drizzle/0042_iam_org_product_surface.sql`, the second release of
+ * the grant-role rename: release 1 started reading `viewer` and stopped writing
+ * `member` to `resource_grants` — though not to `invitations.role`, which a straggler
+ * can still write and whose reader maps anything non-`admin` to `viewer`. This rewrites
+ * the rows release 1 left alone. Duplicated here so the migration's data ops are locked
+ * by tests — update both together.
  *
  * The vocabulary is the trap: only `resource_grants.role` and `invitations.role`
  * carry a *grant* role. `organization_members.role` and `organization_invitations.role`
@@ -221,6 +223,20 @@ describe("organization product surface migration end state (0042)", () => {
       .from(organizations)
       .where(eq(organizations.id, organizationId));
     expect(org.visibility).toBe("private");
+  });
+
+  it("requires every organization to carry a slug", async () => {
+    const [column] = await testApp.database.execute<{ is_nullable: string }>(
+      sql`SELECT is_nullable FROM information_schema.columns
+          WHERE table_name = 'organizations' AND column_name = 'slug'`,
+    );
+    // The form requires one, Better Auth refuses an empty one and every personal
+    // workspace is minted with one, so a null only ever meant a state nobody wants.
+    expect(column.is_nullable).toBe("NO");
+
+    await expect(
+      testApp.database.execute(sql`INSERT INTO "organizations" ("name") VALUES ('No Slug')`),
+    ).rejects.toThrow();
   });
 
   it("allows one pending join request per organization and user, and no more", async () => {

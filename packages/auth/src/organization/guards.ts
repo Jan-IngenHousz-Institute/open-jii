@@ -49,6 +49,16 @@ export async function findOrganizationSlug(organizationId: string): Promise<stri
   return rows[0]?.slug ?? null;
 }
 
+/** The organization a slug names, or `null` when no organization carries it. */
+export async function findOrganizationIdBySlug(slug: string): Promise<string | null> {
+  const rows = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(eq(organizations.slug, slug))
+    .limit(1);
+  return rows[0]?.id ?? null;
+}
+
 /**
  * Personal workspaces are outside the organization product surface entirely: no
  * members, no invitations, no teams, no settings, no deletion. Enforced here rather
@@ -81,27 +91,49 @@ export async function findMemberRole(
 }
 
 /**
- * Who may read an organization's pending invitations. Better Auth's own
- * `/organization/list-invitations` requires only *some* membership and then returns
- * the whole list — every invitee's address, role and expiry — so on its own it makes
- * that a member-readable surface. openJII treats Invited as a management view, and
- * this is the only thing that makes it one: the web client's gating decides what to
- * render, never what the endpoint will answer.
+ * Who may read an organization's pending invitations — every invitee's address, role
+ * and expiry. Better Auth hands them to any member, from `list-invitations` and again
+ * inside `get-full-organization`, so both are narrowed to this one rule: openJII
+ * treats Invited as a management view, and nothing else makes it one — the web
+ * client's gating decides what to render, never what the endpoint will answer.
  *
  * Personal workspaces need no carve-out: invitations to one are refused at creation,
  * so there is never a list to read.
  */
+export async function canListInvitations(organizationId: string, userId: string): Promise<boolean> {
+  return isMembershipManagerRole(await findMemberRole(organizationId, userId));
+}
+
+/** The refusal `list-invitations` gets; `get-full-organization` withholds instead. */
 export async function assertCanListInvitations(
   organizationId: string,
   userId: string,
 ): Promise<void> {
-  if (!isMembershipManagerRole(await findMemberRole(organizationId, userId))) {
+  if (!(await canListInvitations(organizationId, userId))) {
     // The same answer for a plain member and for a stranger: which of the two the
     // caller is would itself say whether the organization exists.
     throw new APIError("FORBIDDEN", {
       message: "Only an organization's owners and admins can see its pending invitations.",
     });
   }
+}
+
+/**
+ * Who may read an organization at all. Better Auth answers a missing organization
+ * and a non-member differently, so on its own the full-organization read tells any
+ * signed-in caller which ids and slugs exist; one refusal for both closes that.
+ */
+export async function assertCanReadOrganization(
+  target: { value: string; isSlug: boolean },
+  userId: string,
+): Promise<void> {
+  const organizationId = target.isSlug
+    ? await findOrganizationIdBySlug(target.value)
+    : target.value;
+  if (organizationId !== null && (await findMemberRole(organizationId, userId)) !== null) return;
+  throw new APIError("FORBIDDEN", {
+    message: "Only an organization's members can read it.",
+  });
 }
 
 /** Directory visibility is part of the organization's settings, so owners only. */

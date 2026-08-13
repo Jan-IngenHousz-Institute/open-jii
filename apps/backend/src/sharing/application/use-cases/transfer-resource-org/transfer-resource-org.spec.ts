@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
-import { and, eq, macros, profiles, resourceGrants } from "@repo/database";
+import { and, eq, macros, profiles, resourceGrants, sql } from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
@@ -323,6 +323,27 @@ describe("TransferResourceOrgUseCase", () => {
     expect(await grantsOn(macro.id, "organization")).toEqual([
       { granteeId: partnerOrg, role: "viewer" },
     ]);
+  });
+
+  it("moves the resource's updated_at forward", async () => {
+    const { macro } = await labWithMacro();
+    const personal = await testApp.personalOrganizationId(owner);
+    // Staged well into the past rather than compared against the create: both writes
+    // can land in the same millisecond, and the assertion has to bite on a stale row.
+    const stale = new Date("2020-01-01T00:00:00.000Z");
+    await testApp.database.execute(
+      sql`UPDATE ${macros} SET ${sql.identifier("updated_at")} = ${stale.toISOString()}::timestamp WHERE ${macros.id} = ${macro.id}`,
+    );
+
+    assertSuccess(await useCase.execute(owner, "macro", macro.id, personal));
+
+    // The move goes through raw SQL because the table is a union, so drizzle's
+    // `$onUpdate` never fires — and the showcase orders by this column.
+    const [after] = await testApp.database
+      .select({ updatedAt: macros.updatedAt })
+      .from(macros)
+      .where(eq(macros.id, macro.id));
+    expect(after.updatedAt.getTime()).toBeGreaterThan(stale.getTime());
   });
 
   it("leaves visibility and the embargo alone", async () => {

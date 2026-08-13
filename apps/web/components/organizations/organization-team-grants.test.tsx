@@ -5,6 +5,34 @@ import { describe, expect, it } from "vitest";
 import { OrganizationTeamGrants } from "./organization-team-grants";
 
 describe("<OrganizationTeamGrants />", () => {
+  it("does not claim the team reaches nothing while the grants are still loading", () => {
+    render(<OrganizationTeamGrants grants={[]} isPending />);
+
+    // "Nothing has been shared with this team yet" is a finding, and this page is
+    // where somebody checks what deleting the team would withdraw.
+    expect(screen.queryByText("organizations.teams.grantsEmpty")).not.toBeInTheDocument();
+    expect(screen.getByText("organizations.teams.grantsTitle")).toBeInTheDocument();
+  });
+
+  it("says so when the grants could not be read, rather than showing an empty list", () => {
+    render(<OrganizationTeamGrants grants={[]} isError />);
+
+    expect(screen.getByText("organizations.teams.grantsLoadFailed")).toBeInTheDocument();
+    expect(screen.queryByText("organizations.teams.grantsEmpty")).not.toBeInTheDocument();
+  });
+
+  it("names its list for assistive technology", () => {
+    render(
+      <OrganizationTeamGrants
+        grants={[createOrganizationTeamGrant({ resourceName: "Canopy series" })]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("list", { name: "organizations.teams.grantsTitle" }),
+    ).toBeInTheDocument();
+  });
+
   it("links every grantable type, devices included", () => {
     render(
       <OrganizationTeamGrants

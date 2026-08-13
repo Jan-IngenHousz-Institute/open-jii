@@ -44,7 +44,11 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
   const canManage = canManageRoster(organization?.role ?? null);
 
   const { data, isPending, isError } = useOrganizationTeams(organizationId);
-  const { data: grants } = useOrganizationTeamGrants(organizationId);
+  const {
+    data: grants,
+    isPending: isGrantsPending,
+    isError: isGrantsError,
+  } = useOrganizationTeamGrants(organizationId);
   const { mutateAsync: createTeam, isPending: isCreating } =
     useCreateOrganizationTeam(organizationId);
 
@@ -187,9 +191,17 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
 
               <AvatarStack members={team.members} />
 
+              {/* A count of zero is a claim about the team's reach, so an unread grant
+                  list says so instead of making it. */}
               <div className="text-muted-foreground flex items-center gap-1.5 border-t pt-3 text-xs">
                 <FolderOpen className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                {t("organizations.teams.grantCount", { count: grantCounts.get(team.id) ?? 0 })}
+                {isGrantsPending ? (
+                  <Skeleton className="h-3 w-24" />
+                ) : isGrantsError ? (
+                  t("organizations.teams.grantCountUnavailable")
+                ) : (
+                  t("organizations.teams.grantCount", { count: grantCounts.get(team.id) ?? 0 })
+                )}
               </div>
             </Link>
           ))}

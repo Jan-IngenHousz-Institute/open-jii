@@ -77,7 +77,7 @@ export function OrganizationMemberPicker({
   const [open, setOpen] = useState(false);
 
   const [debouncedSearch, isDebounced] = useDebounce(search);
-  const { data: users, isFetching } = useUserSearch(debouncedSearch);
+  const { data: users, isFetching, isError, refetch } = useUserSearch(debouncedSearch);
 
   const results = useMemo<UserResultRow[]>(() => {
     const members = new Set(memberUserIds);
@@ -110,8 +110,10 @@ export function OrganizationMemberPicker({
   const isRegisteredAddress =
     isEmailTerm &&
     (users ?? []).some((user) => (user.email ?? "").toLowerCase() === typedEmail.toLowerCase());
+  // A failed search knows of no account, which is indistinguishable from an address
+  // no account holds — so offering the invitation would turn a member into an invite.
   const canInviteByEmail =
-    isEmailTerm && !isMemberAddress && !isInvitedAddress && !isRegisteredAddress;
+    isEmailTerm && !isError && !isMemberAddress && !isInvitedAddress && !isRegisteredAddress;
 
   const clearSelection = () => {
     onSelectionChange(null);
@@ -166,6 +168,8 @@ export function OrganizationMemberPicker({
         <PickerResults
           results={results}
           isLoading={isLoading}
+          isError={isError}
+          onRetry={() => void refetch()}
           email={typedEmail}
           canInviteByEmail={canInviteByEmail}
           excludedLabel={excludedLabel}
@@ -204,6 +208,8 @@ export function OrganizationMemberPicker({
 function PickerResults({
   results,
   isLoading,
+  isError,
+  onRetry,
   email,
   canInviteByEmail,
   emptyReason,
@@ -213,6 +219,8 @@ function PickerResults({
 }: {
   results: UserResultRow[];
   isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
   email: string;
   canInviteByEmail: boolean;
   emptyReason: "member" | "invited" | "noMatch";
@@ -225,6 +233,24 @@ function PickerResults({
   if (isLoading) {
     return (
       <div className="text-muted-foreground p-4 text-center text-sm">{t("common.loading")}</div>
+    );
+  }
+
+  // Ahead of the empty branch: a failed search has no results either, and that branch
+  // would report "nobody matches" for an answer nobody has.
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center gap-2 p-4 text-center">
+        <p className="text-destructive text-sm">{t("organizations.invite.searchFailed")}</p>
+        <Button
+          type="button"
+          variant="outline"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onRetry}
+        >
+          {t("errors.tryAgain")}
+        </Button>
+      </div>
     );
   }
 

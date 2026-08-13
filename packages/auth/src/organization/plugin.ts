@@ -6,10 +6,12 @@ import { ac, roles } from "../access";
 import { sendOrganizationInvitationEmail } from "../email/invitationEmail";
 import {
   assertCanListInvitations,
+  assertCanReadOrganization,
   assertCanonicalOrgRole,
   assertNotPersonalOrganization,
   assertSlugAllowed,
   assertVisibilityChangeAllowed,
+  canListInvitations,
   findOrganizationSlug,
 } from "./guards";
 import {
@@ -21,8 +23,9 @@ import {
 
 const clientUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 
-/** The one read path this plugin re-authorizes. Matched by exact equality. */
+/** The read paths this plugin re-authorizes. Matched by exact equality. */
 const LIST_INVITATIONS_PATH = "/organization/list-invitations";
+const GET_FULL_ORGANIZATION_PATH = "/organization/get-full-organization";
 
 /**
  * The organization plugin as openJII configures it: the permission matrix, the
@@ -117,6 +120,13 @@ export const openJiiOrganization = () => {
         assertCanonicalOrgRole(member.role);
         return Promise.resolve();
       },
+      // The last membership write without the guard. Better Auth accepts a
+      // comma-joined list of otherwise-valid roles here and stores it verbatim, which
+      // every reader then splits but the roster renders as-is.
+      beforeUpdateMemberRole({ newRole }) {
+        assertCanonicalOrgRole(newRole);
+        return Promise.resolve();
+      },
       beforeCreateTeam({ organization }) {
         // Teams only ever exist inside a real organization, so blocking creation
         // here is what makes every other team operation unreachable for a
@@ -146,13 +156,13 @@ export const openJiiOrganization = () => {
 
   /**
    * `organizationHooks` cover the plugin's writes only — there is no read hook among
-   * them — so the one read that needs narrowing is re-authorized here, on the
-   * plugin's own request pipeline. It runs before Better Auth's endpoint, which is
-   * what makes the refusal happen instead of the listing.
+   * them — so the reads that need narrowing are re-authorized here, on the plugin's
+   * own request pipeline: `before` to refuse ahead of Better Auth's endpoint, `after`
+   * to withhold part of what it answered.
    *
    * Attached to the plugin rather than to the auth instance so that anything
    * mounting `openJiiOrganization()` — the server config and the tests alike —
-   * carries the gate with it.
+   * carries the gates with it.
    */
   // Better Auth's shared plugin type declares `hooks` as optional, but the
   // organization plugin's concrete return type omits the key — so its own hooks
@@ -192,6 +202,58 @@ export const openJiiOrganization = () => {
             if (!organizationId) return;
 
             await assertCanListInvitations(organizationId, session.user.id);
+          }),
+        },
+        {
+          matcher: (ctx: { path?: string }) => ctx.path === GET_FULL_ORGANIZATION_PATH,
+          handler: createAuthMiddleware(async (ctx) => {
+            const session = await getSessionFromCtx(ctx);
+            if (!session) {
+              throw new APIError("UNAUTHORIZED", { message: "Not authenticated" });
+            }
+
+            const query = ctx.query as
+              | { organizationId?: string; organizationSlug?: string }
+              | undefined;
+            const activeOrganizationId = (
+              session.session as { activeOrganizationId?: string | null }
+            ).activeOrganizationId;
+            // Better Auth's own precedence, mirrored: a slug outranks an id, so
+            // authorizing the id would leave the slug it actually reads unchecked.
+            const isSlug = Boolean(query?.organizationSlug);
+            const target = isSlug
+              ? query?.organizationSlug
+              : (query?.organizationId ?? activeOrganizationId);
+            // Nothing named at all: Better Auth answers `null` without reading a row.
+            if (!target) return;
+
+            await assertCanReadOrganization({ value: target, isSlug }, session.user.id);
+          }),
+        },
+      ],
+      after: [
+        ...(declaredHooks?.after ?? []),
+        {
+          matcher: (ctx: { path?: string }) => ctx.path === GET_FULL_ORGANIZATION_PATH,
+          handler: createAuthMiddleware(async (ctx) => {
+            // The membership the `before` gate established is enough to reach the
+            // organization, not to see who it has invited.
+            const returned = ctx.context.returned;
+            if (typeof returned !== "object" || returned === null) return;
+            if (!("invitations" in returned)) return;
+
+            // Read back rather than taken from the payload: the caller chooses
+            // `membersLimit`, so its roster need not carry their own row.
+            const session = await getSessionFromCtx(ctx);
+            const { id } = returned as { id?: unknown };
+            const mayRead =
+              session !== null &&
+              typeof id === "string" &&
+              (await canListInvitations(id, session.user.id));
+            if (mayRead) return;
+
+            const { invitations: _withheld, ...rest } = returned;
+            ctx.context.returned = rest;
           }),
         },
       ],

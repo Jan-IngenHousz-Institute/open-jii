@@ -53,7 +53,14 @@ export function OrganizationPicker({
   return (
     <div className={className ?? "space-y-1.5"}>
       <Label htmlFor={id}>{t("organizations.picker.label")}</Label>
-      <Select value={value ?? personal?.id ?? ""} onValueChange={onChange} disabled={disabled}>
+      {/* Personal is shown as its own id so the Select has something to select, but the
+          contract is `undefined` — mapped back here so a return to Personal omits the
+          field on the wire rather than naming the personal workspace. */}
+      <Select
+        value={value ?? personal?.id ?? ""}
+        onValueChange={(next) => onChange(next === personal?.id ? undefined : next)}
+        disabled={disabled}
+      >
         <SelectTrigger id={id} aria-label={t("organizations.picker.label")}>
           <SelectValue placeholder={t("organizations.picker.personal")} />
         </SelectTrigger>

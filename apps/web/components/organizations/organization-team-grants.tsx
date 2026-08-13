@@ -10,6 +10,7 @@ import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.sche
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Card } from "@repo/ui/components/card";
+import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { RESOURCE_SEGMENT } from "./organization-resource-meta";
 
@@ -37,26 +38,45 @@ const RESOURCE_ICON: Record<SharingResourceType, LucideIcon> = {
  * reads as broken beside a showcase where you can, and following a grant to the thing
  * it is about is the obvious next move from here.
  */
-export function OrganizationTeamGrants({ grants }: { grants: OrganizationTeamGrant[] }) {
+export function OrganizationTeamGrants({
+  grants,
+  isPending = false,
+  isError = false,
+}: {
+  grants: OrganizationTeamGrant[];
+  /** An unread grant list is not an empty one — this page exists to audit the reach. */
+  isPending?: boolean;
+  isError?: boolean;
+}) {
   const { t } = useTranslation();
   const locale = useLocale();
 
   return (
     <section className="flex flex-col gap-2">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3">
-        <h3 className="text-sm font-semibold">{t("organizations.teams.grantsTitle")}</h3>
+        <h3 id="organization-team-grants-title" className="text-sm font-semibold">
+          {t("organizations.teams.grantsTitle")}
+        </h3>
         <p className="text-muted-foreground text-xs">
           {t("organizations.teams.grantsDescription")}
         </p>
       </div>
 
-      {grants.length === 0 ? (
+      {isPending ? (
+        <div aria-busy="true" className="flex flex-col gap-2">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ) : isError ? (
+        <p className="text-destructive text-sm">{t("organizations.teams.grantsLoadFailed")}</p>
+      ) : grants.length === 0 ? (
         <Card className="text-muted-foreground bg-muted/40 px-5 py-6 text-center text-xs shadow-none">
           {t("organizations.teams.grantsEmpty")}
         </Card>
       ) : (
         <Card
           role="list"
+          aria-labelledby="organization-team-grants-title"
           className="bg-muted/40 divide-border divide-y overflow-hidden shadow-none"
         >
           {grants.map((grant) => {

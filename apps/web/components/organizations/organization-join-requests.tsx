@@ -94,7 +94,11 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
 
   return (
     <div className="flex flex-col gap-6">
-      <div role="list" className="flex flex-col gap-3">
+      <div
+        role="list"
+        aria-label={t("organizations.requests.label")}
+        className="flex flex-col gap-3"
+      >
         {pending.map((request) => (
           <Card role="listitem" key={request.id} className="flex items-start gap-3.5 p-5">
             <UserAvatar
@@ -149,9 +153,12 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
         <div className="flex flex-col gap-2">
           {/* Deliberately not "earlier decisions": a withdrawn request is in here
               too, and nobody in the organization decided that one. */}
-          <h3 className="text-sm font-semibold">{t("organizations.requests.historyTitle")}</h3>
+          <h3 id="organization-request-history-title" className="text-sm font-semibold">
+            {t("organizations.requests.historyTitle")}
+          </h3>
           <Card
             role="list"
+            aria-labelledby="organization-request-history-title"
             className="bg-muted/40 divide-border divide-y overflow-hidden shadow-none"
           >
             {decided.map((request) => (

@@ -237,6 +237,28 @@ describe("<OrganizationMemberPicker />", () => {
     expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
   });
 
+  it("treats a failed search as unknown rather than as an address nobody holds", async () => {
+    const user = userEvent.setup();
+    const userSpy = server.mount(contract.users.searchUsers, { status: 500 });
+
+    const { onSelectionChange } = renderPicker();
+
+    await user.type(search(), "lin@uni.edu");
+
+    // An account may well answer to this address — the search just could not say so.
+    // Offering the invitation would sideline somebody who could be added outright.
+    await waitFor(() =>
+      expect(screen.getByText("organizations.invite.searchFailed")).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
+    expect(screen.queryByText("organizations.invite.noMatches")).not.toBeInTheDocument();
+    expect(onSelectionChange).not.toHaveBeenCalled();
+
+    const attempts = userSpy.callCount;
+    await user.click(screen.getByRole("button", { name: "errors.tryAgain" }));
+    await waitFor(() => expect(userSpy.callCount).toBeGreaterThan(attempts));
+  });
+
   it("shows the current selection and clears it on request", async () => {
     const user = userEvent.setup();
     const selection: OrganizationInviteSelection = {

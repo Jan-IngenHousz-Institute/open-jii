@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import { zExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
 import deCommon from "@repo/i18n/locales/de-DE/common.json";
 import deNavigation from "@repo/i18n/locales/de-DE/navigation.json";
 import enCommon from "@repo/i18n/locales/en-US/common.json";
@@ -128,6 +129,9 @@ describe("organization strings", () => {
       ...["experiment", "macro", "protocol", "workbook", "device"].map(
         (type) => `organizations.delete.owned.${type}`,
       ),
+      // An experiment row's meta badge. Read from the schema rather than listed, so a
+      // sixth status has to be given a label instead of shipping as a raw key.
+      ...zExperimentStatus.options.map((status) => `organizations.resources.status.${status}`),
       // The generic noun a metadata title falls back to for an inaccessible org.
       "organizations.organization",
     ];

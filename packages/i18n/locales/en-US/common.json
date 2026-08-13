@@ -637,6 +637,7 @@
       "searchLabel": "Search for someone to add",
       "clearSelection": "Clear selection",
       "noMatches": "No matching users",
+      "searchFailed": "Could not search for people.",
       "alreadyMember": "This person is already a member of this organization",
       "alreadyInvited": "This address already has a pending invitation",
       "sendByEmail": "Send invite by email",
@@ -707,9 +708,11 @@
       "deleteAction": "Delete team",
       "grantCount_one": "{{count}} resource",
       "grantCount_other": "{{count}} resources",
+      "grantCountUnavailable": "Access unknown",
       "grantsTitle": "What this team can reach",
       "grantsDescription": "Shared with the team, not with its people. Deleting the team withdraws these.",
-      "grantsEmpty": "Nothing has been shared with this team yet."
+      "grantsEmpty": "Nothing has been shared with this team yet.",
+      "grantsLoadFailed": "Could not load what this team can reach."
     },
     "settings": {
       "profileTitle": "Profile",
@@ -756,7 +759,8 @@
       "deleting": "Deleting…",
       "deleted": "{{name}} deleted",
       "failed": "Could not delete this organization.",
-      "stillOwned": "Still owned"
+      "stillOwned": "Still owned",
+      "blockersLoadFailed": "Could not check what this organization still owns."
     },
     "picker": {
       "label": "Owning organization",

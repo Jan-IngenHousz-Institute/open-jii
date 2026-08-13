@@ -750,6 +750,7 @@
       "searchLabel": "Zoek iemand om toe te voegen",
       "clearSelection": "Selectie wissen",
       "noMatches": "Geen overeenkomende gebruikers",
+      "searchFailed": "Zoeken naar personen is mislukt.",
       "alreadyMember": "Deze persoon is al lid van deze organisatie",
       "alreadyInvited": "Voor dit adres is al een uitnodiging verstuurd",
       "sendByEmail": "Uitnodiging per e-mail sturen",
@@ -820,9 +821,11 @@
       "deleteAction": "Team verwijderen",
       "grantCount_one": "{{count}} resource",
       "grantCount_other": "{{count}} resources",
+      "grantCountUnavailable": "Toegang onbekend",
       "grantsTitle": "Waar dit team bij kan",
       "grantsDescription": "Gedeeld met het team, niet met de personen erin. Als het team wordt verwijderd, vervalt deze toegang.",
-      "grantsEmpty": "Er is nog niets met dit team gedeeld."
+      "grantsEmpty": "Er is nog niets met dit team gedeeld.",
+      "grantsLoadFailed": "De toegang van dit team kon niet worden geladen."
     },
     "settings": {
       "profileTitle": "Profiel",
@@ -869,7 +872,8 @@
       "deleting": "Verwijderen…",
       "deleted": "{{name}} is verwijderd",
       "failed": "Deze organisatie kon niet worden verwijderd.",
-      "stillOwned": "Nog in bezit"
+      "stillOwned": "Nog in bezit",
+      "blockersLoadFailed": "Kon niet controleren wat deze organisatie nog bezit."
     },
     "picker": {
       "label": "Eigenaar-organisatie",

@@ -100,4 +100,31 @@ describe("<OrganizationPicker />", () => {
 
     expect(onChange).toHaveBeenCalledWith("org-lab");
   });
+
+  it("reports a return to Personal as undefined, not as the personal id", async () => {
+    const user = userEvent.setup();
+    mockSession({ id: "user-1" });
+    mountMyOrganizations([
+      personal,
+      createMyOrganization({ id: "org-lab", name: "Greenhouse Lab" }),
+    ]);
+    const onChange = vi.fn();
+
+    // Controlled: the host stores what it is told, so the round trip has to be driven
+    // through a real value for the return to Personal to be a change at all.
+    const { rerender } = render(<OrganizationPicker value={undefined} onChange={onChange} />);
+
+    await user.click(await screen.findByRole("combobox", { name: "organizations.picker.label" }));
+    await user.click(screen.getByRole("option", { name: "Greenhouse Lab" }));
+    expect(onChange).toHaveBeenLastCalledWith("org-lab");
+
+    rerender(<OrganizationPicker value="org-lab" onChange={onChange} />);
+    await user.click(screen.getByRole("combobox", { name: "organizations.picker.label" }));
+    await user.click(screen.getByRole("option", { name: "organizations.picker.personal" }));
+
+    // `undefined` is the contract for Personal; the id would name the personal
+    // workspace on the wire, which is the one thing "Personal" means not doing.
+    expect(onChange).toHaveBeenLastCalledWith(undefined);
+    expect(onChange).not.toHaveBeenCalledWith("org-personal");
+  });
 });

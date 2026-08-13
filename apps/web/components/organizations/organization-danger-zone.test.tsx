@@ -83,7 +83,7 @@ describe("<OrganizationDangerZone />", () => {
     await waitFor(() => {
       expect(blockerSpy.called).toBe(true);
     });
-    // The showcase is access-scoped and four-typed; it cannot answer this question.
+    // The showcase is access-scoped, so it cannot answer this question.
     expect(showcaseSpy.called).toBe(false);
   });
 
@@ -109,6 +109,27 @@ describe("<OrganizationDangerZone />", () => {
     // is about to refuse.
     expect(screen.getByRole("button", { name: "organizations.delete.action" })).toBeDisabled();
     expect(screen.queryByText("organizations.delete.blockedReason")).not.toBeInTheDocument();
+  });
+
+  it("keeps deletion disabled when the count could not be read, and offers a retry", async () => {
+    const user = userEvent.setup();
+    mockSession({ id: "user-1" });
+    const blockerSpy = server.mount(contract.organizations.getOrganizationDeletionBlockers, {
+      status: 500,
+    });
+
+    renderDangerZone();
+
+    // A failed read is unresolved for good: without it, `total ?? 0` reads as an
+    // empty organization and the confirmation offers what the server will refuse.
+    await waitFor(() =>
+      expect(screen.getByText("organizations.delete.blockersLoadFailed")).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "organizations.delete.action" })).toBeDisabled();
+
+    const attempts = blockerSpy.callCount;
+    await user.click(screen.getByRole("button", { name: "errors.tryAgain" }));
+    await waitFor(() => expect(blockerSpy.callCount).toBeGreaterThan(attempts));
   });
 
   it("deletes after confirmation and leaves the organization's routes", async () => {

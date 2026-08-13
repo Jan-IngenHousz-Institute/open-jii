@@ -44,6 +44,13 @@ async function pickTheLab(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole("option", { name: LAB.name }));
 }
 
+/** Return the same picker to Personal, which is the contract's "no organization". */
+async function pickPersonal(user: ReturnType<typeof userEvent.setup>) {
+  const picker = await screen.findByRole("combobox", { name: "organizations.picker.label" });
+  await user.click(picker);
+  await user.click(await screen.findByRole("option", { name: "organizations.picker.personal" }));
+}
+
 describe("the owning organization a create form submits", () => {
   beforeEach(() => {
     vi.mocked(useSession).mockReturnValue({
@@ -111,6 +118,34 @@ describe("the owning organization a create form submits", () => {
       });
       // Omitted rather than sent as the personal id: the backend's own default is
       // the creator's personal workspace, and that is the behaviour being preserved.
+      expect(createSpy.body).not.toHaveProperty("organizationId");
+    });
+
+    it("submits no organization after the picker is returned to Personal", async () => {
+      const user = userEvent.setup();
+      const createSpy = server.mount(contract.experiments.createExperiment, {
+        body: { id: "00000000-0000-0000-0000-0000000000e1" },
+      });
+
+      render(<NewExperimentForm />);
+      const nameInput = await screen.findByRole("textbox", { name: /newExperiment\.name/i });
+      fireEvent.change(nameInput, { target: { value: "Photosynthesis Run" } });
+
+      // Never changing the picker already passes; the failing path was choosing a
+      // shared organization and then changing your mind back.
+      await pickTheLab(user);
+      await pickPersonal(user);
+
+      for (let step = 0; step < 3; step++) {
+        await user.click(screen.getByRole("button", { name: /experiments\.next/i }));
+      }
+      await user.click(
+        await screen.findByRole("button", { name: /experiments\.(submit|create)/i }),
+      );
+
+      await waitFor(() => {
+        expect(createSpy.called).toBe(true);
+      });
       expect(createSpy.body).not.toHaveProperty("organizationId");
     });
   });

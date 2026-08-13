@@ -962,6 +962,7 @@
       "searchLabel": "Nach einer Person zum Hinzufügen suchen",
       "clearSelection": "Auswahl aufheben",
       "noMatches": "Keine passenden Nutzer",
+      "searchFailed": "Die Personensuche konnte nicht ausgeführt werden.",
       "alreadyMember": "Diese Person ist bereits Mitglied dieser Organisation",
       "alreadyInvited": "Für diese Adresse liegt bereits eine Einladung vor",
       "sendByEmail": "Einladung per E-Mail senden",
@@ -1032,9 +1033,11 @@
       "deleteAction": "Team löschen",
       "grantCount_one": "{{count}} Ressource",
       "grantCount_other": "{{count}} Ressourcen",
+      "grantCountUnavailable": "Zugriff unbekannt",
       "grantsTitle": "Worauf dieses Team zugreifen kann",
       "grantsDescription": "Mit dem Team geteilt, nicht mit seinen Mitgliedern. Wird das Team gelöscht, entfällt dieser Zugriff.",
-      "grantsEmpty": "Mit diesem Team wurde noch nichts geteilt."
+      "grantsEmpty": "Mit diesem Team wurde noch nichts geteilt.",
+      "grantsLoadFailed": "Die Zugriffe dieses Teams konnten nicht geladen werden."
     },
     "settings": {
       "profileTitle": "Profil",
@@ -1081,7 +1084,8 @@
       "deleting": "Wird gelöscht…",
       "deleted": "{{name}} wurde gelöscht",
       "failed": "Diese Organisation konnte nicht gelöscht werden.",
-      "stillOwned": "Noch im Besitz"
+      "stillOwned": "Noch im Besitz",
+      "blockersLoadFailed": "Es konnte nicht geprüft werden, was diese Organisation noch besitzt."
     },
     "picker": {
       "label": "Besitzende Organisation",

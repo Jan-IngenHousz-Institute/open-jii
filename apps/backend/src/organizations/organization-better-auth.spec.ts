@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import type { APIError } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 
 import { openJiiOrganization } from "@repo/auth/organization";
@@ -168,6 +169,40 @@ describe("organization plugin configuration and protection hooks", () => {
       );
 
     return { owner, admin, org, adminMemberId: adminMember.id, ownerMemberId: ownerMember.id };
+  }
+
+  /** An organization with an owner, an admin, a plain member and one pending invitation. */
+  async function orgWithPlainMember() {
+    const { owner, admin, org } = await orgWithAdmin();
+    const member = await signIn("member");
+
+    const memberRow = await auth.api.addMember({
+      body: { userId: member.userId, organizationId: org.id, role: "member" },
+    });
+    // Asserted, not assumed: the refusals below only mean anything if this caller
+    // really is a member of this organization.
+    expect(memberRow).toMatchObject({ organizationId: org.id, role: "member" });
+
+    const invitation = await auth.api.createInvitation({
+      body: { email: "invitee@example.com", role: "member", organizationId: org.id },
+      headers: owner.headers,
+    });
+
+    return { owner, admin, member, org, invitation };
+  }
+
+  /**
+   * What a refused call tells its caller, and nothing else. Two probes that differ
+   * only in whether their target exists have to reduce to the same value here.
+   */
+  async function refusalOf(call: Promise<unknown>) {
+    try {
+      await call;
+    } catch (error) {
+      const { status, statusCode, body } = error as APIError;
+      return { status, statusCode, body };
+    }
+    throw new Error("The call was answered rather than refused");
   }
 
   const invitationsOf = (organizationId: string) =>
@@ -618,31 +653,12 @@ describe("organization plugin configuration and protection hooks", () => {
     /**
      * Better Auth's own `list-invitations` requires only *some* membership and then
      * returns every invitee's address, role and expiry. openJII treats Invited as a
-     * management view, so the plugin re-authorizes that one read — and this is the
-     * only thing that makes it a management view: the web client's gating decides
-     * what to render, never what the endpoint will answer.
+     * management view, so the plugin re-authorizes that read — and its gating is the
+     * only thing that makes it a management view: the web client decides what to
+     * render, never what the endpoint will answer. `get-full-organization` carries
+     * the same rows and is narrowed to the same rule, below.
      */
     describe("invitation visibility", () => {
-      /** An organization with an owner, an admin and a plain member. */
-      async function orgWithPlainMember() {
-        const { owner, admin, org } = await orgWithAdmin();
-        const member = await signIn("member");
-
-        const memberRow = await auth.api.addMember({
-          body: { userId: member.userId, organizationId: org.id, role: "member" },
-        });
-        // Asserted, not assumed: the refusal below only means anything if this
-        // caller really is a member of this organization.
-        expect(memberRow).toMatchObject({ organizationId: org.id, role: "member" });
-
-        const invitation = await auth.api.createInvitation({
-          body: { email: "invitee@example.com", role: "member", organizationId: org.id },
-          headers: owner.headers,
-        });
-
-        return { owner, admin, member, org, invitation };
-      }
-
       it("refuses a plain member the organization's pending invitations", async () => {
         const { member, org } = await orgWithPlainMember();
 
@@ -809,6 +825,156 @@ describe("organization plugin configuration and protection hooks", () => {
         ).toEqual([]);
       },
     );
+
+    /**
+     * Better Auth validates each token of a role update and would accept this one:
+     * every token is a real role. What it stores is the list, which every openJII
+     * reader splits but the roster renders verbatim.
+     */
+    it("refuses to re-role a member into a list of otherwise-valid roles", async () => {
+      const { owner, org, adminMemberId } = await orgWithAdmin();
+
+      await expect(
+        auth.api.updateMemberRole({
+          body: {
+            memberId: adminMemberId,
+            role: asRole<"member">("admin,member"),
+            organizationId: org.id,
+          },
+          headers: owner.headers,
+        }),
+      ).rejects.toThrow(NOT_A_CANONICAL_ROLE);
+
+      const [stored] = await testApp.database
+        .select({ role: organizationMembers.role })
+        .from(organizationMembers)
+        .where(eq(organizationMembers.id, adminMemberId));
+      expect(stored.role).toBe("admin");
+    });
+
+    it("still re-roles a member into one canonical role", async () => {
+      const { owner, org, adminMemberId } = await orgWithAdmin();
+
+      await auth.api.updateMemberRole({
+        body: { memberId: adminMemberId, role: "member", organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      const [stored] = await testApp.database
+        .select({ role: organizationMembers.role })
+        .from(organizationMembers)
+        .where(eq(organizationMembers.id, adminMemberId));
+      expect(stored.role).toBe("member");
+    });
+  });
+
+  /**
+   * `get-full-organization` joins the same invitation rows into its payload and gates
+   * only on membership, so on its own it hands a plain member exactly what
+   * `list-invitations` withholds — and refuses a stranger differently depending on
+   * whether the organization exists, which makes the route an existence oracle over
+   * both ids and slugs.
+   */
+  describe("reading the full organization", () => {
+    const NOT_A_MEMBER = /only an organization's members can read it/i;
+
+    it("withholds the invitations from a plain member", async () => {
+      const { member, org } = await orgWithPlainMember();
+
+      const full = await auth.api.getFullOrganization({
+        query: { organizationId: org.id },
+        headers: member.headers,
+      });
+
+      // The organization itself stays readable; only the invitee list is withheld.
+      expect(full).toMatchObject({ id: org.id });
+      expect(full?.members).toHaveLength(3);
+      expect(full).not.toHaveProperty("invitations");
+    });
+
+    it.each(["owner", "admin"] as const)("still hands an %s the invitations", async (role) => {
+      const context = await orgWithPlainMember();
+      const caller = role === "owner" ? context.owner : context.admin;
+
+      const full = await auth.api.getFullOrganization({
+        query: { organizationId: context.org.id },
+        headers: caller.headers,
+      });
+
+      expect(full?.invitations).toEqual([
+        expect.objectContaining({ id: context.invitation.id, email: "invitee@example.com" }),
+      ]);
+    });
+
+    it("refuses a stranger an id that exists exactly as one that does not", async () => {
+      const { org } = await orgWithPlainMember();
+      const stranger = await signIn("stranger");
+
+      const existing = await refusalOf(
+        auth.api.getFullOrganization({
+          query: { organizationId: org.id },
+          headers: stranger.headers,
+        }),
+      );
+      const fabricated = await refusalOf(
+        auth.api.getFullOrganization({
+          query: { organizationId: crypto.randomUUID() },
+          headers: stranger.headers,
+        }),
+      );
+
+      // Identical down to the status: any difference would answer whether the id
+      // names an organization. Better Auth alone says 403 for one and 400 for the other.
+      expect(fabricated).toEqual(existing);
+      expect(existing.body?.message).toMatch(NOT_A_MEMBER);
+    });
+
+    it("refuses a stranger a slug that exists exactly as one that does not", async () => {
+      const { org } = await orgWithPlainMember();
+      const stranger = await signIn("stranger");
+
+      const existing = await refusalOf(
+        auth.api.getFullOrganization({
+          query: { organizationSlug: org.slug },
+          headers: stranger.headers,
+        }),
+      );
+      const fabricated = await refusalOf(
+        auth.api.getFullOrganization({
+          query: { organizationSlug: uniqueSlug("nowhere") },
+          headers: stranger.headers,
+        }),
+      );
+
+      expect(fabricated).toEqual(existing);
+      expect(existing.body?.message).toMatch(NOT_A_MEMBER);
+    });
+
+    /**
+     * Better Auth reads the slug ahead of the id, so a member of one organization
+     * pairing their own id with somebody else's slug would otherwise probe with a
+     * membership the gate had already accepted.
+     */
+    it("refuses a member probing another organization's slug behind their own id", async () => {
+      const { member, org } = await orgWithPlainMember();
+      const other = await createOrganization(await signIn("outsider"));
+
+      const existing = await refusalOf(
+        auth.api.getFullOrganization({
+          query: { organizationId: org.id, organizationSlug: other.slug },
+          headers: member.headers,
+        }),
+      );
+      const fabricated = await refusalOf(
+        auth.api.getFullOrganization({
+          query: { organizationId: org.id, organizationSlug: uniqueSlug("nowhere") },
+          headers: member.headers,
+        }),
+      );
+
+      expect(fabricated).toEqual(existing);
+      expect(existing.body?.message).toMatch(NOT_A_MEMBER);
+    });
   });
 
   describe("last-owner protection", () => {

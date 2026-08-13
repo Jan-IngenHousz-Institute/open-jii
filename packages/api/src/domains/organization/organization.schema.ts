@@ -51,7 +51,11 @@ export const zOrganizationDirectoryEntry = z.object({
   description: z.string().nullable(),
   location: z.string().nullable(),
   memberCount: z.number().int(),
-  /** Everything the organization owns, summed across all five owned types. */
+  /**
+   * How much of what the organization owns *this caller* can reach, summed across all
+   * five owned types. Access-scoped, so two callers reading the same row can legitimately
+   * see different totals — a non-member's is the public part.
+   */
   resourceCount: z.number().int(),
   /**
    * Carried, not assumed. The directory used to be public-only, so a row's visibility
@@ -79,9 +83,9 @@ export const zOrganizationProfile = z.object({
   visibility: zOrganizationVisibility,
   memberCount: z.number().int(),
   /**
-   * Everything the organization owns, summed across all five owned types — the same
-   * total the directory row reports, so the profile and the listing cannot disagree
-   * about how big the same organization is.
+   * How much of what the organization owns *this caller* can reach, summed across all
+   * five owned types — scoped the same way the directory row is, so the profile and the
+   * listing cannot disagree about the same organization for the same caller.
    */
   resourceCount: z.number().int(),
   /** When the organization was created, for the profile's "on openJII since" row. */
@@ -101,7 +105,10 @@ export const zMyOrganization = z.object({
   role: zOrganizationRole,
   isPersonal: z.boolean(),
   memberCount: z.number().int(),
-  /** Everything the organization owns, summed across all five owned types. */
+  /**
+   * How much of what the organization owns this caller can reach, summed across all
+   * five owned types. Scoped like the rest, though the caller is always a member here.
+   */
   resourceCount: z.number().int(),
 });
 

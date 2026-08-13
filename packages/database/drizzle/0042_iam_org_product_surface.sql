@@ -11,6 +11,11 @@ CREATE TABLE "organization_join_requests" (
 );
 --> statement-breakpoint
 ALTER TABLE "invitations" ALTER COLUMN "role" SET DEFAULT 'viewer';--> statement-breakpoint
+-- Backfill before the constraint: 0035's legacy cleanup deliberately kept a
+-- slug-less organization that still had members, so this is a no-op everywhere it
+-- matters and the only thing between that one row and a failed deploy.
+UPDATE "organizations" SET "slug" = 'legacy-' || "id"::text WHERE "slug" IS NULL;--> statement-breakpoint
+ALTER TABLE "organizations" ALTER COLUMN "slug" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "organizations" ADD COLUMN "visibility" "visibility" DEFAULT 'private' NOT NULL;--> statement-breakpoint
 ALTER TABLE "organization_join_requests" ADD CONSTRAINT "organization_join_requests_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization_join_requests" ADD CONSTRAINT "organization_join_requests_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -23,9 +28,12 @@ CREATE INDEX "macros_organization_id_idx" ON "macros" USING btree ("organization
 CREATE INDEX "organization_invitations_email_status_idx" ON "organization_invitations" USING btree ("email","status");--> statement-breakpoint
 CREATE INDEX "protocols_organization_id_idx" ON "protocols" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "workbooks_organization_id_idx" ON "workbooks" USING btree ("organization_id");--> statement-breakpoint
--- Grant-role rename, second release: the first one shipped the code that reads
--- `viewer` while still writing `member`, so no instance able to write the old
--- spelling is live by the time this runs.
+-- Grant-role rename, second release. Safe for two different reasons rather than one:
+-- `resource_grants` has no live writer of the old spelling, because release 1 already
+-- emits `viewer` there. `invitations.role` does still have one — release 1's invitation
+-- insert writes `member`, and those instances are up during a rolling deploy — but a
+-- row that lands after this UPDATE is read correctly anyway, since the reader maps
+-- anything that is not `admin` to `viewer`.
 --
 -- Only these two columns carry a *grant* role. `organization_members.role` and
 -- `organization_invitations.role` carry Better Auth *organization* roles, where

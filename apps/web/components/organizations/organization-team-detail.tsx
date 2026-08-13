@@ -59,7 +59,11 @@ export function OrganizationTeamDetail({
 
   const { data: teams, isPending, isError } = useOrganizationTeams(organizationId);
   const { data: roster } = useOrganizationMembers(organizationId);
-  const { data: grants } = useOrganizationTeamGrants(organizationId);
+  const {
+    data: grants,
+    isPending: isGrantsPending,
+    isError: isGrantsError,
+  } = useOrganizationTeamGrants(organizationId);
   const { mutateAsync: changeMembership, isPending: isChanging } =
     useOrganizationTeamMembership(organizationId);
   const { mutateAsync: renameTeam, isPending: isRenaming } =
@@ -268,7 +272,11 @@ export function OrganizationTeamDetail({
           </p>
         </Card>
       ) : (
-        <Card role="list" className="divide-border divide-y overflow-hidden">
+        <Card
+          role="list"
+          aria-label={t("organizations.members.title")}
+          className="divide-border divide-y overflow-hidden"
+        >
           {team.members.map((member) => {
             const displayName =
               `${member.firstName} ${member.lastName}`.trim() || (member.email ?? member.userId);
@@ -307,7 +315,11 @@ export function OrganizationTeamDetail({
         </Card>
       )}
 
-      <OrganizationTeamGrants grants={(grants ?? []).filter((grant) => grant.teamId === teamId)} />
+      <OrganizationTeamGrants
+        grants={(grants ?? []).filter((grant) => grant.teamId === teamId)}
+        isPending={isGrantsPending}
+        isError={isGrantsError}
+      />
 
       {canManage && (
         <section className="border-destructive/40 bg-destructive/5 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center">

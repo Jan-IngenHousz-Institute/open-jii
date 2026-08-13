@@ -681,9 +681,13 @@ export class SharingRepository {
           throw AppError.forbidden(NOT_A_TARGET_MEMBER_MESSAGE);
         }
 
+        // `updated_at` by hand: `table` is a union, so this cannot go through drizzle's
+        // update builder and its `$onUpdate` never runs. Same expression the column
+        // defaults to, since a transfer is a change to the row like any other.
         await tx.execute(sql`
           UPDATE ${table}
-          SET ${sql.identifier("organization_id")} = ${params.targetOrganizationId}::uuid
+          SET ${sql.identifier("organization_id")} = ${params.targetOrganizationId}::uuid,
+              ${sql.identifier("updated_at")} = (now() AT TIME ZONE 'UTC')
           WHERE ${table.id} = ${params.resourceId}
         `);
 

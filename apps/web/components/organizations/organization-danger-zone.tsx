@@ -26,11 +26,11 @@ import { organizationsPath } from "./organization-routes";
  * the block is a temporary state with a clear remedy: the owner needs to know why
  * they cannot delete and what would let them.
  *
- * The count comes from the dedicated blocker read, not from the resources showcase.
- * The showcase is scoped to what the caller may read and carries only the four
- * shareable types, while the delete guard counts all five — so an organization
- * owning nothing but a device would read as deletable there and be refused only
- * after the confirmation. A raced server refusal is still surfaced verbatim.
+ * The count comes from the dedicated blocker read, not from the resources showcase:
+ * the showcase is scoped to what the caller may read, so an organization still
+ * holding resources this owner cannot see would read as deletable there and be
+ * refused only after the confirmation. A raced server refusal is surfaced verbatim,
+ * and a blocker read that fails leaves the action disabled rather than offered.
  */
 export function OrganizationDangerZone({
   organizationId,
@@ -43,8 +43,12 @@ export function OrganizationDangerZone({
   const router = useRouter();
   const locale = useLocale();
 
-  const { data: blockers, isPending: isCountPending } =
-    useOrganizationDeletionBlockers(organizationId);
+  const {
+    data: blockers,
+    isPending: isCountPending,
+    isError: isCountError,
+    refetch: refetchBlockers,
+  } = useOrganizationDeletionBlockers(organizationId);
   const { mutateAsync: deleteOrganization, isPending: isDeleting } = useDeleteOrganization();
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -114,8 +118,9 @@ export function OrganizationDangerZone({
           variant="destructive"
           onClick={() => setIsConfirmOpen(true)}
           // Unresolved is not "unblocked": until the count answers, offering the
-          // action would invite a click the server is about to refuse.
-          disabled={isBlocked || isCountPending || isDeleting}
+          // action would invite a click the server is about to refuse. A failed read
+          // is unresolved for good, so it stays disabled rather than reading as zero.
+          disabled={isBlocked || isCountPending || isCountError || isDeleting}
           title={isBlocked ? blockedReason : undefined}
           aria-describedby={isBlocked ? "organization-delete-blocked" : undefined}
         >
@@ -125,6 +130,16 @@ export function OrganizationDangerZone({
           <p id="organization-delete-blocked" className="text-muted-foreground text-xs">
             {blockedReason}
           </p>
+        ) : null}
+        {isCountError ? (
+          <div className="flex flex-col items-start gap-1.5">
+            <p className="text-destructive text-xs">
+              {t("organizations.delete.blockersLoadFailed")}
+            </p>
+            <Button variant="outline" onClick={() => void refetchBlockers()}>
+              {t("errors.tryAgain")}
+            </Button>
+          </div>
         ) : null}
       </div>
 

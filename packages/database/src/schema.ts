@@ -217,7 +217,7 @@ export const orgBasePermissionEnum = pgEnum("org_base_permission", ["none", "rea
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
-  slug: varchar("slug", { length: 255 }).unique(),
+  slug: varchar("slug", { length: 255 }).unique().notNull(),
   logo: text("logo"),
   metadata: text("metadata"),
   type: organizationTypeEnum("type"),
