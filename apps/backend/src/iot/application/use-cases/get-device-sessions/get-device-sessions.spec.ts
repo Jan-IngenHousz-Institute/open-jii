@@ -17,8 +17,9 @@ function event(
   eventType: "connected" | "disconnected",
   eventTimestamp: string,
   disconnectReason: string | null = null,
+  sessionIdentifier = "s-1",
 ) {
-  return { eventType, eventTimestamp, disconnectReason, sessionIdentifier: "s-1" };
+  return { eventType, eventTimestamp, disconnectReason, sessionIdentifier };
 }
 
 describe("GetDeviceSessionsUseCase", () => {
@@ -116,6 +117,48 @@ describe("GetDeviceSessionsUseCase", () => {
     expect(result.value.sessions).toHaveLength(1);
     expect(result.value.sessions[0].start).toBe("2026-08-13T01:00:00.000Z");
     expect(result.value.sessions[0].durationSeconds).toBe(3 * 3600);
+  });
+
+  it("ignores a stale disconnect from a previous MQTT session", async () => {
+    // The old session's delayed disconnect lands after the new session's
+    // connect; it must not close (or truncate) the live session.
+    vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(
+      success([
+        event("connected", "2026-08-13T01:00:00.000Z", null, "s-2"),
+        event("disconnected", "2026-08-13T02:00:00.000Z", "DUPLICATE_CLIENTID", "s-1"),
+        event("disconnected", "2026-08-13T03:00:00.000Z", "CONNECTION_LOST", "s-2"),
+      ]),
+    );
+
+    const result = await useCase.execute(THING, FROM, TO);
+
+    assertSuccess(result);
+    expect(result.value.sessions).toEqual([
+      {
+        start: "2026-08-13T01:00:00.000Z",
+        end: "2026-08-13T03:00:00.000Z",
+        openStart: false,
+        durationSeconds: 7200,
+        disconnectReason: "CONNECTION_LOST",
+      },
+    ]);
+  });
+
+  it("ignores an orphan disconnect after a closed session instead of opening a phantom one", async () => {
+    vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(
+      success([
+        event("connected", "2026-08-13T01:00:00.000Z"),
+        event("disconnected", "2026-08-13T02:00:00.000Z"),
+        event("disconnected", "2026-08-13T03:00:00.000Z"),
+      ]),
+    );
+
+    const result = await useCase.execute(THING, FROM, TO);
+
+    assertSuccess(result);
+    expect(result.value.sessions).toHaveLength(1);
+    expect(result.value.sessions[0].end).toBe("2026-08-13T02:00:00.000Z");
+    expect(result.value.sessions[0].openStart).toBe(false);
   });
 
   it("reports unknown uptime for a range without events", async () => {

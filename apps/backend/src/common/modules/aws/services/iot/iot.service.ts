@@ -11,6 +11,7 @@ import {
   DescribeEndpointCommand,
   SearchIndexCommand,
 } from "@aws-sdk/client-iot";
+import type { ThingDocument } from "@aws-sdk/client-iot";
 import { Injectable } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -175,40 +176,49 @@ export class AwsIotService {
   ): Promise<Result<Map<string, ThingConnectivity>>> {
     return tryCatch(
       async () => {
+        const chunks = this.chunkThingNames(thingNames);
+        const documents = (
+          await Promise.all(chunks.map((chunk) => this.searchThingsChunk(chunk)))
+        ).flat();
+
         const connectivity = new Map<string, ThingConnectivity>();
-
-        for (const chunk of this.chunkThingNames(thingNames)) {
-          const queryString = chunk.map((name) => `thingName:${name}`).join(" OR ");
-          let nextToken: string | undefined;
-
-          do {
-            const response = await this.iotClient.send(
-              new SearchIndexCommand({ queryString, nextToken }),
-            );
-
-            for (const thing of response.things ?? []) {
-              if (!thing.thingName) {
-                continue;
-              }
-
-              connectivity.set(thing.thingName, {
-                thingName: thing.thingName,
-                connected: thing.connectivity?.connected ?? false,
-                lastSeenAt:
-                  thing.connectivity?.timestamp !== undefined && thing.connectivity.timestamp > 0
-                    ? new Date(thing.connectivity.timestamp).toISOString()
-                    : null,
-              });
-            }
-
-            nextToken = response.nextToken;
-          } while (nextToken !== undefined);
+        for (const thing of documents) {
+          if (thing.thingName) {
+            connectivity.set(thing.thingName, this.toThingConnectivity(thing.thingName, thing));
+          }
         }
 
         return connectivity;
       },
       (error) => this.mapError(error, ErrorCodes.AWS_IOT_SEARCH_INDEX_FAILED),
     );
+  }
+
+  private async searchThingsChunk(thingNames: string[]): Promise<ThingDocument[]> {
+    const queryString = thingNames.map((name) => `thingName:${name}`).join(" OR ");
+    const things: ThingDocument[] = [];
+    let nextToken: string | undefined;
+
+    do {
+      const response = await this.iotClient.send(
+        new SearchIndexCommand({ queryString, nextToken }),
+      );
+      things.push(...(response.things ?? []));
+      nextToken = response.nextToken;
+    } while (nextToken !== undefined);
+
+    return things;
+  }
+
+  private toThingConnectivity(thingName: string, thing: ThingDocument): ThingConnectivity {
+    const timestamp = thing.connectivity?.timestamp;
+
+    return {
+      thingName,
+      connected: thing.connectivity?.connected ?? false,
+      lastSeenAt:
+        timestamp !== undefined && timestamp > 0 ? new Date(timestamp).toISOString() : null,
+    };
   }
 
   private chunkThingNames(thingNames: string[]): string[][] {

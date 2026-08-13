@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import type { DeviceLifecycleEvent, DeviceSession } from "@repo/api/domains/iot/iot.schema";
 
@@ -22,14 +22,16 @@ export interface DeviceSessionsResult {
  */
 @Injectable()
 export class GetDeviceSessionsUseCase {
-  private readonly logger = new Logger(GetDeviceSessionsUseCase.name);
-
   constructor(
     @Inject(IOT_DATABRICKS_PORT)
     private readonly databricksPort: DatabricksPort,
   ) {}
 
-  async execute(thingName: string, from: string, to: string): Promise<Result<DeviceSessionsResult>> {
+  async execute(
+    thingName: string,
+    from: string,
+    to: string,
+  ): Promise<Result<DeviceSessionsResult>> {
     const eventsResult = await this.databricksPort.getDeviceLifecycleEvents(
       thingName,
       from,
@@ -66,9 +68,12 @@ export class GetDeviceSessionsUseCase {
     return success({ events, sessions, uptimePercent, truncated });
   }
 
-  // Pair ordered events into sessions, clamped to the range. A leading
-  // disconnect means the device was online at range start (open start); a
-  // trailing connect means it still is (open end).
+  // Pair ordered events into sessions, clamped to the range. A disconnect as
+  // the range's first event means the device was online at range start (open
+  // start); a trailing connect means it still is (open end). Presence events
+  // from different MQTT sessions can interleave, so a disconnect only closes
+  // the open session when their session identifiers agree (or either side
+  // lacks one); stale and orphan disconnects are ignored.
   private deriveSessions(
     events: DeviceLifecycleEvent[],
     from: string,
@@ -76,12 +81,34 @@ export class GetDeviceSessionsUseCase {
   ): DeviceSession[] {
     const rangeEnd = Math.min(Date.now(), new Date(to).getTime());
     const sessions: DeviceSession[] = [];
-    let open: { start: string; openStart: boolean } | null = null;
+    let open: { start: string; openStart: boolean; sessionIdentifier: string | null } | null = null;
+    let isFirstEvent = true;
 
     for (const event of events) {
+      const isLeadingDisconnect = isFirstEvent;
+      isFirstEvent = false;
+
       if (event.eventType === "connected") {
-        // A repeated connect keeps the earliest start of the open session.
-        open = open ?? { start: event.eventTimestamp, openStart: false };
+        // A repeated connect keeps the earliest start of the open session; the
+        // latest connect's identifier names the live MQTT session.
+        open =
+          open === null
+            ? {
+                start: event.eventTimestamp,
+                openStart: false,
+                sessionIdentifier: event.sessionIdentifier,
+              }
+            : { ...open, sessionIdentifier: event.sessionIdentifier };
+        continue;
+      }
+
+      const isOrphanDisconnect = open === null && !isLeadingDisconnect;
+      const openIdentifier = open?.sessionIdentifier ?? null;
+      const isStaleDisconnect =
+        openIdentifier !== null &&
+        event.sessionIdentifier !== null &&
+        openIdentifier !== event.sessionIdentifier;
+      if (isOrphanDisconnect || isStaleDisconnect) {
         continue;
       }
 

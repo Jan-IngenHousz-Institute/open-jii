@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import type { DeviceBatteryPoint, MonitoringBucket } from "@repo/api/domains/iot/iot.schema";
 
@@ -11,8 +11,6 @@ import type { DatabricksPort } from "../../../core/ports/databricks.port";
  */
 @Injectable()
 export class GetDeviceBatteryUseCase {
-  private readonly logger = new Logger(GetDeviceBatteryUseCase.name);
-
   constructor(
     @Inject(IOT_DATABRICKS_PORT)
     private readonly databricksPort: DatabricksPort,

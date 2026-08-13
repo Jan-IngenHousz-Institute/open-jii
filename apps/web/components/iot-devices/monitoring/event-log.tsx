@@ -38,7 +38,9 @@ export function EventLog({ events }: EventLogProps) {
 
   const newestFirst = [...events].reverse();
   const totalPages = Math.max(1, Math.ceil(newestFirst.length / PAGE_SIZE));
-  const pageEvents = newestFirst.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // The event list shrinks when the range narrows; the page must follow.
+  const currentPage = Math.min(page, totalPages);
+  const pageEvents = newestFirst.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="space-y-3">
@@ -61,7 +63,7 @@ export function EventLog({ events }: EventLogProps) {
                   {t(`iot.devices.connectivity.${event.eventType}`)}
                 </TableCell>
                 <TableCell className="text-muted-foreground font-mono text-xs">
-                  {event.disconnectReason ?? "—"}
+                  {event.disconnectReason ?? "-"}
                 </TableCell>
               </TableRow>
             ))}
@@ -72,14 +74,14 @@ export function EventLog({ events }: EventLogProps) {
       {totalPages > 1 && (
         <div className="flex items-center justify-end gap-2 text-xs">
           <span className="text-muted-foreground">
-            {t("iot.devices.pageOf", { page, total: totalPages })}
+            {t("iot.devices.pageOf", { page: currentPage, total: totalPages })}
           </span>
           <Button
             variant="outline"
             size="sm"
-            disabled={page <= 1}
+            disabled={currentPage <= 1}
             onClick={() => {
-              setPage((current) => current - 1);
+              setPage(currentPage - 1);
             }}
           >
             {t("iot.devices.monitoring.previous")}
@@ -87,9 +89,9 @@ export function EventLog({ events }: EventLogProps) {
           <Button
             variant="outline"
             size="sm"
-            disabled={page >= totalPages}
+            disabled={currentPage >= totalPages}
             onClick={() => {
-              setPage((current) => current + 1);
+              setPage(currentPage + 1);
             }}
           >
             {t("iot.devices.monitoring.next")}

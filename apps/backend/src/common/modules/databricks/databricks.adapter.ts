@@ -499,7 +499,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         const raw = row[index.average_battery];
         return {
           bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
-          averageBattery: raw === null || raw === undefined ? null : Number(raw),
+          averageBattery: raw === null ? null : Number(raw),
         };
       }),
     );

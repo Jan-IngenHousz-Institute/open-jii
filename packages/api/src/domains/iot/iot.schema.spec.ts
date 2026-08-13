@@ -210,7 +210,7 @@ describe("Iot Schema", () => {
       expect(zIotDeviceList.safeParse([{ ...validDevice, connectivity }]).success).toBe(true);
     });
 
-    it("keeps register/revoke shapes free of connectivity — they never consult the fleet index", () => {
+    it("keeps register/revoke shapes free of connectivity, they never consult the fleet index", () => {
       expect(zIotDevice.safeParse(validDevice).success).toBe(true);
       expect(zIotDeviceList.safeParse([validDevice]).success).toBe(false);
     });
