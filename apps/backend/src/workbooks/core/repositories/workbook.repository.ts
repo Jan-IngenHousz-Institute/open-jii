@@ -301,7 +301,6 @@ export class WorkbookRepository {
         .update(workbooks)
         .set({
           ...data,
-          updatedAt: new Date(),
         })
         .where(eq(workbooks.id, id))
         .returning(workbookColumns);
