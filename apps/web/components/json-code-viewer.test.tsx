@@ -1,6 +1,7 @@
 // JsonCodeViewer component test file
 import { render, screen, userEvent, act } from "@/test/test-utils";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import { formatJson } from "~/lib/json-format";
 
 import { JsonCodeViewer } from "./json-code-viewer";
 
@@ -92,8 +93,7 @@ describe("JsonCodeViewer", () => {
   });
 
   it("should display code statistics (lines and size)", () => {
-    const jsonStr = JSON.stringify(sampleObject, null, 2);
-    const lineCount = jsonStr.split("\n").length;
+    const lineCount = formatJson(sampleObject).split("\n").length;
 
     render(<JsonCodeViewer value={sampleObject} />);
 
@@ -131,27 +131,31 @@ describe("JsonCodeViewer", () => {
   it("should copy JSON to clipboard when clicking copy button", async () => {
     render(<JsonCodeViewer value={sampleObject} />);
 
-    const copyButton = screen.getByRole("button");
+    const copyButton = screen.getByTestId("json-copy-button");
     await user.click(copyButton);
 
-    const expectedJson = JSON.stringify(sampleObject, null, 2);
-    expect(mockClipboard.writeText).toHaveBeenCalledWith(expectedJson);
+    expect(mockClipboard.writeText).toHaveBeenCalledWith(formatJson(sampleObject));
     expect(mockClipboard.writeText).toHaveBeenCalledTimes(1);
   });
 
-  it("should copy string value as-is to clipboard", async () => {
-    render(<JsonCodeViewer value={sampleString} />);
+  it("should copy the displayed text, not the source string", async () => {
+    // Deliberately not already-canonical: copying the source rather than the
+    // rendered text would be invisible with a value that reformats to itself.
+    const source = '{"key":"value","n":[1,2,3]}';
+    render(<JsonCodeViewer value={source} />);
 
-    const copyButton = screen.getByRole("button");
+    const copyButton = screen.getByTestId("json-copy-button");
     await user.click(copyButton);
 
-    expect(mockClipboard.writeText).toHaveBeenCalledWith(sampleString);
+    const displayed = screen.getByTestId<HTMLTextAreaElement>("code-editor-textarea").value;
+    expect(displayed).not.toBe(source);
+    expect(mockClipboard.writeText).toHaveBeenCalledWith(displayed);
   });
 
   it("should show check icon after successful copy", async () => {
     render(<JsonCodeViewer {...defaultProps} />);
 
-    const copyButton = screen.getByRole("button");
+    const copyButton = screen.getByTestId("json-copy-button");
 
     await user.click(copyButton);
 
@@ -228,12 +232,12 @@ describe("JsonCodeViewer", () => {
     const onEditStart = vi.fn();
     render(<JsonCodeViewer {...defaultProps} onEditStart={onEditStart} />);
 
-    const copyButton = screen.getByRole("button");
+    const copyButton = screen.getByTestId("json-copy-button");
     await user.click(copyButton);
 
     // The copy button's onClick calls e.stopPropagation(), so onEditStart should NOT
     // be called from the copy button click. However, the mock Button doesn't inherently
-    // stop propagation — we're verifying the clipboard was called.
+    // stop propagation, so we're verifying the clipboard was called.
     expect(mockClipboard.writeText).toHaveBeenCalled();
   });
 
@@ -243,7 +247,7 @@ describe("JsonCodeViewer", () => {
 
     render(<JsonCodeViewer {...defaultProps} />);
 
-    const copyButton = screen.getByRole("button");
+    const copyButton = screen.getByTestId("json-copy-button");
 
     await user.click(copyButton);
 
@@ -259,8 +263,7 @@ describe("JsonCodeViewer", () => {
     const smallObj = { a: 1 };
     render(<JsonCodeViewer value={smallObj} />);
 
-    const jsonStr = JSON.stringify(smallObj, null, 2);
-    const expectedSize = new Blob([jsonStr]).size;
+    const expectedSize = new Blob([formatJson(smallObj)]).size;
 
     const statsEl = screen.getByText((_content, element) => {
       if (!element) return false;

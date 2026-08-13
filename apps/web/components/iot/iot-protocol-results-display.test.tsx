@@ -1,5 +1,6 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { formatJson } from "~/lib/json-format";
 
 import { ProtocolResultsDisplay } from "./iot-protocol-results-display";
 
@@ -101,7 +102,7 @@ describe("ProtocolResultsDisplay", () => {
     it("copies data to clipboard when copy button is clicked", async () => {
       vi.useRealTimers(); // Use real timers for this test
       const user = userEvent.setup();
-      // Spy AFTER userEvent.setup() — it replaces navigator.clipboard
+      // Spy AFTER userEvent.setup(): it replaces navigator.clipboard
       const writeTextSpy = vi.spyOn(navigator.clipboard, "writeText");
 
       render(<ProtocolResultsDisplay testResult={successResult} />);
@@ -110,10 +111,34 @@ describe("ProtocolResultsDisplay", () => {
       await user.click(copyButton);
 
       await waitFor(() => {
-        expect(writeTextSpy).toHaveBeenCalledWith(JSON.stringify(successResult.data, null, 2));
+        expect(writeTextSpy).toHaveBeenCalledWith(formatJson(successResult.data));
       });
 
       vi.useFakeTimers(); // Restore fake timers for other tests
+    });
+
+    it("switches the response data between the compact and expanded layouts", async () => {
+      vi.useRealTimers();
+      localStorage.clear();
+      const user = userEvent.setup();
+      const result = {
+        ...successResult,
+        data: { samples: Array.from({ length: 40 }, (_, i) => i) },
+      };
+      render(<ProtocolResultsDisplay testResult={result} />);
+
+      const compact = formatJson(result.data, { style: "compact" });
+      const expanded = formatJson(result.data, { style: "expanded" });
+      expect(expanded.split("\n").length).toBeGreaterThan(compact.split("\n").length);
+
+      // The rendered text is whitespace-significant, so read the <pre> directly
+      // rather than going through getByText, which normalises it.
+      const pre = () => document.querySelector("pre")?.textContent;
+      expect(pre()).toBe(compact);
+      await user.click(screen.getByTestId("json-format-toggle"));
+      await waitFor(() => expect(pre()).toBe(expanded));
+
+      vi.useFakeTimers();
     });
 
     it("handles copy error gracefully", async () => {
@@ -122,7 +147,7 @@ describe("ProtocolResultsDisplay", () => {
         // noop
       });
       const user = userEvent.setup();
-      // Spy AFTER userEvent.setup() — it replaces navigator.clipboard
+      // Spy AFTER userEvent.setup(): it replaces navigator.clipboard
       vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(
         new Error("Clipboard error"),
       );

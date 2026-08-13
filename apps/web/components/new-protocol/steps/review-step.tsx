@@ -1,5 +1,7 @@
 "use client";
 
+import { useJsonFormatStyle } from "@/hooks/useJsonFormatStyle";
+import { formatJson } from "@/lib/json-format";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import * as z from "zod";
 
@@ -37,6 +39,9 @@ export function ReviewStep({
 }: ReviewStepProps) {
   const formData = form.getValues();
   const { t } = useTranslation();
+  // Read-only preview inside the wizard, so it follows the stored preference
+  // without its own control; the toggle lives on the editors this step reviews.
+  const { style } = useJsonFormatStyle();
 
   return (
     <div className="mx-auto space-y-8">
@@ -49,7 +54,7 @@ export function ReviewStep({
       </div>
 
       <div className="relative flex flex-col gap-6 md:flex-row">
-        {/* Left column — Details + Macros (defines the row height) */}
+        {/* Left column: Details + Macros (defines the row height) */}
         <div className="flex w-full flex-col gap-6 md:w-1/2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -66,7 +71,7 @@ export function ReviewStep({
                   <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
                     {t("newProtocol.protocolName")}
                   </div>
-                  <div className="mt-1 text-base font-medium">{formData.name || "—"}</div>
+                  <div className="mt-1 text-base font-medium">{formData.name || "\u2014"}</div>
                 </div>
                 <div>
                   <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
@@ -129,7 +134,7 @@ export function ReviewStep({
           </Card>
         </div>
 
-        {/* Right column — Code (absolutely positioned, height matches left column) */}
+        {/* Right column: Code (absolutely positioned, height matches left column) */}
         <div className="relative md:absolute md:bottom-0 md:right-0 md:top-0 md:w-[calc(50%-0.75rem)]">
           <Card className="flex h-full flex-col">
             <CardHeader className="flex shrink-0 flex-row items-center justify-between pb-3">
@@ -142,8 +147,8 @@ export function ReviewStep({
             </CardHeader>
             <CardContent className="min-h-0 flex-1">
               <div className="bg-muted/30 h-full overflow-auto rounded-md border p-3">
-                <pre className="text-xs">
-                  <code>{JSON.stringify(formData.code, null, 2)}</code>
+                <pre className="whitespace-pre-wrap break-words text-xs">
+                  <code>{formatJson(formData.code, { style })}</code>
                 </pre>
               </div>
             </CardContent>

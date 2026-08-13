@@ -1,7 +1,11 @@
 "use client";
 
+import { JsonFormatToggle } from "@/components/shared/json-format-toggle";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useJsonFormatStyle } from "@/hooks/useJsonFormatStyle";
+import { formatJson } from "@/lib/json-format";
 import { AlertCircle, Check, CheckCircle2, Copy, Play } from "lucide-react";
+import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
@@ -25,12 +29,18 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
   const { copy: copyToClipboard, copied } = useCopyToClipboard();
+  const { style, toggleStyle } = useJsonFormatStyle();
+  // Device responses carry long sample arrays; copy takes what is on screen.
+  const responseJson = useMemo(
+    () => formatJson(testResult?.data, { style }),
+    [testResult?.data, style],
+  );
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (testResult?.data === undefined) return;
-    await copyToClipboard(JSON.stringify(testResult.data, null, 2));
+    await copyToClipboard(responseJson);
   };
 
   return (
@@ -73,22 +83,27 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
                 {t("iot.protocolRunner.responseData")}
               </div>
               <div className="relative flex min-h-0 flex-1 flex-col">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="bg-background hover:bg-accent shadow-xs absolute right-2 top-2 z-10 h-7 w-7 border"
-                  onClick={handleCopy}
-                  aria-label={copied ? tCommon("common.copied") : tCommon("common.copy")}
-                  title={copied ? tCommon("common.copied") : tCommon("common.copy")}
-                >
-                  {copied ? (
-                    <Check className="h-3.5 w-3.5 text-green-600" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                </Button>
+                <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+                  <JsonFormatToggle style={style} onToggle={toggleStyle} />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-background hover:bg-accent shadow-xs h-7 w-7 border"
+                    onClick={handleCopy}
+                    aria-label={copied ? tCommon("common.copied") : tCommon("common.copy")}
+                    title={copied ? tCommon("common.copied") : tCommon("common.copy")}
+                  >
+                    {copied ? (
+                      <Check className="h-3.5 w-3.5 text-green-600" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </div>
                 <div className="bg-muted/30 min-h-[12rem] flex-1 overflow-auto rounded border">
-                  <pre className="p-3 text-xs">{JSON.stringify(testResult.data, null, 2)}</pre>
+                  <pre className="whitespace-pre-wrap break-words p-3 pr-20 text-xs">
+                    {responseJson}
+                  </pre>
                 </div>
               </div>
             </div>
