@@ -1,6 +1,7 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { reformatJsonString } from "~/lib/json-format";
 
 import {
   ExperimentDataTableVariantCell,
@@ -174,7 +175,9 @@ describe("VariantExpandedContent", () => {
 
   it("should copy JSON to clipboard when copy button is clicked", async () => {
     const user = userEvent.setup();
-    const jsonData = '{"name": "John", "age": 30}';
+    // Deliberately not already-canonical, so copying the source rather than the
+    // rendered text would be visible here.
+    const jsonData = '{"name":"John","age":30}';
     render(<VariantExpandedContent data={jsonData} />);
 
     const copyButton = screen.getByText("common.copy").closest("button");
@@ -185,7 +188,8 @@ describe("VariantExpandedContent", () => {
     }
 
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(jsonData);
+      // Copy yields what is displayed, not the raw source.
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(reformatJsonString(jsonData));
     });
   });
 
@@ -220,7 +224,9 @@ describe("VariantExpandedContent", () => {
     expect(screen.getByText("not valid json")).toBeInTheDocument();
   });
 
-  it("should apply scrolling classes for overflow", () => {
+  it("scrolls vertically and wraps long lines instead of scrolling sideways", () => {
+    // The compact layout keeps data arrays on one line, so those lines have to
+    // soft-wrap; scrolling sideways would push the values out of view instead.
     const largeObject: Record<string, string> = {};
     for (let i = 0; i < 100; i++) {
       largeObject[`key${i}`] = `value${i}`;
@@ -231,9 +237,11 @@ describe("VariantExpandedContent", () => {
 
     const codeBlock = document.querySelector("pre");
     expect(codeBlock).toBeTruthy();
-    expect(codeBlock?.classList.contains("overflow-x-auto")).toBe(true);
     expect(codeBlock?.classList.contains("overflow-y-auto")).toBe(true);
     expect(codeBlock?.classList.contains("max-h-96")).toBe(true);
+    expect(codeBlock?.classList.contains("whitespace-pre-wrap")).toBe(true);
+    expect(codeBlock?.classList.contains("break-words")).toBe(true);
+    expect(codeBlock?.classList.contains("overflow-x-auto")).toBe(false);
   });
 
   it("should position copy button absolutely over content", () => {
