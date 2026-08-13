@@ -180,6 +180,12 @@ export class AwsIotService {
     }
 
     const message = error instanceof Error ? error.message : "Unknown error";
+
+    // AWS rejecting the request's content is the caller's error, not an outage.
+    if (error instanceof Error && error.name === "ValidationException") {
+      return AppError.badRequest(message, code);
+    }
+
     return AppError.internal(message, code);
   }
 }

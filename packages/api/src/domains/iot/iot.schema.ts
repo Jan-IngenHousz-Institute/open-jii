@@ -61,7 +61,16 @@ export const zIotDeviceDetail = zIotDevice.extend({
 });
 
 export const zRegisterIotDeviceBody = z.object({
-  serialNumber: z.string().min(1).max(255).describe("Physical device identifier, e.g. MAC address"),
+  serialNumber: z
+    .string()
+    .min(1)
+    .max(255)
+    // AWS IoT thing-attribute values only allow this charset; anything else
+    // would fail at CreateThing with an opaque 500.
+    .regex(/^[a-zA-Z0-9_.,@/:#=[\]-]+$/, {
+      message: "Only letters, numbers, and _ . , @ / : # = [ ] - are allowed",
+    })
+    .describe("Physical device identifier, e.g. MAC address"),
   name: z.string().min(1).max(255).optional(),
   deviceType: zDeviceType.describe("IotDevice class, maps to the ingest topic sensorType"),
   // Optional target organization to register the device into; defaults to the
