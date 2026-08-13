@@ -6,8 +6,6 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const wrapperPath = resolve(__dirname, "../lib/wrappers/wrapper.js");
-const helpersPath = resolve(__dirname, "../lib/helpers/helpers.js");
 const fixturePath = resolve(
   __dirname,
   "../../../packages/api/fixtures/macro-input-shape-fingerprints.json",
@@ -32,22 +30,78 @@ interface WrapperEnvelope {
 
 const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as FingerprintFixture;
 
-function runWrapper(script: string, items: unknown[]) {
+// Interpreter overrides let local runs point at a venv / custom R library:
+// MACRO_WRAPPER_PYTHON=/tmp/venv/bin/python MACRO_WRAPPER_RSCRIPT=Rscript pnpm test
+const pythonBin = process.env.MACRO_WRAPPER_PYTHON ?? "python3";
+const rscriptBin = process.env.MACRO_WRAPPER_RSCRIPT ?? "Rscript";
+
+function runtimeAvailable(command: string, args: string[], env?: Record<string, string>): boolean {
+  const result = spawnSync(command, args, {
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+  });
+  return result.status === 0;
+}
+
+// The Python wrapper imports numpy/pandas/scipy at startup and the R wrapper
+// needs jsonlite. CI runners provide neither (the container contract job was
+// dropped per review), so the Python/R parity tests skip when the runtime is
+// missing instead of failing.
+const pythonAvailable = runtimeAvailable(pythonBin, ["-c", "import numpy, pandas, scipy"]);
+// LC_CTYPE mirrors handler.R so non-ASCII fixture strings survive as UTF-8.
+const rEnv = { LC_CTYPE: "C.UTF-8" };
+const rAvailable = runtimeAvailable(rscriptBin, ["-e", "library(jsonlite)"], rEnv);
+
+function stageRuntime(wrapperFile: string, helpersFile: string) {
   const dir = mkdtempSync(resolve(tmpdir(), "macro-wrapper-test-"));
   tempDirs.push(dir);
-  const runtimeWrapperPath = resolve(dir, "wrappers/wrapper.js");
-  const runtimeHelpersPath = resolve(dir, "src/helpers/helpers.js");
-  const scriptPath = resolve(dir, "script.js");
-  const inputPath = resolve(dir, "input.json");
   mkdirSync(resolve(dir, "wrappers"), { recursive: true });
   mkdirSync(resolve(dir, "src/helpers"), { recursive: true });
-  writeFileSync(runtimeWrapperPath, readFileSync(wrapperPath));
-  writeFileSync(runtimeHelpersPath, readFileSync(helpersPath));
+  writeFileSync(
+    resolve(dir, "wrappers", wrapperFile),
+    readFileSync(resolve(__dirname, "../lib/wrappers", wrapperFile)),
+  );
+  writeFileSync(
+    resolve(dir, "src/helpers", helpersFile),
+    readFileSync(resolve(__dirname, "../lib/helpers", helpersFile)),
+  );
+  return dir;
+}
+
+function runWrapper(script: string, items: unknown[]) {
+  const dir = stageRuntime("wrapper.js", "helpers.js");
+  const scriptPath = resolve(dir, "script.js");
+  const inputPath = resolve(dir, "input.json");
   writeFileSync(scriptPath, script, "utf8");
   writeFileSync(inputPath, JSON.stringify(items), "utf8");
 
-  return spawnSync(process.execPath, [runtimeWrapperPath, scriptPath, inputPath], {
+  return spawnSync(process.execPath, [resolve(dir, "wrappers/wrapper.js"), scriptPath, inputPath], {
     encoding: "utf8",
+  });
+}
+
+function runPythonWrapper(script: string, items: unknown[]) {
+  const dir = stageRuntime("wrapper.py", "helpers.py");
+  const scriptPath = resolve(dir, "script.py");
+  const inputPath = resolve(dir, "input.json");
+  writeFileSync(scriptPath, script, "utf8");
+  writeFileSync(inputPath, JSON.stringify(items), "utf8");
+
+  return spawnSync(pythonBin, [resolve(dir, "wrappers/wrapper.py"), scriptPath, inputPath], {
+    encoding: "utf8",
+  });
+}
+
+function runRWrapper(script: string, items: unknown[]) {
+  const dir = stageRuntime("wrapper.R", "helpers.R");
+  const scriptPath = resolve(dir, "script.R");
+  const inputPath = resolve(dir, "input.json");
+  writeFileSync(scriptPath, script, "utf8");
+  writeFileSync(inputPath, JSON.stringify(items), "utf8");
+
+  return spawnSync(rscriptBin, [resolve(dir, "wrappers/wrapper.R"), scriptPath, inputPath], {
+    encoding: "utf8",
+    env: { ...process.env, ...rEnv },
   });
 }
 
@@ -75,6 +129,20 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
+// Shared parity assertion: the fixture contract is only meaningful if every
+// runtime reproduces it byte-for-byte, redacted digests included.
+function expectFixtureParity(stdout: string) {
+  const envelope = JSON.parse(stdout) as WrapperEnvelope;
+  expect(envelope.status).toBe("success");
+  expect(envelope.results).toHaveLength(fixture.cases.length);
+  expect(envelope.fingerprints).toEqual(expectedFingerprints());
+
+  const emittedFingerprints = JSON.stringify(envelope.fingerprints);
+  for (const sentinel of fixture.privacySentinels) {
+    expect(emittedFingerprints).not.toContain(sentinel);
+  }
+}
+
 describe("JavaScript macro wrapper diagnostics", () => {
   it("matches every v2 fingerprint fixture through structured stdout", () => {
     expect(fixture.fixtureVersion).toBe(2);
@@ -82,14 +150,7 @@ describe("JavaScript macro wrapper diagnostics", () => {
 
     expect(result.status).toBe(0);
     expect(result.stderr).toBe("");
-    const envelope = JSON.parse(result.stdout) as WrapperEnvelope;
-    expect(envelope.status).toBe("success");
-    expect(envelope.fingerprints).toEqual(expectedFingerprints());
-
-    const emittedFingerprints = JSON.stringify(envelope.fingerprints);
-    for (const sentinel of fixture.privacySentinels) {
-      expect(emittedFingerprints).not.toContain(sentinel);
-    }
+    expectFixtureParity(result.stdout);
   });
 
   it("includes the JavaScript error type and fingerprints failing items", () => {
@@ -110,5 +171,25 @@ describe("JavaScript macro wrapper diagnostics", () => {
         },
       ],
     });
+  });
+});
+
+describe.skipIf(!pythonAvailable)("Python macro wrapper diagnostics", () => {
+  it("matches every v2 fingerprint fixture through structured stdout", () => {
+    const result = runPythonWrapper('output["ok"] = True', fixtureItems());
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expectFixtureParity(result.stdout);
+  });
+});
+
+describe.skipIf(!rAvailable)("R macro wrapper diagnostics", () => {
+  it("matches every v2 fingerprint fixture through structured stdout", () => {
+    const result = runRWrapper("output$ok <- TRUE", fixtureItems());
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expectFixtureParity(result.stdout);
   });
 });
