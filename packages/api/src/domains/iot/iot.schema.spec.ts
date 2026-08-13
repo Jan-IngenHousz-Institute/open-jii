@@ -398,9 +398,9 @@ describe("Iot Schema", () => {
     });
 
     it("rejects a reversed or empty range", () => {
-      expect(
-        zMonitoringRangeQuery.safeParse({ ...validRange, from: validRange.to }).success,
-      ).toBe(false);
+      expect(zMonitoringRangeQuery.safeParse({ ...validRange, from: validRange.to }).success).toBe(
+        false,
+      );
       expect(
         zMonitoringRangeQuery.safeParse({
           ...validRange,
