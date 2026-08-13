@@ -2,18 +2,33 @@ import type { MonitoringRangePreset } from "@/components/iot-devices/monitoring/
 import { resolveMonitoringRange } from "@/components/iot-devices/monitoring/monitoring-range";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-// The window is derived once per preset selection, not per render, so the
-// query key stays stable between refetches.
+const RANGE_REFRESH_MS = 60_000;
+
+// The window re-anchors to now on the refresh cadence; a frozen anchor would
+// quietly turn "last 24h" into "the 24h ending when the page was opened". Each
+// re-anchor changes the query key, so previous data is held as placeholder to
+// keep the panels from flashing back to skeletons.
 export const useDeviceMonitoring = (deviceId: string, preset: MonitoringRangePreset) => {
-  const range = useMemo(() => resolveMonitoringRange(preset), [preset]);
+  const [anchor, setAnchor] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setAnchor(Date.now());
+    }, RANGE_REFRESH_MS);
+    return () => {
+      clearInterval(id);
+    };
+  }, []);
+
+  const range = useMemo(() => resolveMonitoringRange(preset, anchor), [preset, anchor]);
 
   return {
     ...useQuery(
       orpc.iot.getDeviceMonitoring.queryOptions({
         input: { deviceId, from: range.from, to: range.to, bucket: range.bucket },
-        refetchInterval: 60_000,
+        placeholderData: (prev) => prev,
       }),
     ),
     range,

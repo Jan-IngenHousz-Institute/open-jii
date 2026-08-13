@@ -12,6 +12,7 @@ import type { UploadMetadata } from "../../../experiments/core/models/experiment
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { DataUploadJobInput } from "../../../experiments/core/ports/databricks.port";
+import type { LifecycleEventRow } from "../../../iot/core/models/device-connectivity-log.model";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -23,6 +24,7 @@ import { QueryBuilderService } from "./services/query-builder/query-builder.serv
 import type {
   AggregationSpec,
   FilterCondition,
+  QueryParams,
 } from "./services/query-builder/query-builder.types";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData } from "./services/sql/sql.types";
@@ -345,31 +347,20 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
    * it lags by pipeline cadence; no row means no data has ever landed.
    */
   async getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>> {
-    const queryResult = this.queryBuilder.buildQuery({
+    const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.device_last_activity`,
       whereConditions: [["client_id", thingName]],
       limit: 1,
     });
-    if (queryResult.isFailure()) {
-      return queryResult;
+    if (result.isFailure()) {
+      return failure(result.error);
     }
 
-    const activityResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
-    if (activityResult.isFailure()) {
-      return failure(activityResult.error);
-    }
-
-    const schemaData = activityResult.value;
-    if (schemaData.rows.length === 0) {
-      return success({ lastDataAt: null });
-    }
-
-    const lastDataIndex = schemaData.columns.findIndex((column) => column.name === "last_data_at");
-    const raw = lastDataIndex >= 0 ? schemaData.rows[0][lastDataIndex] : null;
-    const parsed = raw ? new Date(raw) : null;
+    const { rows, index } = result.value;
+    const firstRow = rows.at(0);
 
     return success({
-      lastDataAt: parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : null,
+      lastDataAt: firstRow === undefined ? null : this.toIsoOrNull(firstRow[index.last_data_at]),
     });
   }
 
@@ -382,17 +373,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     from: string,
     to: string,
     limit: number,
-  ): Promise<
-    Result<
-      {
-        eventType: string | null;
-        eventTimestamp: string | null;
-        disconnectReason: string | null;
-        sessionIdentifier: string | null;
-      }[]
-    >
-  > {
-    const queryResult = this.queryBuilder.buildQuery({
+  ): Promise<Result<LifecycleEventRow[]>> {
+    const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_device_lifecycle_events`,
       columns: ["event_type", "event_timestamp", "disconnect_reason", "session_identifier"],
       whereConditions: [["client_id", thingName]],
@@ -401,18 +383,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       orderDirection: "ASC",
       limit,
     });
-    if (queryResult.isFailure()) {
-      return queryResult;
-    }
-
-    const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
     if (result.isFailure()) {
       return failure(result.error);
     }
 
-    const index = this.columnIndex(result.value.columns);
+    const { rows, index } = result.value;
     return success(
-      result.value.rows.map((row) => ({
+      rows.map((row) => ({
         eventType: row[index.event_type] ?? null,
         eventTimestamp: this.toIsoOrNull(row[index.event_timestamp]),
         disconnectReason: row[index.disconnect_reason] ?? null,
@@ -431,7 +408,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     bucket: "hour" | "day",
   ): Promise<Result<{ bucketStart: string | null; experimentId: string | null; count: number }[]>> {
     const bucketAlias = `timestamp_${bucket}`;
-    const queryResult = this.queryBuilder.buildQuery({
+    const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
@@ -442,18 +419,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       orderBy: bucketAlias,
       orderDirection: "ASC",
     });
-    if (queryResult.isFailure()) {
-      return queryResult;
-    }
-
-    const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
     if (result.isFailure()) {
       return failure(result.error);
     }
 
-    const index = this.columnIndex(result.value.columns);
+    const { rows, index } = result.value;
     return success(
-      result.value.rows.map((row) => ({
+      rows.map((row) => ({
         bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
         experimentId: row[index.experiment_id] ?? null,
         count: Number(row[index.measurement_count] ?? 0),
@@ -473,7 +445,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     bucket: "hour" | "day",
   ): Promise<Result<{ bucketStart: string | null; averageBattery: number | null }[]>> {
     const bucketAlias = `timestamp_${bucket}`;
-    const queryResult = this.queryBuilder.buildQuery({
+    const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
@@ -484,18 +456,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       orderBy: bucketAlias,
       orderDirection: "ASC",
     });
-    if (queryResult.isFailure()) {
-      return queryResult;
-    }
-
-    const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
     if (result.isFailure()) {
       return failure(result.error);
     }
 
-    const index = this.columnIndex(result.value.columns);
+    const { rows, index } = result.value;
     return success(
-      result.value.rows.map((row) => {
+      rows.map((row) => {
         const raw = row[index.average_battery];
         return {
           bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
@@ -518,7 +485,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   ): Promise<
     Result<{ total: number; withGps: number; withBattery: number; withWorkbookRun: number }[]>
   > {
-    const queryResult = this.queryBuilder.buildQuery({
+    const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
@@ -532,18 +499,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         ],
       },
     });
-    if (queryResult.isFailure()) {
-      return queryResult;
-    }
-
-    const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
     if (result.isFailure()) {
       return failure(result.error);
     }
 
-    const index = this.columnIndex(result.value.columns);
+    const { rows, index } = result.value;
     return success(
-      result.value.rows.map((row) => ({
+      rows.map((row) => ({
         total: Number(row[index.total_count] ?? 0),
         withGps: Number(row[index.gps_count] ?? 0),
         withBattery: Number(row[index.battery_count] ?? 0),
@@ -562,7 +524,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     to: string,
     column: "device_version" | "protocol_id" | "workbook_run_id",
   ): Promise<Result<{ value: string | null; count: number }[]>> {
-    const queryResult = this.queryBuilder.buildQuery({
+    const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
@@ -571,8 +533,27 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         functions: [{ column: "*", function: "count", alias: "row_count" }],
       },
     });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        value: row[index[column]] ?? null,
+        count: Number(row[index.row_count] ?? 0),
+      })),
+    );
+  }
+
+  // Shared plumbing for the monitoring reads: build the SQL, run it against
+  // the centrum schema, and index the result columns by name.
+  private async runMonitoringQuery(
+    params: QueryParams,
+  ): Promise<Result<{ rows: (string | null)[][]; index: Record<string, number> }>> {
+    const queryResult = this.queryBuilder.buildQuery(params);
     if (queryResult.isFailure()) {
-      return queryResult;
+      return failure(queryResult.error);
     }
 
     const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
@@ -580,13 +561,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return failure(result.error);
     }
 
-    const index = this.columnIndex(result.value.columns);
-    return success(
-      result.value.rows.map((row) => ({
-        value: row[index[column]] ?? null,
-        count: Number(row[index.row_count] ?? 0),
-      })),
-    );
+    return success({ rows: result.value.rows, index: this.columnIndex(result.value.columns) });
   }
 
   private columnIndex(columns: { name: string }[]): Record<string, number> {

@@ -1,4 +1,5 @@
 import type { Result } from "../../../common/utils/fp-utils";
+import type { LifecycleEventRow } from "../models/device-connectivity-log.model";
 
 /**
  * Injection token for the IoT Databricks port
@@ -17,16 +18,7 @@ export interface DatabricksPort {
     from: string,
     to: string,
     limit: number,
-  ): Promise<
-    Result<
-      {
-        eventType: string | null;
-        eventTimestamp: string | null;
-        disconnectReason: string | null;
-        sessionIdentifier: string | null;
-      }[]
-    >
-  >;
+  ): Promise<Result<LifecycleEventRow[]>>;
   getDeviceThroughput(
     thingName: string,
     from: string,

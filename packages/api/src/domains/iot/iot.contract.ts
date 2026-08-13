@@ -11,7 +11,6 @@ import {
   zIotDevice,
   zIotDeviceActivity,
   zIotDeviceDetail,
-  zMonitoringBucket,
   zMonitoringRangeQuery,
   zIotDeviceList,
   zIotDevicePathParam,
@@ -65,7 +64,7 @@ export const iotContract = {
       path: "/api/v1/devices/{deviceId}/monitoring",
       successStatus: 200,
     })
-    .input(zMonitoringRangeQuery.extend({ bucket: zMonitoringBucket }))
+    .input(zMonitoringRangeQuery)
     .output(zDeviceMonitoring),
   deleteIotDevice: oc
     .route({ method: "DELETE", path: "/api/v1/devices/{deviceId}", successStatus: 204 })

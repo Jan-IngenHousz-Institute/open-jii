@@ -23,6 +23,15 @@ export function bucketAxis(from: string, to: string, bucket: MonitoringBucket): 
   return axis;
 }
 
+// Hour buckets label an instant, so local time is right. Day buckets are UTC
+// days (date_trunc and the axis both use UTC midnights); formatting those
+// locally would shift every label a day back in negative-offset timezones, so
+// the UTC date is rebuilt as a plain local date before formatting.
 export function formatBucketLabel(bucketStart: string, bucket: MonitoringBucket): string {
-  return format(new Date(bucketStart), bucket === "hour" ? "MMM d HH:mm" : "MMM d");
+  const at = new Date(bucketStart);
+  if (bucket === "hour") {
+    return format(at, "MMM d HH:mm");
+  }
+
+  return format(new Date(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()), "MMM d");
 }

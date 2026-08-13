@@ -3,6 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { DeviceLifecycleEvent, DeviceSession } from "@repo/api/domains/iot/iot.schema";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
+import { DeviceConnectivityLog } from "../../../core/models/device-connectivity-log.model";
 import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 
@@ -17,8 +18,8 @@ export interface DeviceSessionsResult {
 }
 
 /**
- * Connectivity sessions and uptime for one thing over a range, derived from
- * the ordered lifecycle-event log.
+ * Connectivity sessions and uptime for one thing over a range: fetches the
+ * ordered lifecycle-event log and hands derivation to the domain model.
  */
 @Injectable()
 export class GetDeviceSessionsUseCase {
@@ -43,129 +44,13 @@ export class GetDeviceSessionsUseCase {
     }
 
     const truncated = eventsResult.value.length > EVENT_QUERY_CAP;
-    const events = eventsResult.value
-      .slice(0, EVENT_QUERY_CAP)
-      .flatMap((row): DeviceLifecycleEvent[] => {
-        if (
-          (row.eventType !== "connected" && row.eventType !== "disconnected") ||
-          row.eventTimestamp === null
-        ) {
-          return [];
-        }
-        return [
-          {
-            eventType: row.eventType,
-            eventTimestamp: row.eventTimestamp,
-            disconnectReason: row.disconnectReason,
-            sessionIdentifier: row.sessionIdentifier,
-          },
-        ];
-      });
+    const log = new DeviceConnectivityLog(eventsResult.value.slice(0, EVENT_QUERY_CAP), from, to);
 
-    const sessions = this.deriveSessions(events, from, to);
-    const uptimePercent = this.deriveUptime(sessions, events, from, to);
-
-    return success({ events, sessions, uptimePercent, truncated });
-  }
-
-  // Pair ordered events into sessions, clamped to the range. A disconnect as
-  // the range's first event means the device was online at range start (open
-  // start); a trailing connect means it still is (open end). Presence events
-  // from different MQTT sessions can interleave, so a disconnect only closes
-  // the open session when their session identifiers agree (or either side
-  // lacks one); stale and orphan disconnects are ignored.
-  private deriveSessions(
-    events: DeviceLifecycleEvent[],
-    from: string,
-    to: string,
-  ): DeviceSession[] {
-    const rangeEnd = Math.min(Date.now(), new Date(to).getTime());
-    const sessions: DeviceSession[] = [];
-    let open: { start: string; openStart: boolean; sessionIdentifier: string | null } | null = null;
-    let isFirstEvent = true;
-
-    for (const event of events) {
-      const isLeadingDisconnect = isFirstEvent;
-      isFirstEvent = false;
-
-      if (event.eventType === "connected") {
-        // A repeated connect keeps the earliest start of the open session; the
-        // latest connect's identifier names the live MQTT session.
-        open =
-          open === null
-            ? {
-                start: event.eventTimestamp,
-                openStart: false,
-                sessionIdentifier: event.sessionIdentifier,
-              }
-            : { ...open, sessionIdentifier: event.sessionIdentifier };
-        continue;
-      }
-
-      const isOrphanDisconnect = open === null && !isLeadingDisconnect;
-      const openIdentifier = open?.sessionIdentifier ?? null;
-      const isStaleDisconnect =
-        openIdentifier !== null &&
-        event.sessionIdentifier !== null &&
-        openIdentifier !== event.sessionIdentifier;
-      if (isOrphanDisconnect || isStaleDisconnect) {
-        continue;
-      }
-
-      const start = open ?? { start: from, openStart: true };
-      const durationSeconds = Math.max(
-        0,
-        (new Date(event.eventTimestamp).getTime() - new Date(start.start).getTime()) / 1000,
-      );
-      sessions.push({
-        start: start.start,
-        end: event.eventTimestamp,
-        openStart: start.openStart,
-        durationSeconds,
-        disconnectReason: event.disconnectReason,
-      });
-      open = null;
-    }
-
-    if (open) {
-      const durationSeconds = Math.max(0, (rangeEnd - new Date(open.start).getTime()) / 1000);
-      sessions.push({
-        start: open.start,
-        end: null,
-        openStart: open.openStart,
-        durationSeconds,
-        disconnectReason: null,
-      });
-    }
-
-    return sessions;
-  }
-
-  // Uptime over the elapsed part of the range. Without any events the state in
-  // the range is unknown, not zero.
-  private deriveUptime(
-    sessions: DeviceSession[],
-    events: DeviceLifecycleEvent[],
-    from: string,
-    to: string,
-  ): number | null {
-    if (events.length === 0) {
-      return null;
-    }
-
-    const rangeStart = new Date(from).getTime();
-    const rangeEnd = Math.min(Date.now(), new Date(to).getTime());
-    const elapsed = rangeEnd - rangeStart;
-    if (elapsed <= 0) {
-      return null;
-    }
-
-    const connectedMs = sessions.reduce((total, session) => {
-      const start = Math.max(rangeStart, new Date(session.start).getTime());
-      const end = session.end === null ? rangeEnd : new Date(session.end).getTime();
-      return total + Math.max(0, Math.min(rangeEnd, end) - start);
-    }, 0);
-
-    return Math.min(100, (connectedMs / elapsed) * 100);
+    return success({
+      events: log.events,
+      sessions: log.sessions,
+      uptimePercent: log.uptimePercent,
+      truncated,
+    });
   }
 }

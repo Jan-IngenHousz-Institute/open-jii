@@ -11,6 +11,7 @@ import {
   zOnboardDeviceBody,
   zDeviceOnboardingConfig,
   zDeviceExperiment,
+  zMonitoringRangeQuery,
 } from "./iot.schema";
 
 describe("Iot Schema", () => {
@@ -381,6 +382,31 @@ describe("Iot Schema", () => {
 
     it("rejects a missing lastDataAt", () => {
       expect(zIotDeviceActivity.safeParse({}).success).toBe(false);
+    });
+  });
+
+  describe("zMonitoringRangeQuery", () => {
+    const validRange = {
+      deviceId: "11111111-1111-4111-8111-111111111111",
+      from: "2026-08-13T00:00:00.000Z",
+      to: "2026-08-14T00:00:00.000Z",
+      bucket: "hour",
+    };
+
+    it("accepts an ordered range", () => {
+      expect(zMonitoringRangeQuery.safeParse(validRange).success).toBe(true);
+    });
+
+    it("rejects a reversed or empty range", () => {
+      expect(
+        zMonitoringRangeQuery.safeParse({ ...validRange, from: validRange.to }).success,
+      ).toBe(false);
+      expect(
+        zMonitoringRangeQuery.safeParse({
+          ...validRange,
+          from: "2026-08-15T00:00:00.000Z",
+        }).success,
+      ).toBe(false);
     });
   });
 });

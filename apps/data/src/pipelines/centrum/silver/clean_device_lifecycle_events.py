@@ -2,7 +2,11 @@
 # DBTITLE 1,Clean Connectivity Events - Streaming Table
 # Silver: normalized device connect/disconnect events. Presence events can
 # arrive out of order and redelivered, so rows are deduplicated on
-# (client_id, event_timestamp, event_type) within a watermark window.
+# (client_id, event_timestamp, event_type) within a watermark window. The
+# watermark is wide because rows older than it are DROPPED, not just deduped:
+# the first Auto Loader backlog (archive accrues before the pipeline deploys)
+# and any pipeline downtime must not lose history. Presence volume is tiny,
+# so the extra dedup state is negligible.
 
 # COMMAND ----------
 import dlt
@@ -42,6 +46,6 @@ def clean_device_lifecycle_events():
             F.col("disconnectReason").alias("disconnect_reason"),
             F.col("ingestion_timestamp"),
         )
-        .withWatermark("event_timestamp", "1 hour")
+        .withWatermark("event_timestamp", "7 days")
         .dropDuplicates(["client_id", "event_timestamp", "event_type"])
     )

@@ -221,14 +221,20 @@ export const zIotDeviceActivity = z.object({
 
 // --- Device monitoring ---
 
-// Shared range input for the monitoring series endpoints.
-export const zMonitoringRangeQuery = z.object({
-  deviceId: z.string().uuid(),
-  from: z.string().datetime(),
-  to: z.string().datetime(),
-});
-
 export const zMonitoringBucket = z.enum(["hour", "day"]);
+
+// The monitoring dashboard's range input: one query window plus its bucket.
+export const zMonitoringRangeQuery = z
+  .object({
+    deviceId: z.string().uuid(),
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+    bucket: zMonitoringBucket,
+  })
+  .refine((range) => new Date(range.from).getTime() < new Date(range.to).getTime(), {
+    message: "from must be before to",
+    path: ["from"],
+  });
 
 export const zDeviceLifecycleEvent = z.object({
   eventType: z.enum(["connected", "disconnected"]),

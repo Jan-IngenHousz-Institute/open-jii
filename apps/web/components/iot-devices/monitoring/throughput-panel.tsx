@@ -36,8 +36,13 @@ interface ThroughputSeries {
   counts: number[];
 }
 
-// Fixed-order series assignment: bound experiments first (by name), then any
-// unbound publishers, with everything past the palette folded into "Other".
+interface SeriesGroup {
+  name: string;
+  keys: string[];
+}
+
+// Fixed-order series assignment: alphabetical by display name, with
+// everything past the palette folded into a single "Other" group.
 function buildSeries(
   buckets: DeviceThroughputBucket[],
   boundExperiments: DeviceExperiment[],
@@ -60,21 +65,23 @@ function buildSeries(
 
   const orderedKeys = [...byExperiment.keys()].sort((a, b) => nameFor(a).localeCompare(nameFor(b)));
 
-  const head = orderedKeys.slice(0, MONITORING_MAX_SERIES - 1);
-  const tail = orderedKeys.slice(MONITORING_MAX_SERIES - 1);
-  const grouped = tail.length > 1 ? [...head, tail] : orderedKeys.map((key) => key);
+  const needsOtherGroup = orderedKeys.length > MONITORING_MAX_SERIES;
+  const groups: SeriesGroup[] = needsOtherGroup
+    ? [
+        ...orderedKeys
+          .slice(0, MONITORING_MAX_SERIES - 1)
+          .map((key) => ({ name: nameFor(key), keys: [key] })),
+        { name: otherLabel, keys: orderedKeys.slice(MONITORING_MAX_SERIES - 1) },
+      ]
+    : orderedKeys.map((key) => ({ name: nameFor(key), keys: [key] }));
 
-  return grouped.map((entry): ThroughputSeries => {
-    const keys = Array.isArray(entry) ? entry : [entry];
-    const counts = axis.map((bucketStart) =>
+  return groups.map(({ name, keys }) => ({
+    key: keys.join("+"),
+    name,
+    counts: axis.map((bucketStart) =>
       keys.reduce((sum, key) => sum + (byExperiment.get(key)?.get(bucketStart) ?? 0), 0),
-    );
-    return {
-      key: keys.join("+"),
-      name: Array.isArray(entry) ? otherLabel : nameFor(entry),
-      counts,
-    };
-  });
+    ),
+  }));
 }
 
 /**
