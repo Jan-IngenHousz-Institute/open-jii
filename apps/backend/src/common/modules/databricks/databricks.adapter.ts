@@ -374,6 +374,238 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
+   * Lifecycle events for a device in a range, ascending, capped at `limit`.
+   * The caller derives sessions and uptime from the ordered pairs.
+   */
+  async getDeviceLifecycleEvents(
+    thingName: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<
+    Result<
+      {
+        eventType: string | null;
+        eventTimestamp: string | null;
+        disconnectReason: string | null;
+        sessionIdentifier: string | null;
+      }[]
+    >
+  > {
+    const queryResult = this.queryBuilder.buildQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_device_lifecycle_events`,
+      columns: ["event_type", "event_timestamp", "disconnect_reason", "session_identifier"],
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "event_timestamp", operator: "between", value: [from, to] }],
+      orderBy: "event_timestamp",
+      orderDirection: "ASC",
+      limit,
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const index = this.columnIndex(result.value.columns);
+    return success(
+      result.value.rows.map((row) => ({
+        eventType: row[index.event_type] ?? null,
+        eventTimestamp: this.toIsoOrNull(row[index.event_timestamp]),
+        disconnectReason: row[index.disconnect_reason] ?? null,
+        sessionIdentifier: row[index.session_identifier] ?? null,
+      })),
+    );
+  }
+
+  /**
+   * Measurement counts per time bucket and experiment for a device in a range.
+   */
+  async getDeviceThroughput(
+    thingName: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<{ bucketStart: string | null; experimentId: string | null; count: number }[]>> {
+    const bucketAlias = `timestamp_${bucket}`;
+    const queryResult = this.queryBuilder.buildQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "experiment_id" }],
+        functions: [{ column: "*", function: "count", alias: "measurement_count" }],
+      },
+      orderBy: bucketAlias,
+      orderDirection: "ASC",
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const index = this.columnIndex(result.value.columns);
+    return success(
+      result.value.rows.map((row) => ({
+        bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
+        experimentId: row[index.experiment_id] ?? null,
+        count: Number(row[index.measurement_count] ?? 0),
+      })),
+    );
+  }
+
+  /**
+   * Average reported battery per time bucket for a device in a range. Buckets
+   * without battery-carrying measurements yield a null average (SQL AVG skips
+   * nulls; a bucket of only-null batteries returns null).
+   */
+  async getDeviceBatterySeries(
+    thingName: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<{ bucketStart: string | null; averageBattery: number | null }[]>> {
+    const bucketAlias = `timestamp_${bucket}`;
+    const queryResult = this.queryBuilder.buildQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "timestamp", timeBucket: bucket }],
+        functions: [{ column: "device_battery", function: "avg", alias: "average_battery" }],
+      },
+      orderBy: bucketAlias,
+      orderDirection: "ASC",
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const index = this.columnIndex(result.value.columns);
+    return success(
+      result.value.rows.map((row) => {
+        const raw = row[index.average_battery];
+        return {
+          bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
+          averageBattery: raw === null || raw === undefined ? null : Number(raw),
+        };
+      }),
+    );
+  }
+
+  /**
+   * Coverage counts per day for a device in a range: total measurements and
+   * how many carried a GPS fix, a battery reading, or a workbook run id (SQL
+   * COUNT(column) skips nulls). Grouped by the precomputed `date` column; the
+   * caller sums the days.
+   */
+  async getDevicePayloadCoverage(
+    thingName: string,
+    from: string,
+    to: string,
+  ): Promise<
+    Result<{ total: number; withGps: number; withBattery: number; withWorkbookRun: number }[]>
+  > {
+    const queryResult = this.queryBuilder.buildQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "date" }],
+        functions: [
+          { column: "*", function: "count", alias: "total_count" },
+          { column: "latitude", function: "count", alias: "gps_count" },
+          { column: "device_battery", function: "count", alias: "battery_count" },
+          { column: "workbook_run_id", function: "count", alias: "workbook_row_count" },
+        ],
+      },
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const index = this.columnIndex(result.value.columns);
+    return success(
+      result.value.rows.map((row) => ({
+        total: Number(row[index.total_count] ?? 0),
+        withGps: Number(row[index.gps_count] ?? 0),
+        withBattery: Number(row[index.battery_count] ?? 0),
+        withWorkbookRun: Number(row[index.workbook_row_count] ?? 0),
+      })),
+    );
+  }
+
+  /**
+   * Measurement counts grouped by one payload column (e.g. device_version,
+   * protocol_id, workbook_run_id) for a device in a range.
+   */
+  async getDevicePayloadMix(
+    thingName: string,
+    from: string,
+    to: string,
+    column: "device_version" | "protocol_id" | "workbook_run_id",
+  ): Promise<Result<{ value: string | null; count: number }[]>> {
+    const queryResult = this.queryBuilder.buildQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column }],
+        functions: [{ column: "*", function: "count", alias: "row_count" }],
+      },
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const index = this.columnIndex(result.value.columns);
+    return success(
+      result.value.rows.map((row) => ({
+        value: row[index[column]] ?? null,
+        count: Number(row[index.row_count] ?? 0),
+      })),
+    );
+  }
+
+  private columnIndex(columns: { name: string }[]): Record<string, number> {
+    const index: Record<string, number> = {};
+    columns.forEach((column, i) => {
+      index[column.name] = i;
+    });
+    return index;
+  }
+
+  private toIsoOrNull(raw: string | null | undefined): string | null {
+    if (!raw) {
+      return null;
+    }
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+
+  /**
    * Get active (in-progress) uploads for an experiment by querying the data upload job runs.
    * Filters job-runs API by EXPERIMENT_ID widget (and optionally UPLOAD_TABLE_ID / UPLOAD_TABLE_NAME).
    */

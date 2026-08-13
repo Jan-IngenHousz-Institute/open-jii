@@ -13500,6 +13500,325 @@
         }
       }
     },
+    "/api/v1/devices/{deviceId}/monitoring": {
+      "get": {
+        "operationId": "iot.getDeviceMonitoring",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "hour",
+                "day"
+              ],
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "enum": [
+                        "hour",
+                        "day"
+                      ],
+                      "type": "string"
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "eventType": {
+                            "enum": [
+                              "connected",
+                              "disconnected"
+                            ],
+                            "type": "string"
+                          },
+                          "eventTimestamp": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "disconnectReason": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sessionIdentifier": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "eventType",
+                          "eventTimestamp",
+                          "disconnectReason",
+                          "sessionIdentifier"
+                        ]
+                      }
+                    },
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "start": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "end": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "openStart": {
+                            "type": "boolean"
+                          },
+                          "durationSeconds": {
+                            "type": "number"
+                          },
+                          "disconnectReason": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "start",
+                          "end",
+                          "openStart",
+                          "durationSeconds",
+                          "disconnectReason"
+                        ]
+                      }
+                    },
+                    "uptimePercent": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    },
+                    "throughput": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "bucketStart": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "experimentId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "bucketStart",
+                          "experimentId",
+                          "count"
+                        ]
+                      }
+                    },
+                    "battery": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "bucketStart": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "averageBattery": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "bucketStart",
+                          "averageBattery"
+                        ]
+                      }
+                    },
+                    "payload": {
+                      "type": "object",
+                      "properties": {
+                        "totalMeasurements": {
+                          "type": "integer"
+                        },
+                        "withGps": {
+                          "type": "integer"
+                        },
+                        "withBattery": {
+                          "type": "integer"
+                        },
+                        "workbookRuns": {
+                          "type": "integer"
+                        },
+                        "firmwareMix": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "version": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "count": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "version",
+                              "count"
+                            ]
+                          }
+                        },
+                        "protocolMix": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "protocolId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "count": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "protocolId",
+                              "count"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "totalMeasurements",
+                        "withGps",
+                        "withBattery",
+                        "workbookRuns",
+                        "firmwareMix",
+                        "protocolMix"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "events",
+                    "sessions",
+                    "uptimePercent",
+                    "truncated",
+                    "throughput",
+                    "battery",
+                    "payload"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices/{deviceId}/credentials": {
       "post": {
         "operationId": "iot.issueIotCredentials",

@@ -219,6 +219,79 @@ export const zIotDeviceActivity = z.object({
   lastDataAt: z.string().datetime().nullable(),
 });
 
+// --- Device monitoring ---
+
+// Shared range input for the monitoring series endpoints.
+export const zMonitoringRangeQuery = z.object({
+  deviceId: z.string().uuid(),
+  from: z.string().datetime(),
+  to: z.string().datetime(),
+});
+
+export const zMonitoringBucket = z.enum(["hour", "day"]);
+
+export const zDeviceLifecycleEvent = z.object({
+  eventType: z.enum(["connected", "disconnected"]),
+  eventTimestamp: z.string().datetime(),
+  disconnectReason: z.string().nullable(),
+  sessionIdentifier: z.string().nullable(),
+});
+
+/**
+ * A connectivity session derived from paired lifecycle events, clamped to the
+ * queried range. `openStart` marks a session already running at range start;
+ * a null `end` marks one still running at range end.
+ */
+export const zDeviceSession = z.object({
+  start: z.string().datetime(),
+  end: z.string().datetime().nullable(),
+  openStart: z.boolean(),
+  durationSeconds: z.number(),
+  disconnectReason: z.string().nullable(),
+});
+
+export const zDeviceThroughputBucket = z.object({
+  bucketStart: z.string().datetime(),
+  experimentId: z.string().uuid().nullable(),
+  count: z.number().int(),
+});
+
+export const zDeviceBatteryPoint = z.object({
+  bucketStart: z.string().datetime(),
+  averageBattery: z.number().nullable(),
+});
+
+/**
+ * Payload-content profile of the measurements a device sent in a range:
+ * coverage of the optional metadata channels, firmware mix, protocol mix, and
+ * workbook-run counts. Protocol attribution only exists on legacy-topic rows.
+ */
+export const zDevicePayloadStats = z.object({
+  totalMeasurements: z.number().int(),
+  withGps: z.number().int(),
+  withBattery: z.number().int(),
+  workbookRuns: z.number().int(),
+  firmwareMix: z.array(z.object({ version: z.string().nullable(), count: z.number().int() })),
+  protocolMix: z.array(z.object({ protocolId: z.string().nullable(), count: z.number().int() })),
+});
+
+/**
+ * Everything the monitoring dashboard needs for one range, in one response:
+ * the warehouse queries run in parallel server-side.
+ */
+export const zDeviceMonitoring = z.object({
+  bucket: zMonitoringBucket,
+  events: z.array(zDeviceLifecycleEvent),
+  sessions: z.array(zDeviceSession),
+  uptimePercent: z.number().nullable(),
+  // True when the range held more events than the query cap; sessions and
+  // uptime then cover only the returned window.
+  truncated: z.boolean(),
+  throughput: z.array(zDeviceThroughputBucket),
+  battery: z.array(zDeviceBatteryPoint),
+  payload: zDevicePayloadStats,
+});
+
 // --- Inferred types ---
 export type OnboardDeviceBody = z.infer<typeof zOnboardDeviceBody>;
 export type DeviceProcedure = z.infer<typeof zDeviceProcedure>;
@@ -233,6 +306,13 @@ export type IotUploadUrl = z.infer<typeof zIotUploadUrl>;
 export type IotDeviceStatus = z.infer<typeof zIotDeviceStatus>;
 export type IotDevice = z.infer<typeof zIotDevice>;
 export type DeviceConnectivity = z.infer<typeof zDeviceConnectivity>;
+export type MonitoringBucket = z.infer<typeof zMonitoringBucket>;
+export type DeviceLifecycleEvent = z.infer<typeof zDeviceLifecycleEvent>;
+export type DeviceSession = z.infer<typeof zDeviceSession>;
+export type DeviceThroughputBucket = z.infer<typeof zDeviceThroughputBucket>;
+export type DeviceBatteryPoint = z.infer<typeof zDeviceBatteryPoint>;
+export type DevicePayloadStats = z.infer<typeof zDevicePayloadStats>;
+export type DeviceMonitoring = z.infer<typeof zDeviceMonitoring>;
 export type IotDeviceWithConnectivity = z.infer<typeof zIotDeviceWithConnectivity>;
 export type IotDeviceActivity = z.infer<typeof zIotDeviceActivity>;
 export type IotDeviceDetail = z.infer<typeof zIotDeviceDetail>;

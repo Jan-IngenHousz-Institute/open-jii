@@ -8,7 +8,12 @@ import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapt
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { DeleteIotDeviceUseCase } from "./application/use-cases/delete-iot-device/delete-iot-device";
+import { GetDeviceBatteryUseCase } from "./application/use-cases/get-device-battery/get-device-battery";
+import { GetDeviceMonitoringUseCase } from "./application/use-cases/get-device-monitoring/get-device-monitoring";
+import { GetDevicePayloadStatsUseCase } from "./application/use-cases/get-device-payload-stats/get-device-payload-stats";
 import { GetDeviceRegistryUseCase } from "./application/use-cases/get-device-registry/get-device-registry";
+import { GetDeviceSessionsUseCase } from "./application/use-cases/get-device-sessions/get-device-sessions";
+import { GetDeviceThroughputUseCase } from "./application/use-cases/get-device-throughput/get-device-throughput";
 import { GetIotCredentialsUseCase } from "./application/use-cases/get-iot-credentials/get-iot-credentials";
 import { GetIotDeviceActivityUseCase } from "./application/use-cases/get-iot-device-activity/get-iot-device-activity";
 import { GetIotDeviceUseCase } from "./application/use-cases/get-iot-device/get-iot-device";
@@ -48,6 +53,11 @@ import { IotController } from "./presentation/iot.controller";
     ListIotDevicesUseCase,
     GetIotDeviceUseCase,
     GetIotDeviceActivityUseCase,
+    GetDeviceMonitoringUseCase,
+    GetDeviceSessionsUseCase,
+    GetDeviceThroughputUseCase,
+    GetDeviceBatteryUseCase,
+    GetDevicePayloadStatsUseCase,
     DeleteIotDeviceUseCase,
     IssueIotCredentialsUseCase,
     RevokeIotCredentialsUseCase,
