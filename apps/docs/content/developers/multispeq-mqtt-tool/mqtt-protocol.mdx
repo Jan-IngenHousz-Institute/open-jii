@@ -10,7 +10,7 @@ The canonical MQTT contract is generated from root `asyncapi.yaml` and rendered 
 ## Experiment ingestion topic
 
 ```text
-experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}/{protocolId}
+experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}
 ```
 
 | Segment                     | Meaning                                                              |
@@ -20,7 +20,8 @@ experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}
 | `sensorType`                | Device family, such as `multispeq`.                                  |
 | `sensorVersion`             | Hardware/firmware family version used for routing and compatibility. |
 | `sensorId`                  | Device identifier.                                                   |
-| `protocolId`                | Measurement protocol identifier.                                     |
+
+A transitional legacy shape with a trailing `{protocolId}` segment remains routed for already-fielded mobile builds; it is removed once those roll over. New publishers use the shape above.
 
 Treat every segment as routing data: do not include `/` inside a value. AWS IoT policies scope which topics a credential may publish, so a structurally valid topic can still be unauthorized.
 

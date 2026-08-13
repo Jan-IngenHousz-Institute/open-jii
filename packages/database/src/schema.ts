@@ -780,3 +780,26 @@ export const iotDevices = pgTable(
     index("iot_devices_organization_id_idx").on(t.organizationId),
   ],
 );
+
+// Experiment <-> Device binding (Associative Table). A device serves several
+// experiments; what it runs is each experiment's pinned workbook version, so
+// nothing about the procedure is stored on the binding.
+export const experimentDevices = pgTable(
+  "experiment_devices",
+  {
+    experimentId: uuid("experiment_id")
+      .references(() => experiments.id, { onDelete: "cascade" })
+      .notNull(),
+    deviceId: uuid("device_id")
+      .references(() => iotDevices.id, { onDelete: "cascade" })
+      .notNull(),
+    addedBy: uuid("added_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    primaryKey({ columns: [t.experimentId, t.deviceId] }),
+    index("experiment_devices_device_idx").on(t.deviceId),
+  ],
+);

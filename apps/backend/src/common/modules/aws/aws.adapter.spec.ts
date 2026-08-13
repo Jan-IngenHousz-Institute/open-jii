@@ -465,4 +465,29 @@ describe("AwsAdapter", () => {
       );
     });
   });
+
+  describe("getIotDataEndpoint", () => {
+    it("delegates to AwsIotService and returns the endpoint", async () => {
+      const endpoint = "abc123-ats.iot.eu-central-1.amazonaws.com";
+      vi.spyOn(awsIotService, "describeDataEndpoint").mockResolvedValue(success(endpoint));
+
+      const result = await awsAdapter.getIotDataEndpoint();
+
+      assertSuccess(result);
+      expect(result.value).toBe(endpoint);
+    });
+
+    it("propagates failure from AwsIotService", async () => {
+      const error = AppError.internal(
+        "describe failed",
+        ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED,
+      );
+      vi.spyOn(awsIotService, "describeDataEndpoint").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.getIotDataEndpoint();
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED);
+    });
+  });
 });

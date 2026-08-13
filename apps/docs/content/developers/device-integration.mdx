@@ -1,0 +1,208 @@
+---
+title: "Device Integration"
+description: "How to connect your own hardware to openJII: certificates, MQTT, the onboarding configuration file, and a reference firmware sketch."
+---
+
+This guide walks through everything a device implementer needs to stream measurements into openJII: obtaining credentials, connecting to the broker, reading the onboarding configuration file, running its procedures, and publishing data. The live MQTT channel and payload reference is at [/api/mqtt](/api/mqtt).
+
+## Prerequisites
+
+1. **Register the device** on the platform under Devices, with its serial number and family. Registration creates the cloud identity (the _thing name_) the device authenticates as.
+2. **Issue a certificate** from the device's Credentials tab. The one-time download bundle contains the device certificate, its private key, and the Amazon Root CA. Store all three on the device; the private key never leaves it.
+3. **Onboard the device** to one or more experiments from its Onboarding tab. Onboarding issues the configuration file described below.
+
+## Connecting
+
+Connect via MQTT over TLS (port 8883):
+
+| Parameter          | Value                                          |
+| ------------------ | ---------------------------------------------- |
+| Host               | the `endpoint` field of the configuration file |
+| Port               | 8883 (MQTT over TLS)                           |
+| Client id          | the `thingName` field, exactly                 |
+| Client certificate | from the credentials bundle                    |
+| Client key         | from the credentials bundle                    |
+| CA                 | Amazon Root CA 1 from the credentials bundle   |
+
+The broker authorizes by certificate: a device may only connect as its own thing name. Certificates can be rotated or revoked from the Credentials tab at any time; a revoked device cannot reconnect until a new certificate is issued.
+
+## The configuration file
+
+The Onboarding tab delivers a single JSON file, either downloaded or pushed over a direct serial or Bluetooth connection. It is the device's full desired state: everything it should serve, nothing it should not. Re-issuing (onboarding with no new experiments selected) always returns the complete current state, so applying the newest file is always safe.
+
+```json
+{
+  "thingName": "seed-ambyte-gw-01",
+  "deviceType": "ambyte",
+  "endpoint": "a2s5...-ats.iot.eu-central-1.amazonaws.com",
+  "docsUrl": "https://docs.openjii.org/developers/device-integration",
+  "experiments": [
+    {
+      "experimentId": "06c68043-...",
+      "experimentName": "Soil Health Monitoring",
+      "topicPrefix": "experiment/data_ingest/v1/06c68043-.../ambyte",
+      "workbookVersion": 1,
+      "procedures": [
+        {
+          "type": "protocol",
+          "protocolId": "dd66de2d-...",
+          "name": "Soil Moisture Probe",
+          "family": "ambyte",
+          "code": [{ "_protocol_set": [{ "label": "SoilMoisture", "interval": 5 }] }]
+        },
+        { "type": "command", "format": "string", "content": "battery" },
+        {
+          "type": "question",
+          "id": "0b1f...",
+          "name": "plot",
+          "kind": "multi_choice",
+          "text": "Which plot?",
+          "options": ["A1", "B1"],
+          "required": true,
+          "answer": "A1"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Field reference:
+
+- `thingName`: the MQTT client id. Also echoed as `id` in the push envelope (below).
+- `deviceType`: the device's sensor family; it is the `sensorType` segment already baked into each `topicPrefix`.
+- `endpoint`: the broker host to connect to.
+- `docsUrl`: this page.
+- `experiments[]`: one entry per experiment the device serves. An experiment the device should stop serving is simply absent from the newest file.
+- `workbookVersion`: provenance of the compiled procedures; `null` when the experiment has no pinned workbook or procedures were excluded at onboarding (the "include workbook procedures" toggle).
+- `procedures[]`: the compiled measurement plan, in execution order. Three kinds exist:
+  - **protocol**: run `code` (the measurement procedure, snapshotted at workbook publish; its shape is family-specific) and publish the result.
+  - **command**: send `content` to the local instrument as-is; `format` says how to parse it (`string`, `json`, or `yaml`).
+  - **question**: static metadata, answered by the operator when the file was issued. Attach `name` (the canonical column key) and `answer` to every measurement you publish for this experiment. Questions are never interactive on a device.
+
+The plan is deliberately flat. Workbook concepts that need interactivity or platform-side execution (markdown instructions, branching, analysis macros) never reach the device.
+
+## Publishing measurements
+
+For each measurement, build the topic from the experiment's `topicPrefix` plus two segments the device chooses:
+
+```
+<topicPrefix>/<sensorVersion>/<sensorId>
+```
+
+- `sensorVersion`: hardware or firmware revision of the sensor, e.g. `v1`.
+- `sensorId`: stable identifier of the individual sensor, e.g. its MAC.
+
+Publish with QoS 1. The payload schema per channel is documented in the [AsyncAPI reference](/api/mqtt); include the question answers from the plan in every payload.
+
+## How the file reaches the device
+
+The platform assumes nothing about your hardware beyond storage: the downloaded file is the canonical transport, and how it lands on the device is up to your provisioning flow (flashed during setup, copied to an SD card, written by a vendor tool). Every family supports this path.
+
+Push-capable families can additionally receive the file over a direct serial or BLE connection as one command frame:
+
+```json
+{ "command": "SET_CONFIG", "payload": { "config": { ...the file... }, "id": "<thingName>" } }
+```
+
+Persist the payload's `config` and treat it as the new full state. A custom build that wants the push must accept this frame; today only generic-family devices do.
+
+The other families are download-only, for two different reasons: MultispeQ, Ambit, and MiniPAR instruments do not store a configuration at all (their procedure travels inline per measurement), while Ambyte edge devices load the file at provisioning time and expose no onboarding commands over a direct connection.
+
+How these capabilities are declared inside the platform, and how to add support for a new device, is covered in [Device support](/developers/extending/device-support).
+
+## Reference implementation (ESP32)
+
+A minimal Arduino/ESP32 sketch using `PubSubClient` and `ArduinoJson`. It reads the configuration from flash, connects with the certificate bundle, runs each protocol procedure, and publishes one measurement per procedure.
+
+```cpp
+#include <ArduinoJson.h>
+#include <LittleFS.h>
+#include <PubSubClient.h>
+#include <WiFiClientSecure.h>
+
+// Stored on flash during provisioning:
+//   /config.json    the onboarding configuration file
+//   /device.crt     device certificate        (credentials bundle)
+//   /device.key     device private key        (credentials bundle)
+//   /root-ca.pem    Amazon Root CA 1          (credentials bundle)
+
+WiFiClientSecure tls;
+PubSubClient mqtt(tls);
+JsonDocument config;
+
+String readFile(const char* path) {
+  File f = LittleFS.open(path, "r");
+  String s = f.readString();
+  f.close();
+  return s;
+}
+
+void connectMqtt() {
+  tls.setCACert(readFile("/root-ca.pem").c_str());
+  tls.setCertificate(readFile("/device.crt").c_str());
+  tls.setPrivateKey(readFile("/device.key").c_str());
+
+  mqtt.setServer(config["endpoint"], 8883);
+  mqtt.setBufferSize(4096);
+  while (!mqtt.connect(config["thingName"])) delay(1000);
+}
+
+// Replace with the real measurement for your sensor family: for an ambyte
+// procedure, `code` is the _protocol_set to execute.
+JsonDocument measure(JsonVariantConst code) {
+  JsonDocument m;
+  m["value"] = analogRead(A0);
+  m["timestamp"] = millis();
+  return m;
+}
+
+void publishExperiment(JsonObjectConst experiment) {
+  const char* prefix = experiment["topicPrefix"];
+
+  for (JsonObjectConst procedure : experiment["procedures"].as<JsonArrayConst>()) {
+    const char* type = procedure["type"];
+
+    if (strcmp(type, "protocol") == 0) {
+      JsonDocument payload;
+      payload["measurement"] = measure(procedure["code"]);
+
+      // Attach every prefilled question answer as metadata.
+      for (JsonObjectConst q : experiment["procedures"].as<JsonArrayConst>()) {
+        if (strcmp(q["type"], "question") == 0 && !q["answer"].isNull()) {
+          payload["answers"][q["name"].as<const char*>()] = q["answer"];
+        }
+      }
+
+      // <topicPrefix>/<sensorVersion>/<sensorId>
+      String topic = String(prefix) + "/v1/" + WiFi.macAddress();
+      String body;
+      serializeJson(payload, body);
+      mqtt.publish(topic.c_str(), body.c_str());
+    }
+    // "command" procedures: forward `content` to your local instrument.
+  }
+}
+
+void setup() {
+  LittleFS.begin();
+  deserializeJson(config, readFile("/config.json"));
+  WiFi.begin();  // credentials from your provisioning flow
+  while (WiFi.status() != WL_CONNECTED) delay(500);
+  connectMqtt();
+}
+
+void loop() {
+  mqtt.loop();
+  for (JsonObjectConst experiment : config["experiments"].as<JsonArrayConst>()) {
+    publishExperiment(experiment);
+  }
+  delay(60000);
+}
+```
+
+## Lifecycle notes
+
+- **Re-issue over patch**: whenever bindings or workbooks change, re-issue the file from the Onboarding tab and replace the device's stored copy wholesale.
+- **Archived experiments** disappear from re-issued files; the device stops serving them by applying the newest file.
+- **Certificate rotation** does not change the configuration file; only the key material on the device changes.

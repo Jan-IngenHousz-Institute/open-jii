@@ -104,7 +104,7 @@ describe("useIotBrowserSupport", () => {
       expect(result.current.any).toBe(true);
     });
 
-    it("keeps bluetooth enabled for ambyte devices", () => {
+    it("disables bluetooth for ambyte edge devices with 'device' reason", () => {
       Object.defineProperty(globalThis, "navigator", {
         value: { bluetooth: {}, serial: {}, userAgent: "test" },
         configurable: true,
@@ -112,7 +112,8 @@ describe("useIotBrowserSupport", () => {
 
       const { result } = renderHook(() => useIotBrowserSupport("ambyte"));
 
-      expect(result.current.bluetooth).toBe(true);
+      expect(result.current.bluetooth).toBe(false);
+      expect(result.current.bluetoothReason).toBe("device");
       expect(result.current.serial).toBe(true);
       expect(result.current.any).toBe(true);
     });

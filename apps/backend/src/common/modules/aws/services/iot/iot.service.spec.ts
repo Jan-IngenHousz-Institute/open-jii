@@ -8,6 +8,7 @@ import {
   DetachThingPrincipalCommand,
   AttachPolicyCommand,
   UpdateCertificateCommand,
+  DescribeEndpointCommand,
 } from "@aws-sdk/client-iot";
 import { mockClient } from "aws-sdk-client-mock";
 
@@ -247,6 +248,65 @@ describe("AwsIotService", () => {
 
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.AWS_IOT_UPDATE_CERT_FAILED);
+    });
+  });
+
+  describe("describeDataEndpoint", () => {
+    const ENDPOINT = "abc123-ats.iot.eu-central-1.amazonaws.com";
+
+    // The cache lives on the instance, so these tests use fresh instances
+    // instead of the module singleton.
+    const freshService = () => new AwsIotService(awsConfig);
+
+    it("resolves the ATS data endpoint", async () => {
+      iotMock.on(DescribeEndpointCommand).resolves({ endpointAddress: ENDPOINT });
+
+      const result = await freshService().describeDataEndpoint();
+
+      assertSuccess(result);
+      expect(result.value).toBe(ENDPOINT);
+      expect(iotMock.commandCalls(DescribeEndpointCommand)[0].args[0].input).toEqual({
+        endpointType: "iot:Data-ATS",
+      });
+    });
+
+    it("caches a resolved endpoint for the instance lifetime", async () => {
+      iotMock.on(DescribeEndpointCommand).resolves({ endpointAddress: ENDPOINT });
+      const cached = freshService();
+
+      const first = await cached.describeDataEndpoint();
+      const second = await cached.describeDataEndpoint();
+
+      assertSuccess(first);
+      assertSuccess(second);
+      expect(second.value).toBe(ENDPOINT);
+      expect(iotMock.commandCalls(DescribeEndpointCommand)).toHaveLength(1);
+    });
+
+    it("does not cache a failure", async () => {
+      iotMock
+        .on(DescribeEndpointCommand)
+        .rejectsOnce(new Error("throttled"))
+        .resolves({ endpointAddress: ENDPOINT });
+      const cached = freshService();
+
+      const first = await cached.describeDataEndpoint();
+      assertFailure(first);
+      expect(first.error.code).toBe(ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED);
+
+      const second = await cached.describeDataEndpoint();
+      assertSuccess(second);
+      expect(second.value).toBe(ENDPOINT);
+      expect(iotMock.commandCalls(DescribeEndpointCommand)).toHaveLength(2);
+    });
+
+    it("fails when AWS returns no endpoint address", async () => {
+      iotMock.on(DescribeEndpointCommand).resolves({});
+
+      const result = await freshService().describeDataEndpoint();
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED);
     });
   });
 });

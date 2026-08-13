@@ -8,16 +8,15 @@ import { sensorFamilyToDeviceType } from "./device-type-mapping";
 
 /**
  * Host-owned expectation: the IoT `DeviceType` the web host routes each API
- * sensor family to. `ambyte` intentionally routes through the generic driver
- * (compatibility path, not a dedicated Ambyte integration); every other family
- * maps to its own driver.
+ * sensor family to. Every family maps to its own device type; `ambyte` has no
+ * dedicated driver and is routed through the generic one at connection time.
  */
 const EXPECTED_DEVICE_TYPE: Record<SensorFamily, DeviceType> = {
   multispeq: "multispeq",
   ambit: "ambit",
   minipar: "minipar",
   generic: "generic",
-  ambyte: "generic",
+  ambyte: "ambyte",
 };
 
 describe("sensorFamilyToDeviceType", () => {

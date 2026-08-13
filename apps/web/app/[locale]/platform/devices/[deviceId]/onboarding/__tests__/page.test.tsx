@@ -1,5 +1,10 @@
-import { render, screen } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { createIotDeviceDetail, readOnlyCapabilities } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
+import { use } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api/contract";
 
 import DeviceOnboardingContent from "../device-onboarding-content";
 import { generateMetadata } from "../page";
@@ -12,6 +17,10 @@ vi.mock("@/lib/platform-metadata", () => ({
 
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 
+function renderPage() {
+  return render(<DeviceOnboardingContent params={Promise.resolve({ deviceId: DEVICE_ID })} />);
+}
+
 describe("generateMetadata", () => {
   it("titles the route by its onboarding section", async () => {
     const metadata = await generateMetadata({
@@ -23,9 +32,36 @@ describe("generateMetadata", () => {
 });
 
 describe("DeviceOnboardingPage", () => {
-  it("names the tab it stands in for, so the placeholder is not ambiguous", () => {
-    render(<DeviceOnboardingContent />);
+  beforeEach(() => {
+    vi.mocked(use).mockReturnValue({ deviceId: DEVICE_ID });
+  });
 
-    expect(screen.getByText("iot.devices.comingSoon.onboarding")).toBeInTheDocument();
+  it("offers onboarding to someone who may manage the device", async () => {
+    server.mount(contract.iot.getIotDevice, {
+      body: createIotDeviceDetail({ id: DEVICE_ID, status: "active" }),
+    });
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
+
+    renderPage();
+
+    expect(await screen.findByText("iot.onboarding.currentEmpty")).toBeInTheDocument();
+  });
+
+  it("sends someone below manage back to the device instead of a blank route", async () => {
+    server.mount(contract.iot.getIotDevice, {
+      body: createIotDeviceDetail({
+        id: DEVICE_ID,
+        status: "active",
+        capabilities: { ...readOnlyCapabilities },
+      }),
+    });
+
+    const { container, router } = renderPage();
+
+    await waitFor(() => {
+      expect(router.replace).toHaveBeenCalledWith(`/en-US/platform/devices/${DEVICE_ID}`);
+    });
+    expect(container).toBeEmptyDOMElement();
   });
 });
