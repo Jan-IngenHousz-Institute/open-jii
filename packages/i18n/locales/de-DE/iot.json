@@ -55,6 +55,7 @@
         "serial": "Seriennummer",
         "type": "Typ",
         "status": "Status",
+        "lastSeen": "Zuletzt gesehen",
         "created": "Registriert"
       },
       "status": {
@@ -90,6 +91,22 @@
         "monitoring": "Verfolgen Sie Gerätekonnektivität, letzte Aktivität und den Zustand der Flotte auf einen Blick.",
         "lineage": "Verfolgen Sie die Identität dieses Geräts bis zu seinen erfassten Messungen.",
         "onboarding": "Onboarden Sie jedes Gerät über seine Detailseite (Tab „Einrichtung“). Bulk-Onboarding aus dieser Ansicht folgt in Kürze."
+      },
+      "connectivity": {
+        "connected": "Verbunden",
+        "connectedNow": "Jetzt verbunden",
+        "disconnected": "Getrennt",
+        "unknown": "Unbekannt",
+        "never": "Nie verbunden"
+      },
+      "monitoring": {
+        "title": "Monitoring",
+        "description": "Live-Broker-Konnektivität und der Zeitpunkt, zu dem zuletzt Daten dieses Geräts die Plattform erreicht haben.",
+        "state": "Konnektivität",
+        "lastSeen": "Zuletzt gesehen",
+        "lastData": "Zuletzt empfangene Daten",
+        "noData": "Noch keine Daten empfangen",
+        "pipelineNote": "Zuletzt empfangene Daten werden von der Daten-Pipeline berechnet und entsprechen dem letzten Pipeline-Lauf; die Konnektivität ist live."
       },
       "pageOf": "Seite {{page}} von {{total}}",
       "actions": {
@@ -135,7 +152,9 @@
           "role": "Rolle",
           "status": "Status",
           "registered": "Registriert",
-          "thingName": "Gerätekennung"
+          "thingName": "Gerätekennung",
+          "connectivity": "Konnektivität",
+          "lastSeen": "Zuletzt gesehen"
         },
         "credentials": {
           "title": "Anmeldedaten"

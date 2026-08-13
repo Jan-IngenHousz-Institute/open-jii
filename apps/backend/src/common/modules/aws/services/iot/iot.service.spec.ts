@@ -9,6 +9,7 @@ import {
   AttachPolicyCommand,
   UpdateCertificateCommand,
   DescribeEndpointCommand,
+  SearchIndexCommand,
 } from "@aws-sdk/client-iot";
 import { mockClient } from "aws-sdk-client-mock";
 
@@ -307,6 +308,83 @@ describe("AwsIotService", () => {
 
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED);
+    });
+  });
+
+  describe("searchThingsConnectivity", () => {
+    it("maps indexed things to connectivity with an ISO last-seen", async () => {
+      iotMock.on(SearchIndexCommand).resolves({
+        things: [
+          { thingName: "AMBYTE_A", connectivity: { connected: true, timestamp: 1755079200000 } },
+          { thingName: "AMBYTE_B", connectivity: { connected: false, timestamp: 0 } },
+        ],
+      });
+
+      const result = await service.searchThingsConnectivity(["AMBYTE_A", "AMBYTE_B"]);
+
+      assertSuccess(result);
+      expect(result.value.get("AMBYTE_A")).toEqual({
+        thingName: "AMBYTE_A",
+        connected: true,
+        lastSeenAt: new Date(1755079200000).toISOString(),
+      });
+      // A zero timestamp means the index never recorded a state change.
+      expect(result.value.get("AMBYTE_B")).toEqual({
+        thingName: "AMBYTE_B",
+        connected: false,
+        lastSeenAt: null,
+      });
+    });
+
+    it("omits things absent from the index response", async () => {
+      iotMock.on(SearchIndexCommand).resolves({ things: [] });
+
+      const result = await service.searchThingsConnectivity(["AMBYTE_MISSING"]);
+
+      assertSuccess(result);
+      expect(result.value.size).toBe(0);
+    });
+
+    it("follows nextToken pagination within a chunk", async () => {
+      iotMock
+        .on(SearchIndexCommand)
+        .resolvesOnce({
+          things: [{ thingName: "AMBYTE_A", connectivity: { connected: true, timestamp: 1 } }],
+          nextToken: "page-2",
+        })
+        .resolvesOnce({
+          things: [{ thingName: "AMBYTE_B", connectivity: { connected: true, timestamp: 2 } }],
+        });
+
+      const result = await service.searchThingsConnectivity(["AMBYTE_A", "AMBYTE_B"]);
+
+      assertSuccess(result);
+      expect(result.value.size).toBe(2);
+      expect(iotMock.commandCalls(SearchIndexCommand)).toHaveLength(2);
+    });
+
+    it("chunks large fleets into multiple queries", async () => {
+      const thingNames = Array.from({ length: 120 }, (_, i) => `AMBYTE_${String(i)}`);
+      iotMock.on(SearchIndexCommand).resolves({ things: [] });
+
+      const result = await service.searchThingsConnectivity(thingNames);
+
+      assertSuccess(result);
+      const calls = iotMock.commandCalls(SearchIndexCommand);
+      expect(calls.length).toBeGreaterThanOrEqual(3);
+      for (const call of calls) {
+        const query = call.args[0].input.queryString ?? "";
+        expect(query.length).toBeLessThanOrEqual(1000);
+      }
+    });
+
+    it("maps an AWS failure to the search-index error code", async () => {
+      iotMock.on(SearchIndexCommand).rejects(new Error("index not ready"));
+
+      const result = await service.searchThingsConnectivity(["AMBYTE_A"]);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_SEARCH_INDEX_FAILED);
     });
   });
 });

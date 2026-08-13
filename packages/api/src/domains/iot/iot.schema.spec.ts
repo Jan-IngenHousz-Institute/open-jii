@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   zIotCredentials,
   zIotDevice,
+  zIotDeviceActivity,
   zIotDeviceDetail,
   zIotDeviceList,
   zRegisterIotDeviceBody,
@@ -185,18 +186,41 @@ describe("Iot Schema", () => {
       canShare: true,
       canLeave: false,
     };
+    const connectivity = { connected: true, lastSeenAt: "2025-01-10T00:00:00.000Z" };
 
     it("accepts a device with its caller capabilities", () => {
-      expect(zIotDeviceDetail.safeParse({ ...validDevice, capabilities }).success).toBe(true);
+      expect(
+        zIotDeviceDetail.safeParse({ ...validDevice, capabilities, connectivity }).success,
+      ).toBe(true);
     });
 
     it("requires the capabilities object — the Collaborators tab is gated on it", () => {
-      expect(zIotDeviceDetail.safeParse(validDevice).success).toBe(false);
+      expect(zIotDeviceDetail.safeParse({ ...validDevice, connectivity }).success).toBe(false);
+    });
+
+    it("requires connectivity, nullable for a degraded fleet index", () => {
+      expect(zIotDeviceDetail.safeParse({ ...validDevice, capabilities }).success).toBe(false);
+      expect(
+        zIotDeviceDetail.safeParse({ ...validDevice, capabilities, connectivity: null }).success,
+      ).toBe(true);
     });
 
     it("keeps the list response free of capabilities, which cost a resolution per row", () => {
       expect(zIotDevice.safeParse({ ...validDevice, capabilities }).success).toBe(true);
-      expect(zIotDeviceList.safeParse([validDevice]).success).toBe(true);
+      expect(zIotDeviceList.safeParse([{ ...validDevice, connectivity }]).success).toBe(true);
+    });
+
+    it("keeps register/revoke shapes free of connectivity — they never consult the fleet index", () => {
+      expect(zIotDevice.safeParse(validDevice).success).toBe(true);
+      expect(zIotDeviceList.safeParse([validDevice]).success).toBe(false);
+    });
+
+    it("accepts a never-connected device in connectivity", () => {
+      expect(
+        zIotDeviceList.safeParse([
+          { ...validDevice, connectivity: { connected: false, lastSeenAt: null } },
+        ]).success,
+      ).toBe(true);
     });
   });
 
@@ -341,6 +365,22 @@ describe("Iot Schema", () => {
         addedAt: "yesterday",
       };
       expect(zDeviceExperiment.safeParse(binding).success).toBe(false);
+    });
+  });
+
+  describe("zIotDeviceActivity", () => {
+    it("accepts a datetime lastDataAt", () => {
+      expect(zIotDeviceActivity.safeParse({ lastDataAt: "2025-01-10T00:00:00.000Z" }).success).toBe(
+        true,
+      );
+    });
+
+    it("accepts null when no data has landed or the warehouse is unavailable", () => {
+      expect(zIotDeviceActivity.safeParse({ lastDataAt: null }).success).toBe(true);
+    });
+
+    it("rejects a missing lastDataAt", () => {
+      expect(zIotDeviceActivity.safeParse({}).success).toBe(false);
     });
   });
 });

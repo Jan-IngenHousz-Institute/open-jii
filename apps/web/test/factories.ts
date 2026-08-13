@@ -37,7 +37,7 @@ import type {
 } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
-import type { IotDevice, IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
+import type { IotDeviceDetail, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import type { Macro, MacroDetail } from "@repo/api/domains/macro/macro.schema";
 import type { Protocol, ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
 import type { ResourceGrantDto, ResourceOwnerDto } from "@repo/api/domains/sharing/sharing.schema";
@@ -833,7 +833,9 @@ export function createUpload(
 
 let iotDeviceSeq = 0;
 
-export function createIotDevice(overrides: Partial<IotDevice> = {}): IotDevice {
+export function createIotDevice(
+  overrides: Partial<IotDeviceWithConnectivity> = {},
+): IotDeviceWithConnectivity {
   iotDeviceSeq++;
   const thingName = `ambyte_${iotDeviceSeq}`;
   return {
@@ -851,6 +853,8 @@ export function createIotDevice(overrides: Partial<IotDevice> = {}): IotDevice {
     visibility: "private",
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
+    // Unknown by default: the fleet index is an enrichment, not a given.
+    connectivity: null,
     ...overrides,
   };
 }

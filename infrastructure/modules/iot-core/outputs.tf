@@ -34,3 +34,7 @@ output "databricks_large_iot_read_policy_arn" {
   value       = var.large_iot_bucket_arn != "" ? aws_iam_policy.databricks_large_iot_read[0].arn : null
 }
 
+output "databricks_device_lifecycle_read_policy_arn" {
+  description = "ARN of the IAM policy granting the Databricks storage-credential role read access to the raw archive's device-lifecycle-events prefix (null when disabled)"
+  value       = var.enable_databricks_lifecycle_read ? aws_iam_policy.databricks_device_lifecycle_read[0].arn : null
+}

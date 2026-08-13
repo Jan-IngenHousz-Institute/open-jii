@@ -9,6 +9,7 @@ import {
   AttachPolicyCommand,
   UpdateCertificateCommand,
   DescribeEndpointCommand,
+  SearchIndexCommand,
 } from "@aws-sdk/client-iot";
 import { Injectable } from "@nestjs/common";
 
@@ -20,7 +21,13 @@ import type {
   CreatedThing,
   CertificateResult,
   CertificateStatus,
+  ThingConnectivity,
 } from "./iot.types";
+
+// The fleet-index query string is capped at 1000 characters, so thing names
+// are batched by accumulated length with a generous count ceiling.
+const SEARCH_INDEX_MAX_QUERY_CHARS = 900;
+const SEARCH_INDEX_MAX_TERMS = 50;
 
 @Injectable()
 export class AwsIotService {
@@ -158,6 +165,78 @@ export class AwsIotService {
     }
 
     return result;
+  }
+
+  // Live broker connectivity from the fleet index (thingConnectivity STATUS
+  // indexing). Things absent from the response (not yet indexed, or the index
+  // still building after first enable) are simply missing from the map.
+  async searchThingsConnectivity(
+    thingNames: string[],
+  ): Promise<Result<Map<string, ThingConnectivity>>> {
+    return tryCatch(
+      async () => {
+        const connectivity = new Map<string, ThingConnectivity>();
+
+        for (const chunk of this.chunkThingNames(thingNames)) {
+          const queryString = chunk.map((name) => `thingName:${name}`).join(" OR ");
+          let nextToken: string | undefined;
+
+          do {
+            const response = await this.iotClient.send(
+              new SearchIndexCommand({ queryString, nextToken }),
+            );
+
+            for (const thing of response.things ?? []) {
+              if (!thing.thingName) {
+                continue;
+              }
+
+              connectivity.set(thing.thingName, {
+                thingName: thing.thingName,
+                connected: thing.connectivity?.connected ?? false,
+                lastSeenAt:
+                  thing.connectivity?.timestamp !== undefined && thing.connectivity.timestamp > 0
+                    ? new Date(thing.connectivity.timestamp).toISOString()
+                    : null,
+              });
+            }
+
+            nextToken = response.nextToken;
+          } while (nextToken !== undefined);
+        }
+
+        return connectivity;
+      },
+      (error) => this.mapError(error, ErrorCodes.AWS_IOT_SEARCH_INDEX_FAILED),
+    );
+  }
+
+  private chunkThingNames(thingNames: string[]): string[][] {
+    const chunks: string[][] = [];
+    let current: string[] = [];
+    let currentLength = 0;
+
+    for (const name of thingNames) {
+      const termLength = name.length + 14; // "thingName:" + " OR "
+      if (
+        current.length > 0 &&
+        (current.length >= SEARCH_INDEX_MAX_TERMS ||
+          currentLength + termLength > SEARCH_INDEX_MAX_QUERY_CHARS)
+      ) {
+        chunks.push(current);
+        current = [];
+        currentLength = 0;
+      }
+
+      current.push(name);
+      currentLength += termLength;
+    }
+
+    if (current.length > 0) {
+      chunks.push(current);
+    }
+
+    return chunks;
   }
 
   async updateCertificateStatus(

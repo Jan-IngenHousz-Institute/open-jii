@@ -340,6 +340,40 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
+   * Last data arrival for a device from the gold device_last_activity table,
+   * keyed on client_id (== Thing name for X.509 devices). Pipeline-computed, so
+   * it lags by pipeline cadence; no row means no data has ever landed.
+   */
+  async getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>> {
+    const queryResult = this.queryBuilder.buildQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.device_last_activity`,
+      whereConditions: [["client_id", thingName]],
+      limit: 1,
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const activityResult = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
+    if (activityResult.isFailure()) {
+      return failure(activityResult.error);
+    }
+
+    const schemaData = activityResult.value;
+    if (schemaData.rows.length === 0) {
+      return success({ lastDataAt: null });
+    }
+
+    const lastDataIndex = schemaData.columns.findIndex((column) => column.name === "last_data_at");
+    const raw = lastDataIndex >= 0 ? schemaData.rows[0][lastDataIndex] : null;
+    const parsed = raw ? new Date(raw) : null;
+
+    return success({
+      lastDataAt: parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : null,
+    });
+  }
+
+  /**
    * Get active (in-progress) uploads for an experiment by querying the data upload job runs.
    * Filters job-runs API by EXPERIMENT_ID widget (and optionally UPLOAD_TABLE_ID / UPLOAD_TABLE_NAME).
    */

@@ -55,6 +55,7 @@
         "serial": "Serienummer",
         "type": "Type",
         "status": "Status",
+        "lastSeen": "Laatst gezien",
         "created": "Geregistreerd"
       },
       "status": {
@@ -90,6 +91,22 @@
         "monitoring": "Volg apparaatconnectiviteit, laatst gezien en de gezondheid van de vloot in één oogopslag.",
         "lineage": "Traceer de identiteit van dit apparaat tot aan zijn opgenomen metingen.",
         "onboarding": "Onboard elk apparaat via zijn detailpagina (tabblad Onboarding). Bulk-onboarding vanuit dit overzicht volgt binnenkort."
+      },
+      "connectivity": {
+        "connected": "Verbonden",
+        "connectedNow": "Nu verbonden",
+        "disconnected": "Niet verbonden",
+        "unknown": "Onbekend",
+        "never": "Nooit verbonden"
+      },
+      "monitoring": {
+        "title": "Monitoring",
+        "description": "Live broker-connectiviteit en het moment waarop de data van dit apparaat het platform voor het laatst bereikte.",
+        "state": "Connectiviteit",
+        "lastSeen": "Laatst gezien",
+        "lastData": "Laatst ontvangen data",
+        "noData": "Nog geen data ontvangen",
+        "pipelineNote": "Laatst ontvangen data wordt berekend door de datapipeline en weerspiegelt de laatste pipeline-run; de connectiviteit is live."
       },
       "pageOf": "Pagina {{page}} van {{total}}",
       "actions": {
@@ -135,7 +152,9 @@
           "role": "Rol",
           "status": "Status",
           "registered": "Geregistreerd",
-          "thingName": "Apparaat-identificatie"
+          "thingName": "Apparaat-identificatie",
+          "connectivity": "Connectiviteit",
+          "lastSeen": "Laatst gezien"
         },
         "credentials": {
           "title": "Inloggegevens"

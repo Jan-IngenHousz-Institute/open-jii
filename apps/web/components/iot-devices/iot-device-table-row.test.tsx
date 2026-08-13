@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
+import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { Table, TableBody } from "@repo/ui/components/table";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { IotDeviceTableRow } from "./iot-device-table-row";
 
-function renderRow(device: IotDevice) {
+function renderRow(device: IotDeviceWithConnectivity) {
   return render(
     <Table>
       <TableBody>
@@ -27,6 +27,23 @@ describe("IotDeviceTableRow", () => {
 
     expect(screen.getByRole("link", { name: "Greenhouse 1" })).toBeInTheDocument();
     expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
+  });
+
+  it("shows connected-now in the last-seen cell for an online device", () => {
+    renderRow(
+      createIotDevice({
+        name: "Greenhouse 1",
+        connectivity: { connected: true, lastSeenAt: "2026-08-13T08:00:00.000Z" },
+      }),
+    );
+
+    expect(screen.getByText("iot.devices.connectivity.connectedNow")).toBeInTheDocument();
+  });
+
+  it("shows the unknown last-seen fallback when the fleet index is unavailable", () => {
+    renderRow(createIotDevice({ name: "Greenhouse 1", connectivity: null }));
+
+    expect(screen.getByText("iot.devices.connectivity.unknown")).toBeInTheDocument();
   });
 
   it("badges a private device, the way the other resource lists do", () => {

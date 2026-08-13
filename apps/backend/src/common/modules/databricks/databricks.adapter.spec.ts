@@ -936,6 +936,88 @@ describe("DatabricksAdapter", () => {
     });
   });
 
+  describe("getDeviceLastActivity", () => {
+    const mockSqlResponse = (dataArray: (string | null)[][], rowCount: number) => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "stmt-activity",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 3,
+              columns: [
+                { name: "client_id", type_name: "string", type_text: "string", position: 0 },
+                {
+                  name: "last_data_at",
+                  type_name: "timestamp",
+                  type_text: "timestamp",
+                  position: 1,
+                },
+                { name: "measurement_count", type_name: "long", type_text: "bigint", position: 2 },
+              ],
+            },
+            total_row_count: rowCount,
+            truncated: false,
+          },
+          result: {
+            data_array: dataArray,
+            chunk_index: 0,
+            row_count: rowCount,
+            row_offset: 0,
+          },
+        });
+    };
+
+    it("returns the last data arrival as an ISO timestamp", async () => {
+      mockSqlResponse([["AMBYTE_A", "2026-08-13T09:00:00.000Z", "42"]], 1);
+
+      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_A");
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ lastDataAt: "2026-08-13T09:00:00.000Z" });
+    });
+
+    it("returns null when the device has no activity row", async () => {
+      mockSqlResponse([], 0);
+
+      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_NEW");
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ lastDataAt: null });
+    });
+
+    it("returns null for a row without a parsable last_data_at", async () => {
+      mockSqlResponse([["AMBYTE_A", null, "0"]], 1);
+
+      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_A");
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ lastDataAt: null });
+    });
+
+    it("propagates a SQL failure", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(500, { message: "warehouse unavailable" });
+
+      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_A");
+
+      expect(result.isFailure()).toBe(true);
+    });
+  });
+
   describe("getExportMetadata", () => {
     it("should return export metadata from Delta Lake", async () => {
       const experimentId = "exp-456";

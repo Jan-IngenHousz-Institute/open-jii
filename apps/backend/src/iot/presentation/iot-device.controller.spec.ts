@@ -8,6 +8,7 @@ import type { IotDevice, IotDeviceDetail, IotDeviceList } from "@repo/api/domain
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
+import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
@@ -23,6 +24,7 @@ describe("IotDeviceController", () => {
   const testApp = TestHarness.App;
   let userId: string;
   let awsAdapter: AwsAdapter;
+  let databricksAdapter: DatabricksAdapter;
   let analyticsAdapter: MockAnalyticsAdapter;
 
   const registerBody = { serialNumber: "AA:BB:CC:DD:EE:FF", name: "Sensor", deviceType: "ambyte" };
@@ -35,10 +37,12 @@ describe("IotDeviceController", () => {
     await testApp.beforeEach();
     userId = await testApp.createTestUser({ name: "Owner" });
     awsAdapter = testApp.module.get(AwsAdapter);
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
     analyticsAdapter = testApp.module.get(AnalyticsAdapter);
     analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
     vi.spyOn(awsAdapter, "createThing").mockResolvedValue(success(RETURNED_THING));
     vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
   });
 
   afterEach(() => {
@@ -248,6 +252,52 @@ describe("IotDeviceController", () => {
       const path = testApp.resolveOrpcPath(contract.iot.deleteIotDevice, { deviceId: device.id });
 
       await testApp.delete(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("getIotDeviceActivity", () => {
+    it("returns the pipeline-computed last data arrival (200)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceLastActivity").mockResolvedValue(
+        success({ lastDataAt: "2026-08-13T09:00:00.000Z" }),
+      );
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDeviceActivity, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<{ lastDataAt: string | null }> = await testApp
+        .get(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual({ lastDataAt: "2026-08-13T09:00:00.000Z" });
+    });
+
+    it("degrades to a null lastDataAt when the warehouse is unavailable (200)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceLastActivity").mockResolvedValue(
+        failure(AppError.internal("warehouse down")),
+      );
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDeviceActivity, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<{ lastDataAt: string | null }> = await testApp
+        .get(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual({ lastDataAt: null });
+    });
+
+    it("returns 403 for another user's private device", async () => {
+      const otherUser = await testApp.createTestUser({});
+      const device = await testApp.createIotDevice({ createdBy: otherUser });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDeviceActivity, {
+        deviceId: device.id,
+      });
+
+      await testApp.get(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
     });
   });
 

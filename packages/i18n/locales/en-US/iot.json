@@ -55,6 +55,7 @@
         "serial": "Serial number",
         "type": "Type",
         "status": "Status",
+        "lastSeen": "Last seen",
         "created": "Registered"
       },
       "status": {
@@ -90,6 +91,22 @@
         "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
         "lineage": "Trace this device's identity through to its ingested measurements.",
         "onboarding": "Onboard each device from its detail page (Onboarding tab). Bulk onboarding from this view is coming soon."
+      },
+      "connectivity": {
+        "connected": "Connected",
+        "connectedNow": "Connected now",
+        "disconnected": "Disconnected",
+        "unknown": "Unknown",
+        "never": "Never connected"
+      },
+      "monitoring": {
+        "title": "Monitoring",
+        "description": "Live broker connectivity and the last time this device's data reached the platform.",
+        "state": "Connectivity",
+        "lastSeen": "Last seen",
+        "lastData": "Last data received",
+        "noData": "No data received yet",
+        "pipelineNote": "Last data received is computed by the data pipeline and reflects the last pipeline run; connectivity is live."
       },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {
@@ -135,7 +152,9 @@
           "role": "Role",
           "status": "Status",
           "registered": "Registered",
-          "thingName": "Device identifier"
+          "thingName": "Device identifier",
+          "connectivity": "Connectivity",
+          "lastSeen": "Last seen"
         },
         "credentials": {
           "title": "Credentials"

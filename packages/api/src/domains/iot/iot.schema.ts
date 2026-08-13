@@ -45,7 +45,24 @@ export const zIotDevice = z.object({
   updatedAt: z.string().datetime(),
 });
 
-export const zIotDeviceList = z.array(zIotDevice);
+/**
+ * Broker connectivity from AWS Fleet Indexing. `lastSeenAt` is the timestamp of
+ * the last connectivity state change (null when the thing was never indexed as
+ * connected). The whole object is null when the index is unavailable or still
+ * building; consumers render that as "unknown", never as an error.
+ */
+export const zDeviceConnectivity = z.object({
+  connected: z.boolean(),
+  lastSeenAt: z.string().datetime().nullable(),
+});
+
+// Only the list and detail routes carry connectivity; register/revoke keep the
+// plain shape so their handlers never depend on the fleet index.
+export const zIotDeviceWithConnectivity = zIotDevice.extend({
+  connectivity: zDeviceConnectivity.nullable(),
+});
+
+export const zIotDeviceList = z.array(zIotDeviceWithConnectivity);
 
 /**
  * A single device plus the caller's effective capabilities on it. Only the detail
@@ -56,7 +73,7 @@ export const zIotDeviceList = z.array(zIotDevice);
  * is what the credentials surface and the danger zone hang on, since on a device
  * "manage" means issuing, rotating and revoking real AWS certificates.
  */
-export const zIotDeviceDetail = zIotDevice.extend({
+export const zIotDeviceDetail = zIotDeviceWithConnectivity.extend({
   capabilities: zResourceCapabilities,
 });
 
@@ -193,6 +210,15 @@ export const zDeviceExperiment = zExperiment
 
 export const zDeviceExperimentList = z.array(zDeviceExperiment);
 
+/**
+ * Last data arrival for a device, computed by the pipeline (gold
+ * device_last_activity). Always lags by pipeline cadence; null when the device
+ * has never landed data or the warehouse is unavailable.
+ */
+export const zIotDeviceActivity = z.object({
+  lastDataAt: z.string().datetime().nullable(),
+});
+
 // --- Inferred types ---
 export type OnboardDeviceBody = z.infer<typeof zOnboardDeviceBody>;
 export type DeviceProcedure = z.infer<typeof zDeviceProcedure>;
@@ -206,6 +232,9 @@ export type IotUploadUrlRequest = z.infer<typeof zIotUploadUrlRequest>;
 export type IotUploadUrl = z.infer<typeof zIotUploadUrl>;
 export type IotDeviceStatus = z.infer<typeof zIotDeviceStatus>;
 export type IotDevice = z.infer<typeof zIotDevice>;
+export type DeviceConnectivity = z.infer<typeof zDeviceConnectivity>;
+export type IotDeviceWithConnectivity = z.infer<typeof zIotDeviceWithConnectivity>;
+export type IotDeviceActivity = z.infer<typeof zIotDeviceActivity>;
 export type IotDeviceDetail = z.infer<typeof zIotDeviceDetail>;
 export type IotDeviceList = z.infer<typeof zIotDeviceList>;
 export type RegisterIotDeviceBody = z.infer<typeof zRegisterIotDeviceBody>;

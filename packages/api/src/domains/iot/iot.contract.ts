@@ -8,6 +8,7 @@ import {
   zDeviceRegistryWebhookResponse,
   zIotCredentials,
   zIotDevice,
+  zIotDeviceActivity,
   zIotDeviceDetail,
   zIotDeviceList,
   zIotDevicePathParam,
@@ -46,6 +47,12 @@ export const iotContract = {
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}", successStatus: 200 })
     .input(zIotDevicePathParam)
     .output(zIotDeviceDetail),
+  // Pipeline-computed last data arrival; served apart from the device detail so
+  // list/detail never wait on the SQL warehouse.
+  getIotDeviceActivity: oc
+    .route({ method: "GET", path: "/api/v1/devices/{deviceId}/activity", successStatus: 200 })
+    .input(zIotDevicePathParam)
+    .output(zIotDeviceActivity),
   deleteIotDevice: oc
     .route({ method: "DELETE", path: "/api/v1/devices/{deviceId}", successStatus: 204 })
     .input(zIotDevicePathParam)
