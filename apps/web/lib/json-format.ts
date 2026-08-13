@@ -31,10 +31,12 @@ export function isJsonFormatStyle(value: unknown): value is JsonFormatStyle {
 export function formatJson(value: unknown, options: FormatJsonOptions = {}): string {
   const {
     style = DEFAULT_JSON_FORMAT_STYLE,
-    indent = DEFAULT_INDENT,
     maxLineWidth = DEFAULT_MAX_LINE_WIDTH,
     dataArrayMaxWidth = DEFAULT_DATA_ARRAY_MAX_WIDTH,
   } = options;
+  // write() feeds level * indent to String.prototype.repeat, which throws on
+  // negative or infinite counts, so clamp to the JSON.stringify range first.
+  const indent = normalizeIndent(options.indent ?? DEFAULT_INDENT);
 
   if (value === undefined) return "";
   if (style === "expanded") return stringify(value, indent) ?? "";
@@ -86,6 +88,11 @@ export function reformatJsonString(source: string, options: FormatJsonOptions = 
 // functions, symbols and undefined itself.
 function stringify(value: unknown, indent?: number): string | undefined {
   return JSON.stringify(value, null, indent);
+}
+
+/** Clamps to the JSON.stringify indent range [0, 10]; NaN and negatives become 0. */
+function normalizeIndent(indent: number): number {
+  return Math.min(10, Math.max(0, Math.trunc(indent))) || 0;
 }
 
 /** Single-line JSON, but spaced after separators so it stays readable. */
