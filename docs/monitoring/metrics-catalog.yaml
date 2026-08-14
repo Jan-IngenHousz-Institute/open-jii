@@ -1,0 +1,744 @@
+# Platform heartbeat metrics catalog.
+# Single source of truth for the digest composer, Grafana panel inventory,
+# runbooks, and the /triage skill. Frozen in the 2026-08-14 metric pass (items 1-63).
+#
+# Field notes:
+# - family: observability (issues) | usage (levels)
+# - source: aws (native CloudWatch) | dbx (Databricks heartbeat job) | pg (metrics-publisher)
+#           | posthog | gh (GitHub Actions) | composer (built-in)
+# - phase: roadmap phase in which the signal starts existing (P1..P5)
+# - active: the composer consumes it today; inactive entries are excluded silently
+#           (active entries with no datapoints trigger the digest self-check instead)
+# - slots: alert | exception | pulse | weekly | dashboard | s3
+# - severity: critical | warning (alert slot only; routing per notification policy)
+# - signal.dimensions values support ${ENV_PLACEHOLDER} resolution from composer env
+# - baseline: same-weekday-4w compares the last 24h window to the same window 7/14/21/28
+#   days back; wow compares full weeks
+
+version: 1
+
+metrics:
+  # Ingest path
+  - num: 1
+    id: connected-devices
+    name: Connected devices vs registered fleet
+    family: usage
+    source: dbx
+    phase: P3
+    active: false
+    slots: [pulse, dashboard]
+    notes: Fleet-indexing / device_last_activity based; sudden-drop alerting revisited post-P3.
+
+  - num: 2 # merged with 3 in the pass
+    id: ingest-forwarding-failures
+    name: IoT rule invocation / forwarding failures
+    family: observability
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, exception, dashboard]
+    severity: critical
+    signal:
+      namespace: AWS/IoT
+      search: SEARCH('{AWS/IoT,RuleName} MetricName="Failure"', 'Sum')
+      stat: Sum
+    baseline: { method: same-weekday-4w, anomaly: any-nonzero }
+    runbook: docs/runbooks/ingest-forwarding-failures.md
+    notes: Messages accepted by the broker but never forwarded to Kinesis/S3. Data loss risk.
+
+  - num: 4
+    id: iot-auth-failures
+    name: IoT auth/connect failures
+    family: observability
+    source: aws
+    phase: P1
+    active: true
+    slots: [exception, dashboard]
+    signal:
+      namespace: AWS/IoT
+      search: SEARCH('{AWS/IoT} MetricName="Connect.AuthError" OR MetricName="Connect.ClientError" OR MetricName="Connect.ServerError"', 'Sum')
+      stat: Sum
+    baseline: { method: same-weekday-4w, anomaly_pct: 200 }
+    runbook: docs/runbooks/iot-auth-failures.md
+    notes: Cert expiry, policy denials, broken device configs surface here first.
+
+  - num: 5
+    id: per-device-message-topn
+    name: Per-device message volume top-N
+    family: usage
+    source: dbx
+    phase: P3
+    active: false
+    slots: [s3, weekly]
+    notes: Detail stays in heartbeat volume JSON; never a CloudWatch metric (cardinality rule).
+
+  - num: 6
+    id: cert-expiry-horizon
+    name: Certificate expiry horizon / stuck rotations
+    family: observability
+    source: pg
+    phase: P3
+    active: false
+    slots: [alert, weekly]
+    severity: warning
+    runbook: docs/runbooks/cert-expiry-horizon.md
+    notes: Certs <30d to expiry; devices stuck pending/rotating.
+
+  - num: 7
+    id: kinesis-incoming
+    name: Kinesis incoming records/bytes
+    family: usage
+    source: aws
+    phase: P1
+    active: true
+    slots: [pulse, dashboard]
+    signal:
+      namespace: AWS/Kinesis
+      metric: IncomingRecords
+      stat: Sum
+      dimensions: { StreamName: "${KINESIS_STREAM_NAME}" }
+    baseline: { method: same-weekday-4w, anomaly_pct: 50 }
+    notes: Top-line ingest pulse; dual-use as ops anomaly signal.
+
+  - num: 8
+    id: ingest-lag
+    name: Kinesis iterator age (pipeline lag)
+    family: observability
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: critical
+    signal:
+      namespace: AWS/Kinesis
+      metric: GetRecords.IteratorAgeMilliseconds
+      stat: Maximum
+      dimensions: { StreamName: "${KINESIS_STREAM_NAME}" }
+    baseline: { method: threshold, max: 600000 }
+    runbook: docs/runbooks/ingest-lag.md
+    notes: The single best pipeline-lag alarm. Consumer down => age climbs while ingest looks healthy.
+
+  - num: 9
+    id: kinesis-write-throttling
+    name: Kinesis write throttling
+    family: observability
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: AWS/Kinesis
+      metric: WriteProvisionedThroughputExceeded
+      stat: Sum
+      dimensions: { StreamName: "${KINESIS_STREAM_NAME}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/kinesis-write-throttling.md
+
+  # Lakehouse
+  - num: 10
+    id: dlt-heartbeat
+    name: DLT pipeline state / heartbeat dead-man
+    family: observability
+    source: dbx
+    phase: P2
+    active: false
+    slots: [alert, dashboard]
+    severity: critical
+    signal:
+      namespace: OpenJII/Data
+      metric: HeartbeatAgeMinutes
+      stat: Maximum
+    baseline: { method: threshold, max: 45, nodata: alert }
+    runbook: docs/runbooks/dlt-heartbeat.md
+    notes: NoData-as-Alerting; absence of the heartbeat file IS the incident.
+
+  - num: 11
+    id: medallion-throughput
+    name: Rows through bronze/silver/gold
+    family: usage
+    source: dbx
+    phase: P2
+    active: false
+    slots: [weekly, dashboard]
+
+  - num: 12
+    id: expectation-drops
+    name: Silver expectation drops
+    family: observability
+    source: dbx
+    phase: P2
+    active: false
+    slots: [exception, dashboard]
+    baseline: { method: same-weekday-4w, anomaly_pct: 100 }
+    notes: Bad-payload rate creeping up = device fleet problem (firmware, clocks, encoding).
+
+  - num: 13
+    id: stale-experiments
+    name: Active experiments with bound devices gone stale
+    family: observability
+    source: dbx
+    phase: P2
+    active: false
+    slots: [alert, exception]
+    severity: warning
+    signal:
+      namespace: OpenJII/Data
+      metric: StaleExperimentsCount
+      stat: Maximum
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/stale-experiments.md
+    notes: User-facing symptom of any upstream ingest failure; count only, roster in S3 detail.
+
+  - num: 14
+    id: dbx-job-failures
+    name: Upload/export/transfer/backup job failures
+    family: observability
+    source: dbx
+    phase: P2
+    active: false
+    slots: [exception]
+
+  - num: 15
+    id: dbu-consumption
+    name: DBU consumption / cluster runaway
+    family: observability
+    source: dbx
+    phase: P2
+    active: false
+    slots: [weekly, dashboard]
+
+  # Serving path
+  - num: 16
+    id: backend-5xx
+    name: Backend 5xx rate
+    family: observability
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: critical
+    signal:
+      namespace: AWS/ApplicationELB
+      metric: HTTPCode_Target_5XX_Count
+      stat: Sum
+      dimensions: { LoadBalancer: "${ALB_ARN_SUFFIX}" }
+    baseline: { method: same-weekday-4w, anomaly_pct: 100 }
+    runbook: docs/runbooks/backend-5xx.md
+    notes: Grafana rule pre-exists; catalog entry aligns severity + digest visibility.
+
+  - num: 17
+    id: backend-latency
+    name: Backend latency p95/p99
+    family: observability
+    source: aws
+    phase: P1
+    active: true
+    slots: [exception, dashboard]
+    signal:
+      namespace: AWS/ApplicationELB
+      metric: TargetResponseTime
+      stat: p95
+      dimensions: { LoadBalancer: "${ALB_ARN_SUFFIX}" }
+    baseline: { method: same-weekday-4w, anomaly_pct: 100 }
+
+  - num: 18
+    id: backend-4xx-split
+    name: 4xx split auth vs client
+    family: observability
+    source: aws
+    phase: P1
+    active: false
+    slots: [dashboard]
+    notes: Dashboard-only; composer never reads it.
+
+  - num: 19
+    id: webhook-failures
+    name: Webhook failures both directions (HMAC)
+    family: observability
+    source: aws
+    phase: P2
+    active: false
+    slots: [alert, exception]
+    severity: warning
+    runbook: docs/runbooks/webhook-failures.md
+    notes: Log metric filter on HMAC guard rejections + Databricks-inbound webhook errors. Silent pipeline-to-backend breakage.
+
+  - num: 20
+    id: dbx-sql-from-backend
+    name: Databricks SQL latency/errors seen from backend
+    family: observability
+    source: aws
+    phase: P4
+    active: false
+    slots: [exception, dashboard]
+    notes: Needs backend-side custom metric (EMF or PutMetricData) around the SQL port.
+
+  - num: 21
+    id: ecs-vitals
+    name: ECS CPU/mem/task health
+    family: observability
+    source: aws
+    phase: P1
+    active: false
+    slots: [dashboard]
+    notes: Existing Grafana rules cover alerting; dashboard-only in the catalog.
+
+  - num: 22
+    id: macro-usage-by-language
+    name: Macro executions per language
+    family: usage
+    source: dbx
+    phase: P3
+    active: false
+    slots: [weekly]
+
+  - num: 23
+    id: sandbox-errors
+    name: Macro sandbox errors/throttles
+    family: observability
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: AWS/Lambda
+      search: SEARCH('{AWS/Lambda,FunctionName} MetricName="Errors" AND (${MACRO_FUNCTION_FILTER})', 'Sum')
+      stat: Sum
+    baseline: { method: same-weekday-4w, anomaly_pct: 200 }
+    runbook: docs/runbooks/sandbox-errors.md
+
+  - num: 24
+    id: cloudfront-errors
+    name: CloudFront errors / cache hit
+    family: observability
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: critical
+    signal:
+      region: us-east-1
+      namespace: AWS/CloudFront
+      metric: 5xxErrorRate
+      stat: Average
+      dimensions: { DistributionId: "${CLOUDFRONT_DISTRIBUTION_ID}", Region: Global }
+    baseline: { method: threshold, max: 5 }
+    runbook: docs/runbooks/cloudfront-errors.md
+    notes: Existing Grafana rule; CloudFront metrics live in us-east-1.
+
+  - num: 25
+    id: opennext-lambda-errors
+    name: OpenNext server Lambda errors/duration
+    family: observability
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: critical
+    signal:
+      namespace: AWS/Lambda
+      metric: Errors
+      stat: Sum
+      dimensions: { FunctionName: "${SERVER_FUNCTION_NAME}" }
+    baseline: { method: same-weekday-4w, anomaly_pct: 200 }
+    runbook: docs/runbooks/opennext-lambda-errors.md
+
+  - num: 26
+    id: web-vitals
+    name: Web vitals p75
+    family: usage
+    source: posthog
+    phase: P3
+    active: false
+    slots: [weekly]
+
+  - num: 27
+    id: aurora-vitals
+    name: Aurora vitals
+    family: observability
+    source: aws
+    phase: P1
+    active: false
+    slots: [dashboard]
+    notes: Existing Grafana rules cover alerting; dashboard-only in the catalog.
+
+  - num: 28
+    id: slow-queries
+    name: Slow query count / p95 query time
+    family: observability
+    source: aws
+    phase: P4
+    active: false
+    slots: [dashboard]
+
+  - num: 29
+    id: aurora-storage-growth
+    name: Aurora storage growth
+    family: observability
+    source: aws
+    phase: P1
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: AWS/RDS
+      metric: VolumeBytesUsed
+      stat: Maximum
+      dimensions: { DBClusterIdentifier: "${DB_CLUSTER_IDENTIFIER}" }
+    baseline: { method: wow, anomaly_pct: 25 }
+
+  # Usage counts
+  - num: 30
+    id: registrations
+    name: New registrations
+    family: usage
+    source: pg
+    phase: P1
+    active: true
+    slots: [pulse, weekly]
+    signal:
+      namespace: OpenJII/UserRegistrations
+      metric: WeeklyNewUsers
+      stat: Sum
+    baseline: { method: wow, anomaly_pct: none }
+    notes: Weekly granularity until metrics-publisher promotion (P3) adds daily counts.
+
+  - num: 31
+    id: active-users
+    name: DAU/WAU
+    family: usage
+    source: posthog
+    phase: P3
+    active: false
+    slots: [pulse, weekly]
+    notes: Internal-users cohort (44) excluded before this reports anything.
+
+  - num: 32
+    id: experiment-lifecycle-counts
+    name: Experiments created/archived/published
+    family: usage
+    source: pg
+    phase: P3
+    active: false
+    slots: [weekly]
+
+  - num: 33
+    id: measurements-per-day
+    name: Measurements/day + top-N experiments
+    family: usage
+    source: dbx
+    phase: P3
+    active: false
+    slots: [pulse, weekly]
+    notes: Read from public `metrics` schema MVs; never recomputed. Top-N stays in S3 detail.
+
+  - num: 34
+    id: devices-seen-24h
+    name: Devices seen 24h vs fleet
+    family: usage
+    source: dbx
+    phase: P3
+    active: false
+    slots: [pulse]
+    notes: Via gold device_last_activity.
+
+  - num: 35
+    id: adoption-counts
+    name: Macro/upload/export adoption counts
+    family: usage
+    source: pg
+    phase: P3
+    active: false
+    slots: [weekly]
+
+  - num: 36
+    id: workbook-activity
+    name: Workbook activity
+    family: usage
+    source: pg
+    phase: P3
+    active: false
+    slots: [weekly]
+
+  - num: 37
+    id: mobile-sessions
+    name: Mobile sessions/submissions
+    family: usage
+    source: posthog
+    phase: P3
+    active: false
+    slots: [weekly]
+    notes: Pending mobile PostHog instrumentation check.
+
+  - num: 38
+    id: dora
+    name: DORA metrics
+    family: usage
+    source: gh
+    phase: P1
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: DORA/Metrics
+      metric: DeploymentFrequency
+      stat: Sum
+    baseline: { method: wow, anomaly_pct: none }
+    notes: Published by .github/actions/publish-dora-metrics.
+
+  - num: 39
+    id: cost-snapshot
+    name: Cost snapshot week-over-week
+    family: usage
+    source: aws
+    phase: P3
+    active: false
+    slots: [weekly]
+    notes: Includes 62 (top-3 delta drivers) when it lands.
+
+  - num: 40
+    id: digest-self-check
+    name: Digest self-check
+    family: observability
+    source: composer
+    phase: P1
+    active: true
+    slots: [exception]
+    notes: Built into the composer; active metrics with no datapoints are reported, never silently skipped.
+
+  # Public metrics pipeline (post-landing)
+  - num: 41
+    id: metrics-mv-freshness
+    name: Public metrics pipeline / MV freshness
+    family: observability
+    source: dbx
+    phase: P3
+    active: false
+    slots: [alert, dashboard]
+    severity: critical
+    runbook: docs/runbooks/metrics-mv-freshness.md
+    notes: Critical once the public page ships; staleness there is publicly visible.
+
+  # Client-side observability (PostHog)
+  - num: 42
+    id: client-error-spike
+    name: JS error spike / new error type
+    family: observability
+    source: posthog
+    phase: P3
+    active: false
+    slots: [alert]
+    severity: warning
+    runbook: docs/runbooks/client-error-spike.md
+    notes: PostHog insight alert -> #platform-alerts; not routed through CloudWatch.
+
+  - num: 43
+    id: pageview-collapse
+    name: Pageview collapse
+    family: observability
+    source: posthog
+    phase: P3
+    active: false
+    slots: [alert]
+    severity: critical
+    runbook: docs/runbooks/pageview-collapse.md
+    notes: Covers the white-screen-deploy blind spot; CloudWatch sees 200s throughout.
+
+  # Product insights (PostHog, need event taxonomy)
+  - num: 44
+    id: internal-users-cohort
+    name: Internal-users exclusion cohort
+    family: usage
+    source: posthog
+    phase: P3
+    active: false
+    slots: []
+    notes: Prerequisite for 30/31/33/45-49; team traffic excluded from every usage metric.
+
+  - num: 45
+    id: feature-adoption-matrix
+    name: Feature adoption matrix
+    family: usage
+    source: posthog
+    phase: P3
+    active: false
+    slots: [weekly]
+
+  - num: 46
+    id: activation-funnel
+    name: Activation funnel
+    family: usage
+    source: posthog
+    phase: P3
+    active: false
+    slots: [weekly]
+    notes: register -> experiment -> device/upload -> first data -> first viz; one-liner in the note.
+
+  - num: 47
+    id: retention-cohorts
+    name: Retention cohorts
+    family: usage
+    source: posthog
+    phase: P3
+    active: false
+    slots: [weekly]
+    notes: PostHog dashboard link only; never rebuilt elsewhere.
+
+  - num: 48
+    id: new-feature-watch
+    name: New-feature watch
+    family: usage
+    source: posthog
+    phase: P3
+    active: false
+    slots: [weekly]
+    notes: Flag exposure -> first use -> repeat, 4 weeks per launch.
+
+  - num: 49
+    id: friction-signals
+    name: Friction (abandoned wizards, rage/dead clicks, error sessions)
+    family: usage
+    source: posthog
+    phase: P3
+    active: false
+    slots: [weekly]
+    notes: Weekly Product section with session-replay links.
+
+  # Rosters, deltas, correlations
+  - num: 50
+    id: experiments-at-risk
+    name: Experiments-at-risk roster
+    family: usage
+    source: dbx
+    phase: P3
+    active: false
+    slots: [weekly, s3]
+    notes: Created >7d, engaged, zero data; each row is an outreach action.
+
+  - num: 51
+    id: silent-devices
+    name: Silent-device roster
+    family: observability
+    source: dbx
+    phase: P3
+    active: false
+    slots: [exception, s3]
+    notes: Quiet >N x own cadence (per-device duty-cycle baseline).
+
+  - num: 52
+    id: device-clock-drift
+    name: Device clock drift
+    family: observability
+    source: dbx
+    phase: P3
+    active: false
+    slots: [weekly, dashboard]
+    notes: Payload-timestamp vs ingest-time offset distribution; top offenders roster.
+
+  - num: 53
+    id: device-battery-trend
+    name: Device battery trend
+    family: observability
+    source: dbx
+    phase: P3
+    active: false
+    slots: [weekly, s3]
+    notes: device_battery already lands in clean_data.
+
+  - num: 54
+    id: macro-protocol-failure-matrix
+    name: Macro x protocol failure matrix
+    family: observability
+    source: dbx
+    phase: P3
+    active: false
+    slots: [weekly]
+
+  - num: 55
+    id: aging-invitations
+    name: Aging invitations / join requests
+    family: usage
+    source: pg
+    phase: P3
+    active: false
+    slots: [weekly, s3]
+    notes: Pending >7d; two-click admin nudge per row.
+
+  - num: 56
+    id: outdated-workbooks
+    name: Outdated-workbook roster
+    family: usage
+    source: pg
+    phase: P3
+    active: false
+    slots: [weekly]
+    notes: Experiments pinned to upgradable workbook versions.
+
+  - num: 57
+    id: embargo-horizon
+    name: Embargo horizon
+    family: usage
+    source: pg
+    phase: P3
+    active: false
+    slots: [weekly, s3]
+    notes: Experiments auto-flipping public in next 30d; the flip is consequential and currently silent.
+
+  - num: 58
+    id: time-to-value
+    name: Time-to-value from DB timestamps
+    family: usage
+    source: pg
+    phase: P3
+    active: false
+    slots: [weekly]
+    notes: created -> first device bound -> first data; non-PostHog half of the activation story.
+
+  - num: 59
+    id: deploy-annotations
+    name: Deploy annotations on dashboards and incidents
+    family: observability
+    source: gh
+    phase: P4
+    active: false
+    slots: [dashboard]
+    notes: Deploy events become Grafana annotations; incident blocks get "started within Nh of deploy X".
+
+  - num: 60
+    id: new-error-codes
+    name: New-error-code watch + top movers
+    family: observability
+    source: aws
+    phase: P4
+    active: false
+    slots: [exception, weekly]
+    notes: AppError enum is closed; new-codes-this-week is exact, not fuzzy log-grepping.
+
+  - num: 61
+    id: latency-top-movers
+    name: Latency top-movers per oRPC procedure
+    family: observability
+    source: aws
+    phase: P4
+    active: false
+    slots: [weekly]
+
+  - num: 62
+    id: cost-movers
+    name: Cost movers (top-3 delta drivers)
+    family: usage
+    source: aws
+    phase: P3
+    active: false
+    slots: [weekly]
+    notes: Folds into 39.
+
+  - num: 63
+    id: mobile-sync-lag
+    name: Mobile sync lag + stuck-queue roster
+    family: observability
+    source: dbx
+    phase: P3
+    active: false
+    slots: [weekly, exception, s3]
+    notes: Capture-timestamp vs upload-time; offline-first fails silently as data marooned on phones.
