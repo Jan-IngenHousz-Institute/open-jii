@@ -7,11 +7,19 @@
  */
 export class VariantSchema {
   static topLevelFieldNames(schema: string): string[] {
+    return VariantSchema.topLevelFields(schema).map((field) => field.name);
+  }
+
+  /** Top-level `name`/`type` pairs; nested types stay raw DDL strings. */
+  static topLevelFields(schema: string): { name: string; type: string }[] {
     const inner = VariantSchema.unwrap(schema);
     if (inner === null) return [];
     return VariantSchema.splitTopLevel(inner)
-      .map((field) => VariantSchema.extractName(field))
-      .filter((name) => name.length > 0);
+      .map((field) => ({
+        name: VariantSchema.extractName(field),
+        type: VariantSchema.extractType(field),
+      }))
+      .filter((field) => field.name.length > 0);
   }
 
   /** Strip the OBJECT<…> / STRUCT<…> envelope. Null when the input
@@ -67,5 +75,15 @@ export class VariantSchema {
     }
     const colon = trimmed.indexOf(":");
     return colon >= 0 ? trimmed.slice(0, colon).trim() : trimmed;
+  }
+
+  /** Pull the DDL type from a `name: TYPE` segment; empty when absent. */
+  private static extractType(segment: string): string {
+    const trimmed = segment.trim();
+    // For backticked names the type colon is the first one after the
+    // closing backtick; bare names can't contain ":".
+    const start = trimmed.startsWith("`") ? trimmed.indexOf("`", 1) + 1 : 0;
+    const colon = trimmed.indexOf(":", start);
+    return colon >= 0 ? trimmed.slice(colon + 1).trim() : "";
   }
 }

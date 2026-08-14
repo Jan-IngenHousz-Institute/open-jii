@@ -11,7 +11,7 @@ export function buildTimeBucketExpression(
   builder: BaseQueryBuilder,
 ): { sql: string; alias: string } {
   return {
-    sql: `date_trunc('${unit.toUpperCase()}', ${builder.escapeIdentifier(column)})`,
+    sql: builder.dateTruncExpression(unit, builder.escapeIdentifier(column)),
     alias: `${column}_${unit}`,
   };
 }

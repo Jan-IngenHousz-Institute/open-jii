@@ -1,4 +1,3 @@
-import { SqlQueryBuilder } from "../query-builder.base";
 import type { BaseQueryBuilder } from "../query-builder.base";
 import type { AggregateExpression, AggregationSpec } from "../query-builder.types";
 import { QueryBuilderInputError } from "../query-builder.types";
@@ -82,8 +81,8 @@ export function wrapWithAggregation(
     limit?: number;
     offset?: number;
   },
+  builder: BaseQueryBuilder,
 ): string {
-  const builder = new SqlQueryBuilder();
   const selectClauses: string[] = [];
   const groupByClauses: string[] = [];
   const windowProjections: string[] = [];

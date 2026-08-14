@@ -48,13 +48,17 @@ export class QueryBuilderService {
           : this.buildSelectQuery(innerParams);
 
       return success(
-        wrapWithAggregation(innerSql, {
-          aggregation: params.aggregation,
-          orderBy: params.orderBy,
-          orderDirection: params.orderDirection,
-          limit: params.limit,
-          offset: params.offset,
-        }),
+        wrapWithAggregation(
+          innerSql,
+          {
+            aggregation: params.aggregation,
+            orderBy: params.orderBy,
+            orderDirection: params.orderDirection,
+            limit: params.limit,
+            offset: params.offset,
+          },
+          this.query(),
+        ),
       );
     } catch (error) {
       if (error instanceof QueryBuilderInputError) {

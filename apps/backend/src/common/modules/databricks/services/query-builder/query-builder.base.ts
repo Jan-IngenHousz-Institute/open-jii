@@ -72,6 +72,34 @@ export abstract class BaseQueryBuilder {
   }
 
   /**
+   * Star-projection column-exclusion clause. Spark spells it `* EXCEPT (...)`;
+   * dialects override (DuckDB: `* EXCLUDE (...)`).
+   */
+  starExceptClause(columns: string[]): string {
+    const list = columns.map((c) => this.escapeIdentifier(c)).join(", ");
+    return `* EXCEPT (${list})`;
+  }
+
+  /**
+   * Deterministic contributor pseudonym over an already-escaped salt literal
+   * and column SQL. Must stay byte-identical to
+   * `ContributorAnonymizerService.pseudonymFor`: `Contributor-` + first 6
+   * upper-hex of sha256 over `<experimentId>:<id>`. Dialects must preserve
+   * Spark `concat`'s NULL propagation: a NULL id yields NULL, not a pseudonym.
+   */
+  pseudonymExpression(saltSql: string, colSql: string): string {
+    return `concat('Contributor-', upper(substr(sha2(concat(${saltSql}, ${colSql}), 256), 1, 6)))`;
+  }
+
+  /**
+   * Time-bucket expression over already-escaped column SQL. Spark coerces
+   * string timestamps implicitly; dialects that don't must cast.
+   */
+  dateTruncExpression(unit: TimeBucketUnit, colSql: string): string {
+    return `date_trunc('${unit.toUpperCase()}', ${colSql})`;
+  }
+
+  /**
    * Apply a single user filter to the WHERE clause. Default routes the
    * compiled SQL into `where(...)`; subclasses with multi-level WHEREs
    * (variant flattening) override to route flattened-field filters into
@@ -130,14 +158,14 @@ export abstract class BaseQueryBuilder {
 }
 
 export class SqlQueryBuilder extends BaseQueryBuilder {
-  private selectClause = "*";
-  private fromClause = "";
-  private whereConditions: string[] = [];
-  private groupByColumns: string[] = [];
-  private orderByClause?: string;
-  private limitValue?: number;
-  private offsetValue?: number;
-  private exceptColumns: string[] = [];
+  protected selectClause = "*";
+  protected fromClause = "";
+  protected whereConditions: string[] = [];
+  protected groupByColumns: string[] = [];
+  protected orderByClause?: string;
+  protected limitValue?: number;
+  protected offsetValue?: number;
+  protected exceptColumns: string[] = [];
 
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
@@ -216,8 +244,7 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
     // un-listed columns are already excluded by virtue of not being
     // projected. Drop EXCEPT silently in that case.
     if (this.exceptColumns.length > 0 && this.selectClause === "*") {
-      const exceptList = this.exceptColumns.map((c) => this.escapeIdentifier(c)).join(", ");
-      selectPart = `* EXCEPT (${exceptList})`;
+      selectPart = this.starExceptClause(this.exceptColumns);
     }
 
     const selectKeyword = this.isDistinct ? "SELECT DISTINCT" : "SELECT";
@@ -247,10 +274,10 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
 }
 
 export class VariantQueryBuilder extends BaseQueryBuilder {
-  private selectClause = "*";
-  private fromClause = "";
-  private variantColumns: { column: string; schema: string; alias: string }[] = [];
-  private whereConditions: string[] = [];
+  protected selectClause = "*";
+  protected fromClause = "";
+  protected variantColumns: { column: string; schema: string; alias: string }[] = [];
+  protected whereConditions: string[] = [];
   /**
    * WHERE conditions that must run *after* VARIANT flattening, i.e. they
    * reference fields that only exist as columns once `parsed_*.*` has
@@ -258,11 +285,11 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
    * the inner subquery level) so flattened-field filters resolve and
    * base-column filters stay efficient.
    */
-  private whereFlattenedConditions: string[] = [];
-  private orderByClause?: string;
-  private limitValue?: number;
-  private offsetValue?: number;
-  private exceptColumns: string[] = [];
+  protected whereFlattenedConditions: string[] = [];
+  protected orderByClause?: string;
+  protected limitValue?: number;
+  protected offsetValue?: number;
+  protected exceptColumns: string[] = [];
 
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {

@@ -84,7 +84,7 @@ describe("wrapWithAggregation", () => {
         groupBy: [{ column: "device" }],
         functions: [{ column: "value", function: "avg" }],
       },
-    });
+    }, new SqlQueryBuilder());
     expect(sql).toBe(
       "SELECT `device` AS `device`, AVG(`value`) AS `value_avg` FROM (SELECT * FROM t) GROUP BY `device`",
     );
@@ -123,7 +123,7 @@ describe("wrapWithAggregation", () => {
         groupBy: [{ column: "ts", timeBucket: "hour" }],
         functions: [{ column: "value", function: "sum" }],
       },
-    });
+    }, new SqlQueryBuilder());
     expect(sql).toContain("date_trunc('HOUR', `ts`) AS `ts_hour`");
     expect(sql).toContain("GROUP BY date_trunc('HOUR', `ts`)");
   });
@@ -134,7 +134,7 @@ describe("wrapWithAggregation", () => {
         functions: [{ column: "value", function: "cumsum" }],
       },
       orderBy: "ts",
-    });
+    }, new SqlQueryBuilder());
     // No groupBy, no row aggregates: keep every base column so non-
     // aggregated series can still find their values, append the cumsum.
     expect(sql).toContain("SELECT *, SUM(`value`) OVER (ORDER BY `ts`)");
@@ -149,7 +149,7 @@ describe("wrapWithAggregation", () => {
         groupBy: [{ column: "device" }],
         functions: [{ column: "value", function: "cumsum" }],
       },
-    });
+    }, new SqlQueryBuilder());
     expect(sql).toContain("SUM(SUM(`value`)) OVER (ORDER BY `device`)");
   });
 
@@ -159,7 +159,7 @@ describe("wrapWithAggregation", () => {
         aggregation: {
           functions: [{ column: "value", function: "cumsum" }],
         },
-      }),
+      }, new SqlQueryBuilder()),
     ).toThrow(QueryBuilderInputError);
   });
 
@@ -173,14 +173,14 @@ describe("wrapWithAggregation", () => {
       orderDirection: "DESC",
       limit: 5,
       offset: 10,
-    });
+    }, new SqlQueryBuilder());
     expect(sql).toContain("ORDER BY `value_avg` DESC");
     expect(sql).toContain("LIMIT 5");
     expect(sql).toContain("OFFSET 10");
   });
 
   it("throws when called with empty aggregation content", () => {
-    expect(() => wrapWithAggregation("SELECT * FROM t", { aggregation: {} })).toThrow(
+    expect(() => wrapWithAggregation("SELECT * FROM t", { aggregation: {} }, new SqlQueryBuilder())).toThrow(
       /without aggregation content/,
     );
   });
