@@ -30,7 +30,7 @@ export interface DevicePresentationInput {
 }
 
 /** Where the `primary` value came from. */
-export type DevicePresentationProvenance = "name" | "product" | "fallback";
+export type DevicePresentationProvenance = "name" | "id" | "product" | "fallback";
 
 export interface DevicePresentation {
   /** Named value, canonical product name, or the `unknown-device` token. */
@@ -75,8 +75,10 @@ function normalizeRoles(values: readonly DisplayRole[]): DisplayRole[] {
  * Resolve the deterministic identity hierarchy:
  *
  * 1. a usable assigned/reported name wins;
- * 2. otherwise a known product profile's canonical name;
- * 3. otherwise the `unknown-device` fallback token.
+ * 2. otherwise the stable identifier: a serial distinguishes forty unnamed
+ *    devices where a shared product name cannot;
+ * 3. otherwise a known product profile's canonical name;
+ * 4. otherwise the `unknown-device` fallback token.
  *
  * The generic family and unknown/foreign values both fall through to the
  * fallback token, because neither carries a product name.
@@ -96,6 +98,17 @@ export function presentDevice(input: DevicePresentationInput): DevicePresentatio
     return {
       primary: name,
       provenance: "name",
+      productId: profile?.productId ?? null,
+      productName: profile?.productName ?? null,
+      roles,
+      id,
+    };
+  }
+
+  if (id !== null) {
+    return {
+      primary: id,
+      provenance: "id",
       productId: profile?.productId ?? null,
       productName: profile?.productName ?? null,
       roles,

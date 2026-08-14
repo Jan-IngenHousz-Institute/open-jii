@@ -322,18 +322,18 @@ const DEVICE_SECTION_KEY: Record<Exclude<DeviceSection, "overview">, string> = {
 };
 
 /**
- * A device's own recognizable label: the assigned name, then the canonical product
- * name (both via the shared {@link presentDevice} transform), then the serial
- * number as a stable identifier. `null` when nothing identifying resolves.
+ * A device's own recognizable label: the assigned name, then the serial number
+ * as the stable identifier, then the canonical product name (all via the shared
+ * {@link presentDevice} transform). `null` when nothing identifying resolves.
  */
 function deviceIdentity(device: DeviceSummary): string | null {
   const present = presentDevice({
     name: device.name,
     family: device.deviceType,
-    id: device.id,
+    id: device.serialNumber,
   });
 
-  return present.provenance === "fallback" ? nonEmpty(device.serialNumber) : present.primary;
+  return present.provenance === "fallback" ? null : present.primary;
 }
 
 /**

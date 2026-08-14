@@ -179,7 +179,7 @@ function DeviceResultIdentity({ result }: { result: OutputDeviceResult }) {
   });
   const primaryLabel = resolveDevicePrimaryLabel(presentation, t);
   const secondaryLabel = [
-    presentation.provenance === "name" ? presentation.productName : null,
+    presentation.provenance !== "product" ? presentation.productName : null,
     presentation.id,
   ]
     .filter((value): value is string => value != null && value !== primaryLabel)

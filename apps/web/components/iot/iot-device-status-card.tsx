@@ -79,7 +79,7 @@ export function DeviceStatusCard({
             {isConnected ? (
               <div className="text-muted-foreground mt-1 space-y-0.5 text-xs">
                 <div className="truncate">{resolveDevicePrimaryLabel(present, t)}</div>
-                {present.provenance === "name" && present.productName && (
+                {present.provenance !== "product" && present.productName && (
                   <div className="truncate">{present.productName}</div>
                 )}
                 {deviceInfo?.device_version && (

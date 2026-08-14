@@ -9,6 +9,7 @@ import {
   AttachPolicyCommand,
   UpdateCertificateCommand,
   DescribeEndpointCommand,
+  InvalidRequestException,
 } from "@aws-sdk/client-iot";
 import { mockClient } from "aws-sdk-client-mock";
 
@@ -97,6 +98,33 @@ describe("AwsIotService", () => {
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.AWS_IOT_CREATE_THING_FAILED);
       expect(result.error.message).toContain("throttled");
+    });
+
+    it("maps an AWS ValidationException to a 400, not an outage", async () => {
+      const validationError = new Error("attribute value failed regex");
+      validationError.name = "ValidationException";
+      iotMock.on(CreateThingCommand).rejects(validationError);
+
+      const result = await service.createThing(input);
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(400);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_CREATE_THING_FAILED);
+    });
+
+    it("maps the modeled InvalidRequestException to a 400 as well", async () => {
+      iotMock.on(CreateThingCommand).rejects(
+        new InvalidRequestException({
+          message: "Invalid thing name",
+          $metadata: {},
+        }),
+      );
+
+      const result = await service.createThing(input);
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(400);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_CREATE_THING_FAILED);
     });
   });
 
