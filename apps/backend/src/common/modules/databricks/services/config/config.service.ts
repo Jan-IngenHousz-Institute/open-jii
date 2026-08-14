@@ -36,6 +36,7 @@ export class DatabricksConfigService {
       warehouseId: this.configService.getOrThrow<string>("databricks.warehouseId"),
       catalogName: this.configService.getOrThrow<string>("databricks.catalogName"),
       centrumSchemaName: this.configService.getOrThrow<string>("databricks.centrumSchemaName"),
+      metricsSchemaName: this.configService.getOrThrow<string>("databricks.metricsSchemaName"),
       rawDataTableName: this.configService.getOrThrow<string>("databricks.rawDataTableName"),
       deviceDataTableName: this.configService.getOrThrow<string>("databricks.deviceDataTableName"),
       macroDataTableName: this.configService.getOrThrow<string>("databricks.macroDataTableName"),
@@ -127,6 +128,13 @@ export class DatabricksConfigService {
    */
   getCentrumSchemaName(): string {
     return this.config.centrumSchemaName;
+  }
+
+  /**
+   * Returns the metrics schema name
+   */
+  getMetricsSchemaName(): string {
+    return this.config.metricsSchemaName;
   }
 
   /**

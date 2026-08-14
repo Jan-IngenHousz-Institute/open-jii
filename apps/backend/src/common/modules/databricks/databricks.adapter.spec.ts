@@ -2578,4 +2578,158 @@ describe("DatabricksAdapter", () => {
       expect(result.isFailure()).toBe(true);
     });
   });
+
+  describe("public metrics", () => {
+    const mockToken = () =>
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+    const mockSqlResponse = (columns: string[], rows: (string | null)[][]) =>
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: columns.length,
+              columns: columns.map((name, position) => ({
+                name,
+                type_name: "STRING",
+                type_text: "STRING",
+                position,
+              })),
+            },
+            total_row_count: rows.length,
+            truncated: false,
+          },
+          result: {
+            data_array: rows,
+            chunk_index: 0,
+            row_count: rows.length,
+            row_offset: 0,
+          },
+        });
+
+    it("maps the platform totals row", async () => {
+      mockToken();
+      mockSqlResponse(
+        [
+          "total_measurements",
+          "devices_all_time",
+          "experiments_with_data",
+          "first_measurement_at",
+          "last_measurement_at",
+          "total_macro_executions",
+          "total_uploaded_rows",
+          "computed_at",
+        ],
+        [
+          [
+            "1000",
+            "9",
+            "5",
+            "2024-01-01 00:00:00",
+            "2026-08-14 10:00:00",
+            "200",
+            "50",
+            "2026-08-14 10:05:00",
+          ],
+        ],
+      );
+
+      const result = await databricksAdapter.getPublicPlatformTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        totalMeasurements: 1000,
+        devicesAllTime: 9,
+        experimentsWithData: 5,
+        firstMeasurementAt: "2024-01-01 00:00:00",
+        lastMeasurementAt: "2026-08-14 10:00:00",
+        totalMacroExecutions: 200,
+        totalUploadedRows: 50,
+        computedAt: "2026-08-14 10:05:00",
+      });
+    });
+
+    it("returns null totals when the metrics table is empty", async () => {
+      mockToken();
+      mockSqlResponse(["total_measurements"], []);
+
+      const result = await databricksAdapter.getPublicPlatformTotals();
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+
+    it("returns daily activity in ascending date order", async () => {
+      mockToken();
+      mockSqlResponse(
+        [
+          "date",
+          "measurements",
+          "live_measurements",
+          "imported_measurements",
+          "active_devices",
+          "active_experiments",
+          "macro_executions",
+          "uploaded_rows",
+          "cumulative_measurements",
+          "computed_at",
+        ],
+        [
+          ["2026-08-14", "10", "8", "2", "3", "2", "4", "0", "1000", "2026-08-14 10:05:00"],
+          ["2026-08-13", "20", "20", "0", "4", "3", "6", "5", "990", "2026-08-14 10:05:00"],
+        ],
+      );
+
+      const result = await databricksAdapter.getPublicDailyActivity(366);
+
+      assertSuccess(result);
+      expect(result.value.map((row) => row.date)).toEqual(["2026-08-13", "2026-08-14"]);
+      expect(result.value[1]).toEqual({
+        date: "2026-08-14",
+        measurements: 10,
+        liveMeasurements: 8,
+        importedMeasurements: 2,
+        activeDevices: 3,
+        activeExperiments: 2,
+        macroExecutions: 4,
+        uploadedRows: 0,
+        cumulativeMeasurements: 1000,
+      });
+    });
+
+    it("maps family totals", async () => {
+      mockToken();
+      mockSqlResponse(
+        [
+          "family",
+          "total_measurements",
+          "devices_all_time",
+          "devices_active_7d",
+          "last_measurement_at",
+          "computed_at",
+        ],
+        [["multispeq", "900", "7", "3", "2026-08-14 10:00:00", "2026-08-14 10:05:00"]],
+      );
+
+      const result = await databricksAdapter.getPublicFamilyTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          family: "multispeq",
+          totalMeasurements: 900,
+          devicesAllTime: 7,
+          devicesActive7d: 3,
+          lastMeasurementAt: "2026-08-14 10:00:00",
+        },
+      ]);
+    });
+  });
 });

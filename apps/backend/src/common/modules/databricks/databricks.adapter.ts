@@ -3,6 +3,11 @@ import { Readable } from "stream";
 
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { zExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  PublicDailyActivity,
+  PublicFamilyTotals,
+  PublicPlatformTotals,
+} from "@repo/api/domains/metrics/metrics.schema";
 
 import type {
   ExportFormat,
@@ -25,6 +30,7 @@ import type {
   GroupLifecycleEventRow,
   GroupThroughputRow,
 } from "../../../iot/core/ports/databricks.port";
+import type { MetricsDatabricksPort } from "../../../metrics/core/ports/databricks.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -42,11 +48,12 @@ import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData } from "./services/sql/sql.types";
 
 @Injectable()
-export class DatabricksAdapter implements ExperimentDatabricksPort {
+export class DatabricksAdapter implements ExperimentDatabricksPort, MetricsDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
   readonly CATALOG_NAME: string;
   readonly CENTRUM_SCHEMA_NAME: string;
+  readonly METRICS_SCHEMA_NAME: string;
 
   readonly RAW_DATA_TABLE_NAME: string;
   readonly DEVICE_DATA_TABLE_NAME: string;
@@ -62,6 +69,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   ) {
     this.CATALOG_NAME = this.configService.getCatalogName();
     this.CENTRUM_SCHEMA_NAME = this.configService.getCentrumSchemaName();
+    this.METRICS_SCHEMA_NAME = this.configService.getMetricsSchemaName();
     this.RAW_DATA_TABLE_NAME = this.configService.getRawDataTableName();
     this.DEVICE_DATA_TABLE_NAME = this.configService.getDeviceDataTableName();
     this.MACRO_DATA_TABLE_NAME = this.configService.getMacroDataTableName();
@@ -1175,6 +1183,101 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       limit,
       offset,
     });
+  }
+
+  private metricsTable(tableName: string): string {
+    return `${this.CATALOG_NAME}.${this.METRICS_SCHEMA_NAME}.${tableName}`;
+  }
+
+  async getPublicPlatformTotals(): Promise<Result<PublicPlatformTotals | null>> {
+    const queryResult = this.queryBuilder.buildQuery({
+      table: this.metricsTable("platform_totals"),
+      limit: 1,
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const result = await this.executeSqlQuery(this.METRICS_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    if (result.value.rows.length === 0) {
+      return success(null);
+    }
+
+    const row = result.value.rows[0];
+    const index = this.columnIndex(result.value.columns);
+    return success({
+      totalMeasurements: Number(row[index.total_measurements] ?? 0),
+      totalUploadedRows: Number(row[index.total_uploaded_rows] ?? 0),
+      totalMacroExecutions: Number(row[index.total_macro_executions] ?? 0),
+      devicesAllTime: Number(row[index.devices_all_time] ?? 0),
+      experimentsWithData: Number(row[index.experiments_with_data] ?? 0),
+      firstMeasurementAt: row[index.first_measurement_at] ?? null,
+      lastMeasurementAt: row[index.last_measurement_at] ?? null,
+      computedAt: row[index.computed_at] ?? null,
+    });
+  }
+
+  async getPublicDailyActivity(days: number): Promise<Result<PublicDailyActivity[]>> {
+    const queryResult = this.queryBuilder.buildQuery({
+      table: this.metricsTable("daily_activity"),
+      orderBy: "date",
+      orderDirection: "DESC",
+      limit: days,
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const result = await this.executeSqlQuery(this.METRICS_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const index = this.columnIndex(result.value.columns);
+    const rows = result.value.rows.map((row) => ({
+      date: String(row[index.date]),
+      measurements: Number(row[index.measurements] ?? 0),
+      liveMeasurements: Number(row[index.live_measurements] ?? 0),
+      importedMeasurements: Number(row[index.imported_measurements] ?? 0),
+      activeDevices: Number(row[index.active_devices] ?? 0),
+      activeExperiments: Number(row[index.active_experiments] ?? 0),
+      macroExecutions: Number(row[index.macro_executions] ?? 0),
+      uploadedRows: Number(row[index.uploaded_rows] ?? 0),
+      cumulativeMeasurements: Number(row[index.cumulative_measurements] ?? 0),
+    }));
+
+    return success(rows.reverse());
+  }
+
+  async getPublicFamilyTotals(): Promise<Result<PublicFamilyTotals[]>> {
+    const queryResult = this.queryBuilder.buildQuery({
+      table: this.metricsTable("family_totals"),
+      orderBy: "total_measurements",
+      orderDirection: "DESC",
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const result = await this.executeSqlQuery(this.METRICS_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const index = this.columnIndex(result.value.columns);
+    return success(
+      result.value.rows.map((row) => ({
+        family: String(row[index.family]),
+        totalMeasurements: Number(row[index.total_measurements] ?? 0),
+        devicesAllTime: Number(row[index.devices_all_time] ?? 0),
+        devicesActive7d: Number(row[index.devices_active_7d] ?? 0),
+        lastMeasurementAt: row[index.last_measurement_at] ?? null,
+      })),
+    );
   }
 
   async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {

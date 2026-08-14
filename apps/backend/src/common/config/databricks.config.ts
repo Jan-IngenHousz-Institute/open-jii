@@ -16,6 +16,7 @@ export default registerAs("databricks", () => ({
   },
   webhookSecret: process.env.DATABRICKS_WEBHOOK_SECRET,
   centrumSchemaName: process.env.DATABRICKS_CENTRUM_SCHEMA_NAME,
+  metricsSchemaName: process.env.DATABRICKS_METRICS_SCHEMA_NAME ?? "metrics",
   rawDataTableName: process.env.DATABRICKS_RAW_DATA_TABLE_NAME,
   deviceDataTableName: process.env.DATABRICKS_DEVICE_DATA_TABLE_NAME,
   macroDataTableName: process.env.DATABRICKS_MACRO_DATA_TABLE_NAME,

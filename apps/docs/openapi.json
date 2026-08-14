@@ -18158,6 +18158,208 @@
         }
       }
     },
+    "/api/v1/metrics/public": {
+      "get": {
+        "operationId": "metrics.getPublicMetrics",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totals": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "totalMeasurements": {
+                              "type": "number"
+                            },
+                            "totalUploadedRows": {
+                              "type": "number"
+                            },
+                            "totalMacroExecutions": {
+                              "type": "number"
+                            },
+                            "devicesAllTime": {
+                              "type": "number"
+                            },
+                            "experimentsWithData": {
+                              "type": "number"
+                            },
+                            "firstMeasurementAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "lastMeasurementAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "computedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "totalMeasurements",
+                            "totalUploadedRows",
+                            "totalMacroExecutions",
+                            "devicesAllTime",
+                            "experimentsWithData",
+                            "firstMeasurementAt",
+                            "lastMeasurementAt",
+                            "computedAt"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "registry": {
+                      "type": "object",
+                      "properties": {
+                        "registeredUsers": {
+                          "type": "number"
+                        },
+                        "organizations": {
+                          "type": "number"
+                        },
+                        "experiments": {
+                          "type": "number"
+                        },
+                        "protocols": {
+                          "type": "number"
+                        },
+                        "macros": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "registeredUsers",
+                        "organizations",
+                        "experiments",
+                        "protocols",
+                        "macros"
+                      ]
+                    },
+                    "dailyActivity": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string"
+                          },
+                          "measurements": {
+                            "type": "number"
+                          },
+                          "liveMeasurements": {
+                            "type": "number"
+                          },
+                          "importedMeasurements": {
+                            "type": "number"
+                          },
+                          "activeDevices": {
+                            "type": "number"
+                          },
+                          "activeExperiments": {
+                            "type": "number"
+                          },
+                          "macroExecutions": {
+                            "type": "number"
+                          },
+                          "uploadedRows": {
+                            "type": "number"
+                          },
+                          "cumulativeMeasurements": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "measurements",
+                          "liveMeasurements",
+                          "importedMeasurements",
+                          "activeDevices",
+                          "activeExperiments",
+                          "macroExecutions",
+                          "uploadedRows",
+                          "cumulativeMeasurements"
+                        ]
+                      }
+                    },
+                    "familyTotals": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "family": {
+                            "type": "string"
+                          },
+                          "totalMeasurements": {
+                            "type": "number"
+                          },
+                          "devicesAllTime": {
+                            "type": "number"
+                          },
+                          "devicesActive7d": {
+                            "type": "number"
+                          },
+                          "lastMeasurementAt": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "family",
+                          "totalMeasurements",
+                          "devicesAllTime",
+                          "devicesActive7d",
+                          "lastMeasurementAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "totals",
+                    "registry",
+                    "dailyActivity",
+                    "familyTotals"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/newsletter/subscribe": {
       "post": {
         "operationId": "newsletter.subscribe",

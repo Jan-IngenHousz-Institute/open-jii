@@ -18,6 +18,7 @@ import { healthContract } from "./domains/health/health.contract";
 import { iotDeviceGroupContract } from "./domains/iot/device-group/iot-device-group.contract";
 import { iotContract } from "./domains/iot/iot.contract";
 import { macroContract } from "./domains/macro/macro.contract";
+import { metricsContract } from "./domains/metrics/metrics.contract";
 import { newsletterContract } from "./domains/newsletter/newsletter.contract";
 import { organizationJoinRequestsContract } from "./domains/organization/join-requests/organization-join-requests.contract";
 import { organizationContract } from "./domains/organization/organization.contract";
@@ -55,6 +56,7 @@ export const contract = {
   health: healthContract,
   iot: { ...iotContract, ...iotDeviceGroupContract },
   macros: macroContract,
+  metrics: metricsContract,
   newsletter: newsletterContract,
   organizations: { ...organizationContract, ...organizationJoinRequestsContract },
   protocols: protocolContract,

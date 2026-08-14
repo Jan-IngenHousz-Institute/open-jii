@@ -1964,6 +1964,10 @@ module "backend_ecs" {
       value = "centrum"
     },
     {
+      name  = "DATABRICKS_METRICS_SCHEMA_NAME"
+      value = "metrics"
+    },
+    {
       name  = "DATABRICKS_RAW_DATA_TABLE_NAME"
       value = "enriched_experiment_raw_data"
     },
