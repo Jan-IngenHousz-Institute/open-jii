@@ -39,6 +39,8 @@ describe("EventLog", () => {
     expect(screen.getAllByRole("row")).toHaveLength(26);
     await user.click(screen.getByRole("button", { name: "iot.devices.monitoring.next" }));
     expect(screen.getAllByRole("row")).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: "iot.devices.monitoring.previous" }));
+    expect(screen.getAllByRole("row")).toHaveLength(26);
   });
 
   it("clamps the page when the list shrinks under it", async () => {

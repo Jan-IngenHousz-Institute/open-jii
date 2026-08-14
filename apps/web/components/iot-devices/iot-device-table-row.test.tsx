@@ -90,6 +90,19 @@ describe("IotDeviceTableRow", () => {
     expect(screen.queryByText("iot.deviceIdentity.role.measurementDevice")).not.toBeInTheDocument();
   });
 
+  it("navigates to the device when the row itself is clicked", async () => {
+    const router = vi.mocked(useRouter)();
+    const user = userEvent.setup();
+    const device = createIotDevice({ name: "Field gateway", serialNumber: "SN-CLICK" });
+    renderRow(device);
+
+    await user.click(screen.getByText("SN-CLICK"));
+
+    expect(router.push).toHaveBeenCalledWith(
+      expect.stringContaining(`/platform/devices/${device.id}`),
+    );
+  });
+
   it("keeps link clicks from also triggering row navigation", async () => {
     const router = vi.mocked(useRouter)();
     const user = userEvent.setup();

@@ -83,6 +83,39 @@ describe("GetDeviceMonitoringUseCase", () => {
     assertFailure(result);
   });
 
+  it("fails loudly when the session log fails", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
+
+    const result = await useCase.execute(device.id, FROM, TO, "hour", userId);
+
+    assertFailure(result);
+  });
+
+  it("fails loudly when the battery series fails", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
+
+    const result = await useCase.execute(device.id, FROM, TO, "hour", userId);
+
+    assertFailure(result);
+  });
+
+  it("fails loudly when the payload breakdown fails", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
+
+    const result = await useCase.execute(device.id, FROM, TO, "hour", userId);
+
+    assertFailure(result);
+  });
+
   it("returns 404 for a missing device", async () => {
     const result = await useCase.execute(faker.string.uuid(), FROM, TO, "hour", userId);
 

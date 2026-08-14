@@ -1,6 +1,6 @@
 import { createIotDeviceDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -139,6 +139,24 @@ describe("DeviceMonitoringPage", () => {
     render(<DeviceMonitoringContent />);
 
     expect(await screen.findByText("iot.devices.monitoring.loadError")).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.monitoring.retry")).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "iot.devices.monitoring.retry" }));
+    expect(await screen.findByText("iot.devices.monitoring.loadError")).toBeInTheDocument();
+  });
+
+  it("switches to daily buckets when a longer range is picked", async () => {
+    mountAll();
+    const spy = server.mount(contract.iot.getDeviceMonitoring, { body: monitoring });
+    const user = userEvent.setup();
+
+    render(<DeviceMonitoringContent />);
+    await screen.findByText("iot.devices.monitoring.uptime");
+
+    await user.click(screen.getByRole("radio", { name: "iot.devices.monitoring.range.7d" }));
+
+    await waitFor(() => {
+      const lastCall = spy.calls.at(-1);
+      expect(lastCall?.query.bucket).toBe("day");
+    });
   });
 });

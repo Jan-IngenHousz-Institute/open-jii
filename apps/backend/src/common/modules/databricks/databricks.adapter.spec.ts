@@ -1018,6 +1018,184 @@ describe("DatabricksAdapter", () => {
     });
   });
 
+  describe("monitoring readers", () => {
+    const mockSql = (columns: string[], dataArray: (string | null)[][]) => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "stmt-monitoring",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: columns.length,
+              columns: columns.map((name, position) => ({
+                name,
+                type_name: "string",
+                type_text: "string",
+                position,
+              })),
+            },
+            total_row_count: dataArray.length,
+            truncated: false,
+          },
+          result: {
+            data_array: dataArray,
+            chunk_index: 0,
+            row_count: dataArray.length,
+            row_offset: 0,
+          },
+        });
+    };
+
+    it("maps lifecycle-event rows, normalizing timestamps and nulls", async () => {
+      mockSql(
+        ["event_type", "event_timestamp", "disconnect_reason", "session_identifier"],
+        [
+          ["connected", "2026-08-13T01:00:00.000Z", null, "s-1"],
+          ["disconnected", "2026-08-13T03:00:00.000Z", "CONNECTION_LOST", null],
+        ],
+      );
+
+      const result = await databricksAdapter.getDeviceLifecycleEvents(
+        "AMBYTE_A",
+        "2026-08-13T00:00:00.000Z",
+        "2026-08-13T12:00:00.000Z",
+        100,
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          eventType: "connected",
+          eventTimestamp: "2026-08-13T01:00:00.000Z",
+          disconnectReason: null,
+          sessionIdentifier: "s-1",
+        },
+        {
+          eventType: "disconnected",
+          eventTimestamp: "2026-08-13T03:00:00.000Z",
+          disconnectReason: "CONNECTION_LOST",
+          sessionIdentifier: null,
+        },
+      ]);
+    });
+
+    it("maps throughput buckets with their experiment attribution", async () => {
+      mockSql(
+        ["timestamp_hour", "experiment_id", "measurement_count"],
+        [
+          ["2026-08-13T01:00:00.000Z", "exp-1", "12"],
+          ["2026-08-13T02:00:00.000Z", null, "3"],
+        ],
+      );
+
+      const result = await databricksAdapter.getDeviceThroughput(
+        "AMBYTE_A",
+        "2026-08-13T00:00:00.000Z",
+        "2026-08-13T12:00:00.000Z",
+        "hour",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-08-13T01:00:00.000Z", experimentId: "exp-1", count: 12 },
+        { bucketStart: "2026-08-13T02:00:00.000Z", experimentId: null, count: 3 },
+      ]);
+    });
+
+    it("maps the battery series, keeping null averages for battery-less buckets", async () => {
+      mockSql(
+        ["timestamp_day", "average_battery"],
+        [
+          ["2026-08-13T00:00:00.000Z", "87.5"],
+          ["2026-08-14T00:00:00.000Z", null],
+        ],
+      );
+
+      const result = await databricksAdapter.getDeviceBatterySeries(
+        "AMBYTE_A",
+        "2026-08-13T00:00:00.000Z",
+        "2026-08-15T00:00:00.000Z",
+        "day",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-08-13T00:00:00.000Z", averageBattery: 87.5 },
+        { bucketStart: "2026-08-14T00:00:00.000Z", averageBattery: null },
+      ]);
+    });
+
+    it("maps the payload breakdown, coercing missing counts to zero", async () => {
+      mockSql(
+        [
+          "device_version",
+          "protocol_id",
+          "workbook_run_id",
+          "row_count",
+          "gps_count",
+          "battery_count",
+        ],
+        [
+          ["1.1.0", null, "run-1", "20", "5", null],
+          [null, "proto-1", null, "12", null, "12"],
+        ],
+      );
+
+      const result = await databricksAdapter.getDevicePayloadBreakdown(
+        "AMBYTE_A",
+        "2026-08-13T00:00:00.000Z",
+        "2026-08-13T12:00:00.000Z",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          deviceVersion: "1.1.0",
+          protocolId: null,
+          workbookRunId: "run-1",
+          count: 20,
+          withGps: 5,
+          withBattery: 0,
+        },
+        {
+          deviceVersion: null,
+          protocolId: "proto-1",
+          workbookRunId: null,
+          count: 12,
+          withGps: 0,
+          withBattery: 12,
+        },
+      ]);
+    });
+
+    it("propagates a SQL failure from any reader", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(500, { message: "warehouse unavailable" });
+
+      const result = await databricksAdapter.getDeviceThroughput(
+        "AMBYTE_A",
+        "2026-08-13T00:00:00.000Z",
+        "2026-08-13T12:00:00.000Z",
+        "hour",
+      );
+
+      expect(result.isFailure()).toBe(true);
+    });
+  });
+
   describe("getExportMetadata", () => {
     it("should return export metadata from Delta Lake", async () => {
       const experimentId = "exp-456";
