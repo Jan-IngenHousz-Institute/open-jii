@@ -54,6 +54,7 @@ export function IotDeviceLayoutContent({
         canShare={device.capabilities.canShare}
         canLeave={device.capabilities.canLeave}
         canManage={device.capabilities.canManage}
+        isMobileFamily={device.deviceType === "mobile"}
       >
         {children}
       </IotDeviceDetailTabs>

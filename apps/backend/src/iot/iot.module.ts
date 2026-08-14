@@ -6,6 +6,7 @@ import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { DeleteIotDeviceUseCase } from "./application/use-cases/delete-iot-device/delete-iot-device";
+import { EnsureMobileDeviceUseCase } from "./application/use-cases/ensure-mobile-device/ensure-mobile-device";
 import { GetDeviceRegistryUseCase } from "./application/use-cases/get-device-registry/get-device-registry";
 import { GetIotCredentialsUseCase } from "./application/use-cases/get-iot-credentials/get-iot-credentials";
 import { GetIotDeviceUseCase } from "./application/use-cases/get-iot-device/get-iot-device";
@@ -41,6 +42,7 @@ import { IotController } from "./presentation/iot.controller";
     GetIotCredentialsUseCase,
     GetIotUploadUrlUseCase,
     RegisterIotDeviceUseCase,
+    EnsureMobileDeviceUseCase,
     ListIotDevicesUseCase,
     GetIotDeviceUseCase,
     DeleteIotDeviceUseCase,

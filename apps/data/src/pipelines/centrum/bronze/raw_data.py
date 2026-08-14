@@ -65,6 +65,12 @@ def raw_data():
             "workbook_version_id",
             F.get_json_object(F.col("data").cast("string"), "$.workbook_version_id"),
         )
+        # Lean-topic publishers carry protocol attribution in the payload; the
+        # legacy 8-segment topic carries it as its trailing segment instead.
+        .withColumn(
+            "payload_protocol_id",
+            F.get_json_object(F.col("data").cast("string"), "$.protocol_id"),
+        )
         .withColumn(
             "macro_context",
             F.get_json_object(F.col("data").cast("string"), "$.macro_context"),
@@ -73,6 +79,7 @@ def raw_data():
             "experiment_id",
             "client_id",
             "workbook_version_id",
+            "payload_protocol_id",
             "macro_context",
             "parsed_data",
             "ingestion_timestamp",

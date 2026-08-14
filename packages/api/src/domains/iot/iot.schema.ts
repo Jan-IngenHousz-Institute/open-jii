@@ -80,6 +80,13 @@ export const zRegisterIotDeviceBody = z.object({
 
 export const zRegisterIotDeviceResponse = zIotDevice;
 
+// Silent per-phone self-registration: the app calls this on login with its
+// persisted install UUID; the route is an idempotent ensure, not a create.
+export const zEnsureMobileDeviceBody = z.object({
+  installId: z.string().uuid().describe("Persisted per-install identifier; doubles as the serial"),
+  name: z.string().min(1).max(255).optional().describe("Device model, e.g. iPhone 15"),
+});
+
 // --- Device registry webhook (Databricks lineage: thing_name -> registry) ---
 export const zDeviceRegistryWebhookPayload = z.object({
   thingNames: z.array(z.string()).min(1).max(500),
@@ -218,5 +225,6 @@ export type IotDevice = z.infer<typeof zIotDevice>;
 export type IotDeviceDetail = z.infer<typeof zIotDeviceDetail>;
 export type IotDeviceList = z.infer<typeof zIotDeviceList>;
 export type RegisterIotDeviceBody = z.infer<typeof zRegisterIotDeviceBody>;
+export type EnsureMobileDeviceBody = z.infer<typeof zEnsureMobileDeviceBody>;
 export type IotDevicePathParam = z.infer<typeof zIotDevicePathParam>;
 export type IssueIotCredentialsResponse = z.infer<typeof zIssueIotCredentialsResponse>;

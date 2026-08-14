@@ -15,8 +15,6 @@ export function loadEnvVariablesFromExpo(): EnvVariablesMap {
         process.env.EXPO_PUBLIC_PROD_IOT_ENDPOINT,
         "EXPO_PUBLIC_PROD_IOT_ENDPOINT",
       ),
-      CLIENT_ID: required(process.env.EXPO_PUBLIC_PROD_CLIENT_ID, "EXPO_PUBLIC_PROD_CLIENT_ID"),
-      MQTT_TOPIC: required(process.env.EXPO_PUBLIC_PROD_MQTT_TOPIC, "EXPO_PUBLIC_PROD_MQTT_TOPIC"),
       NEXT_AUTH_URI: required(
         process.env.EXPO_PUBLIC_PROD_NEXT_AUTH_URI,
         "EXPO_PUBLIC_PROD_NEXT_AUTH_URI",
@@ -41,8 +39,6 @@ export function loadEnvVariablesFromExpo(): EnvVariablesMap {
         process.env.EXPO_PUBLIC_DEV_IOT_ENDPOINT,
         "EXPO_PUBLIC_DEV_IOT_ENDPOINT",
       ),
-      CLIENT_ID: required(process.env.EXPO_PUBLIC_DEV_CLIENT_ID, "EXPO_PUBLIC_DEV_CLIENT_ID"),
-      MQTT_TOPIC: required(process.env.EXPO_PUBLIC_DEV_MQTT_TOPIC, "EXPO_PUBLIC_DEV_MQTT_TOPIC"),
       NEXT_AUTH_URI: required(
         process.env.EXPO_PUBLIC_DEV_NEXT_AUTH_URI,
         "EXPO_PUBLIC_DEV_NEXT_AUTH_URI",

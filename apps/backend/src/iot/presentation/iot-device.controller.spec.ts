@@ -39,6 +39,11 @@ describe("IotDeviceController", () => {
     analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
     vi.spyOn(awsAdapter, "createThing").mockResolvedValue(success(RETURNED_THING));
     vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
+    vi.spyOn(awsAdapter, "getCognitoIdentityId").mockResolvedValue(
+      success("eu-central-1:identity-1"),
+    );
+    vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -63,6 +68,11 @@ describe("IotDeviceController", () => {
         .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withAuth(userId)
         .send(registerBody)
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "9f2c1a2e-1111-4111-8111-111111111111" })
         .expect(StatusCodes.FORBIDDEN);
 
       const getPath = testApp.resolveOrpcPath(contract.iot.getIotDevice, {
@@ -123,6 +133,53 @@ describe("IotDeviceController", () => {
         .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withAuth(userId)
         .send(registerBody)
+        .expect(StatusCodes.CONFLICT);
+    });
+  });
+
+  describe("ensureMobileDevice", () => {
+    const ensureBody = { installId: "9f2c1a2e-1111-4111-8111-111111111111", name: "iPhone 15" };
+
+    it("creates on first call and returns the same active device on the second (200)", async () => {
+      const first: SuperTestResponse<IotDevice> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send(ensureBody)
+        .expect(StatusCodes.OK);
+
+      expect(first.body.deviceType).toBe("mobile");
+      expect(first.body.status).toBe("active");
+      expect(first.body.serialNumber).toBe(ensureBody.installId);
+
+      const second: SuperTestResponse<IotDevice> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send(ensureBody)
+        .expect(StatusCodes.OK);
+
+      expect(second.body.id).toBe(first.body.id);
+    });
+
+    it("rejects a non-uuid install id (400)", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "not-a-uuid" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 409 when another user holds the install id", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send(ensureBody)
+        .expect(StatusCodes.OK);
+
+      const otherUser = await testApp.createTestUser({ name: "Other" });
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(otherUser)
+        .send(ensureBody)
         .expect(StatusCodes.CONFLICT);
     });
   });

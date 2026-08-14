@@ -33,6 +33,7 @@ describe("DeleteIotDeviceUseCase", () => {
     awsAdapter = testApp.module.get(AwsAdapter);
     repo = testApp.module.get(IotDeviceRepository);
     deleteThingSpy = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
   });
 
   afterEach(() => {
@@ -66,6 +67,9 @@ describe("DeleteIotDeviceUseCase", () => {
     const detachSpy = vi
       .spyOn(awsAdapter, "detachThingPrincipal")
       .mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(
+      success(["arn:aws:iot:eu-central-1:000000000000:cert/cert-live"]),
+    );
     const device = await testApp.createIotDevice({
       createdBy: userId,
       status: "active",
@@ -120,6 +124,9 @@ describe("DeleteIotDeviceUseCase", () => {
 
   it("propagates the failure when detaching the principal fails", async () => {
     vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(
+      success(["arn:aws:iot:eu-central-1:000000000000:cert/cert-live"]),
+    );
     vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(
       failure(AppError.internal("detach failed")),
     );
@@ -134,6 +141,38 @@ describe("DeleteIotDeviceUseCase", () => {
 
     assertFailure(result);
     expect(result.error.message).toBe("detach failed");
+    expect(deleteThingSpy).not.toHaveBeenCalled();
+  });
+
+  it("detaches a Cognito identity principal from a certificate-less mobile device", async () => {
+    const detachSpy = vi
+      .spyOn(awsAdapter, "detachThingPrincipal")
+      .mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(
+      success(["eu-central-1:cognito-identity-1"]),
+    );
+    const device = await testApp.createIotDevice({
+      createdBy: userId,
+      deviceType: "mobile",
+      status: "active",
+    });
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertSuccess(result);
+    expect(detachSpy).toHaveBeenCalledWith(device.thingName, "eu-central-1:cognito-identity-1");
+    expect(deleteThingSpy).toHaveBeenCalledWith(device.thingName);
+  });
+
+  it("propagates the failure when listing thing principals fails", async () => {
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(
+      failure(AppError.internal("list failed")),
+    );
+    const device = await testApp.createIotDevice({ createdBy: userId });
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertFailure(result);
     expect(deleteThingSpy).not.toHaveBeenCalled();
   });
 

@@ -792,7 +792,7 @@ async function main() {
   const deviceSeeds: {
     slug: string;
     name: string;
-    deviceType: "multispeq" | "ambyte" | "ambit" | "minipar";
+    deviceType: "multispeq" | "ambyte" | "ambit" | "minipar" | "mobile";
     status: "pending" | "active" | "revoked";
   }[] = [
     {

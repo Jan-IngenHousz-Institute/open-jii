@@ -1,18 +1,26 @@
-import { getEnvVar } from "~/shared/stores/environment-store";
+import * as ExpoApplication from "expo-application";
+import { getLocalThingName } from "~/shared/stores/device-identity-store";
 
-// Sentinel protocolId for question-only uploads (no device sample).
-// Routed by an AWS IoT rule like any real protocol — see CONTEXT.md "Topic".
+// Sentinel protocol_id for question-only uploads (no device sample). Carried
+// in the payload since the lean topic has no protocol segment; the pipeline
+// treats it like any other protocol_id value.
 export const QUESTIONS_PROTOCOL_ID = "questions";
 
-export function getMeasurementMqttTopic({
-  experimentId,
-  protocolId,
-}: {
-  experimentId: string;
-  protocolId: string;
-}): string {
-  return getEnvVar("MQTT_TOPIC")
-    .replace(":clientId", getEnvVar("CLIENT_ID"))
-    .replace(":experimentId", experimentId)
-    .replace(":protocolId", protocolId);
+// The canonical lean ingest shape (asyncapi.yaml, experiment_data_ingest_v1_lean):
+// experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}.
+// sensorType is the device family, sensorVersion the app release, sensorId the
+// phone's thing name, the same identity the MQTT connection uses.
+const TOPIC_PREFIX = "experiment/data_ingest/v1";
+const SENSOR_TYPE = "mobile";
+
+function appVersionSegment(): string {
+  const version = ExpoApplication.nativeApplicationVersion;
+  if (!version) {
+    return "0";
+  }
+  return version.replace(/[^a-zA-Z0-9._-]/g, "-");
+}
+
+export function getMeasurementMqttTopic({ experimentId }: { experimentId: string }): string {
+  return `${TOPIC_PREFIX}/${experimentId}/${SENSOR_TYPE}/${appVersionSegment()}/${getLocalThingName()}`;
 }

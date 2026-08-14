@@ -179,6 +179,7 @@ export const sensorFamilyEnum = pgEnum("sensor_family", [
   "minipar",
   "generic",
   "ambit",
+  "mobile",
 ]);
 
 // Profiles Table

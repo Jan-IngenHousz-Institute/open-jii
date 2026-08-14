@@ -12,6 +12,8 @@ export interface MacroInfo {
 export interface BuildUploadPayloadArgs {
   rawMeasurement: any;
   userId: string;
+  /** Real protocol uuid, or the "questions" sentinel for question-only rows. */
+  protocolId: string;
   macro: MacroInfo | null;
   timestamp: string;
   timezone: string;
@@ -33,6 +35,7 @@ export interface BuildUploadPayloadArgs {
 export function buildUploadPayload({
   rawMeasurement,
   userId,
+  protocolId,
   macro,
   timestamp,
   timezone,
@@ -61,6 +64,8 @@ export function buildUploadPayload({
     timestamp,
     timezone,
     user_id: userId,
+    // Attribution lives in the payload on the lean topic shape.
+    protocol_id: protocolId,
     ...rawMeasurement,
     ...(hasInjectableSample ? { sample: injectedSample } : {}),
     annotations: buildAnnotations(commentText),

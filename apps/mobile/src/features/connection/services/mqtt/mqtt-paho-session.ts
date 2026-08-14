@@ -1,7 +1,8 @@
 import { Client, Message } from "paho-mqtt";
 import "react-native-get-random-values";
-import { generateRandomString } from "~/features/connection/utils/generate-random-string";
+import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { createLogger } from "~/shared/observability/logger";
+import { getLocalThingName } from "~/shared/stores/device-identity-store";
 import { getEnvVar } from "~/shared/stores/environment-store";
 
 import { createSignedUrl, getCredentials } from "./aws-iot-auth";
@@ -129,7 +130,12 @@ export function createPahoSessionFactory(): PahoSessionFactory {
       });
       const tCreds = Date.now();
 
-      const clientId = `${getEnvVar("CLIENT_ID")}_${generateRandomString()}`;
+      // The thing name IS the MQTT client id: the ingest rule's clientid()
+      // capture is what joins rows to the device registry, and the fleet index
+      // only tracks connections whose client id matches a Thing. Also invites
+      // registration to self-heal without ever blocking the connect.
+      void ensureDeviceRegistered({ throttle: true });
+      const clientId = getLocalThingName();
 
       log.debug("connect: createSignedUrl start");
       const signedUrl = await createSignedUrl({

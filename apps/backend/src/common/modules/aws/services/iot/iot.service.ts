@@ -9,6 +9,7 @@ import {
   AttachPolicyCommand,
   UpdateCertificateCommand,
   DescribeEndpointCommand,
+  ListThingPrincipalsCommand,
 } from "@aws-sdk/client-iot";
 import { Injectable } from "@nestjs/common";
 
@@ -95,25 +96,43 @@ export class AwsIotService {
     );
   }
 
-  async attachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>> {
+  // A principal is a certificate ARN for X.509 devices or a Cognito identity
+  // id for mobile devices; the API accepts either.
+  async attachThingPrincipal(thingName: string, principal: string): Promise<Result<void>> {
     return tryCatch(
       async () => {
-        await this.iotClient.send(
-          new AttachThingPrincipalCommand({ thingName, principal: certificateArn }),
-        );
+        await this.iotClient.send(new AttachThingPrincipalCommand({ thingName, principal }));
       },
       (error) => this.mapError(error, ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED),
     );
   }
 
-  async detachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>> {
+  async detachThingPrincipal(thingName: string, principal: string): Promise<Result<void>> {
     return tryCatch(
       async () => {
-        await this.iotClient.send(
-          new DetachThingPrincipalCommand({ thingName, principal: certificateArn }),
-        );
+        await this.iotClient.send(new DetachThingPrincipalCommand({ thingName, principal }));
       },
       (error) => this.mapError(error, ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED),
+    );
+  }
+
+  async listThingPrincipals(thingName: string): Promise<Result<string[]>> {
+    return tryCatch(
+      async () => {
+        const principals: string[] = [];
+        let nextToken: string | undefined;
+
+        do {
+          const response = await this.iotClient.send(
+            new ListThingPrincipalsCommand({ thingName, nextToken }),
+          );
+          principals.push(...(response.principals ?? []));
+          nextToken = response.nextToken;
+        } while (nextToken !== undefined);
+
+        return principals;
+      },
+      (error) => this.mapError(error, ErrorCodes.AWS_IOT_LIST_PRINCIPALS_FAILED),
     );
   }
 

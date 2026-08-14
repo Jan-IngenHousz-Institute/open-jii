@@ -3662,7 +3662,8 @@
                               "ambyte",
                               "minipar",
                               "generic",
-                              "ambit"
+                              "ambit",
+                              "mobile"
                             ],
                             "type": "string"
                           },
@@ -12476,7 +12477,8 @@
                           "ambyte",
                           "minipar",
                           "generic",
-                          "ambit"
+                          "ambit",
+                          "mobile"
                         ],
                         "type": "string"
                       },
@@ -12852,7 +12854,8 @@
                               "ambyte",
                               "minipar",
                               "generic",
-                              "ambit"
+                              "ambit",
+                              "mobile"
                             ],
                             "type": "string"
                           },
@@ -12887,6 +12890,160 @@
                   "required": [
                     "devices",
                     "success"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/mobile": {
+      "post": {
+        "operationId": "iot.ensureMobileDevice",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "installId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Persisted per-install identifier; doubles as the serial"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "Device model, e.g. iPhone 15"
+                  }
+                },
+                "required": [
+                  "installId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "thingName": {
+                      "type": "string"
+                    },
+                    "thingArn": {
+                      "type": "string"
+                    },
+                    "serialNumber": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "deviceType": {
+                      "enum": [
+                        "multispeq",
+                        "ambyte",
+                        "minipar",
+                        "generic",
+                        "ambit",
+                        "mobile"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "active",
+                        "rotating",
+                        "revoked"
+                      ],
+                      "type": "string"
+                    },
+                    "certificateId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "certificateArn": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "thingName",
+                    "thingArn",
+                    "serialNumber",
+                    "name",
+                    "deviceType",
+                    "status",
+                    "certificateId",
+                    "certificateArn",
+                    "createdBy",
+                    "organizationId",
+                    "visibility",
+                    "createdAt",
+                    "updatedAt"
                   ]
                 }
               }
@@ -12937,7 +13094,8 @@
                           "ambyte",
                           "minipar",
                           "generic",
-                          "ambit"
+                          "ambit",
+                          "mobile"
                         ],
                         "type": "string"
                       },
@@ -13051,7 +13209,8 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit"
+                      "ambit",
+                      "mobile"
                     ],
                     "type": "string",
                     "description": "IotDevice class, maps to the ingest topic sensorType"
@@ -13106,7 +13265,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "mobile"
                       ],
                       "type": "string"
                     },
@@ -13245,7 +13405,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "mobile"
                       ],
                       "type": "string"
                     },
@@ -13497,7 +13658,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "mobile"
                       ],
                       "type": "string"
                     },
@@ -13696,7 +13858,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "mobile"
                       ],
                       "type": "string"
                     },
@@ -13755,7 +13918,8 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit"
+                                        "ambit",
+                                        "mobile"
                                       ],
                                       "type": "string"
                                     },
@@ -15313,7 +15477,8 @@
                           "ambyte",
                           "minipar",
                           "generic",
-                          "ambit"
+                          "ambit",
+                          "mobile"
                         ],
                         "type": "string"
                       },
@@ -15422,7 +15587,8 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit"
+                      "ambit",
+                      "mobile"
                     ],
                     "type": "string"
                   },
@@ -15489,7 +15655,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "mobile"
                       ],
                       "type": "string"
                     },
@@ -15620,7 +15787,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "mobile"
                       ],
                       "type": "string"
                     },
@@ -15767,7 +15935,8 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit"
+                      "ambit",
+                      "mobile"
                     ],
                     "type": "string"
                   }
@@ -15814,7 +15983,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "mobile"
                       ],
                       "type": "string"
                     },
@@ -18880,7 +19050,8 @@
                                       "ambyte",
                                       "minipar",
                                       "generic",
-                                      "ambit"
+                                      "ambit",
+                                      "mobile"
                                     ],
                                     "type": "string"
                                   },
@@ -19394,7 +19565,8 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit"
+                                        "ambit",
+                                        "mobile"
                                       ],
                                       "type": "string"
                                     },
@@ -19970,7 +20142,8 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit"
+                                        "ambit",
+                                        "mobile"
                                       ],
                                       "type": "string"
                                     },
@@ -20562,7 +20735,8 @@
                                       "ambyte",
                                       "minipar",
                                       "generic",
-                                      "ambit"
+                                      "ambit",
+                                      "mobile"
                                     ],
                                     "type": "string"
                                   },
@@ -21058,7 +21232,8 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit"
+                                        "ambit",
+                                        "mobile"
                                       ],
                                       "type": "string"
                                     },
@@ -21798,7 +21973,8 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit"
+                                        "ambit",
+                                        "mobile"
                                       ],
                                       "type": "string"
                                     },
@@ -21868,7 +22044,8 @@
                                   "ambyte",
                                   "minipar",
                                   "generic",
-                                  "ambit"
+                                  "ambit",
+                                  "mobile"
                                 ],
                                 "type": "string"
                               }

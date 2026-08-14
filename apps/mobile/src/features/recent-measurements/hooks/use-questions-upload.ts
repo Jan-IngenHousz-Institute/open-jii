@@ -41,7 +41,7 @@ export function useQuestionsUpload() {
       commentText?: string;
       flagType?: ExperimentAnnotationFlagType | null;
     }) => {
-      const topic = getMeasurementMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
+      const topic = getMeasurementMqttTopic({ experimentId });
 
       const location = await getMeasurementLocation();
 
@@ -52,6 +52,7 @@ export function useQuestionsUpload() {
         timestamp,
         timezone,
         user_id: userId,
+        protocol_id: QUESTIONS_PROTOCOL_ID,
         annotations: buildAnnotations(commentText, flagType),
         ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
       };

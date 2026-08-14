@@ -120,13 +120,11 @@ export function useMeasurementUpload() {
 
       for (const result of results) {
         const { rawMeasurement, device, macroContext } = result;
-        const topic = getMeasurementMqttTopic({
-          experimentId,
-          protocolId: result.protocolId ?? protocolId,
-        });
+        const topic = getMeasurementMqttTopic({ experimentId });
         const measurementData = buildUploadPayload({
           rawMeasurement,
           userId,
+          protocolId: result.protocolId ?? protocolId,
           macro,
           timestamp,
           timezone,

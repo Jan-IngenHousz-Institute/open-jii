@@ -8,8 +8,9 @@ export interface SensorFamilyOption {
   disabled: boolean;
 }
 
-/** Display label for the generic family, which has no product name. */
+/** Display labels for families without a trademarked product name. */
 const GENERIC_LABEL = "Generic";
+const MOBILE_LABEL = "Mobile";
 
 /**
  * Families not offered as a local-connection target in this authoring selector.
@@ -17,7 +18,7 @@ const GENERIC_LABEL = "Generic";
  * (Web protocol testing separately preserves a generic-driver compatibility
  * path for existing Ambyte-family protocols.)
  */
-const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte"]);
+const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte", "mobile"]);
 
 /**
  * Selectable sensor family options derived from the API enum.
@@ -37,6 +38,9 @@ export const SENSOR_FAMILY_OPTIONS: SensorFamilyOption[] = zSensorFamily.options
  * name and falls back to a neutral label.
  */
 export function getSensorFamilyLabel(family: SensorFamily): string {
+  if (family === "mobile") {
+    return MOBILE_LABEL;
+  }
   return DEVICE_PROFILES[family].productName ?? GENERIC_LABEL;
 }
 

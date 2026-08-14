@@ -16,6 +16,7 @@ const QUESTIONS = [{ question_label: "q1", question_text: "Q?", question_answer:
 
 const baseArgs = {
   userId: "user-1",
+  protocolId: "protocol-9",
   macro: MACRO,
   timestamp: "2026-01-01T10:00:00Z",
   timezone: "Europe/Amsterdam",
@@ -46,6 +47,7 @@ describe("buildUploadPayload payload construction", () => {
       timestamp: "2026-01-01T10:00:00Z",
       timezone: "Europe/Amsterdam",
       user_id: "user-1",
+      protocol_id: "protocol-9",
       device_id: "d-1",
       sample: 'compressed:[{"v":1,"macros":["macro_one.js"]},{"v":2,"macros":["macro_one.js"]}]',
       _sample_encoding: "gzip+base64",

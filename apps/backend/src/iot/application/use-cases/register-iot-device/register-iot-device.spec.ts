@@ -64,6 +64,16 @@ describe("RegisterIotDeviceUseCase", () => {
     );
   });
 
+  it("rejects the mobile family, phones register themselves through the app", async () => {
+    const createThing = mockCreateThing();
+
+    const result = await useCase.execute({ ...body, deviceType: "mobile" }, userId);
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(400);
+    expect(createThing).not.toHaveBeenCalled();
+  });
+
   it("returns 409 when the serial number is already registered", async () => {
     mockCreateThing();
     await useCase.execute(body, userId);

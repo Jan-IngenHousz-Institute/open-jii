@@ -74,6 +74,19 @@ describe("DeviceCredentialsPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("sends a mobile device back to the overview even for a manager, there is no cert lifecycle", async () => {
+    server.mount(contract.iot.getIotDevice, {
+      body: createIotDeviceDetail({ id: DEVICE_ID, deviceType: "mobile", status: "active" }),
+    });
+
+    const { container, router } = renderPage();
+
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith(`/en-US/platform/devices/${DEVICE_ID}`),
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("does not redirect while the capabilities are still unknown", async () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({ id: DEVICE_ID }),

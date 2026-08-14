@@ -3,7 +3,14 @@ import { z } from "zod";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zVisibility } from "../visibility/visibility.schema";
 
-export const zSensorFamily = z.enum(["multispeq", "ambyte", "minipar", "generic", "ambit"]);
+export const zSensorFamily = z.enum([
+  "multispeq",
+  "ambyte",
+  "minipar",
+  "generic",
+  "ambit",
+  "mobile",
+]);
 
 // Define Zod schemas for protocol models
 export const zProtocol = z.object({

@@ -133,6 +133,8 @@ resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
           "iot:CreateKeysAndCertificate",
           "iot:AttachThingPrincipal",
           "iot:DetachThingPrincipal",
+          # Delete detaches every principal (certs, Cognito identities) first.
+          "iot:ListThingPrincipals",
           "iot:UpdateCertificate",
           # Resolves the MQTT broker host handed to a device during onboarding.
           "iot:DescribeEndpoint"
