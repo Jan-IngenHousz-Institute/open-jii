@@ -32,17 +32,20 @@ export interface DatabricksPort {
     to: string,
     bucket: "hour" | "day",
   ): Promise<Result<{ bucketStart: string | null; averageBattery: number | null }[]>>;
-  getDevicePayloadCoverage(
+  getDevicePayloadBreakdown(
     thingName: string,
     from: string,
     to: string,
   ): Promise<
-    Result<{ total: number; withGps: number; withBattery: number; withWorkbookRun: number }[]>
+    Result<
+      {
+        deviceVersion: string | null;
+        protocolId: string | null;
+        workbookRunId: string | null;
+        count: number;
+        withGps: number;
+        withBattery: number;
+      }[]
+    >
   >;
-  getDevicePayloadMix(
-    thingName: string,
-    from: string,
-    to: string,
-    column: "device_version" | "protocol_id" | "workbook_run_id",
-  ): Promise<Result<{ value: string | null; count: number }[]>>;
 }

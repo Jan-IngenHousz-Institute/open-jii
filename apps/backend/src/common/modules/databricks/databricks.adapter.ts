@@ -473,29 +473,41 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
-   * Coverage counts per day for a device in a range: total measurements and
-   * how many carried a GPS fix, a battery reading, or a workbook run id (SQL
-   * COUNT(column) skips nulls). Grouped by the precomputed `date` column; the
-   * caller sums the days.
+   * One grouped scan powering the payload profile: measurement counts and
+   * metadata coverage per (firmware, protocol, workbook run) combination.
+   * SQL COUNT(column) skips nulls, which is what makes the coverage counts
+   * work; the caller sums combinations into totals and mixes.
    */
-  async getDevicePayloadCoverage(
+  async getDevicePayloadBreakdown(
     thingName: string,
     from: string,
     to: string,
   ): Promise<
-    Result<{ total: number; withGps: number; withBattery: number; withWorkbookRun: number }[]>
+    Result<
+      {
+        deviceVersion: string | null;
+        protocolId: string | null;
+        workbookRunId: string | null;
+        count: number;
+        withGps: number;
+        withBattery: number;
+      }[]
+    >
   > {
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
-        groupBy: [{ column: "date" }],
+        groupBy: [
+          { column: "device_version" },
+          { column: "protocol_id" },
+          { column: "workbook_run_id" },
+        ],
         functions: [
-          { column: "*", function: "count", alias: "total_count" },
+          { column: "*", function: "count", alias: "row_count" },
           { column: "latitude", function: "count", alias: "gps_count" },
           { column: "device_battery", function: "count", alias: "battery_count" },
-          { column: "workbook_run_id", function: "count", alias: "workbook_row_count" },
         ],
       },
     });
@@ -506,42 +518,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const { rows, index } = result.value;
     return success(
       rows.map((row) => ({
-        total: Number(row[index.total_count] ?? 0),
+        deviceVersion: row[index.device_version] ?? null,
+        protocolId: row[index.protocol_id] ?? null,
+        workbookRunId: row[index.workbook_run_id] ?? null,
+        count: Number(row[index.row_count] ?? 0),
         withGps: Number(row[index.gps_count] ?? 0),
         withBattery: Number(row[index.battery_count] ?? 0),
-        withWorkbookRun: Number(row[index.workbook_row_count] ?? 0),
-      })),
-    );
-  }
-
-  /**
-   * Measurement counts grouped by one payload column (e.g. device_version,
-   * protocol_id, workbook_run_id) for a device in a range.
-   */
-  async getDevicePayloadMix(
-    thingName: string,
-    from: string,
-    to: string,
-    column: "device_version" | "protocol_id" | "workbook_run_id",
-  ): Promise<Result<{ value: string | null; count: number }[]>> {
-    const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
-      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
-      aggregation: {
-        groupBy: [{ column }],
-        functions: [{ column: "*", function: "count", alias: "row_count" }],
-      },
-    });
-    if (result.isFailure()) {
-      return failure(result.error);
-    }
-
-    const { rows, index } = result.value;
-    return success(
-      rows.map((row) => ({
-        value: row[index[column]] ?? null,
-        count: Number(row[index.row_count] ?? 0),
       })),
     );
   }

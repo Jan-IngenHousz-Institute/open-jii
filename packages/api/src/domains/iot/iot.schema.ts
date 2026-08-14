@@ -234,7 +234,13 @@ export const zMonitoringRangeQuery = z
   .refine((range) => new Date(range.from).getTime() < new Date(range.to).getTime(), {
     message: "from must be before to",
     path: ["from"],
-  });
+  })
+  // The UI presets top out at 30 days; an unbounded span would let one request
+  // scan and return an arbitrarily large slice of the warehouse.
+  .refine(
+    (range) => new Date(range.to).getTime() - new Date(range.from).getTime() <= 31 * 86_400_000,
+    { message: "range must not exceed 31 days", path: ["to"] },
+  );
 
 export const zDeviceLifecycleEvent = z.object({
   eventType: z.enum(["connected", "disconnected"]),

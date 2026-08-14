@@ -26,8 +26,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
     await testApp.beforeEach();
     useCase = testApp.module.get(GetDevicePayloadStatsUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
-    vi.spyOn(databricksAdapter, "getDevicePayloadCoverage").mockResolvedValue(success([]));
-    vi.spyOn(databricksAdapter, "getDevicePayloadMix").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
   });
 
   afterEach(() => {
@@ -39,33 +38,44 @@ describe("GetDevicePayloadStatsUseCase", () => {
     await testApp.teardown();
   });
 
-  it("sums daily coverage and counts distinct workbook runs", async () => {
-    vi.spyOn(databricksAdapter, "getDevicePayloadCoverage").mockResolvedValue(
+  it("folds the grouped breakdown into totals, mixes, and distinct runs", async () => {
+    vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(
       success([
-        { total: 40, withGps: 30, withBattery: 40, withWorkbookRun: 10 },
-        { total: 60, withGps: 10, withBattery: 55, withWorkbookRun: 20 },
+        // run-1 spans two firmware versions: one run, not two.
+        {
+          deviceVersion: "1.0.0",
+          protocolId: null,
+          workbookRunId: "run-1",
+          count: 10,
+          withGps: 5,
+          withBattery: 10,
+        },
+        {
+          deviceVersion: "1.1.0",
+          protocolId: null,
+          workbookRunId: "run-1",
+          count: 20,
+          withGps: 15,
+          withBattery: 15,
+        },
+        {
+          deviceVersion: "1.1.0",
+          protocolId: null,
+          workbookRunId: "run-2",
+          count: 50,
+          withGps: 20,
+          withBattery: 50,
+        },
+        {
+          deviceVersion: "1.1.0",
+          protocolId: null,
+          workbookRunId: null,
+          count: 20,
+          withGps: 0,
+          withBattery: 20,
+        },
       ]),
     );
-    vi.spyOn(databricksAdapter, "getDevicePayloadMix").mockImplementation((_t, _f, _o, column) => {
-      if (column === "workbook_run_id") {
-        return Promise.resolve(
-          success([
-            { value: "run-1", count: 10 },
-            { value: "run-2", count: 20 },
-            { value: null, count: 70 },
-          ]),
-        );
-      }
-      if (column === "device_version") {
-        return Promise.resolve(
-          success([
-            { value: "1.0.0", count: 30 },
-            { value: "1.1.0", count: 70 },
-          ]),
-        );
-      }
-      return Promise.resolve(success([{ value: null, count: 100 }]));
-    });
 
     const result = await useCase.execute(THING, FROM, TO);
 
@@ -74,14 +84,43 @@ describe("GetDevicePayloadStatsUseCase", () => {
     expect(result.value.withGps).toBe(40);
     expect(result.value.withBattery).toBe(95);
     expect(result.value.workbookRuns).toBe(2);
-    // Firmware mix sorted by count descending; null protocol groups dropped
-    // (protocol attribution only exists on legacy-topic rows).
-    expect(result.value.firmwareMix[0]).toEqual({ version: "1.1.0", count: 70 });
+    expect(result.value.firmwareMix).toEqual([
+      { version: "1.1.0", count: 90 },
+      { version: "1.0.0", count: 10 },
+    ]);
     expect(result.value.protocolMix).toEqual([]);
   });
 
-  it("propagates a warehouse failure from any of the parallel queries", async () => {
-    vi.spyOn(databricksAdapter, "getDevicePayloadCoverage").mockResolvedValue(
+  it("keeps legacy protocol groups and drops only the null attribution", async () => {
+    vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(
+      success([
+        {
+          deviceVersion: null,
+          protocolId: "proto-1",
+          workbookRunId: null,
+          count: 12,
+          withGps: 0,
+          withBattery: 0,
+        },
+        {
+          deviceVersion: null,
+          protocolId: null,
+          workbookRunId: null,
+          count: 88,
+          withGps: 0,
+          withBattery: 0,
+        },
+      ]),
+    );
+
+    const result = await useCase.execute(THING, FROM, TO);
+
+    assertSuccess(result);
+    expect(result.value.protocolMix).toEqual([{ protocolId: "proto-1", count: 12 }]);
+  });
+
+  it("propagates a warehouse failure", async () => {
+    vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(
       failure(AppError.internal("warehouse down")),
     );
 

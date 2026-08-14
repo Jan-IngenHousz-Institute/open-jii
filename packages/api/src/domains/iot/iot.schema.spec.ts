@@ -397,6 +397,16 @@ describe("Iot Schema", () => {
       expect(zMonitoringRangeQuery.safeParse(validRange).success).toBe(true);
     });
 
+    it("rejects a span past the preset ceiling", () => {
+      expect(
+        zMonitoringRangeQuery.safeParse({
+          ...validRange,
+          from: "2026-06-01T00:00:00.000Z",
+          to: "2026-08-14T00:00:00.000Z",
+        }).success,
+      ).toBe(false);
+    });
+
     it("rejects a reversed or empty range", () => {
       expect(zMonitoringRangeQuery.safeParse({ ...validRange, from: validRange.to }).success).toBe(
         false,

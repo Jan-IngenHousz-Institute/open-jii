@@ -32,8 +32,7 @@ describe("GetDeviceMonitoringUseCase", () => {
     vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDeviceThroughput").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(success([]));
-    vi.spyOn(databricksAdapter, "getDevicePayloadCoverage").mockResolvedValue(success([]));
-    vi.spyOn(databricksAdapter, "getDevicePayloadMix").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
   });
 
   afterEach(() => {

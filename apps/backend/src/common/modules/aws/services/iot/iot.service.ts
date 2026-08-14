@@ -29,6 +29,7 @@ import type {
 // are batched by accumulated length with a generous count ceiling.
 const SEARCH_INDEX_MAX_QUERY_CHARS = 900;
 const SEARCH_INDEX_MAX_TERMS = 50;
+const SEARCH_INDEX_TERM_OVERHEAD = "thingName:".length + " OR ".length;
 
 @Injectable()
 export class AwsIotService {
@@ -227,7 +228,7 @@ export class AwsIotService {
     let currentLength = 0;
 
     for (const name of thingNames) {
-      const termLength = name.length + 14; // "thingName:" + " OR "
+      const termLength = name.length + SEARCH_INDEX_TERM_OVERHEAD;
       if (
         current.length > 0 &&
         (current.length >= SEARCH_INDEX_MAX_TERMS ||

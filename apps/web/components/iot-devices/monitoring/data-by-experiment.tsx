@@ -8,6 +8,8 @@ import Link from "next/link";
 import type { DeviceExperiment, DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 
+import { MONITORING_PRIMARY_COLOR } from "./monitoring-palette";
+
 interface DataByExperimentProps {
   monitoring: DeviceMonitoring;
   boundExperiments: DeviceExperiment[];
@@ -106,8 +108,9 @@ export function DataByExperiment({ monitoring, boundExperiments }: DataByExperim
           <span className="w-20 text-right text-sm tabular-nums">{row.count}</span>
           <div className="bg-muted h-1.5 w-24 overflow-hidden rounded-full">
             <div
-              className="h-full rounded-full bg-[#1f77b4]"
+              className="h-full rounded-full"
               style={{
+                backgroundColor: MONITORING_PRIMARY_COLOR,
                 width: `${String(grandTotal === 0 ? 0 : (row.count / grandTotal) * 100)}%`,
               }}
             />
