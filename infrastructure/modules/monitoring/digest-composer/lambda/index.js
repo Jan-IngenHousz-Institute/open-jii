@@ -109,6 +109,13 @@ async function fetchWindow(metrics, start, end) {
     }
   }
 
+  // Absent datapoints for a Sum counter mean zero events, not a broken signal
+  metrics.forEach((metric, index) => {
+    if (results[index] === null && metric.signal.stat === "Sum") {
+      results[index] = 0;
+    }
+  });
+
   return results;
 }
 
@@ -191,7 +198,7 @@ function runbookLink(metric) {
   return ` · <${base}/${metric.runbook}|runbook>`;
 }
 
-function renderObservability(results, environment) {
+function renderObservability(results, environment, configErrors) {
   const anomalies = results.filter((entry) => entry.evaluation.state === "anomaly");
   const missing = results.filter((entry) => entry.evaluation.state === "missing");
 
@@ -221,6 +228,10 @@ function renderObservability(results, environment) {
     lines.push(
       `⚠️ Self-check: no datapoints for ${names} (had data in prior weeks); excluded above.`,
     );
+  }
+
+  if (configErrors.length > 0) {
+    lines.push(`⚠️ Self-check: unresolved catalog placeholders for ${configErrors.join(", ")}.`);
   }
 
   return lines.join("\n");
@@ -305,8 +316,22 @@ async function deliver(channel, text) {
 exports.handler = async (event) => {
   const digest = event?.digest;
   const environment = process.env.ENVIRONMENT ?? "unknown";
-  const catalog = loadCatalog().filter((metric) => metric.active && metric.signal);
   const now = Date.now();
+
+  // A broken placeholder must cost one metric, not the whole digest
+  const configErrors = [];
+  const catalog = loadCatalog()
+    .filter((metric) => metric.active && metric.signal)
+    .filter((metric) => {
+      try {
+        toQuery(metric, 0);
+        return true;
+      } catch (error) {
+        configErrors.push(metric.id);
+        console.warn(JSON.stringify({ configError: metric.id, message: error.message }));
+        return false;
+      }
+    });
 
   if (digest === "observability") {
     const metrics = catalog.filter(
@@ -318,7 +343,7 @@ exports.handler = async (event) => {
       ...entry,
       evaluation: evaluate(entry),
     }));
-    await deliver("heartbeat", renderObservability(results, environment));
+    await deliver("heartbeat", renderObservability(results, environment, configErrors));
     return;
   }
 
