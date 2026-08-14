@@ -37,8 +37,8 @@ export const iotContract = {
 
   // IotDevice registry (owner-scoped)
   // Idempotent per-phone self-registration; 200 whether the row was created
-  // or already existed. Ordered before the {deviceId} routes so /mobile never
-  // parses as a device id.
+  // or already existed. The path is static, so it cannot collide with the
+  // {deviceId} param routes.
   ensureMobileDevice: oc
     .route({ method: "POST", path: "/api/v1/devices/mobile", successStatus: 200 })
     .input(zEnsureMobileDeviceBody)
