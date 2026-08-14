@@ -40,3 +40,12 @@ vulnerabilities:
   - id: CVE-2026-44605
     statement: "rpm NDB heap overflow. No rpm operations at runtime."
     expired_at: 2026-11-05
+
+  # aws-lambda-rie, Go stdlib 1.26.5, fixed in 1.26.6. Local emulation binary;
+  # on Lambda the entrypoint skips RIE because AWS_LAMBDA_RUNTIME_API is set.
+  - id: CVE-2026-39821
+    statement: "net/http punycode privilege escalation. RIE never runs in production."
+    expired_at: 2026-11-05
+  - id: CVE-2026-46600
+    statement: "dnsmessage parsing DoS. RIE never runs in production."
+    expired_at: 2026-11-05
