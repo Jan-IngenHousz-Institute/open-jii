@@ -103,7 +103,6 @@
         "title": "Monitoring",
         "description": "Live-Broker-Konnektivität und die Datenlage dieses Geräts im Zeitverlauf.",
         "state": "Konnektivität",
-        "lastSeen": "Zuletzt gesehen",
         "lastData": "Zuletzt empfangene Daten",
         "noData": "Noch keine Daten empfangen",
         "pipelineNote": "Von der Daten-Pipeline berechnet; entspricht dem letzten Pipeline-Lauf.",

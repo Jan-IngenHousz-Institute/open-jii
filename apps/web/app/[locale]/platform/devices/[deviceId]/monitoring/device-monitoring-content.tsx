@@ -26,9 +26,10 @@ const CONNECTIVITY_POLL_MS = 15_000;
 const RANGE_PRESETS: MonitoringRangePreset[] = ["24h", "7d", "30d"];
 
 /**
- * The monitoring dashboard: live state on top, then stability, data flow,
- * payload content, device health, and the raw event record. Live tiles ignore
- * the range; everything else is pipeline-fed and labeled so.
+ * The monitoring dashboard: the triage tiles on top (live connectivity and
+ * last data beside range-scoped volume and battery), then stability, data
+ * flow, payload content, device health, and the raw event record. Everything
+ * warehouse-fed is labeled with its pipeline provenance.
  */
 export default function DeviceMonitoringPage() {
   const { t } = useTranslation("iot");

@@ -103,7 +103,6 @@
         "title": "Monitoring",
         "description": "Live broker-connectiviteit en het dataverloop van dit apparaat in de tijd.",
         "state": "Connectiviteit",
-        "lastSeen": "Laatst gezien",
         "lastData": "Laatst ontvangen data",
         "noData": "Nog geen data ontvangen",
         "pipelineNote": "Berekend door de datapipeline; weerspiegelt de laatste pipeline-run.",

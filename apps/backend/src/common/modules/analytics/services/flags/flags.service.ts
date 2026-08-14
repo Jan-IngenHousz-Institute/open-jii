@@ -19,6 +19,12 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(FlagsService.name);
   private initialized = false;
 
+  // Every PostHog evaluation is an HTTP round trip, and polling surfaces call
+  // the flag-gated routes several times a minute. Flag decisions tolerate a
+  // minute of staleness, so successful evaluations are cached per user.
+  private static readonly FLAG_CACHE_TTL_MS = 60_000;
+  private readonly flagCache = new Map<string, { value: boolean; expiresAt: number }>();
+
   constructor(private readonly configService: AnalyticsConfigService) {}
 
   /* v8 ignore next 3 */
@@ -100,6 +106,12 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
    * @returns Whether the flag is enabled (falls back to default on error)
    */
   async isFeatureFlagEnabled(flagKey: FeatureFlagKey, distinctId = "anonymous"): Promise<boolean> {
+    const cacheKey = `${flagKey}:${distinctId}`;
+    const cached = this.flagCache.get(cacheKey);
+    if (cached !== undefined && cached.expiresAt > Date.now()) {
+      return cached.value;
+    }
+
     try {
       const client = this.getPostHogClient();
 
@@ -117,6 +129,13 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
       this.logger.debug(
         `Feature flag ${flagKey} for ${distinctId}: ${result} (PostHog returned: ${isEnabled})`,
       );
+
+      // Defaults from an uninitialized client or an error are never cached;
+      // only real evaluations are worth holding on to.
+      this.flagCache.set(cacheKey, {
+        value: result,
+        expiresAt: Date.now() + FlagsService.FLAG_CACHE_TTL_MS,
+      });
 
       return result;
     } catch (error) {

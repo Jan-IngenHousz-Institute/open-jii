@@ -103,7 +103,6 @@
         "title": "Monitoring",
         "description": "Live broker connectivity and what this device's data looks like over time.",
         "state": "Connectivity",
-        "lastSeen": "Last seen",
         "lastData": "Last data received",
         "noData": "No data received yet",
         "pipelineNote": "Computed by the data pipeline; reflects the last pipeline run.",
