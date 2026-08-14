@@ -28,6 +28,7 @@
     "@aws-sdk/client-location": "catalog:aws-sdk",
     "@aws-sdk/client-s3": "catalog:aws-sdk",
     "@aws-sdk/s3-request-presigner": "catalog:aws-sdk",
+    "@duckdb/node-api": "1.5.5-r.4",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.1.18",
@@ -62,7 +63,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@duckdb/node-api": "1.5.5-r.4",
     "@faker-js/faker": "^9.9.0",
     "@nestjs/cli": "^11.0.19",
     "@nestjs/schematics": "^11.0.10",

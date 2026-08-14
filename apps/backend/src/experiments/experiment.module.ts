@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
@@ -7,6 +8,8 @@ import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
+import { DuckDbAdapter } from "../common/modules/duckdb/duckdb.adapter";
+import { DuckDbModule } from "../common/modules/duckdb/duckdb.module";
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro/create-macro";
@@ -79,6 +82,7 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EXPERIMENT_DATA_READ_PORT } from "./core/ports/experiment-data-read.port";
+import type { ExperimentDataReadPort } from "./core/ports/experiment-data-read.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 // Repositories
@@ -114,6 +118,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
 @Module({
   imports: [
     DatabricksModule,
+    DuckDbModule,
     AwsModule,
     EmailModule,
     AnalyticsModule,
@@ -147,7 +152,15 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     },
     {
       provide: EXPERIMENT_DATA_READ_PORT,
-      useExisting: DatabricksAdapter,
+      useFactory: (
+        configService: ConfigService,
+        warehouseAdapter: DatabricksAdapter,
+        duckDbAdapter: DuckDbAdapter,
+      ): ExperimentDataReadPort =>
+        configService.get<string>("duckdb.readAdapter") === "duckdb"
+          ? duckDbAdapter
+          : warehouseAdapter,
+      inject: [ConfigService, DatabricksAdapter, DuckDbAdapter],
     },
     {
       provide: AWS_PORT,

@@ -15,6 +15,7 @@ import analyticsConfig from "./common/config/analytics.config";
 import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
+import duckdbConfig from "./common/config/duckdb.config";
 import emailConfig from "./common/config/email.config";
 import mailchimpConfig from "./common/config/mailchimp.config";
 import { DatabaseModule } from "./common/database/database.module";
@@ -42,6 +43,7 @@ const orpcLogger = new Logger("ORPC");
       load: [
         databaseConfig,
         databricksConfig,
+        duckdbConfig,
         awsConfig,
         emailConfig,
         mailchimpConfig,

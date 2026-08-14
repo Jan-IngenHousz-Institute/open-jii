@@ -31,6 +31,6 @@ import { DatabricksVolumesService } from "./services/volumes/volumes.service";
     DatabricksVolumesService,
     DatabricksAdapter,
   ],
-  exports: [DatabricksAdapter, DatabricksConfigService],
+  exports: [DatabricksAdapter, DatabricksConfigService, DatabricksAuthService],
 })
 export class DatabricksModule {}
