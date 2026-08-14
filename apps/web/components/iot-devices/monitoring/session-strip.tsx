@@ -87,6 +87,8 @@ export function SessionStrip({ monitoring, from, to }: SessionStripProps) {
               <TooltipTrigger asChild>
                 <div
                   role="img"
+                  // Focusable so the tooltip's detail opens from the keyboard too.
+                  tabIndex={0}
                   aria-label={t("iot.devices.monitoring.sessionAria", {
                     duration: formatDuration(segment.session.durationSeconds),
                   })}

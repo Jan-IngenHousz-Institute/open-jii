@@ -3,6 +3,7 @@ import { Readable } from "stream";
 
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { zExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
+import type { LifecycleEventRow } from "@repo/api/transforms/device-connectivity";
 
 import type {
   ExportFormat,
@@ -12,7 +13,6 @@ import type { UploadMetadata } from "../../../experiments/core/models/experiment
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { DataUploadJobInput } from "../../../experiments/core/ports/databricks.port";
-import type { LifecycleEventRow } from "../../../iot/core/models/device-connectivity-log.model";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";

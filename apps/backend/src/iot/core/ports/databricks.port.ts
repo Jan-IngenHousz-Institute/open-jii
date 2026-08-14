@@ -1,5 +1,6 @@
+import type { LifecycleEventRow } from "@repo/api/transforms/device-connectivity";
+
 import type { Result } from "../../../common/utils/fp-utils";
-import type { LifecycleEventRow } from "../models/device-connectivity-log.model";
 
 /**
  * Injection token for the IoT Databricks port

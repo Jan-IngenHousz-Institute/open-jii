@@ -1,9 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import type { DeviceLifecycleEvent, DeviceSession } from "@repo/api/domains/iot/iot.schema";
+import { deriveDeviceConnectivity } from "@repo/api/transforms/device-connectivity";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
-import { DeviceConnectivityLog } from "../../../core/models/device-connectivity-log.model";
 import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 
@@ -19,7 +19,7 @@ export interface DeviceSessionsResult {
 
 /**
  * Connectivity sessions and uptime for one thing over a range: fetches the
- * ordered lifecycle-event log and hands derivation to the domain model.
+ * ordered lifecycle-event log and hands derivation to the shared transform.
  */
 @Injectable()
 export class GetDeviceSessionsUseCase {
@@ -44,13 +44,12 @@ export class GetDeviceSessionsUseCase {
     }
 
     const truncated = eventsResult.value.length > EVENT_QUERY_CAP;
-    const log = new DeviceConnectivityLog(eventsResult.value.slice(0, EVENT_QUERY_CAP), from, to);
+    const derivation = deriveDeviceConnectivity(
+      eventsResult.value.slice(0, EVENT_QUERY_CAP),
+      from,
+      to,
+    );
 
-    return success({
-      events: log.events,
-      sessions: log.sessions,
-      uptimePercent: log.uptimePercent,
-      truncated,
-    });
+    return success({ ...derivation, truncated });
   }
 }
