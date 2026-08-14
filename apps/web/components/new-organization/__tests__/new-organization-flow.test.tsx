@@ -1,6 +1,6 @@
 import { createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -74,21 +74,21 @@ describe("the create-organization wizard", () => {
     expect(screen.getByText("organizations.create.people.teamsNote")).toBeInTheDocument();
     await user.click(next());
 
-    // Review: what is about to be created, including that it will be private.
+    // Review: what is about to be created, including the untouched privacy default.
     expect(await screen.findByText("organizations.create.reviewHeading")).toBeInTheDocument();
     expect(screen.getByText("Greenhouse Lab")).toBeInTheDocument();
     expect(screen.getByText("greenhouse-lab")).toBeInTheDocument();
     expect(screen.getByText("We grow things.")).toBeInTheDocument();
     expect(screen.getByText("https://openjii.org/about")).toBeInTheDocument();
     expect(screen.getByText("Wageningen")).toBeInTheDocument();
-    expect(screen.getByText("organizations.create.privacyNote")).toBeInTheDocument();
+    expect(screen.getByText("organizations.create.privateNote")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "organizations.createAction" }));
 
     await waitFor(() => {
       expect(create()).toHaveBeenCalledTimes(1);
     });
-    // Trimmed, and nothing invented: no visibility, and the untouched type is absent.
+    // Trimmed, and nothing invented: the visibility nobody touched, and no type.
     expect(create().mock.calls[0]?.[0]).toEqual({
       name: "Greenhouse Lab",
       slug: "greenhouse-lab",
@@ -96,7 +96,44 @@ describe("the create-organization wizard", () => {
       description: "We grow things.",
       website: "https://openjii.org/about",
       location: "Wageningen",
+      visibility: "private",
     });
+  });
+
+  // Private is also the server's fallback, so only `public` proves the control is wired.
+  it("publishes the organization when the profile step's public option is chosen", async () => {
+    const user = userEvent.setup();
+    // Scoped to this render: `isolate` is off, so a document-wide role query leaks.
+    const { container } = render(<NewOrganizationForm />);
+
+    await user.type(screen.getByLabelText("organizations.fields.name"), "Greenhouse Lab");
+    await user.click(next());
+
+    expect(await screen.findByText("organizations.create.profileDescription")).toBeInTheDocument();
+    // Private until somebody says otherwise, and the wizard opens on it.
+    const [privateOption, publicOption] = within(container).getAllByRole("radio");
+    expect(privateOption).toHaveAttribute("aria-checked", "true");
+    expect(publicOption).toHaveAttribute("aria-checked", "false");
+
+    await user.click(publicOption);
+    expect(publicOption).toHaveAttribute("aria-checked", "true");
+    expect(privateOption).toHaveAttribute("aria-checked", "false");
+
+    await user.click(next());
+    await user.click(await screen.findByRole("button", { name: "organizations.create.next" }));
+
+    // Read back twice: the summary row, and the sentence above the create button.
+    expect(await screen.findByText("organizations.create.reviewHeading")).toBeInTheDocument();
+    expect(screen.getByText("organizations.visibility.publicLabel")).toBeInTheDocument();
+    expect(screen.getByText("organizations.create.publicNote")).toBeInTheDocument();
+    expect(screen.queryByText("organizations.create.privateNote")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "organizations.createAction" }));
+
+    await waitFor(() => {
+      expect(create()).toHaveBeenCalledTimes(1);
+    });
+    expect(create().mock.calls[0]?.[0]).toMatchObject({ visibility: "public" });
   });
 
   it("sends the role a collected person was changed to, not the one they were added on", async () => {
@@ -132,6 +169,21 @@ describe("the create-organization wizard", () => {
     });
     expect(addSpy.body).toEqual({ userId: "u-1", role: "admin" });
     expect(addSpy.params.id).toBe("org-1");
+  });
+
+  it("refuses a name longer than the column will hold", async () => {
+    const user = userEvent.setup();
+    render(<NewOrganizationForm />);
+
+    // `paste`: 256 keystrokes through the seeded-slug handler is slow.
+    await user.click(screen.getByLabelText("organizations.fields.name"));
+    await user.paste("a".repeat(256));
+
+    // Caught here rather than at the insert, three steps from the field that caused it.
+    expect(await screen.findByText("organizations.errors.nameTooLong")).toBeInTheDocument();
+    await user.click(next());
+    expect(screen.getByLabelText("organizations.fields.name")).toBeInTheDocument();
+    expect(screen.getByText("organizations.errors.nameTooLong")).toBeInTheDocument();
   });
 
   it("refuses to leave the first step on a name-less form", async () => {

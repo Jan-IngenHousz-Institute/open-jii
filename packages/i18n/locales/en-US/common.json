@@ -475,6 +475,7 @@
     },
     "errors": {
       "nameRequired": "A name is required.",
+      "nameTooLong": "A name must be at most 255 characters.",
       "website": "Enter a valid URL, including https://.",
       "slug": {
         "required": "A slug is required.",
@@ -494,7 +495,8 @@
       "creating": "Creating…",
       "created": "{{name}} created",
       "failed": "Could not create this organization.",
-      "privacyNote": "New organizations are private. You can make yours public later, from its settings.",
+      "privateNote": "This organization will be private. Nobody outside it will see it, and you can publish it later from its settings.",
+      "publicNote": "This organization will be public. It appears in the directory as soon as it is created, where anyone signed in can find it and ask to join.",
       "next": "Next",
       "identityStep": "Identity",
       "identityTitle": "Identity",

@@ -31,7 +31,9 @@ export function ProfileSection({ formData, onEdit, className }: ProfileSectionPr
         </div>
         {/* Plain text, so it is rendered as typed rather than through the rich-text
             renderer the experiment review uses. */}
-        <div className="whitespace-pre-line text-sm">{formData.description.trim() || "—"}</div>
+        <div className="whitespace-pre-line break-words text-sm">
+          {formData.description.trim() || "—"}
+        </div>
 
         <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
           {t("organizations.fields.website")}
@@ -41,7 +43,17 @@ export function ProfileSection({ formData, onEdit, className }: ProfileSectionPr
         <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
           {t("organizations.fields.location")}
         </div>
-        <div className="text-base font-medium">{formData.location.trim() || "—"}</div>
+        <div className="break-words text-base font-medium">{formData.location.trim() || "—"}</div>
+
+        {/* Read back here so the summary and the create body cannot disagree about it. */}
+        <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+          {t("organizations.visibility.title")}
+        </div>
+        <div className="text-base font-medium">
+          {formData.visibility === "public"
+            ? t("organizations.visibility.publicLabel")
+            : t("organizations.visibility.privateLabel")}
+        </div>
       </CardContent>
     </Card>
   );

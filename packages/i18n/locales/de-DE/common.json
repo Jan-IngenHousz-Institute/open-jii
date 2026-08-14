@@ -800,6 +800,7 @@
     },
     "errors": {
       "nameRequired": "Ein Name ist erforderlich.",
+      "nameTooLong": "Ein Name darf höchstens 255 Zeichen lang sein.",
       "website": "Geben Sie eine gültige URL ein, einschließlich https://.",
       "slug": {
         "required": "Ein Kurzname ist erforderlich.",
@@ -819,7 +820,8 @@
       "creating": "Wird erstellt…",
       "created": "{{name}} wurde erstellt",
       "failed": "Diese Organisation konnte nicht erstellt werden.",
-      "privacyNote": "Neue Organisationen sind privat. Sie können Ihre später in den Einstellungen öffentlich machen.",
+      "privateNote": "Diese Organisation wird privat sein. Von außen sieht sie niemand, und Sie können sie später in den Einstellungen veröffentlichen.",
+      "publicNote": "Diese Organisation wird öffentlich sein. Sie erscheint direkt nach dem Anlegen im Verzeichnis, wo alle angemeldeten Personen sie finden und eine Beitrittsanfrage stellen können.",
       "next": "Weiter",
       "identityStep": "Identität",
       "identityTitle": "Identität",

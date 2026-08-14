@@ -13,6 +13,7 @@ import {
   assertVisibilityChangeAllowed,
   canListInvitations,
   findOrganizationSlug,
+  resolveCreateVisibility,
 } from "./guards";
 import {
   assertOrganizationIsDeletable,
@@ -98,8 +99,10 @@ export const openJiiOrganization = () => {
     organizationHooks: {
       beforeCreateOrganization({ organization }) {
         if (typeof organization.slug === "string") assertSlugAllowed(organization.slug);
-        // Directory listing is a deliberate later act, never part of creation.
-        return Promise.resolve({ data: { visibility: "private" } });
+        // Written on every create, so the column's default never decides.
+        return Promise.resolve({
+          data: { visibility: resolveCreateVisibility(organization.visibility) },
+        });
       },
       async beforeUpdateOrganization({ organization: update, member }) {
         const slug = await findOrganizationSlug(member.organizationId);

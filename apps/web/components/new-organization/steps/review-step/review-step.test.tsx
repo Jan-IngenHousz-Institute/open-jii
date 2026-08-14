@@ -32,6 +32,7 @@ function renderReview(overrides: Partial<NewOrganizationFormValues> = {}) {
           description: "",
           website: "",
           location: "",
+          visibility: "private",
           people: [],
           ...overrides,
         },
@@ -71,10 +72,20 @@ describe("<ReviewStep />", () => {
     expect(screen.getByText("organizations.create.people.count")).toBeInTheDocument();
   });
 
-  it("states that the organization will be private before it is created", () => {
+  // Both states, because a note stuck on private would look correct on the default.
+  it("says what a private organization is about to be", () => {
     renderReview();
 
-    expect(screen.getByText("organizations.create.privacyNote")).toBeInTheDocument();
+    expect(screen.getByText("organizations.create.privateNote")).toBeInTheDocument();
+    expect(screen.getByText("organizations.visibility.privateLabel")).toBeInTheDocument();
+  });
+
+  it("says what a public organization is about to be", () => {
+    renderReview({ visibility: "public" });
+
+    expect(screen.getByText("organizations.create.publicNote")).toBeInTheDocument();
+    expect(screen.getByText("organizations.visibility.publicLabel")).toBeInTheDocument();
+    expect(screen.queryByText("organizations.create.privateNote")).not.toBeInTheDocument();
   });
 
   it("sends each section's edit control back to the step that owns it", async () => {

@@ -136,6 +136,23 @@ export async function assertCanReadOrganization(
   });
 }
 
+/** Better Auth stores an additional field verbatim, so the column's two states are enforced here. */
+function assertValidVisibility(value: unknown): asserts value is OrganizationVisibility {
+  if (!ORGANIZATION_VISIBILITIES.includes(value as OrganizationVisibility)) {
+    throw new APIError("BAD_REQUEST", { message: "Visibility must be 'private' or 'public'." });
+  }
+}
+
+/**
+ * The visibility a create body asks for, defaulting to private. No role check, unlike a
+ * change: whoever creates an organization is its owner by construction.
+ */
+export function resolveCreateVisibility(value: unknown): OrganizationVisibility {
+  if (value === undefined || value === null) return "private";
+  assertValidVisibility(value);
+  return value;
+}
+
 /** Directory visibility is part of the organization's settings, so owners only. */
 export function assertVisibilityChangeAllowed(value: unknown, memberRole: string): void {
   if (!isOwnerRole(memberRole)) {
@@ -143,7 +160,5 @@ export function assertVisibilityChangeAllowed(value: unknown, memberRole: string
       message: "Only an organization owner can change its visibility.",
     });
   }
-  if (!ORGANIZATION_VISIBILITIES.includes(value as OrganizationVisibility)) {
-    throw new APIError("BAD_REQUEST", { message: "Visibility must be 'private' or 'public'." });
-  }
+  assertValidVisibility(value);
 }

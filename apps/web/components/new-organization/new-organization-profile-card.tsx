@@ -24,7 +24,8 @@ export function NewOrganizationProfileCard({ form }: NewOrganizationProfileCardP
   const { t } = useTranslation();
 
   return (
-    <Card>
+    // `min-w-0` because this card shares a grid row and would otherwise widen it.
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>{t("organizations.create.profileTitle")}</CardTitle>
         <CardDescription>{t("organizations.create.profileDescription")}</CardDescription>

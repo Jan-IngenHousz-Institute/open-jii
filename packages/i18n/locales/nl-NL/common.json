@@ -588,6 +588,7 @@
     },
     "errors": {
       "nameRequired": "Een naam is verplicht.",
+      "nameTooLong": "Een naam mag maximaal 255 tekens lang zijn.",
       "website": "Vul een geldige URL in, inclusief https://.",
       "slug": {
         "required": "Een slug is verplicht.",
@@ -607,7 +608,8 @@
       "creating": "Aanmaken…",
       "created": "{{name}} is aangemaakt",
       "failed": "Deze organisatie kon niet worden aangemaakt.",
-      "privacyNote": "Nieuwe organisaties zijn privé. Je kunt de jouwe later via de instellingen openbaar maken.",
+      "privateNote": "Deze organisatie wordt privé. Niemand daarbuiten ziet haar, en je kunt haar later via de instellingen publiceren.",
+      "publicNote": "Deze organisatie wordt openbaar. Ze verschijnt zodra ze is aangemaakt in de directory, waar iedereen die is ingelogd haar kan vinden en lidmaatschap kan aanvragen.",
       "next": "Volgende",
       "identityStep": "Identiteit",
       "identityTitle": "Identiteit",

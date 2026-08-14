@@ -49,11 +49,12 @@ export function PeopleSection({ formData, onEdit, className }: PeopleSectionProp
                   ) : (
                     <Mail className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
                   )}
-                  <span className="truncate font-medium">
+                  {/* `truncate` does nothing on a flex child without `min-w-0`. */}
+                  <span className="min-w-0 truncate font-medium">
                     {person.kind === "user" ? person.displayName : person.email}
                   </span>
                   {/* The role is the half of this a reviewer cannot infer from the name. */}
-                  <span className="text-muted-foreground truncate text-xs">
+                  <span className="text-muted-foreground min-w-0 truncate text-xs">
                     {pendingPersonRoleText(person, t)}
                   </span>
                 </li>

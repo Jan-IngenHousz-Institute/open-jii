@@ -67,6 +67,7 @@ function values(overrides: Partial<NewOrganizationFormValues> = {}): NewOrganiza
     description: "We grow things.",
     website: "https://openjii.org/about",
     location: "Wageningen",
+    visibility: "private",
     people: [],
     ...overrides,
   };
@@ -105,12 +106,13 @@ describe("<NewOrganizationForm /> submit", () => {
       expect(create()).toHaveBeenCalledTimes(1);
     });
     // No type and no profile fields: an unset optional is omitted rather than sent as
-    // "", which is what keeps it absent instead of set-but-blank. Visibility is never
-    // sent — a new organization is private by definition.
+    // "", which is what keeps it absent instead of set-but-blank. Visibility is not one
+    // of them: it is always answered, so it is always sent.
     expect(create().mock.calls[0]?.[0]).toEqual({
       name: "Greenhouse Lab",
       slug: "greenhouse-lab",
       keepCurrentActiveOrganization: true,
+      visibility: "private",
     });
   });
 
@@ -128,7 +130,20 @@ describe("<NewOrganizationForm /> submit", () => {
       description: "We grow things.",
       website: "https://openjii.org/about",
       location: "Wageningen",
+      visibility: "private",
     });
+  });
+
+  it("carries a public choice to the create rather than quietly keeping it private", async () => {
+    submitValues.current = values({ visibility: "public" });
+
+    await submit();
+
+    await waitFor(() => {
+      expect(create()).toHaveBeenCalledTimes(1);
+    });
+    // Asserted on the wire: a create that drops the field defaults to private anyway.
+    expect(create().mock.calls[0]?.[0]).toMatchObject({ visibility: "public" });
   });
 
   it("adds a registered person and invites an address, then navigates", async () => {

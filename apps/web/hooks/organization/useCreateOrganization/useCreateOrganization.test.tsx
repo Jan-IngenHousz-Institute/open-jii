@@ -23,7 +23,11 @@ describe("useCreateOrganization", () => {
     const queryClient = createTestQueryClient();
 
     const { result } = renderHook(() => useCreateOrganization(), { queryClient });
-    await result.current.mutateAsync({ name: "Greenhouse Lab", slug: "greenhouse-lab" });
+    await result.current.mutateAsync({
+      name: "Greenhouse Lab",
+      slug: "greenhouse-lab",
+      visibility: "private",
+    });
 
     expect(create()).toHaveBeenCalledWith(
       expect.objectContaining({ keepCurrentActiveOrganization: true }),
@@ -40,14 +44,17 @@ describe("useCreateOrganization", () => {
       description: "",
       website: "",
       location: "",
+      visibility: "private",
     });
 
     // Empty is absent, not a set-but-blank profile field: the columns are nullable
-    // and an empty string would render as a value somebody chose.
+    // and an empty string would render as a value somebody chose. Visibility is not
+    // among them: it is always chosen, so it is always sent.
     expect(create()).toHaveBeenCalledWith({
       name: "Greenhouse Lab",
       slug: "greenhouse-lab",
       keepCurrentActiveOrganization: true,
+      visibility: "private",
     });
   });
 
@@ -62,6 +69,7 @@ describe("useCreateOrganization", () => {
       description: "We study leaves",
       website: "https://openjii.org/",
       location: "Wageningen",
+      visibility: "public",
     });
 
     expect(create()).toHaveBeenCalledWith({
@@ -72,6 +80,7 @@ describe("useCreateOrganization", () => {
       description: "We study leaves",
       website: "https://openjii.org/",
       location: "Wageningen",
+      visibility: "public",
     });
   });
 });

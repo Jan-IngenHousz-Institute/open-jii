@@ -26,6 +26,7 @@ import { organizationPath } from "../organizations/organization-routes";
 import { NewOrganizationIdentityCard } from "./new-organization-identity-card";
 import { NewOrganizationPeopleCard } from "./new-organization-people-card";
 import { NewOrganizationProfileCard } from "./new-organization-profile-card";
+import { NewOrganizationVisibilityCard } from "./new-organization-visibility-card";
 import type { NewOrganizationFormValues } from "./steps/form-step";
 import { FormStep, NO_TYPE, identitySchema, peopleSchema, profileSchema } from "./steps/form-step";
 import { ReviewStep, reviewSchema } from "./steps/review-step/review-step";
@@ -33,10 +34,8 @@ import { ReviewStep, reviewSchema } from "./steps/review-step/review-step";
 /**
  * Creating an organization: identity, profile, people, review.
  *
- * New organizations are always private — the create takes no visibility and the column
- * defaults to it — so publishing is a deliberate act from settings afterwards rather
- * than a decision buried in this form. Review says so, which is where somebody is
- * actually deciding to create it.
+ * Directory visibility is chosen on the profile step and starts on private, so an
+ * organization is listed only because somebody chose to list it.
  */
 export function NewOrganizationForm() {
   const router = useRouter();
@@ -85,7 +84,7 @@ export function NewOrganizationForm() {
       identity: createFormStep([
         (props) => <NewOrganizationIdentityCard {...props} takenSlugs={takenSlugs.current} />,
       ]),
-      profile: createFormStep([NewOrganizationProfileCard]),
+      profile: createFormStep([NewOrganizationProfileCard, NewOrganizationVisibilityCard]),
       people: createFormStep([NewOrganizationPeopleCard]),
     };
   }, []);
@@ -151,6 +150,7 @@ export function NewOrganizationForm() {
         description: values.description,
         website: values.website,
         location: values.location,
+        visibility: values.visibility,
       });
       organizationId = organization?.id;
     } catch (err) {
@@ -267,6 +267,7 @@ export function NewOrganizationForm() {
             description: "",
             website: "",
             location: "",
+            visibility: "private",
             people: [],
           }}
           onSubmit={onSubmit}

@@ -31,12 +31,13 @@ export function IdentitySection({ formData, onEdit, className }: IdentitySection
         <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
           {t("organizations.fields.name")}
         </div>
-        <div className="text-base font-medium">{formData.name.trim() || "—"}</div>
+        <div className="break-words text-base font-medium">{formData.name.trim() || "—"}</div>
 
         <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
           {t("organizations.fields.slug")}
         </div>
-        <div className="text-base font-medium">{formData.slug || "—"}</div>
+        {/* A slug has no spaces, so it is always one token and always the first to overflow. */}
+        <div className="break-words text-base font-medium">{formData.slug || "—"}</div>
 
         <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
           {t("organizations.fields.type")}

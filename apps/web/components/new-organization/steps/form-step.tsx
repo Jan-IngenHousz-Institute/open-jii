@@ -8,10 +8,12 @@ import { organizationSlugRejection } from "~/util/organization-slug";
 import type {
   OrganizationRole,
   OrganizationType,
+  OrganizationVisibility,
 } from "@repo/api/domains/organization/organization.schema";
 import {
   zOrganizationRole,
   zOrganizationType,
+  zOrganizationVisibility,
 } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
 import { WizardStepButtons } from "@repo/ui/components/wizard-form";
@@ -57,6 +59,7 @@ export interface NewOrganizationFormValues {
   description: string;
   website: string;
   location: string;
+  visibility: OrganizationVisibility;
   people: PendingOrganizationPerson[];
 }
 
@@ -82,7 +85,12 @@ type Translate = (key: string) => string;
  */
 export function identitySchema(t: Translate, isSlugTaken: (slug: string) => boolean) {
   return z.object({
-    name: z.string().trim().min(1, t("organizations.errors.nameRequired")),
+    // `varchar(255)`, so an uncapped name fails at the insert instead of here.
+    name: z
+      .string()
+      .trim()
+      .min(1, t("organizations.errors.nameRequired"))
+      .max(255, t("organizations.errors.nameTooLong")),
     slug: z.string().superRefine((slug, ctx) => {
       const rejection = organizationSlugRejection(slug);
       if (rejection !== null) {
@@ -103,7 +111,10 @@ export function identitySchema(t: Translate, isSlugTaken: (slug: string) => bool
   });
 }
 
-/** Description, website and location — all optional, all editable from settings later. */
+/**
+ * Description, website, location and visibility — all editable from settings later.
+ * Visibility is the one that is always answered, so it is not optional.
+ */
 export function profileSchema(t: Translate) {
   return z.object({
     description: z.string().trim(),
@@ -117,6 +128,7 @@ export function profileSchema(t: Translate) {
         t("organizations.errors.website"),
       ),
     location: z.string().trim(),
+    visibility: zOrganizationVisibility,
   });
 }
 

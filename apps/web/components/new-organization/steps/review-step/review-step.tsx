@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { Globe, Lock } from "lucide-react";
 import { z } from "zod";
 
 import { useTranslation } from "@repo/i18n";
@@ -40,6 +40,7 @@ export function ReviewStep({
 }: WizardStepProps<NewOrganizationFormValues>) {
   const { t } = useTranslation();
   const formData = form.getValues();
+  const isPublic = formData.visibility === "public";
 
   return (
     <div className="mx-auto space-y-8">
@@ -50,17 +51,25 @@ export function ReviewStep({
         <p className="text-muted-foreground text-sm">{t("organizations.create.reviewHint")}</p>
       </div>
 
+      {/* `min-w-0`: a grid item does not shrink below its content, so an unbreakable value would widen the column. */}
       <div className="grid gap-6 md:grid-cols-2">
-        <IdentitySection className="md:col-span-2" formData={formData} onEdit={() => goToStep(0)} />
-        <ProfileSection formData={formData} onEdit={() => goToStep(1)} />
-        <PeopleSection formData={formData} onEdit={() => goToStep(2)} />
+        <IdentitySection
+          className="min-w-0 md:col-span-2"
+          formData={formData}
+          onEdit={() => goToStep(0)}
+        />
+        <ProfileSection className="min-w-0" formData={formData} onEdit={() => goToStep(1)} />
+        <PeopleSection className="min-w-0" formData={formData} onEdit={() => goToStep(2)} />
       </div>
 
-      {/* Where the privacy of a new organization belongs: it is not a field to fill in,
-          it is what is about to happen. */}
+      {/* Two literal keys rather than one interpolated: only literals are guarded. */}
       <p className="text-muted-foreground flex items-start gap-2 text-xs leading-relaxed">
-        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-        {t("organizations.create.privacyNote")}
+        {isPublic ? (
+          <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        ) : (
+          <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        )}
+        {isPublic ? t("organizations.create.publicNote") : t("organizations.create.privateNote")}
       </p>
 
       <WizardStepButtons

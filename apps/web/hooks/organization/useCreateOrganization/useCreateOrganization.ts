@@ -7,7 +7,10 @@ import {
 } from "@/hooks/organization/organization-cache";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { OrganizationType } from "@repo/api/domains/organization/organization.schema";
+import type {
+  OrganizationType,
+  OrganizationVisibility,
+} from "@repo/api/domains/organization/organization.schema";
 import { authClient } from "@repo/auth/client";
 
 export interface CreateOrganizationInput {
@@ -17,6 +20,7 @@ export interface CreateOrganizationInput {
   description?: string;
   website?: string;
   location?: string;
+  visibility: OrganizationVisibility;
 }
 
 /**
@@ -40,6 +44,8 @@ export const useCreateOrganization = () => {
           name: input.name,
           slug: input.slug,
           keepCurrentActiveOrganization: true,
+          // Always sent, unlike the fields below: absent would be the server's default.
+          visibility: input.visibility,
           // Empty optional fields are omitted rather than sent as "": the column
           // is nullable and an empty string would render as a set-but-blank value.
           ...(input.type ? { type: input.type } : {}),
