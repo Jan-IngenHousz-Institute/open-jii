@@ -501,7 +501,7 @@
       "identityStep": "Identity",
       "identityTitle": "Identity",
       "identityDescription": "What this organization is called, and the handle it is reached by.",
-      "profileStep": "Profile",
+      "profileStep": "Profile & visibility",
       "profileTitle": "Profile",
       "profileDescription": "How this organization introduces itself. All of it is optional and editable later.",
       "peopleStep": "People",
