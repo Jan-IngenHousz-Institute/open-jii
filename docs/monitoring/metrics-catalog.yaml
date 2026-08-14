@@ -401,7 +401,7 @@ metrics:
       namespace: OpenJII/UserRegistrations
       metric: WeeklyNewUsers
       stat: Sum
-    baseline: { method: wow, anomaly_pct: none }
+    baseline: { method: wow }
     notes: Weekly granularity until metrics-publisher promotion (P3) adds daily counts.
 
   - num: 31
@@ -481,10 +481,10 @@ metrics:
     slots: [weekly]
     signal:
       namespace: DORA/Metrics
-      metric: DeploymentFrequency
+      search: SEARCH('{DORA/Metrics,Environment,Service} MetricName="DeploymentFrequency" AND Environment="${ENVIRONMENT}"', 'Sum')
       stat: Sum
-    baseline: { method: wow, anomaly_pct: none }
-    notes: Published by .github/actions/publish-dora-metrics.
+    baseline: { method: wow }
+    notes: Published by .github/actions/publish-dora-metrics with Service+Environment dimensions.
 
   - num: 39
     id: cost-snapshot
