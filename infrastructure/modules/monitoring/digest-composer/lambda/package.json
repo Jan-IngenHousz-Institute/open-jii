@@ -1,0 +1,15 @@
+{
+  "name": "digest-composer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Composes heartbeat/usage digests from the metrics catalog and posts them to Slack",
+  "main": "index.js",
+  "scripts": {
+    "sync-catalog": "cp ../../../../../docs/monitoring/metrics-catalog.yaml ./catalog.yaml",
+    "zip": "zip -r function.zip index.js catalog.yaml package.json node_modules > /dev/null",
+    "build": "npm run sync-catalog && npm ci --omit=dev && npm run zip"
+  },
+  "dependencies": {
+    "js-yaml": "^4.3.1"
+  }
+}
