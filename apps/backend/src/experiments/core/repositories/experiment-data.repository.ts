@@ -20,15 +20,15 @@ import type {
   TableDataDto,
 } from "../models/experiment-data.model";
 import { ExperimentDto } from "../models/experiment.model";
-import { DATABRICKS_PORT } from "../ports/databricks.port";
-import type { DatabricksPort } from "../ports/databricks.port";
+import { EXPERIMENT_DATA_READ_PORT } from "../ports/experiment-data-read.port";
+import type { ExperimentDataReadPort } from "../ports/experiment-data-read.port";
 
 @Injectable()
 export class ExperimentDataRepository {
   private readonly logger = new Logger(ExperimentDataRepository.name);
 
   constructor(
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    @Inject(EXPERIMENT_DATA_READ_PORT) private readonly readPort: ExperimentDataReadPort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
   ) {}
 
@@ -69,7 +69,7 @@ export class ExperimentDataRepository {
       limit,
     } = params;
 
-    const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
+    const metadataResult = await this.readPort.getExperimentTableMetadata(experimentId, {
       identifier: tableName,
       includeSchemas: true,
     });
@@ -202,7 +202,7 @@ export class ExperimentDataRepository {
     const { experimentId, experiment, tableName, column, limit } = params;
 
     // Need schemas so buildQuery can extract columns living inside a VARIANT.
-    const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
+    const metadataResult = await this.readPort.getExperimentTableMetadata(experimentId, {
       identifier: tableName,
       includeSchemas: true,
     });
@@ -363,7 +363,7 @@ export class ExperimentDataRepository {
       }
     }
 
-    return this.databricksPort.buildExperimentQuery({
+    return this.readPort.buildExperimentQuery({
       tableName,
       tableType,
       experimentId,
@@ -385,8 +385,8 @@ export class ExperimentDataRepository {
    * `UNRESOLVED_COLUMN` depend on the exact compiled query.
    */
   private async executeQuery(query: string): Promise<Result<SchemaData>> {
-    const dataResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
+    const dataResult = await this.readPort.executeSqlQuery(
+      this.readPort.CENTRUM_SCHEMA_NAME,
       query,
     );
     if (dataResult.isFailure()) {
@@ -417,7 +417,7 @@ export class ExperimentDataRepository {
       {
         name: tableName,
         catalog_name: experiment.name,
-        schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
+        schema_name: this.readPort.CENTRUM_SCHEMA_NAME,
         data: this.transformSchemaData(dataResult.value, experiment),
         page: 1,
         pageSize: totalRows,
@@ -448,7 +448,7 @@ export class ExperimentDataRepository {
       {
         name: tableName,
         catalog_name: experiment.name,
-        schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
+        schema_name: this.readPort.CENTRUM_SCHEMA_NAME,
         data: this.transformSchemaData(dataResult.value, experiment),
         page,
         pageSize,
