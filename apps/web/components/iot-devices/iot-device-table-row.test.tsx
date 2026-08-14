@@ -60,25 +60,24 @@ describe("IotDeviceTableRow", () => {
     expect(screen.queryByText("resourceVisibility.publicStatus")).not.toBeInTheDocument();
   });
 
-  it("falls back to the canonical product name when the device is unnamed", () => {
+  it("falls back to the serial number when the device is unnamed", () => {
     renderRow(createIotDevice({ name: null, deviceType: "multispeq", serialNumber: "SN-XYZ" }));
 
-    // Name absent, product known: show the product; the serial stays in its column.
-    expect(screen.getByRole("link", { name: "MultispeQ" })).toBeInTheDocument();
-    expect(screen.getByText("SN-XYZ")).toBeInTheDocument();
+    // Name absent: the serial identifies the device where a shared product
+    // name cannot distinguish forty unnamed units.
+    expect(screen.getByRole("link", { name: "SN-XYZ" })).toBeInTheDocument();
   });
 
-  it("falls back to unknown-device for an unnamed generic device", () => {
+  it("falls back to the serial number for an unnamed generic device", () => {
     renderRow(createIotDevice({ name: null, deviceType: "generic", serialNumber: "SN-GEN" }));
 
-    expect(screen.getByRole("link", { name: "iot.deviceIdentity.unknown" })).toBeInTheDocument();
-    expect(screen.getByText("SN-GEN")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "SN-GEN" })).toBeInTheDocument();
   });
 
   it("shows measurement-device context for Ambit rows", () => {
     renderRow(createIotDevice({ name: null, deviceType: "ambit", serialNumber: "AMB-1" }));
 
-    expect(screen.getByRole("link", { name: "Ambit" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "AMB-1" })).toBeInTheDocument();
     expect(screen.getByText("iot.deviceIdentity.role.measurementDevice")).toBeInTheDocument();
   });
 

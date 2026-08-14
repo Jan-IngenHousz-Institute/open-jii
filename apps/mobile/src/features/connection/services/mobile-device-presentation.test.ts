@@ -45,13 +45,13 @@ describe("presentMobileDevice", () => {
     ]);
   });
 
-  it("uses the canonical product when identity has no usable name", () => {
+  it("leads with the stable identifier when identity has no usable name", () => {
     const presentation = presentMobileDevice(device, identity({}));
 
-    expect(presentation).toMatchObject({ primary: "MultispeQ", provenance: "product" });
+    expect(presentation).toMatchObject({ primary: "AA:BB:CC:DD:EE:FF", provenance: "id" });
     expect(mobileDeviceSecondaryParts(presentation, labels)).toEqual([
+      "MultispeQ",
       "Measurement device",
-      "ID AA:BB:CC:DD:EE:FF",
     ]);
   });
 
@@ -59,7 +59,7 @@ describe("presentMobileDevice", () => {
     const presentation = presentMobileDevice(device, identity({}));
 
     expect(mobileDeviceSecondaryParts(presentation, { identifier: labels.identifier })).toEqual([
-      "ID AA:BB:CC:DD:EE:FF",
+      "MultispeQ",
     ]);
   });
 
@@ -67,12 +67,12 @@ describe("presentMobileDevice", () => {
     const presentation = presentMobileDevice(device);
 
     expect(presentation).toMatchObject({
-      primary: "unknown-device",
-      provenance: "fallback",
+      primary: "AA:BB:CC:DD:EE:FF",
+      provenance: "id",
       productName: null,
       id: "AA:BB:CC:DD:EE:FF",
     });
-    expect(mobileDevicePrimaryLabel(presentation, "Unknown device")).toBe("Unknown device");
+    expect(mobileDevicePrimaryLabel(presentation, "Unknown device")).toBe("AA:BB:CC:DD:EE:FF");
   });
 
   it("keeps a usable transport name during the pre-identity fallback", () => {
@@ -99,7 +99,7 @@ describe("presentMobileDevice", () => {
     ).toBe("Plot probe");
   });
 
-  it("adds stable identifier context to a product fallback", () => {
+  it("does not duplicate an identifier that is already the primary label", () => {
     const presentation = presentMobileDevice(device, identity({ deviceId: "SN-42" }));
 
     expect(
@@ -107,10 +107,10 @@ describe("presentMobileDevice", () => {
         unknownDevice: "Unknown device",
         identifier: labels.identifier,
       }),
-    ).toBe("MultispeQ (ID SN-42)");
+    ).toBe("SN-42");
   });
 
-  it("adds stable identifier context to an unknown fallback", () => {
+  it("stays attributable pre-identity through the identifier primary", () => {
     const presentation = presentMobileDevice(device);
 
     expect(
@@ -118,6 +118,6 @@ describe("presentMobileDevice", () => {
         unknownDevice: "Unknown device",
         identifier: labels.identifier,
       }),
-    ).toBe("Unknown device (ID AA:BB:CC:DD:EE:FF)");
+    ).toBe("AA:BB:CC:DD:EE:FF");
   });
 });

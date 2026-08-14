@@ -92,7 +92,7 @@ describe("useDeviceSheetActions", () => {
     expect(mockT).toHaveBeenCalledWith("setup.errorDisconnect", { name: "Plot probe" });
   });
 
-  it("uses product plus stable ID for an unnamed disconnect failure", async () => {
+  it("uses the stable ID for an unnamed disconnect failure", async () => {
     const unnamedDevice: Device = { ...device, name: device.id };
     mockExecutorGetState.mockReturnValue({
       executors: new Map([
@@ -105,11 +105,11 @@ describe("useDeviceSheetActions", () => {
     await result.current.handleDisconnect(unnamedDevice);
 
     expect(mockT).toHaveBeenCalledWith("setup.errorDisconnect", {
-      name: "MultispeQ (ID SN-42)",
+      name: "SN-42",
     });
   });
 
-  it("uses unknown plus stable ID for an unnamed connect failure", async () => {
+  it("uses the stable ID for an unnamed connect failure", async () => {
     const unnamedDevice: Device = { ...device, name: device.id };
     mockConnect.mockRejectedValue(new Error("bluetooth down"));
     const { result } = renderHook(() => useDeviceSheetActions());
@@ -117,7 +117,7 @@ describe("useDeviceSheetActions", () => {
     await result.current.handleConnect(unnamedDevice);
 
     expect(mockT).toHaveBeenCalledWith("setup.errorConnect", {
-      name: "Unknown device (ID dev-1)",
+      name: "dev-1",
     });
   });
 
