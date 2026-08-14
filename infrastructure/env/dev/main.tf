@@ -2439,6 +2439,23 @@ module "grafana_metrics_publisher" {
   metrics_publisher_lambda_sg_id = module.vpc.metrics_publisher_lambda_sg_id
 }
 
+module "digest_composer" {
+  source = "../../modules/monitoring/digest-composer"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
+  kinesis_stream_name        = module.kinesis.kinesis_stream_name
+  alb_arn                    = module.backend_alb.alb_arn
+  cloudfront_distribution_id = module.opennext.cloudfront_distribution_id
+  server_function_name       = module.opennext.server_function_name
+  macro_function_names       = values(module.macro_sandbox.function_names)
+  db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
+
+  heartbeat_webhook_url = var.slack_heartbeat_webhook_url
+  usage_webhook_url     = var.slack_usage_webhook_url
+}
+
 module "aws_inspector" {
   source         = "../../modules/inspector"
   resource_types = ["ECR", "LAMBDA", "LAMBDA_CODE"]
