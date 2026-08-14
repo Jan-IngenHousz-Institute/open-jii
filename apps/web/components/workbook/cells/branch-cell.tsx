@@ -137,8 +137,8 @@ export function BranchCellComponent({
       >
         <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
         <ul className="space-y-0.5">
-          {validationErrors.map((error) => (
-            <li key={error}>{error}</li>
+          {validationErrors.map((error, index) => (
+            <li key={`${index}:${error}`}>{error}</li>
           ))}
         </ul>
       </div>
@@ -227,7 +227,8 @@ export function BranchCellComponent({
         },
       ],
     };
-    setExpandedPaths((prev) => ({ ...prev, [newPath.id]: true }));
+    const newPathKey = `${newPath.id}:${cell.paths.length}`;
+    setExpandedPaths((prev) => ({ ...prev, [newPathKey]: true }));
     onUpdate({ ...cell, paths: [...cell.paths, newPath] });
   }, [cell, onUpdate]);
 

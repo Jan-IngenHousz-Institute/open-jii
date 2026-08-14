@@ -494,6 +494,12 @@ describe("validateBranchCell", () => {
     });
 
     expect(isGotoBranchCell(goto)).toBe(true);
+    expect(
+      isGotoBranchCell({
+        ...goto,
+        paths: [{ ...goto.paths[0], gotoCellId: undefined }],
+      }),
+    ).toBe(false);
     expect(isGotoBranchCell({ ...goto, defaultPathId: undefined })).toBe(false);
     expect(
       isGotoBranchCell({

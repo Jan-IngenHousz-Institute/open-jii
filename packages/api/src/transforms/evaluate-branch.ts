@@ -56,6 +56,7 @@ export function isGotoBranchCell(cell: BranchCell): boolean {
   return (
     cell.paths.length === 1 &&
     cell.paths[0].conditions.length === 0 &&
+    Boolean(cell.paths[0].gotoCellId) &&
     defaultPath.status === "resolved" &&
     defaultPath.path === cell.paths[0]
   );
