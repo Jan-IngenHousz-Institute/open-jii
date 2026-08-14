@@ -731,6 +731,106 @@ module "pipeline_scheduler" {
   depends_on = [module.centrum_pipeline]
 }
 
+module "metrics_pipeline" {
+  source = "../../modules/databricks/pipeline"
+
+  name         = "Metrics-DLT-Pipeline-DEV"
+  schema_name  = "metrics"
+  catalog_name = module.databricks_catalog.catalog_name
+
+  notebook_paths = [
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/platform_totals",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/family_totals",
+  ]
+
+  configuration = {
+    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME" = "centrum"
+    "SILVER_TABLE"        = "clean_data"
+  }
+
+  continuous_mode  = false
+  development_mode = true
+  serverless       = true
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_RUN"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "metrics_pipeline_scheduler" {
+  source = "../../modules/databricks/job"
+
+  name        = "Metrics-Pipeline-Scheduler-DEV"
+  description = "Triggers the public metrics pipeline refresh"
+
+  # Schedule: every 15 minutes
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0/15 * * * ?"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key         = "trigger_metrics_pipeline"
+      task_type   = "pipeline"
+      pipeline_id = module.metrics_pipeline.pipeline_id
+    }
+  ]
+
+  # The metrics pipeline only ever runs through this job, so job-level failure
+  # notifications cover every run; no in-pipeline event hook needed.
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.metrics_pipeline]
+}
+
 module "centrum_backup_job" {
   source = "../../modules/databricks/job"
 
