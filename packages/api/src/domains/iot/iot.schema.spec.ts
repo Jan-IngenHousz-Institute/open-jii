@@ -107,6 +107,24 @@ describe("Iot Schema", () => {
       ).toBe(false);
     });
 
+    it("rejects a serialNumber with characters AWS thing attributes forbid", () => {
+      // Spaces are the common case; AWS attribute values allow only
+      // [a-zA-Z0-9_.,@/:#=[\]-] and would 500 at CreateThing otherwise.
+      expect(
+        zRegisterIotDeviceBody.safeParse({ ...validBody, serialNumber: "TEST 123" }).success,
+      ).toBe(false);
+      expect(
+        zRegisterIotDeviceBody.safeParse({ ...validBody, serialNumber: "SN(1)" }).success,
+      ).toBe(false);
+    });
+
+    it("accepts serial numbers in the full attribute charset", () => {
+      expect(
+        zRegisterIotDeviceBody.safeParse({ ...validBody, serialNumber: "dev_1.2,a@b/c:d#e=[f]-g" })
+          .success,
+      ).toBe(true);
+    });
+
     it("rejects an empty name when provided", () => {
       expect(zRegisterIotDeviceBody.safeParse({ ...validBody, name: "" }).success).toBe(false);
     });

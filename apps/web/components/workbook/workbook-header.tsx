@@ -144,7 +144,7 @@ export function WorkbookHeader({
     const identitySecondary =
       presentation.id ?? ordinal ?? (device.label !== primary ? device.label : null);
     const secondaryParts = [
-      presentation.provenance === "name" ? presentation.productName : null,
+      presentation.provenance !== "product" ? presentation.productName : null,
       identitySecondary,
     ]
       .filter((value): value is string => value != null && value !== primary)

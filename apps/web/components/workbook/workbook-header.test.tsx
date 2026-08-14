@@ -148,7 +148,7 @@ describe("WorkbookHeader", () => {
     expect(screen.getByText("MultispeQ v2")).toBeInTheDocument();
   });
 
-  it("uses product-first identity with stable id as secondary context", () => {
+  it("uses id-first identity with the product as secondary context", () => {
     renderHeader({
       isConnected: true,
       connectedDevices: [
@@ -162,8 +162,8 @@ describe("WorkbookHeader", () => {
       ],
     });
 
-    expect(screen.getByText("Ambit")).toBeInTheDocument();
     expect(screen.getByText(/AMB-42/)).toBeInTheDocument();
+    expect(screen.getByText(/Ambit/)).toBeInTheDocument();
   });
 
   it("keeps canonical product and stable id as secondary context for a named device", () => {

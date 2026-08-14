@@ -44,7 +44,7 @@ describe("ConnectedDeviceRow identity hierarchy", () => {
     expect(screen.getByText(/Battery 87%/)).toBeTruthy();
   });
 
-  it("renders the canonical product when only family identity is known", () => {
+  it("leads with the stable ID and keeps the product as context when only family identity is known", () => {
     render(
       <ConnectedDeviceRow
         device={device}
@@ -53,16 +53,16 @@ describe("ConnectedDeviceRow identity hierarchy", () => {
       />,
     );
 
-    expect(screen.getByText("MultispeQ")).toBeTruthy();
-    expect(screen.getByText(/ID AA:BB:CC:DD:EE:FF/)).toBeTruthy();
+    expect(screen.getByText("AA:BB:CC:DD:EE:FF")).toBeTruthy();
+    expect(screen.getByText(/MultispeQ/)).toBeTruthy();
+    expect(screen.queryByText(/ID AA:BB:CC:DD:EE:FF/)).toBeNull();
   });
 
-  it("renders Unknown device without a MultispeQ fallback before identity", () => {
+  it("leads with the stable ID without a MultispeQ fallback before identity", () => {
     render(<ConnectedDeviceRow device={device} onDisconnect={vi.fn()} />);
 
-    expect(screen.getByText("Unknown device")).toBeTruthy();
-    expect(screen.queryByText("MultispeQ")).toBeNull();
-    expect(screen.getByText(/ID AA:BB:CC:DD:EE:FF/)).toBeTruthy();
+    expect(screen.getByText("AA:BB:CC:DD:EE:FF")).toBeTruthy();
+    expect(screen.queryByText(/MultispeQ/)).toBeNull();
   });
 
   it("passes the selected device to the disconnect handler", () => {

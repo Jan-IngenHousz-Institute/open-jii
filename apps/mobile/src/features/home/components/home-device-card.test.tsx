@@ -137,7 +137,7 @@ describe("HomeDeviceCard reconnect identity", () => {
     expect(screen.getByText("Tap to connect a device")).toBeTruthy();
   });
 
-  it("keeps the stable ID visible when the remembered device has no usable name", () => {
+  it("leads with the stable ID when the remembered device has no usable name", () => {
     state.lastConnectedDevice = {
       type: "bluetooth-classic",
       id: "AA:BB:CC:DD:EE:FF",
@@ -146,10 +146,8 @@ describe("HomeDeviceCard reconnect identity", () => {
 
     render(<HomeDeviceCard />);
 
-    expect(screen.getByText("Reconnect Unknown device")).toBeTruthy();
-    expect(
-      screen.getByText("Tap to reconnect your last device · ID AA:BB:CC:DD:EE:FF"),
-    ).toBeTruthy();
+    expect(screen.getByText("Reconnect AA:BB:CC:DD:EE:FF")).toBeTruthy();
+    expect(screen.getByText("Tap to reconnect your last device")).toBeTruthy();
   });
 
   it("does not duplicate the ID when the remembered device has a usable name", () => {
