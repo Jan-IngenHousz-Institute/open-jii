@@ -31,6 +31,8 @@ export function QuestionsOnlySubmitNode() {
     experimentLabel,
     iterationCount,
     flowNodes,
+    workbookRunId,
+    workbookVersionId,
     dismissQuestionsSubmit,
     navigateToQuestionFromOverview,
   } = useMeasurementFlowStore();
@@ -90,6 +92,8 @@ export function QuestionsOnlySubmitNode() {
       questions,
       commentText: trimmedComment || undefined,
       flagType,
+      workbookRunId,
+      workbookVersionId,
     });
 
     log.info("handleUpload returned");

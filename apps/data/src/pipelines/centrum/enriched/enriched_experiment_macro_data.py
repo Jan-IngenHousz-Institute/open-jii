@@ -74,6 +74,7 @@ def enriched_experiment_macro_data():
             macro_data.macro_id,
             macro_data.macro_name,
             macro_data.macro_filename,
+            macro_data.workbook_run_id,
             macro_data.macro_output,
             macro_data.macro_error,
             macro_data.processed_timestamp,

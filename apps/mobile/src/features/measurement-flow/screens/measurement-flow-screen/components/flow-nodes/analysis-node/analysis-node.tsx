@@ -60,6 +60,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     producerCellId,
     cellOutputs,
     workbookVersionId,
+    workbookRunId,
     setCellOutput,
   } = useMeasurementFlowStore();
   const protocolId = flowProtocolId(flowNodes);
@@ -242,6 +243,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         filename: macro.filename,
       },
       workbookVersionId,
+      workbookRunId,
       questions,
       commentText: measurementComment.trim() || undefined,
       protocolName: activeProtocolName ?? protocolId,

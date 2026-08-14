@@ -57,6 +57,8 @@ interface SharedUploadArgs {
   questions: AnswerData[];
   commentText?: string;
   workbookVersionId?: string;
+  /** Stable UUID for the complete workbook attempt, across sequential nodes. */
+  workbookRunId?: string;
 }
 
 export function useMeasurementUpload() {
@@ -80,6 +82,7 @@ export function useMeasurementUpload() {
       questions,
       commentText,
       workbookVersionId,
+      workbookRunId,
     }: SharedUploadArgs & {
       results: {
         rawMeasurement: any;
@@ -106,11 +109,10 @@ export function useMeasurementUpload() {
         throw new Error("No measurements to upload");
       }
 
-      // Measurements taken together ARE one run: every multi-device round is
-      // stamped with one shared workbook_run_id. Each row is still its own
-      // MQTT message in the ordinary envelope (see CONTEXT.md: Workbook run),
-      // published on ITS protocol's topic when the round was heterogeneous.
-      const workbookRunId = results.length > 1 ? uuidv4() : undefined;
+      // The caller supplies the attempt-scoped id for workbook flows. The
+      // fallback keeps the wire invariant for legacy/direct callers: every
+      // upload batch always has a workbook_run_id, even with one device.
+      const correlatedRunId = workbookRunId ?? uuidv4();
 
       // One fix per round: all devices measured at the same physical spot.
       const location = await getMeasurementLocation();
@@ -132,7 +134,7 @@ export function useMeasurementUpload() {
           timezone,
           questions,
           commentText,
-          workbookRunId,
+          workbookRunId: correlatedRunId,
           workbookVersionId,
           macroContext,
           fallbackDeviceId: device?.id,

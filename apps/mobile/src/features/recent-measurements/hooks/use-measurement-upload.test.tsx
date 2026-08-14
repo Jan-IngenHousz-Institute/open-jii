@@ -48,6 +48,7 @@ const SHARED = {
   userId: "user-1",
   macro: null,
   questions: [],
+  workbookRunId: "run-attempt-1",
 };
 
 type SavedCall = [
@@ -112,7 +113,7 @@ describe("useMeasurementUpload", () => {
     expect(calls.map(([m]) => m.metadata.protocolName)).toEqual(["Proto A", "Proto B", "Shared"]);
 
     const runIds = calls.map(([m]) => m.measurementResult.workbook_run_id);
-    expect(runIds[0]).toBeTruthy();
+    expect(runIds[0]).toBe("run-attempt-1");
     expect(new Set(runIds).size).toBe(1);
     expect(calls[0][0].measurementResult).toMatchObject({
       workbook_version_id: "version-1",
@@ -122,7 +123,7 @@ describe("useMeasurementUpload", () => {
     expect(enqueueMany).toHaveBeenCalledWith(["saved-1", "saved-2", "saved-3"]);
   });
 
-  it("omits workbook_run_id for a single-device round", async () => {
+  it("stamps the attempt workbook_run_id for a single-device round", async () => {
     const { result } = renderHook(() => useMeasurementUpload(), { wrapper });
 
     await act(async () => {
@@ -134,6 +135,21 @@ describe("useMeasurementUpload", () => {
 
     const [measurement] = saveMeasurement.mock.calls[0] as SavedCall;
     expect(measurement.topic).toBe("topic/exp-1/proto-shared");
-    expect(measurement.measurementResult).not.toHaveProperty("workbook_run_id");
+    expect(measurement.measurementResult.workbook_run_id).toBe("run-attempt-1");
+  });
+
+  it("generates a workbook_run_id when a legacy caller omits one", async () => {
+    const { result } = renderHook(() => useMeasurementUpload(), { wrapper });
+
+    await act(async () => {
+      const { workbookRunId: _omitted, ...legacy } = SHARED;
+      await result.current.uploadMeasurements({
+        ...legacy,
+        results: [{ rawMeasurement: { a: 1 } }],
+      });
+    });
+
+    const [measurement] = saveMeasurement.mock.calls[0] as SavedCall;
+    expect(measurement.measurementResult.workbook_run_id).toBeTruthy();
   });
 });

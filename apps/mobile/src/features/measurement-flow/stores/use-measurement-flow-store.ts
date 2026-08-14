@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type {
@@ -83,39 +84,58 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       ...initialFlowState,
       iterationAnchor: undefined,
 
-      setExperimentId: (experimentId, experimentLabel) => set({ experimentId, experimentLabel }),
+      setExperimentId: (experimentId, experimentLabel) =>
+        set((state) => ({
+          experimentId,
+          experimentLabel,
+          // Re-renders and repeated presses for the same active experiment keep
+          // the attempt identity; selecting a new flow starts a fresh run.
+          workbookRunId:
+            state.experimentId === experimentId && state.workbookRunId
+              ? state.workbookRunId
+              : uuidv4(),
+        })),
 
       setCurrentStep: (step) => set({ currentStep: step }),
       setCurrentFlowStep: (step) => set({ currentFlowStep: step }),
 
-      nextStep: () => set(nextStepState),
+      nextStep: () =>
+        set((state) => {
+          const next = nextStepState(state);
+          return next.iterationCount !== undefined && next.iterationCount > state.iterationCount
+            ? { ...next, workbookRunId: uuidv4() }
+            : next;
+        }),
       previousStep: () => set(previousStepState),
 
       // Route through resetFlow so the persisted slice is cleared too.
       reset: () => get().resetFlow(),
 
       setFlowNodes: (nodes) =>
-        set({
+        set((state) => ({
           flowNodes: nodes,
+          workbookRunId: nodes.length > 0 ? (state.workbookRunId ?? uuidv4()) : state.workbookRunId,
           currentFlowStep: 0,
           cells: [],
           edges: [],
           branchVisitCounts: {},
           lastMatchedPath: undefined,
           branchReturnStack: [],
-        }),
+        })),
 
       setFlowGraph: (nodes, edges, cells, workbookVersionId) =>
-        set({
+        set((state) => ({
           flowNodes: nodes,
           edges,
           cells,
           workbookVersionId,
+          // Also repairs a paused v1 flow persisted before run IDs existed.
+          workbookRunId: state.workbookRunId ?? uuidv4(),
           currentFlowStep: 0,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
           branchReturnStack: [],
-        }),
+        })),
 
       setLastMatchedPath: (path) => set({ lastMatchedPath: path }),
 
@@ -131,9 +151,10 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       resetFlow: () => set({ ...resetFlowState(), iterationAnchor: undefined }),
 
-      startNewIteration: () => set(startNewIterationState),
+      startNewIteration: () =>
+        set((state) => ({ ...startNewIterationState(state), workbookRunId: uuidv4() })),
 
-      retryCurrentIteration: () => set(retryIterationState()),
+      retryCurrentIteration: () => set({ ...retryIterationState(), workbookRunId: uuidv4() }),
 
       finishFlow: () => set(finishFlowState),
 
@@ -156,7 +177,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       setIterationAnchor: (anchor) => set({ iterationAnchor: anchor }),
 
-      dismissQuestionsSubmit: () => set(dismissQuestionsSubmitState),
+      dismissQuestionsSubmit: () =>
+        set((state) => ({ ...dismissQuestionsSubmitState(state), workbookRunId: uuidv4() })),
 
       navigateToQuestionFromOverview: (questionIndex) =>
         set(navigateToQuestionFromOverviewState(questionIndex)),
@@ -179,6 +201,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
         workbookVersionId: state.workbookVersionId,
+        workbookRunId: state.workbookRunId,
         currentStep: state.currentStep,
         flowNodes: state.flowNodes,
         currentFlowStep: state.currentFlowStep,

@@ -109,6 +109,8 @@ describe("QuestionsOnlySubmitNode", () => {
   it("renders the ReadyState overview plus Finish and Submit buttons", () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
+      workbookRunId: "run-1",
+      workbookVersionId: "version-1",
       flowNodes: [makeQuestion("q1", "What's your name?")],
     });
     useFlowAnswersStore.setState({
@@ -150,6 +152,8 @@ describe("QuestionsOnlySubmitNode", () => {
     const dismissQuestionsSubmit = vi.fn();
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
+      workbookRunId: "run-1",
+      workbookVersionId: "version-1",
       flowNodes: [makeQuestion("q1", "What's your name?")],
       dismissQuestionsSubmit,
     });
@@ -171,6 +175,8 @@ describe("QuestionsOnlySubmitNode", () => {
         experimentName: "Amazing Experiment",
         experimentId: "exp-1",
         userId: "user-1",
+        workbookRunId: "run-1",
+        workbookVersionId: "version-1",
         questions: [
           {
             question_label: "q1",

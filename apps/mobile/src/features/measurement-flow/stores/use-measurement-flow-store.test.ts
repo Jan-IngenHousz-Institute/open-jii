@@ -25,6 +25,7 @@ const makeBranch = (id: string): FlowNode =>
 function resetStore() {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
+    workbookRunId: undefined,
     currentStep: 0,
     flowNodes: [],
     currentFlowStep: 0,
@@ -53,6 +54,7 @@ describe("useMeasurementFlowStore", () => {
     it("exposes the correct default values", () => {
       const state = useMeasurementFlowStore.getState();
       expect(state.experimentId).toBeUndefined();
+      expect(state.workbookRunId).toBeUndefined();
       expect(state.currentStep).toBe(0);
       expect(state.flowNodes).toEqual([]);
       expect(state.currentFlowStep).toBe(0);
@@ -65,9 +67,15 @@ describe("useMeasurementFlowStore", () => {
   });
 
   describe("simple setters", () => {
-    it("setExperimentId updates experimentId", () => {
+    it("setExperimentId starts one stable workbook run", () => {
       useMeasurementFlowStore.getState().setExperimentId("exp-1");
-      expect(useMeasurementFlowStore.getState().experimentId).toBe("exp-1");
+      const first = useMeasurementFlowStore.getState();
+      expect(first.experimentId).toBe("exp-1");
+      expect(first.workbookRunId).toBeTruthy();
+      useMeasurementFlowStore.getState().setExperimentId("exp-1");
+      expect(useMeasurementFlowStore.getState().workbookRunId).toBe(first.workbookRunId);
+      useMeasurementFlowStore.getState().setExperimentId("exp-2");
+      expect(useMeasurementFlowStore.getState().workbookRunId).not.toBe(first.workbookRunId);
     });
 
     it("setCurrentStep updates currentStep", () => {
@@ -138,11 +146,14 @@ describe("useMeasurementFlowStore", () => {
         flowNodes: [makeQuestion("q1"), makeMeasurement("m1")],
         currentFlowStep: 1,
         iterationCount: 0,
+        workbookRunId: "run-1",
       });
       useMeasurementFlowStore.getState().nextStep();
       const state = useMeasurementFlowStore.getState();
       expect(state.currentFlowStep).toBe(0);
       expect(state.iterationCount).toBe(1);
+      expect(state.workbookRunId).toBeTruthy();
+      expect(state.workbookRunId).not.toBe("run-1");
     });
 
     it("pauses for review when the questions-only flow completes", () => {
@@ -233,6 +244,7 @@ describe("useMeasurementFlowStore", () => {
         flowNodes: [makeQuestion("q1")],
         currentFlowStep: 0,
         iterationCount: 3,
+        workbookRunId: "run-1",
       });
       useMeasurementFlowStore.getState().previousStep();
       const state = useMeasurementFlowStore.getState();
@@ -242,6 +254,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.iterationCount).toBe(0);
       expect(state.isFlowFinished).toBe(false);
       expect(state.isQuestionsSubmitPending).toBe(false);
+      expect(state.workbookRunId).toBeUndefined();
       expect(state.scanResult).toBeUndefined();
       expect(state.scanResults).toBeUndefined();
       expect(state.scanResult).toBeUndefined();
@@ -266,12 +279,14 @@ describe("useMeasurementFlowStore", () => {
         experimentId: "exp-1",
         currentStep: 5,
         isFromOverview: true,
+        workbookRunId: "run-1",
       });
       useMeasurementFlowStore.getState().reset();
       const state = useMeasurementFlowStore.getState();
       expect(state.experimentId).toBeUndefined();
       expect(state.currentStep).toBe(0);
       expect(state.isFromOverview).toBe(false);
+      expect(state.workbookRunId).toBeUndefined();
     });
   });
 
@@ -288,6 +303,7 @@ describe("useMeasurementFlowStore", () => {
         scanResults: [{ result: { foo: "bar" } }],
         scanResult: { foo: "bar" },
         isFromOverview: true,
+        workbookRunId: "run-1",
       });
       useMeasurementFlowStore.getState().resetFlow();
       const state = useMeasurementFlowStore.getState();
@@ -302,6 +318,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.scanResults).toBeUndefined();
       expect(state.scanResult).toBeUndefined();
       expect(state.isFromOverview).toBe(false);
+      expect(state.workbookRunId).toBeUndefined();
     });
   });
 
@@ -313,6 +330,7 @@ describe("useMeasurementFlowStore", () => {
         isQuestionsSubmitPending: true,
         scanResults: [{ result: { foo: "bar" } }],
         scanResult: { foo: "bar" },
+        workbookRunId: "run-1",
         isFromOverview: true,
       });
       useMeasurementFlowStore.getState().retryCurrentIteration();
@@ -322,6 +340,8 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.scanResult).toBeUndefined();
       expect(state.scanResults).toBeUndefined();
+      expect(state.workbookRunId).toBeTruthy();
+      expect(state.workbookRunId).not.toBe("run-1");
       expect(state.scanResult).toBeUndefined();
       expect(state.isFromOverview).toBe(false);
     });
@@ -442,6 +462,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.edges).toEqual(edges);
       expect(state.cells).toEqual(cells);
       expect(state.workbookVersionId).toBe("version-1");
+      expect(state.workbookRunId).toBeTruthy();
       expect(state.currentFlowStep).toBe(0);
       expect(state.branchVisitCounts).toEqual({});
       expect(state.lastMatchedPath).toBeUndefined();
