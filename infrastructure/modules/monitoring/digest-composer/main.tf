@@ -47,10 +47,9 @@ resource "aws_iam_role_policy" "digest_composer" {
         Sid    = "CloudWatchRead"
         Effect = "Allow"
         Action = [
-          "cloudwatch:GetMetricData",
-          "cloudwatch:ListMetrics"
+          "cloudwatch:GetMetricData"
         ]
-        # GetMetricData/ListMetrics do not support resource-level permissions
+        # GetMetricData does not support resource-level permissions
         Resource = "*"
       },
       {
