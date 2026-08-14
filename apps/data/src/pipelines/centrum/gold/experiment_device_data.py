@@ -17,6 +17,7 @@ from openjii.centrum import (
 @dlt.table(
     name=EXPERIMENT_DEVICE_DATA_TABLE,
     comment="Gold layer: Device metadata aggregated per experiment",
+    cluster_by=["experiment_id"],
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",

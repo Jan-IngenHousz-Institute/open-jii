@@ -24,6 +24,7 @@ from openjii.centrum import (
 @dlt.table(
     name=ENRICHED_MACRO_DATA_VIEW,
     comment="Enriched materialized view: Macro data with expanded VARIANT, questions, user struct, and annotations. Qualified for incremental refresh.",
+    cluster_by=["experiment_id"],
     table_properties={
         "quality": "gold",
         "delta.enableRowTracking": "true",
