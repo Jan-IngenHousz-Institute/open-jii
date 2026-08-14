@@ -49,7 +49,7 @@ ARG PROJECT=backend
 
 WORKDIR /app
 # Deploy only production dependencies to a separate directory
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=${PROJECT} deploy --prod --ignore-scripts --no-optional --legacy /dependencies
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=${PROJECT} deploy --prod --ignore-scripts --legacy /dependencies
 
 # Final image
 FROM alpine AS runner

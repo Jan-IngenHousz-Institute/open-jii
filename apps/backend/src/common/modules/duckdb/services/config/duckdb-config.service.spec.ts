@@ -26,21 +26,21 @@ describe("DuckDbConfigService", () => {
     expect(() => makeService({})).not.toThrow();
   });
 
-  it("assertAttachable reports every missing key at once", () => {
+  it("assertReady reports every missing key at once", () => {
     const service = makeService({
-      databricks: { host: "https://x", catalogName: "cat" },
+      delta: { endpoint: "https://share.example" },
+      databricks: { centrumSchemaName: "centrum" },
     });
 
-    expect(() => service.assertAttachable()).toThrow(
-      /DATABRICKS_CENTRUM_SCHEMA_NAME.*DATABRICKS_RAW_DATA_TABLE_NAME.*DATABRICKS_DEVICE_DATA_TABLE_NAME.*DATABRICKS_MACRO_DATA_TABLE_NAME.*DATABRICKS_UPLOADED_DATA_TABLE_NAME/,
+    expect(() => service.assertReady()).toThrow(
+      /DELTA_BEARER_TOKEN.*DELTA_SHARE_NAME.*DATABRICKS_RAW_DATA_TABLE_NAME.*DATABRICKS_DEVICE_DATA_TABLE_NAME.*DATABRICKS_MACRO_DATA_TABLE_NAME.*DATABRICKS_UPLOADED_DATA_TABLE_NAME/,
     );
   });
 
-  it("assertAttachable passes with a complete configuration", () => {
+  it("assertReady passes with a complete configuration", () => {
     const service = makeService({
+      delta: { endpoint: "https://share.example", bearerToken: "t", shareName: "s" },
       databricks: {
-        host: "https://x",
-        catalogName: "cat",
         centrumSchemaName: "centrum",
         rawDataTableName: "r",
         deviceDataTableName: "d",
@@ -49,6 +49,6 @@ describe("DuckDbConfigService", () => {
       },
     });
 
-    expect(() => service.assertAttachable()).not.toThrow();
+    expect(() => service.assertReady()).not.toThrow();
   });
 });

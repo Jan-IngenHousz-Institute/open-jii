@@ -95,7 +95,7 @@ export class ExperimentDataRepository {
 
     // Aggregation summary: page/pageSize ignored, `limit` caps the result.
     if (hasAggregation) {
-      const queryResult = this.buildQuery(experimentId, metadata, {
+      const queryResult = await this.buildQuery(experimentId, metadata, {
         filters: effectiveFilters,
         aggregation,
         orderBy,
@@ -114,7 +114,7 @@ export class ExperimentDataRepository {
         const offset = (page - 1) * pageSize;
 
         // COUNT(*) over the unpaged filter query.
-        const countSubqueryResult = this.buildQuery(experimentId, metadata, {
+        const countSubqueryResult = await this.buildQuery(experimentId, metadata, {
           columns,
           filters: effectiveFilters,
         });
@@ -128,7 +128,7 @@ export class ExperimentDataRepository {
         }
         const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
 
-        const dataQueryResult = this.buildQuery(experimentId, metadata, {
+        const dataQueryResult = await this.buildQuery(experimentId, metadata, {
           columns,
           filters: effectiveFilters,
           orderBy,
@@ -151,7 +151,7 @@ export class ExperimentDataRepository {
       }
 
       // Chart-style: all matching rows in one page, capped by `limit`.
-      const queryResult = this.buildQuery(experimentId, metadata, {
+      const queryResult = await this.buildQuery(experimentId, metadata, {
         columns,
         filters: effectiveFilters,
         orderBy,
@@ -168,7 +168,7 @@ export class ExperimentDataRepository {
     const usedPage = page ?? 1;
     const usedPageSize = pageSize ?? 5;
     const offset = (usedPage - 1) * usedPageSize;
-    const queryResult = this.buildQuery(experimentId, metadata, {
+    const queryResult = await this.buildQuery(experimentId, metadata, {
       orderBy,
       orderDirection,
       limit: usedPageSize,
@@ -213,7 +213,7 @@ export class ExperimentDataRepository {
       return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
     }
 
-    const queryResult = this.buildQuery(experimentId, metadataResult.value[0], {
+    const queryResult = await this.buildQuery(experimentId, metadataResult.value[0], {
       columns: [column],
       distinct: true,
       orderBy: column,
@@ -284,7 +284,7 @@ export class ExperimentDataRepository {
     );
   }
 
-  private buildQuery(
+  private async buildQuery(
     experimentId: string,
     metadata: ExperimentTableMetadata,
     options: {
@@ -297,7 +297,7 @@ export class ExperimentDataRepository {
       limit?: number;
       offset?: number;
     } = {},
-  ): Result<string> {
+  ): Promise<Result<string>> {
     const { columns, filters, aggregation, distinct, orderBy, orderDirection, limit, offset } =
       options;
     const {

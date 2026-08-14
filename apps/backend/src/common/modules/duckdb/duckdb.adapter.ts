@@ -14,12 +14,15 @@ import type { SchemaData } from "../databricks/services/sql/sql.types";
 import { DuckDbConfigService } from "./services/config/duckdb-config.service";
 import { SparkTypeMapper } from "./services/schema/spark-type-mapper";
 import { DuckDbSessionService } from "./services/session/duckdb-session.service";
+import { DeltaSharingService } from "./services/sharing/delta-sharing.service";
+
+const NO_DELTA_FILES = "NO_DELTA_FILES";
 
 /**
- * Experiment-data read engine backed by embedded DuckDB scanning the Delta
- * tables through Unity Catalog. Mirrors the DatabricksAdapter's read surface
- * and wire contract (string cells, Spark type_text) so the repository can't
- * tell the engines apart.
+ * Experiment-data read engine: Delta Sharing supplies pre-signed parquet
+ * URLs (scoped per experiment), embedded DuckDB runs the SQL over them.
+ * Mirrors the DatabricksAdapter's read surface and wire contract (string
+ * cells, Spark type_text) so the repository can't tell the engines apart.
  */
 @Injectable()
 export class DuckDbAdapter implements ExperimentDataReadPort {
@@ -30,6 +33,7 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
   constructor(
     private readonly configService: DuckDbConfigService,
     private readonly sessionService: DuckDbSessionService,
+    private readonly sharingService: DeltaSharingService,
     private readonly queryBuilder: DuckDbQueryBuilderService,
     private readonly typeMapper: SparkTypeMapper,
   ) {
@@ -62,8 +66,17 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       whereConditions.push(["identifier", options.identifier]);
     }
 
+    const fromResult = await this.fromExpression("experiment_table_metadata", whereConditions);
+    if (fromResult.isFailure()) {
+      // A shared table with zero matching files means zero matching rows.
+      if (fromResult.error.code === NO_DELTA_FILES) {
+        return success([]);
+      }
+      return failure(fromResult.error);
+    }
+
     const queryResult = this.queryBuilder.buildQuery({
-      table: this.sessionService.tableRef("experiment_table_metadata"),
+      table: fromResult.value,
       columns,
       whereConditions,
     });
@@ -103,9 +116,9 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
 
   /**
    * Same dispatch as the Databricks adapter (macro/upload share physical
-   * tables scoped by id columns), targeting the attached catalog.
+   * tables scoped by id columns); the FROM source is the per-query file list.
    */
-  buildExperimentQuery(params: {
+  async buildExperimentQuery(params: {
     tableName: string;
     tableType: "static" | "macro" | "upload";
     experimentId: string;
@@ -119,49 +132,24 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
     orderDirection?: "ASC" | "DESC";
     limit?: number;
     offset?: number;
-  }): Result<string> {
+  }): Promise<Result<string>> {
     const { tableName, tableType, experimentId, ...queryParams } = params;
 
-    if (tableType === "macro") {
-      return this.queryBuilder.buildQuery({
-        ...queryParams,
-        table: this.sessionService.tableRef(this.configService.getMacroDataTableName()),
-        whereConditions: [
-          ["experiment_id", experimentId],
-          ["macro_id", tableName],
-        ],
-      });
+    const target = this.resolveTarget(tableName, tableType, experimentId);
+    if (target.isFailure()) {
+      return target;
     }
+    const { physicalTable, whereConditions } = target.value;
 
-    if (tableType === "upload") {
-      return this.queryBuilder.buildQuery({
-        ...queryParams,
-        table: this.sessionService.tableRef(this.configService.getUploadedDataTableName()),
-        whereConditions: [
-          ["experiment_id", experimentId],
-          ["upload_table_id", tableName],
-        ],
-      });
-    }
-
-    const staticTableMapping: Record<string, string> = {
-      [ExperimentTableName.RAW_DATA]: this.configService.getRawDataTableName(),
-      [ExperimentTableName.DEVICE]: this.configService.getDeviceDataTableName(),
-    };
-    const physicalTable = staticTableMapping[tableName];
-    if (!physicalTable) {
-      return failure(
-        AppError.internal(
-          `No physical table mapping found for static table '${tableName}'`,
-          "UNKNOWN_TABLE_MAPPING",
-        ),
-      );
+    const fromResult = await this.fromExpression(physicalTable, whereConditions);
+    if (fromResult.isFailure()) {
+      return fromResult;
     }
 
     return this.queryBuilder.buildQuery({
       ...queryParams,
-      table: this.sessionService.tableRef(physicalTable),
-      whereConditions: [["experiment_id", experimentId]],
+      table: fromResult.value,
+      whereConditions,
     });
   }
 
@@ -197,5 +185,78 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       const message = error instanceof Error ? error.message : String(error);
       return failure(AppError.internal(`DuckDB query execution failed: ${message}`));
     }
+  }
+
+  private resolveTarget(
+    tableName: string,
+    tableType: "static" | "macro" | "upload",
+    experimentId: string,
+  ): Result<{ physicalTable: string; whereConditions: [string, string][] }> {
+    if (tableType === "macro") {
+      return success({
+        physicalTable: this.configService.getMacroDataTableName(),
+        whereConditions: [
+          ["experiment_id", experimentId],
+          ["macro_id", tableName],
+        ],
+      });
+    }
+
+    if (tableType === "upload") {
+      return success({
+        physicalTable: this.configService.getUploadedDataTableName(),
+        whereConditions: [
+          ["experiment_id", experimentId],
+          ["upload_table_id", tableName],
+        ],
+      });
+    }
+
+    const staticTableMapping: Record<string, string> = {
+      [ExperimentTableName.RAW_DATA]: this.configService.getRawDataTableName(),
+      [ExperimentTableName.DEVICE]: this.configService.getDeviceDataTableName(),
+    };
+    const physicalTable = staticTableMapping[tableName];
+    if (!physicalTable) {
+      return failure(
+        AppError.internal(
+          `No physical table mapping found for static table '${tableName}'`,
+          "UNKNOWN_TABLE_MAPPING",
+        ),
+      );
+    }
+
+    return success({
+      physicalTable,
+      whereConditions: [["experiment_id", experimentId]],
+    });
+  }
+
+  /**
+   * FROM source for a physical table. Local mode targets bare in-memory
+   * tables so integration specs run without Delta Sharing; otherwise a fresh
+   * pre-signed file list becomes a read_parquet scan. union_by_name tolerates
+   * files written before a column was added to the table.
+   */
+  private async fromExpression(
+    physicalTable: string,
+    scopes: [string, string][],
+  ): Promise<Result<string>> {
+    if (this.configService.isLocalMode()) {
+      return success(`"${physicalTable.replace(/"/g, '""')}"`);
+    }
+
+    const urlsResult = await this.sharingService.getDataFileUrls(physicalTable, scopes);
+    if (urlsResult.isFailure()) {
+      return urlsResult;
+    }
+    if (urlsResult.value.length === 0) {
+      return failure(
+        AppError.notFound(`No data files for table '${physicalTable}'`, NO_DELTA_FILES),
+      );
+    }
+
+    const urlList = urlsResult.value.map((url) => `'${url.replace(/'/g, "''")}'`).join(", ");
+    return success(`read_parquet([${urlList}], union_by_name = true)`);
   }
 }

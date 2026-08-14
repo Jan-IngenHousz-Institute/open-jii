@@ -56,7 +56,11 @@ export interface DatabricksPort {
     },
   ): Promise<Result<ExperimentTableMetadata[]>>;
 
-  /** Build a SQL query for experiment data, dispatching by table type. */
+  /**
+   * Build a SQL query for experiment data, dispatching by table type. Async
+   * to satisfy the read-port contract shared with engines that resolve their
+   * FROM source remotely.
+   */
   buildExperimentQuery(params: {
     tableName: string;
     tableType: "static" | "macro" | "upload";
@@ -71,7 +75,7 @@ export interface DatabricksPort {
     orderDirection?: "ASC" | "DESC";
     limit?: number;
     offset?: number;
-  }): Result<string>;
+  }): Promise<Result<string>>;
 
   executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>>;
 

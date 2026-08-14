@@ -93,7 +93,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success(mockQuery));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       const result = await repository.getTableData({
@@ -154,7 +154,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success("SELECT ..."));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
         success({ columns: [], rows: [], totalRows: 0, truncated: false }),
       );
@@ -204,7 +204,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success("SELECT ..."));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
         success({ columns: [], rows: [], totalRows: 0, truncated: false }),
       );
@@ -280,7 +280,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success(mockQuery));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       const result = await repository.getTableData({
@@ -338,7 +338,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success(mockQuery));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       const result = await repository.getTableData({
@@ -395,7 +395,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success(mockQuery));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       const result = await repository.getTableData({
@@ -450,7 +450,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success(mockQuery));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       const result = await repository.getTableData(baseParams);
@@ -493,7 +493,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success(mockQuery));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       const result = await repository.getTableData({
@@ -533,7 +533,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(
         success(`SELECT * FROM table`),
       );
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(error));
@@ -577,7 +577,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success(mockQuery));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success(mockQuery));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       const result = await repository.getTableData({
@@ -612,7 +612,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success(mockMetadata),
       );
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(
         success(`SELECT * FROM table`),
       );
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(error));
@@ -691,7 +691,7 @@ describe("ExperimentDataRepository", () => {
 
     it("strips nulls/blanks and preserves string-column values verbatim", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success("SELECT ..."));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
         success(mockRows(["alpha", null, "", "007"])),
       );
@@ -716,7 +716,7 @@ describe("ExperimentDataRepository", () => {
 
     it("coerces values to numbers only for a numeric column", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success("SELECT ..."));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
         success(mockRows(["42", "3.5", null], "DOUBLE")),
       );
@@ -729,7 +729,7 @@ describe("ExperimentDataRepository", () => {
 
     it("flags truncation and trims to the requested limit", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success("SELECT ..."));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
         success(mockRows(["a", "b", "c", "d"])),
       );
@@ -742,7 +742,7 @@ describe("ExperimentDataRepository", () => {
 
     it("pseudonymises contributor names when the experiment anonymizes contributors", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success("SELECT ..."));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
         success(
           mockRows(
@@ -784,7 +784,7 @@ describe("ExperimentDataRepository", () => {
 
     it("propagates a query-builder failure", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(
         failure(AppError.badRequest("bad query")),
       );
 
@@ -794,7 +794,7 @@ describe("ExperimentDataRepository", () => {
 
     it("propagates an executeSqlQuery failure", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
-      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockResolvedValue(success("SELECT ..."));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
         failure(AppError.internal("UNRESOLVED_COLUMN")),
       );

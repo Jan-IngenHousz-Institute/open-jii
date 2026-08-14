@@ -1060,8 +1060,10 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
   /**
    * Build a SQL query for experiment data, dispatching to static vs macro table.
+   * Async only to satisfy the shared read-port contract; the work is synchronous.
    */
-  buildExperimentQuery(params: {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async buildExperimentQuery(params: {
     tableName: string;
     tableType: "static" | "macro" | "upload";
     experimentId: string;
@@ -1075,7 +1077,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     orderDirection?: "ASC" | "DESC";
     limit?: number;
     offset?: number;
-  }): Result<string> {
+  }): Promise<Result<string>> {
     const {
       tableName,
       tableType,

@@ -2,13 +2,12 @@ import { HttpService } from "@nestjs/axios";
 import { ConfigService } from "@nestjs/config";
 import axios from "axios";
 
-import { DatabricksAuthService } from "../databricks/services/auth/auth.service";
-import { DatabricksConfigService } from "../databricks/services/config/config.service";
 import { DuckDbQueryBuilderService } from "../databricks/services/query-builder/duckdb-query-builder.service";
 import { DuckDbAdapter } from "./duckdb.adapter";
 import { DuckDbConfigService } from "./services/config/duckdb-config.service";
 import { SparkTypeMapper } from "./services/schema/spark-type-mapper";
 import { DuckDbSessionService } from "./services/session/duckdb-session.service";
+import { DeltaSharingService } from "./services/sharing/delta-sharing.service";
 
 const TEST_CONFIG = {
   duckdb: {
@@ -18,13 +17,6 @@ const TEST_CONFIG = {
     threads: "1",
   },
   databricks: {
-    host: "https://unit-test.invalid",
-    clientId: "id",
-    clientSecret: "secret",
-    dataExportJobId: "1",
-    dataUploadJobId: "2",
-    warehouseId: "w",
-    catalogName: "cat",
     centrumSchemaName: "centrum",
     rawDataTableName: "enriched_experiment_raw_data",
     deviceDataTableName: "experiment_device_data",
@@ -42,15 +34,12 @@ describe("DuckDbAdapter (localMode end-to-end)", () => {
   beforeAll(async () => {
     const configService = new ConfigService(TEST_CONFIG);
     const duckDbConfig = new DuckDbConfigService(configService);
-    const authService = new DatabricksAuthService(
-      new DatabricksConfigService(configService),
-      new HttpService(axios.create()),
-    );
 
-    session = new DuckDbSessionService(duckDbConfig, authService);
+    session = new DuckDbSessionService(duckDbConfig);
     adapter = new DuckDbAdapter(
       duckDbConfig,
       session,
+      new DeltaSharingService(new HttpService(axios.create()), duckDbConfig),
       new DuckDbQueryBuilderService(),
       new SparkTypeMapper(),
     );
@@ -101,7 +90,7 @@ describe("DuckDbAdapter (localMode end-to-end)", () => {
   });
 
   it("serves a full macro read: variant flattening, string cells, Spark type_text", async () => {
-    const queryResult = adapter.buildExperimentQuery({
+    const queryResult = await adapter.buildExperimentQuery({
       tableName: "macro-1",
       tableType: "macro",
       experimentId: "exp-1",
@@ -144,7 +133,7 @@ describe("DuckDbAdapter (localMode end-to-end)", () => {
   it("returns COUNT cells as strings so callers can Number() them", async () => {
     const result = await adapter.executeSqlQuery(
       "centrum",
-      `SELECT COUNT(*) AS total FROM ${session.tableRef("enriched_experiment_macro_data")}`,
+      'SELECT COUNT(*) AS total FROM "enriched_experiment_macro_data"',
     );
 
     expect(result.isSuccess()).toBe(true);
@@ -153,8 +142,8 @@ describe("DuckDbAdapter (localMode end-to-end)", () => {
     expect(Number(result.value.rows[0][0])).toBe(3);
   });
 
-  it("fails unknown static tables without touching the engine", () => {
-    const result = adapter.buildExperimentQuery({
+  it("fails unknown static tables without touching the engine", async () => {
+    const result = await adapter.buildExperimentQuery({
       tableName: "not-a-table",
       tableType: "static",
       experimentId: "exp-1",

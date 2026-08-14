@@ -447,8 +447,8 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("buildExperimentQuery", () => {
-    it("should build query for standard tables (raw_data, device)", () => {
-      const result = databricksAdapter.buildExperimentQuery({
+    it("should build query for standard tables (raw_data, device)", async () => {
+      const result = await databricksAdapter.buildExperimentQuery({
         tableName: "raw_data",
         tableType: "static",
         experimentId: "exp-123",
@@ -462,8 +462,8 @@ describe("DatabricksAdapter", () => {
       expect(query).toContain(databricksAdapter.RAW_DATA_TABLE_NAME);
     });
 
-    it("should build query for macro tables with macro_id filter", () => {
-      const result = databricksAdapter.buildExperimentQuery({
+    it("should build query for macro tables with macro_id filter", async () => {
+      const result = await databricksAdapter.buildExperimentQuery({
         tableName: "some_macro_id",
         tableType: "macro",
         experimentId: "exp-123",
@@ -478,8 +478,8 @@ describe("DatabricksAdapter", () => {
       expect(query).toContain(databricksAdapter.MACRO_DATA_TABLE_NAME);
     });
 
-    it("should handle VARIANT columns parsing", () => {
-      const result = databricksAdapter.buildExperimentQuery({
+    it("should handle VARIANT columns parsing", async () => {
+      const result = await databricksAdapter.buildExperimentQuery({
         tableName: "device",
         tableType: "static",
         experimentId: "exp-123",
@@ -494,8 +494,8 @@ describe("DatabricksAdapter", () => {
       expect(query).toContain('from_json(data::string, \'{"field1":"int"}\') as parsed_data');
     });
 
-    it("should handle all query options (limit, offset, orderBy)", () => {
-      const result = databricksAdapter.buildExperimentQuery({
+    it("should handle all query options (limit, offset, orderBy)", async () => {
+      const result = await databricksAdapter.buildExperimentQuery({
         tableName: "raw_data",
         tableType: "static",
         experimentId: "exp-123",

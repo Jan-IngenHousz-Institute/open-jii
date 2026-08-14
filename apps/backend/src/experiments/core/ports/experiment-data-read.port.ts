@@ -28,7 +28,11 @@ export interface ExperimentDataReadPort {
     },
   ): Promise<Result<ExperimentTableMetadata[]>>;
 
-  /** Build a SQL query for experiment data, dispatching by table type. */
+  /**
+   * Build a SQL query for experiment data, dispatching by table type. Async
+   * because engines that read via Delta Sharing resolve the FROM source to a
+   * fresh pre-signed file list per query.
+   */
   buildExperimentQuery(params: {
     tableName: string;
     tableType: "static" | "macro" | "upload";
@@ -43,7 +47,7 @@ export interface ExperimentDataReadPort {
     orderDirection?: "ASC" | "DESC";
     limit?: number;
     offset?: number;
-  }): Result<string>;
+  }): Promise<Result<string>>;
 
   executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>>;
 }
