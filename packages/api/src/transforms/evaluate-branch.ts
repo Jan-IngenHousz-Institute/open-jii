@@ -56,7 +56,6 @@ export function isGotoBranchCell(cell: BranchCell): boolean {
   return (
     cell.paths.length === 1 &&
     cell.paths[0].conditions.length === 0 &&
-    Boolean(cell.paths[0].gotoCellId) &&
     defaultPath.status === "resolved" &&
     defaultPath.path === cell.paths[0]
   );
@@ -125,6 +124,10 @@ export function validateBranchCell(
   }
   const defaultPath =
     defaultPathResolution.status === "resolved" ? defaultPathResolution.path : undefined;
+
+  if (isGotoBranchCell(cell) && !cell.paths[0].gotoCellId) {
+    errors.push("Go to target is missing");
+  }
 
   for (const path of cell.paths) {
     const label = path.label || "Unnamed path";

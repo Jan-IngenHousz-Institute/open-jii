@@ -37,6 +37,7 @@
         "mixedSensorFamilies": "Werkboek combineert sensorfamilies: {{detail}}",
         "macroWithoutInput": "Macro heeft geen voorafgaande meting",
         "unreachableCell": "{{label}} is onbereikbaar",
+        "gotoMissingTarget": "Ga naar heeft geen doelcel",
         "backwardGotoLoop": "Ga naar springt terug naar {{ref}}",
         "branchNoDefault": "Branch heeft geen uniek Anders-pad en kan doorlopen",
         "duplicateBranchPathId": "Branchpad-id {{ref}} komt dubbel voor",

@@ -43,7 +43,7 @@ const branchCell = (id: string, sourceCellId: string, gotoCellId?: string): Work
   defaultPathId: "path-1",
 });
 
-const gotoCell = (id: string, gotoCellId: string): WorkbookCell => ({
+const gotoCell = (id: string, gotoCellId?: string): WorkbookCell => ({
   id,
   type: "branch",
   isCollapsed: false,
@@ -212,6 +212,19 @@ describe("validateWorkbook", () => {
     expect(result.ok).toBe(true);
     expect(result.issues).toContainEqual(
       expect.objectContaining({ code: "backward-goto-loop", cellId: "goto", ref: "target" }),
+    );
+  });
+
+  it("blocks a Go to until its target is selected", () => {
+    const result = validateWorkbook([gotoCell("goto")], ctx({}));
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({
+        level: "error",
+        code: "goto-missing-target",
+        cellId: "goto",
+      }),
     );
   });
 

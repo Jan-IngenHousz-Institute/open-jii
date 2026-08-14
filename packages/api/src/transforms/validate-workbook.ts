@@ -17,6 +17,7 @@ export type WorkbookIssueCode =
   | "mixed-sensor-families"
   | "macro-without-input"
   | "unreachable-cell"
+  | "goto-missing-target"
   | "backward-goto-loop"
   | "branch-no-default"
   | "duplicate-branch-path-id"
@@ -164,6 +165,14 @@ function structuralBranchIssues(cells: WorkbookCell[]): WorkbookIssue[] {
 
     if (isGotoBranchCell(cell)) {
       const targetId = cell.paths[0].gotoCellId;
+      if (!targetId) {
+        issues.push({
+          level: "error",
+          code: "goto-missing-target",
+          cellId: cell.id,
+          cellLabel: cellLabelOf(cell),
+        });
+      }
       const targetIndex = targetId ? indexById.get(targetId) : undefined;
       if (targetIndex !== undefined && targetIndex < index) {
         issues.push({

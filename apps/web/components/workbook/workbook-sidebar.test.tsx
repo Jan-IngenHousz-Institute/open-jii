@@ -194,6 +194,7 @@ describe("WorkbookSidebar", () => {
   it("provides EN, NL, and DE Problems translations for every structural branch issue", () => {
     const issueKeys = [
       "unreachableCell",
+      "gotoMissingTarget",
       "backwardGotoLoop",
       "branchNoDefault",
       "duplicateBranchPathId",

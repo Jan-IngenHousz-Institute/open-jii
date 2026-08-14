@@ -60,6 +60,8 @@ function issueMessage(
       return t("flow.upgradeDiff.issue.unreachableCell", {
         label: issue.cellLabel ?? issue.cellId,
       });
+    case "goto-missing-target":
+      return t("flow.upgradeDiff.issue.gotoMissingTarget");
     case "backward-goto-loop":
       return t("flow.upgradeDiff.issue.backwardGotoLoop", { ref: issue.ref ?? "" });
     case "branch-no-default":

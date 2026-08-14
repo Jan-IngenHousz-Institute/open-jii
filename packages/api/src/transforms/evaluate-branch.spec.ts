@@ -499,7 +499,7 @@ describe("validateBranchCell", () => {
         ...goto,
         paths: [{ ...goto.paths[0], gotoCellId: undefined }],
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(isGotoBranchCell({ ...goto, defaultPathId: undefined })).toBe(false);
     expect(
       isGotoBranchCell({
@@ -535,6 +535,12 @@ describe("validateBranchCell", () => {
     });
 
     expect(validateBranchCell(goto)).toEqual([]);
+    expect(
+      validateBranchCell({
+        ...goto,
+        paths: [{ ...goto.paths[0], gotoCellId: undefined }],
+      }),
+    ).toEqual(["Go to target is missing"]);
     expect(validateBranchCell({ ...goto, defaultPathId: undefined })).toEqual([
       "Branch Otherwise path is missing",
       "Go to: no conditions defined",

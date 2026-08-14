@@ -48,6 +48,7 @@
         "mixedSensorFamilies": "Workbook mixes sensor families: {{detail}}",
         "macroWithoutInput": "Macro has no upstream measurement",
         "unreachableCell": "{{label}} is unreachable",
+        "gotoMissingTarget": "Go to has no target",
         "backwardGotoLoop": "Go to loops backward to {{ref}}",
         "branchNoDefault": "Branch has no unique Otherwise path and may fall through",
         "duplicateBranchPathId": "Branch path id {{ref}} is duplicated",

@@ -138,6 +138,7 @@
         "macroWithoutInput": "Makro \"{{label}}\" hat keine vorangehende Messung zum Ausführen",
         "mixedFamilies": "Dieses Arbeitsbuch mischt Sensorfamilien ({{detail}}); ein Durchlauf zielt auf ein einzelnes Gerät",
         "unreachableCell": "Zelle \"{{label}}\" ist nicht erreichbar",
+        "gotoMissingTarget": "Ein Gehe zu hat keine Zielzelle",
         "backwardGotoLoop": "Ein Gehe zu springt zurück zu {{ref}}",
         "branchNoDefault": "Eine Verzweigung hat keinen eindeutigen Sonst-Pfad und kann durchfallen",
         "duplicateBranchPathId": "Eine Verzweigungspfad-ID ist doppelt vorhanden ({{ref}})",

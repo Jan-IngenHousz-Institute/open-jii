@@ -37,6 +37,7 @@
         "mixedSensorFamilies": "Arbeitsmappe mischt Sensorfamilien: {{detail}}",
         "macroWithoutInput": "Makro hat keine vorherige Messung",
         "unreachableCell": "{{label}} ist nicht erreichbar",
+        "gotoMissingTarget": "Gehe zu hat keine Zielzelle",
         "backwardGotoLoop": "Gehe zu springt zurück zu {{ref}}",
         "branchNoDefault": "Verzweigung hat keinen eindeutigen Sonst-Pfad und kann durchfallen",
         "duplicateBranchPathId": "Verzweigungspfad-ID {{ref}} ist doppelt vorhanden",

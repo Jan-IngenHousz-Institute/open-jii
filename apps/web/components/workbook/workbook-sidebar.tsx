@@ -152,6 +152,8 @@ export function workbookIssueMessage(
       return t("workbooks.problems.issue.unreachableCell", {
         label: issue.cellLabel ?? issue.cellId ?? "",
       });
+    case "goto-missing-target":
+      return t("workbooks.problems.issue.gotoMissingTarget");
     case "backward-goto-loop":
       return t("workbooks.problems.issue.backwardGotoLoop", { ref: issue.ref ?? "" });
     case "branch-no-default":

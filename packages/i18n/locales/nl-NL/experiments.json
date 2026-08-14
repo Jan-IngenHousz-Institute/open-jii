@@ -135,6 +135,7 @@
         "macroWithoutInput": "Macro \"{{label}}\" heeft geen voorafgaande meting om op te draaien",
         "mixedFamilies": "Dit werkboek mengt sensorfamilies ({{detail}}); een run richt zich op één apparaat",
         "unreachableCell": "Cel \"{{label}}\" is niet bereikbaar",
+        "gotoMissingTarget": "Een Ga naar heeft geen doelcel",
         "backwardGotoLoop": "Een Ga naar springt terug naar {{ref}}",
         "branchNoDefault": "Een branch heeft geen uniek Anders-pad en kan doorlopen",
         "duplicateBranchPathId": "Een branchpad-id komt dubbel voor ({{ref}})",

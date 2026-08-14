@@ -376,6 +376,27 @@ describe("BranchCellComponent", () => {
     expect(updated.paths[0].conditions).toHaveLength(1);
   });
 
+  it("keeps a new Go to compact while prompting for its target", () => {
+    renderBranch({
+      paths: [
+        {
+          id: "goto-path",
+          label: "Go to",
+          color: "#005E5E",
+          conditions: [],
+        },
+      ],
+      defaultPathId: "goto-path",
+    });
+
+    expect(screen.getByText("Go to")).toBeInTheDocument();
+    expect(screen.queryByText("If")).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Go to target" })).toHaveTextContent(
+      "Choose target cell...",
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Go to target is missing");
+  });
+
   it("turns a one-path branch back into Go to without losing its target", async () => {
     const user = userEvent.setup();
     const { onUpdate } = renderBranch({
