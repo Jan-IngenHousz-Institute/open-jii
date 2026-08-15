@@ -1,25 +1,42 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveMonitoringRange } from "./monitoring-range";
+import { isRangeWithinLimit, resolveMonitoringPreset, toMonitoringRange } from "./monitoring-range";
 
-const NOW = new Date("2026-08-13T10:30:00.000Z").getTime();
+const NOW = new Date("2026-08-15T10:30:00.000Z").getTime();
 
-describe("resolveMonitoringRange", () => {
-  it("resolves 24h to an hourly-bucketed day ending now", () => {
-    const range = resolveMonitoringRange("24h", NOW);
+describe("monitoring range", () => {
+  it("resolves short presets to an hourly window", () => {
+    const day = resolveMonitoringPreset("last24h", NOW);
 
-    expect(range.bucket).toBe("hour");
-    expect(range.to).toBe("2026-08-13T10:30:00.000Z");
-    expect(range.from).toBe("2026-08-12T10:30:00.000Z");
+    expect(day.bucket).toBe("hour");
+    expect(day.from).toBe("2026-08-14T10:30:00.000Z");
+    expect(day.to).toBe("2026-08-15T10:30:00.000Z");
   });
 
-  it("resolves 7d and 30d to daily buckets over the full span", () => {
-    const week = resolveMonitoringRange("7d", NOW);
-    const month = resolveMonitoringRange("30d", NOW);
+  it("drops to daily buckets once the window outgrows an hourly axis", () => {
+    expect(resolveMonitoringPreset("last7d", NOW).bucket).toBe("day");
+    expect(resolveMonitoringPreset("last30d", NOW).bucket).toBe("day");
+  });
 
-    expect(week.bucket).toBe("day");
-    expect(week.from).toBe("2026-08-06T10:30:00.000Z");
-    expect(month.bucket).toBe("day");
-    expect(month.from).toBe("2026-07-14T10:30:00.000Z");
+  it("picks the bucket for an absolute range from its span", () => {
+    const short = toMonitoringRange(
+      new Date("2026-08-15T00:00:00Z"),
+      new Date("2026-08-16T00:00:00Z"),
+    );
+    const long = toMonitoringRange(
+      new Date("2026-08-01T00:00:00Z"),
+      new Date("2026-08-15T00:00:00Z"),
+    );
+
+    expect(short.bucket).toBe("hour");
+    expect(long.bucket).toBe("day");
+  });
+
+  it("refuses reversed and over-long windows, which the contract rejects anyway", () => {
+    const from = new Date("2026-08-01T00:00:00Z");
+
+    expect(isRangeWithinLimit(from, new Date("2026-08-20T00:00:00Z"))).toBe(true);
+    expect(isRangeWithinLimit(from, new Date("2026-09-20T00:00:00Z"))).toBe(false);
+    expect(isRangeWithinLimit(new Date("2026-08-20T00:00:00Z"), from)).toBe(false);
   });
 });

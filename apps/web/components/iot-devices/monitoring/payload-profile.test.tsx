@@ -1,9 +1,15 @@
 import { render, screen } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { DevicePayloadStats } from "@repo/api/domains/iot/iot.schema";
 
 import { PayloadProfile } from "./payload-profile";
+
+vi.mock("@repo/ui/components/charts/bar-chart", () => ({
+  BarChart: vi.fn(({ data }: { data: { name: string }[] }) => (
+    <div data-testid="share-bar">{data.map((series) => series.name).join(",")}</div>
+  )),
+}));
 
 function payload(overrides: Partial<DevicePayloadStats> = {}): DevicePayloadStats {
   return {
@@ -18,37 +24,40 @@ function payload(overrides: Partial<DevicePayloadStats> = {}): DevicePayloadStat
 }
 
 describe("PayloadProfile", () => {
-  it("shows metadata coverage as percentages of the total", () => {
+  it("reads coverage as a share of the measurements sent", () => {
     render(<PayloadProfile payload={payload()} />);
 
-    expect(screen.getByText("25%")).toBeInTheDocument();
-    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByText("25% (50/200)")).toBeInTheDocument();
+    expect(screen.getByText("100% (200/200)")).toBeInTheDocument();
+  });
+
+  it("shows the headline counts for the window", () => {
+    render(<PayloadProfile payload={payload()} />);
+
     expect(screen.getByText("200")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
-  it("survives an empty range without dividing by zero", () => {
-    render(
-      <PayloadProfile
-        payload={payload({ totalMeasurements: 0, withGps: 0, withBattery: 0, firmwareMix: [] })}
-      />,
-    );
+  it("says so plainly when the device sent nothing, instead of rendering empty charts", () => {
+    render(<PayloadProfile payload={payload({ totalMeasurements: 0 })} />);
 
-    expect(screen.getAllByText("0%").length).toBeGreaterThan(0);
+    expect(screen.getByText("iot.devices.monitoring.noMeasurements")).toBeInTheDocument();
+    expect(screen.queryByTestId("share-bar")).not.toBeInTheDocument();
   });
 
-  it("lists the firmware mix and hides the legacy protocol section when empty", () => {
+  it("charts the firmware mix and reports an absent protocol mix as nothing reported", () => {
     render(<PayloadProfile payload={payload()} />);
 
-    expect(screen.getByText(/1\.1\.0/)).toBeInTheDocument();
-    expect(screen.queryByText("iot.devices.monitoring.protocols")).not.toBeInTheDocument();
+    expect(screen.getByTestId("share-bar")).toHaveTextContent("1.1.0");
+    expect(screen.getByText("iot.devices.monitoring.noBreakdown")).toBeInTheDocument();
   });
 
-  it("shows the protocol mix with its legacy note when present", () => {
+  it("charts the protocol mix when legacy-topic rows carry one", () => {
     render(
       <PayloadProfile payload={payload({ protocolMix: [{ protocolId: "proto-1", count: 12 }] })} />,
     );
 
-    expect(screen.getByText(/proto-1/)).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.monitoring.protocolLegacyNote")).toBeInTheDocument();
+    const bars = screen.getAllByTestId("share-bar");
+    expect(bars.some((bar) => bar.textContent.includes("proto-1"))).toBe(true);
   });
 });

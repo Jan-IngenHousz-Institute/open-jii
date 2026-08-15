@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 
+import type { MonitoringRange } from "./monitoring-range";
 import { MonitoringTiles } from "./monitoring-tiles";
+
+const RANGE: MonitoringRange = {
+  from: "2026-08-13T00:00:00.000Z",
+  to: "2026-08-13T12:00:00.000Z",
+  bucket: "hour",
+};
 
 function monitoring(overrides: Partial<DeviceMonitoring> = {}): DeviceMonitoring {
   return {
@@ -39,19 +46,18 @@ const connectedDevice = () =>
   });
 
 describe("MonitoringTiles", () => {
-  it("sums measurements and shows the latest known battery", () => {
+  it("sums measurements for the window and states the rate they arrived at", () => {
     render(
       <MonitoringTiles
         device={connectedDevice()}
         activity={{ lastDataAt: new Date().toISOString() }}
         monitoring={monitoring()}
+        range={RANGE}
       />,
     );
 
     expect(screen.getByText("12")).toBeInTheDocument();
-    // The trailing null bucket must not blank the tile; the value is the
-    // device-reported reading, which is not a percentage on every family.
-    expect(screen.getByText("92.40")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.perHour")).toBeInTheDocument();
     expect(screen.queryByText("iot.devices.monitoring.connectedButSilent")).not.toBeInTheDocument();
   });
 
@@ -61,6 +67,7 @@ describe("MonitoringTiles", () => {
         device={connectedDevice()}
         activity={{ lastDataAt: "2026-08-13T00:00:00.000Z" }}
         monitoring={monitoring()}
+        range={RANGE}
       />,
     );
 
@@ -75,6 +82,7 @@ describe("MonitoringTiles", () => {
         })}
         activity={{ lastDataAt: null }}
         monitoring={monitoring()}
+        range={RANGE}
       />,
     );
 
@@ -82,15 +90,17 @@ describe("MonitoringTiles", () => {
     expect(screen.getByText("iot.devices.monitoring.noData")).toBeInTheDocument();
   });
 
-  it("shows the no-battery state for families that never report it", () => {
+  it("reports uptime with its session count, or says the window holds no evidence", () => {
     render(
       <MonitoringTiles
         device={connectedDevice()}
         activity={{ lastDataAt: null }}
-        monitoring={monitoring({ battery: [] })}
+        monitoring={monitoring({ uptimePercent: 99.5, sessions: [] })}
+        range={RANGE}
       />,
     );
 
-    expect(screen.getByText("iot.devices.monitoring.noBattery")).toBeInTheDocument();
+    expect(screen.getByText("99.5%")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.sessionCount")).toBeInTheDocument();
   });
 });

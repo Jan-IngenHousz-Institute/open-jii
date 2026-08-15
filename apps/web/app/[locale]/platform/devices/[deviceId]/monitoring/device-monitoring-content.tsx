@@ -1,13 +1,18 @@
 "use client";
 
+import { AvailabilityPanel } from "@/components/iot-devices/monitoring/availability-panel";
 import { BatteryPanel } from "@/components/iot-devices/monitoring/battery-panel";
 import { DataByExperiment } from "@/components/iot-devices/monitoring/data-by-experiment";
 import { EventLog } from "@/components/iot-devices/monitoring/event-log";
-import type { MonitoringRangePreset } from "@/components/iot-devices/monitoring/monitoring-range";
+import type {
+  MonitoringPresetId,
+  MonitoringRange,
+} from "@/components/iot-devices/monitoring/monitoring-range";
+import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
+import { MonitoringRangeControl } from "@/components/iot-devices/monitoring/monitoring-range-control";
 import { MonitoringTiles } from "@/components/iot-devices/monitoring/monitoring-tiles";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { PayloadProfile } from "@/components/iot-devices/monitoring/payload-profile";
-import { SessionStrip } from "@/components/iot-devices/monitoring/session-strip";
 import { ThroughputPanel } from "@/components/iot-devices/monitoring/throughput-panel";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useDeviceMonitoring } from "@/hooks/iot/useDeviceMonitoring/useDeviceMonitoring";
@@ -20,22 +25,32 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
+import { cn } from "@repo/ui/lib/utils";
 
 const CONNECTIVITY_POLL_MS = 15_000;
-const RANGE_PRESETS: MonitoringRangePreset[] = ["24h", "7d", "30d"];
+const DEFAULT_PRESET: MonitoringPresetId = "last24h";
+
+interface RangeSelection {
+  range: MonitoringRange;
+  preset: MonitoringPresetId | null;
+}
 
 /**
- * The monitoring dashboard: the triage tiles on top (live connectivity and
- * last data beside range-scoped volume and battery), then stability, data
- * flow, payload content, device health, and the raw event record. Everything
- * warehouse-fed is labeled with its pipeline provenance.
+ * The device monitoring dashboard, ordered the way an operator reads it: is it
+ * healthy right now, was it available over the window, did data flow, where
+ * did it land, what did it carry, and finally the raw record. Every
+ * time-series panel shares the one selected range, so a gap in one panel lines
+ * up with the gap above it.
  */
 export default function DeviceMonitoringPage() {
   const { t } = useTranslation("iot");
   const params = useParams<{ deviceId: string }>();
   const deviceId = params.deviceId;
-  const [preset, setPreset] = useState<MonitoringRangePreset>("24h");
+
+  const [selection, setSelection] = useState<RangeSelection>(() => ({
+    range: resolveMonitoringPreset(DEFAULT_PRESET),
+    preset: DEFAULT_PRESET,
+  }));
 
   const { data: device } = useIotDevice(deviceId, { refetchInterval: CONNECTIVITY_POLL_MS });
   const { data: activity } = useIotDeviceActivity(deviceId);
@@ -43,47 +58,36 @@ export default function DeviceMonitoringPage() {
   const {
     data: monitoring,
     isLoading,
+    isFetching,
     isError,
     refetch,
-    range,
-  } = useDeviceMonitoring(deviceId, preset);
+  } = useDeviceMonitoring(deviceId, selection.range);
 
-  const handlePresetChange = (value: string) => {
-    if (value === "24h" || value === "7d" || value === "30d") {
-      setPreset(value);
-    }
+  const handleRangeChange = (range: MonitoringRange, preset: MonitoringPresetId | null) => {
+    setSelection({ range, preset });
   };
-
-  const uptimeLabel =
-    monitoring?.uptimePercent == null
-      ? t("iot.devices.monitoring.uptimeUnknown")
-      : t("iot.devices.monitoring.uptime", {
-          percent: monitoring.uptimePercent.toFixed(1),
-        });
 
   return (
     <div className="max-w-5xl space-y-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-medium">{t("iot.devices.monitoring.title")}</h2>
           <p className="text-muted-foreground text-sm">{t("iot.devices.monitoring.description")}</p>
         </div>
-        <ToggleGroup
-          type="single"
-          size="sm"
-          value={preset}
-          onValueChange={handlePresetChange}
-          className="bg-muted rounded-md p-0.5"
-        >
-          {RANGE_PRESETS.map((option) => (
-            <ToggleGroupItem key={option} value={option} className="px-3">
-              {t(`iot.devices.monitoring.range.${option}`)}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <MonitoringRangeControl
+          range={selection.range}
+          activePreset={selection.preset}
+          onRangeChange={handleRangeChange}
+          isUpdating={isFetching && !isLoading}
+        />
       </div>
 
-      <MonitoringTiles device={device} activity={activity} monitoring={monitoring} />
+      <MonitoringTiles
+        device={device}
+        activity={activity}
+        monitoring={monitoring}
+        range={selection.range}
+      />
 
       {isError ? (
         <Card className="shadow-none">
@@ -102,20 +106,23 @@ export default function DeviceMonitoringPage() {
         </Card>
       ) : isLoading || monitoring === undefined ? (
         <div className="space-y-6">
-          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-48 w-full rounded-xl" />
           <Skeleton className="h-64 w-full rounded-xl" />
           <Skeleton className="h-48 w-full rounded-xl" />
         </div>
       ) : (
-        <>
-          <PanelCard title={uptimeLabel} description={t("iot.devices.monitoring.sessionsHint")}>
-            {monitoring.events.length === 0 ? (
-              <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-                {t("iot.devices.monitoring.noEvents")}
-              </p>
-            ) : (
-              <SessionStrip monitoring={monitoring} from={range.from} to={range.to} />
-            )}
+        // While a new range loads the previous data stays put, dimmed, so the
+        // layout never collapses under the cursor.
+        <div className={cn("space-y-6 transition-opacity", isFetching && "opacity-60")}>
+          <PanelCard
+            title={t("iot.devices.monitoring.availabilityTitle")}
+            description={t("iot.devices.monitoring.availabilityHint")}
+          >
+            <AvailabilityPanel
+              monitoring={monitoring}
+              from={selection.range.from}
+              to={selection.range.to}
+            />
           </PanelCard>
 
           <PanelCard
@@ -125,8 +132,8 @@ export default function DeviceMonitoringPage() {
             <ThroughputPanel
               monitoring={monitoring}
               boundExperiments={boundExperiments ?? []}
-              from={range.from}
-              to={range.to}
+              from={selection.range.from}
+              to={selection.range.to}
             />
           </PanelCard>
 
@@ -146,7 +153,7 @@ export default function DeviceMonitoringPage() {
           <PanelCard title={t("iot.devices.monitoring.eventLogTitle")}>
             <EventLog events={monitoring.events} />
           </PanelCard>
-        </>
+        </div>
       )}
     </div>
   );

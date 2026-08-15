@@ -1,24 +1,47 @@
+import { differenceInHours, subDays, subHours } from "date-fns";
+
 import type { MonitoringBucket } from "@repo/api/domains/iot/iot.schema";
 
-export type MonitoringRangePreset = "24h" | "7d" | "30d";
+export type MonitoringPresetId = "last1h" | "last24h" | "last7d" | "last30d";
 
-const RANGE_HOURS: Record<MonitoringRangePreset, number> = {
-  "24h": 24,
-  "7d": 24 * 7,
-  "30d": 24 * 30,
-};
+export const MONITORING_PRESETS: MonitoringPresetId[] = ["last1h", "last24h", "last7d", "last30d"];
 
-/**
- * Resolve a range preset into the query window and its natural bucket:
- * hourly bars for a day, daily bars for longer ranges.
- */
-export function resolveMonitoringRange(
-  preset: MonitoringRangePreset,
+/** The contract caps a monitoring window; the picker refuses wider spans. */
+export const MONITORING_MAX_RANGE_DAYS = 31;
+
+// Hourly resolution stays readable up to a couple of days; beyond that the
+// bucket count outgrows the axis and daily is the honest grain.
+const HOURLY_BUCKET_MAX_HOURS = 48;
+
+export interface MonitoringRange {
+  from: string;
+  to: string;
+  bucket: MonitoringBucket;
+}
+
+export function resolveMonitoringPreset(
+  preset: MonitoringPresetId,
   now = Date.now(),
-): { from: string; to: string; bucket: MonitoringBucket } {
+): MonitoringRange {
+  const to = new Date(now);
+  const from = {
+    last1h: () => subHours(to, 1),
+    last24h: () => subHours(to, 24),
+    last7d: () => subDays(to, 7),
+    last30d: () => subDays(to, 30),
+  }[preset]();
+
+  return toMonitoringRange(from, to);
+}
+
+export function toMonitoringRange(from: Date, to: Date): MonitoringRange {
   return {
-    from: new Date(now - RANGE_HOURS[preset] * 3_600_000).toISOString(),
-    to: new Date(now).toISOString(),
-    bucket: preset === "24h" ? "hour" : "day",
+    from: from.toISOString(),
+    to: to.toISOString(),
+    bucket: differenceInHours(to, from) <= HOURLY_BUCKET_MAX_HOURS ? "hour" : "day",
   };
+}
+
+export function isRangeWithinLimit(from: Date, to: Date): boolean {
+  return from < to && differenceInHours(to, from) <= MONITORING_MAX_RANGE_DAYS * 24;
 }

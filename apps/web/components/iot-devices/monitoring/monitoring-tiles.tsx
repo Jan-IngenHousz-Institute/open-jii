@@ -3,6 +3,7 @@
 import { ConnectivityDot, useFormatLastSeen } from "@/components/iot-devices/device-connectivity";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
+import { differenceInHours } from "date-fns";
 import { AlertTriangle } from "lucide-react";
 
 import type {
@@ -13,6 +14,8 @@ import type {
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import type { MonitoringRange } from "./monitoring-range";
+
 // Beyond this silence, a connected device's tile turns amber: online but not
 // delivering. A fixed threshold until cadence inference exists.
 const SILENT_THRESHOLD_MS = 3_600_000;
@@ -21,19 +24,15 @@ interface MonitoringTilesProps {
   device: IotDeviceDetail | undefined;
   activity: IotDeviceActivity | undefined;
   monitoring: DeviceMonitoring | undefined;
+  range: MonitoringRange;
 }
 
-function Tile({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border p-3">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <div className="mt-1 text-sm font-medium">{children}</div>
-    </div>
-  );
-}
-
-/** The triage row: live state first, then recency, volume, and battery. */
-export function MonitoringTiles({ device, activity, monitoring }: MonitoringTilesProps) {
+/**
+ * The triage row: live state, then the window's headline figures. Each tile
+ * carries its own context line, so a number is never shown without the frame
+ * that makes it mean something.
+ */
+export function MonitoringTiles({ device, activity, monitoring, range }: MonitoringTilesProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
   const formatLastSeen = useFormatLastSeen();
@@ -43,8 +42,9 @@ export function MonitoringTiles({ device, activity, monitoring }: MonitoringTile
     device?.connectivity?.connected === true &&
     (lastDataAt === null || Date.now() - new Date(lastDataAt).getTime() > SILENT_THRESHOLD_MS);
 
-  const totalMeasurements = monitoring?.throughput.reduce((sum, bucket) => sum + bucket.count, 0);
-  const latestBattery = monitoring?.battery.filter((point) => point.averageBattery !== null).at(-1);
+  const total = monitoring?.throughput.reduce((sum, bucket) => sum + bucket.count, 0);
+  const windowHours = Math.max(1, differenceInHours(new Date(range.to), new Date(range.from)));
+  const perHour = total === undefined ? undefined : total / windowHours;
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -70,30 +70,58 @@ export function MonitoringTiles({ device, activity, monitoring }: MonitoringTile
       <Tile label={t("iot.devices.monitoring.lastData")}>
         {activity === undefined ? (
           <Skeleton className="h-4 w-24" />
-        ) : lastDataAt === null ? (
-          t("iot.devices.monitoring.noData")
         ) : (
-          formatRelativeTime(lastDataAt, locale)
+          <div className="space-y-1">
+            <p>
+              {lastDataAt === null
+                ? t("iot.devices.monitoring.noData")
+                : formatRelativeTime(lastDataAt, locale)}
+            </p>
+            <p className="text-muted-foreground text-xs font-normal">
+              {t("iot.devices.monitoring.pipelineNote")}
+            </p>
+          </div>
         )}
       </Tile>
 
       <Tile label={t("iot.devices.monitoring.measurements")}>
-        {totalMeasurements === undefined ? (
+        {total === undefined || perHour === undefined ? (
           <Skeleton className="h-4 w-16" />
         ) : (
-          <span className="tabular-nums">{totalMeasurements}</span>
+          <div className="space-y-1">
+            <p className="tabular-nums">{total}</p>
+            <p className="text-muted-foreground text-xs font-normal tabular-nums">
+              {t("iot.devices.monitoring.perHour", { rate: perHour.toFixed(1) })}
+            </p>
+          </div>
         )}
       </Tile>
 
-      <Tile label={t("iot.devices.monitoring.batteryAxis")}>
+      <Tile label={t("iot.devices.monitoring.uptimeLabel")}>
         {monitoring === undefined ? (
           <Skeleton className="h-4 w-16" />
-        ) : latestBattery?.averageBattery == null ? (
-          t("iot.devices.monitoring.noBattery")
         ) : (
-          <span className="tabular-nums">{latestBattery.averageBattery.toFixed(2)}</span>
+          <div className="space-y-1">
+            <p className="tabular-nums">
+              {monitoring.uptimePercent === null
+                ? t("iot.devices.monitoring.uptimeUnknown")
+                : `${monitoring.uptimePercent.toFixed(1)}%`}
+            </p>
+            <p className="text-muted-foreground text-xs font-normal">
+              {t("iot.devices.monitoring.sessionCount", { count: monitoring.sessions.length })}
+            </p>
+          </div>
         )}
       </Tile>
+    </div>
+  );
+}
+
+function Tile({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border p-3">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <div className="mt-1 text-sm font-medium">{children}</div>
     </div>
   );
 }

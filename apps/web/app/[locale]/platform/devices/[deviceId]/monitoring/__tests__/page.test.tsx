@@ -101,13 +101,14 @@ describe("DeviceMonitoringPage", () => {
 
     render(<DeviceMonitoringContent />);
 
-    expect(await screen.findByText("iot.devices.monitoring.uptime")).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.monitoring.throughputTotal")).toBeInTheDocument();
+    expect(await screen.findByText("iot.devices.monitoring.availabilityTitle")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.throughputTitle")).toBeInTheDocument();
     expect(screen.getByText("Soil Health")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.monitoring.payloadTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.monitoring.batteryTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.monitoring.eventLogTitle")).toBeInTheDocument();
-    expect(screen.getByText("MQTT_KEEP_ALIVE_TIMEOUT")).toBeInTheDocument();
+    // The outage behind the session is listed with the reason it ended.
+    expect(screen.getAllByText("MQTT_KEEP_ALIVE_TIMEOUT").length).toBeGreaterThan(0);
   });
 
   it("hides the battery panel when the family never reports battery", async () => {
@@ -115,7 +116,7 @@ describe("DeviceMonitoringPage", () => {
 
     render(<DeviceMonitoringContent />);
 
-    await screen.findByText("iot.devices.monitoring.uptime");
+    await screen.findByText("iot.devices.monitoring.availabilityTitle");
     expect(screen.queryByText("iot.devices.monitoring.batteryTitle")).not.toBeInTheDocument();
   });
 
@@ -124,7 +125,9 @@ describe("DeviceMonitoringPage", () => {
 
     render(<DeviceMonitoringContent />);
 
-    expect(await screen.findByText("iot.devices.monitoring.uptimeUnknown")).toBeInTheDocument();
+    expect(
+      (await screen.findAllByText("iot.devices.monitoring.uptimeUnknown")).length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText("iot.devices.monitoring.noEvents").length).toBeGreaterThan(0);
   });
 
@@ -144,19 +147,19 @@ describe("DeviceMonitoringPage", () => {
     expect(await screen.findByText("iot.devices.monitoring.loadError")).toBeInTheDocument();
   });
 
-  it("switches to daily buckets when a longer range is picked", async () => {
+  it("re-queries the whole dashboard on one shared range, switching bucket with the span", async () => {
     mountAll();
     const spy = server.mount(contract.iot.getDeviceMonitoring, { body: monitoring });
     const user = userEvent.setup();
 
     render(<DeviceMonitoringContent />);
-    await screen.findByText("iot.devices.monitoring.uptime");
+    await screen.findByText("iot.devices.monitoring.availabilityTitle");
 
-    await user.click(screen.getByRole("radio", { name: "iot.devices.monitoring.range.7d" }));
+    await user.click(screen.getByRole("button", { name: "iot.devices.monitoring.range.last7d" }));
 
     await waitFor(() => {
-      const lastCall = spy.calls.at(-1);
-      expect(lastCall?.query.bucket).toBe("day");
+      // A week cannot be read on an hourly axis, so the grain follows the span.
+      expect(spy.calls.at(-1)?.query.bucket).toBe("day");
     });
   });
 });
