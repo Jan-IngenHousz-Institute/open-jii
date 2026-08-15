@@ -48,6 +48,7 @@
     "@repo/iot": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-hotkeys": "0.10.0",
+    "recharts": "^2.15.4",
     "@tanstack/react-query": "catalog:react-query",
     "@tanstack/react-table": "^8.21.3",
     "@uiw/react-codemirror": "^4.25.9",

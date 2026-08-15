@@ -1,0 +1,21 @@
+{
+  "title": "The platform in numbers",
+  "subtitle": "Research activity across the openJII network",
+  "lastMeasurement": "Last measurement received {{timeAgo}}",
+  "tiles": {
+    "measurements": "Measurements collected",
+    "researchers": "Registered researchers",
+    "experiments": "Experiments",
+    "devices": "Devices that sent data"
+  },
+  "charts": {
+    "growthTitle": "Measurements over time",
+    "activityTitle": "Daily activity, last 30 days",
+    "familyTitle": "Measurements by device family",
+    "measurements": "Measurements",
+    "cumulativeMeasurements": "Total measurements"
+  },
+  "families": {
+    "unattributed": "Unattributed"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "title": "Het platform in cijfers",
+  "subtitle": "Onderzoeksactiviteit in het openJII-netwerk",
+  "lastMeasurement": "Laatste meting ontvangen {{timeAgo}}",
+  "tiles": {
+    "measurements": "Verzamelde metingen",
+    "researchers": "Geregistreerde onderzoekers",
+    "experiments": "Experimenten",
+    "devices": "Apparaten met verzonden data"
+  },
+  "charts": {
+    "growthTitle": "Metingen door de tijd",
+    "activityTitle": "Dagelijkse activiteit, laatste 30 dagen",
+    "familyTitle": "Metingen per apparaatfamilie",
+    "measurements": "Metingen",
+    "cumulativeMeasurements": "Totaal aantal metingen"
+  },
+  "families": {
+    "unattributed": "Niet toegewezen"
+  }
+}
