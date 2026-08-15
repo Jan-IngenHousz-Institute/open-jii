@@ -37,9 +37,12 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
   const locale = useLocale();
   const formatLastSeen = useFormatLastSeen();
 
-  const lastDataAt = activity?.lastDataAt ?? null;
+  // `undefined` is "still loading" and must not be read as "never sent data",
+  // which would flash the silent warning on every page load.
+  const lastDataAt = activity === undefined ? undefined : activity.lastDataAt;
   const connectedButSilent =
     device?.connectivity?.connected === true &&
+    lastDataAt !== undefined &&
     (lastDataAt === null || Date.now() - new Date(lastDataAt).getTime() > SILENT_THRESHOLD_MS);
 
   const total = monitoring?.throughput.reduce((sum, bucket) => sum + bucket.count, 0);
@@ -73,7 +76,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
         ) : (
           <div className="space-y-1">
             <p>
-              {lastDataAt === null
+              {lastDataAt === null || lastDataAt === undefined
                 ? t("iot.devices.monitoring.noData")
                 : formatRelativeTime(lastDataAt, locale)}
             </p>

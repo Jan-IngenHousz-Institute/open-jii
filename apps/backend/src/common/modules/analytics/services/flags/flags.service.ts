@@ -23,6 +23,10 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
   // the flag-gated routes several times a minute. Flag decisions tolerate a
   // minute of staleness, so successful evaluations are cached per user.
   private static readonly FLAG_CACHE_TTL_MS = 60_000;
+  // Keyed per (flag, user), so the ceiling keeps a large user base from
+  // growing the map without bound; insertion order makes the oldest entry the
+  // first eviction candidate.
+  private static readonly FLAG_CACHE_MAX_ENTRIES = 5_000;
   private readonly flagCache = new Map<string, { value: boolean; expiresAt: number }>();
 
   constructor(private readonly configService: AnalyticsConfigService) {}
@@ -132,6 +136,12 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
 
       // Defaults from an uninitialized client or an error are never cached;
       // only real evaluations are worth holding on to.
+      if (this.flagCache.size >= FlagsService.FLAG_CACHE_MAX_ENTRIES) {
+        const oldest = this.flagCache.keys().next();
+        if (!oldest.done) {
+          this.flagCache.delete(oldest.value);
+        }
+      }
       this.flagCache.set(cacheKey, {
         value: result,
         expiresAt: Date.now() + FlagsService.FLAG_CACHE_TTL_MS,

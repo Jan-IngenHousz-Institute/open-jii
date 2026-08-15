@@ -115,7 +115,6 @@
         "uptimeUnknown": "Uptime onbekend",
         "truncated": "De periode bevat meer gebeurtenissen dan getoond; de sessies dekken alleen het teruggegeven venster.",
         "throughputTitle": "Datastroom",
-        "throughputTotal": "{{count}} metingen in de periode",
         "measurements": "Metingen",
         "bucketColumn": "Periode",
         "otherSeries": "Overig",
@@ -166,7 +165,9 @@
         "legendUnknown": "Geen data",
         "perHour": "{{rate}}/uur",
         "coverage": "Metadata-dekking",
-        "noBreakdown": "Niets gerapporteerd."
+        "noBreakdown": "Niets gerapporteerd.",
+        "throughputTotal_one": "{{count}} meting in deze periode",
+        "throughputTotal_other": "{{count}} metingen in deze periode"
       },
       "pageOf": "Pagina {{page}} van {{total}}",
       "actions": {

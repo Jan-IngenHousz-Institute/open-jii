@@ -50,6 +50,13 @@ export class GetDeviceSessionsUseCase {
       to,
     );
 
-    return success({ ...derivation, truncated });
+    return success({
+      events: derivation.events,
+      sessions: derivation.sessions,
+      // A percentage over a capped window would read as fact while describing
+      // only the part that fit; the sessions themselves are real and stay.
+      uptimePercent: truncated ? null : derivation.uptimePercent,
+      truncated,
+    });
   }
 }

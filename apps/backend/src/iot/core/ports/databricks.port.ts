@@ -6,10 +6,34 @@ import type { DeviceLifecycleEventRow } from "../models/device-lifecycle-event.m
  */
 export const IOT_DATABRICKS_PORT = Symbol("IOT_DATABRICKS_PORT");
 
+/** One time bucket of measurement volume, attributed to an experiment. */
+export interface DeviceThroughputRow {
+  bucketStart: string | null;
+  experimentId: string | null;
+  count: number;
+}
+
+/** Average reported battery for one time bucket; null when none was reported. */
+export interface DeviceBatteryRow {
+  bucketStart: string | null;
+  averageBattery: number | null;
+}
+
+/** Measurement counts and metadata coverage per payload-shape combination. */
+export interface DevicePayloadBreakdownRow {
+  deviceVersion: string | null;
+  protocolId: string | null;
+  workbookRunId: string | null;
+  count: number;
+  withGps: number;
+  withBattery: number;
+}
+
 /**
- * Port interface for Databricks operations in the IoT domain. The warehouse is
- * only consulted for pipeline-computed facts (last data arrival); live
- * connectivity comes from AWS directly.
+ * Port interface for Databricks operations in the IoT domain: every
+ * pipeline-computed fact about a device, namely last data arrival, lifecycle
+ * events, measurement throughput, battery series and payload breakdown. Live
+ * connectivity is not here; it comes from AWS directly.
  */
 export interface DatabricksPort {
   getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>>;
@@ -24,27 +48,16 @@ export interface DatabricksPort {
     from: string,
     to: string,
     bucket: "hour" | "day",
-  ): Promise<Result<{ bucketStart: string | null; experimentId: string | null; count: number }[]>>;
+  ): Promise<Result<DeviceThroughputRow[]>>;
   getDeviceBatterySeries(
     thingName: string,
     from: string,
     to: string,
     bucket: "hour" | "day",
-  ): Promise<Result<{ bucketStart: string | null; averageBattery: number | null }[]>>;
+  ): Promise<Result<DeviceBatteryRow[]>>;
   getDevicePayloadBreakdown(
     thingName: string,
     from: string,
     to: string,
-  ): Promise<
-    Result<
-      {
-        deviceVersion: string | null;
-        protocolId: string | null;
-        workbookRunId: string | null;
-        count: number;
-        withGps: number;
-        withBattery: number;
-      }[]
-    >
-  >;
+  ): Promise<Result<DevicePayloadBreakdownRow[]>>;
 }

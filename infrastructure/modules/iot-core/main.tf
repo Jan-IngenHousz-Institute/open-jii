@@ -321,6 +321,13 @@ resource "aws_iam_policy" "databricks_device_lifecycle_read" {
         Effect   = "Allow"
         Action   = ["s3:ListBucket"]
         Resource = var.s3_archive_bucket_arn
+        # The archive also holds raw measurement payloads; Auto Loader only
+        # ever lists its own prefix.
+        Condition = {
+          StringLike = {
+            "s3:prefix" = ["device-lifecycle-events/", "device-lifecycle-events/*"]
+          }
+        }
       }
     ]
   })

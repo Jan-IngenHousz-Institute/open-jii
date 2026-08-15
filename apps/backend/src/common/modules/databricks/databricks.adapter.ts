@@ -13,6 +13,11 @@ import type { ExperimentTableMetadata } from "../../../experiments/core/models/e
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { DataUploadJobInput } from "../../../experiments/core/ports/databricks.port";
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
+import type {
+  DeviceBatteryRow,
+  DevicePayloadBreakdownRow,
+  DeviceThroughputRow,
+} from "../../../iot/core/ports/databricks.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -406,7 +411,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     from: string,
     to: string,
     bucket: "hour" | "day",
-  ): Promise<Result<{ bucketStart: string | null; experimentId: string | null; count: number }[]>> {
+  ): Promise<Result<DeviceThroughputRow[]>> {
     const bucketAlias = `timestamp_${bucket}`;
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
@@ -443,7 +448,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     from: string,
     to: string,
     bucket: "hour" | "day",
-  ): Promise<Result<{ bucketStart: string | null; averageBattery: number | null }[]>> {
+  ): Promise<Result<DeviceBatteryRow[]>> {
     const bucketAlias = `timestamp_${bucket}`;
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
@@ -482,18 +487,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     thingName: string,
     from: string,
     to: string,
-  ): Promise<
-    Result<
-      {
-        deviceVersion: string | null;
-        protocolId: string | null;
-        workbookRunId: string | null;
-        count: number;
-        withGps: number;
-        withBattery: number;
-      }[]
-    >
-  > {
+  ): Promise<Result<DevicePayloadBreakdownRow[]>> {
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
       whereConditions: [["client_id", thingName]],

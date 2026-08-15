@@ -115,7 +115,6 @@
         "uptimeUnknown": "Uptime unknown",
         "truncated": "The range holds more events than shown; sessions cover the returned window only.",
         "throughputTitle": "Data flow",
-        "throughputTotal": "{{count}} measurements in range",
         "measurements": "Measurements",
         "bucketColumn": "Period",
         "otherSeries": "Other",
@@ -166,7 +165,9 @@
         "legendUnknown": "No data",
         "perHour": "{{rate}}/hour",
         "coverage": "Metadata coverage",
-        "noBreakdown": "Nothing reported."
+        "noBreakdown": "Nothing reported.",
+        "throughputTotal_one": "{{count}} measurement in this window",
+        "throughputTotal_other": "{{count}} measurements in this window"
       },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {

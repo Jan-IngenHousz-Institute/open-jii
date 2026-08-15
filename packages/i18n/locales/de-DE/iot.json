@@ -100,7 +100,7 @@
         "never": "Nie verbunden"
       },
       "monitoring": {
-        "title": "Monitoring",
+        "title": "Überwachung",
         "description": "Live-Broker-Konnektivität und die Datenlage dieses Geräts im Zeitverlauf.",
         "state": "Konnektivität",
         "lastData": "Zuletzt empfangene Daten",
@@ -115,7 +115,6 @@
         "uptimeUnknown": "Verfügbarkeit unbekannt",
         "truncated": "Der Zeitraum enthält mehr Ereignisse als angezeigt; die Sitzungen decken nur das zurückgegebene Fenster ab.",
         "throughputTitle": "Datenfluss",
-        "throughputTotal": "{{count}} Messungen im Zeitraum",
         "measurements": "Messungen",
         "bucketColumn": "Zeitraum",
         "otherSeries": "Andere",
@@ -144,7 +143,7 @@
         "next": "Weiter",
         "viewChart": "Als Diagramm anzeigen",
         "viewTable": "Als Tabelle anzeigen",
-        "loadError": "Monitoring-Daten konnten nicht geladen werden.",
+        "loadError": "Überwachungsdaten konnten nicht geladen werden.",
         "retry": "Erneut versuchen",
         "connectedButSilent": "Verbunden, keine aktuellen Daten",
         "noMeasurements": "Keine Messungen in diesem Zeitraum.",
@@ -166,7 +165,9 @@
         "legendUnknown": "Keine Daten",
         "perHour": "{{rate}}/Std.",
         "coverage": "Metadaten-Abdeckung",
-        "noBreakdown": "Nichts gemeldet."
+        "noBreakdown": "Nichts gemeldet.",
+        "throughputTotal_one": "{{count}} Messung in diesem Zeitraum",
+        "throughputTotal_other": "{{count}} Messungen in diesem Zeitraum"
       },
       "pageOf": "Seite {{page}} von {{total}}",
       "actions": {

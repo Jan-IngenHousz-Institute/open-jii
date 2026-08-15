@@ -137,14 +137,19 @@ describe("DeviceMonitoringPage", () => {
     });
     server.mount(contract.iot.getIotDeviceActivity, { body: { lastDataAt: null } });
     server.mount(contract.iot.listDeviceExperiments, { body: [] });
-    server.mount(contract.iot.getDeviceMonitoring, { status: 500 });
+    const spy = server.mount(contract.iot.getDeviceMonitoring, { status: 500 });
 
     render(<DeviceMonitoringContent />);
 
     expect(await screen.findByText("iot.devices.monitoring.loadError")).toBeInTheDocument();
+    const attemptsBeforeRetry = spy.callCount;
+
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "iot.devices.monitoring.retry" }));
-    expect(await screen.findByText("iot.devices.monitoring.loadError")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(spy.callCount).toBeGreaterThan(attemptsBeforeRetry);
+    });
   });
 
   it("re-queries the whole dashboard on one shared range, switching bucket with the span", async () => {

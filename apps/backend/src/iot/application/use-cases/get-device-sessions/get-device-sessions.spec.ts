@@ -177,13 +177,21 @@ describe("GetDeviceSessionsUseCase", () => {
         new Date(1755043200000 + i * 1000).toISOString(),
       ),
     );
-    vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(success(events));
+    const getEvents = vi
+      .spyOn(databricksAdapter, "getDeviceLifecycleEvents")
+      .mockResolvedValue(success(events));
 
     const result = await useCase.execute(THING, FROM, TO);
 
     assertSuccess(result);
+    // One row past the cap is what makes truncation detectable without a
+    // second count query.
+    expect(getEvents).toHaveBeenCalledWith(THING, FROM, TO, 1001);
     expect(result.value.truncated).toBe(true);
     expect(result.value.events).toHaveLength(1000);
+    // Uptime over a capped window would describe only the part that fit.
+    expect(result.value.uptimePercent).toBeNull();
+    expect(result.value.sessions.length).toBeGreaterThan(0);
   });
 
   it("propagates a warehouse failure", async () => {

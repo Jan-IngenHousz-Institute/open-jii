@@ -229,7 +229,7 @@ describe("Iot Schema", () => {
       expect(zIotDeviceList.safeParse([{ ...validDevice, connectivity }]).success).toBe(true);
     });
 
-    it("keeps register/revoke shapes free of connectivity, they never consult the fleet index", () => {
+    it("accepts a device without connectivity, which the list response then rejects", () => {
       expect(zIotDevice.safeParse(validDevice).success).toBe(true);
       expect(zIotDeviceList.safeParse([validDevice]).success).toBe(false);
     });
@@ -413,6 +413,16 @@ describe("Iot Schema", () => {
 
     it("accepts an ordered range", () => {
       expect(zMonitoringRangeQuery.safeParse(validRange).success).toBe(true);
+    });
+
+    it("accepts a span exactly at the ceiling", () => {
+      expect(
+        zMonitoringRangeQuery.safeParse({
+          ...validRange,
+          from: "2026-07-14T00:00:00.000Z",
+          to: "2026-08-14T00:00:00.000Z",
+        }).success,
+      ).toBe(true);
     });
 
     it("rejects a span past the preset ceiling", () => {

@@ -149,6 +149,26 @@ describe("deriveDeviceConnectivity", () => {
     });
   });
 
+  describe("live windows", () => {
+    it("clamps an open session to now, not to a range end still in the future", () => {
+      const openedAt = "2026-08-13T11:00:00.000Z";
+      const future = "2026-08-14T12:00:00.000Z";
+
+      const { sessions } = deriveDeviceConnectivity(
+        [row("connected", openedAt)],
+        FROM,
+        future,
+        NOW,
+      );
+
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].end).toBeNull();
+      // NOW is 2026-08-14T00:00Z: 13h of the session has elapsed, and the
+      // hours between NOW and the range end have not happened yet.
+      expect(sessions[0].durationSeconds).toBe(13 * 3600);
+    });
+  });
+
   describe("uptime", () => {
     it("is null for a range without events", () => {
       const derivation = derive([]);

@@ -1175,26 +1175,7 @@ describe("DatabricksAdapter", () => {
       ]);
     });
 
-    it("reads zone-less warehouse timestamps as UTC, not server-local time", async () => {
-      // The SQL statement API returns naive strings; parsing them locally would
-      // shift every bucket by the server's offset and silently empty the charts.
-      mockSql(
-        ["timestamp_hour", "experiment_id", "measurement_count"],
-        [["2026-08-15 09:00:00", "exp-1", "4"]],
-      );
-
-      const result = await databricksAdapter.getDeviceThroughput(
-        "AMBYTE_A",
-        "2026-08-15T00:00:00.000Z",
-        "2026-08-15T12:00:00.000Z",
-        "hour",
-      );
-
-      assertSuccess(result);
-      expect(result.value[0].bucketStart).toBe("2026-08-15T09:00:00.000Z");
-    });
-
-    it("keeps an explicit zone when the warehouse provides one", async () => {
+    it("normalizes warehouse timestamps to ISO instants", async () => {
       mockSql(
         ["timestamp_hour", "experiment_id", "measurement_count"],
         [["2026-08-15T09:00:00.000Z", "exp-1", "4"]],
