@@ -15,6 +15,7 @@ import type { DataUploadJobInput } from "../../../experiments/core/ports/databri
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
 import type {
   DeviceBatteryRow,
+  DeviceMeasurementRow,
   DevicePayloadBreakdownRow,
   DeviceThroughputRow,
 } from "../../../iot/core/ports/databricks.port";
@@ -496,6 +497,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         groupBy: [
           { column: "device_version" },
           { column: "protocol_id" },
+          { column: "workbook_version_id" },
+          { column: "workbook_run_id" },
           { column: "workbook_run_id" },
         ],
         functions: [
@@ -514,12 +517,68 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       rows.map((row) => ({
         deviceVersion: row[index.device_version] ?? null,
         protocolId: row[index.protocol_id] ?? null,
+        workbookVersionId: row[index.workbook_version_id] ?? null,
         workbookRunId: row[index.workbook_run_id] ?? null,
         count: Number(row[index.row_count] ?? 0),
         withGps: Number(row[index.gps_count] ?? 0),
         withBattery: Number(row[index.battery_count] ?? 0),
       })),
     );
+  }
+
+  /**
+   * The device's most recent measurements in a range, newest first. Row-level
+   * evidence behind the aggregates: what actually arrived, and when.
+   */
+  async getDeviceRecentMeasurements(
+    thingName: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<DeviceMeasurementRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      columns: [
+        "timestamp",
+        "experiment_id",
+        "protocol_id",
+        "workbook_version_id",
+        "device_version",
+        "device_battery",
+        "latitude",
+        "longitude",
+      ],
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      orderBy: "timestamp",
+      orderDirection: "DESC",
+      limit,
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        timestamp: this.toIsoOrNull(row[index.timestamp]),
+        experimentId: row[index.experiment_id] ?? null,
+        protocolId: row[index.protocol_id] ?? null,
+        workbookVersionId: row[index.workbook_version_id] ?? null,
+        deviceVersion: row[index.device_version] ?? null,
+        battery: this.toNumberOrNull(row[index.device_battery]),
+        latitude: this.toNumberOrNull(row[index.latitude]),
+        longitude: this.toNumberOrNull(row[index.longitude]),
+      })),
+    );
+  }
+
+  private toNumberOrNull(raw: string | null | undefined): number | null {
+    if (raw === null || raw === undefined) {
+      return null;
+    }
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   // Shared plumbing for the monitoring reads: build the SQL, run it against

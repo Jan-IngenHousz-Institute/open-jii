@@ -25,7 +25,9 @@ function monitoringWith(battery: DeviceMonitoring["battery"]): DeviceMonitoring 
       workbookRuns: 0,
       firmwareMix: [],
       protocolMix: [],
+      workbookMix: [],
     },
+    recentMeasurements: [],
   };
 }
 
@@ -60,8 +62,12 @@ describe("BatteryPanel", () => {
     );
 
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+    // The latest reading also shows as a summary figure above the chart.
+    expect(screen.getByText("iot.devices.monitoring.batteryLatest")).toBeInTheDocument();
+
     await user.click(screen.getByRole("radio", { name: "iot.devices.monitoring.viewTable" }));
 
-    expect(screen.getByText("87.5")).toBeInTheDocument();
+    expect(screen.getAllByRole("row")).toHaveLength(2);
+    expect(screen.getAllByText("87.50").length).toBeGreaterThan(1);
   });
 });

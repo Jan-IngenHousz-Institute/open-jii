@@ -58,7 +58,13 @@ export class GetDevicePayloadStatsUseCase {
       ),
     ).map((entry) => ({ protocolId: entry.key, count: entry.count }));
 
-    return success({ ...totals, workbookRuns, firmwareMix, protocolMix });
+    // Workbook attribution is absent on ad-hoc measurements, so the null group
+    // is kept: "sent outside any workbook" is a real answer here.
+    const workbookMix = this.sumMix(
+      rows.map((row) => ({ key: row.workbookVersionId, count: row.count })),
+    ).map((entry) => ({ workbookVersionId: entry.key, count: entry.count }));
+
+    return success({ ...totals, workbookRuns, firmwareMix, protocolMix, workbookMix });
   }
 
   private sumMix(entries: MixEntry[]): MixEntry[] {

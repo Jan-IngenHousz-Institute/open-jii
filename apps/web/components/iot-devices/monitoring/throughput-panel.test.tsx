@@ -34,7 +34,9 @@ function monitoringWith(throughput: DeviceMonitoring["throughput"]): DeviceMonit
       workbookRuns: 0,
       firmwareMix: [],
       protocolMix: [],
+      workbookMix: [],
     },
+    recentMeasurements: [],
   };
 }
 

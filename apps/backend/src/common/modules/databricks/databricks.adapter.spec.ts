@@ -1137,14 +1137,15 @@ describe("DatabricksAdapter", () => {
         [
           "device_version",
           "protocol_id",
+          "workbook_version_id",
           "workbook_run_id",
           "row_count",
           "gps_count",
           "battery_count",
         ],
         [
-          ["1.1.0", null, "run-1", "20", "5", null],
-          [null, "proto-1", null, "12", null, "12"],
+          ["1.1.0", null, "wb-1", "run-1", "20", "5", null],
+          [null, "proto-1", null, null, "12", null, "12"],
         ],
       );
 
@@ -1159,6 +1160,7 @@ describe("DatabricksAdapter", () => {
         {
           deviceVersion: "1.1.0",
           protocolId: null,
+          workbookVersionId: "wb-1",
           workbookRunId: "run-1",
           count: 20,
           withGps: 5,
@@ -1167,6 +1169,7 @@ describe("DatabricksAdapter", () => {
         {
           deviceVersion: null,
           protocolId: "proto-1",
+          workbookVersionId: null,
           workbookRunId: null,
           count: 12,
           withGps: 0,

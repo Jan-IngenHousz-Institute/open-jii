@@ -33,6 +33,7 @@ describe("GetDeviceMonitoringUseCase", () => {
     vi.spyOn(databricksAdapter, "getDeviceThroughput").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDeviceRecentMeasurements").mockResolvedValue(success([]));
   });
 
   afterEach(() => {
@@ -108,6 +109,17 @@ describe("GetDeviceMonitoringUseCase", () => {
   it("fails loudly when the payload breakdown fails", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId });
     vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
+
+    const result = await useCase.execute(device.id, FROM, TO, "hour", userId);
+
+    assertFailure(result);
+  });
+
+  it("fails loudly when the measurement log fails", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    vi.spyOn(databricksAdapter, "getDeviceRecentMeasurements").mockResolvedValue(
       failure(AppError.internal("warehouse down")),
     );
 

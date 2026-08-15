@@ -294,6 +294,21 @@ export const zDevicePayloadStats = z.object({
   workbookRuns: z.number().int(),
   firmwareMix: z.array(z.object({ version: z.string().nullable(), count: z.number().int() })),
   protocolMix: z.array(z.object({ protocolId: z.string().nullable(), count: z.number().int() })),
+  workbookMix: z.array(
+    z.object({ workbookVersionId: z.string().nullable(), count: z.number().int() }),
+  ),
+});
+
+/** One stored measurement, for the row-level table behind the aggregates. */
+export const zDeviceMeasurement = z.object({
+  timestamp: z.string().datetime(),
+  experimentId: z.string().nullable(),
+  protocolId: z.string().nullable(),
+  workbookVersionId: z.string().nullable(),
+  deviceVersion: z.string().nullable(),
+  battery: z.number().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
 });
 
 /**
@@ -311,6 +326,7 @@ export const zDeviceMonitoring = z.object({
   throughput: z.array(zDeviceThroughputBucket),
   battery: z.array(zDeviceBatteryPoint),
   payload: zDevicePayloadStats,
+  recentMeasurements: z.array(zDeviceMeasurement),
 });
 
 // --- Inferred types ---
@@ -333,6 +349,7 @@ export type DeviceSession = z.infer<typeof zDeviceSession>;
 export type DeviceThroughputBucket = z.infer<typeof zDeviceThroughputBucket>;
 export type DeviceBatteryPoint = z.infer<typeof zDeviceBatteryPoint>;
 export type DevicePayloadStats = z.infer<typeof zDevicePayloadStats>;
+export type DeviceMeasurement = z.infer<typeof zDeviceMeasurement>;
 export type DeviceMonitoring = z.infer<typeof zDeviceMonitoring>;
 export type IotDeviceWithConnectivity = z.infer<typeof zIotDeviceWithConnectivity>;
 export type IotDeviceActivity = z.infer<typeof zIotDeviceActivity>;

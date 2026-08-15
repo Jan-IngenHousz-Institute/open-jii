@@ -23,10 +23,23 @@ export interface DeviceBatteryRow {
 export interface DevicePayloadBreakdownRow {
   deviceVersion: string | null;
   protocolId: string | null;
+  workbookVersionId: string | null;
   workbookRunId: string | null;
   count: number;
   withGps: number;
   withBattery: number;
+}
+
+/** One measurement as stored, for the row-level view behind the aggregates. */
+export interface DeviceMeasurementRow {
+  timestamp: string | null;
+  experimentId: string | null;
+  protocolId: string | null;
+  workbookVersionId: string | null;
+  deviceVersion: string | null;
+  battery: number | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 /**
@@ -60,4 +73,10 @@ export interface DatabricksPort {
     from: string,
     to: string,
   ): Promise<Result<DevicePayloadBreakdownRow[]>>;
+  getDeviceRecentMeasurements(
+    thingName: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<DeviceMeasurementRow[]>>;
 }

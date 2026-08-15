@@ -55,7 +55,9 @@ const monitoring: DeviceMonitoring = {
     workbookRuns: 2,
     firmwareMix: [{ version: "1.1.0", count: 12 }],
     protocolMix: [],
+    workbookMix: [],
   },
+  recentMeasurements: [],
 };
 
 function mountAll(overrides?: Partial<DeviceMonitoring>) {

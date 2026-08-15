@@ -13791,6 +13791,31 @@
                               "count"
                             ]
                           }
+                        },
+                        "workbookMix": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "workbookVersionId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "count": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "workbookVersionId",
+                              "count"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -13799,8 +13824,101 @@
                         "withBattery",
                         "workbookRuns",
                         "firmwareMix",
-                        "protocolMix"
+                        "protocolMix",
+                        "workbookMix"
                       ]
+                    },
+                    "recentMeasurements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "timestamp": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "experimentId": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "protocolId": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "workbookVersionId": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "deviceVersion": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "battery": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "latitude": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "longitude": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "timestamp",
+                          "experimentId",
+                          "protocolId",
+                          "workbookVersionId",
+                          "deviceVersion",
+                          "battery",
+                          "latitude",
+                          "longitude"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -13811,7 +13929,8 @@
                     "truncated",
                     "throughput",
                     "battery",
-                    "payload"
+                    "payload",
+                    "recentMeasurements"
                   ]
                 }
               }

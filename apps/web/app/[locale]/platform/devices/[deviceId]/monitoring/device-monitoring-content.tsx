@@ -13,14 +13,19 @@ import { MonitoringRangeControl } from "@/components/iot-devices/monitoring/moni
 import { MonitoringTiles } from "@/components/iot-devices/monitoring/monitoring-tiles";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { PayloadProfile } from "@/components/iot-devices/monitoring/payload-profile";
+import { RecentMeasurements } from "@/components/iot-devices/monitoring/recent-measurements";
 import { ThroughputPanel } from "@/components/iot-devices/monitoring/throughput-panel";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useDeviceMonitoring } from "@/hooks/iot/useDeviceMonitoring/useDeviceMonitoring";
 import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
 import { useIotDeviceActivity } from "@/hooks/iot/useIotDeviceActivity/useIotDeviceActivity";
+import { useLocale } from "@/hooks/useLocale";
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
@@ -29,6 +34,10 @@ import { cn } from "@repo/ui/lib/utils";
 
 const CONNECTIVITY_POLL_MS = 15_000;
 const DEFAULT_PRESET: MonitoringPresetId = "last24h";
+
+function hasBatteryReadings(monitoring: DeviceMonitoring): boolean {
+  return monitoring.battery.some((point) => point.averageBattery !== null);
+}
 
 interface RangeSelection {
   range: MonitoringRange;
@@ -44,6 +53,7 @@ interface RangeSelection {
  */
 export default function DeviceMonitoringPage() {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
   const params = useParams<{ deviceId: string }>();
   const deviceId = params.deviceId;
 
@@ -55,6 +65,18 @@ export default function DeviceMonitoringPage() {
   const { data: device } = useIotDevice(deviceId, { refetchInterval: CONNECTIVITY_POLL_MS });
   const { data: activity } = useIotDeviceActivity(deviceId);
   const { data: boundExperiments } = useDeviceExperiments(deviceId);
+  // Names for experiments the viewer is a member of; ids outside this list stay
+  // unnamed, since a device publishing to an experiment says nothing about the
+  // viewer's access to it.
+  const { data: visibleExperiments } = useQuery(
+    orpc.experiments.listExperiments.queryOptions({ input: { filter: "member" } }),
+  );
+  const { data: visibleProtocols } = useQuery(
+    orpc.protocols.listProtocols.queryOptions({ input: {} }),
+  );
+  const { data: visibleWorkbooks } = useQuery(
+    orpc.workbooks.listWorkbooks.queryOptions({ input: {} }),
+  );
   const {
     data: monitoring,
     isLoading,
@@ -141,18 +163,53 @@ export default function DeviceMonitoringPage() {
             title={t("iot.devices.monitoring.dataByExperimentTitle")}
             description={t("iot.devices.monitoring.dataByExperimentHint")}
           >
-            <DataByExperiment monitoring={monitoring} boundExperiments={boundExperiments ?? []} />
+            <DataByExperiment
+              monitoring={monitoring}
+              boundExperiments={boundExperiments ?? []}
+              visibleExperiments={visibleExperiments ?? []}
+              locale={locale}
+            />
           </PanelCard>
 
           <PanelCard title={t("iot.devices.monitoring.payloadTitle")}>
-            <PayloadProfile payload={monitoring.payload} />
+            <PayloadProfile
+              payload={monitoring.payload}
+              visibleProtocols={visibleProtocols ?? []}
+              visibleWorkbooks={visibleWorkbooks ?? []}
+              locale={locale}
+            />
           </PanelCard>
 
-          <BatteryPanel monitoring={monitoring} />
-
-          <PanelCard title={t("iot.devices.monitoring.eventLogTitle")}>
-            <EventLog events={monitoring.events} />
+          <PanelCard
+            title={t("iot.devices.monitoring.measurementsTitle")}
+            description={t("iot.devices.monitoring.measurementsHint")}
+          >
+            <RecentMeasurements
+              measurements={monitoring.recentMeasurements}
+              visibleExperiments={visibleExperiments ?? []}
+              visibleProtocols={visibleProtocols ?? []}
+              locale={locale}
+            />
           </PanelCard>
+
+          {/* Families that never report battery get the log at full width
+              rather than an empty half. */}
+          <div
+            className={cn(
+              "grid gap-6",
+              hasBatteryReadings(monitoring) ? "lg:grid-cols-2" : "grid-cols-1",
+            )}
+          >
+            {hasBatteryReadings(monitoring) && (
+              <PanelCard title={t("iot.devices.monitoring.batteryTitle")}>
+                <BatteryPanel monitoring={monitoring} />
+              </PanelCard>
+            )}
+
+            <PanelCard title={t("iot.devices.monitoring.eventLogTitle")}>
+              <EventLog events={monitoring.events} />
+            </PanelCard>
+          </div>
         </div>
       )}
     </div>

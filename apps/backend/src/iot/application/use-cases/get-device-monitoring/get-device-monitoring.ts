@@ -5,6 +5,7 @@ import type { DeviceMonitoring, MonitoringBucket } from "@repo/api/domains/iot/i
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { GetDeviceBatteryUseCase } from "../get-device-battery/get-device-battery";
+import { GetDeviceMeasurementsUseCase } from "../get-device-measurements/get-device-measurements";
 import { GetDevicePayloadStatsUseCase } from "../get-device-payload-stats/get-device-payload-stats";
 import { GetDeviceSessionsUseCase } from "../get-device-sessions/get-device-sessions";
 import { GetDeviceThroughputUseCase } from "../get-device-throughput/get-device-throughput";
@@ -23,6 +24,7 @@ export class GetDeviceMonitoringUseCase {
     private readonly getDeviceThroughput: GetDeviceThroughputUseCase,
     private readonly getDeviceBattery: GetDeviceBatteryUseCase,
     private readonly getDevicePayloadStats: GetDevicePayloadStatsUseCase,
+    private readonly getDeviceMeasurements: GetDeviceMeasurementsUseCase,
   ) {}
 
   async execute(
@@ -49,12 +51,14 @@ export class GetDeviceMonitoringUseCase {
     }
     const thingName = deviceResult.value.thingName;
 
-    const [sessionsResult, throughputResult, batteryResult, payloadResult] = await Promise.all([
-      this.getDeviceSessions.execute(thingName, from, to),
-      this.getDeviceThroughput.execute(thingName, from, to, bucket),
-      this.getDeviceBattery.execute(thingName, from, to, bucket),
-      this.getDevicePayloadStats.execute(thingName, from, to),
-    ]);
+    const [sessionsResult, throughputResult, batteryResult, payloadResult, measurementsResult] =
+      await Promise.all([
+        this.getDeviceSessions.execute(thingName, from, to),
+        this.getDeviceThroughput.execute(thingName, from, to, bucket),
+        this.getDeviceBattery.execute(thingName, from, to, bucket),
+        this.getDevicePayloadStats.execute(thingName, from, to),
+        this.getDeviceMeasurements.execute(thingName, from, to),
+      ]);
     if (sessionsResult.isFailure()) {
       return failure(sessionsResult.error);
     }
@@ -67,6 +71,9 @@ export class GetDeviceMonitoringUseCase {
     if (payloadResult.isFailure()) {
       return failure(payloadResult.error);
     }
+    if (measurementsResult.isFailure()) {
+      return failure(measurementsResult.error);
+    }
 
     return success({
       bucket,
@@ -74,6 +81,7 @@ export class GetDeviceMonitoringUseCase {
       throughput: throughputResult.value,
       battery: batteryResult.value,
       payload: payloadResult.value,
+      recentMeasurements: measurementsResult.value,
     });
   }
 }

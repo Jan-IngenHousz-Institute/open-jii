@@ -35,7 +35,9 @@ function monitoring(overrides: Partial<DeviceMonitoring> = {}): DeviceMonitoring
       workbookRuns: 0,
       firmwareMix: [],
       protocolMix: [],
+      workbookMix: [],
     },
+    recentMeasurements: [],
     ...overrides,
   };
 }

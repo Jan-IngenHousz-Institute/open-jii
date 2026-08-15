@@ -68,19 +68,23 @@ export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelPro
         </div>
       </div>
 
-      <div className="h-20 w-full">
+      {/* Tall enough for the date axis: the chart layer reserves the tick band
+          via automargin, and a squat container swallows it. */}
+      <div className="h-44 w-full">
         <BarChart
           bargap={0.05}
           data={[
             {
               name: t("iot.devices.monitoring.availability"),
               x: slices.map((slice) => slice.start),
-              y: slices.map(() => 1),
+              // Bar height is the share of the bucket spent online, so a
+              // partial bucket reads as partial instead of a flat block.
+              y: slices.map((slice) => Math.round(slice.onlineRatio * 100)),
               marker: { color: slices.map((slice) => STATE_COLOR[slice.state]) },
               text: slices.map((slice) =>
                 t(`iot.devices.monitoring.legend${stateSuffix(slice.state)}`),
               ),
-              hovertemplate: "%{x}<br>%{text}<extra></extra>",
+              hovertemplate: "%{x}<br>%{text} · %{y}%<extra></extra>",
             },
           ]}
           config={{
@@ -88,6 +92,7 @@ export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelPro
             showModeBar: false,
             xAxisType: "date",
             yAxisType: "linear",
+            yAxisTitle: t("iot.devices.monitoring.onlineShare"),
           }}
         />
       </div>
