@@ -217,7 +217,7 @@ async function runCase(
   const dd = await outcome(adapters.duckdb);
 
   const detail =
-    wh.error ?? dd.error
+    (wh.error ?? dd.error)
       ? `warehouse: ${wh.error ?? "ok"} | duckdb: ${dd.error ?? "ok"}`
       : wh.data && dd.data
         ? diff(wh.data, dd.data)

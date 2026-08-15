@@ -79,12 +79,16 @@ describe("wrapWithAggregation", () => {
   // depending on the spec's content; tests pick canonical specs for each.
 
   it("GROUP BY path: projects groupBy + aggregates, emits GROUP BY", () => {
-    const sql = wrapWithAggregation("SELECT * FROM t", {
-      aggregation: {
-        groupBy: [{ column: "device" }],
-        functions: [{ column: "value", function: "avg" }],
+    const sql = wrapWithAggregation(
+      "SELECT * FROM t",
+      {
+        aggregation: {
+          groupBy: [{ column: "device" }],
+          functions: [{ column: "value", function: "avg" }],
+        },
       },
-    }, new SqlQueryBuilder());
+      new SqlQueryBuilder(),
+    );
     expect(sql).toBe(
       "SELECT `device` AS `device`, AVG(`value`) AS `value_avg` FROM (SELECT * FROM t) GROUP BY `device`",
     );
@@ -118,23 +122,31 @@ describe("wrapWithAggregation", () => {
   });
 
   it("time-bucketed groupBy projects via date_trunc + derived alias", () => {
-    const sql = wrapWithAggregation("SELECT * FROM t", {
-      aggregation: {
-        groupBy: [{ column: "ts", timeBucket: "hour" }],
-        functions: [{ column: "value", function: "sum" }],
+    const sql = wrapWithAggregation(
+      "SELECT * FROM t",
+      {
+        aggregation: {
+          groupBy: [{ column: "ts", timeBucket: "hour" }],
+          functions: [{ column: "value", function: "sum" }],
+        },
       },
-    }, new SqlQueryBuilder());
+      new SqlQueryBuilder(),
+    );
     expect(sql).toContain("date_trunc('HOUR', `ts`) AS `ts_hour`");
     expect(sql).toContain("GROUP BY date_trunc('HOUR', `ts`)");
   });
 
   it("window-only path: preserves raw rows with SELECT *, <window>", () => {
-    const sql = wrapWithAggregation("SELECT * FROM t", {
-      aggregation: {
-        functions: [{ column: "value", function: "cumsum" }],
+    const sql = wrapWithAggregation(
+      "SELECT * FROM t",
+      {
+        aggregation: {
+          functions: [{ column: "value", function: "cumsum" }],
+        },
+        orderBy: "ts",
       },
-      orderBy: "ts",
-    }, new SqlQueryBuilder());
+      new SqlQueryBuilder(),
+    );
     // No groupBy, no row aggregates: keep every base column so non-
     // aggregated series can still find their values, append the cumsum.
     expect(sql).toContain("SELECT *, SUM(`value`) OVER (ORDER BY `ts`)");
@@ -144,44 +156,56 @@ describe("wrapWithAggregation", () => {
   it("cumsum routes through window-only when no groupBy / orderBy given as anchor", () => {
     // With a groupBy column the cumsum anchors on the first groupBy
     // expression; without one, falls back to opts.orderBy.
-    const sql = wrapWithAggregation("SELECT * FROM t", {
-      aggregation: {
-        groupBy: [{ column: "device" }],
-        functions: [{ column: "value", function: "cumsum" }],
+    const sql = wrapWithAggregation(
+      "SELECT * FROM t",
+      {
+        aggregation: {
+          groupBy: [{ column: "device" }],
+          functions: [{ column: "value", function: "cumsum" }],
+        },
       },
-    }, new SqlQueryBuilder());
+      new SqlQueryBuilder(),
+    );
     expect(sql).toContain("SUM(SUM(`value`)) OVER (ORDER BY `device`)");
   });
 
   it("rejects cumsum without any ordering anchor", () => {
     expect(() =>
-      wrapWithAggregation("SELECT * FROM t", {
-        aggregation: {
-          functions: [{ column: "value", function: "cumsum" }],
+      wrapWithAggregation(
+        "SELECT * FROM t",
+        {
+          aggregation: {
+            functions: [{ column: "value", function: "cumsum" }],
+          },
         },
-      }, new SqlQueryBuilder()),
+        new SqlQueryBuilder(),
+      ),
     ).toThrow(QueryBuilderInputError);
   });
 
   it("appends ORDER BY / LIMIT / OFFSET to the outer wrap", () => {
-    const sql = wrapWithAggregation("SELECT * FROM t", {
-      aggregation: {
-        groupBy: [{ column: "device" }],
-        functions: [{ column: "value", function: "avg" }],
+    const sql = wrapWithAggregation(
+      "SELECT * FROM t",
+      {
+        aggregation: {
+          groupBy: [{ column: "device" }],
+          functions: [{ column: "value", function: "avg" }],
+        },
+        orderBy: "value_avg",
+        orderDirection: "DESC",
+        limit: 5,
+        offset: 10,
       },
-      orderBy: "value_avg",
-      orderDirection: "DESC",
-      limit: 5,
-      offset: 10,
-    }, new SqlQueryBuilder());
+      new SqlQueryBuilder(),
+    );
     expect(sql).toContain("ORDER BY `value_avg` DESC");
     expect(sql).toContain("LIMIT 5");
     expect(sql).toContain("OFFSET 10");
   });
 
   it("throws when called with empty aggregation content", () => {
-    expect(() => wrapWithAggregation("SELECT * FROM t", { aggregation: {} }, new SqlQueryBuilder())).toThrow(
-      /without aggregation content/,
-    );
+    expect(() =>
+      wrapWithAggregation("SELECT * FROM t", { aggregation: {} }, new SqlQueryBuilder()),
+    ).toThrow(/without aggregation content/);
   });
 });

@@ -1,6 +1,7 @@
-import { DuckDBConnection, DuckDBInstance } from "@duckdb/node-api";
+import type { DuckDBConnection } from "@duckdb/node-api";
+import { DuckDBInstance } from "@duckdb/node-api";
 
-import { DuckDbSqlQueryBuilder, DuckDbVariantQueryBuilder } from "./duckdb-query-builder.base";
+import { DuckDbSqlQueryBuilder } from "./duckdb-query-builder.base";
 import { DuckDbQueryBuilderService } from "./duckdb-query-builder.service";
 
 describe("DuckDbQueryBuilder", () => {
@@ -51,7 +52,7 @@ describe("DuckDbQueryBuilder", () => {
 
     const run = async (sql: string): Promise<Record<string, unknown>[]> => {
       const reader = await connection.runAndReadAll(sql);
-      return reader.getRowObjects() as Record<string, unknown>[];
+      return reader.getRowObjects();
     };
 
     beforeAll(async () => {

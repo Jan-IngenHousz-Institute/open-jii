@@ -16,7 +16,7 @@ export interface DeltaMetadata {
 export interface DeltaFile {
   url: string;
   id: string;
-  partitionValues: Record<string, string>;
+  partitionValues: Record<string, string | undefined>;
   size: number;
   /** JSON blob with numRecords/minValues/maxValues, when the server sends it. */
   stats?: string;

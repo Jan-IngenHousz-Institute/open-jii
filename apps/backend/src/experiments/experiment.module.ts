@@ -81,9 +81,9 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { EMAIL_PORT } from "./core/ports/email.port";
 import { EXPERIMENT_DATA_READ_PORT } from "./core/ports/experiment-data-read.port";
 import type { ExperimentDataReadPort } from "./core/ports/experiment-data-read.port";
-import { EMAIL_PORT } from "./core/ports/email.port";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 // Repositories
 import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";

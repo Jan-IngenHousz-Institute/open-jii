@@ -83,9 +83,15 @@ describe("DeltaSharingService", () => {
     expect(post).toHaveBeenCalledWith(
       "https://share.example/delta-sharing/shares/open-jii/schemas/centrum/tables/enriched_experiment_macro_data/query",
       { predicateHints: ["`experiment_id` = 'exp-1'"], limitHint: 50 },
-      expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Bearer token-1" }),
-      }),
+      {
+        headers: {
+          Authorization: "Bearer token-1",
+          "Content-Type": "application/json",
+          Accept: "application/x-ndjson; charset=utf-8",
+        },
+        timeout: 30000,
+        responseType: "text",
+      },
     );
   });
 

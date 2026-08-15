@@ -70,8 +70,7 @@ export class DeltaSharingService {
         const url = `${endpoint}/shares/${share}/schemas/${schema}/tables/${table}/query`;
 
         const predicateHints = scopes.map(
-          ([column, value]) =>
-            `\`${column.replace(/`/g, "``")}\` = '${value.replace(/'/g, "''")}'`,
+          ([column, value]) => `\`${column.replace(/`/g, "``")}\` = '${value.replace(/'/g, "''")}'`,
         );
 
         const response = await this.httpService.axiosRef.post(
@@ -156,15 +155,26 @@ export class DeltaSharingService {
       } catch {
         continue;
       }
-      const min = stats.minValues?.[column];
-      const max = stats.maxValues?.[column];
+      const min = DeltaSharingService.scalarText(stats.minValues?.[column]);
+      const max = DeltaSharingService.scalarText(stats.maxValues?.[column]);
       if (min === undefined || max === undefined) {
         continue;
       }
-      if (!(String(min) <= value && value <= String(max))) {
+      if (!(min <= value && value <= max)) {
         return false;
       }
     }
     return true;
+  }
+
+  /** Stats values are only comparable when scalar; anything else is unusable. */
+  private static scalarText(value: unknown): string | undefined {
+    if (typeof value === "string") {
+      return value;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+    return undefined;
   }
 }

@@ -600,6 +600,84 @@ resource "databricks_grants" "centrum_schema" {
   depends_on = [module.databricks_catalog]
 }
 
+
+# ---------------------------------------------------------------------------
+# Delta Sharing: one share exposing the centrum schema, one backend recipient.
+# The backend's embedded DuckDB engine reads pre-signed parquet through it.
+# ---------------------------------------------------------------------------
+module "delta_sharing_share" {
+  source = "../../modules/databricks/share"
+
+  share_name   = "open_jii_${var.environment}"
+  catalog_name = module.databricks_catalog.catalog_name
+  comment      = "Open JII ${var.environment}: shares the centrum schema with the backend service"
+
+  schemas = [
+    {
+      name    = "centrum"
+      comment = "Central schema containing all experiment data tables"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "delta_sharing_recipient" {
+  source = "../../modules/databricks/recipient"
+
+  recipient_name      = "open_jii_backend_${var.environment}"
+  comment             = "Open JII backend service (${var.environment}): Delta Sharing consumer"
+  authentication_type = "TOKEN"
+
+  properties = {
+    environment = var.environment
+    service     = "open-jii-backend"
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_catalog]
+}
+
+module "delta_sharing_grant" {
+  source = "../../modules/databricks/grant"
+
+  share_name     = module.delta_sharing_share.share_name
+  recipient_name = module.delta_sharing_recipient.recipient_name
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.delta_sharing_share, module.delta_sharing_recipient]
+}
+
+module "delta_sharing_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-delta-sharing-secrets-${var.environment}"
+  description = "Delta Sharing credentials for the openJII backend"
+
+  secret_string = jsonencode({
+    DELTA_ENDPOINT     = "${module.databricks_workspace.workspace_url}/api/2.0/delta-sharing"
+    DELTA_BEARER_TOKEN = try(module.delta_sharing_recipient.tokens[0].bearer_token, "PENDING_ACTIVATION")
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+    SecretType  = "delta-sharing"
+  }
+}
+
 module "centrum_pipeline" {
   source = "../../modules/databricks/pipeline"
 
@@ -1838,6 +1916,14 @@ module "backend_ecs" {
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
     },
     {
+      name      = "DELTA_ENDPOINT"
+      valueFrom = "${module.delta_sharing_secrets.secret_arn}:DELTA_ENDPOINT::"
+    },
+    {
+      name      = "DELTA_BEARER_TOKEN"
+      valueFrom = "${module.delta_sharing_secrets.secret_arn}:DELTA_BEARER_TOKEN::"
+    },
+    {
       name      = "DATABRICKS_WEBHOOK_API_KEY_ID"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY_ID::"
     },
@@ -1924,6 +2010,14 @@ module "backend_ecs" {
     {
       name  = "EXPERIMENT_DATA_READ_ADAPTER"
       value = "warehouse"
+    },
+    {
+      name  = "DELTA_SHARE_NAME"
+      value = module.delta_sharing_share.share_name
+    },
+    {
+      name  = "DELTA_SCHEMA_NAME"
+      value = "centrum"
     },
     {
       name  = "DUCKDB_MEMORY_LIMIT"

@@ -129,14 +129,13 @@ export class DuckDbVariantQueryBuilder extends VariantQueryBuilder {
     const limitClause = this.limitValue ? `LIMIT ${this.limitValue}` : "";
     const offsetClause = this.offsetValue ? `OFFSET ${this.offsetValue}` : "";
 
-    const allExceptColumns = [
-      ...this.variantColumns.map((v) => v.column),
-      ...this.exceptColumns,
-    ];
+    const allExceptColumns = [...this.variantColumns.map((v) => v.column), ...this.exceptColumns];
 
     const extractions = this.variantColumns
       .flatMap((v) =>
-        VariantSchema.topLevelFields(v.schema).map((field) => this.fieldExtraction(v.column, field)),
+        VariantSchema.topLevelFields(v.schema).map((field) =>
+          this.fieldExtraction(v.column, field),
+        ),
       )
       .join(",\n        ");
 
