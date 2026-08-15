@@ -16,8 +16,18 @@ function duckDbPseudonymExpression(saltSql: string, colSql: string): string {
 }
 
 function duckDbDateTruncExpression(unit: TimeBucketUnit, colSql: string): string {
-  // DuckDB does not coerce VARCHAR timestamps; the cast is a no-op on real ones.
+  // DuckDB does not coerce VARCHAR timestamps; the cast is a no-op on real
+  // ones. The session runs in UTC, so casting a TIMESTAMPTZ here yields the
+  // UTC wall clock Spark buckets on.
   return `date_trunc('${unit.toLowerCase()}', CAST(${colSql} AS TIMESTAMP))`;
+}
+
+function duckDbOrderByTerm(colSql: string, direction: "ASC" | "DESC"): string {
+  // DuckDB defaults NULLs last in both directions; Spark puts them first when
+  // ascending. Left implicit, page 1 of an ascending sort over a nullable
+  // column is a different row set per engine.
+  const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
+  return `${colSql} ${direction} ${nulls}`;
 }
 
 export class DuckDbSqlQueryBuilder extends SqlQueryBuilder {
@@ -36,6 +46,10 @@ export class DuckDbSqlQueryBuilder extends SqlQueryBuilder {
 
   dateTruncExpression(unit: TimeBucketUnit, colSql: string): string {
     return duckDbDateTruncExpression(unit, colSql);
+  }
+
+  orderByTerm(colSql: string, direction: "ASC" | "DESC"): string {
+    return duckDbOrderByTerm(colSql, direction);
   }
 }
 
@@ -57,12 +71,18 @@ export class DuckDbVariantQueryBuilder extends VariantQueryBuilder {
     return duckDbDateTruncExpression(unit, colSql);
   }
 
+  orderByTerm(colSql: string, direction: "ASC" | "DESC"): string {
+    return duckDbOrderByTerm(colSql, direction);
+  }
+
   /**
-   * DuckDB cast target for a Spark VARIANT-DDL field type. Nested types cast
-   * to JSON: VARCHAR would yield DuckDB struct text (`{'b': 2}`), JSON gives
-   * real JSON the FE and anonymizer can parse.
+   * DuckDB cast target for a Spark VARIANT-DDL field type, or null to leave
+   * the extraction as a native VARIANT. Nested types take the null branch:
+   * casting them (to JSON or VARCHAR) reports the column as a string, which
+   * would make an unplottable nested object look categorical, whereas VARIANT
+   * classifies as complex like Spark's struct does.
    */
-  private static duckDbCastType(sparkType: string): string {
+  private static duckDbCastType(sparkType: string): string | null {
     const upper = sparkType.toUpperCase();
     if (
       upper.startsWith("OBJECT<") ||
@@ -70,7 +90,7 @@ export class DuckDbVariantQueryBuilder extends VariantQueryBuilder {
       upper.startsWith("ARRAY<") ||
       upper.startsWith("MAP<")
     ) {
-      return "JSON";
+      return null;
     }
     if (upper.startsWith("DECIMAL") || upper.startsWith("NUMERIC")) {
       return sparkType;
@@ -98,7 +118,8 @@ export class DuckDbVariantQueryBuilder extends VariantQueryBuilder {
   private fieldExtraction(column: string, field: { name: string; type: string }): string {
     const source = `variant_extract(${this.escapeIdentifier(column)}, ${this.escapeValue(field.name)})`;
     const castType = DuckDbVariantQueryBuilder.duckDbCastType(field.type);
-    return `try_cast(${source} AS ${castType}) AS ${this.escapeIdentifier(field.name)}`;
+    const projection = castType === null ? source : `try_cast(${source} AS ${castType})`;
+    return `${projection} AS ${this.escapeIdentifier(field.name)}`;
   }
 
   /**

@@ -24,11 +24,12 @@ import { QueryBuilderService } from "../src/common/modules/databricks/services/q
 import { VariantSchema } from "../src/common/modules/databricks/services/query-builder/schema/variant-schema";
 import { DatabricksSqlService } from "../src/common/modules/databricks/services/sql/sql.service";
 import type { SchemaData } from "../src/common/modules/databricks/services/sql/sql.types";
+import { DeltaConfigService } from "../src/common/modules/delta/services/config/delta-config.service";
+import { DeltaSharingService } from "../src/common/modules/delta/services/sharing/delta-sharing.service";
 import { DuckDbAdapter } from "../src/common/modules/duckdb/duckdb.adapter";
 import { DuckDbConfigService } from "../src/common/modules/duckdb/services/config/duckdb-config.service";
 import { SparkTypeMapper } from "../src/common/modules/duckdb/services/schema/spark-type-mapper";
 import { DuckDbSessionService } from "../src/common/modules/duckdb/services/session/duckdb-session.service";
-import { DeltaSharingService } from "../src/common/modules/duckdb/services/sharing/delta-sharing.service";
 import type { ExperimentTableMetadata } from "../src/experiments/core/models/experiment-data.model";
 import type { ExperimentDataReadPort } from "../src/experiments/core/ports/experiment-data-read.port";
 
@@ -70,7 +71,7 @@ function buildAdapters(): { warehouse: ExperimentDataReadPort; duckdb: Experimen
   const duckdb = new DuckDbAdapter(
     duckDbConfigService,
     new DuckDbSessionService(duckDbConfigService),
-    new DeltaSharingService(httpService, duckDbConfigService),
+    new DeltaSharingService(httpService, new DeltaConfigService(configService)),
     new DuckDbQueryBuilderService(),
     new SparkTypeMapper(),
   );

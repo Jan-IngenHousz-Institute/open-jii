@@ -31,19 +31,36 @@ export class SparkTypeMapper {
     VARIANT: "VARIANT",
   };
 
+  /**
+   * Base type category, matching what Databricks puts in `type_name`
+   * (`STRING`, `STRUCT`, `ARRAY`, ...) as opposed to the full DDL in
+   * `type_text`. The FE renders this verbatim as a column badge.
+   */
+  toSparkTypeName(duckDbType: string): string {
+    const typeText = this.toSparkTypeText(duckDbType);
+    const open = typeText.indexOf("<");
+    if (open > 0) {
+      return typeText.slice(0, open);
+    }
+    const paren = typeText.indexOf("(");
+    return paren > 0 ? typeText.slice(0, paren) : typeText;
+  }
+
   /** Spark DDL type_text for a DuckDB type's toString() form. */
   toSparkTypeText(duckDbType: string): string {
     const type = duckDbType.trim();
     const upper = type.toUpperCase();
 
+    // Array suffix binds loosest, so it must be peeled before the scalar
+    // prefix checks below (else `TIMESTAMP[]` reads as a bare TIMESTAMP).
+    if (upper.endsWith("[]")) {
+      return `ARRAY<${this.toSparkTypeText(type.slice(0, -2))}>`;
+    }
     if (upper.startsWith("TIMESTAMP")) {
       return "TIMESTAMP";
     }
     if (upper.startsWith("DECIMAL")) {
       return type.replace(/\s+/g, "");
-    }
-    if (upper.endsWith("[]")) {
-      return `ARRAY<${this.toSparkTypeText(type.slice(0, -2))}>`;
     }
     if (upper.startsWith("MAP(")) {
       const [key, value] = SparkTypeMapper.splitTopLevel(type.slice(4, -1));
@@ -61,21 +78,49 @@ export class SparkTypeMapper {
   }
 
   /**
-   * String-or-null cell from a getRowsJson() value. The Json reader already
-   * renders numerics and timestamps as strings; composites stringify to JSON
-   * text so JSON.parse-ing consumers keep working.
+   * String-or-null cell from a getRowsJson() value, normalised toward the
+   * warehouse's JSON_ARRAY rendering. Composites stringify to JSON text so
+   * JSON.parse-ing consumers keep working.
+   *
+   * `duckDbType` is optional only so callers without column metadata still
+   * work; without it timestamps and floats keep DuckDB's rendering.
    */
-  toCellString(value: unknown): string | null {
+  toCellString(value: unknown, duckDbType?: string): string | null {
     if (value === null || value === undefined) {
       return null;
     }
+
+    const upper = duckDbType?.trim().toUpperCase();
+
     if (typeof value === "string") {
+      // The client renders TIMESTAMPTZ in the process zone with an offset
+      // suffix ("2026-01-01 12:15:00+02"); the warehouse emits plain UTC.
+      if (upper?.startsWith("TIMESTAMP") && upper.includes("TIME ZONE")) {
+        return SparkTypeMapper.toUtcTimestampText(value);
+      }
       return value;
     }
-    if (typeof value === "boolean" || typeof value === "number" || typeof value === "bigint") {
+    if (typeof value === "boolean" || typeof value === "bigint") {
       return String(value);
     }
+    if (typeof value === "number") {
+      // Spark renders floating point with a decimal point (21.0, not 21).
+      const isFloating = upper === "DOUBLE" || upper === "FLOAT" || upper === "REAL";
+      return isFloating && Number.isInteger(value) ? `${value}.0` : String(value);
+    }
     return JSON.stringify(value);
+  }
+
+  /** Re-render an offset-suffixed timestamp as plain UTC. */
+  private static toUtcTimestampText(value: string): string {
+    // DuckDB renders a bare-hour offset ("+02"); Date needs "+02:00".
+    const isoOffset = value.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00");
+    const parsed = new Date(isoOffset);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    const [date, time] = parsed.toISOString().split("T");
+    return `${date} ${time.replace(/(\.000)?Z$/, "")}`;
   }
 
   /** Split on top-level commas, honoring (), [] nesting and "quoted" names. */

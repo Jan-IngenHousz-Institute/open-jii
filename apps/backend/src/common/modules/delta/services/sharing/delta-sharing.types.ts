@@ -23,16 +23,12 @@ export interface DeltaFile {
   expirationTimestamp?: number;
 }
 
-export interface TableQueryRequest {
-  predicateHints?: string[];
-  limitHint?: number;
-}
-
 export interface TableQueryResponse {
   protocol: DeltaProtocol;
   metadata: DeltaMetadata;
   files: DeltaFile[];
   version: number;
+  nextPageToken?: string;
 }
 
 /** Parsed min/max stats used for client-side file pruning. */
@@ -42,7 +38,14 @@ export interface DeltaFileStats {
   maxValues?: Record<string, unknown>;
 }
 
+/** Terminator line; carries the page token when the listing is incomplete. */
+export interface EndStreamAction {
+  nextPageToken?: string;
+  minUrlExpirationTimestamp?: number;
+}
+
 export type DeltaResponseLine =
   | { protocol: DeltaProtocol }
   | { metaData: DeltaMetadata }
-  | { file: DeltaFile };
+  | { file: DeltaFile }
+  | { endStreamAction: EndStreamAction };

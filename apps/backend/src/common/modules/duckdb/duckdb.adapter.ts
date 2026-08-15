@@ -11,12 +11,19 @@ import type {
   FilterCondition,
 } from "../databricks/services/query-builder/query-builder.types";
 import type { SchemaData } from "../databricks/services/sql/sql.types";
+import { DeltaSharingService } from "../delta/services/sharing/delta-sharing.service";
 import { DuckDbConfigService } from "./services/config/duckdb-config.service";
 import { SparkTypeMapper } from "./services/schema/spark-type-mapper";
 import { DuckDbSessionService } from "./services/session/duckdb-session.service";
-import { DeltaSharingService } from "./services/sharing/delta-sharing.service";
 
-const NO_DELTA_FILES = "NO_DELTA_FILES";
+/**
+ * Stands in for a query whose share has no data files. `read_parquet` cannot
+ * bind an empty file list, so there is no relation to select from; this marker
+ * makes {@link DuckDbAdapter.executeSqlQuery} return an empty result set,
+ * matching the warehouse (which answers an empty table with zero rows, not an
+ * error).
+ */
+const EMPTY_RESULT_QUERY = "-- openjii:no-delta-files";
 
 /**
  * Experiment-data read engine: Delta Sharing supplies pre-signed parquet
@@ -68,11 +75,10 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
 
     const fromResult = await this.fromExpression("experiment_table_metadata", whereConditions);
     if (fromResult.isFailure()) {
-      // A shared table with zero matching files means zero matching rows.
-      if (fromResult.error.code === NO_DELTA_FILES) {
-        return success([]);
-      }
       return failure(fromResult.error);
+    }
+    if (fromResult.value === null) {
+      return success([]);
     }
 
     const queryResult = this.queryBuilder.buildQuery({
@@ -145,6 +151,9 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
     if (fromResult.isFailure()) {
       return fromResult;
     }
+    if (fromResult.value === null) {
+      return success(EMPTY_RESULT_QUERY);
+    }
 
     return this.queryBuilder.buildQuery({
       ...queryParams,
@@ -154,17 +163,26 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
   }
 
   async executeSqlQuery(_schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
+    if (sqlStatement === EMPTY_RESULT_QUERY) {
+      return success({ columns: [], rows: [], totalRows: 0, truncated: false });
+    }
+
     try {
       const reader = await this.sessionService.run(sqlStatement);
 
-      const columns = reader.columnNames().map((name, position) => {
-        const typeText = this.typeMapper.toSparkTypeText(String(reader.columnTypes()[position]));
-        return { name, type_name: typeText, type_text: typeText, position };
-      });
+      const duckDbTypes = reader.columnTypes().map((type) => String(type));
+      const columns = reader.columnNames().map((name, position) => ({
+        name,
+        type_name: this.typeMapper.toSparkTypeName(duckDbTypes[position]),
+        type_text: this.typeMapper.toSparkTypeText(duckDbTypes[position]),
+        position,
+      }));
 
       const rows = reader
         .getRowsJson()
-        .map((row) => row.map((cell) => this.typeMapper.toCellString(cell)));
+        .map((row) =>
+          row.map((cell, index) => this.typeMapper.toCellString(cell, duckDbTypes[index])),
+        );
 
       return success({
         columns,
@@ -176,7 +194,9 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       this.logger.error({
         msg: "DuckDB query failed",
         operation: "executeSqlQuery",
-        sql: sqlStatement,
+        // The SQL embeds pre-signed URLs, which are bearer credentials for the
+        // data files; only the redacted shape is safe to log.
+        sql: DuckDbAdapter.redactSignedUrls(sqlStatement),
         error,
       });
       if (error instanceof AppError) {
@@ -185,6 +205,14 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       const message = error instanceof Error ? error.message : String(error);
       return failure(AppError.internal(`DuckDB query execution failed: ${message}`));
     }
+  }
+
+  /** Replace pre-signed file URLs with a count so SQL stays loggable. */
+  private static redactSignedUrls(sql: string): string {
+    return sql.replace(/read_parquet\(\[(.*?)\]/s, (_match, urls: string) => {
+      const count = urls.split("', '").length;
+      return `read_parquet([<${count} pre-signed url(s) redacted>]`;
+    });
   }
 
   private resolveTarget(
@@ -233,15 +261,16 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
   }
 
   /**
-   * FROM source for a physical table. Local mode targets bare in-memory
-   * tables so integration specs run without Delta Sharing; otherwise a fresh
-   * pre-signed file list becomes a read_parquet scan. union_by_name tolerates
-   * files written before a column was added to the table.
+   * FROM source for a physical table, or null when the share holds no data
+   * files for it. Local mode targets bare in-memory tables so integration
+   * specs run without Delta Sharing; otherwise a fresh pre-signed file list
+   * becomes a read_parquet scan. union_by_name tolerates files written before
+   * a column was added to the table.
    */
   private async fromExpression(
     physicalTable: string,
     scopes: [string, string][],
-  ): Promise<Result<string>> {
+  ): Promise<Result<string | null>> {
     if (this.configService.isLocalMode()) {
       return success(`"${physicalTable.replace(/"/g, '""')}"`);
     }
@@ -251,9 +280,7 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       return urlsResult;
     }
     if (urlsResult.value.length === 0) {
-      return failure(
-        AppError.notFound(`No data files for table '${physicalTable}'`, NO_DELTA_FILES),
-      );
+      return success(null);
     }
 
     const urlList = urlsResult.value.map((url) => `'${url.replace(/'/g, "''")}'`).join(", ");

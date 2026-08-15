@@ -1,9 +1,13 @@
-import { DuckDBInstance } from "@duckdb/node-api";
-import type { DuckDBResultReader } from "@duckdb/node-api";
+import type { DuckDBInstance, DuckDBResultReader } from "@duckdb/node-api";
 import { Injectable, Logger } from "@nestjs/common";
 import type { OnModuleDestroy } from "@nestjs/common";
 
 import { DuckDbConfigService } from "../config/duckdb-config.service";
+
+/** SQL string literal for a settings value. */
+function quoteLiteral(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
 
 /**
  * Owns the process-wide DuckDB instance. Everything is lazy: the native
@@ -32,14 +36,31 @@ export class DuckDbSessionService implements OnModuleDestroy {
     }
   }
 
-  onModuleDestroy(): void {
-    if (this.instancePromise) {
-      void this.instancePromise.then((instance) => instance.closeSync()).catch(() => undefined);
+  async onModuleDestroy(): Promise<void> {
+    const pending = this.instancePromise;
+    this.instancePromise = undefined;
+    if (!pending) {
+      return;
+    }
+    try {
+      (await pending).closeSync();
+    } catch (error) {
+      this.logger.warn({
+        msg: "DuckDB instance close failed",
+        operation: "onModuleDestroy",
+        error,
+      });
     }
   }
 
   private getInstance(): Promise<DuckDBInstance> {
-    this.instancePromise ??= this.createInstance();
+    // A rejected init must not be memoized: the first query after deploy can
+    // fail on a transient extension fetch, and a cached rejection would brick
+    // the task for its whole lifetime (the health check never touches DuckDB).
+    this.instancePromise ??= this.createInstance().catch((error: unknown) => {
+      this.instancePromise = undefined;
+      throw error;
+    });
     return this.instancePromise;
   }
 
@@ -48,29 +69,43 @@ export class DuckDbSessionService implements OnModuleDestroy {
       this.configService.assertReady();
     }
 
-    const instance = await DuckDBInstance.create(":memory:");
-    const connection = await instance.connect();
+    // Imported here, not at module scope: the package loads a native binding
+    // on import, which would abort boot on a platform without a prebuild even
+    // when the warehouse adapter is selected and DuckDB is never used.
+    const { DuckDBInstance: Instance } = await import("@duckdb/node-api");
+    const instance = await Instance.create(":memory:");
+    let connection: Awaited<ReturnType<DuckDBInstance["connect"]>> | undefined;
     try {
-      await connection.run(`SET memory_limit = '${this.configService.getMemoryLimit()}'`);
+      connection = await instance.connect();
+      // Spark runs these tables in UTC. Without this, date_trunc buckets and
+      // bare timestamp literals in filters resolve against the container's
+      // local zone, shifting every time series by the host offset.
+      await connection.run("SET TimeZone = 'UTC'");
+      await connection.run(
+        `SET memory_limit = ${quoteLiteral(this.configService.getMemoryLimit())}`,
+      );
       await connection.run(`SET threads = ${this.configService.getThreads()}`);
 
       const tempDirectory = this.configService.getTempDirectory();
       if (tempDirectory) {
-        await connection.run(`SET temp_directory = '${tempDirectory}'`);
+        await connection.run(`SET temp_directory = ${quoteLiteral(tempDirectory)}`);
       }
 
       if (!this.configService.isLocalMode()) {
         const extensionDirectory = this.configService.getExtensionDirectory();
         if (extensionDirectory) {
-          await connection.run(`SET extension_directory = '${extensionDirectory}'`);
+          await connection.run(`SET extension_directory = ${quoteLiteral(extensionDirectory)}`);
         }
         // INSTALL is an idempotent no-op once the extension is on disk; the
-        // first query per task fetches it via NAT egress.
+        // first query per task fetches it over egress.
         await connection.run("INSTALL httpfs");
         await connection.run("LOAD httpfs");
       }
+    } catch (error) {
+      instance.closeSync();
+      throw error;
     } finally {
-      connection.closeSync();
+      connection?.closeSync();
     }
 
     this.logger.log({

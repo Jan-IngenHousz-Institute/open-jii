@@ -100,6 +100,15 @@ export abstract class BaseQueryBuilder {
   }
 
   /**
+   * ORDER BY term for an already-escaped column. Spark's default null
+   * placement (first ascending, last descending) is implicit here; dialects
+   * that order nulls differently must spell it out or paginate differently.
+   */
+  orderByTerm(colSql: string, direction: "ASC" | "DESC"): string {
+    return `${colSql} ${direction}`;
+  }
+
+  /**
    * Apply a single user filter to the WHERE clause. Default routes the
    * compiled SQL into `where(...)`; subclasses with multi-level WHEREs
    * (variant flattening) override to route flattened-field filters into
@@ -207,9 +216,9 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
     if (column.includes(".")) {
       const parts = column.split(".");
       const escapedParts = parts.map((part) => this.escapeIdentifier(part));
-      this.orderByClause = `${escapedParts.join(".")} ${direction}`;
+      this.orderByClause = this.orderByTerm(escapedParts.join("."), direction);
     } else {
-      this.orderByClause = `${this.escapeIdentifier(column)} ${direction}`;
+      this.orderByClause = this.orderByTerm(this.escapeIdentifier(column), direction);
     }
     return this;
   }
@@ -377,9 +386,9 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     if (column.includes(".")) {
       const parts = column.split(".");
       const escapedParts = parts.map((part) => this.escapeIdentifier(part));
-      this.orderByClause = `${escapedParts.join(".")} ${direction}`;
+      this.orderByClause = this.orderByTerm(escapedParts.join("."), direction);
     } else {
-      this.orderByClause = `${this.escapeIdentifier(column)} ${direction}`;
+      this.orderByClause = this.orderByTerm(this.escapeIdentifier(column), direction);
     }
     return this;
   }

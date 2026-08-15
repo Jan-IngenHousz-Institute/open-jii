@@ -4,16 +4,13 @@ import { ConfigService } from "@nestjs/config";
 import { AppError } from "../../../../utils/fp-utils";
 
 /**
- * Engine knobs from duckdb.*, Delta Sharing connection from delta.*, and
- * table names reused from the databricks.* namespace. Deliberately lazy:
- * nothing is validated at boot so the app starts with warehouse-mode dummy
- * envs; `assertReady()` runs at first use and reports every missing key at
- * once.
+ * Engine knobs from duckdb.* plus the physical table names, reused from the
+ * databricks.* namespace rather than duplicated. Deliberately lazy: nothing
+ * is validated at boot so the app starts with warehouse-mode dummy envs;
+ * `assertReady()` runs at first use and reports every missing key at once.
  */
 @Injectable()
 export class DuckDbConfigService {
-  static readonly DEFAULT_REQUEST_TIMEOUT = 30000;
-
   constructor(private readonly configService: ConfigService) {}
 
   isDuckDbReadAdapter(): boolean {
@@ -42,30 +39,6 @@ export class DuckDbConfigService {
     return this.configService.get<string>("duckdb.tempDirectory");
   }
 
-  getDeltaEndpoint(): string {
-    return this.configService.get<string>("delta.endpoint") ?? "";
-  }
-
-  getDeltaBearerToken(): string {
-    return this.configService.get<string>("delta.bearerToken") ?? "";
-  }
-
-  getDeltaShareName(): string {
-    return this.configService.get<string>("delta.shareName") ?? "";
-  }
-
-  getDeltaSchemaName(): string {
-    return this.configService.get<string>("delta.schemaName") ?? "centrum";
-  }
-
-  getDeltaRequestTimeout(): number {
-    const raw = this.configService.get<string>("delta.requestTimeout");
-    const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-    return Number.isFinite(parsed) && parsed > 0
-      ? parsed
-      : DuckDbConfigService.DEFAULT_REQUEST_TIMEOUT;
-  }
-
   getCentrumSchemaName(): string {
     return this.configService.get<string>("databricks.centrumSchemaName") ?? "";
   }
@@ -86,12 +59,9 @@ export class DuckDbConfigService {
     return this.configService.get<string>("databricks.uploadedDataTableName") ?? "";
   }
 
-  /** Every key the Delta Sharing read path needs; throws listing all gaps. */
+  /** Every table name the read path resolves; throws listing all gaps. */
   assertReady(): void {
     const required: [string, string][] = [
-      ["DELTA_ENDPOINT", this.getDeltaEndpoint()],
-      ["DELTA_BEARER_TOKEN", this.getDeltaBearerToken()],
-      ["DELTA_SHARE_NAME", this.getDeltaShareName()],
       ["DATABRICKS_CENTRUM_SCHEMA_NAME", this.getCentrumSchemaName()],
       ["DATABRICKS_RAW_DATA_TABLE_NAME", this.getRawDataTableName()],
       ["DATABRICKS_DEVICE_DATA_TABLE_NAME", this.getDeviceDataTableName()],

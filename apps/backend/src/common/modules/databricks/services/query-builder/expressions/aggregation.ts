@@ -154,7 +154,7 @@ export function wrapWithAggregation(
 
   if (opts.orderBy) {
     const direction = opts.orderDirection ?? "ASC";
-    sql += ` ORDER BY ${builder.escapeIdentifier(opts.orderBy)} ${direction}`;
+    sql += ` ORDER BY ${builder.orderByTerm(builder.escapeIdentifier(opts.orderBy), direction)}`;
   }
 
   if (opts.limit !== undefined) {

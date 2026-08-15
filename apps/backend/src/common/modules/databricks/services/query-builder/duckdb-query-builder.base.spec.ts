@@ -19,7 +19,7 @@ describe("DuckDbQueryBuilder", () => {
 
     it("escapes dotted struct paths per segment", () => {
       const query = builder.from("t").orderBy("contributor.name", "DESC").build();
-      expect(query).toBe('SELECT * FROM t ORDER BY "contributor"."name" DESC');
+      expect(query).toBe('SELECT * FROM t ORDER BY "contributor"."name" DESC NULLS LAST');
     });
 
     it("emits EXCLUDE for star column exclusion", () => {
@@ -44,10 +44,20 @@ describe("DuckDbQueryBuilder", () => {
       expect(expr.sql).toBe(`date_trunc('hour', CAST("created_at" AS TIMESTAMP))`);
       expect(expr.alias).toBe("created_at_hour");
     });
+
+    it("spells out Spark's null ordering, which DuckDB does not share", () => {
+      expect(builder.from("t").orderBy("value", "ASC").build()).toBe(
+        'SELECT * FROM t ORDER BY "value" ASC NULLS FIRST',
+      );
+      expect(new DuckDbSqlQueryBuilder().from("t").orderBy("value", "DESC").build()).toBe(
+        'SELECT * FROM t ORDER BY "value" DESC NULLS LAST',
+      );
+    });
   });
 
   describe("execution against in-memory DuckDB", () => {
     let connection: DuckDBConnection;
+    let instance: DuckDBInstance;
     let service: DuckDbQueryBuilderService;
 
     const run = async (sql: string): Promise<Record<string, unknown>[]> => {
@@ -56,7 +66,7 @@ describe("DuckDbQueryBuilder", () => {
     };
 
     beforeAll(async () => {
-      const instance = await DuckDBInstance.create(":memory:");
+      instance = await DuckDBInstance.create(":memory:");
       connection = await instance.connect();
       service = new DuckDbQueryBuilderService();
 
@@ -80,6 +90,12 @@ describe("DuckDbQueryBuilder", () => {
             {'id': 'user-3', 'name': 'Alan'})
         ) AS t(experiment_id, macro_id, "timestamp", macro_output, contributor)
       `);
+    });
+
+    // The native handles keep the worker's event loop alive until closed.
+    afterAll(() => {
+      connection.closeSync();
+      instance.closeSync();
     });
 
     const MACRO_SCHEMA = "OBJECT<SPAD: DOUBLE, `Leaf Temp`: DOUBLE, meta: OBJECT<unit: STRING>>";
@@ -111,9 +127,14 @@ describe("DuckDbQueryBuilder", () => {
       expect(rows[0].experiment_id).toBeUndefined();
     });
 
-    it("serializes nested variant objects as real JSON", async () => {
-      const rows = await run(buildQuery({ limit: 1 }));
-      expect(JSON.parse(String(rows[0].meta))).toEqual({ unit: "C" });
+    it("leaves nested variant objects as VARIANT, not a cast-to-string", async () => {
+      // Casting these to JSON/VARCHAR would report the column as STRING, and
+      // an unplottable nested object would read as categorical to the pickers.
+      const reader = await connection.runAndReadAll(buildQuery({ limit: 1 }));
+      const metaIndex = reader.columnNames().indexOf("meta");
+      expect(String(reader.columnTypes()[metaIndex])).toBe("VARIANT");
+      // getRowsJson is the adapter's read path; it renders VARIANT as JSON.
+      expect(reader.getRowsJson()[0][metaIndex]).toEqual({ unit: "C" });
     });
 
     it("routes flattened-field filters to the post-flatten WHERE", async () => {

@@ -1,24 +1,21 @@
-import { HttpModule } from "@nestjs/axios";
 import { Module } from "@nestjs/common";
 
 import { DuckDbQueryBuilderService } from "../databricks/services/query-builder/duckdb-query-builder.service";
+import { DeltaModule } from "../delta/delta.module";
 import { DuckDbAdapter } from "./duckdb.adapter";
 import { DuckDbConfigService } from "./services/config/duckdb-config.service";
 import { SparkTypeMapper } from "./services/schema/spark-type-mapper";
 import { DuckDbSessionService } from "./services/session/duckdb-session.service";
-import { DeltaSharingService } from "./services/sharing/delta-sharing.service";
 
+/**
+ * Embedded DuckDB read engine. Sources its data through {@link DeltaModule},
+ * which is the only part that speaks the sharing protocol.
+ */
 @Module({
-  imports: [
-    HttpModule.register({
-      timeout: 30000,
-      maxRedirects: 5,
-    }),
-  ],
+  imports: [DeltaModule],
   providers: [
     DuckDbConfigService,
     DuckDbSessionService,
-    DeltaSharingService,
     DuckDbQueryBuilderService,
     SparkTypeMapper,
     DuckDbAdapter,

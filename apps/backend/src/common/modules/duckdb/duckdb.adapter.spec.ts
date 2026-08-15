@@ -2,12 +2,14 @@ import { HttpService } from "@nestjs/axios";
 import { ConfigService } from "@nestjs/config";
 import axios from "axios";
 
+import { success } from "../../utils/fp-utils";
 import { DuckDbQueryBuilderService } from "../databricks/services/query-builder/duckdb-query-builder.service";
+import { DeltaConfigService } from "../delta/services/config/delta-config.service";
+import { DeltaSharingService } from "../delta/services/sharing/delta-sharing.service";
 import { DuckDbAdapter } from "./duckdb.adapter";
 import { DuckDbConfigService } from "./services/config/duckdb-config.service";
 import { SparkTypeMapper } from "./services/schema/spark-type-mapper";
 import { DuckDbSessionService } from "./services/session/duckdb-session.service";
-import { DeltaSharingService } from "./services/sharing/delta-sharing.service";
 
 const TEST_CONFIG = {
   duckdb: {
@@ -39,7 +41,10 @@ describe("DuckDbAdapter (localMode end-to-end)", () => {
     adapter = new DuckDbAdapter(
       duckDbConfig,
       session,
-      new DeltaSharingService(new HttpService(axios.create()), duckDbConfig),
+      new DeltaSharingService(
+        new HttpService(axios.create()),
+        new DeltaConfigService(configService),
+      ),
       new DuckDbQueryBuilderService(),
       new SparkTypeMapper(),
     );
@@ -68,6 +73,11 @@ describe("DuckDbAdapter (localMode end-to-end)", () => {
           {'id': 'user-3', 'name': 'Alan', 'avatar': NULL})
       ) AS t(experiment_id, macro_id, "timestamp", macro_output, contributor)
     `);
+  });
+
+  // The native instance keeps the worker's event loop alive until closed.
+  afterAll(async () => {
+    await session.onModuleDestroy();
   });
 
   it("reads experiment table metadata with parsed row counts and schemas", async () => {
@@ -160,5 +170,62 @@ describe("DuckDbAdapter (localMode end-to-end)", () => {
     expect(result.isFailure()).toBe(true);
     if (result.isSuccess()) throw new Error("expected failure");
     expect(result.error.message).toContain("DuckDB query execution failed");
+  });
+});
+
+describe("DuckDbAdapter with an empty share", () => {
+  let adapter: DuckDbAdapter;
+
+  // Rebuilt per test: `restoreMocks` drops the sharing spy after each one.
+  beforeEach(() => {
+    // Not local mode: exercise the Delta Sharing path with a server that
+    // serves no data files for the table.
+    const configService = new ConfigService({
+      duckdb: { readAdapter: "duckdb", localMode: false },
+      delta: { endpoint: "https://share.example", bearerToken: "t", shareName: "s" },
+      databricks: TEST_CONFIG.databricks,
+    });
+    const duckDbConfig = new DuckDbConfigService(configService);
+    const sharing = new DeltaSharingService(
+      new HttpService(axios.create()),
+      new DeltaConfigService(configService),
+    );
+    vi.spyOn(sharing, "getDataFileUrls").mockResolvedValue(success([]));
+
+    adapter = new DuckDbAdapter(
+      duckDbConfig,
+      new DuckDbSessionService(duckDbConfig),
+      sharing,
+      new DuckDbQueryBuilderService(),
+      new SparkTypeMapper(),
+    );
+  });
+
+  it("answers a data query with an empty result set, not a 404", async () => {
+    const queryResult = await adapter.buildExperimentQuery({
+      tableName: "macro-1",
+      tableType: "macro",
+      experimentId: "exp-empty",
+    });
+    expect(queryResult.isSuccess()).toBe(true);
+    if (queryResult.isFailure()) throw queryResult.error;
+
+    const dataResult = await adapter.executeSqlQuery("centrum", queryResult.value);
+    expect(dataResult.isSuccess()).toBe(true);
+    if (dataResult.isFailure()) throw dataResult.error;
+    expect(dataResult.value).toEqual({
+      columns: [],
+      rows: [],
+      totalRows: 0,
+      truncated: false,
+    });
+  });
+
+  it("reports no tables rather than failing when metadata has no files", async () => {
+    const result = await adapter.getExperimentTableMetadata("exp-empty");
+
+    expect(result.isSuccess()).toBe(true);
+    if (result.isFailure()) throw result.error;
+    expect(result.value).toEqual([]);
   });
 });

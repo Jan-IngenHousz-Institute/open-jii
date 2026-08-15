@@ -26,20 +26,16 @@ describe("DuckDbConfigService", () => {
     expect(() => makeService({})).not.toThrow();
   });
 
-  it("assertReady reports every missing key at once", () => {
-    const service = makeService({
-      delta: { endpoint: "https://share.example" },
-      databricks: { centrumSchemaName: "centrum" },
-    });
+  it("assertReady reports every missing table name at once", () => {
+    const service = makeService({ databricks: { centrumSchemaName: "centrum" } });
 
     expect(() => service.assertReady()).toThrow(
-      /DELTA_BEARER_TOKEN.*DELTA_SHARE_NAME.*DATABRICKS_RAW_DATA_TABLE_NAME.*DATABRICKS_DEVICE_DATA_TABLE_NAME.*DATABRICKS_MACRO_DATA_TABLE_NAME.*DATABRICKS_UPLOADED_DATA_TABLE_NAME/,
+      /DATABRICKS_RAW_DATA_TABLE_NAME.*DATABRICKS_DEVICE_DATA_TABLE_NAME.*DATABRICKS_MACRO_DATA_TABLE_NAME.*DATABRICKS_UPLOADED_DATA_TABLE_NAME/,
     );
   });
 
   it("assertReady passes with a complete configuration", () => {
     const service = makeService({
-      delta: { endpoint: "https://share.example", bearerToken: "t", shareName: "s" },
       databricks: {
         centrumSchemaName: "centrum",
         rawDataTableName: "r",

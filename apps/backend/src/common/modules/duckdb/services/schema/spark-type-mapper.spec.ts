@@ -41,6 +41,25 @@ describe("SparkTypeMapper", () => {
         "STRUCT<Leaf Temp: DOUBLE>",
       );
     });
+
+    it("peels the array suffix before scalar prefixes", () => {
+      // TIMESTAMP[]/DECIMAL(..)[] previously matched the scalar branch first
+      // and reported as plottable scalars.
+      expect(mapper.toSparkTypeText("TIMESTAMP[]")).toBe("ARRAY<TIMESTAMP>");
+      expect(mapper.toSparkTypeText("DECIMAL(10,2)[]")).toBe("ARRAY<DECIMAL(10,2)>");
+    });
+  });
+
+  describe("toSparkTypeName", () => {
+    it.each([
+      ["VARCHAR", "STRING"],
+      ["DECIMAL(10,2)", "DECIMAL"],
+      ["VARCHAR[]", "ARRAY"],
+      ['STRUCT("id" VARCHAR)', "STRUCT"],
+      ["MAP(VARCHAR, BIGINT)", "MAP"],
+    ])("reduces %s to the base category %s", (duckdb, name) => {
+      expect(mapper.toSparkTypeName(duckdb)).toBe(name);
+    });
   });
 
   describe("toCellString", () => {
@@ -59,6 +78,21 @@ describe("SparkTypeMapper", () => {
     it("serializes composites as JSON text", () => {
       expect(mapper.toCellString({ id: "u1" })).toBe('{"id":"u1"}');
       expect(mapper.toCellString([1, 2])).toBe("[1,2]");
+    });
+
+    it("renders whole floats with a decimal point like Spark", () => {
+      expect(mapper.toCellString(21, "DOUBLE")).toBe("21.0");
+      expect(mapper.toCellString(21.5, "DOUBLE")).toBe("21.5");
+      // Integral types keep their bare rendering.
+      expect(mapper.toCellString(21, "BIGINT")).toBe("21");
+    });
+
+    it("normalises offset-suffixed timestamps to plain UTC", () => {
+      expect(mapper.toCellString("2026-01-01 12:15:00+02", "TIMESTAMP WITH TIME ZONE")).toBe(
+        "2026-01-01 10:15:00",
+      );
+      // Zone-less timestamps are already UTC wall clock.
+      expect(mapper.toCellString("2026-01-01 10:15:00", "TIMESTAMP")).toBe("2026-01-01 10:15:00");
     });
   });
 });
