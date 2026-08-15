@@ -42,24 +42,26 @@ export function BatteryPanel({ monitoring }: BatteryPanelProps) {
         </div>
 
         {view === "chart" ? (
-          <LineChart
-            className="h-56"
-            data={[
-              {
-                name: t("iot.devices.monitoring.batterySeries"),
-                x: points.map((point) => formatBucketLabel(point.bucketStart, monitoring.bucket)),
-                y: points.map((point) => point.averageBattery ?? 0),
-                mode: "lines+markers",
-                color: MONITORING_PRIMARY_COLOR,
-                connectgaps: false,
-              },
-            ]}
-            config={{
-              showLegend: false,
-              showModeBar: false,
-              yAxisTitle: t("iot.devices.monitoring.batteryAxis"),
-            }}
-          />
+          <div className="h-56 w-full">
+            <LineChart
+              data={[
+                {
+                  name: t("iot.devices.monitoring.batterySeries"),
+                  x: points.map((point) => point.bucketStart),
+                  y: points.map((point) => point.averageBattery ?? 0),
+                  mode: "lines+markers",
+                  color: MONITORING_PRIMARY_COLOR,
+                  connectgaps: false,
+                },
+              ]}
+              config={{
+                showLegend: false,
+                showModeBar: false,
+                xAxisType: "date",
+                yAxisTitle: t("iot.devices.monitoring.batteryAxis"),
+              }}
+            />
+          </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border">
             <Table>

@@ -111,23 +111,31 @@ export function ThroughputPanel({ monitoring, boundExperiments, from, to }: Thro
         <ChartTableToggle view={view} onViewChange={setView} />
       </div>
 
-      {view === "chart" ? (
-        <BarChart
-          className="h-64"
-          barmode="stack"
-          bargap={0.15}
-          data={series.map((entry, index) => ({
-            name: entry.name,
-            x: axis.map((bucketStart) => formatBucketLabel(bucketStart, monitoring.bucket)),
-            y: entry.counts,
-            color: MONITORING_SERIES_COLORS[index % MONITORING_SERIES_COLORS.length],
-          }))}
-          config={{
-            showLegend: series.length > 1,
-            showModeBar: false,
-            yAxisTitle: t("iot.devices.monitoring.measurements"),
-          }}
-        />
+      {total === 0 ? (
+        <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+          {t("iot.devices.monitoring.noMeasurements")}
+        </p>
+      ) : view === "chart" ? (
+        <div className="h-64 w-full">
+          <BarChart
+            barmode="stack"
+            bargap={0.15}
+            data={series.map((entry, index) => ({
+              name: entry.name,
+              // Instants on a real time axis: the chart layer defaults
+              // `xaxis.type` to linear, which cannot place label strings.
+              x: axis,
+              y: entry.counts,
+              color: MONITORING_SERIES_COLORS[index % MONITORING_SERIES_COLORS.length],
+            }))}
+            config={{
+              showLegend: series.length > 1,
+              showModeBar: false,
+              xAxisType: "date",
+              yAxisTitle: t("iot.devices.monitoring.measurements"),
+            }}
+          />
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
           <Table>

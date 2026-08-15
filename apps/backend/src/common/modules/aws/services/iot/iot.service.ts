@@ -29,7 +29,10 @@ import type {
 // are batched by accumulated length with a generous count ceiling.
 const SEARCH_INDEX_MAX_QUERY_CHARS = 900;
 const SEARCH_INDEX_MAX_TERMS = 50;
-const SEARCH_INDEX_TERM_OVERHEAD = "thingName:".length + " OR ".length;
+// Thing names are quoted in the query: colons and hyphens are operators in the
+// fleet-index syntax, and an unquoted name makes the whole query invalid
+// (InvalidQueryException), which would degrade every device to "unknown".
+const SEARCH_INDEX_TERM_OVERHEAD = 'thingName:""'.length + " OR ".length;
 
 @Injectable()
 export class AwsIotService {
@@ -196,7 +199,7 @@ export class AwsIotService {
   }
 
   private async searchThingsChunk(thingNames: string[]): Promise<ThingDocument[]> {
-    const queryString = thingNames.map((name) => `thingName:${name}`).join(" OR ");
+    const queryString = thingNames.map((name) => `thingName:"${name}"`).join(" OR ");
     const things: ThingDocument[] = [];
     let nextToken: string | undefined;
 

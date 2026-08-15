@@ -49,8 +49,9 @@ describe("MonitoringTiles", () => {
     );
 
     expect(screen.getByText("12")).toBeInTheDocument();
-    // The trailing null bucket must not blank the battery tile.
-    expect(screen.getByText("92%")).toBeInTheDocument();
+    // The trailing null bucket must not blank the tile; the value is the
+    // device-reported reading, which is not a percentage on every family.
+    expect(screen.getByText("92.40")).toBeInTheDocument();
     expect(screen.queryByText("iot.devices.monitoring.connectedButSilent")).not.toBeInTheDocument();
   });
 

@@ -143,7 +143,7 @@
         "unknownVersion": "unbekannt",
         "batteryTitle": "Batterie",
         "batterySeries": "Batterie",
-        "batteryAxis": "Batterie %",
+        "batteryAxis": "Batterie (gemeldet)",
         "noBattery": "Nicht gemeldet",
         "eventLogTitle": "Ereignisprotokoll",
         "eventTime": "Zeit",
@@ -156,7 +156,8 @@
         "viewTable": "Als Tabelle anzeigen",
         "loadError": "Monitoring-Daten konnten nicht geladen werden.",
         "retry": "Erneut versuchen",
-        "connectedButSilent": "Verbunden, keine aktuellen Daten"
+        "connectedButSilent": "Verbunden, keine aktuellen Daten",
+        "noMeasurements": "Keine Messungen in diesem Zeitraum."
       },
       "pageOf": "Seite {{page}} von {{total}}",
       "actions": {

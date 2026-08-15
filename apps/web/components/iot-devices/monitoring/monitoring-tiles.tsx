@@ -91,7 +91,7 @@ export function MonitoringTiles({ device, activity, monitoring }: MonitoringTile
         ) : latestBattery?.averageBattery == null ? (
           t("iot.devices.monitoring.noBattery")
         ) : (
-          <span className="tabular-nums">{`${latestBattery.averageBattery.toFixed(0)}%`}</span>
+          <span className="tabular-nums">{latestBattery.averageBattery.toFixed(2)}</span>
         )}
       </Tile>
     </div>

@@ -143,7 +143,7 @@
         "unknownVersion": "onbekend",
         "batteryTitle": "Batterij",
         "batterySeries": "Batterij",
-        "batteryAxis": "Batterij %",
+        "batteryAxis": "Batterij (gerapporteerd)",
         "noBattery": "Niet gemeld",
         "eventLogTitle": "Gebeurtenislog",
         "eventTime": "Tijd",
@@ -156,7 +156,8 @@
         "viewTable": "Toon als tabel",
         "loadError": "Monitoringdata kon niet worden geladen.",
         "retry": "Opnieuw proberen",
-        "connectedButSilent": "Verbonden, geen recente data"
+        "connectedButSilent": "Verbonden, geen recente data",
+        "noMeasurements": "Geen metingen in deze periode."
       },
       "pageOf": "Pagina {{page}} van {{total}}",
       "actions": {
