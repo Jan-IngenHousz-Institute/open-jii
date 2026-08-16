@@ -87,7 +87,7 @@ const plainFlowNode = (id: string): FlowNode => ({
   content: {},
   isStart: false,
 });
-// The active protocol is derived from the flow's measurement node (flowProtocolId).
+// Protocol nodes carry the protocol used by branch-evaluation fixtures.
 const measurementFlowNode = (id: string, protocolId: string): FlowNode => ({
   id,
   type: "measurement",

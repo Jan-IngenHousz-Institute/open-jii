@@ -113,8 +113,7 @@ describe("useMeasurementUpload", () => {
     expect(calls.map(([m]) => m.metadata.protocolName)).toEqual(["Proto A", "Proto B", "Shared"]);
 
     const runIds = calls.map(([m]) => m.measurementResult.workbook_run_id);
-    expect(runIds[0]).toBe("run-attempt-1");
-    expect(new Set(runIds).size).toBe(1);
+    expect(runIds).toEqual(["run-attempt-1", "run-attempt-1", "run-attempt-1"]);
     expect(calls[0][0].measurementResult).toMatchObject({
       workbook_version_id: "version-1",
       macro_context: JSON.stringify({ measurement: { a: 1 } }),

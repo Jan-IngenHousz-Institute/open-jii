@@ -439,6 +439,7 @@ describe("useMeasurementFlowStore", () => {
     it("setFlowGraph sets nodes/edges/cells and resets branch + step state", () => {
       useMeasurementFlowStore.setState({
         experimentId: "exp-1",
+        workbookRunId: "run-1",
         currentFlowStep: 5,
         branchVisitCounts: { b1: 3 },
         lastMatchedPath: { label: "old", color: "#000" },
@@ -464,7 +465,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.edges).toEqual(edges);
       expect(state.cells).toEqual(cells);
       expect(state.workbookVersionId).toBe("version-1");
-      expect(state.workbookRunId).toBeTruthy();
+      expect(state.workbookRunId).toBe("run-1");
       expect(state.currentFlowStep).toBe(0);
       expect(state.branchVisitCounts).toEqual({});
       expect(state.lastMatchedPath).toBeUndefined();

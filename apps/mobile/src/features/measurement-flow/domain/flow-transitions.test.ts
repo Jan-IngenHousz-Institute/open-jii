@@ -2,13 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import type { FlowState } from "./flow-transitions";
-import {
-  flowMode,
-  flowProtocolId,
-  initialFlowState,
-  nextStepState,
-  previousStepState,
-} from "./flow-transitions";
+import { flowMode, initialFlowState, nextStepState, previousStepState } from "./flow-transitions";
 
 // Edge transitions the store suite doesn't reach, plus the flowMode table.
 // The bulk of the transition behavior is covered through the store wrapper
@@ -20,38 +14,11 @@ const makeQuestion = (id: string): FlowNode =>
 const makeMeasurement = (id: string): FlowNode =>
   ({ id, type: "measurement", name: id, content: { params: {}, protocolId: "p" } }) as FlowNode;
 
-// A command cell also rides a "measurement" node but carries no protocolId.
-const makeCommand = (id: string): FlowNode =>
-  ({
-    id,
-    type: "measurement",
-    name: id,
-    content: { command: { format: "string", content: "battery" } },
-  }) as FlowNode;
-
 const inFlow = (overrides: Partial<FlowState> = {}): FlowState => ({
   ...initialFlowState,
   experimentId: "exp-1",
   flowNodes: [makeQuestion("q1"), makeMeasurement("m1")],
   ...overrides,
-});
-
-describe("flowProtocolId", () => {
-  it("derives the protocol from the flow's measurement node", () => {
-    expect(flowProtocolId([makeQuestion("q1"), makeMeasurement("m1")])).toBe("p");
-  });
-
-  it("is undefined for questions-only flows", () => {
-    expect(flowProtocolId([makeQuestion("q1"), makeQuestion("q2")])).toBeUndefined();
-  });
-
-  it("skips a leading command node so the real protocol still resolves", () => {
-    expect(flowProtocolId([makeCommand("c1"), makeMeasurement("m1")])).toBe("p");
-  });
-
-  it("is undefined for a command-only flow (no protocol to upload against)", () => {
-    expect(flowProtocolId([makeCommand("c1")])).toBeUndefined();
-  });
 });
 
 describe("flowMode", () => {

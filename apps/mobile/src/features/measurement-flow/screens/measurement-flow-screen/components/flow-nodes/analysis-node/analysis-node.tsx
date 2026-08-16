@@ -7,7 +7,6 @@ import { MOBILE_PRE_IDENTITY_FAMILY } from "~/features/connection/services/mobil
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
-import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
@@ -75,8 +74,8 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       (node) =>
         node.id === producerCellId && node.type === "measurement" && node.content?.protocolId,
     ) ?? flowNodes.find((node) => node.type === "measurement" && node.content?.protocolId);
-  const protocolId = activeProtocolNode?.content?.protocolId ?? flowProtocolId(flowNodes);
-  const activeProtocolName = activeProtocolNode?.content?.protocol?.name as string | undefined;
+  const protocolId = activeProtocolNode?.content?.protocolId;
+  const activeProtocolName = activeProtocolNode?.name;
 
   const experimentName = resolveExperimentName({
     experimentLabel,

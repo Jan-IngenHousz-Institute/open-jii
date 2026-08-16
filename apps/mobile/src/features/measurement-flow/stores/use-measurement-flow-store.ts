@@ -120,20 +120,16 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         }),
 
       setFlowGraph: (nodes, edges, cells, workbookVersionId) =>
-        set((state) => ({
+        set({
           flowNodes: nodes,
           edges,
           cells,
           workbookVersionId,
-          // Repair an active flow persisted before run IDs existed. Preloading
-          // a picker selection must not mint an attempt before Start is pressed.
-          workbookRunId:
-            state.experimentId && !state.workbookRunId ? uuidv4() : state.workbookRunId,
           currentFlowStep: 0,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
           branchReturnStack: [],
-        })),
+        }),
 
       setLastMatchedPath: (path) => set({ lastMatchedPath: path }),
 
@@ -185,15 +181,15 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
     {
       name: "measurement-flow-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // v1 wire format, pinned by flow-store-persistence.test.ts. v1 discards
-      // flows persisted by pre-fix (v0) builds, which can hold a mis-seeded
-      // plot or a stale "Experiment" name; the upgrade starts them clean.
-      version: 1,
+      // v2 wire format, pinned by flow-store-persistence.test.ts. Flows from
+      // earlier app versions have no trustworthy workbookRunId, so the upgrade
+      // deliberately drops them and returns the user to experiment selection.
+      version: 2,
       migrate: (persisted, version) =>
-        (version < 1 ? initialFlowState : persisted) as MeasurementFlowStore,
-      // protocolId was dropped from the persisted slice (now derived from
-      // flowNodes via flowProtocolId); legacy payloads carrying it merge in
-      // as an ignored extra key.
+        (version < 2 ? initialFlowState : persisted) as MeasurementFlowStore,
+      // protocolId was dropped from the persisted slice; uploads resolve it
+      // from the exact producer measurement node. Legacy payloads carrying it
+      // merge in as an ignored extra key.
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,

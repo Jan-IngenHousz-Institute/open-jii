@@ -182,9 +182,9 @@ describe("AnalysisNode protocol cell", () => {
       {
         id: "ground-protocol",
         type: "measurement",
-        name: "Ground",
+        name: "Ground position",
         isStart: true,
-        content: { protocolId: "proto-shared", protocol: { name: "Ground position" } },
+        content: { protocolId: "proto-shared", protocol: { name: "Shared protocol resource" } },
       },
       {
         id: "ground-macro",
@@ -196,9 +196,9 @@ describe("AnalysisNode protocol cell", () => {
       {
         id: "ambit-2-protocol",
         type: "measurement",
-        name: "Ambit 2",
+        name: "Ambit 2 position",
         isStart: false,
-        content: { protocolId: "proto-shared", protocol: { name: "Ambit 2 position" } },
+        content: { protocolId: "proto-shared", protocol: { name: "Shared protocol resource" } },
       },
       {
         id: "ambit-2-macro",
@@ -338,9 +338,9 @@ describe("AnalysisNode upload with a command in the flow", () => {
   } as AnalysisContent;
 
   // Command → Protocol → Macro: the command rides a "measurement" node with no
-  // protocolId. Regression (Vlad, on device): flowProtocolId picked the command
-  // node, so the upload threw "Missing protocol id" (swallowed by .catch) and no
-  // local measurement was created. It must now resolve the real protocol.
+  // protocolId. Regression (Vlad, on device): the protocol lookup picked the
+  // command node, so the upload threw "Missing protocol id" (swallowed by
+  // .catch) and no local measurement was created. It must resolve the real protocol.
   const commandProtocolMacroNodes = [
     {
       id: "cmd1",
