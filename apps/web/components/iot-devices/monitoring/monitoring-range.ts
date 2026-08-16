@@ -45,3 +45,22 @@ export function toMonitoringRange(from: Date, to: Date): MonitoringRange {
 export function isRangeWithinLimit(from: Date, to: Date): boolean {
   return from < to && differenceInHours(to, from) <= MONITORING_MAX_RANGE_DAYS * 24;
 }
+
+/**
+ * Turn a calendar selection into a window. The picker hands back midnights, so
+ * the closing day is extended to cover itself. Incomplete or over-long
+ * selections resolve to null: the contract rejects them, and silently
+ * truncating the user's choice would be worse than ignoring it.
+ */
+export function rangeFromCalendarSelection(
+  selected: { from?: Date; to?: Date } | undefined,
+): MonitoringRange | null {
+  if (!selected?.from || !selected.to) {
+    return null;
+  }
+
+  const to = new Date(selected.to);
+  to.setHours(23, 59, 59, 999);
+
+  return isRangeWithinLimit(selected.from, to) ? toMonitoringRange(selected.from, to) : null;
+}

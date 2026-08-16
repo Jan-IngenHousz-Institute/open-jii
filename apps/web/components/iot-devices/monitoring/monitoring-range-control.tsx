@@ -14,9 +14,8 @@ import { cn } from "@repo/ui/lib/utils";
 import type { MonitoringPresetId, MonitoringRange } from "./monitoring-range";
 import {
   MONITORING_PRESETS,
-  isRangeWithinLimit,
+  rangeFromCalendarSelection,
   resolveMonitoringPreset,
-  toMonitoringRange,
 } from "./monitoring-range";
 
 interface MonitoringRangeControlProps {
@@ -46,19 +45,12 @@ export function MonitoringRangeControl({
   };
 
   const handleCalendarSelect = (selected: { from?: Date; to?: Date } | undefined) => {
-    if (!selected?.from || !selected.to) {
+    const range = rangeFromCalendarSelection(selected);
+    if (range === null) {
       return;
     }
 
-    const from = selected.from;
-    // The calendar hands back midnight; the window should cover the whole day.
-    const to = new Date(selected.to);
-    to.setHours(23, 59, 59, 999);
-    if (!isRangeWithinLimit(from, to)) {
-      return;
-    }
-
-    onRangeChange(toMonitoringRange(from, to), null);
+    onRangeChange(range, null);
     setOpen(false);
   };
 

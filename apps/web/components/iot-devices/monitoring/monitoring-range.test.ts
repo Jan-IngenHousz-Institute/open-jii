@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { isRangeWithinLimit, resolveMonitoringPreset, toMonitoringRange } from "./monitoring-range";
+import {
+  isRangeWithinLimit,
+  rangeFromCalendarSelection,
+  resolveMonitoringPreset,
+  toMonitoringRange,
+} from "./monitoring-range";
 
 const NOW = new Date("2026-08-15T10:30:00.000Z").getTime();
 
@@ -38,5 +43,32 @@ describe("monitoring range", () => {
     expect(isRangeWithinLimit(from, new Date("2026-08-20T00:00:00Z"))).toBe(true);
     expect(isRangeWithinLimit(from, new Date("2026-09-20T00:00:00Z"))).toBe(false);
     expect(isRangeWithinLimit(new Date("2026-08-20T00:00:00Z"), from)).toBe(false);
+  });
+
+  describe("calendar selection", () => {
+    it("covers the closing day, which the picker hands back as its midnight", () => {
+      const range = rangeFromCalendarSelection({
+        from: new Date("2026-08-10T00:00:00"),
+        to: new Date("2026-08-12T00:00:00"),
+      });
+
+      expect(range).not.toBeNull();
+      expect(new Date(range?.to ?? 0).getHours()).toBe(23);
+      expect(range?.bucket).toBe("day");
+    });
+
+    it("ignores an incomplete selection instead of guessing the other bound", () => {
+      expect(rangeFromCalendarSelection(undefined)).toBeNull();
+      expect(rangeFromCalendarSelection({ from: new Date("2026-08-10T00:00:00") })).toBeNull();
+    });
+
+    it("ignores a window past the ceiling rather than silently truncating it", () => {
+      expect(
+        rangeFromCalendarSelection({
+          from: new Date("2026-06-01T00:00:00"),
+          to: new Date("2026-08-12T00:00:00"),
+        }),
+      ).toBeNull();
+    });
   });
 });

@@ -1195,6 +1195,55 @@ describe("DatabricksAdapter", () => {
       expect(result.value[0].bucketStart).toBe("2026-08-15T09:00:00.000Z");
     });
 
+    it("maps recent measurements, coercing unparsable numerics to null", async () => {
+      mockSql(
+        [
+          "timestamp",
+          "experiment_id",
+          "protocol_id",
+          "workbook_version_id",
+          "device_version",
+          "device_battery",
+          "latitude",
+          "longitude",
+        ],
+        [
+          [
+            "2026-08-15T09:00:00.000Z",
+            "exp-1",
+            "proto-1",
+            "wb-1",
+            "1.1.0",
+            "4.16",
+            "51.98",
+            "5.66",
+          ],
+          ["2026-08-15T08:00:00.000Z", null, null, null, null, null, null, null],
+        ],
+      );
+
+      const result = await databricksAdapter.getDeviceRecentMeasurements(
+        "AMBYTE_A",
+        "2026-08-15T00:00:00.000Z",
+        "2026-08-15T12:00:00.000Z",
+        50,
+      );
+
+      assertSuccess(result);
+      expect(result.value[0]).toEqual({
+        timestamp: "2026-08-15T09:00:00.000Z",
+        experimentId: "exp-1",
+        protocolId: "proto-1",
+        workbookVersionId: "wb-1",
+        deviceVersion: "1.1.0",
+        battery: 4.16,
+        latitude: 51.98,
+        longitude: 5.66,
+      });
+      expect(result.value[1].battery).toBeNull();
+      expect(result.value[1].latitude).toBeNull();
+    });
+
     it("propagates a SQL failure from any reader", async () => {
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,

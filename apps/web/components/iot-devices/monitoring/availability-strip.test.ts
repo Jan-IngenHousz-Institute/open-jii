@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 
-import { deriveOutages } from "./availability-strip";
+import { buildAvailabilitySlices, deriveOutages } from "./availability-strip";
 
 const FROM = "2026-08-13T00:00:00.000Z";
 const TO = "2026-08-13T12:00:00.000Z";
@@ -89,5 +89,41 @@ describe("deriveOutages", () => {
     expect(outages).toHaveLength(1);
     expect(outages[0].reason).toBe("CONNECTION_LOST");
     expect(outages[0].durationSeconds).toBe(2 * 3600);
+  });
+});
+
+describe("buildAvailabilitySlices", () => {
+  const axis = ["2026-08-13T00:00:00.000Z", "2026-08-13T06:00:00.000Z"];
+
+  it("grades a fully covered slice as up and an untouched one as down", () => {
+    const slices = buildAvailabilitySlices(
+      monitoring({ sessions: [session(FROM, "2026-08-13T06:00:00.000Z")] }),
+      axis,
+      TO,
+      NOW,
+    );
+
+    expect(slices.map((slice) => slice.state)).toEqual(["up", "down"]);
+    expect(slices[0].onlineRatio).toBe(1);
+  });
+
+  it("grades a slice the device was online for part of as partial", () => {
+    const slices = buildAvailabilitySlices(
+      monitoring({ sessions: [session(FROM, "2026-08-13T03:00:00.000Z")] }),
+      axis,
+      TO,
+      NOW,
+    );
+
+    expect(slices[0].state).toBe("partial");
+    expect(slices[0].onlineRatio).toBeCloseTo(0.5, 5);
+  });
+
+  it("grades every slice unknown when the window holds no evidence", () => {
+    const slices = buildAvailabilitySlices(monitoring({ events: [] }), axis, TO, NOW);
+
+    // No events means the state was never observed, which is not the same as
+    // the device being down.
+    expect(slices.every((slice) => slice.state === "unknown")).toBe(true);
   });
 });
