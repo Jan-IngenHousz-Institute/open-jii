@@ -14,6 +14,11 @@
 # - signal.dimensions values support ${ENV_PLACEHOLDER} resolution from composer env
 # - baseline: same-weekday-4w compares the last 24h window to the same window 7/14/21/28
 #   days back; wow compares full weeks
+# - WHERE BASELINE RULES APPLY: only the daily observability digest evaluates them, i.e.
+#   metrics with family: observability AND an exception or alert slot. The pulse and the
+#   weekly note render levels, using the baseline for the displayed delta only. An
+#   anomaly_pct on a pulse-only or weekly-only metric is therefore inert today and is
+#   kept as intent for the per-environment Grafana rules (P2b).
 
 version: 1
 
@@ -98,7 +103,11 @@ metrics:
       stat: Sum
       dimensions: { StreamName: "${KINESIS_STREAM_NAME}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 50 }
-    notes: Top-line ingest pulse; dual-use as ops anomaly signal.
+    notes: >
+      Top-line ingest pulse. The digest shows it as a level with a delta; the
+      anomaly_pct is inert until an ingest-collapse rule lands in P2b, which is
+      where "producers stopped publishing" should alarm (iterator age only
+      catches a stalled consumer).
 
   - num: 8
     id: ingest-lag

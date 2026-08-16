@@ -49,16 +49,6 @@ export interface Evaluation {
   reason?: string;
 }
 
-/** One NDJSON line the Databricks heartbeat job writes for the forwarder. */
-export interface HeartbeatObservation {
-  namespace: string;
-  metric: string;
-  value: number;
-  unit?: string;
-  timestamp: string;
-  dimensions?: Record<string, string | number>;
-}
-
 export interface ForwarderDatum {
   namespace: string;
   datum: {
