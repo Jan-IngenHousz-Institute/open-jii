@@ -529,5 +529,14 @@
     "leaveFailed": "Uw toegang kon niet worden opgegeven.",
     "yourAccessTitle": "Uw toegang",
     "yourAccessDescription": "U hebt toegang tot deze resource omdat deze met u is gedeeld. U kunt die toegang op elk moment opgeven."
+  },
+  "dataTable": {
+    "noData": "Geen gegevens ontvangen",
+    "noResults": "Geen resultaten",
+    "error": "Fout bij het laden van gegevens",
+    "page": "Pagina",
+    "pageOf": "van",
+    "previous": "Vorige",
+    "next": "Volgende"
   }
 }
