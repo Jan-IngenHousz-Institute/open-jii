@@ -133,9 +133,7 @@ export default function DeviceMonitoringPage() {
           <Skeleton className="h-48 w-full rounded-xl" />
         </div>
       ) : (
-        // While a new range loads the previous data stays put, dimmed, so the
-        // layout never collapses under the cursor.
-        <div className={cn("space-y-6 transition-opacity", isFetching && "opacity-60")}>
+        <div className="space-y-6">
           <PanelCard
             title={t("iot.devices.monitoring.availabilityTitle")}
             description={t("iot.devices.monitoring.availabilityHint")}

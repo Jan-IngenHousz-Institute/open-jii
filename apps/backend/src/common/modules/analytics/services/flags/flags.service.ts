@@ -134,18 +134,21 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         `Feature flag ${flagKey} for ${distinctId}: ${result} (PostHog returned: ${isEnabled})`,
       );
 
-      // Defaults from an uninitialized client or an error are never cached;
-      // only real evaluations are worth holding on to.
-      if (this.flagCache.size >= FlagsService.FLAG_CACHE_MAX_ENTRIES) {
-        const oldest = this.flagCache.keys().next();
-        if (!oldest.done) {
-          this.flagCache.delete(oldest.value);
+      // Only a real evaluation is cached. A fallback default means PostHog had
+      // no answer yet, and pinning that for the TTL would keep a flag dark
+      // after it starts resolving.
+      if (typeof isEnabled === "boolean") {
+        if (this.flagCache.size >= FlagsService.FLAG_CACHE_MAX_ENTRIES) {
+          const oldest = this.flagCache.keys().next();
+          if (!oldest.done) {
+            this.flagCache.delete(oldest.value);
+          }
         }
+        this.flagCache.set(cacheKey, {
+          value: isEnabled,
+          expiresAt: Date.now() + FlagsService.FLAG_CACHE_TTL_MS,
+        });
       }
-      this.flagCache.set(cacheKey, {
-        value: result,
-        expiresAt: Date.now() + FlagsService.FLAG_CACHE_TTL_MS,
-      });
 
       return result;
     } catch (error) {

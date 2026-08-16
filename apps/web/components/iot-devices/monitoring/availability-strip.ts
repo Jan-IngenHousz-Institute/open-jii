@@ -94,12 +94,47 @@ function gradeSlice(onlineRatio: number, hasEvidence: boolean): BucketAvailabili
  */
 export function deriveOutages(
   monitoring: DeviceMonitoring,
+  from: string,
   to: string,
   now = Date.now(),
 ): Outage[] {
   const rangeEndMs = Math.min(now, new Date(to).getTime());
+  const rangeStartMs = new Date(from).getTime();
 
-  return monitoring.sessions.flatMap((session, position) => {
+  // Without any lifecycle evidence the window is unknown, not down.
+  if (monitoring.events.length === 0) {
+    return [];
+  }
+
+  // Evidence but no session at all: the device was down for the whole window.
+  const first = monitoring.sessions.at(0);
+  if (first === undefined) {
+    return [
+      {
+        start: from,
+        end: null,
+        durationSeconds: Math.max(0, (rangeEndMs - rangeStartMs) / 1000),
+        reason: null,
+      },
+    ];
+  }
+
+  // A window that opens before the first session opens with an outage; its
+  // cause happened before the window, so no reason is claimed.
+  const leadingGapSeconds = (new Date(first.start).getTime() - rangeStartMs) / 1000;
+  const leading: Outage[] =
+    leadingGapSeconds > 0
+      ? [
+          {
+            start: from,
+            end: first.start,
+            durationSeconds: leadingGapSeconds,
+            reason: null,
+          },
+        ]
+      : [];
+
+  const between = monitoring.sessions.flatMap((session, position) => {
     // A session with no end is still running, so nothing follows it.
     const start = session.end;
     if (start === null) {
@@ -122,4 +157,6 @@ export function deriveOutages(
       },
     ];
   });
+
+  return [...leading, ...between];
 }

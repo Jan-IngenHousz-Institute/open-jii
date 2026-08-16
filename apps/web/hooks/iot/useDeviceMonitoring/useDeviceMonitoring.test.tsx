@@ -50,4 +50,27 @@ describe("useDeviceMonitoring", () => {
     expect(query.to).toBe(RANGE.to);
     expect(query.bucket).toBe("hour");
   });
+
+  it("does not serve the previous window's data while a new range loads", async () => {
+    server.mount(contract.iot.getDeviceMonitoring, { body: monitoring });
+    const { result, rerender } = renderHook(
+      ({ range }: { range: MonitoringRange }) => useDeviceMonitoring(DEVICE_ID, range),
+      { initialProps: { range: RANGE } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    const wider: MonitoringRange = {
+      from: "2026-08-08T10:30:00.000Z",
+      to: "2026-08-15T10:30:00.000Z",
+      bucket: "day",
+    };
+    rerender({ range: wider });
+
+    // Panels derive their axis from the selected range, so stale data must not
+    // be handed to them under the new one.
+    expect(result.current.data).toBeUndefined();
+  });
 });

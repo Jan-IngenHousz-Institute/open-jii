@@ -156,7 +156,6 @@
         "uptimeWindow": "{{from}} tot {{to}}",
         "outages": "Storingen",
         "sessions": "Sessies",
-        "sessionCount": "{{count}} sessies",
         "outageList": "Storingen",
         "moreOutages": "Nog {{count}}",
         "legendUp": "Online",
@@ -187,7 +186,9 @@
         "location": "Locatie",
         "batteryLatest": "Laatste",
         "batteryChange": "Verandering",
-        "batteryRange": "Bereik"
+        "batteryRange": "Bereik",
+        "sessionCount_one": "{{count}} sessie",
+        "sessionCount_other": "{{count}} sessies"
       },
       "pageOf": "Pagina {{page}} van {{total}}",
       "actions": {

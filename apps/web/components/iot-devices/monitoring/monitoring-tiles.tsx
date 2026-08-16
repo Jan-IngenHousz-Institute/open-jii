@@ -3,7 +3,6 @@
 import { ConnectivityDot, useFormatLastSeen } from "@/components/iot-devices/device-connectivity";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
-import { differenceInHours } from "date-fns";
 import { AlertTriangle } from "lucide-react";
 
 import type {
@@ -46,7 +45,9 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
     (lastDataAt === null || Date.now() - new Date(lastDataAt).getTime() > SILENT_THRESHOLD_MS);
 
   const total = monitoring?.throughput.reduce((sum, bucket) => sum + bucket.count, 0);
-  const windowHours = Math.max(1, differenceInHours(new Date(range.to), new Date(range.from)));
+  // Fractional hours: truncating would misstate the rate on sub-day windows.
+  const windowMs = new Date(range.to).getTime() - new Date(range.from).getTime();
+  const windowHours = Math.max(1, windowMs / 3_600_000);
   const perHour = total === undefined ? undefined : total / windowHours;
 
   return (

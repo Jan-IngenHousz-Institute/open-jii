@@ -42,7 +42,7 @@ export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelPro
 
   const axis = bucketAxis(from, to, monitoring.bucket);
   const slices = buildAvailabilitySlices(monitoring, axis, to);
-  const outages = deriveOutages(monitoring, to);
+  const outages = deriveOutages(monitoring, from, to);
   const listedOutages = outages.slice(0, MAX_LISTED_OUTAGES);
 
   const uptimeLabel =

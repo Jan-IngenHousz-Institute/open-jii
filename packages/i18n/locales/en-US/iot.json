@@ -156,7 +156,6 @@
         "uptimeWindow": "{{from}} to {{to}}",
         "outages": "Outages",
         "sessions": "Sessions",
-        "sessionCount": "{{count}} sessions",
         "outageList": "Outages",
         "moreOutages": "{{count}} more",
         "legendUp": "Online",
@@ -187,7 +186,9 @@
         "location": "Location",
         "batteryLatest": "Latest",
         "batteryChange": "Change",
-        "batteryRange": "Range"
+        "batteryRange": "Range",
+        "sessionCount_one": "{{count}} session",
+        "sessionCount_other": "{{count}} sessions"
       },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {
