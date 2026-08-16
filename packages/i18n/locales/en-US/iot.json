@@ -186,7 +186,6 @@
         "sessionCount_one": "{{count}} session",
         "sessionCount_other": "{{count}} sessions",
         "noReadableSamples": "The measurements in this window carry no readable readings.",
-        "moreFields_other": "{{count}} more fields reported but not shown.",
         "eventDetail": "Details",
         "activity": {
           "connected": "Connected",
@@ -196,7 +195,6 @@
         },
         "unknownProtocolId": "Unknown protocol",
         "unknownWorkbookId": "Unknown workbook",
-        "moreFields_one": "{{count}} more field reported but not shown.",
         "macros": "Macros",
         "unknownMacroId": "Unknown macro",
         "macroRunHint": "Counted per macro run"

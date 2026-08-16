@@ -186,7 +186,6 @@
         "sessionCount_one": "{{count}} Sitzung",
         "sessionCount_other": "{{count}} Sitzungen",
         "noReadableSamples": "Die Messungen in diesem Zeitraum enthalten keine lesbaren Messwerte.",
-        "moreFields_other": "{{count}} weitere Felder gemeldet, aber nicht angezeigt.",
         "eventDetail": "Details",
         "activity": {
           "connected": "Verbunden",
@@ -196,7 +195,6 @@
         },
         "unknownProtocolId": "Unbekanntes Protokoll",
         "unknownWorkbookId": "Unbekanntes Workbook",
-        "moreFields_one": "{{count}} weiteres Feld gemeldet, aber nicht angezeigt.",
         "macros": "Makros",
         "unknownMacroId": "Unbekanntes Makro",
         "macroRunHint": "Pro Makrolauf gezählt"

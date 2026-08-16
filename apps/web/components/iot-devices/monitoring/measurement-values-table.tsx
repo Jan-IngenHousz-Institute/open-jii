@@ -1,35 +1,25 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
-import { formatTimestamp } from "@/util/date";
-import { formatValue } from "~/components/experiment-data/experiment-data-utils";
+import { DataTable } from "@/components/data-table/data-table";
 
 import type { DeviceMeasurement } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui/components/table";
 
-import { buildMeasurementValueTable, inferColumnType } from "./measurement-values";
+import { buildMeasurementValueTable } from "./measurement-values";
 
 interface MeasurementValuesTableProps {
   measurements: DeviceMeasurement[];
 }
 
 /**
- * The readings themselves: one row per sample the device sent, with a column
- * per field it reported. The device defines the shape, so the columns come
- * from the data rather than from an assumed schema.
+ * The readings themselves, rendered by the platform's data table: one column
+ * per field the device reported, each cell typed the way the experiment data
+ * tables type it. The device defines the shape, so the columns come from the
+ * data rather than from an assumed schema.
  */
 export function MeasurementValuesTable({ measurements }: MeasurementValuesTableProps) {
   const { t } = useTranslation("iot");
-  const locale = useLocale();
-  const { columns, rows, hiddenColumnCount } = buildMeasurementValueTable(measurements);
+  const { columns, rows } = buildMeasurementValueTable(measurements);
 
   if (rows.length === 0) {
     return (
@@ -42,50 +32,8 @@ export function MeasurementValuesTable({ measurements }: MeasurementValuesTableP
   }
 
   return (
-    <div className="space-y-2">
-      <div className="max-h-96 overflow-auto rounded-lg border">
-        <Table>
-          <TableHeader className="bg-background sticky top-0">
-            <TableRow>
-              <TableHead>{t("iot.devices.monitoring.measuredAt")}</TableHead>
-              {columns.map((column) => (
-                <TableHead key={column} className="text-right font-mono text-xs">
-                  {column}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row, position) => (
-              <TableRow key={`${row.timestamp}-${String(position)}`}>
-                <TableCell className="whitespace-nowrap text-xs tabular-nums">
-                  {formatTimestamp(row.timestamp, locale)}
-                </TableCell>
-                {columns.map((column) => (
-                  <TableCell key={column} className="text-xs">
-                    {/* The platform's own cell formatter, so a reading renders
-                        the way the experiment data tables render it. */}
-                    {column in row.values
-                      ? formatValue(
-                          row.values[column],
-                          inferColumnType(row.values[column]),
-                          `${row.timestamp}-${String(position)}`,
-                          column,
-                        )
-                      : "-"}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {hiddenColumnCount > 0 && (
-        <p className="text-muted-foreground text-xs">
-          {t("iot.devices.monitoring.moreFields", { count: hiddenColumnCount })}
-        </p>
-      )}
+    <div className="max-h-[32rem] overflow-y-auto">
+      <DataTable columns={columns} rows={rows} />
     </div>
   );
 }

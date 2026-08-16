@@ -186,7 +186,6 @@
         "sessionCount_one": "{{count}} sessie",
         "sessionCount_other": "{{count}} sessies",
         "noReadableSamples": "De metingen in deze periode bevatten geen leesbare meetwaarden.",
-        "moreFields_other": "Nog {{count}} velden gerapporteerd maar niet getoond.",
         "eventDetail": "Details",
         "activity": {
           "connected": "Verbonden",
@@ -196,7 +195,6 @@
         },
         "unknownProtocolId": "Onbekend protocol",
         "unknownWorkbookId": "Onbekend workbook",
-        "moreFields_one": "Nog {{count}} veld gerapporteerd maar niet getoond.",
         "macros": "Macro's",
         "unknownMacroId": "Onbekende macro",
         "macroRunHint": "Geteld per macro-uitvoering"
