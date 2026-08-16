@@ -5,7 +5,8 @@
   "description": "Forwards Databricks heartbeat metric files from S3 into CloudWatch",
   "main": "index.js",
   "scripts": {
-    "build": "npm ci --omit=dev && zip -Xr function.zip index.js package.json node_modules > /dev/null"
+    "sync": "rm -rf ./lib && cp -R ../../../../../packages/monitoring/dist ./lib",
+    "build": "npm run sync && npm ci --omit=dev && zip -Xr function.zip index.js package.json lib node_modules > /dev/null"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.0.0",
