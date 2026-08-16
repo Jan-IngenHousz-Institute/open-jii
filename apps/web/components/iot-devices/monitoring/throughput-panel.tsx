@@ -135,7 +135,8 @@ export function ThroughputPanel({
             }))}
             config={{
               showLegend: series.length > 1,
-              showModeBar: false,
+              showModeBar: true,
+              modeBarStyle: "transparent",
               xAxisType: "date",
               yAxisTitle: t("iot.devices.monitoring.measurements"),
             }}

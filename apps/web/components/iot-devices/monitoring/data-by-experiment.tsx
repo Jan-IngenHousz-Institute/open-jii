@@ -60,7 +60,7 @@ export function DataByExperiment({
       {charted.length > 0 && (
         <div
           className="w-full"
-          style={{ height: `${String(Math.max(120, charted.length * 44))}px` }}
+          style={{ height: `${String(Math.max(208, charted.length * 44))}px` }}
         >
           <HorizontalBarChart
             data={[
@@ -73,7 +73,8 @@ export function DataByExperiment({
             ]}
             config={{
               showLegend: false,
-              showModeBar: false,
+              showModeBar: true,
+              modeBarStyle: "transparent",
               xAxisType: "linear",
               yAxisType: "category",
             }}

@@ -23,6 +23,7 @@ function row(timestamp: string | null) {
     battery: 4.16,
     latitude: null,
     longitude: null,
+    sample: null,
   };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { format } from "date-fns";
+import { useLocale } from "@/hooks/useLocale";
+import { formatTimestamp } from "@/util/date";
 import { formatValue } from "~/components/experiment-data/experiment-data-utils";
 
 import type { DeviceMeasurement } from "@repo/api/domains/iot/iot.schema";
@@ -27,6 +28,7 @@ interface MeasurementValuesTableProps {
  */
 export function MeasurementValuesTable({ measurements }: MeasurementValuesTableProps) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
   const { columns, rows, hiddenColumnCount } = buildMeasurementValueTable(measurements);
 
   if (rows.length === 0) {
@@ -57,7 +59,7 @@ export function MeasurementValuesTable({ measurements }: MeasurementValuesTableP
             {rows.map((row, position) => (
               <TableRow key={`${row.timestamp}-${String(position)}`}>
                 <TableCell className="whitespace-nowrap text-xs tabular-nums">
-                  {format(new Date(row.timestamp), "MMM d HH:mm:ss")}
+                  {formatTimestamp(row.timestamp, locale)}
                 </TableCell>
                 {columns.map((column) => (
                   <TableCell key={column} className="text-xs">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
 import { useState } from "react";
 
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
@@ -30,6 +31,7 @@ interface BatteryPanelProps {
  */
 export function BatteryPanel({ monitoring }: BatteryPanelProps) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
   const [view, setView] = useState<PanelView>("chart");
 
   const points = monitoring.battery.flatMap((point) =>
@@ -76,7 +78,8 @@ export function BatteryPanel({ monitoring }: BatteryPanelProps) {
             ]}
             config={{
               showLegend: false,
-              showModeBar: false,
+              showModeBar: true,
+              modeBarStyle: "transparent",
               xAxisType: "date",
               yAxisTitle: t("iot.devices.monitoring.batteryAxis"),
             }}
@@ -97,7 +100,7 @@ export function BatteryPanel({ monitoring }: BatteryPanelProps) {
               {points.map((point) => (
                 <TableRow key={point.bucketStart}>
                   <TableCell className="text-muted-foreground text-xs">
-                    {formatBucketLabel(point.bucketStart, monitoring.bucket)}
+                    {formatBucketLabel(point.bucketStart, monitoring.bucket, locale)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {point.averageBattery.toFixed(2)}

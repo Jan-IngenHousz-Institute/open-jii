@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { formatTimestamp } from "@/util/date";
 
 import type { DeviceMeasurement } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -75,7 +75,7 @@ export function RecentMeasurements({
           {measurements.map((row) => (
             <TableRow key={`${row.timestamp}-${row.experimentId ?? ""}-${row.protocolId ?? ""}`}>
               <TableCell className="whitespace-nowrap text-xs tabular-nums">
-                {format(new Date(row.timestamp), "MMM d HH:mm:ss")}
+                {formatTimestamp(row.timestamp, locale)}
               </TableCell>
               <TableCell className="text-xs">
                 <EntityCell id={row.experimentId} resolved={experiments} />

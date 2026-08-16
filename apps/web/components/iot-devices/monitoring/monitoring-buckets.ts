@@ -1,5 +1,3 @@
-import { format } from "date-fns";
-
 import type { MonitoringBucket } from "@repo/api/domains/iot/iot.schema";
 
 const BUCKET_MS: Record<MonitoringBucket, number> = {
@@ -23,15 +21,25 @@ export function bucketAxis(from: string, to: string, bucket: MonitoringBucket): 
   return axis;
 }
 
-// Hour buckets label an instant, so local time is right. Day buckets are UTC
-// days (date_trunc and the axis both use UTC midnights); formatting those
-// locally would shift every label a day back in negative-offset timezones, so
-// the UTC date is rebuilt as a plain local date before formatting.
-export function formatBucketLabel(bucketStart: string, bucket: MonitoringBucket): string {
+// Hour buckets label an instant, so the viewer's zone is right. Day buckets
+// are UTC days (date_trunc and the axis both use UTC midnights), so they are
+// rendered in UTC; formatting those locally would shift every label a day back
+// in negative-offset timezones.
+export function formatBucketLabel(
+  bucketStart: string,
+  bucket: MonitoringBucket,
+  locale: string,
+): string {
   const at = new Date(bucketStart);
+
   if (bucket === "hour") {
-    return format(at, "MMM d HH:mm");
+    return at.toLocaleString(locale, {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
-  return format(new Date(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()), "MMM d");
+  return at.toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 }

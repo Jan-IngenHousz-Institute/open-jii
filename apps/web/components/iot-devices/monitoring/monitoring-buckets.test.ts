@@ -30,12 +30,19 @@ describe("formatBucketLabel", () => {
   it("labels a day bucket with its UTC date regardless of the viewer timezone", () => {
     // A UTC midnight rendered locally would read as the previous day anywhere
     // west of UTC; the label must stay on the UTC day.
-    expect(formatBucketLabel("2026-08-13T00:00:00.000Z", "day")).toBe("Aug 13");
+    expect(formatBucketLabel("2026-08-13T00:00:00.000Z", "day", "en-US")).toBe("Aug 13");
   });
 
-  it("labels an hour bucket as a localized instant", () => {
-    expect(formatBucketLabel("2026-08-13T14:00:00.000Z", "hour")).toMatch(
-      /^[A-Z][a-z]{2} \d{1,2} \d{2}:\d{2}$/,
-    );
+  it("renders the label in the viewer's locale, not a fixed one", () => {
+    const dutch = formatBucketLabel("2026-08-13T00:00:00.000Z", "day", "nl-NL");
+    const german = formatBucketLabel("2026-08-13T00:00:00.000Z", "day", "de-DE");
+
+    expect(dutch).toContain("13");
+    expect(dutch).not.toBe("Aug 13");
+    expect(german).not.toBe(dutch);
+  });
+
+  it("labels an hour bucket as an instant carrying a time of day", () => {
+    expect(formatBucketLabel("2026-08-13T14:00:00.000Z", "hour", "en-US")).toMatch(/\d{2}:\d{2}/);
   });
 });

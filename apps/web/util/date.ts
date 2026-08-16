@@ -39,6 +39,27 @@ export function formatShortDate(value: Date | string, locale: string): string {
   });
 }
 
+/** Short date and time in the viewer's locale, e.g. "14 Aug, 09:30". */
+export function formatDateTime(value: Date | string, locale: string): string {
+  return new Date(value).toLocaleString(locale, {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** As {@link formatDateTime}, to the second, for log and record tables. */
+export function formatTimestamp(value: Date | string, locale: string): string {
+  return new Date(value).toLocaleString(locale, {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 export function daysUntil(value: Date | string, now = Date.now()): number {
   return Math.ceil((new Date(value).getTime() - now) / DAY);
 }

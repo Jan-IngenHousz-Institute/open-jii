@@ -1,6 +1,7 @@
 "use client";
 
-import { format } from "date-fns";
+import { useLocale } from "@/hooks/useLocale";
+import { formatDateTime } from "@/util/date";
 import { CalendarIcon, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
@@ -38,6 +39,7 @@ export function MonitoringRangeControl({
   isUpdating,
 }: MonitoringRangeControlProps) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
 
   const handlePreset = (preset: MonitoringPresetId) => {
@@ -94,8 +96,7 @@ export function MonitoringRangeControl({
           >
             <CalendarIcon className="h-3.5 w-3.5" />
             <span className="tabular-nums">
-              {format(new Date(range.from), "MMM d, HH:mm")} –{" "}
-              {format(new Date(range.to), "MMM d, HH:mm")}
+              {formatDateTime(range.from, locale)} – {formatDateTime(range.to, locale)}
             </span>
           </Button>
         </PopoverTrigger>

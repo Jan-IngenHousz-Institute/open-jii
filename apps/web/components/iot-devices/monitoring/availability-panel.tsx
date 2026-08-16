@@ -1,8 +1,7 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
-import { formatRelativeTime } from "@/util/date";
-import { format } from "date-fns";
+import { formatDateTime, formatRelativeTime } from "@/util/date";
 
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -57,8 +56,8 @@ export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelPro
           <p className="text-3xl font-semibold tabular-nums">{uptimeLabel}</p>
           <p className="text-muted-foreground text-xs">
             {t("iot.devices.monitoring.uptimeWindow", {
-              from: format(new Date(from), "MMM d HH:mm"),
-              to: format(new Date(to), "MMM d HH:mm"),
+              from: formatDateTime(from, locale),
+              to: formatDateTime(to, locale),
             })}
           </p>
         </div>
@@ -70,7 +69,7 @@ export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelPro
 
       {/* Tall enough for the date axis: the chart layer reserves the tick band
           via automargin, and a squat container swallows it. */}
-      <div className="h-44 w-full">
+      <div className="h-52 w-full">
         <BarChart
           bargap={0.05}
           data={[
@@ -89,7 +88,8 @@ export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelPro
           ]}
           config={{
             showLegend: false,
-            showModeBar: false,
+            showModeBar: true,
+            modeBarStyle: "transparent",
             xAxisType: "date",
             yAxisType: "linear",
             yAxisTitle: t("iot.devices.monitoring.onlineShare"),

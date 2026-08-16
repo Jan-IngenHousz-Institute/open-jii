@@ -1,6 +1,7 @@
 "use client";
 
-import { format } from "date-fns";
+import { useLocale } from "@/hooks/useLocale";
+import { formatTimestamp } from "@/util/date";
 import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -36,6 +37,7 @@ interface EventLogProps {
  */
 export function EventLog({ entries }: EventLogProps) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
   const [page, setPage] = useState(1);
 
   if (entries.length === 0) {
@@ -66,7 +68,7 @@ export function EventLog({ entries }: EventLogProps) {
             {pageEntries.map((entry, position) => (
               <TableRow key={`${entry.timestamp}-${entry.kind}-${String(position)}`}>
                 <TableCell className="whitespace-nowrap text-xs tabular-nums">
-                  {format(new Date(entry.timestamp), "MMM d HH:mm:ss")}
+                  {formatTimestamp(entry.timestamp, locale)}
                 </TableCell>
                 <TableCell className="text-xs">
                   <Badge variant={KIND_VARIANT[entry.kind]} className="font-normal">
