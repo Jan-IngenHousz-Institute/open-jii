@@ -193,9 +193,11 @@ export function ExperimentDataTable({
     return <div>{t("experimentDataTable.noData")}</div>;
   }
 
-  // The last page is a partial one, so its skeletons follow the remainder.
-  const loadingRowCount =
-    pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
+  // A last page holds the remainder, except when the total divides evenly and
+  // it is as full as any other.
+  const remainder = totalRows % pagination.pageSize;
+  const isLastPage = pagination.pageIndex + 1 === totalPages;
+  const loadingRowCount = isLastPage && remainder > 0 ? remainder : pagination.pageSize;
 
   return (
     <Form {...selectionForm}>

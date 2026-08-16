@@ -133,12 +133,16 @@ export function DataTable({
     return selection === undefined ? dataColumns : [selectionColumn(), ...dataColumns];
   }, [columns, cellHandlers, toggleCellExpansion, isCellExpanded, errorColumn, selection]);
 
+  const isPaged = pagination !== undefined;
+
   const table = useReactTable<DataRow>({
     data: rows,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    manualPagination: pagination !== undefined,
+    // Without a paging model every row renders. Supplying one unpaged would
+    // silently cut the table at tanstack's default page size.
+    ...(isPaged ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+    manualPagination: isPaged,
     enableRowSelection: selection !== undefined,
     getRowId: (row) => String(row.id),
     onRowSelectionChange: selection?.onChange,
@@ -154,6 +158,7 @@ export function DataTable({
   useHotkey(
     "ArrowRight",
     (event) => {
+      if (!isPaged) return;
       if (isEditableTarget(document.activeElement) || isEditableTarget(event.target)) return;
       if (!table.getCanNextPage()) return;
       event.preventDefault();
@@ -166,6 +171,7 @@ export function DataTable({
   useHotkey(
     "ArrowLeft",
     (event) => {
+      if (!isPaged) return;
       if (isEditableTarget(document.activeElement) || isEditableTarget(event.target)) return;
       if (!table.getCanPreviousPage()) return;
       event.preventDefault();
@@ -204,7 +210,7 @@ export function DataTable({
         </Table>
       </div>
 
-      {pagination && (
+      {isPaged && (
         <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
           <div className="flex-1 whitespace-nowrap">
             {t("dataTable.totalRows")}: {pagination.totalRows}

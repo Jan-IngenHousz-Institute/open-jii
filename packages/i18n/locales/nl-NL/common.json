@@ -534,6 +534,8 @@
     "noData": "Geen gegevens ontvangen",
     "noResults": "Geen resultaten",
     "error": "Fout bij het laden van gegevens",
+    "totalRows": "Totaal aantal rijen",
+    "rowsPerPage": "Rijen per pagina",
     "page": "Pagina",
     "pageOf": "van",
     "previous": "Vorige",
