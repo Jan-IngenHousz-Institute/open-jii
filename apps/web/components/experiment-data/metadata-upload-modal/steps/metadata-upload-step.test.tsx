@@ -155,7 +155,7 @@ vi.mock("@repo/ui/lib/utils", () => ({
 
 const sampleData = {
   columns: [
-    { id: "col_0", name: "ID", type: "number" as const },
+    { id: "col_0", name: "PlotCode", type: "number" as const },
     { id: "col_1", name: "Name", type: "string" as const },
   ],
   rows: [
@@ -483,14 +483,14 @@ describe("MetadataUploadStep", () => {
           metadata: {
             name: "Test Metadata",
             columns: [
-              { id: "ID", name: "ID", type: "number" },
+              { id: "PlotCode", name: "PlotCode", type: "number" },
               { id: "Name", name: "Name", type: "string" },
             ],
             rows: [
-              { _id: "row_0", ID: 1, Name: "Test" },
-              { _id: "row_1", ID: 2, Name: "Test2" },
+              { _id: "row_0", PlotCode: 1, Name: "Test" },
+              { _id: "row_1", PlotCode: 2, Name: "Test2" },
             ],
-            identifierColumnId: "ID",
+            identifierColumnId: "PlotCode",
             experimentQuestionId: "column:device_id",
           },
         });

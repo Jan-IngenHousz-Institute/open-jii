@@ -58,6 +58,7 @@ def experiment_macro_data():
             "questions_data",
             "annotations",
             "skip_macro_processing",
+            "workbook_run_id",
             "workbook_version_id",
             "macro_context",
             F.explode("macros").alias("macro")
@@ -80,6 +81,7 @@ def experiment_macro_data():
             "questions_data",
             "annotations",
             "skip_macro_processing",
+            "workbook_run_id",
             "workbook_version_id",
             "macro_context",
             F.col("macro.id").alias("macro_id"),
@@ -162,6 +164,7 @@ def experiment_macro_data():
             "macro_id",
             "macro_name",
             "macro_filename",
+            "workbook_run_id",
             "workbook_version_id",
             "macro_output",
             "macro_error",

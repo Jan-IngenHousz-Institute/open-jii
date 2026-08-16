@@ -29,14 +29,14 @@ const snapshots: EntitySnapshots = {
 
 const nodes: FlowNode[] = [
   {
-    id: "n1",
+    id: "c1",
     name: "n1",
     type: "measurement",
     isStart: false,
     content: { params: {}, protocolId: "p1" },
   },
   {
-    id: "n2",
+    id: "c2",
     name: "n2",
     type: "analysis",
     isStart: false,
@@ -64,6 +64,91 @@ describe("hydrateFlowNodes", () => {
       language: "python",
       code: "print(1)",
     });
+  });
+
+  it("hydrates repeated protocol references from their exact workbook cells", () => {
+    const repeatedCells: WorkbookCell[] = [
+      {
+        id: "ground-cell",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: "p1", version: 1, name: "Ground position" },
+      },
+      {
+        id: "ambit-cell",
+        type: "protocol",
+        isCollapsed: false,
+        payload: { protocolId: "p1", version: 1, name: "Ambit 2 position" },
+      },
+    ];
+    const repeatedNodes: FlowNode[] = [
+      {
+        id: "ground-cell",
+        name: "Ground position",
+        type: "measurement",
+        isStart: false,
+        content: { params: {}, protocolId: "p1" },
+      },
+      {
+        id: "ambit-cell",
+        name: "Ambit 2 position",
+        type: "measurement",
+        isStart: false,
+        content: { params: {}, protocolId: "p1" },
+      },
+    ];
+
+    const hydrated = hydrateFlowNodes(repeatedNodes, repeatedCells, snapshots);
+
+    expect(hydrated.map((node) => node.content.protocol?.name)).toEqual([
+      "Ground position",
+      "Ambit 2 position",
+    ]);
+  });
+
+  it("hydrates repeated macro references from their exact workbook cells", () => {
+    const repeatedCells: WorkbookCell[] = [
+      {
+        id: "ground-macro-cell",
+        type: "macro",
+        isCollapsed: false,
+        payload: { macroId: "m1", language: "python", name: "Ground analysis" },
+      },
+      {
+        id: "ambit-macro-cell",
+        type: "macro",
+        isCollapsed: false,
+        payload: { macroId: "m1", language: "javascript", name: "Ambit 2 analysis" },
+      },
+    ];
+    const repeatedNodes: FlowNode[] = [
+      {
+        id: "ground-macro-cell",
+        name: "Ground analysis",
+        type: "analysis",
+        isStart: false,
+        content: { params: {}, macroId: "m1" },
+      },
+      {
+        id: "ambit-macro-cell",
+        name: "Ambit 2 analysis",
+        type: "analysis",
+        isStart: false,
+        content: { params: {}, macroId: "m1" },
+      },
+    ];
+
+    const hydrated = hydrateFlowNodes(repeatedNodes, repeatedCells, snapshots);
+
+    expect(
+      hydrated.map((node) => ({
+        name: node.content.macro?.name,
+        language: node.content.macro?.language,
+      })),
+    ).toEqual([
+      { name: "Ground analysis", language: "python" },
+      { name: "Ambit 2 analysis", language: "javascript" },
+    ]);
   });
 
   it("leaves non-measurement/analysis nodes untouched", () => {

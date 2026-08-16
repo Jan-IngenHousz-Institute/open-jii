@@ -5,9 +5,9 @@ import { useFlowAnswersStore } from "./use-flow-answers-store";
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
 
 // Characterization of the AsyncStorage wire format of both persisted flow
-// stores (pinned at version 1). A silent shape change wipes a field
-// researcher's paused flow on rehydrate. v1 deliberately discards pre-fix v0
-// payloads; update fixtures ONLY with a deliberate change or a version bump.
+// stores (measurement flow v2, answers v1). A silent shape change wipes a field
+// researcher's paused flow on rehydrate. Measurement v2 deliberately discards
+// older flows that cannot be correlated safely; update fixtures only deliberately.
 
 const MEASUREMENT_KEY = "measurement-flow-storage";
 const ANSWERS_KEY = "flow-answers-storage";
@@ -16,7 +16,7 @@ const ANSWERS_KEY = "flow-answers-storage";
 const MEASUREMENT_V0 = `{ "state": { "experimentId": "old-exp", "iterationCount": 5 }, "version": 0 }`;
 const ANSWERS_V0 = `{ "state": { "answersHistory": [{ "plot": "old" }], "autoincrementSettings": { "plot": true }, "rememberAnswerSettings": {} }, "version": 0 }`;
 
-// v0 envelope for a paused mid-flow session, parked on the measurement node.
+// Current v2 envelope for a paused mid-flow session, parked on the measurement node.
 // Every value differs from the store default so a key dropped from partialize
 // fails its per-field assert instead of silently matching the default.
 const MEASUREMENT_FIXTURE = `{
@@ -24,6 +24,7 @@ const MEASUREMENT_FIXTURE = `{
     "experimentId": "exp-42",
     "experimentLabel": "Greenhouse Trial B",
     "workbookVersionId": "version-17",
+    "workbookRunId": "run-17",
     "protocolId": "proto-7",
     "currentStep": 1,
     "flowNodes": [
@@ -80,7 +81,7 @@ const MEASUREMENT_FIXTURE = `{
     "branchVisitCounts": { "node-b1": 2 },
     "branchReturnStack": [{ "landing": 3, "step": 1 }]
   },
-  "version": 1
+  "version": 2
 }`;
 
 // v0 envelope after two completed answer iterations with per-question
@@ -99,10 +100,11 @@ const ANSWERS_FIXTURE = `{
 
 const MEASUREMENT_STATE = (JSON.parse(MEASUREMENT_FIXTURE) as { state: Record<string, unknown> })
   .state;
+const MEASUREMENT_V1_WITHOUT_RUN = `{ "state": { "experimentId": "exp-v1", "currentFlowStep": 3, "scanResult": { "sample": [{ "phi2": 0.8 }] } }, "version": 1 }`;
 
-// Dropped from the persisted slice (protocolId is now derived from flowNodes
-// via flowProtocolId). The fixture keeps it so we prove legacy payloads
-// still rehydrate; the app neither reads nor re-writes it.
+// Dropped from the persisted slice (uploads now resolve it from the exact
+// producer measurement node). The fixture keeps it so we prove legacy
+// payloads still rehydrate; the app neither reads nor re-writes it.
 const LEGACY_ONLY_KEYS = ["protocolId"];
 const EXPECTED_WRITTEN_STATE = Object.fromEntries(
   Object.entries(MEASUREMENT_STATE).filter(([key]) => !LEGACY_ONLY_KEYS.includes(key)),
@@ -119,7 +121,7 @@ async function readEnvelope(key: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
-describe("measurement-flow-storage v1 wire format", () => {
+describe("measurement-flow-storage v2 wire format", () => {
   beforeAll(async () => {
     await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_FIXTURE);
     await useMeasurementFlowStore.persist.rehydrate();
@@ -142,7 +144,7 @@ describe("measurement-flow-storage v1 wire format", () => {
     useMeasurementFlowStore.setState({}); // identity write still runs partialize + setItem
     const envelope = await readEnvelope(MEASUREMENT_KEY);
     expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
-    expect(envelope.version).toBe(1);
+    expect(envelope.version).toBe(2);
     expect(envelope.state).toEqual(EXPECTED_WRITTEN_STATE);
   });
 
@@ -170,8 +172,31 @@ describe("measurement-flow-storage v1 wire format", () => {
       "producerCellId",
       "scanResult",
       "scanResults",
+      "workbookRunId",
       "workbookVersionId",
     ]);
+  });
+});
+
+describe("measurement-flow-storage v1 to v2 migration", () => {
+  it("drops an active v1 flow and returns to experiment selection", async () => {
+    await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_V1_WITHOUT_RUN);
+    await useMeasurementFlowStore.persist.rehydrate();
+
+    const state = useMeasurementFlowStore.getState();
+    expect(state.experimentId).toBeUndefined();
+    expect(state.workbookRunId).toBeUndefined();
+    expect(state.scanResult).toBeUndefined();
+    expect(state.currentFlowStep).toBe(0);
+    expect(state.flowNodes).toEqual([]);
+
+    const envelope = await readEnvelope(MEASUREMENT_KEY);
+    expect(envelope.version).toBe(2);
+    expect(envelope.state).toMatchObject({
+      currentFlowStep: 0,
+      flowNodes: [],
+      iterationCount: 0,
+    });
   });
 });
 
@@ -208,7 +233,7 @@ describe("flow-answers-storage v1 wire format", () => {
   });
 });
 
-// The v0 -> v1 bump deliberately discards flows persisted by pre-fix builds
+// Version upgrades deliberately discard flows persisted by pre-fix builds
 // (they can hold a mis-seeded plot or a stale "Experiment" name). These run
 // last: rehydrating a v0 payload resets the singleton stores to defaults.
 describe("flow stores discard pre-fix v0 payloads on upgrade", () => {
