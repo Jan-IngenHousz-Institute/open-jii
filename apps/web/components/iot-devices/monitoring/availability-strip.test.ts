@@ -32,7 +32,9 @@ function monitoring(overrides: Partial<DeviceMonitoring> = {}): DeviceMonitoring
       firmwareMix: [],
       protocolMix: [],
       workbookMix: [],
+      macroMix: [],
     },
+    firmwareHistory: [],
     recentMeasurements: [],
     ...overrides,
   };

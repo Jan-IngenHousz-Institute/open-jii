@@ -14,18 +14,20 @@ interface PayloadProfileProps {
   /** Entities the viewer may open; the rest are simply not defined here. */
   visibleProtocols: EntityAccess[];
   visibleWorkbooks: EntityAccess[];
+  visibleMacros: EntityAccess[];
   locale: string;
 }
 
 /**
  * What the device's payloads carried: the headline counts, how often the
- * optional channels were populated, and which firmware, protocols and
- * workbooks produced the measurements.
+ * optional channels were populated, and which firmware, protocols, workbooks
+ * and macros produced the measurements.
  */
 export function PayloadProfile({
   payload,
   visibleProtocols,
   visibleWorkbooks,
+  visibleMacros,
   locale,
 }: PayloadProfileProps) {
   const { t } = useTranslation("iot");
@@ -39,8 +41,8 @@ export function PayloadProfile({
     );
   }
 
-  // An id the platform cannot resolve belongs to no protocol or workbook it
-  // knows: unknown, not withheld.
+  // An id the platform cannot resolve belongs to nothing it knows: unknown,
+  // not withheld.
   const protocolEntities = resolveEntities(
     payload.protocolMix.flatMap((entry) => (entry.protocolId === null ? [] : [entry.protocolId])),
     visibleProtocols,
@@ -54,6 +56,13 @@ export function PayloadProfile({
     visibleWorkbooks,
     (id) => `/${locale}/platform/workbooks/${id}`,
     () => t("iot.devices.monitoring.unknownWorkbookId"),
+  );
+
+  const macroEntities = resolveEntities(
+    payload.macroMix.flatMap((entry) => (entry.macroId === null ? [] : [entry.macroId])),
+    visibleMacros,
+    (id) => `/${locale}/platform/macros/${id}`,
+    () => t("iot.devices.monitoring.unknownMacroId"),
   );
 
   return (
@@ -76,7 +85,7 @@ export function PayloadProfile({
         />
       </dl>
 
-      <div className="grid gap-6 border-t pt-6 lg:grid-cols-3">
+      <div className="grid gap-6 border-t pt-6 sm:grid-cols-2 lg:grid-cols-4">
         <Breakdown
           title={t("iot.devices.monitoring.firmwareVersions")}
           hint={t("iot.devices.monitoring.asReported")}
@@ -129,6 +138,23 @@ export function PayloadProfile({
               ),
           }))}
         />
+
+        <Breakdown
+          title={t("iot.devices.monitoring.macros")}
+          hint={t("iot.devices.monitoring.macroRunHint")}
+          total={payload.macroMix.reduce((sum, entry) => sum + entry.count, 0)}
+          rows={payload.macroMix.map((entry) => ({
+            key: entry.macroId ?? "unknown",
+            count: entry.count,
+            node: (
+              <UnresolvedAware
+                id={entry.macroId}
+                resolved={macroEntities}
+                fallback={t("iot.devices.monitoring.unknownMacroId")}
+              />
+            ),
+          }))}
+        />
       </div>
     </div>
   );
@@ -145,7 +171,7 @@ function UnresolvedAware({
   fallback: string;
 }) {
   const entity = id === null ? undefined : resolved.get(id);
-  if (entity === undefined || !entity.accessible) {
+  if (!entity?.accessible) {
     return (
       <span className="text-muted-foreground">
         {fallback}

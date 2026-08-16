@@ -26,7 +26,9 @@ function monitoringWith(battery: DeviceMonitoring["battery"]): DeviceMonitoring 
       firmwareMix: [],
       protocolMix: [],
       workbookMix: [],
+      macroMix: [],
     },
+    firmwareHistory: [],
     recentMeasurements: [],
   };
 }

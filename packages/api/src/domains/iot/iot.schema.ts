@@ -297,6 +297,19 @@ export const zDevicePayloadStats = z.object({
   workbookMix: z.array(
     z.object({ workbookVersionId: z.string().nullable(), count: z.number().int() }),
   ),
+  /**
+   * Measurements per macro. A measurement can run several macros, so these
+   * counts are per macro run and do not sum to `totalMeasurements`.
+   */
+  macroMix: z.array(z.object({ macroId: z.string().nullable(), count: z.number().int() })),
+});
+
+/** A firmware version the device reported, and the window it was seen in. */
+export const zDeviceFirmwareVersion = z.object({
+  version: z.string().nullable(),
+  firstSeen: z.string().datetime(),
+  lastSeen: z.string().datetime(),
+  count: z.number().int(),
 });
 
 /** One stored measurement, for the row-level table behind the aggregates. */
@@ -328,6 +341,7 @@ export const zDeviceMonitoring = z.object({
   throughput: z.array(zDeviceThroughputBucket),
   battery: z.array(zDeviceBatteryPoint),
   payload: zDevicePayloadStats,
+  firmwareHistory: z.array(zDeviceFirmwareVersion),
   recentMeasurements: z.array(zDeviceMeasurement),
 });
 
@@ -351,6 +365,7 @@ export type DeviceSession = z.infer<typeof zDeviceSession>;
 export type DeviceThroughputBucket = z.infer<typeof zDeviceThroughputBucket>;
 export type DeviceBatteryPoint = z.infer<typeof zDeviceBatteryPoint>;
 export type DevicePayloadStats = z.infer<typeof zDevicePayloadStats>;
+export type DeviceFirmwareVersion = z.infer<typeof zDeviceFirmwareVersion>;
 export type DeviceMeasurement = z.infer<typeof zDeviceMeasurement>;
 export type DeviceMonitoring = z.infer<typeof zDeviceMonitoring>;
 export type IotDeviceWithConnectivity = z.infer<typeof zIotDeviceWithConnectivity>;

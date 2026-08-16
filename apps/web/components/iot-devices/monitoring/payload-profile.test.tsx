@@ -7,6 +7,7 @@ import { PayloadProfile } from "./payload-profile";
 
 const PROTOCOL_ID = "55555555-5555-4555-8555-555555555555";
 const WORKBOOK_ID = "66666666-6666-4666-8666-666666666666";
+const MACRO_ID = "77777777-7777-4777-8777-777777777777";
 
 function payload(overrides: Partial<DevicePayloadStats> = {}): DevicePayloadStats {
   return {
@@ -17,6 +18,7 @@ function payload(overrides: Partial<DevicePayloadStats> = {}): DevicePayloadStat
     firmwareMix: [{ version: "1.1.0", count: 200 }],
     protocolMix: [],
     workbookMix: [],
+    macroMix: [],
     ...overrides,
   };
 }
@@ -26,6 +28,7 @@ function renderProfile(
   visible: Partial<{
     protocols: { id: string; name: string }[];
     workbooks: { id: string; name: string }[];
+    macros: { id: string; name: string }[];
   }> = {},
 ) {
   return render(
@@ -33,6 +36,7 @@ function renderProfile(
       payload={stats}
       visibleProtocols={visible.protocols ?? []}
       visibleWorkbooks={visible.workbooks ?? []}
+      visibleMacros={visible.macros ?? []}
       locale="en-US"
     />,
   );
@@ -87,6 +91,40 @@ describe("PayloadProfile", () => {
     });
 
     expect(screen.getByRole("link", { name: /Field routine/ })).toBeInTheDocument();
+  });
+
+  it("names and links a macro the viewer can open", () => {
+    renderProfile(payload({ macroMix: [{ macroId: MACRO_ID, count: 120 }] }), {
+      macros: [{ id: MACRO_ID, name: "Fluorescence QC" }],
+    });
+
+    expect(screen.getByRole("link", { name: /Fluorescence QC/ })).toHaveAttribute(
+      "href",
+      `/en-US/platform/macros/${MACRO_ID}`,
+    );
+  });
+
+  it("counts macro runs against the macro total, not the measurement total", () => {
+    // Two macros on every one of the 200 measurements: each ran on all of
+    // them, so each reads 50% of the macro runs rather than 100% of the
+    // measurements.
+    renderProfile(
+      payload({
+        macroMix: [
+          { macroId: MACRO_ID, count: 200 },
+          { macroId: "abcd", count: 200 },
+        ],
+      }),
+    );
+
+    expect(screen.getAllByText("50%")).toHaveLength(2);
+  });
+
+  it("calls a macro the platform does not define unknown", () => {
+    renderProfile(payload({ macroMix: [{ macroId: "9999", count: 10 }] }));
+
+    expect(screen.getByText("iot.devices.monitoring.unknownMacroId")).toBeInTheDocument();
+    expect(screen.getByText("9999")).toBeInTheDocument();
   });
 
   it("says so plainly when the device sent nothing", () => {

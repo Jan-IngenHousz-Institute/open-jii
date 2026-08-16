@@ -5,6 +5,7 @@ import type { DeviceMonitoring, MonitoringBucket } from "@repo/api/domains/iot/i
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { GetDeviceBatteryUseCase } from "../get-device-battery/get-device-battery";
+import { GetDeviceFirmwareHistoryUseCase } from "../get-device-firmware-history/get-device-firmware-history";
 import { GetDeviceMeasurementsUseCase } from "../get-device-measurements/get-device-measurements";
 import { GetDevicePayloadStatsUseCase } from "../get-device-payload-stats/get-device-payload-stats";
 import { GetDeviceSessionsUseCase } from "../get-device-sessions/get-device-sessions";
@@ -12,7 +13,7 @@ import { GetDeviceThroughputUseCase } from "../get-device-throughput/get-device-
 
 /**
  * Orchestrates the monitoring dashboard response: resolves the device once,
- * then runs the three single-responsibility queries in parallel.
+ * then runs the single-responsibility queries in parallel.
  */
 @Injectable()
 export class GetDeviceMonitoringUseCase {
@@ -25,6 +26,7 @@ export class GetDeviceMonitoringUseCase {
     private readonly getDeviceBattery: GetDeviceBatteryUseCase,
     private readonly getDevicePayloadStats: GetDevicePayloadStatsUseCase,
     private readonly getDeviceMeasurements: GetDeviceMeasurementsUseCase,
+    private readonly getDeviceFirmwareHistory: GetDeviceFirmwareHistoryUseCase,
   ) {}
 
   async execute(
@@ -51,14 +53,21 @@ export class GetDeviceMonitoringUseCase {
     }
     const thingName = deviceResult.value.thingName;
 
-    const [sessionsResult, throughputResult, batteryResult, payloadResult, measurementsResult] =
-      await Promise.all([
-        this.getDeviceSessions.execute(thingName, from, to),
-        this.getDeviceThroughput.execute(thingName, from, to, bucket),
-        this.getDeviceBattery.execute(thingName, from, to, bucket),
-        this.getDevicePayloadStats.execute(thingName, from, to),
-        this.getDeviceMeasurements.execute(thingName, from, to),
-      ]);
+    const [
+      sessionsResult,
+      throughputResult,
+      batteryResult,
+      payloadResult,
+      measurementsResult,
+      firmwareResult,
+    ] = await Promise.all([
+      this.getDeviceSessions.execute(thingName, from, to),
+      this.getDeviceThroughput.execute(thingName, from, to, bucket),
+      this.getDeviceBattery.execute(thingName, from, to, bucket),
+      this.getDevicePayloadStats.execute(thingName, from, to),
+      this.getDeviceMeasurements.execute(thingName, from, to),
+      this.getDeviceFirmwareHistory.execute(thingName, from, to),
+    ]);
     if (sessionsResult.isFailure()) {
       return failure(sessionsResult.error);
     }
@@ -74,6 +83,9 @@ export class GetDeviceMonitoringUseCase {
     if (measurementsResult.isFailure()) {
       return failure(measurementsResult.error);
     }
+    if (firmwareResult.isFailure()) {
+      return failure(firmwareResult.error);
+    }
 
     return success({
       bucket,
@@ -81,6 +93,7 @@ export class GetDeviceMonitoringUseCase {
       throughput: throughputResult.value,
       battery: batteryResult.value,
       payload: payloadResult.value,
+      firmwareHistory: firmwareResult.value,
       recentMeasurements: measurementsResult.value,
     });
   }

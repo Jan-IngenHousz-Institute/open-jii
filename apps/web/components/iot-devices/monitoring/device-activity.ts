@@ -1,4 +1,4 @@
-import type { DeviceMeasurement, DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
+import type { DeviceFirmwareVersion, DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 
 export type ActivityKind = "connected" | "disconnected" | "firmwareChanged" | "registered";
 
@@ -19,8 +19,8 @@ interface ActivitySources {
 
 /**
  * Everything that happened to this device in the window, not just the broker
- * events: connections, firmware transitions seen in the measurement stream,
- * and its registration when that falls inside the window.
+ * events: connections, firmware transitions, and its registration when that
+ * falls inside the window.
  */
 export function buildDeviceActivity({
   monitoring,
@@ -42,7 +42,7 @@ export function buildDeviceActivity({
       ? [{ timestamp: registeredAt, kind: "registered", detail: null }]
       : [];
 
-  return [...lifecycle, ...registration, ...firmwareChanges(monitoring.recentMeasurements)].sort(
+  return [...lifecycle, ...registration, ...firmwareChanges(monitoring.firmwareHistory)].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 }
@@ -53,31 +53,17 @@ function withinWindow(timestamp: string, fromMs: number, toMs: number): boolean 
 }
 
 /**
- * Firmware transitions read off the measurement stream. Measurements arrive
- * newest-first, so a change is recorded at the first row reporting the new
- * version, which is the moment it became visible to the platform.
+ * Firmware transitions over the whole window, from the versions the warehouse
+ * saw. Each version after the first is a change, recorded when it first
+ * appeared; the earliest version is the state the window opened in, not an
+ * event.
  */
-function firmwareChanges(measurements: DeviceMeasurement[]): ActivityEntry[] {
-  const changes: ActivityEntry[] = [];
-
-  for (const [position, measurement] of measurements.entries()) {
-    const previous = measurements.at(position + 1);
-    if (previous === undefined) {
-      continue;
-    }
-
-    const before = previous.deviceVersion;
-    const after = measurement.deviceVersion;
-    if (before === null || after === null || before === after) {
-      continue;
-    }
-
-    changes.push({
-      timestamp: measurement.timestamp,
-      kind: "firmwareChanged",
-      detail: `${before} → ${after}`,
-    });
-  }
-
-  return changes;
+function firmwareChanges(history: DeviceFirmwareVersion[]): ActivityEntry[] {
+  return history.slice(1).map((version, position) => ({
+    timestamp: version.firstSeen,
+    kind: "firmwareChanged" as const,
+    // slice(1) shifts the index, so `position` already addresses the
+    // predecessor in the unsliced history.
+    detail: `${history[position].version} → ${version.version}`,
+  }));
 }

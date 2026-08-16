@@ -196,7 +196,10 @@
         },
         "unknownProtocolId": "Unbekanntes Protokoll",
         "unknownWorkbookId": "Unbekanntes Workbook",
-        "moreFields_one": "{{count}} weiteres Feld gemeldet, aber nicht angezeigt."
+        "moreFields_one": "{{count}} weiteres Feld gemeldet, aber nicht angezeigt.",
+        "macros": "Makros",
+        "unknownMacroId": "Unbekanntes Makro",
+        "macroRunHint": "Pro Makrolauf gezählt"
       },
       "pageOf": "Seite {{page}} von {{total}}",
       "actions": {

@@ -1,24 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import type { DeviceMeasurement, DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
+import type { DeviceFirmwareVersion, DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 
 import { buildDeviceActivity } from "./device-activity";
 
 const FROM = "2026-08-13T00:00:00.000Z";
 const TO = "2026-08-13T12:00:00.000Z";
 
-function measurement(timestamp: string, deviceVersion: string | null): DeviceMeasurement {
-  return {
-    timestamp,
-    experimentId: null,
-    protocolId: null,
-    workbookVersionId: null,
-    deviceVersion,
-    battery: null,
-    latitude: null,
-    longitude: null,
-    sample: null,
-  };
+function firmware(version: string, firstSeen: string, lastSeen: string): DeviceFirmwareVersion {
+  return { version, firstSeen, lastSeen, count: 10 };
 }
 
 function monitoring(overrides: Partial<DeviceMonitoring> = {}): DeviceMonitoring {
@@ -38,7 +28,9 @@ function monitoring(overrides: Partial<DeviceMonitoring> = {}): DeviceMonitoring
       firmwareMix: [],
       protocolMix: [],
       workbookMix: [],
+      macroMix: [],
     },
+    firmwareHistory: [],
     recentMeasurements: [],
     ...overrides,
   };
@@ -56,10 +48,9 @@ describe("buildDeviceActivity", () => {
             sessionIdentifier: "s-1",
           },
         ],
-        // Newest first, as the warehouse returns them.
-        recentMeasurements: [
-          measurement("2026-08-13T09:00:00.000Z", "1.1.0"),
-          measurement("2026-08-13T08:00:00.000Z", "1.0.0"),
+        firmwareHistory: [
+          firmware("1.0.0", "2026-08-13T02:00:00.000Z", "2026-08-13T08:00:00.000Z"),
+          firmware("1.1.0", "2026-08-13T09:00:00.000Z", "2026-08-13T11:00:00.000Z"),
         ],
       }),
       registeredAt: "2026-08-13T01:00:00.000Z",
@@ -73,6 +64,7 @@ describe("buildDeviceActivity", () => {
       "registered",
     ]);
     expect(entries[0].detail).toBe("1.0.0 → 1.1.0");
+    expect(entries[0].timestamp).toBe("2026-08-13T09:00:00.000Z");
   });
 
   it("leaves out a registration that happened before the window", () => {
@@ -86,13 +78,11 @@ describe("buildDeviceActivity", () => {
     expect(entries).toEqual([]);
   });
 
-  it("does not invent a firmware change when the version is steady or unreported", () => {
+  it("treats the version the window opened on as state, not a change", () => {
     const entries = buildDeviceActivity({
       monitoring: monitoring({
-        recentMeasurements: [
-          measurement("2026-08-13T09:00:00.000Z", "1.1.0"),
-          measurement("2026-08-13T08:00:00.000Z", "1.1.0"),
-          measurement("2026-08-13T07:00:00.000Z", null),
+        firmwareHistory: [
+          firmware("1.1.0", "2026-08-13T01:00:00.000Z", "2026-08-13T11:00:00.000Z"),
         ],
       }),
       from: FROM,
@@ -100,5 +90,21 @@ describe("buildDeviceActivity", () => {
     });
 
     expect(entries).toEqual([]);
+  });
+
+  it("records every step of a multi-version window", () => {
+    const entries = buildDeviceActivity({
+      monitoring: monitoring({
+        firmwareHistory: [
+          firmware("1.0.0", "2026-08-13T01:00:00.000Z", "2026-08-13T03:00:00.000Z"),
+          firmware("1.1.0", "2026-08-13T04:00:00.000Z", "2026-08-13T06:00:00.000Z"),
+          firmware("2.0.0", "2026-08-13T07:00:00.000Z", "2026-08-13T11:00:00.000Z"),
+        ],
+      }),
+      from: FROM,
+      to: TO,
+    });
+
+    expect(entries.map((entry) => entry.detail)).toEqual(["1.1.0 → 2.0.0", "1.0.0 → 1.1.0"]);
   });
 });

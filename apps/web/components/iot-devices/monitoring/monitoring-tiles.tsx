@@ -57,7 +57,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           <Skeleton className="h-4 w-24" />
         ) : (
           <div className="space-y-1">
-            <ConnectivityDot connectivity={device.connectivity} className="text-xl font-semibold" />
+            <ConnectivityDot connectivity={device.connectivity} className="text-lg font-semibold" />
             <p className="text-muted-foreground text-xs font-normal">
               {formatLastSeen(device.connectivity)}
             </p>
@@ -76,7 +76,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           <Skeleton className="h-4 w-24" />
         ) : (
           <div className="space-y-1">
-            <p className="text-2xl font-semibold">
+            <p className="text-lg font-semibold">
               {lastDataAt === null || lastDataAt === undefined
                 ? t("iot.devices.monitoring.noData")
                 : formatRelativeTime(lastDataAt, locale)}
@@ -93,7 +93,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           <Skeleton className="h-4 w-16" />
         ) : (
           <div className="space-y-1">
-            <p className="text-2xl font-semibold tabular-nums">{total}</p>
+            <p className="text-lg font-semibold tabular-nums">{total}</p>
             <p className="text-muted-foreground text-xs font-normal tabular-nums">
               {t("iot.devices.monitoring.perHour", { rate: perHour.toFixed(1) })}
             </p>
@@ -106,7 +106,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           <Skeleton className="h-4 w-16" />
         ) : (
           <div className="space-y-1">
-            <p className="text-2xl font-semibold tabular-nums">
+            <p className="text-lg font-semibold tabular-nums">
               {monitoring.uptimePercent === null
                 ? t("iot.devices.monitoring.uptimeUnknown")
                 : `${monitoring.uptimePercent.toFixed(1)}%`}

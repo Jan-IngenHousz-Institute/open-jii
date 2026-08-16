@@ -196,7 +196,10 @@
         },
         "unknownProtocolId": "Unknown protocol",
         "unknownWorkbookId": "Unknown workbook",
-        "moreFields_one": "{{count}} more field reported but not shown."
+        "moreFields_one": "{{count}} more field reported but not shown.",
+        "macros": "Macros",
+        "unknownMacroId": "Unknown macro",
+        "macroRunHint": "Counted per macro run"
       },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {

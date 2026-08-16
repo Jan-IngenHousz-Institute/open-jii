@@ -12,9 +12,11 @@ interface MixEntry {
 }
 
 /**
- * Payload-content profile of a device's measurements over a range, folded
- * from one grouped warehouse scan: metadata coverage, firmware mix, protocol
- * mix (legacy-topic rows only), and distinct workbook runs.
+ * Payload-content profile of a device's measurements over a range: metadata
+ * coverage, firmware mix, protocol mix (legacy-topic rows only), distinct
+ * workbook runs, and the macros that ran. Everything but the macros folds
+ * from one grouped scan; macros need their own, since the column is an array
+ * and only expands into countable rows once exploded.
  */
 @Injectable()
 export class GetDevicePayloadStatsUseCase {
@@ -24,9 +26,15 @@ export class GetDevicePayloadStatsUseCase {
   ) {}
 
   async execute(thingName: string, from: string, to: string): Promise<Result<DevicePayloadStats>> {
-    const result = await this.databricksPort.getDevicePayloadBreakdown(thingName, from, to);
+    const [result, macroResult] = await Promise.all([
+      this.databricksPort.getDevicePayloadBreakdown(thingName, from, to),
+      this.databricksPort.getDeviceMacroBreakdown(thingName, from, to),
+    ]);
     if (result.isFailure()) {
       return failure(result.error);
+    }
+    if (macroResult.isFailure()) {
+      return failure(macroResult.error);
     }
 
     const rows = result.value;
@@ -64,7 +72,13 @@ export class GetDevicePayloadStatsUseCase {
       rows.map((row) => ({ key: row.workbookVersionId, count: row.count })),
     ).map((entry) => ({ workbookVersionId: entry.key, count: entry.count }));
 
-    return success({ ...totals, workbookRuns, firmwareMix, protocolMix, workbookMix });
+    // Already grouped by macro id in SQL; the fold only orders it like its
+    // siblings, so the busiest macro leads.
+    const macroMix = this.sumMix(
+      macroResult.value.map((row) => ({ key: row.macroId, count: row.count })),
+    ).map((entry) => ({ macroId: entry.key, count: entry.count }));
+
+    return success({ ...totals, workbookRuns, firmwareMix, protocolMix, workbookMix, macroMix });
   }
 
   private sumMix(entries: MixEntry[]): MixEntry[] {

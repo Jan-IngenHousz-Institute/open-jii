@@ -30,6 +30,20 @@ export interface DevicePayloadBreakdownRow {
   withBattery: number;
 }
 
+/** Measurement count per macro; a measurement can carry several macros. */
+export interface DeviceMacroRow {
+  macroId: string | null;
+  count: number;
+}
+
+/** A firmware version the device reported, with the window it was seen in. */
+export interface DeviceFirmwareVersionRow {
+  version: string | null;
+  firstSeen: string | null;
+  lastSeen: string | null;
+  count: number;
+}
+
 /** One measurement as stored, for the row-level view behind the aggregates. */
 export interface DeviceMeasurementRow {
   timestamp: string | null;
@@ -74,6 +88,16 @@ export interface DatabricksPort {
     from: string,
     to: string,
   ): Promise<Result<DevicePayloadBreakdownRow[]>>;
+  getDeviceMacroBreakdown(
+    thingName: string,
+    from: string,
+    to: string,
+  ): Promise<Result<DeviceMacroRow[]>>;
+  getDeviceFirmwareHistory(
+    thingName: string,
+    from: string,
+    to: string,
+  ): Promise<Result<DeviceFirmwareVersionRow[]>>;
   getDeviceRecentMeasurements(
     thingName: string,
     from: string,

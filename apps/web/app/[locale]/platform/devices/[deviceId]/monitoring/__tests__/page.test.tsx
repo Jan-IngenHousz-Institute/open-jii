@@ -56,7 +56,9 @@ const monitoring: DeviceMonitoring = {
     firmwareMix: [{ version: "1.1.0", count: 12 }],
     protocolMix: [],
     workbookMix: [],
+    macroMix: [],
   },
+  firmwareHistory: [],
   recentMeasurements: [],
 };
 

@@ -15,6 +15,8 @@ import type { DataUploadJobInput } from "../../../experiments/core/ports/databri
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
 import type {
   DeviceBatteryRow,
+  DeviceFirmwareVersionRow,
+  DeviceMacroRow,
   DeviceMeasurementRow,
   DevicePayloadBreakdownRow,
   DeviceThroughputRow,
@@ -499,7 +501,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
           { column: "protocol_id" },
           { column: "workbook_version_id" },
           { column: "workbook_run_id" },
-          { column: "workbook_run_id" },
         ],
         functions: [
           { column: "*", function: "count", alias: "row_count" },
@@ -522,6 +523,81 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         count: Number(row[index.row_count] ?? 0),
         withGps: Number(row[index.gps_count] ?? 0),
         withBattery: Number(row[index.battery_count] ?? 0),
+      })),
+    );
+  }
+
+  /**
+   * Measurement counts per macro the device ran in a range. `macros` is an
+   * array per measurement, so the rows are exploded before grouping and the
+   * counts sum to more than the measurement total whenever a measurement ran
+   * several macros.
+   */
+  async getDeviceMacroBreakdown(
+    thingName: string,
+    from: string,
+    to: string,
+  ): Promise<Result<DeviceMacroRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        explode: { column: "macros", alias: "macro" },
+        groupBy: [{ column: "macro.id", alias: "macro_id" }],
+        functions: [{ column: "*", function: "count", alias: "row_count" }],
+      },
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        macroId: row[index.macro_id] ?? null,
+        count: Number(row[index.row_count] ?? 0),
+      })),
+    );
+  }
+
+  /**
+   * Every firmware version the device reported in a range, with the window it
+   * was seen in. Unlike the version mix, this carries the ordering that makes
+   * a transition visible, and it sees the whole range rather than the tail of
+   * measurements a row-level query returns.
+   */
+  async getDeviceFirmwareHistory(
+    thingName: string,
+    from: string,
+    to: string,
+  ): Promise<Result<DeviceFirmwareVersionRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "device_version" }],
+        functions: [
+          { column: "timestamp", function: "min", alias: "first_seen" },
+          { column: "timestamp", function: "max", alias: "last_seen" },
+          { column: "*", function: "count", alias: "row_count" },
+        ],
+      },
+      orderBy: "first_seen",
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        version: row[index.device_version] ?? null,
+        firstSeen: this.toIsoOrNull(row[index.first_seen]),
+        lastSeen: this.toIsoOrNull(row[index.last_seen]),
+        count: Number(row[index.row_count] ?? 0),
       })),
     );
   }

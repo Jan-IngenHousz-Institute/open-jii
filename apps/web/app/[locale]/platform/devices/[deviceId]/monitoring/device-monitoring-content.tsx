@@ -78,6 +78,7 @@ export default function DeviceMonitoringPage() {
   const { data: visibleWorkbooks } = useQuery(
     orpc.workbooks.listWorkbooks.queryOptions({ input: {} }),
   );
+  const { data: visibleMacros } = useQuery(orpc.macros.listMacros.queryOptions({ input: {} }));
   const {
     data: monitoring,
     isLoading,
@@ -178,6 +179,7 @@ export default function DeviceMonitoringPage() {
               payload={monitoring.payload}
               visibleProtocols={visibleProtocols ?? []}
               visibleWorkbooks={visibleWorkbooks ?? []}
+              visibleMacros={visibleMacros ?? []}
               locale={locale}
             />
           </PanelCard>

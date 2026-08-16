@@ -330,6 +330,8 @@ describe("IotDeviceController", () => {
       );
       vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceFirmwareHistory").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceRecentMeasurements").mockResolvedValue(success([]));
     };
 
@@ -360,6 +362,8 @@ describe("IotDeviceController", () => {
       vi.spyOn(databricksAdapter, "getDeviceThroughput").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceFirmwareHistory").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceRecentMeasurements").mockResolvedValue(success([]));
       const device = await testApp.createIotDevice({ createdBy: userId });
       const path = testApp.resolveOrpcPath(contract.iot.getDeviceMonitoring, {

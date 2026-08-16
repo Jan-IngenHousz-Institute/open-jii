@@ -1132,6 +1132,60 @@ describe("DatabricksAdapter", () => {
       ]);
     });
 
+    it("maps the macro breakdown", async () => {
+      mockSql(
+        ["macro_id", "row_count"],
+        [
+          ["macro-1", "20"],
+          [null, "3"],
+        ],
+      );
+
+      const result = await databricksAdapter.getDeviceMacroBreakdown(
+        "AMBYTE_A",
+        "2026-08-13T00:00:00.000Z",
+        "2026-08-13T12:00:00.000Z",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { macroId: "macro-1", count: 20 },
+        { macroId: null, count: 3 },
+      ]);
+    });
+
+    it("maps the firmware history with its first and last sighting", async () => {
+      mockSql(
+        ["device_version", "first_seen", "last_seen", "row_count"],
+        [
+          ["1.0.0", "2026-08-13T01:00:00.000Z", "2026-08-13T08:00:00.000Z", "60"],
+          ["1.1.0", "2026-08-13T09:00:00.000Z", "2026-08-13T11:00:00.000Z", "40"],
+        ],
+      );
+
+      const result = await databricksAdapter.getDeviceFirmwareHistory(
+        "AMBYTE_A",
+        "2026-08-13T00:00:00.000Z",
+        "2026-08-13T12:00:00.000Z",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          version: "1.0.0",
+          firstSeen: "2026-08-13T01:00:00.000Z",
+          lastSeen: "2026-08-13T08:00:00.000Z",
+          count: 60,
+        },
+        {
+          version: "1.1.0",
+          firstSeen: "2026-08-13T09:00:00.000Z",
+          lastSeen: "2026-08-13T11:00:00.000Z",
+          count: 40,
+        },
+      ]);
+    });
+
     it("maps the payload breakdown, coercing missing counts to zero", async () => {
       mockSql(
         [

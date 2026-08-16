@@ -27,6 +27,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
     useCase = testApp.module.get(GetDevicePayloadStatsUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
     vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(success([]));
   });
 
   afterEach(() => {
@@ -117,6 +118,33 @@ describe("GetDevicePayloadStatsUseCase", () => {
 
     assertSuccess(result);
     expect(result.value.protocolMix).toEqual([{ protocolId: "proto-1", count: 12 }]);
+  });
+
+  it("orders the macro mix by how often each macro ran", async () => {
+    vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(
+      success([
+        { macroId: "macro-a", count: 12 },
+        { macroId: "macro-b", count: 40 },
+      ]),
+    );
+
+    const result = await useCase.execute(THING, FROM, TO);
+
+    assertSuccess(result);
+    expect(result.value.macroMix).toEqual([
+      { macroId: "macro-b", count: 40 },
+      { macroId: "macro-a", count: 12 },
+    ]);
+  });
+
+  it("propagates a failure of the macro scan too", async () => {
+    vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
+
+    const result = await useCase.execute(THING, FROM, TO);
+
+    assertFailure(result);
   });
 
   it("propagates a warehouse failure", async () => {

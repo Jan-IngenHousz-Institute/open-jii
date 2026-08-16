@@ -31,7 +31,9 @@ const monitoring: DeviceMonitoring = {
     firmwareMix: [],
     protocolMix: [],
     workbookMix: [],
+    macroMix: [],
   },
+  firmwareHistory: [],
   recentMeasurements: [],
 };
 
