@@ -741,5 +741,16 @@
     "leaveFailed": "Ihr Zugriff konnte nicht aufgegeben werden.",
     "yourAccessTitle": "Ihr Zugriff",
     "yourAccessDescription": "Sie haben Zugriff auf diese Ressource, weil sie mit Ihnen geteilt wurde. Sie können diesen Zugriff jederzeit aufgeben."
+  },
+  "dataTable": {
+    "noData": "Keine Daten zurückgegeben",
+    "noResults": "Keine Ergebnisse",
+    "error": "Fehler beim Laden der Daten",
+    "totalRows": "Zeilen gesamt",
+    "rowsPerPage": "Zeilen pro Seite",
+    "page": "Seite",
+    "pageOf": "von",
+    "previous": "Zurück",
+    "next": "Weiter"
   }
 }

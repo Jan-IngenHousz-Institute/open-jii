@@ -1,6 +1,5 @@
 import type { AccessorKeyColumnDef } from "@tanstack/react-table";
-
-import type { DataRow } from "../../../../hooks/experiment/useExperimentData/useExperimentData";
+import type { DataRow } from "~/components/data-table/data-table-columns";
 
 const MAX_COLUMN_WIDTH = 120;
 
