@@ -111,6 +111,8 @@ beforeEach(() => {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
     experimentLabel: undefined,
+    workbookRunId: undefined,
+    workbookVersionId: undefined,
     flowNodes: [],
     currentFlowStep: 0,
     iterationCount: 0,
@@ -396,6 +398,30 @@ describe("AnalysisNode upload with a command in the flow", () => {
     });
   });
 
+  it("does not upload when the workbook run id is missing", async () => {
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      experimentLabel: "Trial",
+      workbookRunId: undefined,
+      flowNodes: commandProtocolMacroNodes,
+      currentFlowStep: 2,
+      scanResult: { sample: [{ phi2: 0.8 }] },
+    });
+
+    render(<AnalysisNode content={withMacro} nodeId="m1" />);
+
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    await act(async () => {
+      await props?.onUpload();
+    });
+
+    expect(uploadMeasurements).not.toHaveBeenCalled();
+  });
+
   it("renders per-device results and uploads a linked multi-device round", async () => {
     const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
     useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
@@ -470,6 +496,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       experimentLabel: "Trial",
+      workbookRunId: "run-1",
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },
