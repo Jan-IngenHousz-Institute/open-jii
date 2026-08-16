@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
-import { v4 as uuidv4 } from "uuid";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
@@ -43,7 +42,7 @@ export function useQuestionsUpload() {
       questions: AnswerData[];
       commentText?: string;
       flagType?: ExperimentAnnotationFlagType | null;
-      workbookRunId?: string;
+      workbookRunId: string;
       workbookVersionId?: string;
     }) => {
       const topic = getMeasurementMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
@@ -57,9 +56,7 @@ export function useQuestionsUpload() {
         timestamp,
         timezone,
         user_id: userId,
-        // Questions-only flows are workbook runs too. Keep this field present
-        // for legacy callers by generating a one-upload run when necessary.
-        workbook_run_id: workbookRunId ?? uuidv4(),
+        workbook_run_id: workbookRunId,
         ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
         annotations: buildAnnotations(commentText, flagType),
         ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),

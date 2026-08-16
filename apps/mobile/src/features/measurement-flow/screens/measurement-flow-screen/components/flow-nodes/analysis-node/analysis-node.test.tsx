@@ -70,7 +70,7 @@ vi.mock("~/shared/i18n", () => ({
 }));
 
 vi.mock("./analysis-summary-card", () => ({
-  AnalysisSummaryCard: (props: { experimentName: string }) => {
+  AnalysisSummaryCard: (props: { experimentName: string; protocolName?: string }) => {
     summaryProps(props);
     return null;
   },
@@ -105,6 +105,7 @@ vi.mock("~/shared/ui/measurement/measurement-questions-modal", () => ({
 const CONTENT = { params: {}, macroId: "macro-1" } as AnalysisContent;
 
 const resolvedName = () => summaryProps.mock.calls.at(-1)?.[0]?.experimentName as string;
+const resolvedProtocolName = () => summaryProps.mock.calls.at(-1)?.[0]?.protocolName as string;
 
 beforeEach(() => {
   useMeasurementFlowStore.setState({
@@ -172,6 +173,51 @@ describe("AnalysisNode experiment name", () => {
     useMeasurementFlowStore.setState({ experimentId: "exp-missing", experimentLabel: undefined });
     render(<AnalysisNode content={CONTENT} nodeId="m1" />);
     expect(resolvedName()).toBe("Experiment");
+  });
+});
+
+describe("AnalysisNode protocol cell", () => {
+  it("shows the protocol name from the cell that produced the current scan", () => {
+    const repeatedProtocolNodes = [
+      {
+        id: "ground-protocol",
+        type: "measurement",
+        name: "Ground",
+        isStart: true,
+        content: { protocolId: "proto-shared", protocol: { name: "Ground position" } },
+      },
+      {
+        id: "ground-macro",
+        type: "analysis",
+        name: "Ground analysis",
+        isStart: false,
+        content: { macroId: "macro-ground" },
+      },
+      {
+        id: "ambit-2-protocol",
+        type: "measurement",
+        name: "Ambit 2",
+        isStart: false,
+        content: { protocolId: "proto-shared", protocol: { name: "Ambit 2 position" } },
+      },
+      {
+        id: "ambit-2-macro",
+        type: "analysis",
+        name: "Ambit 2 analysis",
+        isStart: false,
+        content: { macroId: "macro-ambit-2" },
+      },
+    ] as unknown as FlowNode[];
+    useMeasurementFlowStore.setState({
+      flowNodes: repeatedProtocolNodes,
+      currentFlowStep: 3,
+      producerCellId: "ambit-2-protocol",
+      scanResult: { sample: [{ phi2: 0.8 }] },
+    });
+
+    render(<AnalysisNode content={CONTENT} nodeId="ambit-2-macro" />);
+
+    expect(resolvedProtocolName()).toBe("Ambit 2 position");
   });
 });
 

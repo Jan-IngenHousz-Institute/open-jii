@@ -67,15 +67,16 @@ describe("useMeasurementFlowStore", () => {
   });
 
   describe("simple setters", () => {
-    it("setExperimentId starts one stable workbook run", () => {
+    it("setExperimentId starts a fresh workbook run on every picker start", () => {
       useMeasurementFlowStore.getState().setExperimentId("exp-1");
       const first = useMeasurementFlowStore.getState();
       expect(first.experimentId).toBe("exp-1");
       expect(first.workbookRunId).toBeTruthy();
       useMeasurementFlowStore.getState().setExperimentId("exp-1");
-      expect(useMeasurementFlowStore.getState().workbookRunId).toBe(first.workbookRunId);
-      useMeasurementFlowStore.getState().setExperimentId("exp-2");
       expect(useMeasurementFlowStore.getState().workbookRunId).not.toBe(first.workbookRunId);
+      const secondRunId = useMeasurementFlowStore.getState().workbookRunId;
+      useMeasurementFlowStore.getState().setExperimentId("exp-2");
+      expect(useMeasurementFlowStore.getState().workbookRunId).not.toBe(secondRunId);
     });
 
     it("setCurrentStep updates currentStep", () => {
@@ -113,6 +114,7 @@ describe("useMeasurementFlowStore", () => {
       const state = useMeasurementFlowStore.getState();
       expect(state.flowNodes).toEqual(nodes);
       expect(state.currentFlowStep).toBe(0);
+      expect(state.workbookRunId).toBeUndefined();
     });
   });
 
@@ -340,8 +342,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.isQuestionsSubmitPending).toBe(false);
       expect(state.scanResult).toBeUndefined();
       expect(state.scanResults).toBeUndefined();
-      expect(state.workbookRunId).toBeTruthy();
-      expect(state.workbookRunId).not.toBe("run-1");
+      expect(state.workbookRunId).toBe("run-1");
       expect(state.scanResult).toBeUndefined();
       expect(state.isFromOverview).toBe(false);
     });
@@ -437,6 +438,7 @@ describe("useMeasurementFlowStore", () => {
   describe("branch state", () => {
     it("setFlowGraph sets nodes/edges/cells and resets branch + step state", () => {
       useMeasurementFlowStore.setState({
+        experimentId: "exp-1",
         currentFlowStep: 5,
         branchVisitCounts: { b1: 3 },
         lastMatchedPath: { label: "old", color: "#000" },
@@ -467,6 +469,11 @@ describe("useMeasurementFlowStore", () => {
       expect(state.branchVisitCounts).toEqual({});
       expect(state.lastMatchedPath).toBeUndefined();
       expect(state.branchReturnStack).toEqual([]);
+    });
+
+    it("setFlowGraph does not mint a run while preloading the picker", () => {
+      useMeasurementFlowStore.getState().setFlowGraph([makeQuestion("q1")], [], [], "version-1");
+      expect(useMeasurementFlowStore.getState().workbookRunId).toBeUndefined();
     });
 
     it("incrementBranchVisit accumulates per node id", () => {

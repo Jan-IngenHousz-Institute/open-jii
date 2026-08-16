@@ -38,6 +38,7 @@ const shared = {
   experimentId: "exp-1",
   userId: "user-1",
   questions: [],
+  workbookRunId: "run-1",
 };
 
 describe("useQuestionsUpload", () => {
@@ -68,15 +69,5 @@ describe("useQuestionsUpload", () => {
       workbook_version_id: "version-1",
     });
     expect(enqueue).toHaveBeenCalledWith("saved-1");
-  });
-
-  it("generates a workbook run id for a legacy caller", async () => {
-    const { result } = renderHook(() => useQuestionsUpload(), { wrapper });
-
-    await act(async () => {
-      await result.current.uploadQuestions(shared);
-    });
-
-    expect(saveMeasurement.mock.calls[0][0].measurementResult.workbook_run_id).toBeTruthy();
   });
 });

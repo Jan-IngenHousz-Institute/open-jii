@@ -81,8 +81,8 @@ def clean_data():
                 r"THEN element_at(split(parsed_data.topic, '/'), 8) ELSE NULL END"
             )
         )
-        # Null on single-device uploads; rows of one multi-device workbook
-        # run share it and can be joined back on it.
+        # Present on every workbook upload. All rows produced by one workbook
+        # attempt share it and can be correlated across devices and steps.
         .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
         .withColumn("workbook_version_id", F.col("workbook_version_id"))
         .withColumn("macro_context", F.col("macro_context"))

@@ -85,16 +85,13 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       iterationAnchor: undefined,
 
       setExperimentId: (experimentId, experimentLabel) =>
-        set((state) => ({
+        set({
           experimentId,
           experimentLabel,
-          // Re-renders and repeated presses for the same active experiment keep
-          // the attempt identity; selecting a new flow starts a fresh run.
-          workbookRunId:
-            state.experimentId === experimentId && state.workbookRunId
-              ? state.workbookRunId
-              : uuidv4(),
-        })),
+          // Starting from the picker is always a new workbook attempt, even
+          // when the user selects the same experiment again.
+          workbookRunId: uuidv4(),
+        }),
 
       setCurrentStep: (step) => set({ currentStep: step }),
       setCurrentFlowStep: (step) => set({ currentFlowStep: step }),
@@ -112,16 +109,15 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       reset: () => get().resetFlow(),
 
       setFlowNodes: (nodes) =>
-        set((state) => ({
+        set({
           flowNodes: nodes,
-          workbookRunId: nodes.length > 0 ? (state.workbookRunId ?? uuidv4()) : state.workbookRunId,
           currentFlowStep: 0,
           cells: [],
           edges: [],
           branchVisitCounts: {},
           lastMatchedPath: undefined,
           branchReturnStack: [],
-        })),
+        }),
 
       setFlowGraph: (nodes, edges, cells, workbookVersionId) =>
         set((state) => ({
@@ -129,8 +125,10 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           edges,
           cells,
           workbookVersionId,
-          // Also repairs a paused v1 flow persisted before run IDs existed.
-          workbookRunId: state.workbookRunId ?? uuidv4(),
+          // Repair an active flow persisted before run IDs existed. Preloading
+          // a picker selection must not mint an attempt before Start is pressed.
+          workbookRunId:
+            state.experimentId && !state.workbookRunId ? uuidv4() : state.workbookRunId,
           currentFlowStep: 0,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
@@ -151,10 +149,9 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       resetFlow: () => set({ ...resetFlowState(), iterationAnchor: undefined }),
 
-      startNewIteration: () =>
-        set((state) => ({ ...startNewIterationState(state), workbookRunId: uuidv4() })),
+      startNewIteration: () => set(startNewIterationState),
 
-      retryCurrentIteration: () => set({ ...retryIterationState(), workbookRunId: uuidv4() }),
+      retryCurrentIteration: () => set(retryIterationState()),
 
       finishFlow: () => set(finishFlowState),
 

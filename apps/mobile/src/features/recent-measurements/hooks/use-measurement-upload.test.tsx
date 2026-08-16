@@ -137,19 +137,4 @@ describe("useMeasurementUpload", () => {
     expect(measurement.topic).toBe("topic/exp-1/proto-shared");
     expect(measurement.measurementResult.workbook_run_id).toBe("run-attempt-1");
   });
-
-  it("generates a workbook_run_id when a legacy caller omits one", async () => {
-    const { result } = renderHook(() => useMeasurementUpload(), { wrapper });
-
-    await act(async () => {
-      const { workbookRunId: _omitted, ...legacy } = SHARED;
-      await result.current.uploadMeasurements({
-        ...legacy,
-        results: [{ rawMeasurement: { a: 1 } }],
-      });
-    });
-
-    const [measurement] = saveMeasurement.mock.calls[0] as SavedCall;
-    expect(measurement.measurementResult.workbook_run_id).toBeTruthy();
-  });
 });

@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
-import { v4 as uuidv4 } from "uuid";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
@@ -58,7 +57,7 @@ interface SharedUploadArgs {
   commentText?: string;
   workbookVersionId?: string;
   /** Stable UUID for the complete workbook attempt, across sequential nodes. */
-  workbookRunId?: string;
+  workbookRunId: string;
 }
 
 export function useMeasurementUpload() {
@@ -109,11 +108,6 @@ export function useMeasurementUpload() {
         throw new Error("No measurements to upload");
       }
 
-      // The caller supplies the attempt-scoped id for workbook flows. The
-      // fallback keeps the wire invariant for legacy/direct callers: every
-      // upload batch always has a workbook_run_id, even with one device.
-      const correlatedRunId = workbookRunId ?? uuidv4();
-
       // One fix per round: all devices measured at the same physical spot.
       const location = await getMeasurementLocation();
 
@@ -134,7 +128,7 @@ export function useMeasurementUpload() {
           timezone,
           questions,
           commentText,
-          workbookRunId: correlatedRunId,
+          workbookRunId,
           workbookVersionId,
           macroContext,
           fallbackDeviceId: device?.id,

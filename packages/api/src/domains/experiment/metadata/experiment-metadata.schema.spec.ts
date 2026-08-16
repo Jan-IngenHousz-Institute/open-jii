@@ -71,20 +71,23 @@ describe("zExperimentCustomMetadataPayload", () => {
     }
   });
 
-  it("rejects column names that collide with reserved system columns", () => {
-    const blob = {
-      ...validBlob,
-      columns: [{ id: "device_id", name: "device_id", type: "string" as const }],
-      rows: [{ _id: "row_1", device_id: "X" }],
-      identifierColumnId: "device_id",
-    };
-    const result = zExperimentCustomMetadataPayload.safeParse(blob);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issue = result.error.issues.find((i) => i.path.join(".") === "columns.0.name");
-      expect(issue?.message.toLowerCase()).toContain("reserved");
-    }
-  });
+  it.each(["device_id", "workbook_version_id", "workbook_run_id"])(
+    "rejects the reserved system column %s",
+    (columnName) => {
+      const blob = {
+        ...validBlob,
+        columns: [{ id: columnName, name: columnName, type: "string" as const }],
+        rows: [{ _id: "row_1", [columnName]: "X" }],
+        identifierColumnId: columnName,
+      };
+      const result = zExperimentCustomMetadataPayload.safeParse(blob);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find((i) => i.path.join(".") === "columns.0.name");
+        expect(issue?.message.toLowerCase()).toContain("reserved");
+      }
+    },
+  );
 
   it("rejects identifierColumnId that is not in columns", () => {
     const blob = { ...validBlob, identifierColumnId: "missing" };

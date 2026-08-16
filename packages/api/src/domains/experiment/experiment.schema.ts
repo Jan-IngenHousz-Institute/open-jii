@@ -212,6 +212,7 @@ export const RESERVED_EXPERIMENT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   "macro_id",
   "macro_name",
   "macro_filename",
+  "workbook_version_id",
   "workbook_run_id",
   "macro_output",
   "macro_error",
