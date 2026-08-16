@@ -138,20 +138,47 @@ metrics:
   # Lakehouse
   - num: 10
     id: dlt-heartbeat
-    name: DLT pipeline state / heartbeat dead-man
+    name: Heartbeat collector dead-man
     family: observability
     source: dbx
     phase: P2
-    active: false
+    active: true
     slots: [alert, dashboard]
     severity: critical
     signal:
       namespace: OpenJII/Data
-      metric: HeartbeatAgeMinutes
+      metric: CollectorHeartbeat
       stat: Maximum
-    baseline: { method: threshold, max: 45, nodata: alert }
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { nodata: alert }
     runbook: docs/runbooks/dlt-heartbeat.md
-    notes: NoData-as-Alerting; absence of the heartbeat file IS the incident.
+    notes: >
+      Value is always 1; only its absence carries meaning. NoData-as-Alerting in
+      Grafana (P2b), and the composer self-check reports it when the series goes
+      silent. Deliberately has no threshold.
+
+  - num: 64
+    id: gold-materialization-age
+    name: Gold materialization age
+    family: observability
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception, dashboard]
+    signal:
+      namespace: OpenJII/Data
+      metric: GoldMaterializationAgeMinutes
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: same-weekday-4w, anomaly_pct: 100 }
+    runbook: docs/runbooks/dlt-heartbeat.md
+    notes: >
+      Minutes since gold last materialized, from max(status_updated_at) in
+      experiment_status. Split out of 10 during implementation: a fixed
+      threshold cannot serve both environments because the centrum pipeline runs
+      on a weekday-daytime schedule in dev and continuously in prod, so this
+      compares against its own 4-week pattern instead. A hard prod-only
+      staleness rule belongs in the per-environment Grafana rules (P2b).
 
   - num: 11
     id: medallion-throughput
@@ -179,16 +206,20 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    active: false
-    slots: [alert, exception]
-    severity: warning
+    active: true
+    slots: [exception]
     signal:
       namespace: OpenJII/Data
       metric: StaleExperimentsCount
       stat: Maximum
-    baseline: { method: threshold, max: 0 }
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: same-weekday-4w, anomaly_pct: 100 }
     runbook: docs/runbooks/stale-experiments.md
-    notes: User-facing symptom of any upstream ingest failure; count only, roster in S3 detail.
+    notes: >
+      User-facing symptom of any upstream ingest failure; count only, roster in
+      the heartbeat S3 detail. Deviation-based rather than "any stale is an
+      alert" so dev's scheduled pipeline does not flag nightly; the strict
+      prod rule belongs in the per-environment Grafana rules (P2b).
 
   - num: 14
     id: dbx-job-failures

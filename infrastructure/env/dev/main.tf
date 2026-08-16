@@ -403,12 +403,15 @@ module "event_hooks_secret_scope" {
 module "storage_credential" {
   source = "../../modules/databricks/workspace-storage-credential"
 
-  credential_name        = "open-jii-${var.environment}-metastore-access"
-  role_name              = "open-jii-${var.environment}-uc-access"
-  environment            = var.environment
-  bucket_name            = var.centralized_metastore_bucket_name
-  isolation_mode         = "ISOLATION_MODE_OPEN"
-  additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
+  credential_name = "open-jii-${var.environment}-metastore-access"
+  role_name       = "open-jii-${var.environment}-uc-access"
+  environment     = var.environment
+  bucket_name     = var.centralized_metastore_bucket_name
+  isolation_mode  = "ISOLATION_MODE_OPEN"
+  additional_policy_arns = [
+    module.iot_core.databricks_large_iot_read_policy_arn,
+    module.metrics_forwarder.databricks_write_policy_arn
+  ]
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -736,6 +739,81 @@ module "centrum_backup_job" {
   }
 
   depends_on = [module.centrum_pipeline]
+}
+
+module "metrics_heartbeat_job" {
+  source = "../../modules/databricks/job"
+
+  name        = "Metrics-Heartbeat-Job-DEV"
+  description = "Publishes lakehouse observability signals for the platform heartbeat"
+
+  # Schedule: every 15 minutes
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0/15 * * * ?"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  # A missed run is covered by the dead-man alarm, so retry once and let the
+  # next schedule take over rather than stacking retries into it
+  task_retry_config = {
+    retries                   = 1
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = false
+  }
+
+  environments = [
+    {
+      environment_key = "heartbeat"
+      spec = {
+        environment_version = "4"
+        dependencies = [
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+        ]
+      }
+    }
+  ]
+
+  tasks = [
+    {
+      key           = "collect_platform_heartbeat"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/metrics_heartbeat_task"
+
+      parameters = {
+        "CATALOG_NAME"       = module.databricks_catalog.catalog_name
+        "CENTRAL_SCHEMA"     = "centrum"
+        "ENVIRONMENT"        = var.environment
+        "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
+      }
+    }
+  ]
+
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.heartbeat_external_location]
 }
 
 module "data_upload_job" {
@@ -2320,6 +2398,64 @@ module "grafana_metrics_publisher" {
 
   private_subnets                = module.vpc.private_subnets
   metrics_publisher_lambda_sg_id = module.vpc.metrics_publisher_lambda_sg_id
+}
+
+module "heartbeat_metrics_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-heartbeat-${var.environment}"
+
+  enable_versioning = false
+
+  lifecycle_rules = [
+    {
+      id              = "expire-heartbeat-files"
+      status          = "Enabled"
+      transitions     = []
+      expiration_days = 90
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "monitoring"
+  }
+}
+
+module "metrics_forwarder" {
+  source = "../../modules/monitoring/metrics-forwarder"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
+  heartbeat_bucket_id  = module.heartbeat_metrics_s3.bucket_id
+  heartbeat_bucket_arn = module.heartbeat_metrics_s3.bucket_arn
+}
+
+module "heartbeat_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "heartbeat-${var.environment}"
+  bucket_name             = module.heartbeat_metrics_s3.bucket_id
+  external_location_path  = ""
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for platform heartbeat metric files"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_FILES", "WRITE_FILES"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
 }
 
 module "digest_composer" {

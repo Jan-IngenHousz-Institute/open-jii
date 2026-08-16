@@ -6,10 +6,11 @@
   "main": "index.js",
   "scripts": {
     "sync-catalog": "cp ../../../../../docs/monitoring/metrics-catalog.yaml ./catalog.yaml",
-    "zip": "zip -r function.zip index.js catalog.yaml package.json node_modules > /dev/null",
+    "zip": "zip -Xr function.zip index.js catalog.yaml package.json node_modules > /dev/null",
     "build": "npm run sync-catalog && npm ci --omit=dev && npm run zip"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.0.0",
     "js-yaml": "^4.3.1"
   }
 }
