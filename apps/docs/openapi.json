@@ -13816,6 +13816,31 @@
                               "count"
                             ]
                           }
+                        },
+                        "macroMix": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "macroId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "count": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "macroId",
+                              "count"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -13825,8 +13850,44 @@
                         "workbookRuns",
                         "firmwareMix",
                         "protocolMix",
-                        "workbookMix"
+                        "workbookMix",
+                        "macroMix"
                       ]
+                    },
+                    "firmwareHistory": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "version": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "firstSeen": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "lastSeen": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "version",
+                          "firstSeen",
+                          "lastSeen",
+                          "count"
+                        ]
+                      }
                     },
                     "recentMeasurements": {
                       "type": "array",
@@ -13941,6 +14002,7 @@
                     "throughput",
                     "battery",
                     "payload",
+                    "firmwareHistory",
                     "recentMeasurements"
                   ]
                 }
