@@ -1,4 +1,4 @@
-import { parseAnnotations } from "~/components/experiment-data/table-cells/annotations/experiment-data-table-annotations-cell";
+import { parseAnnotations } from "~/components/data-table/cells/annotations/data-table-annotations-cell";
 
 import type {
   ExperimentAnnotation,
