@@ -236,6 +236,7 @@ export function ExperimentDataTable({
             </>
           }
           pagination={{
+            mode: "server",
             state: pagination,
             onChange: handlePaginationChange,
             totalRows,

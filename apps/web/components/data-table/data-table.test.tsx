@@ -71,6 +71,7 @@ describe("DataTable", () => {
         columns={COLUMNS}
         rows={ROWS}
         pagination={{
+          mode: "server",
           state: { pageIndex: 0, pageSize: 10 },
           onChange,
           totalRows: 50,
@@ -83,6 +84,34 @@ describe("DataTable", () => {
     await user.click(screen.getByTitle("dataTable.next"));
 
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it("pages rows it already holds, at the size the caller asks for", async () => {
+    const user = userEvent.setup();
+    const many: DataRow[] = Array.from({ length: 7 }, (_, index) => ({
+      id: `row-${String(index)}`,
+      measured_at: "2026-08-14T09:30:00.000Z",
+      phi2: index / 100,
+      notes: `reading ${String(index)}`,
+      envelope: "{}",
+    }));
+
+    render(
+      <DataTable
+        columns={COLUMNS}
+        rows={many}
+        pagination={{ mode: "client", pageSize: 5, pageSizeOptions: [5, 25, 50] }}
+      />,
+    );
+
+    expect(screen.getByText("reading 4")).toBeInTheDocument();
+    expect(screen.queryByText("reading 5")).not.toBeInTheDocument();
+    expect(screen.getByText(/dataTable.totalRows.*7/)).toBeInTheDocument();
+
+    await user.click(screen.getByTitle("dataTable.next"));
+
+    expect(screen.getByText("reading 5")).toBeInTheDocument();
+    expect(screen.queryByText("reading 4")).not.toBeInTheDocument();
   });
 
   it("shows selection checkboxes only for a caller that owns a selection", () => {

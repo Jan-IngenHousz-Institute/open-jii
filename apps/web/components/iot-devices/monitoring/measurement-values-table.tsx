@@ -32,8 +32,10 @@ export function MeasurementValuesTable({ measurements }: MeasurementValuesTableP
   }
 
   return (
-    <div className="max-h-[32rem] overflow-y-auto">
-      <DataTable columns={columns} rows={rows} />
-    </div>
+    <DataTable
+      columns={columns}
+      rows={rows}
+      pagination={{ mode: "client", pageSize: 5, pageSizeOptions: [5, 25, 50] }}
+    />
   );
 }

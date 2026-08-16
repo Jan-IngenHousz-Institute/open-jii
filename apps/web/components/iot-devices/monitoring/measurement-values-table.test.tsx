@@ -50,6 +50,18 @@ describe("MeasurementValuesTable", () => {
     expect(screen.getByText("2026-08-14 09:30:00")).toBeInTheDocument();
   });
 
+  it("starts at five readings and lets the viewer ask for more", () => {
+    const readings = Array.from({ length: 8 }, (_, index) =>
+      measurement(JSON.stringify({ phi2: index / 100 }), `2026-08-14T09:3${String(index)}:00.000Z`),
+    );
+
+    render(<MeasurementValuesTable measurements={readings} />);
+
+    expect(screen.getByText(/dataTable.totalRows.*8/)).toBeInTheDocument();
+    expect(screen.getByText("0.04")).toBeInTheDocument();
+    expect(screen.queryByText("0.05")).not.toBeInTheDocument();
+  });
+
   it("says nothing arrived when there are no measurements", () => {
     render(<MeasurementValuesTable measurements={[]} />);
 
