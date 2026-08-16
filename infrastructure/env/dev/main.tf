@@ -1824,12 +1824,12 @@ module "backend_ecs" {
   # Container configuration
   container_port = var.backend_container_port
 
-  # Task size (headroom for the embedded DuckDB read engine)
-  cpu               = 1024 # 1 vCPU
-  memory            = 4096 # 4 GB
-  container_cpu     = 1024 # 1 vCPU
-  container_memory  = 4096 # 4 GB
-  ephemeral_storage = 21   # Minimum size (21 GiB); DuckDB temp spill lives here
+  # Task size
+  cpu               = 512  # 0.5 vCPU
+  memory            = 1024 # 1 GB
+  container_cpu     = 512  # 0.5 vCPU
+  container_memory  = 1024 # 1 GB
+  ephemeral_storage = 21   # Minimum size (21 GiB)
 
   # Load balancer integration
   target_group_arn = module.backend_alb.target_group_arn
@@ -2021,11 +2021,11 @@ module "backend_ecs" {
     },
     {
       name  = "DUCKDB_MEMORY_LIMIT"
-      value = "2GB"
+      value = "256MB"
     },
     {
       name  = "DUCKDB_THREADS"
-      value = "2"
+      value = "1"
     },
     {
       name  = "DUCKDB_EXTENSION_DIRECTORY"
