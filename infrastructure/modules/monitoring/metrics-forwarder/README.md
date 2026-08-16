@@ -12,7 +12,9 @@ This module also owns the IAM policy that lets the Unity Catalog storage credent
 
 `index.js` here is the handler only: S3 read, CloudWatch write. Parsing and batching live in **`packages/monitoring`**, a workspace package with vitest coverage.
 
-The handler requires `./lib/forwarder.js` directly rather than the package barrel, because the barrel pulls in the catalog module and its `js-yaml` dependency, which this function does not ship.
+The handler requires `./lib/forwarder.js` directly. The package deliberately has no barrel: importing one would drag the catalog module's `js-yaml` dependency into this bundle, which does not ship it.
+
+Duplicate delivery is safe. All heartbeat metrics use the `Maximum` statistic, so if a write produces more than one `ObjectCreated` event the datapoint is republished with the same timestamp and value rather than double-counted.
 
 ## Build
 
