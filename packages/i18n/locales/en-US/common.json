@@ -957,5 +957,16 @@
       "error": "Something went wrong",
       "deleting": "Deleting…"
     }
+  },
+  "dataTable": {
+    "noData": "No data returned",
+    "noResults": "No results",
+    "error": "Error loading data",
+    "totalRows": "Total rows",
+    "rowsPerPage": "Rows per page",
+    "page": "Page",
+    "pageOf": "of",
+    "previous": "Previous",
+    "next": "Next"
   }
 }

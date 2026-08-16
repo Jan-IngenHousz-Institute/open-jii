@@ -1,7 +1,7 @@
 import type { AccessorKeyColumnDef } from "@tanstack/react-table";
 import { describe, expect, it } from "vitest";
+import type { DataRow } from "~/components/data-table/data-table-columns";
 
-import type { DataRow } from "../../../../hooks/experiment/useExperimentData/useExperimentData";
 import { projectAndOrderColumns } from "./loaded-table-columns";
 
 function col(name: string, size?: number): AccessorKeyColumnDef<DataRow, unknown> {
