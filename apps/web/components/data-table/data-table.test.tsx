@@ -101,6 +101,91 @@ describe("DataTable", () => {
     expect(screen.getAllByLabelText("Select row")).toHaveLength(2);
   });
 
+  it("renders every row it is given when the caller does not page", () => {
+    const many: DataRow[] = Array.from({ length: 11 }, (_, index) => ({
+      id: `row-${String(index)}`,
+      measured_at: "2026-08-14T09:30:00.000Z",
+      phi2: index / 100,
+      notes: `reading ${String(index)}`,
+      envelope: "{}",
+    }));
+
+    render(<DataTable columns={COLUMNS} rows={many} />);
+
+    // An unpaged table with a paging model would stop at tanstack's default
+    // page size and hide the eleventh row.
+    expect(screen.getByText("reading 10")).toBeInTheDocument();
+  });
+
+  it("shows skeletons instead of rows while a page is in flight", () => {
+    const { container } = render(
+      <DataTable columns={COLUMNS} rows={ROWS} isLoading loadingRowCount={3} />,
+    );
+
+    expect(screen.queryByText("field run")).not.toBeInTheDocument();
+    expect(container.querySelectorAll("tbody tr")).toHaveLength(3);
+  });
+
+  it("reports header clicks on sortable columns to the caller", async () => {
+    const onSort = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        sorting={{ column: "phi2", direction: "ASC", onSort }}
+      />,
+    );
+
+    await user.click(screen.getByText("phi2"));
+
+    expect(onSort).toHaveBeenCalledWith("phi2", "DOUBLE");
+  });
+
+  it("marks the rows an error column flags", () => {
+    const failed: DataRow[] = [{ id: "row-3", phi2: 0.4, error_message: "sensor timeout" }];
+
+    const { container } = render(
+      <DataTable
+        columns={[...COLUMNS, { name: "error_message", type_name: "STRING", type_text: "STRING" }]}
+        rows={failed}
+        errorColumn="error_message"
+      />,
+    );
+
+    expect(container.querySelector("tbody tr")?.className).toContain("border-l-destructive");
+  });
+
+  it("toggles selection through the header and the row checkboxes", async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+
+    render(<DataTable columns={COLUMNS} rows={ROWS} selection={{ state: {}, onChange }} />);
+
+    await user.click(screen.getByLabelText("Select all"));
+    expect(onChange).toHaveBeenCalled();
+
+    onChange.mockClear();
+    await user.click(screen.getAllByLabelText("Select row")[0]);
+    expect(onChange).toHaveBeenCalled();
+  });
+
+  it("expands a JSON cell into its own row and collapses it again", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<DataTable columns={COLUMNS} rows={ROWS} />);
+    const bodyRows = () => container.querySelectorAll("tbody tr").length;
+
+    expect(bodyRows()).toBe(2);
+
+    // Re-queried each time: the row re-renders, so the earlier node is stale.
+    await user.click(screen.getAllByRole("button")[0]);
+    expect(bodyRows()).toBe(3);
+
+    await user.click(screen.getAllByRole("button")[0]);
+    expect(bodyRows()).toBe(2);
+  });
+
   it("renders the toolbar the surface passes in", () => {
     render(<DataTable columns={COLUMNS} rows={ROWS} toolbar={<p>filters go here</p>} />);
 
