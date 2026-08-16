@@ -3,7 +3,9 @@
 import { AvailabilityPanel } from "@/components/iot-devices/monitoring/availability-panel";
 import { BatteryPanel } from "@/components/iot-devices/monitoring/battery-panel";
 import { DataByExperiment } from "@/components/iot-devices/monitoring/data-by-experiment";
+import { buildDeviceActivity } from "@/components/iot-devices/monitoring/device-activity";
 import { EventLog } from "@/components/iot-devices/monitoring/event-log";
+import { MeasurementValuesTable } from "@/components/iot-devices/monitoring/measurement-values-table";
 import type {
   MonitoringPresetId,
   MonitoringRange,
@@ -13,7 +15,6 @@ import { MonitoringRangeControl } from "@/components/iot-devices/monitoring/moni
 import { MonitoringTiles } from "@/components/iot-devices/monitoring/monitoring-tiles";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { PayloadProfile } from "@/components/iot-devices/monitoring/payload-profile";
-import { RecentMeasurements } from "@/components/iot-devices/monitoring/recent-measurements";
 import { ThroughputPanel } from "@/components/iot-devices/monitoring/throughput-panel";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useDeviceMonitoring } from "@/hooks/iot/useDeviceMonitoring/useDeviceMonitoring";
@@ -152,6 +153,9 @@ export default function DeviceMonitoringPage() {
             <ThroughputPanel
               monitoring={monitoring}
               boundExperiments={boundExperiments ?? []}
+              visibleExperiments={visibleExperiments ?? []}
+              visibleProtocols={visibleProtocols ?? []}
+              locale={locale}
               from={selection.range.from}
               to={selection.range.to}
             />
@@ -182,12 +186,7 @@ export default function DeviceMonitoringPage() {
             title={t("iot.devices.monitoring.measurementsTitle")}
             description={t("iot.devices.monitoring.measurementsHint")}
           >
-            <RecentMeasurements
-              measurements={monitoring.recentMeasurements}
-              visibleExperiments={visibleExperiments ?? []}
-              visibleProtocols={visibleProtocols ?? []}
-              locale={locale}
-            />
+            <MeasurementValuesTable measurements={monitoring.recentMeasurements} />
           </PanelCard>
 
           {/* Families that never report battery get the log at full width
@@ -205,7 +204,14 @@ export default function DeviceMonitoringPage() {
             )}
 
             <PanelCard title={t("iot.devices.monitoring.eventLogTitle")}>
-              <EventLog events={monitoring.events} />
+              <EventLog
+                entries={buildDeviceActivity({
+                  monitoring,
+                  registeredAt: device?.createdAt,
+                  from: selection.range.from,
+                  to: selection.range.to,
+                })}
+              />
             </PanelCard>
           </div>
         </div>

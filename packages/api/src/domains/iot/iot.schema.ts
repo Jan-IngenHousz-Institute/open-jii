@@ -309,6 +309,8 @@ export const zDeviceMeasurement = z.object({
   battery: z.number().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
+  /** The reading itself, as stored JSON; its shape is device-defined. */
+  sample: z.string().nullable(),
 });
 
 /**

@@ -13906,6 +13906,16 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "sample": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -13916,7 +13926,8 @@
                           "deviceVersion",
                           "battery",
                           "latitude",
-                          "longitude"
+                          "longitude",
+                          "sample"
                         ]
                       }
                     }

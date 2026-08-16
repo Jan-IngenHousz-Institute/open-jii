@@ -42,8 +42,9 @@ describe("PayloadProfile", () => {
   it("reads coverage as a share of the measurements sent", () => {
     renderProfile(payload());
 
-    expect(screen.getByText("25% (50/200)")).toBeInTheDocument();
-    expect(screen.getByText("100% (200/200)")).toBeInTheDocument();
+    expect(screen.getByText("25%")).toBeInTheDocument();
+    expect(screen.getByText("50 / 200")).toBeInTheDocument();
+    expect(screen.getByText("200 / 200")).toBeInTheDocument();
   });
 
   it("labels the firmware breakdown as device-reported", () => {
@@ -65,11 +66,13 @@ describe("PayloadProfile", () => {
     );
   });
 
-  it("withholds the identity of a protocol the viewer cannot open", () => {
-    renderProfile(payload({ protocolMix: [{ protocolId: PROTOCOL_ID, count: 200 }] }));
+  it("calls an unresolvable protocol unknown and still shows the id the device sent", () => {
+    renderProfile(payload({ protocolMix: [{ protocolId: "1234", count: 200 }] }));
 
-    expect(screen.queryByText(PROTOCOL_ID)).not.toBeInTheDocument();
-    expect(screen.getByText("iot.devices.monitoring.privateProtocol")).toBeInTheDocument();
+    // Protocols are not access-controlled: an id the platform cannot resolve
+    // simply is not defined here.
+    expect(screen.getByText("iot.devices.monitoring.unknownProtocolId")).toBeInTheDocument();
+    expect(screen.getByText("1234")).toBeInTheDocument();
   });
 
   it("calls out measurements sent outside any workbook", () => {

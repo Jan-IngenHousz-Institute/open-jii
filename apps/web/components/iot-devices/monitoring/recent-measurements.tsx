@@ -54,7 +54,9 @@ export function RecentMeasurements({
     measurements.flatMap((row) => (row.protocolId === null ? [] : [row.protocolId])),
     visibleProtocols,
     (id) => `/${locale}/platform/protocols/${id}`,
-    (index) => t("iot.devices.monitoring.privateProtocol", { index }),
+    // Protocols are not access-controlled; an unresolvable id is one the
+    // platform does not define.
+    () => t("iot.devices.monitoring.unknownProtocolId"),
   );
 
   return (

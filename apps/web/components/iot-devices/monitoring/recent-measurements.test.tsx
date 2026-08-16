@@ -18,6 +18,7 @@ function measurement(overrides: Partial<DeviceMeasurement> = {}): DeviceMeasurem
     battery: 4.16,
     latitude: 51.9851,
     longitude: 5.6634,
+    sample: null,
     ...overrides,
   };
 }
@@ -42,7 +43,7 @@ describe("RecentMeasurements", () => {
     expect(screen.getByText("51.985, 5.663")).toBeInTheDocument();
   });
 
-  it("withholds identities the viewer cannot open", () => {
+  it("withholds an experiment the viewer cannot see, but names an undefined protocol", () => {
     render(
       <RecentMeasurements
         measurements={[measurement()]}
@@ -52,9 +53,11 @@ describe("RecentMeasurements", () => {
       />,
     );
 
+    // Experiments are access-controlled, so the id stays withheld; protocols
+    // are not, so an unresolvable one is simply not defined here.
     expect(screen.queryByText(EXPERIMENT_ID)).not.toBeInTheDocument();
     expect(screen.getByText("iot.devices.monitoring.privateExperiment")).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.monitoring.privateProtocol")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.unknownProtocolId")).toBeInTheDocument();
   });
 
   it("renders missing battery and location as dashes rather than blanks", () => {

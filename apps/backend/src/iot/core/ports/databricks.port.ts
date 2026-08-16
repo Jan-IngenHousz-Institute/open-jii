@@ -40,6 +40,7 @@ export interface DeviceMeasurementRow {
   battery: number | null;
   latitude: number | null;
   longitude: number | null;
+  sample: string | null;
 }
 
 /**

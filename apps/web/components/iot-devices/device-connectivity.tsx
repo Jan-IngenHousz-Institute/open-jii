@@ -5,9 +5,12 @@ import { formatRelativeTime } from "@/util/date";
 
 import type { DeviceConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+import { cn } from "@repo/ui/lib/utils";
 
 interface ConnectivityDotProps {
   connectivity: DeviceConnectivity | null;
+  /** Lets a caller scale the label, e.g. the monitoring metric tiles. */
+  className?: string;
 }
 
 /**
@@ -15,13 +18,13 @@ interface ConnectivityDotProps {
  * status badge: green = connected now, gray = offline, muted ring = unknown
  * (fleet index unavailable or still building).
  */
-export function ConnectivityDot({ connectivity }: ConnectivityDotProps) {
+export function ConnectivityDot({ connectivity, className }: ConnectivityDotProps) {
   const { t } = useTranslation("iot");
 
   if (connectivity === null) {
     return (
       <span
-        className="inline-flex items-center gap-1.5 text-xs text-[#68737B]"
+        className={cn("inline-flex items-center gap-1.5 text-xs text-[#68737B]", className)}
         title={t("iot.devices.connectivity.unknown")}
       >
         <span className="h-2 w-2 rounded-full border border-dashed border-[#CDD5DB]" />
@@ -32,7 +35,12 @@ export function ConnectivityDot({ connectivity }: ConnectivityDotProps) {
 
   if (connectivity.connected) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400",
+          className,
+        )}
+      >
         <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
         {t("iot.devices.connectivity.connected")}
       </span>
@@ -40,8 +48,8 @@ export function ConnectivityDot({ connectivity }: ConnectivityDotProps) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-[#68737B]">
-      <span className="h-2 w-2 rounded-full bg-[#CDD5DB]" />
+    <span className={cn("inline-flex items-center gap-1.5 text-xs text-[#68737B]", className)}>
+      <span className="h-2 w-2 shrink-0 rounded-full bg-[#CDD5DB]" />
       {t("iot.devices.connectivity.disconnected")}
     </span>
   );

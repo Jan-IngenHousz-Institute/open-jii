@@ -1,56 +1,64 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import type { DeviceLifecycleEvent } from "@repo/api/domains/iot/iot.schema";
-
+import type { ActivityEntry } from "./device-activity";
 import { EventLog } from "./event-log";
 
-function events(count: number): DeviceLifecycleEvent[] {
+function entries(count: number): ActivityEntry[] {
   return Array.from({ length: count }, (_, index) => ({
-    eventType: index % 2 === 0 ? "connected" : "disconnected",
-    eventTimestamp: new Date(Date.UTC(2026, 7, 13, 0, index)).toISOString(),
-    disconnectReason: index % 2 === 0 ? null : "CONNECTION_LOST",
-    sessionIdentifier: "s-1",
+    timestamp: new Date(Date.UTC(2026, 7, 13, 0, index)).toISOString(),
+    kind: index % 2 === 0 ? "connected" : "disconnected",
+    detail: index % 2 === 0 ? null : "CONNECTION_LOST",
   }));
 }
 
 describe("EventLog", () => {
-  it("renders the empty state without events", () => {
-    render(<EventLog events={[]} />);
+  it("renders the empty state without activity", () => {
+    render(<EventLog entries={[]} />);
 
     expect(screen.getByText("iot.devices.monitoring.noEvents")).toBeInTheDocument();
   });
 
-  it("shows newest first with a dash for reason-less connects", () => {
-    render(<EventLog events={events(2)} />);
+  it("labels each kind of activity, not only disconnects", () => {
+    render(
+      <EventLog
+        entries={[
+          { timestamp: "2026-08-13T03:00:00.000Z", kind: "firmwareChanged", detail: "1.0 → 1.1" },
+          { timestamp: "2026-08-13T02:00:00.000Z", kind: "registered", detail: null },
+          {
+            timestamp: "2026-08-13T01:00:00.000Z",
+            kind: "disconnected",
+            detail: "CONNECTION_LOST",
+          },
+        ]}
+      />,
+    );
 
-    const rows = screen.getAllByRole("row");
-    // Header row, then the disconnect (newest), then the connect.
-    expect(rows).toHaveLength(3);
-    expect(rows[1]).toHaveTextContent("CONNECTION_LOST");
-    expect(rows[2]).toHaveTextContent("-");
+    expect(screen.getByText("iot.devices.monitoring.activity.firmwareChanged")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.activity.registered")).toBeInTheDocument();
+    expect(screen.getByText("1.0 → 1.1")).toBeInTheDocument();
+    expect(screen.getByText("CONNECTION_LOST")).toBeInTheDocument();
   });
 
-  it("paginates past 25 events", async () => {
-    const user = userEvent.setup();
-    render(<EventLog events={events(26)} />);
+  it("shows a dash where an entry carries no detail", () => {
+    render(
+      <EventLog
+        entries={[{ timestamp: "2026-08-13T01:00:00.000Z", kind: "connected", detail: null }]}
+      />,
+    );
 
-    // 25 rows + header on page one, the remaining event on page two.
+    expect(screen.getByText("-")).toBeInTheDocument();
+  });
+
+  it("paginates past 25 entries and clamps the page when the list shrinks", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<EventLog entries={entries(26)} />);
+
     expect(screen.getAllByRole("row")).toHaveLength(26);
     await user.click(screen.getByRole("button", { name: "iot.devices.monitoring.next" }));
     expect(screen.getAllByRole("row")).toHaveLength(2);
-    await user.click(screen.getByRole("button", { name: "iot.devices.monitoring.previous" }));
-    expect(screen.getAllByRole("row")).toHaveLength(26);
-  });
 
-  it("clamps the page when the list shrinks under it", async () => {
-    const user = userEvent.setup();
-    const { rerender } = render(<EventLog events={events(26)} />);
-    await user.click(screen.getByRole("button", { name: "iot.devices.monitoring.next" }));
-
-    // A narrower range refetch leaves fewer events than the open page.
-    rerender(<EventLog events={events(3)} />);
-
+    rerender(<EventLog entries={entries(3)} />);
     expect(screen.getAllByRole("row")).toHaveLength(4);
   });
 });

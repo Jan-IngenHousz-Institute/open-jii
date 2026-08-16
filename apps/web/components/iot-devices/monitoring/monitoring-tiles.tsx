@@ -57,7 +57,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           <Skeleton className="h-4 w-24" />
         ) : (
           <div className="space-y-1">
-            <ConnectivityDot connectivity={device.connectivity} />
+            <ConnectivityDot connectivity={device.connectivity} className="text-xl font-semibold" />
             <p className="text-muted-foreground text-xs font-normal">
               {formatLastSeen(device.connectivity)}
             </p>
@@ -76,7 +76,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           <Skeleton className="h-4 w-24" />
         ) : (
           <div className="space-y-1">
-            <p>
+            <p className="text-2xl font-semibold">
               {lastDataAt === null || lastDataAt === undefined
                 ? t("iot.devices.monitoring.noData")
                 : formatRelativeTime(lastDataAt, locale)}
@@ -93,7 +93,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           <Skeleton className="h-4 w-16" />
         ) : (
           <div className="space-y-1">
-            <p className="tabular-nums">{total}</p>
+            <p className="text-2xl font-semibold tabular-nums">{total}</p>
             <p className="text-muted-foreground text-xs font-normal tabular-nums">
               {t("iot.devices.monitoring.perHour", { rate: perHour.toFixed(1) })}
             </p>
@@ -106,7 +106,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           <Skeleton className="h-4 w-16" />
         ) : (
           <div className="space-y-1">
-            <p className="tabular-nums">
+            <p className="text-2xl font-semibold tabular-nums">
               {monitoring.uptimePercent === null
                 ? t("iot.devices.monitoring.uptimeUnknown")
                 : `${monitoring.uptimePercent.toFixed(1)}%`}
@@ -125,7 +125,7 @@ function Tile({ label, children }: { label: string; children: React.ReactNode })
   return (
     <div className="rounded-lg border p-3">
       <p className="text-muted-foreground text-xs">{label}</p>
-      <div className="mt-1 text-sm font-medium">{children}</div>
+      <div className="mt-1.5 text-sm font-medium">{children}</div>
     </div>
   );
 }

@@ -9,23 +9,20 @@ import type {
 } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui/components/table";
 
 import { ChartTableToggle } from "./chart-table-toggle";
 import type { PanelView } from "./chart-table-toggle";
-import { bucketAxis, formatBucketLabel } from "./monitoring-buckets";
+import { bucketAxis } from "./monitoring-buckets";
 import { MONITORING_MAX_SERIES, MONITORING_SERIES_COLORS } from "./monitoring-palette";
+import { RecentMeasurements } from "./recent-measurements";
+import type { EntityAccess } from "./resolve-entity-label";
 
 interface ThroughputPanelProps {
   monitoring: DeviceMonitoring;
   boundExperiments: DeviceExperiment[];
+  visibleExperiments: EntityAccess[];
+  visibleProtocols: EntityAccess[];
+  locale: string;
   from: string;
   to: string;
 }
@@ -88,7 +85,15 @@ function buildSeries(
  * Measurements over the range, stacked per experiment. Zero-filled buckets
  * keep silent periods visible as real gaps instead of a compressed axis.
  */
-export function ThroughputPanel({ monitoring, boundExperiments, from, to }: ThroughputPanelProps) {
+export function ThroughputPanel({
+  monitoring,
+  boundExperiments,
+  visibleExperiments,
+  visibleProtocols,
+  locale,
+  from,
+  to,
+}: ThroughputPanelProps) {
   const { t } = useTranslation("iot");
   const [view, setView] = useState<PanelView>("chart");
 
@@ -137,34 +142,12 @@ export function ThroughputPanel({ monitoring, boundExperiments, from, to }: Thro
           />
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("iot.devices.monitoring.bucketColumn")}</TableHead>
-                {series.map((entry) => (
-                  <TableHead key={entry.key} className="text-right">
-                    {entry.name}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {axis.map((bucketStart, bucketIndex) => (
-                <TableRow key={bucketStart}>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {formatBucketLabel(bucketStart, monitoring.bucket)}
-                  </TableCell>
-                  {series.map((entry) => (
-                    <TableCell key={entry.key} className="text-right tabular-nums">
-                      {entry.counts[bucketIndex]}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <RecentMeasurements
+          measurements={monitoring.recentMeasurements}
+          visibleExperiments={visibleExperiments}
+          visibleProtocols={visibleProtocols}
+          locale={locale}
+        />
       )}
     </div>
   );

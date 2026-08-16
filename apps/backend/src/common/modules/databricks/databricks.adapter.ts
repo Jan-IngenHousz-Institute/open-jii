@@ -547,6 +547,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         "device_battery",
         "latitude",
         "longitude",
+        "sample",
       ],
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
@@ -569,6 +570,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         battery: this.toNumberOrNull(row[index.device_battery]),
         latitude: this.toNumberOrNull(row[index.latitude]),
         longitude: this.toNumberOrNull(row[index.longitude]),
+        // The decompressed reading, as the device sent it. Shape is
+        // device-defined, so it travels as the stored JSON text.
+        sample: row[index.sample] ?? null,
       })),
     );
   }

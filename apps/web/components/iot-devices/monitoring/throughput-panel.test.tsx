@@ -56,6 +56,9 @@ describe("ThroughputPanel", () => {
           })),
         )}
         boundExperiments={FIVE_EXPERIMENTS}
+        visibleExperiments={[]}
+        visibleProtocols={[]}
+        locale="en-US"
         from={FROM}
         to={TO}
       />,
@@ -71,6 +74,9 @@ describe("ThroughputPanel", () => {
       <ThroughputPanel
         monitoring={monitoringWith([{ bucketStart: FROM, experimentId: null, count: 3 }])}
         boundExperiments={[]}
+        visibleExperiments={[]}
+        visibleProtocols={[]}
+        locale="en-US"
         from={FROM}
         to={TO}
       />,
@@ -80,14 +86,32 @@ describe("ThroughputPanel", () => {
     expect(seriesNames).toEqual(["iot.devices.monitoring.unknownExperiment"]);
   });
 
-  it("offers the zero-filled table as the chart's accessible counterpart", async () => {
+  it("offers the row-level record as the chart's counterpart", async () => {
     const user = userEvent.setup();
     render(
       <ThroughputPanel
-        monitoring={monitoringWith([
-          { bucketStart: "2026-08-13T01:00:00.000Z", experimentId: null, count: 3 },
-        ])}
+        monitoring={{
+          ...monitoringWith([
+            { bucketStart: "2026-08-13T01:00:00.000Z", experimentId: null, count: 3 },
+          ]),
+          recentMeasurements: [
+            {
+              timestamp: "2026-08-13T01:05:00.000Z",
+              experimentId: null,
+              protocolId: null,
+              workbookVersionId: null,
+              deviceVersion: "1.1.0",
+              battery: 4.16,
+              latitude: null,
+              longitude: null,
+              sample: null,
+            },
+          ],
+        }}
         boundExperiments={[]}
+        visibleExperiments={[]}
+        visibleProtocols={[]}
+        locale="en-US"
         from={FROM}
         to={TO}
       />,
@@ -95,8 +119,8 @@ describe("ThroughputPanel", () => {
 
     await user.click(screen.getByRole("radio", { name: "iot.devices.monitoring.viewTable" }));
 
-    // Header plus one row per bucket in the range, silent buckets included.
-    expect(screen.getAllByRole("row")).toHaveLength(4);
-    expect(screen.getByText("3")).toBeInTheDocument();
+    // The rows behind the bars, not a restatement of the bars themselves.
+    expect(screen.getByText("iot.devices.monitoring.measuredAt")).toBeInTheDocument();
+    expect(screen.getByText("4.16")).toBeInTheDocument();
   });
 });

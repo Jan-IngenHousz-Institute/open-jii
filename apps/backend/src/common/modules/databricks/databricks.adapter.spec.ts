@@ -1206,6 +1206,7 @@ describe("DatabricksAdapter", () => {
           "device_battery",
           "latitude",
           "longitude",
+          "sample",
         ],
         [
           [
@@ -1217,8 +1218,9 @@ describe("DatabricksAdapter", () => {
             "4.16",
             "51.98",
             "5.66",
+            '[{"phi2":0.61}]',
           ],
-          ["2026-08-15T08:00:00.000Z", null, null, null, null, null, null, null],
+          ["2026-08-15T08:00:00.000Z", null, null, null, null, null, null, null, null],
         ],
       );
 
@@ -1239,6 +1241,7 @@ describe("DatabricksAdapter", () => {
         battery: 4.16,
         latitude: 51.98,
         longitude: 5.66,
+        sample: '[{"phi2":0.61}]',
       });
       expect(result.value[1].battery).toBeNull();
       expect(result.value[1].latitude).toBeNull();

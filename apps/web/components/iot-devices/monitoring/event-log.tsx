@@ -1,9 +1,10 @@
 "use client";
 
+import { format } from "date-fns";
 import { useState } from "react";
 
-import type { DeviceLifecycleEvent } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import {
   Table,
@@ -14,21 +15,30 @@ import {
   TableRow,
 } from "@repo/ui/components/table";
 
+import type { ActivityEntry, ActivityKind } from "./device-activity";
+
 const PAGE_SIZE = 25;
 
+const KIND_VARIANT: Record<ActivityKind, "default" | "secondary" | "outline"> = {
+  connected: "default",
+  disconnected: "secondary",
+  firmwareChanged: "outline",
+  registered: "outline",
+};
+
 interface EventLogProps {
-  events: DeviceLifecycleEvent[];
+  entries: ActivityEntry[];
 }
 
 /**
- * The raw connectivity record, newest first. The session strip shows the
- * shape; this is the evidence, disconnect reasons included.
+ * The device's activity record: broker connections, firmware transitions seen
+ * in the data, and registration. The evidence behind everything above it.
  */
-export function EventLog({ events }: EventLogProps) {
+export function EventLog({ entries }: EventLogProps) {
   const { t } = useTranslation("iot");
   const [page, setPage] = useState(1);
 
-  if (events.length === 0) {
+  if (entries.length === 0) {
     return (
       <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
         {t("iot.devices.monitoring.noEvents")}
@@ -36,34 +46,35 @@ export function EventLog({ events }: EventLogProps) {
     );
   }
 
-  const newestFirst = [...events].reverse();
-  const totalPages = Math.max(1, Math.ceil(newestFirst.length / PAGE_SIZE));
-  // The event list shrinks when the range narrows; the page must follow.
+  const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
+  // The list shrinks when the range narrows; the page must follow.
   const currentPage = Math.min(page, totalPages);
-  const pageEvents = newestFirst.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageEntries = entries.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="max-h-96 overflow-auto rounded-lg border">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-background sticky top-0">
             <TableRow>
               <TableHead>{t("iot.devices.monitoring.eventTime")}</TableHead>
               <TableHead>{t("iot.devices.monitoring.eventType")}</TableHead>
-              <TableHead>{t("iot.devices.monitoring.eventReason")}</TableHead>
+              <TableHead>{t("iot.devices.monitoring.eventDetail")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pageEvents.map((event, index) => (
-              <TableRow key={`${event.eventTimestamp}-${event.eventType}-${String(index)}`}>
+            {pageEntries.map((entry, position) => (
+              <TableRow key={`${entry.timestamp}-${entry.kind}-${String(position)}`}>
                 <TableCell className="whitespace-nowrap text-xs tabular-nums">
-                  {event.eventTimestamp.substring(0, 19).replace("T", " ")}
+                  {format(new Date(entry.timestamp), "MMM d HH:mm:ss")}
                 </TableCell>
                 <TableCell className="text-xs">
-                  {t(`iot.devices.connectivity.${event.eventType}`)}
+                  <Badge variant={KIND_VARIANT[entry.kind]} className="font-normal">
+                    {t(`iot.devices.monitoring.activity.${entry.kind}`)}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground font-mono text-xs">
-                  {event.disconnectReason ?? "-"}
+                  {entry.detail ?? "-"}
                 </TableCell>
               </TableRow>
             ))}

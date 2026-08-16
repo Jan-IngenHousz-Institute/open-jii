@@ -6,22 +6,21 @@ import { Progress } from "@repo/ui/components/progress";
 
 import { EntityLink } from "./entity-link";
 import { MONITORING_SERIES_COLORS } from "./monitoring-palette";
-import type { EntityAccess } from "./resolve-entity-label";
+import type { EntityAccess, ResolvedEntity } from "./resolve-entity-label";
 import { resolveEntities } from "./resolve-entity-label";
 
 interface PayloadProfileProps {
   payload: DevicePayloadStats;
-  /** Entities the viewer may open; anything else stays unnamed. */
+  /** Entities the viewer may open; the rest are simply not defined here. */
   visibleProtocols: EntityAccess[];
   visibleWorkbooks: EntityAccess[];
   locale: string;
 }
 
 /**
- * What the device's payloads carried: how often the optional channels were
- * populated, and which firmware, protocols and workbooks produced the
- * measurements. Every referenced entity resolves to a name and a link when the
- * viewer can open it.
+ * What the device's payloads carried: the headline counts, how often the
+ * optional channels were populated, and which firmware, protocols and
+ * workbooks produced the measurements.
  */
 export function PayloadProfile({
   payload,
@@ -40,11 +39,13 @@ export function PayloadProfile({
     );
   }
 
+  // An id the platform cannot resolve belongs to no protocol or workbook it
+  // knows: unknown, not withheld.
   const protocolEntities = resolveEntities(
     payload.protocolMix.flatMap((entry) => (entry.protocolId === null ? [] : [entry.protocolId])),
     visibleProtocols,
     (id) => `/${locale}/platform/protocols/${id}`,
-    (index) => t("iot.devices.monitoring.privateProtocol", { index }),
+    () => t("iot.devices.monitoring.unknownProtocolId"),
   );
   const workbookEntities = resolveEntities(
     payload.workbookMix.flatMap((entry) =>
@@ -52,33 +53,30 @@ export function PayloadProfile({
     ),
     visibleWorkbooks,
     (id) => `/${locale}/platform/workbooks/${id}`,
-    (index) => t("iot.devices.monitoring.privateWorkbook", { index }),
+    () => t("iot.devices.monitoring.unknownWorkbookId"),
   );
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div className="space-y-3">
-          <p className="text-xs font-medium">{t("iot.devices.monitoring.coverage")}</p>
-          <CoverageMeter
-            label={t("iot.devices.monitoring.gpsCoverage")}
-            covered={payload.withGps}
-            total={total}
-          />
-          <CoverageMeter
-            label={t("iot.devices.monitoring.batteryCoverage")}
-            covered={payload.withBattery}
-            total={total}
-          />
-        </div>
+      <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Figure label={t("iot.devices.monitoring.measurements")} value={String(total)} />
+        <Figure
+          label={t("iot.devices.monitoring.workbookRuns")}
+          value={String(payload.workbookRuns)}
+        />
+        <Coverage
+          label={t("iot.devices.monitoring.gpsCoverage")}
+          covered={payload.withGps}
+          total={total}
+        />
+        <Coverage
+          label={t("iot.devices.monitoring.batteryCoverage")}
+          covered={payload.withBattery}
+          total={total}
+        />
+      </dl>
 
-        <dl className="grid grid-cols-2 gap-3 self-start">
-          <Figure label={t("iot.devices.monitoring.measurements")} value={total} />
-          <Figure label={t("iot.devices.monitoring.workbookRuns")} value={payload.workbookRuns} />
-        </dl>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 border-t pt-6 lg:grid-cols-3">
         <Breakdown
           title={t("iot.devices.monitoring.firmwareVersions")}
           hint={t("iot.devices.monitoring.asReported")}
@@ -101,23 +99,13 @@ export function PayloadProfile({
           rows={payload.protocolMix.map((entry) => ({
             key: entry.protocolId ?? "unknown",
             count: entry.count,
-            node:
-              entry.protocolId === null ? (
-                <span className="text-muted-foreground italic">
-                  {t("iot.devices.monitoring.unknownProtocol")}
-                </span>
-              ) : (
-                <EntityLink
-                  entity={
-                    protocolEntities.get(entry.protocolId) ?? {
-                      id: entry.protocolId,
-                      label: t("iot.devices.monitoring.unknownProtocol"),
-                      href: null,
-                      accessible: false,
-                    }
-                  }
-                />
-              ),
+            node: (
+              <UnresolvedAware
+                id={entry.protocolId}
+                resolved={protocolEntities}
+                fallback={t("iot.devices.monitoring.unknownProtocolId")}
+              />
+            ),
           }))}
         />
 
@@ -133,15 +121,10 @@ export function PayloadProfile({
                   {t("iot.devices.monitoring.noWorkbook")}
                 </span>
               ) : (
-                <EntityLink
-                  entity={
-                    workbookEntities.get(entry.workbookVersionId) ?? {
-                      id: entry.workbookVersionId,
-                      label: t("iot.devices.monitoring.unknownWorkbook"),
-                      href: null,
-                      accessible: false,
-                    }
-                  }
+                <UnresolvedAware
+                  id={entry.workbookVersionId}
+                  resolved={workbookEntities}
+                  fallback={t("iot.devices.monitoring.unknownWorkbookId")}
                 />
               ),
           }))}
@@ -149,6 +132,29 @@ export function PayloadProfile({
       </div>
     </div>
   );
+}
+
+/** Resolved entities link; unresolved ids name what they are and show the id. */
+function UnresolvedAware({
+  id,
+  resolved,
+  fallback,
+}: {
+  id: string | null;
+  resolved: Map<string, ResolvedEntity>;
+  fallback: string;
+}) {
+  const entity = id === null ? undefined : resolved.get(id);
+  if (entity === undefined || !entity.accessible) {
+    return (
+      <span className="text-muted-foreground">
+        {fallback}
+        {id !== null && <span className="ml-1 font-mono text-[11px]">{id}</span>}
+      </span>
+    );
+  }
+
+  return <EntityLink entity={entity} />;
 }
 
 interface BreakdownRow {
@@ -171,7 +177,7 @@ function Breakdown({
   const { t } = useTranslation("iot");
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div>
         <p className="text-xs font-medium">{title}</p>
         {hint !== undefined && <p className="text-muted-foreground text-xs">{hint}</p>}
@@ -179,10 +185,10 @@ function Breakdown({
       {rows.length === 0 || total === 0 ? (
         <p className="text-muted-foreground text-xs">{t("iot.devices.monitoring.noBreakdown")}</p>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {rows.map((row, index) => (
             <li key={row.key} className="space-y-1 text-xs">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-baseline justify-between gap-2">
                 <span className="min-w-0 truncate">{row.node}</span>
                 <span className="text-muted-foreground shrink-0 tabular-nums">
                   {`${((row.count / total) * 100).toFixed(0)}%`}
@@ -206,35 +212,28 @@ function Breakdown({
   );
 }
 
-function CoverageMeter({
-  label,
-  covered,
-  total,
-}: {
-  label: string;
-  covered: number;
-  total: number;
-}) {
+function Coverage({ label, covered, total }: { label: string; covered: number; total: number }) {
   const percent = (covered / total) * 100;
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-baseline justify-between text-xs">
-        <span>{label}</span>
-        <span className="text-muted-foreground tabular-nums">
-          {`${percent.toFixed(0)}% (${String(covered)}/${String(total)})`}
+    <div className="space-y-1.5">
+      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dd className="space-y-1.5">
+        <span className="block text-2xl font-semibold tabular-nums">{`${percent.toFixed(0)}%`}</span>
+        <Progress value={percent} className="h-1.5" />
+        <span className="text-muted-foreground block text-xs tabular-nums">
+          {`${String(covered)} / ${String(total)}`}
         </span>
-      </div>
-      <Progress value={percent} className="h-1.5" />
+      </dd>
     </div>
   );
 }
 
-function Figure({ label, value }: { label: string; value: number }) {
+function Figure({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="space-y-1.5">
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="text-lg font-medium tabular-nums">{value}</dd>
+      <dd className="text-2xl font-semibold tabular-nums">{value}</dd>
     </div>
   );
 }
