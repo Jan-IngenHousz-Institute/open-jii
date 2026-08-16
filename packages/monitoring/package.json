@@ -1,0 +1,39 @@
+{
+  "name": "@repo/monitoring",
+  "version": "0.0.1",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "private": true,
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json --verbose",
+    "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "dev": "tsc --build tsconfig.build.json --watch",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "js-yaml": "^4.3.1"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:testing",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:testing"
+  }
+}

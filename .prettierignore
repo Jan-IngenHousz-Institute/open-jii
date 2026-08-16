@@ -8,3 +8,6 @@ apps/docs/.source/
 
 # Auto-generated from packages/api during the docs build; drift-checked verbatim in CI.
 apps/docs/openapi.json
+
+# Compiled @repo/monitoring output copied into the lambda bundles at build time.
+infrastructure/modules/monitoring/*/lambda/lib/

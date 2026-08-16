@@ -7,12 +7,17 @@ Lambda that composes the platform heartbeat digests from `docs/monitoring/metric
 
 With empty webhook variables the Lambda logs the rendered digest instead of posting, so it deploys safely before the Slack channels exist.
 
+## Where the code lives
+
+`index.js` here is the handler only: CloudWatch queries, Slack delivery, scheduling. Every decision it makes (catalog parsing, placeholder resolution, baselines, anomaly evaluation, rendering) lives in **`packages/monitoring`**, which is a normal workspace package with vitest coverage and is gated by CI like any other package.
+
 ## Build
 
-`function.zip` is committed, like the metrics-publisher module. After changing `index.js` or `docs/monitoring/metrics-catalog.yaml`, rebuild and commit:
+`function.zip` is committed, like the metrics-publisher module, so Terraform stays authoritative and a fresh checkout can plan. Rebuild and commit it after changing the handler, `packages/monitoring`, or `docs/monitoring/metrics-catalog.yaml`:
 
 ```bash
-cd lambda && npm run build
+pnpm turbo run build --filter=@repo/monitoring   # refresh dist/ first
+cd infrastructure/modules/monitoring/digest-composer/lambda && npm run build
 ```
 
-The build copies the catalog into the zip; an un-rebuilt zip serves the stale catalog.
+The build copies the catalog and the compiled package into the zip; skipping the first step ships a stale `lib/`.

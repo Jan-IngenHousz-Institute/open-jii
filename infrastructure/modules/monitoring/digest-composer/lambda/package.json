@@ -5,9 +5,8 @@
   "description": "Composes heartbeat/usage digests from the metrics catalog and posts them to Slack",
   "main": "index.js",
   "scripts": {
-    "sync-catalog": "cp ../../../../../docs/monitoring/metrics-catalog.yaml ./catalog.yaml",
-    "zip": "zip -Xr function.zip index.js catalog.yaml package.json node_modules > /dev/null",
-    "build": "npm run sync-catalog && npm ci --omit=dev && npm run zip"
+    "sync": "cp ../../../../../docs/monitoring/metrics-catalog.yaml ./catalog.yaml && rm -rf ./lib && cp -R ../../../../../packages/monitoring/dist ./lib",
+    "build": "npm run sync && npm ci --omit=dev && zip -Xr function.zip index.js catalog.yaml package.json lib node_modules > /dev/null"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.0.0",
