@@ -20,7 +20,6 @@ import {
   resetFlowState,
   retryIterationState,
   returnToOverviewState,
-  startNewIterationState,
 } from "~/features/measurement-flow/domain/flow-transitions";
 import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
@@ -50,7 +49,6 @@ interface MeasurementFlowStore extends FlowState {
   incrementBranchVisit: (nodeId: string) => void;
   recordBranchJump: (landing: number) => void;
   resetFlow: () => void;
-  startNewIteration: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
   // producerCellId records which cell (protocol or command) yielded the result;
@@ -144,8 +142,6 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       recordBranchJump: (landing) => set((state) => recordBranchJumpState(state, landing)),
 
       resetFlow: () => set({ ...resetFlowState(), iterationAnchor: undefined }),
-
-      startNewIteration: () => set(startNewIterationState),
 
       retryCurrentIteration: () => set(retryIterationState()),
 

@@ -216,20 +216,6 @@ export function resetFlowState(): Partial<FlowState> {
   return { ...initialFlowState };
 }
 
-export function startNewIterationState(state: FlowState): Partial<FlowState> {
-  return {
-    currentFlowStep: 0,
-    iterationCount: state.iterationCount + 1,
-    isQuestionsSubmitPending: false,
-    scanResult: undefined,
-    scanResults: undefined,
-    producerCellId: undefined,
-    cellOutputs: {},
-    isFromOverview: false,
-    ...clearedBranchIteration,
-  };
-}
-
 export function retryIterationState(): Partial<FlowState> {
   return {
     currentFlowStep: 0,

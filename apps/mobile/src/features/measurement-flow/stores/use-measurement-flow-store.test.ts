@@ -512,23 +512,21 @@ describe("useMeasurementFlowStore", () => {
       expect(state.branchReturnStack).toEqual([]);
     });
 
-    it.each([
-      "startNewIteration",
-      "retryCurrentIteration",
-      "resetFlow",
-      "dismissQuestionsSubmit",
-    ] as const)("%s clears branch visit counts, matched path and return stack", (action) => {
-      useMeasurementFlowStore.setState({
-        branchVisitCounts: { b1: 4 },
-        lastMatchedPath: { label: "x", color: "#000" },
-        branchReturnStack: [{ landing: 3, step: 0 }],
-      });
-      useMeasurementFlowStore.getState()[action]();
-      const state = useMeasurementFlowStore.getState();
-      expect(state.branchVisitCounts).toEqual({});
-      expect(state.lastMatchedPath).toBeUndefined();
-      expect(state.branchReturnStack).toEqual([]);
-    });
+    it.each(["retryCurrentIteration", "resetFlow", "dismissQuestionsSubmit"] as const)(
+      "%s clears branch visit counts, matched path and return stack",
+      (action) => {
+        useMeasurementFlowStore.setState({
+          branchVisitCounts: { b1: 4 },
+          lastMatchedPath: { label: "x", color: "#000" },
+          branchReturnStack: [{ landing: 3, step: 0 }],
+        });
+        useMeasurementFlowStore.getState()[action]();
+        const state = useMeasurementFlowStore.getState();
+        expect(state.branchVisitCounts).toEqual({});
+        expect(state.lastMatchedPath).toBeUndefined();
+        expect(state.branchReturnStack).toEqual([]);
+      },
+    );
 
     it("nextStep clears branch state when an iteration wraps", () => {
       useMeasurementFlowStore.setState({
@@ -591,7 +589,7 @@ describe("useMeasurementFlowStore", () => {
       expect(state.consumedNodeIds).toEqual([]);
     });
 
-    it.each(["startNewIteration", "retryCurrentIteration", "resetFlow"] as const)(
+    it.each(["retryCurrentIteration", "resetFlow"] as const)(
       "%s clears the plan and consumed targets",
       (action) => {
         useMeasurementFlowStore.getState().setDevicePlan(plan, ["m2"]);
