@@ -53,14 +53,12 @@ export function HomeDeviceCard() {
     subtitle = secondary.join(" · ");
   } else if (lastConnectedDevice) {
     const presentation = presentMobileDevice(lastConnectedDevice);
+    // An unnamed device already leads with its stable identifier as the
+    // primary label, so the subtitle carries no duplicating ID.
     title = t("device.reconnectTitle", {
       name: mobileDevicePrimaryLabel(presentation, tConnection("identity.unknownDevice")),
     });
-    const identifier =
-      presentation.provenance === "fallback" && presentation.id
-        ? tConnection("identity.identifier", { id: presentation.id })
-        : undefined;
-    subtitle = [t("device.reconnectSub"), identifier].filter(Boolean).join(" · ");
+    subtitle = t("device.reconnectSub");
   } else {
     title = t("device.disconnectedTitle");
     subtitle = t("device.disconnectedSub");

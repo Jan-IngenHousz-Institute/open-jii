@@ -16,13 +16,20 @@ describe("device-presentation", () => {
       expect(result.id).toBe("sn-1");
     });
 
-    it("falls back to the canonical product name when there is no usable name", () => {
+    it("falls back to the stable identifier when there is no usable name", () => {
       const result = presentDevice({ family: "ambit", id: "sn-2" });
-      expect(result.primary).toBe("Ambit");
-      expect(result.provenance).toBe("product");
+      expect(result.primary).toBe("sn-2");
+      expect(result.provenance).toBe("id");
+      // Product context stays available as secondary data alongside the id.
       expect(result.productName).toBe("Ambit");
       expect(result.productId).toBe("ambit");
       expect(result.id).toBe("sn-2");
+    });
+
+    it("falls back to the canonical product name when there is no name and no id", () => {
+      const result = presentDevice({ family: "ambit" });
+      expect(result.primary).toBe("Ambit");
+      expect(result.provenance).toBe("product");
     });
 
     it("treats a blank or whitespace name as unusable", () => {
@@ -39,17 +46,17 @@ describe("device-presentation", () => {
   });
 
   describe("unknown-device fallback", () => {
-    it("returns the unknown-device token for an unknown/foreign family with no name", () => {
+    it("shows the identifier for an unknown/foreign family carrying one", () => {
       const result = presentDevice({ family: "thermometer", id: "sn-3" });
-      expect(result.primary).toBe(UNKNOWN_DEVICE);
-      expect(result.provenance).toBe("fallback");
+      expect(result.primary).toBe("sn-3");
+      expect(result.provenance).toBe("id");
       expect(result.productName).toBeNull();
       expect(result.productId).toBeNull();
       expect(result.id).toBe("sn-3");
     });
 
-    it("returns the unknown-device token for the generic family with no name", () => {
-      const result = presentDevice({ family: "generic", id: "sn-4" });
+    it("returns the unknown-device token for an unknown family with no name and no id", () => {
+      const result = presentDevice({ family: "thermometer" });
       expect(result.primary).toBe(UNKNOWN_DEVICE);
       expect(result.provenance).toBe("fallback");
       expect(result.productName).toBeNull();
@@ -72,14 +79,18 @@ describe("device-presentation", () => {
   });
 
   describe("identifier-only data", () => {
-    it("keeps the stable identifier as secondary/fallback context", () => {
+    it("promotes the stable identifier to primary when nothing else identifies the device", () => {
       const result = presentDevice({ id: "AA:BB:CC" });
-      expect(result.primary).toBe(UNKNOWN_DEVICE);
+      expect(result.primary).toBe("AA:BB:CC");
+      expect(result.provenance).toBe("id");
       expect(result.id).toBe("AA:BB:CC");
     });
 
-    it("drops a blank identifier to null", () => {
-      expect(presentDevice({ family: "ambit", id: "  " }).id).toBeNull();
+    it("drops a blank identifier to null and falls through to the product name", () => {
+      const result = presentDevice({ family: "ambit", id: "  " });
+      expect(result.id).toBeNull();
+      expect(result.primary).toBe("Ambit");
+      expect(result.provenance).toBe("product");
     });
   });
 

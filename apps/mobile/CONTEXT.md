@@ -26,7 +26,7 @@ The MQTT destination string that routes a Measurement to the correct AWS IoT rul
 
 ### Workbook run
 
-N Measurements produced by one Multi-scan round, correlated only by a shared `workbook_run_id` (one uuid per round) embedded in each otherwise-ordinary wire payload. There is no run entity locally or server-side — an unlinked measurement simply has no `workbook_run_id`. There is no batched publish either; the Outbox still sends N independent messages.
+Every upload made from a workbook flow carries a `workbook_run_id`. One UUID identifies one complete workbook attempt, so sequential measurement nodes and every device result in a Multi-scan round share it until the flow starts its next iteration. Retrying or revisiting a step keeps the current run ID and can produce multiple rows for the same position; `(workbook_run_id, macro_id)` is therefore not a unique key. There is no run entity locally or server-side and no batched publish; the Outbox still sends independent messages whose shared ID provides the correlation.
 
 ---
 

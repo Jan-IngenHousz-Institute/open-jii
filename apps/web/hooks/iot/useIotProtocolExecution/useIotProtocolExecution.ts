@@ -37,18 +37,11 @@ export async function executeProtocolWithDriver(
   sensorFamily: SensorFamily,
   protocolCode: Record<string, unknown>[],
 ): Promise<unknown> {
-  if (sensorFamily === "multispeq" || sensorFamily === "minipar") {
-    // MultispeQ + MiniPAR: send the protocol JSON array directly; the device
+  if (sensorFamily === "multispeq" || sensorFamily === "minipar" || sensorFamily === "ambit") {
+    // MultispeQ + MiniPAR + Ambit: send the protocol JSON directly; the device
     // runs the measurement and replies one envelope.
     const result = await driver.execute(protocolCode);
     return parseResponseData(unwrap(result, "Protocol execution failed"));
-  }
-
-  if (sensorFamily === "ambit") {
-    // Ambit measures via its Ambyte gateway; a direct session is command/response.
-    throw new Error(
-      "Ambit devices do not run protocol cells over a direct connection. Use a command cell instead.",
-    );
   }
 
   // Generic: load config → run → retrieve data

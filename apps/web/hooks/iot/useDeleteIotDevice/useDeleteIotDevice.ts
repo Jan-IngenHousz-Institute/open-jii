@@ -13,6 +13,11 @@ export const useDeleteIotDevice = (props: DeleteIotDeviceProps = {}) => {
       onSettled: async () => {
         await queryClient.invalidateQueries({ queryKey: orpc.iot.listIotDevices.key() });
         await queryClient.invalidateQueries({ queryKey: orpc.iot.getIotDevice.key() });
+        // Deleting a device cascades its experiment bindings away.
+        await queryClient.invalidateQueries({
+          queryKey: orpc.experiments.listExperimentDevices.key(),
+        });
+        await queryClient.invalidateQueries({ queryKey: orpc.iot.listDeviceExperiments.key() });
       },
       onSuccess: () => {
         props.onSuccess?.();

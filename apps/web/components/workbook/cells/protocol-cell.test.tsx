@@ -2,7 +2,7 @@ import { __resetProtocolCodeRegistry, getLiveProtocolCode } from "@/lib/protocol
 import { createProtocol, createProtocolDetail, readOnlyCapabilities } from "@/test/factories";
 import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { http, HttpResponse } from "msw";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -196,7 +196,6 @@ describe("ProtocolCellComponent", () => {
   });
 
   it("debounces and persists protocol code edits when a user with update capability types valid JSON", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.protocols.getProtocol, {
       body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
@@ -204,7 +203,7 @@ describe("ProtocolCellComponent", () => {
       body: createProtocol({ id: "p1" }),
     });
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     render(
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
     );
@@ -212,10 +211,8 @@ describe("ProtocolCellComponent", () => {
     await waitFor(() => expect(screen.getByTestId("simulate-change")).toBeInTheDocument());
     await user.click(screen.getByTestId("simulate-change"));
 
-    await vi.advanceTimersByTimeAsync(1100);
-    await waitFor(() => expect(updateSpy.called).toBe(true));
+    await waitFor(() => expect(updateSpy.called).toBe(true), { timeout: 3000 });
     expect(updateSpy.body).toEqual({ code: [{ measurement: "new", duration: 10 }] });
-    vi.useRealTimers();
   });
 
   it("notifies the host after a successful save so the experiment can re-pin", async () => {
@@ -306,6 +303,95 @@ describe("ProtocolCellComponent", () => {
     await vi.advanceTimersByTimeAsync(1500);
 
     expect(updateSpy.called).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("reflows the code without persisting when the format is toggled", async () => {
+    // Layout is not content: autosave keys off the parsed protocol, so switching
+    // between compact and expanded must not write to the server.
+    localStorage.clear();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light", duration: 5 }] }),
+    });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("json-format-toggle")).toBeEnabled());
+    const before = screen.getByTestId("code-editor").textContent;
+
+    await user.click(screen.getByTestId("json-format-toggle"));
+    await vi.advanceTimersByTimeAsync(1500);
+
+    const after = screen.getByTestId("code-editor").textContent;
+    expect(after).not.toBe(before);
+    expect(JSON.parse(after)).toEqual(JSON.parse(before));
+    expect(updateSpy.called).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("reflows an already-seeded cell when the preference changes elsewhere", async () => {
+    // localCode shadows the server copy once seeded, so without this the header
+    // icon would flip while the document kept the old layout.
+    localStorage.clear();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light", duration: 5 }] }),
+    });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
+
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+    await waitFor(() => expect(screen.getByTestId("json-format-toggle")).toBeEnabled());
+    const before = screen.getByTestId("code-editor").textContent;
+
+    // Another mounted instance (or another tab) switches the preference.
+    act(() => {
+      localStorage.setItem("openjii.json-format-style", "expanded");
+      window.dispatchEvent(new CustomEvent("openjii:json-format-style", { detail: "expanded" }));
+    });
+    await vi.advanceTimersByTimeAsync(1500);
+
+    const after = screen.getByTestId("code-editor").textContent;
+    expect(after).not.toBe(before);
+    expect(JSON.parse(after)).toEqual(JSON.parse(before));
+    expect(updateSpy.called).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("still persists a real edit made after the format was toggled", async () => {
+    localStorage.clear();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light", duration: 5 }] }),
+    });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("json-format-toggle")).toBeEnabled());
+    await user.click(screen.getByTestId("json-format-toggle"));
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(updateSpy.called).toBe(false);
+
+    await user.click(screen.getByTestId("simulate-change"));
+    await vi.advanceTimersByTimeAsync(1500);
+
+    await waitFor(() => expect(updateSpy.called).toBe(true));
     vi.useRealTimers();
   });
 

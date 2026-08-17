@@ -35,4 +35,5 @@ export interface AwsPort {
   detachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>>;
   attachDevicePolicies(certificateArn: string): Promise<Result<void>>;
   setCertificateStatus(certificateId: string, status: CertificateStatus): Promise<Result<void>>;
+  getIotDataEndpoint(): Promise<Result<string>>;
 }

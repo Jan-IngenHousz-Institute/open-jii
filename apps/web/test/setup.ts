@@ -12,6 +12,14 @@ afterEach(() => {
   server.resetHandlers();
   cleanup();
   vi.clearAllMocks();
+  // `isolate: false` shares one jsdom, so stored preferences (the JSON format
+  // style, the sidebar) survive into later files and silently change what they
+  // render. Whoever runs first would otherwise decide the rest of the suite.
+  try {
+    window.localStorage.clear();
+  } catch {
+    // Storage can be unavailable; nothing to reset then.
+  }
 });
 
 afterAll(() => {

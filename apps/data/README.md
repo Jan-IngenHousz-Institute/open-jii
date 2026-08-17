@@ -24,7 +24,7 @@ pyproject.toml                   # uv workspace root, ruff / pyright / pytest co
 
 - **uv**: Python toolchain. Install with `brew install uv` or `curl -LsSf https://astral.sh/uv/install.sh | sh`.
 - **Databricks CLI**: for `databricks bundle …` commands.
-- **Java 11+**: required by the local PySpark used in tests.
+- **Java 17 or 21**: required by the local PySpark 4 test runtime.
 
 ## Setup
 

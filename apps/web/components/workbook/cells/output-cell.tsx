@@ -1,7 +1,10 @@
 "use client";
 
+import { JsonFormatToggle } from "@/components/shared/json-format-toggle";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useJsonFormatStyle } from "@/hooks/useJsonFormatStyle";
+import { formatJson } from "@/lib/json-format";
 import { isMultispeqOutput } from "@/lib/multispeq/detect";
 import {
   AlertCircle,
@@ -14,7 +17,7 @@ import {
   Info,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { presentDevice, resolveDevicePrimaryLabel } from "~/util/device-presentation";
 
 import type {
@@ -97,6 +100,10 @@ function DataTabs({
   protocolLoading?: boolean;
 }) {
   const { t } = useTranslation("workbook");
+  const { style, toggleStyle } = useJsonFormatStyle();
+  // Measurement payloads are mostly long sample arrays, so the layout matters
+  // here as much as it does for protocol code. Copy takes what is on screen.
+  const jsonText = useMemo(() => formatJson(data, { style }), [data, style]);
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
       <TabsList className="h-8 rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] p-0.5">
@@ -137,21 +144,24 @@ function DataTabs({
       )}
       <TabsContent value="json" className="mt-2">
         <div className="relative">
-          <pre className="max-h-[480px] overflow-auto rounded-lg bg-[#F7F8FA] p-3 pr-12 text-xs text-[#011111]">
-            {JSON.stringify(data, null, 2)}
+          <pre className="max-h-[480px] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-[#F7F8FA] p-3 pr-20 text-xs text-[#011111]">
+            {jsonText}
           </pre>
-          <button
-            className="shadow-xs absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded-md border border-[#EDF2F6] bg-white text-[#68737B] transition-colors hover:bg-[#F7F8FA] hover:text-[#011111]"
-            onClick={() => void copy(JSON.stringify(data, null, 2))}
-            title={t("output.copyJson")}
-            aria-label={t("output.copyJson")}
-          >
-            {copied ? (
-              <Check className="size-3.5 text-emerald-500" />
-            ) : (
-              <Copy className="size-3.5" />
-            )}
-          </button>
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+            <JsonFormatToggle style={style} onToggle={toggleStyle} />
+            <button
+              className="shadow-xs flex size-7 items-center justify-center rounded-md border border-[#EDF2F6] bg-white text-[#68737B] transition-colors hover:bg-[#F7F8FA] hover:text-[#011111]"
+              onClick={() => void copy(jsonText)}
+              title={t("output.copyJson")}
+              aria-label={t("output.copyJson")}
+            >
+              {copied ? (
+                <Check className="size-3.5 text-emerald-500" />
+              ) : (
+                <Copy className="size-3.5" />
+              )}
+            </button>
+          </div>
         </div>
       </TabsContent>
     </Tabs>
@@ -169,7 +179,7 @@ function DeviceResultIdentity({ result }: { result: OutputDeviceResult }) {
   });
   const primaryLabel = resolveDevicePrimaryLabel(presentation, t);
   const secondaryLabel = [
-    presentation.provenance === "name" ? presentation.productName : null,
+    presentation.provenance !== "product" ? presentation.productName : null,
     presentation.id,
   ]
     .filter((value): value is string => value != null && value !== primaryLabel)

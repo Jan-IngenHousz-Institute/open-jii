@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type {
@@ -19,7 +20,6 @@ import {
   resetFlowState,
   retryIterationState,
   returnToOverviewState,
-  startNewIterationState,
 } from "~/features/measurement-flow/domain/flow-transitions";
 import type { FlowEdge, FlowNode } from "~/shared/measurements/flow-node";
 
@@ -49,7 +49,6 @@ interface MeasurementFlowStore extends FlowState {
   incrementBranchVisit: (nodeId: string) => void;
   recordBranchJump: (landing: number) => void;
   resetFlow: () => void;
-  startNewIteration: () => void;
   retryCurrentIteration: () => void;
   finishFlow: () => void;
   // producerCellId records which cell (protocol or command) yielded the result;
@@ -83,12 +82,25 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       ...initialFlowState,
       iterationAnchor: undefined,
 
-      setExperimentId: (experimentId, experimentLabel) => set({ experimentId, experimentLabel }),
+      setExperimentId: (experimentId, experimentLabel) =>
+        set({
+          experimentId,
+          experimentLabel,
+          // Starting from the picker is always a new workbook attempt, even
+          // when the user selects the same experiment again.
+          workbookRunId: uuidv4(),
+        }),
 
       setCurrentStep: (step) => set({ currentStep: step }),
       setCurrentFlowStep: (step) => set({ currentFlowStep: step }),
 
-      nextStep: () => set(nextStepState),
+      nextStep: () =>
+        set((state) => {
+          const next = nextStepState(state);
+          return next.iterationCount !== undefined && next.iterationCount > state.iterationCount
+            ? { ...next, workbookRunId: uuidv4() }
+            : next;
+        }),
       previousStep: () => set(previousStepState),
 
       // Route through resetFlow so the persisted slice is cleared too.
@@ -131,8 +143,6 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       resetFlow: () => set({ ...resetFlowState(), iterationAnchor: undefined }),
 
-      startNewIteration: () => set(startNewIterationState),
-
       retryCurrentIteration: () => set(retryIterationState()),
 
       finishFlow: () => set(finishFlowState),
@@ -156,7 +166,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
 
       setIterationAnchor: (anchor) => set({ iterationAnchor: anchor }),
 
-      dismissQuestionsSubmit: () => set(dismissQuestionsSubmitState),
+      dismissQuestionsSubmit: () =>
+        set((state) => ({ ...dismissQuestionsSubmitState(state), workbookRunId: uuidv4() })),
 
       navigateToQuestionFromOverview: (questionIndex) =>
         set(navigateToQuestionFromOverviewState(questionIndex)),
@@ -166,19 +177,20 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
     {
       name: "measurement-flow-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // v1 wire format, pinned by flow-store-persistence.test.ts. v1 discards
-      // flows persisted by pre-fix (v0) builds, which can hold a mis-seeded
-      // plot or a stale "Experiment" name; the upgrade starts them clean.
-      version: 1,
+      // v2 wire format, pinned by flow-store-persistence.test.ts. Flows from
+      // earlier app versions have no trustworthy workbookRunId, so the upgrade
+      // deliberately drops them and returns the user to experiment selection.
+      version: 2,
       migrate: (persisted, version) =>
-        (version < 1 ? initialFlowState : persisted) as MeasurementFlowStore,
-      // protocolId was dropped from the persisted slice (now derived from
-      // flowNodes via flowProtocolId); legacy payloads carrying it merge in
-      // as an ignored extra key.
+        (version < 2 ? initialFlowState : persisted) as MeasurementFlowStore,
+      // protocolId was dropped from the persisted slice; uploads resolve it
+      // from the exact producer measurement node. Legacy payloads carrying it
+      // merge in as an ignored extra key.
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
         workbookVersionId: state.workbookVersionId,
+        workbookRunId: state.workbookRunId,
         currentStep: state.currentStep,
         flowNodes: state.flowNodes,
         currentFlowStep: state.currentFlowStep,

@@ -1,6 +1,7 @@
 import { Clock } from "lucide-react-native";
 import React from "react";
-import { View, Text, type ColorValue } from "react-native";
+import { View, Text } from "react-native";
+import type { ColorValue } from "react-native";
 import { useMeasurementCounts } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { cn } from "~/shared/ui/cn";
 

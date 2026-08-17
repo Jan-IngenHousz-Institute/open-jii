@@ -18,6 +18,9 @@ vrn
 # AI Generated Files
 .wolf/
 CLAUDE.md
+# `next dev` regenerates both of these on every run; only CLAUDE.md was listed,
+# so AGENTS.md kept turning up as untracked and getting committed by accident.
+AGENTS.md
 .claude/
 
 # Local env files

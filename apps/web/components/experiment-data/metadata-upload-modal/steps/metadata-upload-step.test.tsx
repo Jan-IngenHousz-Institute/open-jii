@@ -48,6 +48,7 @@ vi.mock("@/components/metadata-table/utils/parse-metadata-import", () => ({
 }));
 
 let mockFlowData: unknown = null;
+let mockSelectOnValueChange: ((value: string) => void) | undefined;
 vi.mock("@/hooks/experiment/useExperimentFlow/useExperimentFlow", () => ({
   useExperimentFlow: () => ({ data: mockFlowData, isLoading: false, error: null }),
 }));
@@ -113,26 +114,33 @@ vi.mock("@repo/ui/components/select", () => ({
     children,
     onValueChange,
     value,
+    disabled,
   }: {
     children: React.ReactNode;
     onValueChange?: (v: string) => void;
     value?: string;
     disabled?: boolean;
-  }) => (
-    <div data-testid="select" data-value={value}>
-      {children}
-      {onValueChange && (
-        <button
-          data-testid="select-trigger-action"
-          onClick={() => onValueChange("test_question")}
-        />
-      )}
-    </div>
-  ),
+  }) => {
+    mockSelectOnValueChange = onValueChange;
+    return (
+      <div data-testid="select" data-value={value} data-disabled={disabled ? "true" : "false"}>
+        {children}
+      </div>
+    );
+  },
   SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SelectGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
-    <div data-value={value}>{children}</div>
+    <button
+      type="button"
+      data-testid={`select-item-${value}`}
+      data-value={value}
+      onClick={() => mockSelectOnValueChange?.(value)}
+    >
+      {children}
+    </button>
   ),
+  SelectLabel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SelectTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
 }));
@@ -147,7 +155,7 @@ vi.mock("@repo/ui/lib/utils", () => ({
 
 const sampleData = {
   columns: [
-    { id: "col_0", name: "ID", type: "number" as const },
+    { id: "col_0", name: "PlotCode", type: "number" as const },
     { id: "col_1", name: "Name", type: "string" as const },
   ],
   rows: [
@@ -161,6 +169,7 @@ describe("MetadataUploadStep", () => {
     vi.clearAllMocks();
     mockFlowData = null;
     mockExistingMetadata = [];
+    mockSelectOnValueChange = undefined;
   });
 
   const renderStep = (props?: Partial<{ onClose: () => void }>) =>
@@ -458,7 +467,7 @@ describe("MetadataUploadStep", () => {
       fireEvent.change(nameInput, { target: { value: "Test Metadata" } });
 
       fireEvent.click(screen.getByTestId("set-identifier"));
-      fireEvent.click(screen.getByTestId("select-trigger-action"));
+      fireEvent.click(screen.getByTestId("select-item-column:device_id"));
 
       return { onClose };
     };
@@ -474,15 +483,15 @@ describe("MetadataUploadStep", () => {
           metadata: {
             name: "Test Metadata",
             columns: [
-              { id: "ID", name: "ID", type: "number" },
+              { id: "PlotCode", name: "PlotCode", type: "number" },
               { id: "Name", name: "Name", type: "string" },
             ],
             rows: [
-              { _id: "row_0", ID: 1, Name: "Test" },
-              { _id: "row_1", ID: 2, Name: "Test2" },
+              { _id: "row_0", PlotCode: 1, Name: "Test" },
+              { _id: "row_1", PlotCode: 2, Name: "Test2" },
             ],
-            identifierColumnId: "ID",
-            experimentQuestionId: "test_question",
+            identifierColumnId: "PlotCode",
+            experimentQuestionId: "column:device_id",
           },
         });
       });
@@ -531,6 +540,36 @@ describe("MetadataUploadStep", () => {
       expect(screen.getByText("Plot Number")).toBeInTheDocument();
       expect(screen.getByText("Location ID")).toBeInTheDocument();
       expect(screen.queryByText("Temperature")).not.toBeInTheDocument();
+      expect(
+        screen.getByText("uploadModal.metadata.matchTargetQuestionsGroup"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("uploadModal.metadata.matchTargetMeasurementColumnsGroup"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("device_id")).toBeInTheDocument();
+    });
+
+    it("offers measurement columns and enables the target select with zero questions", async () => {
+      mockFlowData = { graph: { nodes: [] } };
+      mockParseClipboard.mockResolvedValue(sampleData);
+      renderStep();
+      goToEditView();
+
+      fireEvent.click(getButton("uploadModal.metadata.pasteClipboard"));
+      await screen.findByTestId("metadata-table");
+
+      expect(screen.getByTestId("select")).toHaveAttribute("data-disabled", "false");
+      expect(screen.getByText("device_id")).toBeInTheDocument();
+      expect(
+        screen.getByText("uploadModal.metadata.matchTargetMeasurementColumnsGroup"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("uploadModal.metadata.matchTargetQuestionsGroup"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("uploadModal.metadata.matchTargetHint")).toBeInTheDocument();
+      expect(
+        screen.queryByText("uploadModal.metadata.experimentQuestionNoQuestions"),
+      ).not.toBeInTheDocument();
     });
   });
 });

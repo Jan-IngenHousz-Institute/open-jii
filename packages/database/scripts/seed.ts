@@ -1,4 +1,4 @@
-import { eq, inArray, like } from "drizzle-orm";
+import { and, eq, inArray, like } from "drizzle-orm";
 
 import { db } from "../src/database";
 import { ensurePersonalOrganization, personalOrgSlug } from "../src/organizations";
@@ -11,8 +11,13 @@ import {
   protocolMacros,
   experiments,
   experimentMembers,
+  experimentDevices,
   flows,
+  iotDevices,
   organizations,
+  resourceGrants,
+  workbooks,
+  workbookVersions,
 } from "../src/schema";
 
 const SEED_EMAIL = "seed@openjii.local";
@@ -81,9 +86,26 @@ async function clearSeedData() {
     // experiment_members is dormant, but its rows still have an FK to experiments
     // with no cascade, so any legacy rows must go before the experiments do.
     await db.delete(experimentMembers).where(inArray(experimentMembers.experimentId, seedExpIds));
-    // Experiments cascade-delete: flows
+    // Mirrored member grants are polymorphic (no FK), so no cascade either
+    await db
+      .delete(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, "experiment"),
+          inArray(resourceGrants.resourceId, seedExpIds),
+        ),
+      );
+    // Experiments cascade-delete: flows, experimentDevices
     await db.delete(experiments).where(inArray(experiments.id, seedExpIds));
   }
+
+  // Devices before organizations: iot_devices references its org with RESTRICT.
+  // Deleting a device cascade-removes its remaining experiment bindings.
+  await db.delete(iotDevices).where(like(iotDevices.thingName, "seed-%"));
+
+  // Workbooks cascade-delete their versions; experiments pointing at them are
+  // already gone (or get workbook_version_id set null).
+  await db.delete(workbooks).where(like(workbooks.name, SEED_PREFIX));
 
   // Protocols cascade-delete protocolMacros
   await db.delete(protocols).where(like(protocols.name, SEED_PREFIX));
@@ -666,6 +688,177 @@ async function main() {
 
   await db.insert(flows).values(flowGraphs);
   console.log(`  Created ${flowGraphs.length} flows`);
+
+  // 7. Workbooks with a published version, pinned to two active experiments so
+  // device onboarding configs carry a real procedure. Soil Health stays
+  // unpinned to exercise the workbook-less config path. Like the real publish
+  // flow, each version snapshots its referenced protocol's code so the config
+  // is executable without a lookup. Corn pairs with an ambyte protocol (its
+  // bound device is the Ambyte gateway); wheat with a multispeq one.
+  const cornQuestion = {
+    id: crypto.randomUUID(),
+    type: "question",
+    name: "plot",
+    question: {
+      kind: "multi_choice",
+      text: "Which plot is this device stationed at?",
+      options: ["A1", "A2", "B1", "B2"],
+      required: true,
+    },
+    isCollapsed: false,
+    isAnswered: false,
+  };
+
+  const workbookSeeds = [
+    {
+      name: "[Seed] Corn Measurement Workbook",
+      description: "Measurement procedure for the corn photosynthesis field trial.",
+      experimentId: ex[0].id,
+      intro: "## Corn field procedure\nLog soil moisture at each plot marker.",
+      protocol: p[6],
+      question: cornQuestion,
+    },
+    {
+      name: "[Seed] Wheat Phenotyping Workbook",
+      description: "Flag leaf measurement procedure for the winter wheat phenotyping study.",
+      experimentId: ex[3].id,
+      intro: "## Wheat procedure\nMeasure the flag leaf at mid-blade, avoiding the midrib.",
+      protocol: p[2],
+      question: null,
+    },
+  ];
+
+  for (const wb of workbookSeeds) {
+    const cells = [
+      {
+        id: crypto.randomUUID(),
+        type: "markdown",
+        content: wb.intro,
+        isCollapsed: false,
+      },
+      ...(wb.question ? [wb.question] : []),
+      {
+        id: crypto.randomUUID(),
+        type: "protocol",
+        payload: { protocolId: wb.protocol.id, version: 1, name: wb.protocol.name },
+        isCollapsed: false,
+      },
+    ];
+
+    const [workbook] = await db
+      .insert(workbooks)
+      .values({
+        name: wb.name,
+        description: wb.description,
+        cells,
+        createdBy: user.id,
+        organizationId: personalOrganizationId,
+      })
+      .returning();
+
+    const [version] = await db
+      .insert(workbookVersions)
+      .values({
+        workbookId: workbook.id,
+        version: 1,
+        cells,
+        metadata: {},
+        entitySnapshots: {
+          protocols: {
+            [wb.protocol.id]: { code: wb.protocol.code, family: wb.protocol.family },
+          },
+          macros: {},
+        },
+        createdBy: user.id,
+      })
+      .returning();
+
+    await db
+      .update(experiments)
+      .set({ workbookId: workbook.id, workbookVersionId: version.id })
+      .where(eq(experiments.id, wb.experimentId));
+  }
+
+  console.log(`  Created ${workbookSeeds.length} workbooks (pinned versions)`);
+
+  // 8. IoT devices across families and statuses. Thing/cert identifiers are
+  // fakes; nothing here talks to AWS, so credential flows (issue, rotate,
+  // revoke) still need a real device or localstack.
+  const certFor = (slug: string) => ({
+    certificateId: `seed-cert-${slug}`,
+    certificateArn: `arn:aws:iot:local:000000000000:cert/seed-cert-${slug}`,
+  });
+
+  const deviceSeeds: {
+    slug: string;
+    name: string;
+    deviceType: "multispeq" | "ambyte" | "ambit" | "minipar";
+    status: "pending" | "active" | "revoked";
+  }[] = [
+    {
+      slug: "ambyte-gw-01",
+      name: "[Seed] Ambyte Field Gateway 01",
+      deviceType: "ambyte",
+      status: "active",
+    },
+    {
+      slug: "ambyte-gw-02",
+      name: "[Seed] Ambyte Field Gateway 02",
+      deviceType: "ambyte",
+      status: "pending",
+    },
+    {
+      slug: "multispeq-01",
+      name: "[Seed] MultispeQ Handheld 01",
+      deviceType: "multispeq",
+      status: "active",
+    },
+    { slug: "ambit-01", name: "[Seed] Ambit Logger 01", deviceType: "ambit", status: "active" },
+    {
+      slug: "minipar-01",
+      name: "[Seed] MiniPAR Sensor 01",
+      deviceType: "minipar",
+      status: "active",
+    },
+    { slug: "retired-gw", name: "[Seed] Retired Gateway", deviceType: "ambyte", status: "revoked" },
+  ];
+
+  const createdDevices = await db
+    .insert(iotDevices)
+    .values(
+      deviceSeeds.map((d, index) => ({
+        thingName: `seed-${d.slug}`,
+        thingArn: `arn:aws:iot:local:000000000000:thing/seed-${d.slug}`,
+        serialNumber: `SEED-SN-${String(index + 1).padStart(4, "0")}`,
+        name: d.name,
+        deviceType: d.deviceType,
+        status: d.status,
+        ...(d.status === "pending" ? {} : certFor(d.slug)),
+        organizationId: personalOrganizationId,
+        createdBy: user.id,
+      })),
+    )
+    .returning();
+
+  console.log(`  Created ${createdDevices.length} IoT devices`);
+
+  // 9. Bind devices to experiments. Ambyte 01 also serves the archived
+  // experiment: it shows the archived badge in the device's list, is excluded
+  // from re-issued configs, and stays detachable.
+  const d = createdDevices;
+  const bindings = [
+    { experimentId: ex[0].id, deviceId: d[0].id },
+    { experimentId: ex[4].id, deviceId: d[0].id },
+    { experimentId: ex[2].id, deviceId: d[0].id },
+    { experimentId: ex[3].id, deviceId: d[2].id },
+    { experimentId: ex[4].id, deviceId: d[4].id },
+    { experimentId: ex[0].id, deviceId: d[5].id },
+  ];
+
+  await db
+    .insert(experimentDevices)
+    .values(bindings.map((binding) => ({ ...binding, addedBy: user.id })));
+  console.log(`  Created ${bindings.length} experiment-device bindings`);
 
   console.log("Seed complete!");
 }

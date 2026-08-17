@@ -42,7 +42,9 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       return makeNode(
         cell.id,
         "measurement",
-        cell.payload.name ?? `Protocol ${cell.payload.protocolId.slice(0, 8)}`,
+        cell.payload.name?.trim()
+          ? cell.payload.name
+          : `Protocol ${cell.payload.protocolId.slice(0, 8)}`,
         { protocolId: cell.payload.protocolId },
         isStart,
       );
@@ -69,7 +71,7 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       return makeNode(
         cell.id,
         "analysis",
-        cell.payload.name ?? `Macro ${cell.payload.macroId.slice(0, 8)}`,
+        cell.payload.name?.trim() ? cell.payload.name : `Macro ${cell.payload.macroId.slice(0, 8)}`,
         { macroId: cell.payload.macroId },
         isStart,
       );
@@ -79,6 +81,11 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
       return makeNode(cell.id, "question", cell.name, cell.question, isStart);
 
     case "markdown":
+      // Blank markdown has no instruction to give; an empty name/text node
+      // violates the flow contract and 500s every subsequent flow read.
+      if (cell.content.trim().length === 0) {
+        return null;
+      }
       return makeNode(
         cell.id,
         "instruction",
@@ -107,9 +114,43 @@ function cellToNode(cell: WorkbookCell, isStart: boolean): FlowNode | null {
   }
 }
 
+// A goto may point at a cell that emits no node (blank markdown, output cell).
+// Redirect it to the next emitted node in cell order, or drop the edge when
+// nothing follows.
+function resolveGotoTarget(
+  cells: WorkbookCell[],
+  emittedIds: Set<string>,
+  targetCellId: string,
+): string | null {
+  if (emittedIds.has(targetCellId)) {
+    return targetCellId;
+  }
+
+  const targetIndex = cells.findIndex((cell) => cell.id === targetCellId);
+  if (targetIndex === -1) {
+    return null;
+  }
+
+  for (let i = targetIndex + 1; i < cells.length; i++) {
+    if (emittedIds.has(cells[i].id)) {
+      return cells[i].id;
+    }
+  }
+  return null;
+}
+
+interface PendingGotoEdge {
+  source: string;
+  targetCellId: string;
+  label: string;
+  pathId: string;
+}
+
 export function cellsToFlowGraph(cells: WorkbookCell[]): DerivedFlowGraph {
   const nodes: FlowNode[] = [];
   const edges: FlowEdge[] = [];
+  const emittedIds = new Set<string>();
+  const gotoEdges: PendingGotoEdge[] = [];
 
   let previousId: string | null = null;
   let firstId: string | null = null;
@@ -124,6 +165,7 @@ export function cellsToFlowGraph(cells: WorkbookCell[]): DerivedFlowGraph {
     if (!node) continue;
 
     nodes.push(node);
+    emittedIds.add(node.id);
     firstId ??= node.id;
 
     if (previousId) {
@@ -133,12 +175,24 @@ export function cellsToFlowGraph(cells: WorkbookCell[]): DerivedFlowGraph {
     if (cell.type === "branch") {
       for (const path of cell.paths) {
         if (path.gotoCellId) {
-          edges.push(makeEdge(cell.id, path.gotoCellId, path.label, path.id));
+          gotoEdges.push({
+            source: cell.id,
+            targetCellId: path.gotoCellId,
+            label: path.label,
+            pathId: path.id,
+          });
         }
       }
     }
 
     previousId = node.id;
+  }
+
+  for (const goto of gotoEdges) {
+    const target = resolveGotoTarget(cells, emittedIds, goto.targetCellId);
+    if (target) {
+      edges.push(makeEdge(goto.source, target, goto.label, goto.pathId));
+    }
   }
 
   const NODE_SPACING = 250;

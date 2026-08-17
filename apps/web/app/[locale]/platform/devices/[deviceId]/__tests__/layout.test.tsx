@@ -63,9 +63,9 @@ describe("<DeviceLayout />", () => {
 
     renderLayout();
 
-    // `name` is optional, so the title falls through to the canonical product name
-    // — the same hierarchy the registry rows use, not a heading of its own.
-    expect(await screen.findByRole("heading", { name: "Ambyte" })).toBeInTheDocument();
+    // `name` is optional, so the title falls through to the serial number, the
+    // same hierarchy the registry rows use, not a heading of its own.
+    expect(await screen.findByRole("heading", { name: "SN-77" })).toBeInTheDocument();
   });
 
   it("hides the Collaborators tab from a reader who can neither share nor leave", async () => {

@@ -31,10 +31,18 @@ locals {
     contains(keys(details), "publish") ? ["iot:Subscribe"] : []
   }
 
-  # Compute a friendly name for each IoT topic rule based on the static portion of the channel.
+  # Friendly name per channel: the static topic prefix, unless the channel sets
+  # x-infra-name (needed when two channels share a prefix, e.g. the lean and
+  # legacy ingest shapes). Existing channels must never change names: policies
+  # are attached to live certificates.
+  iot_infra_names = {
+    for channel, details in local.asyncapi.channels : channel =>
+    lookup(details, "x-infra-name", replace(trim(split("/{", channel)[0], "/"), "/", "_"))
+  }
+
   iot_rule_names = {
     for channel in local.all_channels : channel =>
-    "open_jii_${var.environment}_iot_rule_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
+    "open_jii_${var.environment}_iot_rule_${local.iot_infra_names[channel]}"
   }
 
   # Convert the channel into a topic filter by replacing any parameter segment with "+"
@@ -67,10 +75,9 @@ locals {
     if contains(keys(details), "subscribe")
   }
 
-  # Friendly name per channel, derived from the channel's static prefix.
   iot_policy_names = {
     for channel in local.all_channels : channel =>
-    "open_jii_${var.environment}_iot_policy_${replace(trim(split("/{", channel)[0], "/"), "/", "_")}"
+    "open_jii_${var.environment}_iot_policy_${local.iot_infra_names[channel]}"
   }
 }
 

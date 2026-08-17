@@ -1,5 +1,5 @@
 {
-  "id": "915d4fda-cd17-4d2c-b938-211809e2f0d3",
+  "id": "4c7ecdb5-b7b5-4efd-bd28-b24e8ca0b79c",
   "prevId": "16c69cfe-2180-4005-b17a-07e58dc9852b",
   "version": "7",
   "dialect": "postgresql",
@@ -493,6 +493,115 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.experiment_devices": {
+      "name": "experiment_devices",
+      "schema": "",
+      "columns": {
+        "experiment_id": {
+          "name": "experiment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "device_id": {
+          "name": "device_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "added_by": {
+          "name": "added_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "(now() AT TIME ZONE 'UTC')"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "(now() AT TIME ZONE 'UTC')"
+        }
+      },
+      "indexes": {
+        "experiment_devices_device_idx": {
+          "name": "experiment_devices_device_idx",
+          "columns": [
+            {
+              "expression": "device_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "experiment_devices_experiment_id_experiments_id_fk": {
+          "name": "experiment_devices_experiment_id_experiments_id_fk",
+          "tableFrom": "experiment_devices",
+          "tableTo": "experiments",
+          "columnsFrom": [
+            "experiment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "experiment_devices_device_id_iot_devices_id_fk": {
+          "name": "experiment_devices_device_id_iot_devices_id_fk",
+          "tableFrom": "experiment_devices",
+          "tableTo": "iot_devices",
+          "columnsFrom": [
+            "device_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "experiment_devices_added_by_users_id_fk": {
+          "name": "experiment_devices_added_by_users_id_fk",
+          "tableFrom": "experiment_devices",
+          "tableTo": "users",
+          "columnsFrom": [
+            "added_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "experiment_devices_experiment_id_device_id_pk": {
+          "name": "experiment_devices_experiment_id_device_id_pk",
+          "columns": [
+            "experiment_id",
+            "device_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -1038,23 +1147,7 @@
           }
         }
       },
-      "indexes": {
-        "experiments_organization_id_idx": {
-          "name": "experiments_organization_id_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "experiments_workbook_id_workbooks_id_fk": {
           "name": "experiments_workbook_id_workbooks_id_fk",
@@ -1226,7 +1319,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'viewer'"
+          "default": "'member'"
         },
         "status": {
           "name": "status",
@@ -1257,29 +1350,7 @@
           "default": "(now() AT TIME ZONE 'UTC')"
         }
       },
-      "indexes": {
-        "invitations_email_status_idx": {
-          "name": "invitations_email_status_idx",
-          "columns": [
-            {
-              "expression": "email",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "invitations_invited_by_users_id_fk": {
           "name": "invitations_invited_by_users_id_fk",
@@ -1583,23 +1654,7 @@
           }
         }
       },
-      "indexes": {
-        "macros_organization_id_idx": {
-          "name": "macros_organization_id_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "macros_created_by_users_id_fk": {
           "name": "macros_created_by_users_id_fk",
@@ -1724,29 +1779,7 @@
           "default": "(now() AT TIME ZONE 'UTC')"
         }
       },
-      "indexes": {
-        "organization_invitations_email_status_idx": {
-          "name": "organization_invitations_email_status_idx",
-          "columns": [
-            {
-              "expression": "email",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "organization_invitations_organization_id_organizations_id_fk": {
           "name": "organization_invitations_organization_id_organizations_id_fk",
@@ -1785,156 +1818,6 @@
             "id"
           ],
           "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.organization_join_requests": {
-      "name": "organization_join_requests",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "message": {
-          "name": "message",
-          "type": "varchar(250)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "join_request_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "decided_by": {
-          "name": "decided_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decided_at": {
-          "name": "decided_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "(now() AT TIME ZONE 'UTC')"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "(now() AT TIME ZONE 'UTC')"
-        }
-      },
-      "indexes": {
-        "organization_join_requests_pending_uniq": {
-          "name": "organization_join_requests_pending_uniq",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"organization_join_requests\".\"status\" = 'pending'",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "organization_join_requests_organization_idx": {
-          "name": "organization_join_requests_organization_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "organization_join_requests_organization_id_organizations_id_fk": {
-          "name": "organization_join_requests_organization_id_organizations_id_fk",
-          "tableFrom": "organization_join_requests",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "organization_join_requests_user_id_users_id_fk": {
-          "name": "organization_join_requests_user_id_users_id_fk",
-          "tableFrom": "organization_join_requests",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "organization_join_requests_decided_by_users_id_fk": {
-          "name": "organization_join_requests_decided_by_users_id_fk",
-          "tableFrom": "organization_join_requests",
-          "tableTo": "users",
-          "columnsFrom": [
-            "decided_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -2075,7 +1958,7 @@
           "name": "slug",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "logo": {
           "name": "logo",
@@ -2121,14 +2004,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'read'"
-        },
-        "visibility": {
-          "name": "visibility",
-          "type": "visibility",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'private'"
         },
         "created_at": {
           "name": "created_at",
@@ -2554,23 +2429,7 @@
           }
         }
       },
-      "indexes": {
-        "protocols_organization_id_idx": {
-          "name": "protocols_organization_id_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "protocols_created_by_users_id_fk": {
           "name": "protocols_created_by_users_id_fk",
@@ -3476,21 +3335,6 @@
           "columns": [
             {
               "expression": "created_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "workbooks_organization_id_idx": {
-          "name": "workbooks_organization_id_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

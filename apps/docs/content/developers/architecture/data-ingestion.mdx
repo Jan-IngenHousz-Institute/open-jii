@@ -32,7 +32,7 @@ sequenceDiagram
 The canonical topic is:
 
 ```text
-experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}/{protocolId}
+experiment/data_ingest/v1/{experimentId}/{sensorType}/{sensorVersion}/{sensorId}
 ```
 
 Each `/` separates a topic level, and every level carries routing or provenance
@@ -58,7 +58,6 @@ meaning:
     ["{sensorType}", "sensor family"],
     ["{sensorVersion}", "firmware / hardware rev"],
     ["{sensorId}", "which physical sensor"],
-    ["{protocolId}", "measurement protocol"],
   ].map(([part, label], i) => (
     <span key={part} style={{ display: "flex", alignItems: "flex-start" }}>
       {i > 0 && (
@@ -79,16 +78,17 @@ meaning:
   ))}
 </div>
 
-| Level             | Meaning                                             | How it is used                                                                      |
-| ----------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `experiment`      | Domain prefix.                                      | Groups all experiment traffic; the IoT rule subscribes beneath it.                  |
-| `data_ingest`     | Action within the domain.                           | Distinguishes measurement ingestion from other experiment traffic.                  |
-| `v1`              | Topic schema version.                               | Lets a future payload or path change ship as `v2` without breaking `v1` publishers. |
-| `{experimentId}`  | Unique identifier of the experiment.                | Routes each measurement to its experiment's data tables.                            |
-| `{sensorType}`    | Sensor family (for example `multispeq`, `ambit`).   | Selects family-specific parsing and normalization downstream.                       |
-| `{sensorVersion}` | Device firmware or hardware revision.               | Preserved as provenance so results can be traced to device behavior.                |
-| `{sensorId}`      | Unique identifier of the physical device.           | Attributes readings to one device across sessions.                                  |
-| `{protocolId}`    | Identifier of the sampling or measurement protocol. | Records which method produced the reading.                                          |
+| Level             | Meaning                                           | How it is used                                                                      |
+| ----------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `experiment`      | Domain prefix.                                    | Groups all experiment traffic; the IoT rule subscribes beneath it.                  |
+| `data_ingest`     | Action within the domain.                         | Distinguishes measurement ingestion from other experiment traffic.                  |
+| `v1`              | Topic schema version.                             | Lets a future payload or path change ship as `v2` without breaking `v1` publishers. |
+| `{experimentId}`  | Unique identifier of the experiment.              | Routes each measurement to its experiment's data tables.                            |
+| `{sensorType}`    | Sensor family (for example `multispeq`, `ambit`). | Selects family-specific parsing and normalization downstream.                       |
+| `{sensorVersion}` | Device firmware or hardware revision.             | Preserved as provenance so results can be traced to device behavior.                |
+| `{sensorId}`      | Unique identifier of the physical device.         | Attributes readings to one device across sessions.                                  |
+
+A transitional legacy channel with a trailing `{protocolId}` level remains routed for already-fielded mobile builds and is removed after their rollover; the pipeline records a null protocol attribution for rows ingested on the lean shape.
 
 The exact channel parameters and message schema are maintained in the [MQTT API reference](/api/mqtt). Do not copy the deployed broker endpoint from examples: obtain environment-specific connection details and credentials through the supported application flow. For MQTT topic fundamentals, wildcards, and naming best practices, [HiveMQ's MQTT Essentials on topics](https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/) is a good primer.
 

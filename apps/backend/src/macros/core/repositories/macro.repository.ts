@@ -254,7 +254,6 @@ export class MacroRepository {
         .update(macros)
         .set({
           ...data,
-          updatedAt: new Date(),
         })
         .where(eq(macros.id, id))
         .returning(macroColumns);

@@ -1,3 +1,5 @@
+import { OPENJII_FRAME_FOOTER } from "../../utils/framing/openjii-envelope";
+
 /** MiniPAR serial defaults (ESP32 USB-CDC console). */
 export const MINIPAR_SERIAL_DEFAULTS = {
   baudRate: 115200,
@@ -12,8 +14,7 @@ export const MINIPAR_FRAMING = {
    * JSON-mode replies end with this constant sentinel before the newline
    * (a fixed footer, not a computed checksum).
    */
-  FRAME_FOOTER: "7A1E3AA1",
-  FOOTER_LENGTH: 8,
+  FRAME_FOOTER: OPENJII_FRAME_FOOTER,
   /** LINE-mode command timeout. */
   DEFAULT_TIMEOUT: 10_000,
   /** JSON protocol timeout; no estimator exists for MiniPAR protocols yet. */

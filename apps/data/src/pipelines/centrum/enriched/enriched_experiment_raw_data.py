@@ -9,6 +9,7 @@ from pyspark.sql import functions as F
 
 from enrich.annotations_metadata import add_annotation_column
 from enrich.custom_metadata import add_custom_metadata_column
+from enrich.timezone import drop_invalid_timezone
 from openjii.centrum import (
     ANNOTATIONS_SOURCE_TABLE,
     ENRICHED_RAW_DATA_VIEW,
@@ -63,7 +64,7 @@ def enriched_experiment_raw_data():
             raw_data.device_name,
             raw_data.timestamp,  # kept for backwards compatibility (downstream consumers order by timestamp)
             raw_data.timestamp.alias("measurement_time_utc"),
-            raw_data.timezone,
+            drop_invalid_timezone(raw_data.timezone).alias("timezone"),
             raw_data.date,
             raw_data.macros,
             raw_data.questions_data,

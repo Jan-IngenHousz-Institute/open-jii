@@ -7,6 +7,9 @@ import {
   zIotDeviceList,
   zRegisterIotDeviceBody,
   zIssueIotCredentialsResponse,
+  zOnboardDeviceBody,
+  zDeviceOnboardingConfig,
+  zDeviceExperiment,
 } from "./iot.schema";
 
 describe("Iot Schema", () => {
@@ -102,6 +105,24 @@ describe("Iot Schema", () => {
       expect(
         zRegisterIotDeviceBody.safeParse({ ...validBody, serialNumber: "a".repeat(256) }).success,
       ).toBe(false);
+    });
+
+    it("rejects a serialNumber with characters AWS thing attributes forbid", () => {
+      // Spaces are the common case; AWS attribute values allow only
+      // [a-zA-Z0-9_.,@/:#=[\]-] and would 500 at CreateThing otherwise.
+      expect(
+        zRegisterIotDeviceBody.safeParse({ ...validBody, serialNumber: "TEST 123" }).success,
+      ).toBe(false);
+      expect(
+        zRegisterIotDeviceBody.safeParse({ ...validBody, serialNumber: "SN(1)" }).success,
+      ).toBe(false);
+    });
+
+    it("accepts serial numbers in the full attribute charset", () => {
+      expect(
+        zRegisterIotDeviceBody.safeParse({ ...validBody, serialNumber: "dev_1.2,a@b/c:d#e=[f]-g" })
+          .success,
+      ).toBe(true);
     });
 
     it("rejects an empty name when provided", () => {
@@ -215,6 +236,131 @@ describe("Iot Schema", () => {
     it("rejects a bundle missing the private key", () => {
       const { privateKey: _pk, ...withoutKey } = validBundle;
       expect(zIssueIotCredentialsResponse.safeParse(withoutKey).success).toBe(false);
+    });
+  });
+
+  describe("zOnboardDeviceBody", () => {
+    it("defaults a missing experiment list to empty (config re-issue)", () => {
+      const result = zOnboardDeviceBody.safeParse({});
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.experimentIds).toEqual([]);
+      }
+    });
+
+    it("rejects non-uuid experiment ids", () => {
+      expect(zOnboardDeviceBody.safeParse({ experimentIds: ["not-a-uuid"] }).success).toBe(false);
+    });
+
+    it("caps the experiment list at 100", () => {
+      const ids = Array.from(
+        { length: 101 },
+        (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+      );
+      expect(zOnboardDeviceBody.safeParse({ experimentIds: ids }).success).toBe(false);
+    });
+
+    it("defaults includeWorkbook to true", () => {
+      const result = zOnboardDeviceBody.safeParse({});
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.includeWorkbook).toBe(true);
+      }
+    });
+  });
+
+  describe("zDeviceOnboardingConfig", () => {
+    const validConfig = {
+      thingName: "ambyte_AA11",
+      deviceType: "ambyte",
+      endpoint: "abc123-ats.iot.eu-central-1.amazonaws.com",
+      experiments: [
+        {
+          experimentId: "11111111-1111-4111-8111-111111111111",
+          experimentName: "Corn",
+          topicPrefix: "experiment/data_ingest/v1/11111111-1111-4111-8111-111111111111/ambyte",
+          workbookVersion: null,
+          procedures: [],
+        },
+      ],
+    };
+
+    it("accepts a config with an unpinned experiment", () => {
+      expect(zDeviceOnboardingConfig.safeParse(validConfig).success).toBe(true);
+    });
+
+    it("accepts a compiled procedure list of all three kinds", () => {
+      const withProcedures = {
+        ...validConfig,
+        experiments: [
+          {
+            ...validConfig.experiments[0],
+            workbookVersion: 1,
+            procedures: [
+              {
+                type: "protocol",
+                protocolId: "22222222-2222-4222-8222-222222222222",
+                name: "Soil Moisture",
+                family: "ambyte",
+                code: [{ _protocol_set: [] }],
+              },
+              { type: "command", format: "string", content: "battery" },
+              {
+                type: "question",
+                id: "c-q",
+                name: "plot",
+                kind: "multi_choice",
+                text: "Which plot?",
+                options: ["A1", "B1"],
+                required: true,
+                answer: null,
+              },
+            ],
+          },
+        ],
+      };
+      expect(zDeviceOnboardingConfig.safeParse(withProcedures).success).toBe(true);
+    });
+
+    it("rejects a procedure of unknown type", () => {
+      const bad = {
+        ...validConfig,
+        experiments: [
+          {
+            ...validConfig.experiments[0],
+            procedures: [{ type: "markdown", content: "hi" }],
+          },
+        ],
+      };
+      expect(zDeviceOnboardingConfig.safeParse(bad).success).toBe(false);
+    });
+
+    it("rejects an unknown device type", () => {
+      expect(
+        zDeviceOnboardingConfig.safeParse({ ...validConfig, deviceType: "toaster" }).success,
+      ).toBe(false);
+    });
+  });
+
+  describe("zDeviceExperiment", () => {
+    it("accepts a bound experiment with its added timestamp", () => {
+      const binding = {
+        id: "11111111-1111-4111-8111-111111111111",
+        name: "Corn",
+        status: "active",
+        addedAt: new Date().toISOString(),
+      };
+      expect(zDeviceExperiment.safeParse(binding).success).toBe(true);
+    });
+
+    it("rejects a non-datetime addedAt", () => {
+      const binding = {
+        id: "11111111-1111-4111-8111-111111111111",
+        name: "Corn",
+        status: "active",
+        addedAt: "yesterday",
+      };
+      expect(zDeviceExperiment.safeParse(binding).success).toBe(false);
     });
   });
 });

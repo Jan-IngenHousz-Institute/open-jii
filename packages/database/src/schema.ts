@@ -24,7 +24,7 @@ const timestamps = {
     .notNull(),
   updatedAt: timestamp("updated_at")
     .default(sql`(now() AT TIME ZONE 'UTC')`)
-    .$onUpdate(() => new Date())
+    .$onUpdate(() => sql`(now() AT TIME ZONE 'UTC')`)
     .notNull(),
 };
 
@@ -140,7 +140,6 @@ export const apiKeys = pgTable(
 );
 
 // Passkeys Table - for the Better Auth passkey plugin (WebAuthn credentials).
-// No updatedAt: the plugin model only has createdAt.
 export const passkeys = pgTable(
   "passkeys",
   {
@@ -156,9 +155,7 @@ export const passkeys = pgTable(
     backedUp: boolean("backed_up").notNull().default(false),
     transports: text("transports"),
     aaguid: text("aaguid"),
-    createdAt: timestamp("created_at")
-      .default(sql`(now() AT TIME ZONE 'UTC')`)
-      .notNull(),
+    ...timestamps,
   },
   (t) => [
     uniqueIndex("passkeys_credential_id_uniq").on(t.credentialID),
@@ -246,9 +243,7 @@ export const organizationMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     role: text("role").default("member").notNull(),
-    createdAt: timestamp("created_at")
-      .default(sql`(now() AT TIME ZONE 'UTC')`)
-      .notNull(),
+    ...timestamps,
   },
   (t) => [
     uniqueIndex("organization_members_org_user_uniq").on(t.organizationId, t.userId),
@@ -275,9 +270,7 @@ export const organizationInvitations = pgTable(
     // Better Auth teams: optional team the invite is for.
     teamId: uuid("team_id").references(() => teams.id, { onDelete: "set null" }),
     expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at")
-      .default(sql`(now() AT TIME ZONE 'UTC')`)
-      .notNull(),
+    ...timestamps,
   },
   // Every sign-in looks up the signer's pending invitations by email, so this
   // lookup is on the hot path of authentication rather than of an org screen.
@@ -309,9 +302,7 @@ export const teamMembers = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at")
-      .default(sql`(now() AT TIME ZONE 'UTC')`)
-      .notNull(),
+    ...timestamps,
   },
   (t) => [
     uniqueIndex("team_members_team_user_uniq").on(t.teamId, t.userId),
@@ -717,9 +708,7 @@ export const workbookVersions = pgTable(
     cells: jsonb("cells").notNull(),
     metadata: jsonb("metadata").notNull().default({}),
     entitySnapshots: jsonb("entity_snapshots").notNull().default({ protocols: {}, macros: {} }),
-    createdAt: timestamp("created_at")
-      .default(sql`(now() AT TIME ZONE 'UTC')`)
-      .notNull(),
+    ...timestamps,
     createdBy: uuid("created_by")
       .references(() => users.id)
       .notNull(),
@@ -830,5 +819,28 @@ export const iotDevices = pgTable(
   (t) => [
     index("iot_devices_created_by_idx").on(t.createdBy),
     index("iot_devices_organization_id_idx").on(t.organizationId),
+  ],
+);
+
+// Experiment <-> Device binding (Associative Table). A device serves several
+// experiments; what it runs is each experiment's pinned workbook version, so
+// nothing about the procedure is stored on the binding.
+export const experimentDevices = pgTable(
+  "experiment_devices",
+  {
+    experimentId: uuid("experiment_id")
+      .references(() => experiments.id, { onDelete: "cascade" })
+      .notNull(),
+    deviceId: uuid("device_id")
+      .references(() => iotDevices.id, { onDelete: "cascade" })
+      .notNull(),
+    addedBy: uuid("added_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    primaryKey({ columns: [t.experimentId, t.deviceId] }),
+    index("experiment_devices_device_idx").on(t.deviceId),
   ],
 );

@@ -87,9 +87,9 @@
       "comingSoon": {
         "title": "Coming soon",
         "groups": "Organize devices into groups you can manage, provision, and onboard together.",
-        "onboarding": "Onboard devices to experiments: hand each device its connection, experiment, and workbook procedure.",
         "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
-        "lineage": "Trace this device's identity through to its ingested measurements."
+        "lineage": "Trace this device's identity through to its ingested measurements.",
+        "onboarding": "Onboard each device from its detail page (Onboarding tab). Bulk onboarding from this view is coming soon."
       },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {
@@ -180,6 +180,61 @@
         "download": "Download",
         "downloadAll": "Download all"
       }
+    },
+    "onboarding": {
+      "currentTitle": "Experiments",
+      "currentDescription": "The experiments this device currently streams into.",
+      "currentEmpty": "This device is not onboarded to any experiment yet.",
+      "addTitle": "Onboard to experiments",
+      "addDescription": "Pick the experiments this device should stream into. Onboarding issues the configuration to hand to the device.",
+      "addEmpty": "No further experiments available. You can re-issue the current configuration below.",
+      "onboard": "Onboard",
+      "reissue": "Re-issue configuration",
+      "onboardSuccess": "Device onboarded. Configuration ready below.",
+      "onboardError": "Could not onboard the device",
+      "deliveryTitle": "Device configuration",
+      "deliveryDescription": "Hand this configuration to the device: download it, or push it over a direct connection.",
+      "endpointLabel": "Broker endpoint",
+      "topicsLabel": "Publish topics",
+      "download": "Download JSON",
+      "connect": "Connect device",
+      "disconnect": "Disconnect",
+      "push": "Push to device",
+      "connectError": "Could not connect to the device",
+      "pushSuccess": "Configuration pushed to the device",
+      "pushError": "Could not push the configuration",
+      "loadError": "Could not load experiments. Try again.",
+      "inactiveDevice": "This device has no active credentials, so it cannot be onboarded. Issue credentials first.",
+      "inlineProcedureNote": "This device does not accept a stored configuration; it receives its procedure per measurement. Download the configuration instead.",
+      "provisionNote": "This device cannot be configured over a direct connection. Download the configuration and load it onto the device when provisioning it.",
+      "includeWorkbook": "Include workbook procedures in the configuration",
+      "questionsTitle": "Prefill measurement answers",
+      "questionsDescription": "A device cannot answer questions interactively; answers set here travel inside the configuration and the device attaches them to every measurement.",
+      "answerPlaceholder": "Answer",
+      "answerYes": "Yes",
+      "answerNo": "No",
+      "answerRequiredHint": "Answer all required questions before delivering the configuration.",
+      "guide": {
+        "title": "How to connect your device",
+        "step1": "Get the device certificate bundle and the Amazon root CA from the Credentials tab.",
+        "step2": "Connect to the broker endpoint below via MQTT over TLS, with the thing name as client id.",
+        "step3": "Load this configuration onto the device: download the JSON or push it over a direct connection.",
+        "step4": "Run the procedures of each experiment in order.",
+        "step5": "Publish each measurement to the experiment's topic prefix plus /{{sensorVersion}}/{{sensorId}}.",
+        "step6": "Attach the prefilled answers to every published measurement.",
+        "docsLink": "Read the full device integration guide"
+      }
+    },
+    "experimentDevices": {
+      "tabLabel": "Devices",
+      "title": "Devices",
+      "description": "Devices onboarded to this experiment. An onboarded device can stream its measurements into it.",
+      "loading": "Loading devices...",
+      "empty": "No devices are onboarded to this experiment yet.",
+      "detach": "Detach",
+      "detachSuccess": "Device detached from the experiment",
+      "detachError": "Could not detach the device",
+      "loadError": "Could not load the devices. Try again."
     }
   }
 }

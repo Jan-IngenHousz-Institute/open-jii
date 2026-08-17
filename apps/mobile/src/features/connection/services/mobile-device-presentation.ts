@@ -16,7 +16,7 @@ function usableName(value: string | undefined, stableId: string): string | undef
  * Adapt mobile's transport record plus its best-effort identity handshake to
  * the shared structural presenter. The adapter never infers a product before
  * identity is available; a failed handshake therefore remains name-first or
- * falls back to Unknown device + the transport identifier.
+ * leads with the stable transport identifier.
  */
 export function presentMobileDevice(device: Device, identity?: DeviceIdentity): DevicePresentation {
   const identityId = identity?.deviceId?.trim();
@@ -42,16 +42,18 @@ interface AttributionLabels {
 }
 
 /**
- * Keep unnamed device actions attributable without making the stable ID the
- * primary display name. Named devices stay concise; product and unknown
- * fallbacks retain their identifier as secondary inline context.
+ * Keep device actions attributable. Named devices stay concise; a product
+ * primary retains its identifier as inline context; an identifier primary is
+ * already attributable and gets no duplicating suffix.
  */
 export function mobileDeviceAttributedLabel(
   presentation: DevicePresentation,
   labels: AttributionLabels,
 ): string {
   const primary = mobileDevicePrimaryLabel(presentation, labels.unknownDevice);
-  return presentation.provenance !== "name" && presentation.id
+  const isIdentifierAlreadyPrimary =
+    presentation.provenance === "name" || presentation.provenance === "id";
+  return !isIdentifierAlreadyPrimary && presentation.id
     ? `${primary} (${labels.identifier(presentation.id)})`
     : primary;
 }
@@ -84,6 +86,8 @@ export function mobileDeviceSecondaryParts(
   if (labels.measurementDevice && presentation.roles.includes("measurement-device")) {
     parts.push(labels.measurementDevice);
   }
-  if (presentation.id) parts.push(labels.identifier(presentation.id));
+  if (presentation.id && presentation.provenance !== "id") {
+    parts.push(labels.identifier(presentation.id));
+  }
   return parts;
 }

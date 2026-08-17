@@ -15,6 +15,6 @@ export function generateMetadata({ params }: DeviceOnboardingPageProps): Promise
   });
 }
 
-export default function DeviceOnboardingPage() {
-  return <DeviceOnboardingContent />;
+export default function DeviceOnboardingPage({ params }: DeviceOnboardingPageProps) {
+  return <DeviceOnboardingContent params={params} />;
 }

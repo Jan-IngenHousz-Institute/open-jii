@@ -29,7 +29,11 @@ vi.mock("@repo/iot", () => ({
     };
   }),
   AmbitDriver: vi.fn(function () {
-    return { family: "ambit" };
+    return {
+      family: "ambit",
+      initialize: vi.fn(),
+      destroy: vi.fn().mockResolvedValue(undefined),
+    };
   }),
   MiniParDriver: vi.fn(function () {
     return { family: "minipar" };
@@ -45,16 +49,16 @@ vi.mock("@repo/iot", () => ({
   MULTISPEQ_SERIAL_DEFAULTS: {
     baudRate: 115200,
   },
+  // Mirrors the real registry: BLE is generic-only, serial is universal.
   isTransportSupported: vi.fn((deviceType: string, transport: string) => {
-    if (deviceType === "multispeq" && transport === "bluetooth") return false;
+    if (transport === "bluetooth") return deviceType === "generic";
     return true;
   }),
 }));
 
 // Mock device-type-mapping (web-layer mapping from SensorFamily to DeviceType)
 vi.mock("../device-type-mapping", () => ({
-  sensorFamilyToDeviceType: (family: string) =>
-    family === "multispeq" ? ("multispeq" as const) : ("generic" as const),
+  sensorFamilyToDeviceType: (family: string) => family,
 }));
 
 // Mock transport adapters
@@ -121,7 +125,7 @@ describe("useIotCommunication", () => {
     });
 
     it("supports ambyte sensor family", () => {
-      const { result } = renderHook(() => useIotCommunication("ambyte", "bluetooth"));
+      const { result } = renderHook(() => useIotCommunication("ambyte", "serial"));
       expect(result.current).toBeDefined();
     });
   });
@@ -160,14 +164,19 @@ describe("useIotCommunication", () => {
       });
     });
 
-    it("successfully connects with ambyte sensor family via bluetooth", async () => {
+    it("errors when connecting ambyte via bluetooth (edge devices are serial-only)", async () => {
+      // The hook logs the thrown connection error via console.error; expected here.
+      vi.spyOn(console, "error").mockImplementation(() => {
+        // no-op
+      });
+
       const { result } = renderHook(() => useIotCommunication("ambyte", "bluetooth"));
 
       void result.current.connect();
 
       await waitFor(() => {
-        expect(result.current.isConnected).toBe(true);
-        expect(result.current.driver).not.toBeNull();
+        expect(result.current.isConnected).toBe(false);
+        expect(result.current.error).toMatch(/does not support bluetooth transport/);
       });
     });
 

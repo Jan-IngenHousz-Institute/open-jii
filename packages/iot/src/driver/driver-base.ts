@@ -50,6 +50,16 @@ export interface IDeviceDriver {
   /** Fetch the device's structured identity (name, id, firmware, battery). */
   getDeviceIdentity?(): Promise<DeviceIdentity>;
 
+  /**
+   * Store a configuration document on the device. Present only on drivers
+   * whose device family supports stored config (see DEVICE_TRANSPORT_SUPPORT).
+   */
+  setConfig?(config: {
+    config: Record<string, unknown>;
+    id?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void>;
+
   /** Cleanup and destroy driver */
   destroy(): Promise<void>;
 }

@@ -103,6 +103,14 @@ module "storage_credential" {
   bucket_name     = var.centralized_metastore_bucket_name
   isolation_mode  = "ISOLATION_MODE_OPEN"
 
+  # The file-share bucket lives in this account and is SSE-S3 (AES256), so it
+  # needs no cross-account bucket policy and no KMS grants.
+  additional_bucket_access = {
+    "file-share" = {
+      bucket_name = var.file_share_bucket_name
+    }
+  }
+
   providers = {
     databricks.workspace = databricks.workspace
   }
@@ -121,6 +129,36 @@ module "external_location" {
   environment             = var.environment
   comment                 = "External location for ${var.environment} environment data"
   isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
+}
+
+# External location for the pre-existing jii-file-share bucket (image data).
+# Registered against the whole bucket; Unity Catalog validates the credential
+# with a read/write probe at create time.
+module "file_share_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "file-share-${var.environment}"
+  bucket_name             = var.file_share_bucket_name
+  external_location_path  = ""
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for ${var.file_share_bucket_name} (image data)"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+  read_only               = false
+
+  grants = {
+    for principal in var.file_share_grant_principals :
+    principal => {
+      principal  = principal
+      privileges = ["READ_FILES", "WRITE_FILES"]
+    }
+  }
 
   providers = {
     databricks.workspace = databricks.workspace
