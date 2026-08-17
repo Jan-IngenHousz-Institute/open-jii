@@ -121,9 +121,23 @@ export const SwipeableRow = memo(function SwipeableRow({
     opacity: Math.min(1, Math.max(0, translateX.value / -6)),
   }));
 
-  const handleComment = () => onComment?.(id);
-  const handleSync = () => onSync?.(id);
-  const handleDelete = () => onDelete?.(id);
+  // Tapping an action springs the row shut again; leaving it open strands the
+  // buttons visible under whatever the action opened (alert, comment modal).
+  const closeRow = () => {
+    translateX.value = withSpring(0, SPRING_CONFIG);
+  };
+  const handleComment = () => {
+    closeRow();
+    onComment?.(id);
+  };
+  const handleSync = () => {
+    closeRow();
+    onSync?.(id);
+  };
+  const handleDelete = () => {
+    closeRow();
+    onDelete?.(id);
+  };
 
   return (
     <View className="overflow-hidden">

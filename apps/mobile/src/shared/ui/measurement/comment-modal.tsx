@@ -25,7 +25,7 @@ const answersValueStyle = cva("flex-1", {
 interface CommentModalProps {
   visible: boolean;
   initialText: string;
-  onSave: (text: string) => void;
+  onSave: (text: string) => void | Promise<void>;
   onCancel: () => void;
   experimentName: string;
   questions: AnswerData[];
@@ -57,7 +57,11 @@ export function CommentModal({
   }, [visible, initialText]);
 
   const handleSave = () => {
-    onSave(textRef.current);
+    // onSave may be async (persisting to the DB). A rejection means the save
+    // failed — the handler already surfaced that (toast) and kept its state —
+    // so swallow it here: the fire-and-forget call must not become an
+    // unhandled rejection, and the modal stays open for a retry.
+    Promise.resolve(onSave(textRef.current)).catch(() => undefined);
   };
 
   return (

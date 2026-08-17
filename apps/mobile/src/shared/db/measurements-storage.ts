@@ -154,19 +154,23 @@ export function extractWorkbookRunId(measurementResult: object): string {
   return typeof runId === "string" ? runId : "";
 }
 
+// Resolved once at module load: `resolvedOptions()` hits the native Intl
+// backend on every call, and a timezone change mid-session is picked up on
+// the next app start anyway.
+const DEVICE_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 // Local calendar date "YYYY-MM-DD" for `timestamp` (device tz via Intl, which
 // keeps the DB layer free of the time-sync service's native deps), so the
 // Recent list buckets by day without parsing timestamps at render time.
 // Defaults to today when the timestamp is unparseable. See OJD-1470.
 export function computeDayKey(timestamp: string): string {
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   try {
-    const dt = DateTime.fromISO(timestamp, { zone: "utc" }).setZone(zone);
+    const dt = DateTime.fromISO(timestamp, { zone: "utc" }).setZone(DEVICE_ZONE);
     if (dt.isValid) return dt.toFormat("yyyy-MM-dd");
   } catch {
     // fall through to today
   }
-  return DateTime.now().setZone(zone).toFormat("yyyy-MM-dd");
+  return DateTime.now().setZone(DEVICE_ZONE).toFormat("yyyy-MM-dd");
 }
 
 // `questions_text` is plain JSON written by `deriveListColumns`. A malformed or
@@ -178,12 +182,12 @@ function safeParseQuestionsText(text: string | null, id: string): AnswerData[] {
   try {
     const parsed: unknown = JSON.parse(text);
     if (!Array.isArray(parsed)) {
-      console.warn(`[measurements] questions_text not an array for ${id}:`, typeof parsed);
+      log.warn("questions_text not an array", { id, type: typeof parsed });
       return [];
     }
     return parsed as AnswerData[];
   } catch (err) {
-    console.warn(`[measurements] questions_text malformed for ${id}:`, err);
+    log.warn("questions_text malformed", { id, err: (err as Error)?.message });
     return [];
   }
 }
@@ -318,6 +322,35 @@ export async function getMeasurementsList(
 }
 
 /**
+ * Every measurement id belonging to one workbook run, straight from storage —
+ * independent of which page, status filter, or day split the list currently
+ * renders. Run-level actions (delete/upload) resolve membership here so they
+ * act on the whole run, not the visible slice. Pass `statuses` to narrow the
+ * set (e.g. UNSYNCED_STATUSES for upload). Rethrows so the caller's
+ * confirmation can report a lookup failure instead of acting on nothing.
+ */
+export async function getMeasurementIdsByRunId(
+  runId: string,
+  statuses?: readonly MeasurementStatus[],
+): Promise<string[]> {
+  await ensureMigrated();
+  try {
+    const where =
+      statuses && statuses.length > 0
+        ? and(eq(measurements.workbookRunId, runId), inArray(measurements.status, [...statuses]))
+        : eq(measurements.workbookRunId, runId);
+    const rows = db.select({ id: measurements.id }).from(measurements).where(where).all();
+    return rows.map((r) => r.id);
+  } catch (error) {
+    log.error("Failed to fetch measurement ids for run", {
+      runId,
+      err: (error as Error)?.message,
+    });
+    throw error;
+  }
+}
+
+/**
  * Fetch a single full row by id, including the decompressed
  * `measurementResult`. Used by the detail modal on open and by paths that
  * need the full payload (comment editing, MQTT publish).
@@ -413,6 +446,9 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
       .run();
   } catch (error) {
     log.error("Failed to update measurement", { key, err: (error as Error)?.message });
+    // Rethrown so comment/flag edits can keep the modal open and report the
+    // failure instead of looking saved.
+    throw error;
   }
 }
 
@@ -425,6 +461,7 @@ export async function markAsFailed(key: string): Promise<void> {
       .run();
   } catch (error) {
     log.error("Failed to mark measurement as failed", { key, err: (error as Error)?.message });
+    throw error;
   }
 }
 
@@ -439,6 +476,7 @@ export async function markAsSuccessful(key: string): Promise<void> {
       .run();
   } catch (error) {
     log.error("Failed to mark measurement as successful", { key, err: (error as Error)?.message });
+    throw error;
   }
 }
 
@@ -478,6 +516,9 @@ export async function clearMeasurements(status: MeasurementStatus): Promise<void
     db.delete(measurements).where(eq(measurements.status, status)).run();
   } catch (error) {
     log.error("Failed to clear measurements", { status, err: (error as Error)?.message });
+    // Rethrown so the confirmation can report the failure instead of
+    // reporting success over rows that are still there.
+    throw error;
   }
 }
 

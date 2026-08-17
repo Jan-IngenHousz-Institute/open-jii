@@ -1,4 +1,4 @@
-import { eq, isNull, or } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { decompressFromStorage } from "~/shared/compression/storage-compression";
 import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/shared/measurements/measurement-annotations";
@@ -23,8 +23,13 @@ const BATCH_SIZE = 100;
  * Every pass writes non-null values (`questions_text = "[]"`, `workbook_run_id
  * = ""` when the payload has none), so a row is never rescanned forever; it
  * still opens correctly via getMeasurement(id), which decompresses on demand.
+ *
+ * Returns how many rows were actually updated. The UPDATEs are guarded on the
+ * row still needing backfill, so a row a concurrent write (comment edit,
+ * updateMeasurement) fully populated after the batch snapshot is skipped
+ * instead of being reverted to the stale snapshot.
  */
-export async function backfillDerivedColumns(): Promise<void> {
+export async function backfillDerivedColumns(): Promise<number> {
   let totalUpdated = 0;
 
   while (true) {
@@ -79,23 +84,37 @@ export async function backfillDerivedColumns(): Promise<void> {
 
     db.transaction((tx) => {
       for (const u of updates) {
-        tx.update(measurements)
+        // Guarded: skip the row when a concurrent write already populated all
+        // derived columns since the batch snapshot was read — otherwise a
+        // comment edited mid-backfill would be reverted to the stale snapshot.
+        const result = tx
+          .update(measurements)
           .set({
             questionsText: u.questionsText,
             hasComment: u.hasComment,
             dayKey: u.dayKey,
             workbookRunId: u.workbookRunId,
           })
-          .where(eq(measurements.id, u.id))
+          .where(
+            and(
+              eq(measurements.id, u.id),
+              or(
+                isNull(measurements.questionsText),
+                isNull(measurements.dayKey),
+                isNull(measurements.workbookRunId),
+              ),
+            ),
+          )
           .run();
+        totalUpdated += result.changes;
       }
     });
 
-    totalUpdated += rows.length;
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   if (totalUpdated > 0) {
     log.info("backfilled derived columns", { count: totalUpdated });
   }
+  return totalUpdated;
 }

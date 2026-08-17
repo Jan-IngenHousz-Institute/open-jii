@@ -59,6 +59,7 @@ export const MeasurementItem = memo(function MeasurementItem({
         indented ? "bg-jii-mint-light border-l-2 pl-8" : "bg-card pl-4",
       )}
       onPress={() => onPress?.(id)}
+      accessibilityRole="button"
     >
       {/* Top: answers */}
       <Text

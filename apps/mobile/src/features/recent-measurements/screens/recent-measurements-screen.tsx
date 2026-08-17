@@ -1,7 +1,7 @@
 import { FlashList } from "@shopify/flash-list";
 import { useIsFocused } from "expo-router";
 import { useNavigation } from "expo-router";
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, InteractionManager, View } from "react-native";
 import { MeasurementsDayHeader } from "~/features/recent-measurements/components/measurements-day-header";
 import { MeasurementsHeaderActions } from "~/features/recent-measurements/components/measurements-header-actions";
@@ -66,6 +66,10 @@ export function RecentMeasurementsScreen() {
     setExpandedRuns((prev) => ({ ...prev, [runKey]: !prev[runKey] }));
   }, []);
 
+  // Expansion is per-filter-view: switching tabs resets it instead of letting
+  // keys accumulate across deletes and day rollovers for the whole session.
+  useEffect(() => setExpandedRuns({}), [filter]);
+
   // [perf] Defer the first heavy list commit (50 gesture-handler + reanimated
   // swipeables cost ~200 ms on the JS thread paho acks PUBACKs on) until the
   // tab transition settles, then stay mounted so return visits are instant.
@@ -108,16 +112,25 @@ export function RecentMeasurementsScreen() {
 
   const locale = i18n.language === "nl-NL" ? "nl-NL" : "en-GB";
 
+  // Day sections + run entries, keyed on the measurements alone: expanding a
+  // run must not re-run the day bucketing (Luxon, per-item) that OJD-1470
+  // keeps off the interaction path.
+  const sectionEntries = useMemo(() => {
+    // Runs collapse within a day, so a run that straddles midnight still
+    // lands under both day headers rather than jumping out of one. The day
+    // scopes the run key, keeping those two rows independent.
+    return groupMeasurementsByDay(measurements, undefined, locale).map((section) => ({
+      section,
+      entries: groupMeasurementsByRun(section.data, section.key),
+    }));
+  }, [measurements, locale]);
+
   const data = useMemo<ListRow[]>(() => {
     const t0 = Date.now();
-    const sections = groupMeasurementsByDay(measurements, undefined, locale);
     const out: ListRow[] = [];
-    for (const section of sections) {
+    for (const { section, entries } of sectionEntries) {
       out.push({ kind: "header", key: `h:${section.key}`, section });
-      // Runs collapse within a day, so a run that straddles midnight still
-      // lands under both day headers rather than jumping out of one. The day
-      // scopes the run key, keeping those two rows independent.
-      for (const entry of groupMeasurementsByRun(section.data, section.key)) {
+      for (const entry of entries) {
         if (!entry.runId) {
           out.push({ kind: "row", key: entry.key, item: entry.items[0] });
           continue;
@@ -139,17 +152,25 @@ export function RecentMeasurementsScreen() {
       });
     }
     return out;
-  }, [measurements, locale, expandedRuns]);
+  }, [sectionEntries, expandedRuns, measurements.length]);
 
   const firstRowKey = useMemo(
     () => data.find((r) => r.kind === "row" || r.kind === "run")?.key,
     [data],
   );
 
-  // Peek the most-recent row each time the screen gains focus (once the
-  // deferred list is ready) so the swipe action stays discoverable.
+  // Peek the most-recent row once per focus gain (when the deferred list is
+  // ready) so the swipe action stays discoverable. Data churn while focused —
+  // syncs settling, filter changes — must NOT re-fire the nudge.
+  const wasFocused = useRef(false);
+  const peekedThisFocus = useRef(false);
   useEffect(() => {
-    if (isFocused && listReady && firstRowKey) setPeekToken((t) => t + 1);
+    if (isFocused && !wasFocused.current) peekedThisFocus.current = false;
+    wasFocused.current = isFocused;
+    if (isFocused && listReady && firstRowKey && !peekedThisFocus.current) {
+      peekedThisFocus.current = true;
+      setPeekToken((t) => t + 1);
+    }
   }, [isFocused, listReady, firstRowKey]);
 
   const itemsById = useMemo(() => {
@@ -158,8 +179,9 @@ export function RecentMeasurementsScreen() {
     return map;
   }, [measurements]);
 
-  // Run rows hand back their `run:<id>` key, so the actions resolve the run's
-  // measurements from the rows already built for the list.
+  // Run rows hand back their `run:<dayKey>:<id>` key; the actions take the
+  // entry's run id (and experiment name for the confirmation copy) and resolve
+  // the full membership from storage — the rendered slice is not authoritative.
   const runsByKey = useMemo(() => {
     const map = new Map<string, MeasurementRunEntry>();
     for (const row of data) {
@@ -197,14 +219,16 @@ export function RecentMeasurementsScreen() {
   const onRunDelete = useCallback(
     (runKey: string) => {
       const entry = runsByKey.get(runKey);
-      if (entry) confirmDeleteRun(entry.items);
+      // Run actions resolve membership from storage by run id; the entry only
+      // supplies the id and the experiment name for the confirmation copy.
+      if (entry?.runId) void confirmDeleteRun(entry.runId, entry.items[0].experimentName);
     },
     [runsByKey, confirmDeleteRun],
   );
   const onRunSync = useCallback(
     (runKey: string) => {
       const entry = runsByKey.get(runKey);
-      if (entry) confirmSyncRun(entry.items);
+      if (entry?.runId) void confirmSyncRun(entry.runId, entry.items[0].experimentName);
     },
     [runsByKey, confirmSyncRun],
   );

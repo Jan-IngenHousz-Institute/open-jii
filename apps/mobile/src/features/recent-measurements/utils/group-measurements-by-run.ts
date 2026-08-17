@@ -23,11 +23,14 @@ export interface MeasurementRunEntry {
 /**
  * Collapses the measurements of one workbook run (multi-device rounds and the
  * sequential cells of a single attempt all share `workbookRunId`) into one
- * entry, positioned where the run's newest measurement sat. Rows with no run id
- * (legacy, pre-backfill, questions-only saves from older versions) and runs that
- * produced a single measurement stay standalone rows: a dropdown around one item
- * is just noise. Input order is preserved; no sorting, no date parsing, so this
- * stays cheap enough for the list build path (see OJD-1470).
+ * entry. The entry takes the position of the run's FIRST occurrence in the
+ * input, so it only lands where the run's newest measurement sat when the
+ * input is ordered newest-first (the list query's `ORDER BY timestamp DESC`).
+ * Rows with no run id (legacy, pre-backfill, questions-only saves from older
+ * versions) and runs that produced a single measurement stay standalone rows:
+ * a dropdown around one item is just noise. Input order is preserved; no
+ * sorting, no date parsing, so this stays cheap enough for the list build
+ * path (see OJD-1470).
  */
 export function groupMeasurementsByRun(
   items: MeasurementItem[],

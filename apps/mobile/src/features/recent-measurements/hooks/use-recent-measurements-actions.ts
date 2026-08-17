@@ -6,8 +6,9 @@ import type {
 import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useExportMeasurements } from "~/features/recent-measurements/hooks/use-export-measurements";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
-import { isUnsynced } from "~/shared/db/measurement-status";
+import { UNSYNCED_STATUSES } from "~/shared/db/measurement-status";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
+import { getMeasurementIdsByRunId } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
@@ -79,25 +80,38 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
         ? t("recentMeasurements:alerts.removeMeasurementMessage", { name: m.experimentName })
         : t("recentMeasurements:alerts.deleteMeasurementMessage", { name: m.experimentName }),
       confirmText: isSynced ? t("recentMeasurements:alerts.removeButton") : t("common:delete"),
-      variant: "primary",
+      variant: "danger",
       errorMessage: t("recentMeasurements:alerts.deleteMeasurementError"),
       run: async () => {
-        await removeMeasurement(m.key);
-        invalidate();
+        try {
+          await removeMeasurement(m.key);
+        } finally {
+          invalidate();
+        }
       },
     });
   };
 
   // Run-level variants of the two row actions, so a collapsed run can be
-  // uploaded or deleted without expanding it first.
-  const confirmSyncRun = (items: MeasurementItem[]) => {
-    const keys = items.filter((m) => isUnsynced(m.status)).map((m) => m.key);
+  // uploaded or deleted without expanding it first. Membership is resolved
+  // from storage by run id at action time: the rendered slice is only the
+  // loaded, filter-matching, per-day rows, so acting on it would silently
+  // miss run members hidden by a status filter, a midnight split, or an
+  // unfetched page.
+  const confirmSyncRun = async (runId: string, experimentName: string) => {
+    let keys: string[];
+    try {
+      keys = await getMeasurementIdsByRunId(runId, UNSYNCED_STATUSES);
+    } catch {
+      toast.error(t("recentMeasurements:alerts.uploadMeasurementError"));
+      return;
+    }
     if (keys.length === 0) return;
     confirmAndRun(t, {
       title: t("recentMeasurements:alerts.uploadRunTitle"),
       message: t("recentMeasurements:alerts.uploadRunMessage", {
         count: keys.length,
-        name: items[0].experimentName,
+        name: experimentName,
       }),
       confirmText: t("recentMeasurements:alerts.uploadButton"),
       variant: "primary",
@@ -112,20 +126,30 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     });
   };
 
-  const confirmDeleteRun = (items: MeasurementItem[]) => {
-    if (items.length === 0) return;
+  const confirmDeleteRun = async (runId: string, experimentName: string) => {
+    let keys: string[];
+    try {
+      keys = await getMeasurementIdsByRunId(runId);
+    } catch {
+      toast.error(t("recentMeasurements:alerts.deleteMeasurementError"));
+      return;
+    }
+    if (keys.length === 0) return;
     confirmAndRun(t, {
       title: t("recentMeasurements:alerts.deleteRunTitle"),
       message: t("recentMeasurements:alerts.deleteRunMessage", {
-        count: items.length,
-        name: items[0].experimentName,
+        count: keys.length,
+        name: experimentName,
       }),
       confirmText: t("common:delete"),
-      variant: "primary",
+      variant: "danger",
       errorMessage: t("recentMeasurements:alerts.deleteMeasurementError"),
       run: async () => {
-        await removeMeasurements(items.map((m) => m.key));
-        invalidate();
+        try {
+          await removeMeasurements(keys);
+        } finally {
+          invalidate();
+        }
       },
     });
   };
@@ -150,17 +174,28 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
       title: t("recentMeasurements:alerts.deleteAllSyncedTitle"),
       message: t("recentMeasurements:alerts.deleteAllSyncedMessage", { count: syncedCount }),
       confirmText: t("common:delete"),
-      variant: "primary",
+      variant: "danger",
       errorMessage: t("recentMeasurements:alerts.deleteAllSyncedError"),
       run: async () => {
-        await clearSyncedMeasurements();
-        invalidate();
+        try {
+          await clearSyncedMeasurements();
+        } finally {
+          invalidate();
+        }
       },
     });
 
   const saveComment = async (m: StoredMeasurement, text: string) => {
-    await updateMeasurementComment(m.id, m.data, text);
-    invalidate();
+    try {
+      await updateMeasurementComment(m.id, m.data, text);
+    } catch (err) {
+      // Rethrown so the comment modal stays open (it only closes once the save
+      // resolves) instead of losing the edit.
+      toast.error(t("recentMeasurements:alerts.commentSaveError"));
+      throw err;
+    } finally {
+      invalidate();
+    }
   };
 
   return {

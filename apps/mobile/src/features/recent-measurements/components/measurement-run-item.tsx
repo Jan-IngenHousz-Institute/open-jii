@@ -13,7 +13,7 @@ import { cn } from "~/shared/ui/cn";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface MeasurementRunItemProps {
-  /** Run row id (`run:<workbookRunId>`), passed back by the toggle. */
+  /** Run row id (`run:<dayKey>:<runId>`, see groupMeasurementsByRun), passed back by the toggle. */
   id: string;
   count: number;
   experimentName: string;
@@ -60,8 +60,14 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
       onPress={() => onToggle(id)}
       accessibilityRole="button"
       accessibilityState={{ expanded }}
+      // The label replaces the row's children for screen readers, so it must
+      // carry what they say: experiment name and how many measurements the
+      // run collapses.
       accessibilityLabel={t(
-        expanded ? "recentMeasurements:list.collapseRun" : "recentMeasurements:list.expandRun",
+        expanded
+          ? "recentMeasurements:accessibility.collapseRun"
+          : "recentMeasurements:accessibility.expandRun",
+        { name: experimentName, count },
       )}
     >
       <View className="w-7 items-center pt-0.5">

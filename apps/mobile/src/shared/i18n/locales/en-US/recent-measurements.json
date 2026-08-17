@@ -75,8 +75,8 @@
     "uploadRunMessage_one": "Upload {{count}} unsynced measurement from this \"{{name}}\" run?",
     "uploadRunMessage_other": "Upload {{count}} unsynced measurements from this \"{{name}}\" run?",
     "deleteRunTitle": "Delete Workbook Run",
-    "deleteRunMessage_one": "Delete {{count}} measurement from this \"{{name}}\" run from local storage?",
-    "deleteRunMessage_other": "Delete all {{count}} measurements from this \"{{name}}\" run from local storage?",
+    "deleteRunMessage_one": "Delete this measurement of the \"{{name}}\" run from local storage?",
+    "deleteRunMessage_other": "Delete these {{count}} measurements of the \"{{name}}\" run from local storage?",
     "uploadAllTitle": "Upload All Measurements",
     "uploadAllMessage_one": "Are you sure you want to sync {{count}} unsynced measurement?",
     "uploadAllMessage_other": "Are you sure you want to sync {{count}} unsynced measurements?",
@@ -89,7 +89,14 @@
     "saveErrorTitle": "Something went wrong",
     "saveErrorMessage": "Could not save the measurement. Would you like to save it as a file instead?",
     "saveToFileButton": "Save to File",
-    "saveToFileError": "Could not save measurement. Please try again."
+    "saveToFileError": "Could not save measurement. Please try again.",
+    "commentSaveError": "Could not save the comment. Please try again."
+  },
+  "accessibility": {
+    "expandRun_one": "Expand workbook run: {{name}}, {{count}} measurement",
+    "expandRun_other": "Expand workbook run: {{name}}, {{count}} measurements",
+    "collapseRun_one": "Collapse workbook run: {{name}}, {{count}} measurement",
+    "collapseRun_other": "Collapse workbook run: {{name}}, {{count}} measurements"
   },
   "toasts": {
     "uploadFailed": "Upload failed. Please try again.",

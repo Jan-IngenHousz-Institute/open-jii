@@ -10,13 +10,14 @@ vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
     t: (key: string, vars?: Record<string, unknown>) => {
       const count = vars?.count as number | undefined;
+      const name = vars?.name as string | undefined;
       const map: Record<string, string> = {
         "swipe.uploadButton": "Upload",
         "swipe.deleteButton": "Delete",
         "recentMeasurements:list.runMeasurementCount": `${count} measurements`,
         "recentMeasurements:list.noQuestionsAnswered": "No questions answered",
-        "recentMeasurements:list.expandRun": "Expand workbook run",
-        "recentMeasurements:list.collapseRun": "Collapse workbook run",
+        "recentMeasurements:accessibility.expandRun": `Expand workbook run: ${name}, ${count} measurements`,
+        "recentMeasurements:accessibility.collapseRun": `Collapse workbook run: ${name}, ${count} measurements`,
       };
       return map[key] ?? key;
     },
@@ -62,7 +63,8 @@ function item(key: string, status: MeasurementItem["status"]): MeasurementItem {
 }
 
 function entry(...items: MeasurementItem[]): MeasurementRunEntry {
-  return { key: "run:run-1", runId: "run-1", items };
+  // Same shape groupMeasurementsByRun builds: run:<dayKey>:<runId>.
+  return { key: "run:2026-05-18:run-1", runId: "run-1", items };
 }
 
 const defaultProps = {
@@ -99,10 +101,10 @@ describe("MeasurementsRunRow", () => {
       />,
     );
     fireEvent.press(screen.getByText("Photosynthesis"));
-    expect(onToggle).toHaveBeenCalledWith("run:run-1");
+    expect(onToggle).toHaveBeenCalledWith("run:2026-05-18:run-1");
   });
 
-  it("announces its expanded state for screen readers", () => {
+  it("announces its expanded state, name and size for screen readers", () => {
     render(
       <MeasurementsRunRow
         {...defaultProps}
@@ -110,7 +112,23 @@ describe("MeasurementsRunRow", () => {
         entry={entry(item("a", "successful"), item("b", "successful"))}
       />,
     );
-    expect(screen.getByLabelText("Collapse workbook run")).toBeTruthy();
+    // The accessibility label replaces the row's children, so it must carry
+    // the experiment name and the measurement count they visually show.
+    expect(
+      screen.getByLabelText("Collapse workbook run: Photosynthesis, 2 measurements"),
+    ).toBeTruthy();
+  });
+
+  it("names the collapsed run for screen readers too", () => {
+    render(
+      <MeasurementsRunRow
+        {...defaultProps}
+        entry={entry(item("a", "successful"), item("b", "successful"), item("c", "pending"))}
+      />,
+    );
+    expect(
+      screen.getByLabelText("Expand workbook run: Photosynthesis, 3 measurements"),
+    ).toBeTruthy();
   });
 
   it("offers Upload for a run that still has unsynced measurements", () => {
@@ -157,6 +175,6 @@ describe("MeasurementsRunRow", () => {
       />,
     );
     fireEvent.press(screen.getByLabelText("Delete"));
-    expect(onDelete).toHaveBeenCalledWith("run:run-1");
+    expect(onDelete).toHaveBeenCalledWith("run:2026-05-18:run-1");
   });
 });
