@@ -54,10 +54,10 @@ export function MeasurementResult({
       ?.map((output) => output.messages)
       .filter((msg): msg is MacroMessageGroup => msg !== undefined) ?? [];
 
+  const rawJson = useMemo(() => JSON.stringify(rawMeasurement, null, 2), [rawMeasurement]);
+
   const renderRawContent = () => (
-    <Text className={clsx("font-mono text-sm leading-5", classes.text)}>
-      {JSON.stringify(rawMeasurement, null, 2)}
-    </Text>
+    <Text className={clsx("font-mono text-sm leading-5", classes.text)}>{rawJson}</Text>
   );
 
   const fields = useMemo(() => partitionMacroOutput(outputs), [outputs]);
@@ -91,8 +91,8 @@ export function MeasurementResult({
     // what the macro reported without a value, then structured leftovers.
     return (
       <View className="gap-3">
-        {fields.charts.map((field) => (
-          <Chart key={field.name} name={field.name} values={field.values} />
+        {fields.charts.map((field, index) => (
+          <Chart key={`${index}-${field.name}`} name={field.name} values={field.values} />
         ))}
 
         {fields.values.length > 0 && <MacroFieldGrid fields={fields.values} />}
@@ -116,8 +116,8 @@ export function MeasurementResult({
             label={t("measurementFlow:result.structuredFields", { count: fields.others.length })}
           >
             <View className="gap-3">
-              {fields.others.map((field) => (
-                <View key={field.name} className="gap-1">
+              {fields.others.map((field, index) => (
+                <View key={`${index}-${field.name}`} className="gap-1">
                   <Text className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
                     {field.name}
                   </Text>

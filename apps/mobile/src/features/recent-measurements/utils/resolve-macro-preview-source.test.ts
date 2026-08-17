@@ -3,12 +3,10 @@ import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 
 import { resolveMacroPreviewSource } from "./resolve-macro-preview-source";
 
-vi.mock("~/shared/stores/environment-store", () => ({
-  getEnvVar: (key: string) =>
-    key === "MQTT_TOPIC"
-      ? "experiment/data_ingest/v1/:experimentId/multispeq/v1.0/:clientId/:protocolId"
-      : "client-1",
+vi.mock("~/shared/stores/device-identity-store", () => ({
+  getLocalThingName: () => "mobile-test-thing",
 }));
+vi.mock("expo-application", () => ({ nativeApplicationVersion: "2.4.1" }));
 
 const EXPERIMENT_ID = "11111111-1111-1111-1111-111111111111";
 const PROTOCOL_ID = "22222222-2222-2222-2222-222222222222";
@@ -34,7 +32,7 @@ const fullPayload = {
 };
 
 describe("resolveMacroPreviewSource", () => {
-  it("resolves the macro, workbook version, experiment, payload and recorded ctx", () => {
+  it("resolves the macro, workbook version, experiment and recorded ctx", () => {
     const result = resolveMacroPreviewSource(measurement(fullPayload));
 
     expect(result).toEqual({
@@ -43,10 +41,40 @@ describe("resolveMacroPreviewSource", () => {
         experimentId: EXPERIMENT_ID,
         workbookVersionId: "version-1",
         macroId: "macro-1",
-        rawMeasurement: fullPayload,
+        // The upload envelope is stripped: the macro re-sees the raw scan.
+        rawMeasurement: { sample: [{ phi2: 0.8 }] },
         ctx: { upstream: { phi2: 0.5 } },
       },
     });
+  });
+
+  it("strips the injected macros routing list from sample entries", () => {
+    const result = resolveMacroPreviewSource(
+      measurement({
+        ...fullPayload,
+        sample: [
+          { phi2: 0.8, macros: ["macro-1.js"] },
+          { phi2: 0.2, macros: ["macro-1.js"] },
+        ],
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.source.rawMeasurement.sample).toEqual([{ phi2: 0.8 }, { phi2: 0.2 }]);
+  });
+
+  it("keeps capture-time keys that coincide with envelope additions it cannot prove", () => {
+    // timestamp/user_id may have been part of the raw measurement; stripping
+    // them would be a worse fidelity break than leaving them.
+    const result = resolveMacroPreviewSource(
+      measurement({ ...fullPayload, timestamp: "2026-08-01T10:00:00Z", user_id: "u1" }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.source.rawMeasurement.timestamp).toBe("2026-08-01T10:00:00Z");
+    expect(result.source.rawMeasurement.user_id).toBe("u1");
   });
 
   it("reports no-macro for a questions-only save", () => {
@@ -64,6 +92,18 @@ describe("resolveMacroPreviewSource", () => {
   it("reports unknown-experiment when the topic does not match the template", () => {
     const result = resolveMacroPreviewSource(measurement(fullPayload, "some/other/topic"));
     expect(result).toEqual({ ok: false, blocker: "unknown-experiment" });
+  });
+
+  it("reports decode-failed when a marked sample cannot be restored", () => {
+    const corrupt = resolveMacroPreviewSource(
+      measurement({ ...fullPayload, sample: "!!!not-base64!!!", _sample_encoding: "gzip+base64" }),
+    );
+    const mismatched = resolveMacroPreviewSource(
+      measurement({ ...fullPayload, sample: [{ phi2: 0.8 }], _sample_encoding: "gzip+base64" }),
+    );
+
+    expect(corrupt).toEqual({ ok: false, blocker: "decode-failed" });
+    expect(mismatched).toEqual({ ok: false, blocker: "decode-failed" });
   });
 
   it("falls back to an empty ctx when macro_context is absent or malformed", () => {
@@ -91,6 +131,23 @@ describe("resolveMacroPreviewSource", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.source.rawMeasurement._sample_encoding).toBeUndefined();
+    expect(result.source.rawMeasurement.sample).toEqual([{ phi2: 0.8 }, { phi2: 0.2 }]);
+  });
+
+  it("replays the capture-time input from the real stored shape (compressed + injected)", () => {
+    const compressed = {
+      ...fullPayload,
+      // gzip+base64 of the sample entries after buildUploadPayload injected
+      // `macros`: [{"phi2":0.8,"macros":["macro-1.js"]},{"phi2":0.2,"macros":["macro-1.js"]}]
+      sample: "H4sIAAAAAAAAA4uuVirIyDRSsjLQs9BRyk1MLsovVrKKhrB0DfWyipVia3UQioxwKooFAF3o7nVLAAAA",
+      _sample_encoding: "gzip+base64",
+    };
+
+    const result = resolveMacroPreviewSource(measurement(compressed));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Exactly the pre-injection capture input: no `macros` key on any entry.
     expect(result.source.rawMeasurement.sample).toEqual([{ phi2: 0.8 }, { phi2: 0.2 }]);
   });
 });

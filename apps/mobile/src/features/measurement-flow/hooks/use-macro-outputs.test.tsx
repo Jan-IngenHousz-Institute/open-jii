@@ -95,4 +95,36 @@ describe("useMacroOutputs", () => {
 
     await waitFor(() => expect(applyMacro).not.toHaveBeenCalled());
   });
+
+  it("serves a rebuilt payload from cache when the caller passes a stable cacheKey", async () => {
+    applyMacro.mockResolvedValue([{ ok: 1 }]);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+
+    const { rerender } = renderHook(
+      (props: Parameters<typeof useMacroOutputs>[0]) => useMacroOutputs(props),
+      {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        ),
+        initialProps: {
+          rawMeasurement: { sample: [{ phi2: 0.8 }] },
+          macro,
+          cacheKey: "m1/version-1/macro-1",
+        },
+      },
+    );
+    await waitFor(() => expect(applyMacro).toHaveBeenCalledTimes(1));
+
+    // A fresh decode produces an equal payload under a new object identity;
+    // the stable key must keep that from re-running the macro.
+    rerender({
+      rawMeasurement: { sample: [{ phi2: 0.8 }] },
+      macro: { ...macro },
+      cacheKey: "m1/version-1/macro-1",
+    });
+
+    await waitFor(() => expect(applyMacro).toHaveBeenCalledTimes(1));
+  });
 });

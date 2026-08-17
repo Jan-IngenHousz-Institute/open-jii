@@ -23,11 +23,6 @@ vi.mock("~/shared/ui/hooks/use-theme", () => ({
   }),
 }));
 vi.mock("~/shared/ui/TabBar", () => ({ TabBar: () => null }));
-vi.mock("~/shared/ui/measurement/key-value", () => ({
-  KeyValue: ({ name, value }: { name: string; value: string | number }) => (
-    <Text testID={`key-value-${name}`}>{String(value)}</Text>
-  ),
-}));
 vi.mock("~/shared/ui/measurement/chart", () => ({
   Chart: (props: { name: string; values: number[] }) => {
     chartProps(props);

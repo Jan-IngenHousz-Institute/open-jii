@@ -12,7 +12,9 @@ export type MacroPreviewBlocker =
   /** Saved before workbook_version_id existed, so the macro snapshot is unknown. */
   | "no-workbook-version"
   /** Topic doesn't carry an experiment id, so the workbook can't be located. */
-  | "unknown-experiment";
+  | "unknown-experiment"
+  /** The stored sample envelope couldn't be decompressed back to macro input. */
+  | "decode-failed";
 
 export interface MacroPreviewSource {
   experimentId: string;
@@ -49,16 +51,58 @@ export function resolveMacroPreviewSource(
   const { experimentId } = parseMeasurementTopic(measurement.data.topic);
   if (!experimentId) return { ok: false, blocker: "unknown-experiment" };
 
+  const decoded = decodeStoredSample(payload);
+  if (!decoded) return { ok: false, blocker: "decode-failed" };
+
   return {
     ok: true,
     source: {
       experimentId,
       workbookVersionId,
       macroId,
-      rawMeasurement: decodeStoredSample(payload),
+      rawMeasurement: stripUploadEnvelope(decoded),
       ctx: parseMacroContext(payload.macro_context),
     },
   };
+}
+
+// Keys buildUploadPayload wraps around the raw scan result. Stripped on replay
+// so the macro re-sees the input it ran against at capture time: a macro that
+// enumerates its input's keys would otherwise read the envelope as data.
+// timestamp/timezone/user_id/device_id/location are deliberately left alone —
+// they may have been part of the raw measurement itself, which is
+// indistinguishable from the upload-time addition after the fact.
+const UPLOAD_ENVELOPE_KEYS: ReadonlySet<string> = new Set([
+  "questions",
+  "macros",
+  "annotations",
+  "workbook_run_id",
+  "workbook_version_id",
+  "macro_context",
+]);
+
+function stripUploadEnvelope(payload: Record<string, unknown>): Record<string, unknown> {
+  const restored = Object.fromEntries(
+    Object.entries(payload).filter(([key]) => !UPLOAD_ENVELOPE_KEYS.has(key)),
+  );
+  // buildUploadPayload also injects `macros` (the filename routing list) into
+  // every sample entry; the capture-time entries didn't carry it.
+  if ("sample" in restored) {
+    restored.sample = stripInjectedMacros(restored.sample);
+  }
+  return restored;
+}
+
+function stripInjectedMacros(sample: unknown): unknown {
+  const stripEntry = (entry: unknown): unknown => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry) || !("macros" in entry)) {
+      return entry;
+    }
+    const { macros: _macros, ...rest } = entry as Record<string, unknown>;
+    return rest;
+  };
+  if (Array.isArray(sample)) return sample.map(stripEntry);
+  return stripEntry(sample);
 }
 
 // Stored as a JSON string by build-upload-payload. A malformed value falls back

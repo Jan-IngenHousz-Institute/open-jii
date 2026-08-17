@@ -50,34 +50,29 @@ describe("getMeasurementMqttTopic", () => {
 });
 
 describe("parseMeasurementTopic", () => {
-  it("recovers the ids a topic was built from", () => {
-    const topic = getMeasurementMqttTopic({
-      experimentId: "experiment-42",
-      protocolId: "protocol-9",
-    });
+  it("recovers the experiment id from a current lean topic", () => {
+    const topic = getMeasurementMqttTopic({ experimentId: "experiment-42" });
 
-    expect(parseMeasurementTopic(topic)).toEqual({
-      experimentId: "experiment-42",
-      protocolId: "protocol-9",
-    });
+    expect(parseMeasurementTopic(topic)).toEqual({ experimentId: "experiment-42" });
   });
 
-  it("reads positions off the template, not a hardcoded layout", () => {
+  it("recovers the experiment id from a legacy templated topic", () => {
+    // Rows stored by older app versions carry the pre-lean format; both put the
+    // experiment id at segment 3 of the same prefix.
     expect(
-      parseMeasurementTopic(
-        "experiment/data_ingest/v1/exp-7/multispeq/v1.0/client-1/proto-3",
-        "experiment/data_ingest/v1/:experimentId/multispeq/v1.0/:clientId/:protocolId",
-      ),
-    ).toEqual({ experimentId: "exp-7", protocolId: "proto-3" });
+      parseMeasurementTopic("experiment/data_ingest/v1/exp-7/multispeq/v1.0/client-1/proto-3"),
+    ).toEqual({ experimentId: "exp-7" });
   });
 
-  it("returns nothing for a topic that doesn't match the template shape", () => {
+  it("returns nothing for a topic this app never wrote", () => {
     expect(parseMeasurementTopic("some/other/topic")).toEqual({});
+    // Same prefix, but the literal segments don't match the ingest channel.
+    expect(parseMeasurementTopic("openjii/data_ingest/v1/exp-7/mobile/2.4.1/thing-1")).toEqual({});
   });
 
-  it("returns nothing for an empty segment rather than an empty id", () => {
-    expect(
-      parseMeasurementTopic("openjii/mobile-client-7/experiments//protocols/protocol-9"),
-    ).toEqual({ experimentId: undefined, protocolId: "protocol-9" });
+  it("returns undefined rather than an empty id for an empty segment", () => {
+    expect(parseMeasurementTopic("experiment/data_ingest/v1//mobile/2.4.1/thing-1")).toEqual({
+      experimentId: undefined,
+    });
   });
 });

@@ -9,25 +9,28 @@ import { MeasurementResult } from "~/shared/ui/measurement/measurement-result";
 
 interface Props {
   measurement: StoredMeasurement;
-  /** The sheet is open: only then is the macro fetched and re-run. */
-  enabled: boolean;
 }
 
 /**
  * Re-runs a stored measurement's macro on open and shows the same result view
- * the analysis step shows right after a protocol + macro round.
+ * the analysis step shows right after a protocol + macro round. Mounted with
+ * the sheet, so the fetch and the run only happen for an opened measurement.
  */
-export function MeasurementMacroPreview({ measurement, enabled }: Props) {
+export function MeasurementMacroPreview({ measurement }: Props) {
   const colors = useThemeColors();
   const { t } = useTranslation(["recentMeasurements"]);
-  const state = useMeasurementMacroPreview(measurement, enabled);
+  const state = useMeasurementMacroPreview(measurement);
   const preview = state.status === "ready" ? state.preview : undefined;
 
   const { outputs, isLoading, error } = useMacroOutputs({
     rawMeasurement: preview?.rawMeasurement,
     macro: preview?.macro,
     ctx: preview?.ctx,
-    enabled: enabled && !!preview,
+    // Stable identity keeps the ~150 KB decoded payload out of the query key.
+    cacheKey: preview
+      ? `${measurement.id}/${preview.workbookVersionId}/${preview.macroId}`
+      : undefined,
+    enabled: !!preview,
   });
 
   // A measurement with no macro to re-run shows no section at all, rather than

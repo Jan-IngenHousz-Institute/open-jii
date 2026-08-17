@@ -8,7 +8,6 @@ import { orpc } from "~/shared/api/orpc";
  */
 export function useExperimentWorkbookRef(experimentId: string | undefined): {
   workbookId: string | undefined;
-  workbookVersionId: string | undefined;
   isLoading: boolean;
 } {
   const { data, isLoading } = useQuery(
@@ -22,7 +21,6 @@ export function useExperimentWorkbookRef(experimentId: string | undefined): {
   const experiment = experimentId ? data?.find((e) => e.id === experimentId) : undefined;
   return {
     workbookId: experiment?.workbookId ?? undefined,
-    workbookVersionId: experiment?.workbookVersionId ?? undefined,
-    isLoading: !!experimentId && isLoading,
+    isLoading,
   };
 }

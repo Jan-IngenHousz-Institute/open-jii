@@ -29,7 +29,7 @@ export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
       >
         {/* Mounted with the sheet, so the macro is fetched and re-run only
             once a measurement is actually opened. */}
-        <MeasurementMacroPreview measurement={m} enabled />
+        <MeasurementMacroPreview measurement={m} />
       </MeasurementQuestionsModal>
     );
   }

@@ -51,6 +51,13 @@ describe("partitionMacroOutput", () => {
     expect(result.values).toEqual([]);
   });
 
+  it("charts a numeric series with gaps, coercing them to null breaks", () => {
+    const result = partitionMacroOutput([{ trace: [1, null, Number.NaN, 4] }]);
+
+    expect(result.charts).toEqual([{ kind: "chart", name: "trace", values: [1, null, null, 4] }]);
+    expect(result.others).toEqual([]);
+  });
+
   it("treats a mixed array as structured, not as a chart", () => {
     const result = partitionMacroOutput([{ mixed: [1, "two", 3] }]);
 

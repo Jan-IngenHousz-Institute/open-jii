@@ -94,7 +94,10 @@ export async function applyMacro(
   const macroInput: MacroInput =
     typeof macro === "string" ? { code: macro, language: "javascript" } : macro;
   const code = atob(macroInput.code);
-  const language = (macroInput.language ?? "javascript").toLowerCase();
+  // `||`, not `??`: resolvers hand over "" when the language is unknown, and ""
+  // must fall back to javascript rather than execute as-is.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+  const language = (macroInput.language || "javascript").toLowerCase();
 
   log.debug("apply", { language, source: normalized.source, code_bytes: code.length });
 
@@ -104,7 +107,10 @@ export async function applyMacro(
       throw new Error("Python macro runner not ready. Ensure PythonMacroProvider is mounted.");
     }
     try {
-      const out = await runPython(code, structuredClone(normalized.value), ctx);
+      // Clone (not freeze) like the JS path: a frozen object may not survive
+      // the Python bridge, but the clone keeps the macro from mutating
+      // upstream cell outputs shared through `ctx`.
+      const out = await runPython(code, structuredClone(normalized.value), structuredClone(ctx));
       log.debug("(Python) measurement ok");
       return [out];
     } catch (err) {

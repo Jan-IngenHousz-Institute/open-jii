@@ -6,7 +6,8 @@ import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 interface ChartProps {
   name: string;
-  values: number[];
+  /** A numeric series; nulls are gaps (a dropped sample), drawn as a break. */
+  values: (number | null)[];
 }
 
 const CHART_WIDTH = 280;
@@ -51,7 +52,8 @@ export function Chart({ name, values }: ChartProps) {
   const { brand, border, onSurface } = useThemeColors();
   const { t } = useTranslation("measurementFlow");
 
-  if (!values || values.length === 0) {
+  const numbers = values?.filter((v): v is number => v !== null) ?? [];
+  if (!values || numbers.length === 0) {
     return (
       <View className="border-border my-5 rounded-2xl border px-5 py-5">
         <Text className="text-foreground mb-5 text-center text-xl font-bold">{name}</Text>
@@ -62,8 +64,8 @@ export function Chart({ name, values }: ChartProps) {
     );
   }
 
-  const minY = Math.min(...values);
-  const maxY = Math.max(...values);
+  const minY = Math.min(...numbers);
+  const maxY = Math.max(...numbers);
   const yTicks = getTicks(minY, maxY, TICK_COUNT);
   const yMin = yTicks[0];
   const yMax = yTicks[yTicks.length - 1];
@@ -76,7 +78,19 @@ export function Chart({ name, values }: ChartProps) {
   const toY = (v: number) =>
     PADDING.top + (yMax === yMin ? plotH / 2 : (1 - (v - yMin) / (yMax - yMin)) * plotH);
 
-  const pointsStr = values.map((v, i) => `${toX(i)},${toY(v)}`).join(" ");
+  // Consecutive non-null runs, so a gap breaks the line instead of dipping
+  // to zero. A run of one renders as a dot.
+  const segments: { x: number; y: number }[][] = [];
+  let current: { x: number; y: number }[] = [];
+  values.forEach((v, i) => {
+    if (v === null) {
+      if (current.length > 0) segments.push(current);
+      current = [];
+    } else {
+      current.push({ x: toX(i), y: toY(v) });
+    }
+  });
+  if (current.length > 0) segments.push(current);
 
   const xLabelIndices = [0, Math.floor(values.length / 2), values.length - 1].filter(
     (v, i, a) => a.indexOf(v) === i,
@@ -127,16 +141,19 @@ export function Chart({ name, values }: ChartProps) {
               </SvgText>
             ))}
 
-          {values.length === 1 ? (
-            <Circle cx={toX(0)} cy={toY(values[0])} r={4} fill={brand} />
-          ) : (
-            <Polyline
-              points={pointsStr}
-              fill="none"
-              stroke={brand}
-              strokeWidth={2}
-              strokeLinejoin="round"
-            />
+          {segments.map((segment, i) =>
+            segment.length === 1 ? (
+              <Circle key={`seg-${i}`} cx={segment[0].x} cy={segment[0].y} r={4} fill={brand} />
+            ) : (
+              <Polyline
+                key={`seg-${i}`}
+                points={segment.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none"
+                stroke={brand}
+                strokeWidth={2}
+                strokeLinejoin="round"
+              />
+            ),
           )}
         </Svg>
       </View>

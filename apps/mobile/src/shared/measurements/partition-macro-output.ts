@@ -8,7 +8,7 @@ import type { MacroOutput } from "~/shared/measurements/macro-output";
  *  - `other`: structured output (objects, text lists) kept verbatim
  */
 export type MacroField =
-  | { kind: "chart"; name: string; values: number[] }
+  | { kind: "chart"; name: string; values: (number | null)[] }
   | { kind: "value"; name: string; value: string }
   | { kind: "empty"; name: string }
   | { kind: "other"; name: string; json: string };
@@ -44,9 +44,22 @@ export function partitionMacroOutput(outputs: MacroOutput[] | undefined): Partit
         empties.push({ kind: "empty", name });
         continue;
       }
-      if (Array.isArray(value) && value.every((v) => typeof v === "number" && !Number.isNaN(v))) {
-        charts.push({ kind: "chart", name, values: value as number[] });
-        continue;
+      if (Array.isArray(value)) {
+        if (value.every((v) => typeof v === "number" && !Number.isNaN(v))) {
+          charts.push({ kind: "chart", name, values: value as number[] });
+          continue;
+        }
+        // A trace with gaps (null/NaN from a dropped sample) still charts —
+        // the gaps render as breaks. Only genuinely mixed arrays (strings,
+        // objects) fall through to the JSON dump.
+        if (value.length > 0 && value.every((v) => v == null || typeof v === "number")) {
+          charts.push({
+            kind: "chart",
+            name,
+            values: value.map((v) => (typeof v === "number" && Number.isFinite(v) ? v : null)),
+          });
+          continue;
+        }
       }
       if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
         values.push({ kind: "value", name, value: String(value) });

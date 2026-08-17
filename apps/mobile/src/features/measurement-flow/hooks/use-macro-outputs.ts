@@ -10,6 +10,13 @@ interface UseMacroOutputsArgs {
   macro: MacroInput | undefined;
   /** Upstream cell outputs the macro reads as `ctx.<name>`. */
   ctx?: Record<string, unknown>;
+  /**
+   * Stable identity for the cache key (e.g. `<measurementId>/<workbookVersionId>/<macroId>`).
+   * When set, the payload object stays out of the key, so a large measurement
+   * is neither re-hashed on every render nor pinned in the cache by identity.
+   * Callers without a stable id (the live flow) omit it and key on the payload.
+   */
+  cacheKey?: string;
   /** Prevents execution when an upstream output could not be normalized. */
   inputError?: Error;
   /** Defer the run, e.g. until a sheet is actually opened. */
@@ -17,6 +24,11 @@ interface UseMacroOutputsArgs {
   /** Called with the outputs once computed, so a flow can persist them. */
   onProcessed?: (outputs: MacroOutput[]) => void;
 }
+
+// The app-wide default gcTime is Infinity (for the persisted offline cache);
+// macro outputs are cheap to recompute and hold the decoded payload (~150 KB),
+// so they are garbage-collected once unused instead of pinned forever.
+const MACRO_OUTPUTS_GC_TIME = 5 * 60 * 1000;
 
 /**
  * Runs a macro over a measurement and caches the result. Shared by the live
@@ -27,6 +39,7 @@ export function useMacroOutputs({
   rawMeasurement,
   macro,
   ctx,
+  cacheKey,
   inputError,
   enabled = true,
   onProcessed,
@@ -39,12 +52,14 @@ export function useMacroOutputs({
     // applyMacro is a pure local computation; "always" keeps it from being
     // paused by the onlineManager while offline.
     networkMode: "always",
+    gcTime: MACRO_OUTPUTS_GC_TIME,
     enabled: enabled && !!macro && rawMeasurement !== undefined,
     // ctx enters the key as a stable serialization so a changed upstream
-    // output recomputes, while an identical rebuild does not.
+    // output recomputes, while an identical rebuild does not. With a cacheKey
+    // the (large) payload object stays out of the key entirely.
     queryKey: [
       "measurement-result",
-      rawMeasurement,
+      cacheKey ?? rawMeasurement,
       macro,
       ctx ? JSON.stringify(ctx) : undefined,
       inputError?.name,
