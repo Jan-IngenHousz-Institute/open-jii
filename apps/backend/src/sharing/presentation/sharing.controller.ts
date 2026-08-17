@@ -14,6 +14,7 @@ import { LeaveResourceUseCase } from "../application/use-cases/leave-resource/le
 import { ListGrantsUseCase } from "../application/use-cases/list-grants/list-grants";
 import { RevokeGrantUseCase } from "../application/use-cases/revoke-grant/revoke-grant";
 import { SearchGranteeOrganizationsUseCase } from "../application/use-cases/search-grantee-organizations/search-grantee-organizations";
+import { SearchGranteeUsersUseCase } from "../application/use-cases/search-grantee-users/search-grantee-users";
 import { TransferResourceAdminUseCase } from "../application/use-cases/transfer-resource-admin/transfer-resource-admin";
 import { TransferResourceOrgUseCase } from "../application/use-cases/transfer-resource-org/transfer-resource-org";
 import { UpdateGrantUseCase } from "../application/use-cases/update-grant/update-grant";
@@ -36,6 +37,7 @@ export class SharingController {
     private readonly transferResourceAdminUseCase: TransferResourceAdminUseCase,
     private readonly transferResourceOrgUseCase: TransferResourceOrgUseCase,
     private readonly searchGranteeOrganizationsUseCase: SearchGranteeOrganizationsUseCase,
+    private readonly searchGranteeUsersUseCase: SearchGranteeUsersUseCase,
   ) {}
 
   @Implement(sharingContract.listGrants)
@@ -175,6 +177,26 @@ export class SharingController {
         query: input.query,
         limit: input.limit,
       });
+      if (result.isSuccess()) {
+        return result.value;
+      }
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  /**
+   * User lookup for the grantee picker, annotated with the access each candidate
+   * already holds here — so `can(share)` inside the use-case, not mere sign-in.
+   */
+  @Implement(sharingContract.searchGranteeUsers)
+  searchGranteeUsers(@Session() session: UserSession) {
+    return implement(sharingContract.searchGranteeUsers).handler(async ({ input }) => {
+      const result = await this.searchGranteeUsersUseCase.execute(
+        session.user.id,
+        input.resourceType,
+        input.id,
+        { query: input.query, limit: input.limit },
+      );
       if (result.isSuccess()) {
         return result.value;
       }

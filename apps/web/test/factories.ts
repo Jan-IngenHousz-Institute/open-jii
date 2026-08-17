@@ -50,7 +50,11 @@ import type {
   OrganizationTeamGrant,
 } from "@repo/api/domains/organization/organization.schema";
 import type { Protocol, ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
-import type { ResourceGrantDto, ResourceOwnerDto } from "@repo/api/domains/sharing/sharing.schema";
+import type {
+  GranteeUserDto,
+  ResourceGrantDto,
+  ResourceOwnerDto,
+} from "@repo/api/domains/sharing/sharing.schema";
 import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
 import type {
   BranchCell,
@@ -258,6 +262,20 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
   };
 }
 
+/** A grantee-picker candidate: outside the owning org and ungranted unless overridden. */
+export function createGranteeUser(overrides: Partial<GranteeUserDto> = {}): GranteeUserDto {
+  return {
+    userId: "user-1",
+    firstName: "Test",
+    lastName: "User",
+    email: "test@example.com",
+    avatarUrl: null,
+    organizationRole: null,
+    existingGrantRole: null,
+    ...overrides,
+  };
+}
+
 // ── Capability signal (detail responses) ────────────────────────
 
 /**
@@ -322,6 +340,7 @@ export function createResourceGrant(overrides: Partial<ResourceGrantDto> = {}): 
     createdAt: "2026-01-01T00:00:00.000Z",
     createdBy: "owner-1",
     isOutsideCollaborator: false,
+    owningOrganization: null,
     grantee: {
       type: "user",
       displayName: "Grace Hopper",
@@ -334,16 +353,18 @@ export function createResourceGrant(overrides: Partial<ResourceGrantDto> = {}): 
 }
 
 /**
- * An owner row as the collaborators endpoint synthesizes it from the resource's
+ * An org-derived row as the collaborators endpoint synthesizes it from the resource's
  * owning organization. Carries no grant id and no role — there is nothing to
- * change or revoke on it.
+ * change or revoke on it, beyond an `inertGrant` when one is left over.
  */
 export function createResourceOwner(overrides: Partial<ResourceOwnerDto> = {}): ResourceOwnerDto {
   grantSeq++;
   return {
     kind: "owner",
     granteeType: "user",
+    organizationName: "Greenhouse Lab",
     granteeId: `owner-${grantSeq}`,
+    inertGrant: null,
     grantee: {
       type: "user",
       displayName: "Ada Lovelace",

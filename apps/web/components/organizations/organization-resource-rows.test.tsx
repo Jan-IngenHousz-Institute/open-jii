@@ -1,6 +1,13 @@
-import { createOrganizationResource } from "@/test/factories";
-import { render, screen, userEvent, within } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { createMyOrganization, createOrganizationResource } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api/contract";
+import { useSession } from "@repo/auth/client";
+import deCommon from "@repo/i18n/locales/de-DE/common.json";
+import enCommon from "@repo/i18n/locales/en-US/common.json";
+import nlCommon from "@repo/i18n/locales/nl-NL/common.json";
 
 import { OrganizationResourceRows } from "./organization-resource-rows";
 
@@ -305,5 +312,118 @@ describe("<OrganizationResourceRows />", () => {
 
     expect(within(container).queryByText(/measurement/iu)).toBeNull();
     expect(container.querySelector("polyline")).toBeNull();
+  });
+
+  /**
+   * The same affordance a resource carries on its own page, gated by one answer for the
+   * whole page rather than by a capability on each row.
+   */
+  describe("the transfer control", () => {
+    // The accessible name, which is the per-row `aria-label` rather than the visible text.
+    const TRANSFER = "organizations.transfer.actionFor";
+
+    const transferButtons = (container: HTMLElement) =>
+      within(container).queryAllByRole("button", { name: TRANSFER });
+
+    // `clearAllMocks` does not undo a `mockReturnValue`, and files share a module registry.
+    afterEach(() => {
+      vi.mocked(useSession).mockReturnValue({
+        data: null,
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+    });
+
+    /** The row a resource is on, so a click can be aimed at one of five. */
+    function rowFor(container: HTMLElement, name: string): HTMLElement {
+      const row = within(container).getByRole("link", { name }).closest("li");
+      if (!row) throw new Error(`no row for ${name}`);
+      return row;
+    }
+
+    function renderTransferable() {
+      vi.mocked(useSession).mockReturnValue({
+        data: { user: { id: "user-1" } },
+        isPending: false,
+      } as ReturnType<typeof useSession>);
+      server.mount(contract.organizations.listMyOrganizations, {
+        body: [createMyOrganization({ id: "org-2", name: "Other Lab" })],
+      });
+      return render(
+        <OrganizationResourceRows
+          resources={mixedEstate()}
+          transfer={{ organizationId: "org-1" }}
+        />,
+      );
+    }
+
+    it("offers nothing to a member or a non-member", () => {
+      // Neither is handed `transfer`, so one render covers both.
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      expect(transferButtons(container)).toHaveLength(0);
+    });
+
+    it("offers it on the four transferable types and not on a device", () => {
+      const { container } = renderTransferable();
+
+      // Five rows, four controls: there is no transfer route for a device.
+      expect(rowsIn(container)).toHaveLength(5);
+      expect(transferButtons(container)).toHaveLength(4);
+      expect(
+        within(rowFor(container, "Ambyte 04")).queryByRole("button", { name: TRANSFER }),
+      ).toBeNull();
+      for (const name of ["Drought stress", "Dark adaptation", "Batch fit", "Canopy synthesis"]) {
+        expect(
+          within(rowFor(container, name)).getByRole("button", { name: TRANSFER }),
+        ).toBeVisible();
+      }
+    });
+
+    it("opens one dialog, carrying the resource whose row was clicked", async () => {
+      const user = userEvent.setup();
+      const transferSpy = server.mount(contract.sharing.transferResourceOrganization, {
+        body: { resourceType: "macro", resourceId: "m1", organizationId: "org-2" },
+      });
+      const { container } = renderTransferable();
+
+      // Nothing mounted until a row asks for it.
+      expect(screen.queryByRole("dialog")).toBeNull();
+
+      await user.click(
+        within(rowFor(container, "Batch fit")).getByRole("button", { name: TRANSFER }),
+      );
+
+      expect(await screen.findByText("organizations.transfer.dialogTitle")).toBeVisible();
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+
+      await user.click(
+        await screen.findByRole("combobox", { name: "organizations.transfer.targetLabel" }),
+      );
+      await user.click(screen.getByRole("option", { name: "Other Lab" }));
+      await user.click(screen.getByRole("button", { name: "organizations.transfer.confirm" }));
+
+      await waitFor(() => {
+        expect(transferSpy.called).toBe(true);
+      });
+      // The macro that was clicked, not the first row and not another type.
+      expect(transferSpy.params).toMatchObject({ resourceType: "macro", id: "m1" });
+      expect(transferSpy.body).toEqual({ targetOrganizationId: "org-2" });
+    });
+
+    it("keeps the visible label short and names the row only for a screen reader", () => {
+      const { container } = renderTransferable();
+
+      const button = within(rowFor(container, "Batch fit")).getByRole("button", { name: TRANSFER });
+      expect(button).toHaveTextContent("organizations.transfer.action");
+    });
+
+    /** The `t` stub returns the key, so the interpolation is asserted against the bundles. */
+    it.each([
+      ["en-US", enCommon],
+      ["de-DE", deCommon],
+      ["nl-NL", nlCommon],
+    ])("%s names the resource in the accessible label", (_locale, bundle) => {
+      expect(bundle.organizations.transfer.actionFor).toContain("{{name}}");
+    });
   });
 });

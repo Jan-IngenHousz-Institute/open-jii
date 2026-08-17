@@ -63,7 +63,12 @@ type PersonaKey =
   | "elif"
   | "pieter"
   | "hana"
-  | "marco";
+  | "marco"
+  | "ada"
+  | "bo"
+  | "mira"
+  | "rex"
+  | "otto";
 
 const PERSONAS: { key: PersonaKey; firstName: string; lastName: string }[] = [
   { key: "maya", firstName: "Maya", lastName: "Rasmussen" },
@@ -78,6 +83,13 @@ const PERSONAS: { key: PersonaKey; firstName: string; lastName: string }[] = [
   { key: "pieter", firstName: "Pieter", lastName: "de Vries" },
   { key: "hana", firstName: "Hana", lastName: "Kobayashi" },
   { key: "marco", firstName: "Marco", lastName: "Rossi" },
+  // Named after what they demonstrate on the collaborators surface (org 8), so the
+  // row a name lands on is readable without cross-referencing the roster.
+  { key: "ada", firstName: "Ada", lastName: "Admin" },
+  { key: "bo", firstName: "Bo", lastName: "Staleadmin" },
+  { key: "mira", firstName: "Mira", lastName: "Member" },
+  { key: "rex", firstName: "Rex", lastName: "Raised" },
+  { key: "otto", firstName: "Otto", lastName: "Outside" },
 ];
 
 function personaEmail(key: PersonaKey): string {
@@ -294,12 +306,29 @@ async function createTeam(
 /**
  * The organization's resources, plus the creator's admin grant on each — the same
  * pair the create-* use-cases write at runtime, and what the manage affordances read.
+ *
+ * "The same pair" includes when there is no grant: `seedCreatorControl` skips it for
+ * a creator whose org role already carries full control, so seeding one anyway would
+ * put an inert grant on every owner and make the collaborators surface open on a
+ * "Grant has no effect" badge that runtime never produces.
  */
 async function createResources(
   organizationId: string,
   createdBy: string,
   plan: ResourcePlan,
 ): Promise<CreatedResources> {
+  const [membership] = await db
+    .select({ role: organizationMembers.role })
+    .from(organizationMembers)
+    .where(
+      and(
+        eq(organizationMembers.organizationId, organizationId),
+        eq(organizationMembers.userId, createdBy),
+      ),
+    )
+    .limit(1);
+  const creatorNeedsGrant = membership?.role !== "owner" && membership?.role !== "admin";
+
   const created: CreatedResources = { experiments: [], protocols: [], macros: [], workbooks: [] };
 
   for (const e of plan.experiments ?? []) {
@@ -349,25 +378,61 @@ async function createResources(
     created.workbooks.push(row);
   }
 
-  for (const [resourceType, rows] of [
-    ["experiment", created.experiments],
-    ["protocol", created.protocols],
-    ["macro", created.macros],
-    ["workbook", created.workbooks],
-  ] as [ResourceType, { id: string }[]][]) {
-    for (const row of rows) {
-      await upsertGrant(db, {
-        resourceType,
-        resourceId: row.id,
-        granteeType: "user",
-        granteeId: createdBy,
-        role: "admin",
-        createdBy,
-      });
+  if (creatorNeedsGrant) {
+    for (const [resourceType, rows] of [
+      ["experiment", created.experiments],
+      ["protocol", created.protocols],
+      ["macro", created.macros],
+      ["workbook", created.workbooks],
+    ] as [ResourceType, { id: string }[]][]) {
+      for (const row of rows) {
+        await upsertGrant(db, {
+          resourceType,
+          resourceId: row.id,
+          granteeType: "user",
+          granteeId: createdBy,
+          role: "admin",
+          createdBy,
+        });
+      }
     }
   }
 
   return created;
+}
+
+async function grantToUser(
+  userId: string,
+  resourceType: ResourceType,
+  resourceId: string,
+  role: GrantRole,
+  createdBy: string,
+) {
+  await upsertGrant(db, {
+    resourceType,
+    resourceId,
+    granteeType: "user",
+    granteeId: userId,
+    role,
+    createdBy,
+  });
+}
+
+async function grantToOrganization(
+  organizationId: string,
+  resourceType: ResourceType,
+  resourceId: string,
+  role: GrantRole,
+  createdBy: string,
+) {
+  await upsertGrant(db, {
+    resourceType,
+    resourceId,
+    granteeType: "organization",
+    granteeId: organizationId,
+    role,
+    createdBy,
+  });
 }
 
 async function grantToTeam(
@@ -1002,6 +1067,63 @@ async function main() {
   });
   await addMembers(soloId, [{ userId: target.id, role: "owner" }]);
   console.log("  seed-solo-lab — sole owner, empty");
+
+  // ---------------------------------------------------------------------------
+  // 8. Access Showcase Lab — one experiment carrying every way access can arise, so
+  //    a single collaborators tab shows all of them side by side. Two admins and two
+  //    members, one of each holding a grant: the ones without are counted in their
+  //    summary row, the ones with are broken out onto rows of their own. Plus an
+  //    outsider, a team and another organization.
+  // ---------------------------------------------------------------------------
+  const showcaseId = await createOrganization({
+    name: "Access Showcase Lab",
+    slug: "seed-access-showcase",
+    visibility: "private",
+    type: "research_institute",
+    description:
+      "Every shape the collaborators surface can take, on one experiment. Seeded for walking through how access is derived.",
+    location: "Wageningen, Netherlands",
+  });
+
+  await addMembers(showcaseId, [
+    { userId: target.id, role: "owner" },
+    { userId: person.ada, role: "admin" },
+    { userId: person.bo, role: "admin" },
+    { userId: person.mira, role: "member" },
+    { userId: person.rex, role: "member" },
+  ]);
+
+  const showcase = await createResources(showcaseId, target.id, {
+    experiments: [
+      {
+        name: "Access Showcase Experiment",
+        description:
+          "The flagship of the showcase organization: one experiment whose collaborators tab carries an owner, an admins summary, a members summary, a raising grant, an inert grant, an outside collaborator, a team and an organization.",
+        status: "active",
+        visibility: "private",
+      },
+    ],
+  });
+  const showcaseExperiment = showcase.experiments[0];
+
+  const showcaseTeam = await createTeam(showcaseId, "Imaging Crew", [person.mira, person.ada]);
+
+  // Bo administers the organization already, so this grant confers nothing — it is
+  // the redundant one the surface has to label rather than offer a tier for, and it
+  // is what takes Bo out of the admins count and onto a row of their own.
+  await grantToUser(person.bo, "experiment", showcaseExperiment.id, "viewer", target.id);
+  // Rex is a read-only member, so this one genuinely raises them.
+  await grantToUser(person.rex, "experiment", showcaseExperiment.id, "admin", target.id);
+  // Otto belongs to no organization here, which is what the outside badge means.
+  await grantToUser(person.otto, "experiment", showcaseExperiment.id, "admin", target.id);
+  await grantToTeam(showcaseTeam, "experiment", showcaseExperiment.id, "viewer", target.id);
+  // An organization other than the owning one — also outside access, held by a group.
+  await grantToOrganization(canopyId, "experiment", showcaseExperiment.id, "viewer", target.id);
+
+  console.log(
+    `  seed-access-showcase — every collaborator row at once on ` +
+      `/platform/experiments/${showcaseExperiment.id}/collaborators`,
+  );
 
   console.log("Organization seed complete!");
 }

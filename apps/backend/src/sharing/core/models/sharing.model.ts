@@ -1,5 +1,7 @@
 import type {
   ResourceGrantDto,
+  ResourceOrgAdminsDto,
+  ResourceOrgMembersDto,
   ResourceOwnerDto,
   ShareableRole,
   SharingGranteeType,
@@ -10,7 +12,11 @@ import type {
 export type EnrichedGrant = Omit<ResourceGrantDto, "createdAt"> & { createdAt: Date };
 
 /** Everything the collaborators surface lists, at the repository's date fidelity. */
-export type ResourceCollaborator = ResourceOwnerDto | EnrichedGrant;
+export type ResourceCollaborator =
+  | ResourceOwnerDto
+  | ResourceOrgAdminsDto
+  | ResourceOrgMembersDto
+  | EnrichedGrant;
 
 /** A plain direct-grant row: what the guarded write paths resolve to. */
 export interface DirectGrantRow {

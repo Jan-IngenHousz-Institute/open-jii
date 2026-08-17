@@ -80,8 +80,10 @@ const adminOrganizationActions = [] as const;
  *   all of those except `organization:update` — the organization's own settings
  *   (name, slug, profile, directory visibility) belong to its owners alone, and
  *   Better Auth's default admin statement would otherwise hand them over.
- * - `member`: read-only across resource types. This folds the org "base
- *   permission" baseline (default: read) into the role; a configurable per-org
+ * - `member`: read-only, except that on an **experiment** it also carries
+ *   `contribute` — a lab's members can add measurements to the lab's own
+ *   experiments. Only experiments have data to contribute to. This folds the org
+ *   "base permission" baseline into the role; a configurable per-org
  *   base-permission dial is deferred until multi-member orgs exist.
  */
 export const roles = {
@@ -104,7 +106,7 @@ export const roles = {
   }),
   member: ac.newRole({
     ...memberAc.statements,
-    experiment: READ_ONLY,
+    experiment: READ_AND_CONTRIBUTE,
     protocol: READ_ONLY,
     macro: READ_ONLY,
     workbook: READ_ONLY,
@@ -118,11 +120,12 @@ export type OrgRole = keyof typeof roles;
  * Per-resource **grant** roles — a separate matrix from the org roles above,
  * because the two disagree about the middle tier on purpose.
  *
- * A grant is somebody deliberately handing you a resource, so on an experiment the
- * lowest grant tier ("Can view", stored as `viewer`) carries `contribute`. Belonging
- * to the owning organization is not the same act: an org `member` gets read only, as
- * does a public experiment's passer-by. That is why the grant `viewer` tier cannot be
- * aliased onto the org `member` role the way it was when both meant read-only.
+ * On an experiment the lowest grant tier ("Can view", stored as `viewer`) carries
+ * `contribute`, and so does org membership: being handed the lowest tier should not
+ * beat belonging to the organization that owns the experiment. A public experiment's
+ * passer-by still gets read only — that comes from the `visibility` branch in `can()`,
+ * not from either matrix. The two matrices stay separate because they disagree
+ * elsewhere: `viewer` is read-only on the other four types, where `member` is too.
  *
  * These keys are the whole set. `GRANT_ROLES` in `@repo/database` types every write
  * path against them, so anything else reaching `grantRoleCan` is a bug and is refused.

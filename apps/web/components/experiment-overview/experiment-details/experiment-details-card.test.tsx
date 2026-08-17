@@ -18,15 +18,17 @@ vi.mock("../../experiment-settings/experiment-info-card", () => ({
 vi.mock("../experiment-members-trail", () => ({
   ExperimentMembersTrail: ({
     contributors,
+    collaboratorCount,
     href,
     isLoading,
   }: {
     contributors: { userId: string }[];
+    collaboratorCount: number;
     href: string;
     isLoading?: boolean;
   }) => (
     <div data-testid="experiment-members-trail" data-href={href}>
-      {isLoading ? "loading" : `${contributors.length} contributors`}
+      {isLoading ? "loading" : `${contributors.length} of ${collaboratorCount} contributors`}
     </div>
   ),
 }));
@@ -94,6 +96,7 @@ function renderComponent(props: Partial<ComponentProps<typeof ExperimentDetailsC
     experiment: mockExperiment,
     locations: mockLocations,
     contributors: mockContributors,
+    collaboratorCount: mockContributors.length,
     isContributorsLoading: false,
     hasAccess: false,
     // The visibility/danger-zone cards are gated on the server's can(manage).

@@ -87,6 +87,14 @@ const ORG_OWNER_ROLE = "owner";
  */
 const ORG_FULL_CONTROL_ROLES = ["owner", "admin"] as const;
 
+/**
+ * The read-only org role. Named because the members summary has to *require* it
+ * rather than negate full control: `orgRoleCan` ignores a token it does not
+ * recognise, so a stale or custom role confers nothing, and counting it as a plain
+ * member would credit somebody with access they do not have.
+ */
+const ORG_MEMBER_ROLE = "member";
+
 /** Refusal when a closed account's in-flight request tries to create something. */
 const CLOSED_ACCOUNT_CREATE_MESSAGE =
   "Cannot create resources with a closed account. Please sign in again.";
@@ -362,6 +370,39 @@ function livingOrgMemberIdsSql(organizationId: SQL, roles: readonly string[]): S
  */
 export function livingOrgOwnerIdsSql(organizationId: SQL): SQL {
   return livingOrgMemberIdsSql(organizationId, [ORG_OWNER_ROLE]);
+}
+
+/**
+ * Living members who administer the organization without owning it — the admins the
+ * collaborators surface summarizes, and the holders whose direct grants are inert.
+ *
+ * The owner exclusion is what keeps the two org-derived groups disjoint: a
+ * comma-joined `member,owner` reads as `owner` to `can()`, so it belongs to the
+ * owners listed individually and must not be counted again here.
+ */
+export function livingOrgAdminIdsSql(organizationId: SQL): SQL {
+  return sql`
+    SELECT ${organizationMembers.userId} AS "user_id"
+    FROM ${organizationMembers}
+    LEFT JOIN ${profiles} ON ${profiles.userId} = ${organizationMembers.userId}
+    WHERE ${organizationMembers.organizationId} = ${organizationId}
+      AND ${orgRoleIncludes(organizationMembers.role, ["admin"])}
+      AND NOT ${orgRoleIncludes(organizationMembers.role, [ORG_OWNER_ROLE])}
+      AND ${profiles.deletedAt} IS NULL
+  `;
+}
+
+/** Living members whose role is read-only — recognised as `member`, and nothing more. */
+export function livingOrgPlainMemberIdsSql(organizationId: SQL): SQL {
+  return sql`
+    SELECT ${organizationMembers.userId} AS "user_id"
+    FROM ${organizationMembers}
+    LEFT JOIN ${profiles} ON ${profiles.userId} = ${organizationMembers.userId}
+    WHERE ${organizationMembers.organizationId} = ${organizationId}
+      AND ${orgRoleIncludes(organizationMembers.role, [ORG_MEMBER_ROLE])}
+      AND NOT ${orgRoleIncludes(organizationMembers.role, ORG_FULL_CONTROL_ROLES)}
+      AND ${profiles.deletedAt} IS NULL
+  `;
 }
 
 /**

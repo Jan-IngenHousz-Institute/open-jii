@@ -6,8 +6,10 @@ import {
   zCollaboratorsPathParams,
   zCreateCollaboratorBody,
   zGranteeOrganizationList,
+  zGranteeUserList,
   zResourceGrantList,
   zSearchGranteeOrganizationsQuery,
+  zSearchGranteeUsersQuery,
   zUpdateCollaboratorBody,
 } from "./sharing.schema";
 
@@ -91,4 +93,21 @@ export const sharingContract = {
     })
     .input(zSearchGranteeOrganizationsQuery)
     .output(zGranteeOrganizationList),
+  /**
+   * The picker's user source, resource-scoped so every candidate can say what
+   * access they already hold instead of being filtered out of the results.
+   *
+   * Deliberately not a parameter on the global user search: that route also feeds
+   * the member and invitation pickers, and teaching it to answer "what is this
+   * user's role in that organization" would disclose membership from somewhere
+   * nothing scopes to a resource. Here `can(share)` already gates the answer.
+   */
+  searchGranteeUsers: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/{resourceType}/{id}/grantee-users",
+      successStatus: 200,
+    })
+    .input(zSearchGranteeUsersQuery)
+    .output(zGranteeUserList),
 };

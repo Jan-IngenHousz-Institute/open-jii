@@ -16,8 +16,8 @@ import { AuthorizationService } from "./authorization.service";
 /**
  * End-to-end tests for the org-scoped access resolution (can()), against a real
  * DB. Exercises the documented precedence: owning-org role (Better Auth access
- * matrix: owner/admin → full, member → read) → per-resource grant
- * (user → team → org) → public+read → deny.
+ * matrix: owner/admin → full, member → read, plus contribute on an experiment) →
+ * per-resource grant (user → team → org) → public+read → deny.
  */
 describe("AuthorizationService.can", () => {
   const testApp = TestHarness.App;
@@ -376,14 +376,6 @@ describe("can() — the right to contribute, by access path", () => {
   };
 
   describe("paths that do NOT carry contribute", () => {
-    it("a plain member of the owning organization reads, and only reads", async () => {
-      const experiment = await makeExperiment("private");
-      const orgMember = await testApp.createTestUser({ email: "org-member@example.com" });
-      await testApp.addOrganizationMember(orgId, orgMember, "member");
-
-      expect(await allows(orgMember, experiment.id)).toEqual(READ_ONLY);
-    });
-
     it("a stranger on a public experiment reads, and only reads", async () => {
       const experiment = await makeExperiment("public");
       const stranger = await testApp.createTestUser({ email: "stranger@example.com" });
@@ -400,6 +392,16 @@ describe("can() — the right to contribute, by access path", () => {
   });
 
   describe("paths that carry contribute", () => {
+    it("a plain member of the owning organization contributes, and no more", async () => {
+      const experiment = await makeExperiment("private");
+      const orgMember = await testApp.createTestUser({ email: "org-member@example.com" });
+      await testApp.addOrganizationMember(orgId, orgMember, "member");
+
+      // A lab's members can add measurements to the lab's own experiments; changing
+      // the experiment itself still needs a grant or a higher org role.
+      expect(await allows(orgMember, experiment.id)).toEqual(CONTRIBUTOR);
+    });
+
     it("an owner of the owning organization can do everything", async () => {
       const experiment = await makeExperiment("private");
 
@@ -479,22 +481,24 @@ describe("can() — the right to contribute, by access path", () => {
   });
 
   describe("precedence between the paths", () => {
-    it("a grant raises a plain org member from read-only to contributing", async () => {
+    it("a grant raises a plain org member past what membership already gives", async () => {
       const experiment = await makeExperiment("private");
       const orgMember = await testApp.createTestUser({ email: "raised@example.com" });
       await testApp.addOrganizationMember(orgId, orgMember, "member");
 
-      expect(await allows(orgMember, experiment.id)).toEqual(READ_ONLY);
+      // Membership already contributes on an experiment, so the lowest grant tier
+      // adds nothing here — only the admin tier is a raise.
+      expect(await allows(orgMember, experiment.id)).toEqual(CONTRIBUTOR);
 
       await testApp.addResourceGrant({
         resourceType: "experiment",
         resourceId: experiment.id,
         granteeType: "user",
         granteeId: orgMember,
-        role: "viewer",
+        role: "admin",
       });
 
-      expect(await allows(orgMember, experiment.id)).toEqual(CONTRIBUTOR);
+      expect(await allows(orgMember, experiment.id)).toEqual(FULL);
     });
 
     it("the public tier is a read tier: contribute comes back forbidden, not allowed", async () => {

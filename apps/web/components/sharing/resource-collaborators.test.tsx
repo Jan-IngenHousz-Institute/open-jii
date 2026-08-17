@@ -1,4 +1,4 @@
-import { createResourceGrant, createUserProfile } from "@/test/factories";
+import { createResourceGrant, createGranteeUser } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { createTestQueryClient, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -166,16 +166,17 @@ describe("<ResourceCollaborators />", () => {
       expect(screen.queryByText("sharing.noCollaboratorsYet")).not.toBeInTheDocument();
     });
 
-    it("still dedupes the invite dialog against everyone, not just the visible rows", async () => {
+    it("still recognises an existing collaborator the filter has hidden", async () => {
       const user = userEvent.setup();
       server.mount(contract.sharing.listGrants, { body: rows });
-      server.mount(contract.users.searchUsers, {
+      server.mount(contract.sharing.searchGranteeUsers, {
         body: [
-          createUserProfile({
+          createGranteeUser({
             userId: "u-lin",
             firstName: "Lin",
             lastName: "Zhao",
             email: "lin@uni.edu",
+            existingGrantRole: "viewer",
           }),
         ],
       });
@@ -194,11 +195,10 @@ describe("<ResourceCollaborators />", () => {
       await user.click(screen.getByRole("button", { name: /sharing.invite/ }));
       await user.type(screen.getByLabelText("sharing.granteeSearchLabel"), "lin@uni.edu");
 
-      // Still recognised as a collaborator, so she is neither offered as a row nor
-      // as an email invitation — which is what a filtered `existingGranteeIds`
-      // would have broken.
+      // What she already holds comes from the search endpoint, not from the rows on
+      // screen, so a filter that hides her cannot make her look grantable again.
       await waitFor(() =>
-        expect(screen.getByText("sharing.emailAlreadyCollaborator")).toBeInTheDocument(),
+        expect(screen.getByText("sharing.granteeTierAddsNothing")).toBeInTheDocument(),
       );
     });
   });
@@ -244,9 +244,9 @@ describe("<ResourceCollaborators />", () => {
     });
 
     server.mount(contract.sharing.listGrants, { body: [] });
-    server.mount(contract.users.searchUsers, {
+    server.mount(contract.sharing.searchGranteeUsers, {
       body: [
-        createUserProfile({
+        createGranteeUser({
           userId: "u-1",
           firstName: "Lin",
           lastName: "Zhao",

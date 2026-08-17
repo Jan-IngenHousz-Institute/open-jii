@@ -253,8 +253,16 @@ describe("organization plugin configuration and protection hooks", () => {
     });
   });
 
+  /**
+   * Visibility is chosen when the organization is created, and this is the only place
+   * that path is actually executed: everywhere else the client is mocked, and that
+   * Better Auth admits `visibility` into a create body at all rests on it being a
+   * registered `additionalField` plus a `beforeCreateOrganization` hook whose returned
+   * `data` reaches the insert. Both were established by reading Better Auth's source;
+   * these go through `auth.api` against a real database, so they are the proof.
+   */
   describe("directory visibility", () => {
-    it("creates every organization private, even when asked for public", async () => {
+    it("stores the visibility the create body asked for", async () => {
       const owner = await signIn("owner");
 
       const org = await createOrganization(owner, { visibility: "public" });
@@ -263,7 +271,31 @@ describe("organization plugin configuration and protection hooks", () => {
         .select({ visibility: organizations.visibility })
         .from(organizations)
         .where(eq(organizations.id, org.id));
+      expect(stored.visibility).toBe("public");
+    });
+
+    it("lands private when the create body does not say", async () => {
+      const owner = await signIn("owner");
+
+      const org = await createOrganization(owner);
+
+      // The hook writes on every create, so this is its default rather than the
+      // column's — the two agree, and only one of them is the product rule.
+      const [stored] = await testApp.database
+        .select({ visibility: organizations.visibility })
+        .from(organizations)
+        .where(eq(organizations.id, org.id));
       expect(stored.visibility).toBe("private");
+    });
+
+    it("refuses a create visibility that is not one of the two states", async () => {
+      const owner = await signIn("owner");
+
+      // Refused rather than quietly defaulted: a typo that lands private would
+      // publish nothing, but one the other way would, and neither is what was asked.
+      await expect(createOrganization(owner, { visibility: "listed" })).rejects.toThrow(
+        /'private' or 'public'/,
+      );
     });
 
     it("lets an owner publish the organization", async () => {

@@ -13,6 +13,7 @@ import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro
 import { MacroModule } from "../macros/macro.module";
 import { CreateProtocolUseCase } from "../protocols/application/use-cases/create-protocol/create-protocol";
 import { ProtocolRepository } from "../protocols/core/repositories/protocol.repository";
+import { SharingModule } from "../sharing/sharing.module";
 import { UserModule } from "../users/user.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 // Services
@@ -118,6 +119,9 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     UserModule,
     MacroModule,
     WorkbookModule,
+    // For the overview's collaborator count, read from the same place the
+    // collaborators surface and the organization showcase read it.
+    SharingModule,
   ],
   controllers: [
     ExperimentController,

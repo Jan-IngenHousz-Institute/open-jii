@@ -436,9 +436,10 @@ describe("OrganizationController", () => {
         .expect(StatusCodes.OK);
 
       const byId = new Map(response.body.resources.map((row) => [row.id, row]));
-      // The organization's one owner, plus the granted outsider on the experiment.
-      expect(byId.get(experiment.id)?.collaboratorCount).toBe(2);
-      expect(byId.get(workbook.id)?.collaboratorCount).toBe(1);
+      // The organization's owner and the summary standing in for its one plain
+      // member, plus the granted outsider on the experiment.
+      expect(byId.get(experiment.id)?.collaboratorCount).toBe(3);
+      expect(byId.get(workbook.id)?.collaboratorCount).toBe(2);
 
       // The number the card would show, against the tab it links to.
       const collaborators = await testApp

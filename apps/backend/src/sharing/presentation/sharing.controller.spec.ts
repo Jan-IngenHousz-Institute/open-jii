@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
+import type { GranteeUserDto, ResourceGrantDto } from "@repo/api/domains/sharing/sharing.schema";
 import { and, eq, profiles, resourceGrants, teamMembers } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
@@ -187,6 +187,91 @@ describe("SharingController", () => {
         .expect(StatusCodes.OK);
 
       expect((res.body as { id: string }[]).map((o) => o.id)).toEqual([drought]);
+    });
+  });
+
+  describe("searchGranteeUsers", () => {
+    const searchPath = (macroId: string) =>
+      testApp.resolveOrpcPath(contract.sharing.searchGranteeUsers, {
+        resourceType: "macro",
+        id: macroId,
+      });
+
+    it("annotates each candidate with the access they already hold here", async () => {
+      const org = await testApp.createOrganization("Greenhouse Lab");
+      await testApp.addOrganizationMember(org, owner, "owner");
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner, organizationId: org });
+
+      const admin = await testApp.createTestUser({ name: "Zephyrine Admin" });
+      const member = await testApp.createTestUser({ name: "Zephyrine Member" });
+      const outsider = await testApp.createTestUser({ name: "Zephyrine Outsider" });
+      const granted = await testApp.createTestUser({ name: "Zephyrine Granted" });
+      await testApp.addOrganizationMember(org, admin, "admin");
+      await testApp.addOrganizationMember(org, member, "member");
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: granted,
+        role: "viewer",
+        createdBy: owner,
+      });
+
+      const res = await testApp
+        .get(`${searchPath(macro.id)}?query=Zephyrine`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+
+      const byId = new Map(
+        (res.body as GranteeUserDto[]).map((candidate) => [candidate.userId, candidate]),
+      );
+      expect(byId.get(admin)).toMatchObject({ organizationRole: "admin", existingGrantRole: null });
+      expect(byId.get(member)).toMatchObject({
+        organizationRole: "member",
+        existingGrantRole: null,
+      });
+      // Outside the owning org and ungranted: the picker's only fully open case.
+      expect(byId.get(outsider)).toMatchObject({
+        organizationRole: null,
+        existingGrantRole: null,
+      });
+      expect(byId.get(granted)).toMatchObject({
+        organizationRole: null,
+        existingGrantRole: "viewer",
+      });
+    });
+
+    it("reads the role in the owning organization, not in some other one", async () => {
+      const owning = await testApp.createOrganization("Owning Lab");
+      await testApp.addOrganizationMember(owning, owner, "owner");
+      const elsewhere = await testApp.createOrganization("Elsewhere Lab");
+      const macro = await testApp.createMacro({
+        name: "M",
+        createdBy: owner,
+        organizationId: owning,
+      });
+
+      const stranger = await testApp.createTestUser({ name: "Quilliam Stranger" });
+      await testApp.addOrganizationMember(elsewhere, stranger, "owner");
+
+      const res = await testApp
+        .get(`${searchPath(macro.id)}?query=Quilliam`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+
+      expect(res.body as GranteeUserDto[]).toMatchObject([
+        { userId: stranger, organizationRole: null },
+      ]);
+    });
+
+    it("is share-gated, so what a candidate holds is not enumerable without it", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner }); // public
+      const passerBy = await testApp.createTestUser({ name: "Passer By" });
+
+      await testApp
+        .get(`${searchPath(macro.id)}?query=passer`)
+        .withAuth(passerBy)
+        .expect(StatusCodes.FORBIDDEN);
     });
   });
 

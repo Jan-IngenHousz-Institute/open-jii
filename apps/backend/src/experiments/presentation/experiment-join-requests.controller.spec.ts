@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
+import type { ExperimentContributors } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import type {
   ExperimentJoinRequest,
   ExperimentJoinRequestList,
@@ -209,11 +209,13 @@ describe("ExperimentJoinRequestsController", () => {
         contract.experiments.listExperimentContributors,
         { id: experiment.id },
       );
-      const contributorsResponse: SuperTestResponse<ExperimentContributor[]> = await testApp
+      const contributorsResponse: SuperTestResponse<ExperimentContributors> = await testApp
         .get(contributorsPath)
         .withAuth(adminUserId)
         .expect(StatusCodes.OK);
-      expect(contributorsResponse.body.map((c) => c.userId)).toContain(requesterUserId);
+      expect(contributorsResponse.body.contributors.map((c) => c.userId)).toContain(
+        requesterUserId,
+      );
 
       // Standard membership-change email fires
       expect(emailPort.sendAddedUserNotification).toHaveBeenCalledWith(

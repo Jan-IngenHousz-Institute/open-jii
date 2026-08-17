@@ -76,9 +76,10 @@ describe("listOrganizationResources", () => {
         organizationId,
       });
 
-      // One owner, no grants: the creator holds no grant on what they create, so a
-      // count read off `resource_grants` alone would say zero here.
-      expect(await expectAgreement("macro", macro.id)).toBe(1);
+      // The owner, plus the summary row standing in for the organization's one plain
+      // member: the creator holds no grant on what they create, so a count read off
+      // `resource_grants` alone would say zero here.
+      expect(await expectAgreement("macro", macro.id)).toBe(2);
     });
 
     it("counts a user grant alongside the owner", async () => {
@@ -97,7 +98,7 @@ describe("listOrganizationResources", () => {
         createdBy: owner,
       });
 
-      expect(await expectAgreement("macro", macro.id)).toBe(2);
+      expect(await expectAgreement("macro", macro.id)).toBe(3);
     });
 
     it("counts a team grantee once, not once per member of the team", async () => {
@@ -120,7 +121,7 @@ describe("listOrganizationResources", () => {
 
       // The collaborators surface lists the team as one row carrying its head count,
       // so expanding it to two people here would overstate the resource by one.
-      expect(await expectAgreement("workbook", workbook.id)).toBe(2);
+      expect(await expectAgreement("workbook", workbook.id)).toBe(3);
     });
 
     it("counts an owner who also holds a grant once", async () => {
@@ -140,7 +141,76 @@ describe("listOrganizationResources", () => {
 
       // The surface shows them once, as the owner; two rows for one person would carry
       // contradictory affordances, and two in the count would be a phantom collaborator.
-      expect(await expectAgreement("macro", macro.id)).toBe(1);
+      expect(await expectAgreement("macro", macro.id)).toBe(2);
+    });
+
+    it("does not double-count somebody a grant broke out of a summary", async () => {
+      const macro = await testApp.createMacro({
+        name: "Break out",
+        createdBy: owner,
+        organizationId,
+      });
+      // The organization's only plain member, granted a tier that raises them: they
+      // leave the members summary for a row of their own, and the now-empty summary
+      // stops being a row at all.
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: member,
+        role: "admin",
+        createdBy: owner,
+      });
+
+      expect(await expectAgreement("macro", macro.id)).toBe(2);
+    });
+
+    it("keeps counting a summary that still has somebody left in it", async () => {
+      const macro = await testApp.createMacro({
+        name: "Partly broken out",
+        createdBy: owner,
+        organizationId,
+      });
+      const second = await testApp.createTestUser({ name: "Mira Member" });
+      await testApp.addOrganizationMember(organizationId, second, "member");
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: member,
+        role: "admin",
+        createdBy: owner,
+      });
+
+      // Owner, the broken-out member's own row, and a members summary still standing
+      // for the one who holds nothing explicit.
+      expect(await expectAgreement("macro", macro.id)).toBe(3);
+    });
+
+    it("counts the admins summary, and drops it when a grant empties it", async () => {
+      const admin = await testApp.createTestUser({ name: "Ada Admin" });
+      await testApp.addOrganizationMember(organizationId, admin, "admin");
+      const macro = await testApp.createMacro({
+        name: "Admin summary",
+        createdBy: owner,
+        organizationId,
+      });
+
+      // Owner, admins summary, members summary.
+      expect(await expectAgreement("macro", macro.id)).toBe(3);
+
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: admin,
+        role: "viewer",
+        createdBy: owner,
+      });
+
+      // The admin's redundant grant moves them onto their own row, so the summary
+      // goes and the total is unchanged rather than incremented.
+      expect(await expectAgreement("macro", macro.id)).toBe(3);
     });
   });
 
@@ -226,9 +296,9 @@ describe("listOrganizationResources", () => {
     await testApp.addOrganizationMember(elsewhere, member, "owner");
     const macro = await testApp.createMacro({ name: "Ours", createdBy: owner, organizationId });
 
-    // Same id shape, different organization: the owner set is read for the organization
-    // being viewed, so the other organization's owner must not land on this row.
+    // Same id shape, different organization: every membership set is read for the
+    // organization being viewed, so the other one's owner must not land on this row.
     const row = await showcaseRow(owner, macro.id);
-    expect(row.collaboratorCount).toBe(1);
+    expect(row.collaboratorCount).toBe(2);
   });
 });

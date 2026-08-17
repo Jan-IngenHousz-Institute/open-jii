@@ -35,6 +35,8 @@ export function OrganizationOverview({ organizationId }: { organizationId: strin
   const { data, isPending, isError } = useOrganizationResources(organizationId);
 
   const isMember = organization?.role != null;
+  // One answer for the page: every row is owned by this one organization.
+  const canTransfer = organization?.role === "owner" || organization?.role === "admin";
   // Members only, like the endpoints behind them.
   const { data: teams, isPending: isTeamsPending } = useOrganizationTeams(organizationId, {
     enabled: isMember,
@@ -100,7 +102,10 @@ export function OrganizationOverview({ organizationId }: { organizationId: strin
             </div>
           ) : (
             // Neither pending nor errored, so the query has narrowed `data`.
-            <OrganizationResourceRows resources={data.resources} />
+            <OrganizationResourceRows
+              resources={data.resources}
+              transfer={canTransfer ? { organizationId } : undefined}
+            />
           )}
         </Card>
       </div>

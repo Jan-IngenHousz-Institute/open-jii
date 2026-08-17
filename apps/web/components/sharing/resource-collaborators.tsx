@@ -4,8 +4,9 @@ import { DocsHelpLink } from "@/components/docs-help-link";
 import { useResourceCollaborators } from "@/hooks/sharing/useResourceCollaborators/useResourceCollaborators";
 import { Search, UserPlus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { matchesGrantee } from "~/util/collaborator-filter";
+import { matchesCollaborator } from "~/util/collaborator-filter";
 
+import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -53,7 +54,7 @@ export function ResourceCollaborators({
 
   const filteredCollaborators = useMemo(() => {
     if (!normalizedFilter) return collaborators;
-    return collaborators.filter((row) => matchesGrantee(row.grantee, normalizedFilter));
+    return collaborators.filter((row) => matchesCollaborator(row, normalizedFilter));
   }, [collaborators, normalizedFilter]);
 
   // Hide the capability probe until it resolves, and on access/not-found errors.
@@ -105,7 +106,9 @@ export function ResourceCollaborators({
         description={t("sharing.addCollaboratorDescription")}
         disabled={readOnly}
         // Deduplicate against the unfiltered list.
-        existingGranteeIds={collaborators.map((grant) => grant.granteeId)}
+        existingGranteeIds={collaborators.flatMap((row) =>
+          isGranteeRow(row) ? [row.granteeId] : [],
+        )}
       />
     </section>
   );

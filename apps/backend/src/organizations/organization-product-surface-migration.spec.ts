@@ -205,7 +205,7 @@ describe("organization product surface migration end state (0042)", () => {
     expect(column.column_default).toBe("'viewer'::text");
   });
 
-  it("gives every organization a private directory listing", async () => {
+  it("defaults the visibility column to private, so the migration publishes nothing", async () => {
     const [column] = await testApp.database.execute<{
       column_default: string | null;
       is_nullable: string;

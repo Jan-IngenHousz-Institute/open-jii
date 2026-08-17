@@ -50,6 +50,10 @@ interface ExperimentDetailsCardProps {
   experiment: Experiment;
   locations: ExperimentLocation[];
   contributors: ExperimentContributor[];
+  /** Every collaborator row, not just the creditable faces — see the trail. */
+  collaboratorCount: number;
+  /** The contributors read failed; the trail must not claim a zero. */
+  isContributorsError?: boolean;
   isContributorsLoading: boolean;
   hasAccess?: boolean;
   /** `can(manage)` from the experiment-access response — gates the admin-only cards. */
@@ -69,6 +73,8 @@ export function ExperimentDetailsCard({
   experiment,
   locations,
   contributors,
+  collaboratorCount,
+  isContributorsError = false,
   isContributorsLoading,
   hasAccess = false,
   canManage = false,
@@ -175,6 +181,8 @@ export function ExperimentDetailsCard({
                   <h4 className="text-sm font-medium">{tSettings("sharing.collaboratorsTab")}</h4>
                   <ExperimentMembersTrail
                     contributors={contributors}
+                    collaboratorCount={collaboratorCount}
+                    isError={isContributorsError}
                     isLoading={isContributorsLoading}
                     href={`/${locale}/platform/experiments${isArchived ? "-archive" : ""}/${experimentId}/collaborators`}
                   />

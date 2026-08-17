@@ -3,6 +3,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import type {
   GranteeDto,
   GranteeOrganizationDto,
+  GranteeUserDto,
+  OrganizationMemberRole,
   ResourceOwnerDto,
   ShareableRole,
   SharingGranteeType,
@@ -16,6 +18,8 @@ import {
   eq,
   ilike,
   inArray,
+  isNull,
+  or,
   isNotPersonalOrgSql,
   listResourceGrants,
   macros,
@@ -36,10 +40,10 @@ import {
   deleteGranteeGrant,
   workbooks,
 } from "@repo/database";
-import type { DatabaseInstance, DbOrTx, GrantRole } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, GrantRole, SQL } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
-import { escapeLike } from "../../../common/utils/fts";
+import { escapeLike, trigramMatch } from "../../../common/utils/fts";
 import {
   getAnonymizedAvatarUrl,
   getAnonymizedEmail,
@@ -57,7 +61,9 @@ import {
   assertResourceStaysStaffed,
   findStaffedResource,
   isLivingUser,
+  livingOrgAdminIdsSql,
   livingOrgOwnerIdsSql,
+  livingOrgPlainMemberIdsSql,
   lockAndFindBlockingResources,
   lockOrgOwnerships,
   lockStaffedResource,
@@ -96,6 +102,19 @@ async function assertResourceIsUnarchived(
  * being read as some tier it never meant.
  */
 const toGrantRole = (stored: string) => stored as GrantRole;
+
+/**
+ * The strongest role in a Better Auth role string — owner subsumes admin subsumes
+ * member, the precedence `can()` resolves. Tokens outside that set read as no org
+ * role at all, matching `orgRoleCan`, which ignores what it does not recognize.
+ */
+function toOrganizationMemberRole(stored: string | null): OrganizationMemberRole | null {
+  if (stored === null) return null;
+  const tokens = stored.split(",").map((token) => token.trim());
+  if (tokens.includes("owner")) return "owner";
+  if (tokens.includes("admin")) return "admin";
+  return tokens.includes("member") ? "member" : null;
+}
 
 /**
  * The tables a resource can be moved between organizations in. Devices are absent
@@ -148,6 +167,12 @@ function teamMemberCountSql() {
   )`.mapWith(Number);
 }
 
+/** What every row naming the owning organization needs from it, read once. */
+interface OwningOrg {
+  id: string;
+  name: string;
+}
+
 /** One resource to count collaborators on. */
 export interface CollaboratorCountTarget {
   resourceType: SharingResourceType;
@@ -168,17 +193,28 @@ export class SharingRepository {
   constructor(@Inject("DATABASE") private readonly db: DatabaseInstance) {}
 
   /**
-   * How many collaborators each of `resources` has, by {@link list}'s own definition:
-   * the owning org's living owners, plus every grant, minus the user grants those
-   * owners hold. A team or org grantee counts as the one grantee it is, not expanded
-   * to its members — the same arithmetic as the collaborators surface.
+   * How many **rows** the collaborators surface would show for each of `resources` —
+   * literally `list()`'s output length, because a card saying 7 beside a tab listing 4
+   * is the whole failure mode. So: one per living owner, one per grant that is not an
+   * owner's own, and one for each of the admin and member summaries that is not empty.
+   * A team, an organization or a summary counts as the single row it is, never
+   * expanded to the people behind it.
    *
-   * One statement for the whole page. The asked-for pairs go in as a `VALUES` list and
-   * are left-joined, so the grants read is one grouped scan and a resource with no
-   * grants still comes back. All of `resources` must belong to `owningOrganizationId`.
+   * Both surfaces read the same three membership fragments, which is where the
+   * definition actually lives; the arithmetic over them is restated here only because
+   * this answers for a whole page in one statement and `list()` answers for one
+   * resource. `list-organization-resources.spec.ts` asserts the two against each other
+   * rather than against an integer, so they cannot drift without failing.
+   *
+   * The asked-for pairs go in as a `VALUES` list and are left-joined, so the grants
+   * read is one grouped scan and a resource with no grants still comes back. All of
+   * `resources` must belong to `owningOrganizationId`.
    */
   countCollaborators(
-    owningOrganizationId: string,
+    // Nullable for the same reason `list()` is: a resource with no owning organization
+    // has no org-derived rows, and every membership fragment already matches nothing
+    // on a NULL id — so that case needs no branch of its own.
+    owningOrganizationId: string | null,
     resources: readonly CollaboratorCountTarget[],
   ): Promise<Result<Map<string, number>>> {
     return tryCatch(async () => {
@@ -199,23 +235,43 @@ export class SharingRepository {
         collaborator_count: number;
       }>(sql`
         WITH "owners" AS (${livingOrgOwnerIdsSql(sql`${owningOrganizationId}::uuid`)}),
+        "admins" AS (${livingOrgAdminIdsSql(sql`${owningOrganizationId}::uuid`)}),
+        "members" AS (${livingOrgPlainMemberIdsSql(sql`${owningOrganizationId}::uuid`)}),
         "asked" ("resource_type", "resource_id") AS (VALUES ${asked}),
         "granted" AS (
           SELECT ${resourceGrants.resourceType} AS "resource_type",
                  ${resourceGrants.resourceId} AS "resource_id",
-                 COUNT(*)::int AS "n"
+                 -- Rows the surface renders: an owner's own grant rides on their
+                 -- individual row instead of adding one.
+                 COUNT(*) FILTER (
+                   WHERE NOT (
+                     ${resourceGrants.granteeType} = 'user'
+                     AND ${resourceGrants.granteeId} IN (SELECT "user_id" FROM "owners")
+                   )
+                 )::int AS "grant_rows",
+                 -- Whoever a grant broke out of a summary, so the summary is only
+                 -- counted while somebody is still left in it.
+                 COUNT(*) FILTER (
+                   WHERE ${resourceGrants.granteeType} = 'user'
+                     AND ${resourceGrants.granteeId} IN (SELECT "user_id" FROM "admins")
+                 )::int AS "broken_out_admins",
+                 COUNT(*) FILTER (
+                   WHERE ${resourceGrants.granteeType} = 'user'
+                     AND ${resourceGrants.granteeId} IN (SELECT "user_id" FROM "members")
+                 )::int AS "broken_out_members"
           FROM ${resourceGrants}
           JOIN "asked" ON "asked"."resource_type" = ${resourceGrants.resourceType}
                       AND "asked"."resource_id" = ${resourceGrants.resourceId}
-          WHERE NOT (
-            ${resourceGrants.granteeType} = 'user'
-            AND ${resourceGrants.granteeId} IN (SELECT "user_id" FROM "owners")
-          )
           GROUP BY 1, 2
         )
         SELECT "asked"."resource_type"::text AS "resource_type",
                "asked"."resource_id"::text AS "resource_id",
-               (SELECT COUNT(*)::int FROM "owners") + COALESCE("granted"."n", 0)
+               (SELECT COUNT(*)::int FROM "owners")
+                 + COALESCE("granted"."grant_rows", 0)
+                 + CASE WHEN (SELECT COUNT(*) FROM "admins")
+                             > COALESCE("granted"."broken_out_admins", 0) THEN 1 ELSE 0 END
+                 + CASE WHEN (SELECT COUNT(*) FROM "members")
+                             > COALESCE("granted"."broken_out_members", 0) THEN 1 ELSE 0 END
                  AS "collaborator_count"
         FROM "asked"
         LEFT JOIN "granted" ON "granted"."resource_type" = "asked"."resource_type"
@@ -242,9 +298,11 @@ export class SharingRepository {
     owningOrganizationId: string | null,
   ): Promise<Result<ResourceCollaborator[]>> {
     return tryCatch(async () => {
-      // Owners come first and are not grants: they are synthesized from the owning
-      // org, so a creator appears here without ever having been granted anything.
-      const owners = await this.listResourceOwnerDtos(owningOrganizationId);
+      const owningOrg = await this.owningOrganization(owningOrganizationId);
+
+      // Org-derived access comes first and is not granted: a creator appears here
+      // without ever having been granted anything.
+      const owners = await this.listResourceOwnerDtos(owningOrg);
       const ownerIds = new Set(owners.map((o) => o.granteeId));
 
       // With no owning org the join is false, so every grantee counts as outside.
@@ -268,6 +326,7 @@ export class SharingRepository {
           ...granteeDisplayColumns(),
           orgName: organizations.name,
           orgMemberId: organizationMembers.id,
+          orgMemberRole: organizationMembers.role,
           teamName: teams.name,
           teamMemberCount: teamMemberCountSql(),
         })
@@ -297,9 +356,15 @@ export class SharingRepository {
         )
         .orderBy(desc(resourceGrants.createdAt));
 
+      // Their org role already carries everything the grant would.
+      for (const row of owners) {
+        const held = rows.find((r) => r.granteeType === "user" && r.granteeId === row.granteeId);
+        row.inertGrant = held ? { id: held.id, role: toGrantRole(held.role) } : null;
+      }
+
       const grants = rows
-        // An owner who also holds a grant is shown once, as the owner — two rows for
-        // one person would carry contradictory affordances.
+        // An owner is shown once, on their own row — two rows for one person would
+        // carry contradictory affordances, and their grant rides there instead.
         .filter((r) => !(r.granteeType === "user" && ownerIds.has(r.granteeId)))
         .map((r): EnrichedGrant => {
           const granteeType = r.granteeType;
@@ -311,6 +376,7 @@ export class SharingRepository {
               : granteeType === "organization"
                 ? r.granteeId !== owningOrganizationId
                 : r.orgMemberId == null;
+          const orgRole = granteeType === "user" ? toOrganizationMemberRole(r.orgMemberRole) : null;
           return {
             kind: "grant",
             id: r.id,
@@ -322,27 +388,88 @@ export class SharingRepository {
             createdAt: r.createdAt,
             createdBy: r.createdBy,
             isOutsideCollaborator,
+            // `owner` cannot reach here — those rows were filtered out above.
+            owningOrganization:
+              owningOrg && (orgRole === "admin" || orgRole === "member")
+                ? { ...owningOrg, role: orgRole }
+                : null,
             grantee: buildGrantee(granteeType, r),
           };
         });
 
-      return [...owners, ...grants];
+      // Whoever holds a grant is broken out above, so the summaries count only the
+      // people whose access is purely their organization role. Counting them in both
+      // places would make the roster add up to more collaborators than there are.
+      const brokenOut = new Set(
+        grants.flatMap((g) => (g.granteeType === "user" ? [g.granteeId] : [])),
+      );
+      const adminCount = await this.countOrgGroup(owningOrg, livingOrgAdminIdsSql, brokenOut);
+      const memberCount = await this.countOrgGroup(
+        owningOrg,
+        livingOrgPlainMemberIdsSql,
+        brokenOut,
+      );
+
+      const summaries: ResourceCollaborator[] = [];
+      // Absent at zero, so an empty summary never claims a group that is not there.
+      if (owningOrg && adminCount > 0) {
+        summaries.push({
+          kind: "orgAdmins",
+          organizationId: owningOrg.id,
+          organizationName: owningOrg.name,
+          adminCount,
+        });
+      }
+      if (owningOrg && memberCount > 0) {
+        summaries.push({
+          kind: "orgMembers",
+          organizationId: owningOrg.id,
+          organizationName: owningOrg.name,
+          memberCount,
+        });
+      }
+
+      return [...owners, ...summaries, ...grants];
     });
   }
 
-  /**
-   * The living owners of an organization, as collaborator rows. A closed account is
-   * nobody to escalate to, so an org whose last owner left relies on admin grants.
-   */
-  private async listResourceOwnerDtos(
-    owningOrganizationId: string | null,
-  ): Promise<ResourceOwnerDto[]> {
-    if (!owningOrganizationId) return [];
+  /** The owning organization as the rows that name it carry it. */
+  private async owningOrganization(owningOrganizationId: string | null): Promise<OwningOrg | null> {
+    if (!owningOrganizationId) return null;
 
-    // Same fragment the staffing invariant and deletion blocker read, so this cannot
-    // show somebody the rules would not treat as answerable.
+    // `.at()` rather than destructuring: the index signature lies about emptiness.
+    const org = (
+      await this.db
+        .select({ name: organizations.name })
+        .from(organizations)
+        .where(eq(organizations.id, owningOrganizationId))
+        .limit(1)
+    ).at(0);
+    return org ? { id: owningOrganizationId, ...org } : null;
+  }
+
+  /** How many of an organization group have no row of their own. */
+  private async countOrgGroup(
+    owningOrg: OwningOrg | null,
+    groupSql: (organizationId: SQL) => SQL,
+    brokenOut: ReadonlySet<string>,
+  ): Promise<number> {
+    if (!owningOrg) return 0;
+
+    const rows = await this.db.execute<{ user_id: string }>(groupSql(sql`${owningOrg.id}::uuid`));
+    return rows.filter((r) => !brokenOut.has(r.user_id)).length;
+  }
+
+  /**
+   * The living owners of an organization, as collaborator rows. They hold every
+   * action through the org role, so none of this is a grant.
+   */
+  private async listResourceOwnerDtos(owningOrg: OwningOrg | null): Promise<ResourceOwnerDto[]> {
+    if (!owningOrg) return [];
+
+    // The staffing rules' own fragment, so this cannot disagree with them.
     const owners = await this.db.execute<{ user_id: string }>(
-      livingOrgOwnerIdsSql(sql`${owningOrganizationId}::uuid`),
+      livingOrgOwnerIdsSql(sql`${owningOrg.id}::uuid`),
     );
     const ownerIds = owners.map((o) => o.user_id);
     if (ownerIds.length === 0) return [];
@@ -361,7 +488,10 @@ export class SharingRepository {
       kind: "owner",
       granteeType: "user",
       granteeId: r.userId,
+      organizationName: owningOrg.name,
       grantee: buildGrantee("user", { ...r, orgName: null }),
+      // Filled in by `list`, which is where the grant rows are read.
+      inertGrant: null,
     }));
   }
 
@@ -754,6 +884,91 @@ export class SharingRepository {
         .orderBy(asc(organizations.name))
         .limit(params.limit),
     );
+  }
+
+  /**
+   * Users the picker may offer, each carrying the access they already hold here:
+   * their role in the owning organization, and any direct grant on the resource.
+   *
+   * Discoverability, matching and ranking are the global user search's, deliberately
+   * — narrowing this to the organization would hide exactly the outside collaborators
+   * the picker exists to add. Annotating is the whole difference.
+   */
+  searchGranteeUsers(
+    resourceType: SharingResourceType,
+    resourceId: string,
+    owningOrganizationId: string | null,
+    params: { query?: string; limit: number },
+  ): Promise<Result<GranteeUserDto[]>> {
+    return tryCatch(async () => {
+      // No owning organization means nobody holds an org role over this resource.
+      const onOwningOrgMember = owningOrganizationId
+        ? and(
+            eq(organizationMembers.userId, profiles.userId),
+            eq(organizationMembers.organizationId, owningOrganizationId),
+          )
+        : sql`false`;
+
+      const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
+      const isDiscoverable = and(eq(profiles.activated, true), isNull(profiles.deletedAt));
+
+      const rows = await this.db
+        .select({
+          userId: profiles.userId,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+          email: getAnonymizedEmail(),
+          avatarUrl: getAnonymizedAvatarUrl(),
+          organizationRole: organizationMembers.role,
+          existingGrantRole: resourceGrants.role,
+        })
+        .from(profiles)
+        .innerJoin(users, eq(profiles.userId, users.id))
+        .leftJoin(organizationMembers, onOwningOrgMember)
+        .leftJoin(
+          resourceGrants,
+          and(
+            eq(resourceGrants.resourceType, resourceType),
+            eq(resourceGrants.resourceId, resourceId),
+            eq(resourceGrants.granteeType, "user"),
+            eq(resourceGrants.granteeId, profiles.userId),
+          ),
+        )
+        .where(
+          and(
+            isDiscoverable,
+            params.query
+              ? or(
+                  trigramMatch(profiles.firstName, params.query),
+                  trigramMatch(profiles.lastName, params.query),
+                  ilike(fullName, `%${escapeLike(params.query)}%`),
+                  ilike(users.email, `%${escapeLike(params.query)}%`),
+                )
+              : undefined,
+          ),
+        )
+        .orderBy(
+          ...(params.query
+            ? [
+                sql`greatest(similarity(${fullName}, ${params.query}), similarity(${users.email}, ${params.query})) DESC`,
+              ]
+            : []),
+          asc(profiles.firstName),
+          // Names tie constantly, and without a unique tiebreaker the cut-off drifts.
+          asc(profiles.userId),
+        )
+        .limit(params.limit);
+
+      return rows.map((r) => ({
+        userId: r.userId,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        email: r.email,
+        avatarUrl: r.avatarUrl,
+        organizationRole: toOrganizationMemberRole(r.organizationRole),
+        existingGrantRole: r.existingGrantRole ? toGrantRole(r.existingGrantRole) : null,
+      }));
+    });
   }
 
   /**

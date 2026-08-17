@@ -112,6 +112,7 @@ describe("team grantees in the collaborators surface", () => {
         <GranteePicker
           resourceType="experiment"
           resourceId="exp-1"
+          role="viewer"
           selection={null}
           onSelectionChange={vi.fn()}
         />,
@@ -203,6 +204,7 @@ describe("team grantees in the collaborators surface", () => {
         <GranteePicker
           resourceType="experiment"
           resourceId="exp-1"
+          role="viewer"
           selection={null}
           onSelectionChange={vi.fn()}
           existingGranteeIds={["team-1"]}
@@ -232,6 +234,7 @@ describe("team grantees in the collaborators surface", () => {
         <GranteePicker
           resourceType="experiment"
           resourceId="exp-1"
+          role="viewer"
           selection={null}
           onSelectionChange={onSelectionChange}
         />,

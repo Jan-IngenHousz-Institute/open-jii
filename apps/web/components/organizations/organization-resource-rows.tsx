@@ -11,6 +11,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { OrganizationResource } from "@repo/api/domains/organization/organization.schema";
+import type { TransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
+import { zTransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -36,6 +38,7 @@ import {
   hasActiveFilters,
 } from "./organization-resource-filter";
 import { GROUP_ORDER, RESOURCE_SEGMENT, RESOURCE_TYPE_COLOR } from "./organization-resource-meta";
+import { ResourceTransferDialog } from "./resource-transfer-dialog";
 
 /** The sort options, in the order they are offered. */
 const SORT_OPTIONS: readonly { value: ResourceSort; labelKey: string }[] = [
@@ -43,6 +46,12 @@ const SORT_OPTIONS: readonly { value: ResourceSort; labelKey: string }[] = [
   { value: "name", labelKey: "organizations.resources.sortName" },
   { value: "type", labelKey: "organizations.resources.sortType" },
 ];
+
+/** Read off the schema rather than excluding `device` by hand, so a sixth type stays honest. */
+function transferableType(type: OrganizationResource["type"]): TransferableResourceType | null {
+  const parsed = zTransferableResourceType.safeParse(type);
+  return parsed.success ? parsed.data : null;
+}
 
 /** A row's one type-specific fact, in the colour that value wears on its own listing. */
 function metaBadge(
@@ -75,17 +84,33 @@ function metaBadge(
   }
 }
 
+/** The resource a transfer is being started for, held by the list rather than by its row. */
+interface TransferTarget {
+  type: TransferableResourceType;
+  id: string;
+}
+
 /**
  * Everything the organization owns that the caller can open, as one filtered list. The
  * type options and the type sort come off {@link GROUP_ORDER}, so neither can drift from
  * the featured card or the estate bar.
+ *
+ * `transfer` carries the capability and the organization together, so the affordance
+ * cannot be offered without somewhere to move a resource out of. Absent means nobody.
  */
-export function OrganizationResourceRows({ resources }: { resources: OrganizationResource[] }) {
+export function OrganizationResourceRows({
+  resources,
+  transfer,
+}: {
+  resources: OrganizationResource[];
+  transfer?: { organizationId: string };
+}) {
   const { t } = useTranslation();
 
   const [query, setQuery] = useState(DEFAULT_RESOURCE_FILTER.query);
   const [type, setType] = useState<ResourceTypeFilter>(DEFAULT_RESOURCE_FILTER.type);
   const [sort, setSort] = useState<ResourceSort>(DEFAULT_RESOURCE_FILTER.sort);
+  const [target, setTarget] = useState<TransferTarget | null>(null);
 
   // The read is uncapped, so without this it re-runs over everything on every keystroke.
   const visible = useMemo(
@@ -167,20 +192,45 @@ export function OrganizationResourceRows({ resources }: { resources: Organizatio
             className="border-border border-t"
           >
             {visible.map((resource) => (
-              <ResourceRow key={`${resource.type}-${resource.id}`} resource={resource} />
+              <ResourceRow
+                key={`${resource.type}-${resource.id}`}
+                resource={resource}
+                onTransfer={transfer ? setTarget : null}
+              />
             ))}
           </ul>
         )}
+
+        {/* One dialog, not one per row: it reads the caller's memberships when it opens. */}
+        {transfer && target ? (
+          <ResourceTransferDialog
+            resourceType={target.type}
+            resourceId={target.id}
+            currentOrganizationId={transfer.organizationId}
+            open
+            onOpenChange={(next) => {
+              if (!next) setTarget(null);
+            }}
+          />
+        ) : null}
       </div>
     </TooltipProvider>
   );
 }
 
-function ResourceRow({ resource }: { resource: OrganizationResource }) {
+function ResourceRow({
+  resource,
+  onTransfer,
+}: {
+  resource: OrganizationResource;
+  onTransfer: ((target: TransferTarget) => void) | null;
+}) {
   const { t } = useTranslation();
   const locale = useLocale();
 
   const meta = metaBadge(resource, t);
+  // A device has no transfer route, so it gets no control rather than one that refuses.
+  const transferableAs = onTransfer ? transferableType(resource.type) : null;
 
   return (
     <li className="border-border/60 border-b py-3 last:border-b-0">
@@ -204,6 +254,18 @@ function ResourceRow({ resource }: { resource: OrganizationResource }) {
             </TooltipTrigger>
             <TooltipContent>{t("organizations.resources.privateTooltip")}</TooltipContent>
           </Tooltip>
+        ) : null}
+
+        {onTransfer && transferableAs ? (
+          <Button
+            variant="buttonLink"
+            className="ml-auto h-auto shrink-0 p-0"
+            // Named for its row: every one of these reads "Transfer" otherwise.
+            aria-label={t("organizations.transfer.actionFor", { name: resource.name })}
+            onClick={() => onTransfer({ type: transferableAs, id: resource.id })}
+          >
+            {t("organizations.transfer.action")}
+          </Button>
         ) : null}
       </span>
 

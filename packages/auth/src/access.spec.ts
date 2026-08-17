@@ -6,9 +6,9 @@ import { RESOURCE_ACTIONS, RESOURCE_TYPES, grantRoleCan, orgRoleCan, roles } fro
 import type { ResourceAction, ResourceType } from "./access";
 
 /**
- * The capability matrix, pinned action by action. Two asymmetries to hold: a grant
- * of "Can view" carries `contribute` where an org `member` role does not, and
- * `contribute` exists on experiments only.
+ * The capability matrix, pinned action by action. The asymmetry to hold: `contribute`
+ * exists on experiments only, and there both the lowest grant tier and plain org
+ * membership carry it — on the other four types both are read-only.
  *
  * The action and resource-type lists come from the matrix itself rather than being
  * restated here. A copied list would let a sixth resource type be added to
@@ -83,8 +83,16 @@ describe("grant roles", () => {
 });
 
 describe("organization roles", () => {
-  it("keeps the plain 'member' role read-only — org membership is not contribution", () => {
-    expectExactly((a) => orgRoleCan("member", "experiment", a), ["read"]);
+  it("lets a plain 'member' contribute to the organization's own experiments", () => {
+    // A lab's members can add measurements to the lab's experiments: being handed the
+    // lowest grant tier should not beat belonging to the organization that owns it.
+    expectExactly((a) => orgRoleCan("member", "experiment", a), ["read", "contribute"]);
+  });
+
+  it("keeps 'member' read-only on every type with no data to contribute to", () => {
+    for (const resourceType of TYPES_WITHOUT_DATA) {
+      expectExactly((a) => orgRoleCan("member", resourceType, a), ["read"]);
+    }
   });
 
   it("gives 'admin' every action", () => {
@@ -97,7 +105,7 @@ describe("organization roles", () => {
 
   it("honours a multi-role string", () => {
     expectExactly((a) => orgRoleCan("member,admin", "experiment", a), ALL_ACTIONS);
-    expectExactly((a) => orgRoleCan("member,bogus", "experiment", a), ["read"]);
+    expectExactly((a) => orgRoleCan("member,bogus", "experiment", a), ["read", "contribute"]);
   });
 
   it("keeps the organization's own settings to its owners", () => {
@@ -121,16 +129,21 @@ describe("organization roles", () => {
   });
 });
 
-describe("the grant and organization matrices disagree only about the middle tier", () => {
-  it("splits the middle tier: a grant contributes, an org role does not", () => {
+describe("the grant and organization middle tiers", () => {
+  it("agrees on an experiment: the lowest grant tier and membership both contribute", () => {
+    for (const action of ALL_ACTIONS) {
+      expect(grantRoleCan("viewer", "experiment", action)).toBe(
+        orgRoleCan("member", "experiment", action),
+      );
+    }
     expect(grantRoleCan("viewer", "experiment", "contribute")).toBe(true);
-    expect(orgRoleCan("member", "experiment", "contribute")).toBe(false);
-    // ...and agree on everything else about that tier.
-    expect(grantRoleCan("viewer", "experiment", "read")).toBe(true);
-    expect(orgRoleCan("member", "experiment", "read")).toBe(true);
-    for (const action of ["update", "share", "manage"] as const) {
-      expect(grantRoleCan("viewer", "experiment", action)).toBe(false);
-      expect(orgRoleCan("member", "experiment", action)).toBe(false);
+    expect(orgRoleCan("member", "experiment", "contribute")).toBe(true);
+  });
+
+  it("agrees on the other types too, where both are read-only", () => {
+    for (const resourceType of TYPES_WITHOUT_DATA) {
+      expectExactly((a) => grantRoleCan("viewer", resourceType, a), ["read"]);
+      expectExactly((a) => orgRoleCan("member", resourceType, a), ["read"]);
     }
   });
 
