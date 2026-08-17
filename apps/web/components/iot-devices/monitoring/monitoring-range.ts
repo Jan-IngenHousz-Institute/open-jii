@@ -47,10 +47,9 @@ export function isRangeWithinLimit(from: Date, to: Date): boolean {
 }
 
 /**
- * Turn a calendar selection into a window. The picker hands back midnights, so
- * the closing day is extended to cover itself. Incomplete or over-long
- * selections resolve to null: the contract rejects them, and silently
- * truncating the user's choice would be worse than ignoring it.
+ * Turn a calendar selection into a window; the closing midnight is extended
+ * to cover its day. Incomplete or over-long selections resolve to null
+ * rather than silently truncating the user's choice.
  */
 export function rangeFromCalendarSelection(
   selected: { from?: Date; to?: Date } | undefined,

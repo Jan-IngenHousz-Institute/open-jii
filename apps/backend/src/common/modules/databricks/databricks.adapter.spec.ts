@@ -1154,12 +1154,24 @@ describe("DatabricksAdapter", () => {
       ]);
     });
 
-    it("maps the firmware history with its first and last sighting", async () => {
+    it("maps the per-bucket firmware groups with their first and last sighting", async () => {
       mockSql(
-        ["device_version", "first_seen", "last_seen", "row_count"],
+        ["timestamp_hour", "device_version", "first_seen", "last_seen", "row_count"],
         [
-          ["1.0.0", "2026-08-13T01:00:00.000Z", "2026-08-13T08:00:00.000Z", "60"],
-          ["1.1.0", "2026-08-13T09:00:00.000Z", "2026-08-13T11:00:00.000Z", "40"],
+          [
+            "2026-08-13T01:00:00.000Z",
+            "1.0.0",
+            "2026-08-13T01:00:00.000Z",
+            "2026-08-13T01:55:00.000Z",
+            "60",
+          ],
+          [
+            "2026-08-13T02:00:00.000Z",
+            "1.1.0",
+            "2026-08-13T02:05:00.000Z",
+            "2026-08-13T02:50:00.000Z",
+            "40",
+          ],
         ],
       );
 
@@ -1167,6 +1179,7 @@ describe("DatabricksAdapter", () => {
         "AMBYTE_A",
         "2026-08-13T00:00:00.000Z",
         "2026-08-13T12:00:00.000Z",
+        "hour",
       );
 
       assertSuccess(result);
@@ -1174,13 +1187,13 @@ describe("DatabricksAdapter", () => {
         {
           version: "1.0.0",
           firstSeen: "2026-08-13T01:00:00.000Z",
-          lastSeen: "2026-08-13T08:00:00.000Z",
+          lastSeen: "2026-08-13T01:55:00.000Z",
           count: 60,
         },
         {
           version: "1.1.0",
-          firstSeen: "2026-08-13T09:00:00.000Z",
-          lastSeen: "2026-08-13T11:00:00.000Z",
+          firstSeen: "2026-08-13T02:05:00.000Z",
+          lastSeen: "2026-08-13T02:50:00.000Z",
           count: 40,
         },
       ]);

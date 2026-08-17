@@ -349,11 +349,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     return this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
   }
 
-  /**
-   * Last data arrival for a device from the gold device_last_activity table,
-   * keyed on client_id (== Thing name for X.509 devices). Pipeline-computed, so
-   * it lags by pipeline cadence; no row means no data has ever landed.
-   */
+  /** Last data arrival from gold device_last_activity; lags by pipeline cadence. */
   async getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>> {
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.device_last_activity`,
@@ -372,10 +368,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     });
   }
 
-  /**
-   * Lifecycle events for a device in a range, ascending, capped at `limit`.
-   * The caller derives sessions and uptime from the ordered pairs.
-   */
+  /** Lifecycle events in a range, ascending, capped at `limit`. */
   async getDeviceLifecycleEvents(
     thingName: string,
     from: string,
@@ -406,9 +399,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     );
   }
 
-  /**
-   * Measurement counts per time bucket and experiment for a device in a range.
-   */
+  /** Measurement counts per time bucket and experiment. */
   async getDeviceThroughput(
     thingName: string,
     from: string,
@@ -441,11 +432,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     );
   }
 
-  /**
-   * Average reported battery per time bucket for a device in a range. Buckets
-   * without battery-carrying measurements yield a null average (SQL AVG skips
-   * nulls; a bucket of only-null batteries returns null).
-   */
+  /** Average reported battery per bucket; AVG skips nulls, so a battery-less bucket is null. */
   async getDeviceBatterySeries(
     thingName: string,
     from: string,
@@ -481,10 +468,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
-   * One grouped scan powering the payload profile: measurement counts and
-   * metadata coverage per (firmware, protocol, workbook run) combination.
-   * SQL COUNT(column) skips nulls, which is what makes the coverage counts
-   * work; the caller sums combinations into totals and mixes.
+   * One grouped scan powering the payload profile. COUNT(column) skips nulls,
+   * which is what makes the coverage counts work.
    */
   async getDevicePayloadBreakdown(
     thingName: string,
@@ -528,10 +513,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
-   * Measurement counts per macro the device ran in a range. `macros` is an
-   * array per measurement, so the rows are exploded before grouping and the
-   * counts sum to more than the measurement total whenever a measurement ran
-   * several macros.
+   * Counts per macro. `macros` is an array per measurement, so rows are
+   * exploded before grouping and counts can exceed the measurement total.
    */
   async getDeviceMacroBreakdown(
     thingName: string,
@@ -562,22 +545,21 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
-   * Every firmware version the device reported in a range, with the window it
-   * was seen in. Unlike the version mix, this carries the ordering that makes
-   * a transition visible, and it sees the whole range rather than the tail of
-   * measurements a row-level query returns.
+   * Reported firmware per (time bucket, version): grouping by version alone
+   * would collapse a rollback into two overlapping windows.
    */
   async getDeviceFirmwareHistory(
     thingName: string,
     from: string,
     to: string,
+    bucket: "hour" | "day",
   ): Promise<Result<DeviceFirmwareVersionRow[]>> {
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
       whereConditions: [["client_id", thingName]],
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
-        groupBy: [{ column: "device_version" }],
+        groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "device_version" }],
         functions: [
           { column: "timestamp", function: "min", alias: "first_seen" },
           { column: "timestamp", function: "max", alias: "last_seen" },
@@ -602,10 +584,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     );
   }
 
-  /**
-   * The device's most recent measurements in a range, newest first. Row-level
-   * evidence behind the aggregates: what actually arrived, and when.
-   */
+  /** Most recent measurements in a range, newest first. */
   async getDeviceRecentMeasurements(
     thingName: string,
     from: string,
@@ -646,8 +625,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         battery: this.toNumberOrNull(row[index.device_battery]),
         latitude: this.toNumberOrNull(row[index.latitude]),
         longitude: this.toNumberOrNull(row[index.longitude]),
-        // The decompressed reading, as the device sent it. Shape is
-        // device-defined, so it travels as the stored JSON text.
+        // Device-defined shape, so it travels as the stored JSON text.
         sample: row[index.sample] ?? null,
       })),
     );
@@ -661,8 +639,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     return Number.isFinite(parsed) ? parsed : null;
   }
 
-  // Shared plumbing for the monitoring reads: build the SQL, run it against
-  // the centrum schema, and index the result columns by name.
+  // Build the SQL, run it against the centrum schema, index columns by name.
   private async runMonitoringQuery(
     params: QueryParams,
   ): Promise<Result<{ rows: (string | null)[][]; index: Record<string, number> }>> {

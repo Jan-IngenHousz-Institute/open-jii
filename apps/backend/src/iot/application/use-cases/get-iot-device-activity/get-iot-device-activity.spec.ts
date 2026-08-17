@@ -46,11 +46,14 @@ describe("GetIotDeviceActivityUseCase", () => {
     const result = await useCase.execute(device.id, userId);
 
     assertSuccess(result);
-    expect(result.value).toEqual({ lastDataAt: "2026-08-13T09:00:00.000Z" });
+    expect(result.value).toEqual({
+      lastDataAt: "2026-08-13T09:00:00.000Z",
+      pipelineUnavailable: false,
+    });
     expect(getLastActivity).toHaveBeenCalledWith(device.thingName);
   });
 
-  it("returns null when the device has never landed data", async () => {
+  it("reports never-landed data as null with the pipeline available", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId });
     vi.spyOn(databricksAdapter, "getDeviceLastActivity").mockResolvedValue(
       success({ lastDataAt: null }),
@@ -59,10 +62,10 @@ describe("GetIotDeviceActivityUseCase", () => {
     const result = await useCase.execute(device.id, userId);
 
     assertSuccess(result);
-    expect(result.value).toEqual({ lastDataAt: null });
+    expect(result.value).toEqual({ lastDataAt: null, pipelineUnavailable: false });
   });
 
-  it("degrades to null when the warehouse is unavailable, never failing the panel", async () => {
+  it("marks the lookup unavailable on a warehouse failure, never failing the panel", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId });
     vi.spyOn(databricksAdapter, "getDeviceLastActivity").mockResolvedValue(
       failure(AppError.internal("warehouse down")),
@@ -71,7 +74,9 @@ describe("GetIotDeviceActivityUseCase", () => {
     const result = await useCase.execute(device.id, userId);
 
     assertSuccess(result);
-    expect(result.value).toEqual({ lastDataAt: null });
+    // Unknown, not "never sent data": the flag is what stops the frontend
+    // from raising a device-health warning on a warehouse outage.
+    expect(result.value).toEqual({ lastDataAt: null, pipelineUnavailable: true });
   });
 
   it("returns 404 for a missing device, which stays a real failure", async () => {

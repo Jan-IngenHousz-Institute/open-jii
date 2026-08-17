@@ -220,12 +220,13 @@ export const zDeviceExperiment = zExperiment
 export const zDeviceExperimentList = z.array(zDeviceExperiment);
 
 /**
- * Last data arrival for a device, computed by the pipeline (gold
- * device_last_activity). Always lags by pipeline cadence; null when the device
- * has never landed data or the warehouse is unavailable.
+ * Pipeline-computed last data arrival; lags by cadence. A null `lastDataAt`
+ * means never landed only while `pipelineUnavailable` is false; a failed
+ * lookup means unknown, and no device-health warning may fire on it.
  */
 export const zIotDeviceActivity = z.object({
   lastDataAt: z.string().datetime().nullable(),
+  pipelineUnavailable: z.boolean(),
 });
 
 // --- Device monitoring ---
@@ -282,11 +283,7 @@ export const zDeviceBatteryPoint = z.object({
   averageBattery: z.number().nullable(),
 });
 
-/**
- * Payload-content profile of the measurements a device sent in a range:
- * coverage of the optional metadata channels, firmware mix, protocol mix, and
- * workbook-run counts. Protocol attribution only exists on legacy-topic rows.
- */
+// Payload profile of a range. Protocol attribution only exists on legacy-topic rows.
 export const zDevicePayloadStats = z.object({
   totalMeasurements: z.number().int(),
   withGps: z.number().int(),
@@ -297,14 +294,11 @@ export const zDevicePayloadStats = z.object({
   workbookMix: z.array(
     z.object({ workbookVersionId: z.string().nullable(), count: z.number().int() }),
   ),
-  /**
-   * Measurements per macro. A measurement can run several macros, so these
-   * counts are per macro run and do not sum to `totalMeasurements`.
-   */
+  // Per macro run: a measurement can run several, so counts exceed totals.
   macroMix: z.array(z.object({ macroId: z.string().nullable(), count: z.number().int() })),
 });
 
-/** A firmware version the device reported, and the window it was seen in. */
+// One firmware run: ordered, and a version can reappear, so rollbacks are visible.
 export const zDeviceFirmwareVersion = z.object({
   version: z.string().nullable(),
   firstSeen: z.string().datetime(),
@@ -326,10 +320,7 @@ export const zDeviceMeasurement = z.object({
   sample: z.string().nullable(),
 });
 
-/**
- * Everything the monitoring dashboard needs for one range, in one response:
- * the warehouse queries run in parallel server-side.
- */
+// The monitoring dashboard's one-range response; queries run in parallel server-side.
 export const zDeviceMonitoring = z.object({
   bucket: zMonitoringBucket,
   events: z.array(zDeviceLifecycleEvent),

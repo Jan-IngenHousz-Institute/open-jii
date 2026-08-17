@@ -17,11 +17,7 @@ interface ActivitySources {
   to: string;
 }
 
-/**
- * Everything that happened to this device in the window, not just the broker
- * events: connections, firmware transitions, and its registration when that
- * falls inside the window.
- */
+/** The window's activity: connections, firmware transitions, registration. */
 export function buildDeviceActivity({
   monitoring,
   registeredAt,
@@ -52,12 +48,8 @@ function withinWindow(timestamp: string, fromMs: number, toMs: number): boolean 
   return at >= fromMs && at <= toMs;
 }
 
-/**
- * Firmware transitions over the whole window, from the versions the warehouse
- * saw. Each version after the first is a change, recorded when it first
- * appeared; the earliest version is the state the window opened in, not an
- * event.
- */
+// Each run after the first is a change; the earliest is the state the
+// window opened in, not an event.
 function firmwareChanges(history: DeviceFirmwareVersion[]): ActivityEntry[] {
   return history.slice(1).map((version, position) => ({
     timestamp: version.firstSeen,

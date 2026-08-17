@@ -67,9 +67,8 @@ export function buildAggregateExpression(
  * Two SELECT shapes:
  *   - GROUP BY path:    `SELECT <groupBy>, <row aggs>, <windows> FROM (...) GROUP BY ...`
  *   - Window-only path: `SELECT *, <windows> FROM (...)`, preserving raw rows.
- * Both accept an `explode`, which expands an array column of the inner query
- * into one row per element (`LATERAL VIEW EXPLODE`) so its elements can be
- * grouped by.
+ * Both accept an `explode` (`LATERAL VIEW EXPLODE`) so array elements can
+ * be grouped by.
  * The window-only path activates only with no groupBy entries and no
  * row-aggregating functions (cumsum alone), so a no-aggregate series can
  * coexist with a cumsum sibling.
@@ -132,9 +131,8 @@ export function wrapWithAggregation(
     throw new Error("wrapWithAggregation called without aggregation content");
   }
 
-  // An exploded array yields one row per element, so it belongs to the outer
-  // FROM: the inner query still reads whole rows, and every aggregate below
-  // counts elements.
+  // Explode belongs to the outer FROM: the inner query reads whole rows,
+  // the aggregates count elements.
   const explode = opts.aggregation?.explode;
   const from =
     explode === undefined

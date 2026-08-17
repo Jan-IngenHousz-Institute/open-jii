@@ -13,11 +13,7 @@ interface ConnectivityDotProps {
   className?: string;
 }
 
-/**
- * Broker connectivity as its own visual axis, separate from the credential
- * status badge: green = connected now, gray = offline, muted ring = unknown
- * (fleet index unavailable or still building).
- */
+/** Broker connectivity: green = connected, gray = offline, muted ring = unknown. */
 export function ConnectivityDot({ connectivity, className }: ConnectivityDotProps) {
   const { t } = useTranslation("iot");
 
@@ -55,11 +51,7 @@ export function ConnectivityDot({ connectivity, className }: ConnectivityDotProp
   );
 }
 
-/**
- * Human last-seen line for a device: relative time of the last connectivity
- * state change, "connected now" while online, and honest fallbacks for unknown
- * and never-connected states.
- */
+/** Last-seen line: relative time of the last state change, with fallbacks. */
 export function useFormatLastSeen(): (connectivity: DeviceConnectivity | null) => string {
   const { t } = useTranslation("iot");
   const locale = useLocale();

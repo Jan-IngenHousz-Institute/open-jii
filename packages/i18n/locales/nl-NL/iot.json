@@ -105,6 +105,7 @@
         "state": "Connectiviteit",
         "lastData": "Laatst ontvangen data",
         "noData": "Nog geen data ontvangen",
+        "lastDataUnavailable": "Niet beschikbaar",
         "pipelineNote": "Berekend door de datapipeline; weerspiegelt de laatste pipeline-run.",
         "range": {
           "last1h": "1 u",

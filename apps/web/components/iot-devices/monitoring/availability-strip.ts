@@ -1,9 +1,6 @@
 import type { DeviceMonitoring, DeviceSession } from "@repo/api/domains/iot/iot.schema";
 
-/**
- * Availability of one bucket, in the vocabulary uptime monitors use: a slice
- * is up, partially up, down, or has no evidence either way.
- */
+/** Availability of one bucket: up, partially up, down, or no evidence. */
 export type BucketAvailability = "up" | "partial" | "down" | "unknown";
 
 export interface AvailabilitySlice {
@@ -36,10 +33,7 @@ function toIntervals(sessions: DeviceSession[], rangeEndMs: number): Interval[] 
     .sort((a, b) => a.start - b.start);
 }
 
-/**
- * Split the window into slices and grade each one, so availability reads as
- * discrete blocks (hoverable, countable) rather than one continuous smear.
- */
+/** Split the window into slices and grade each one. */
 export function buildAvailabilitySlices(
   monitoring: DeviceMonitoring,
   axis: string[],
@@ -88,10 +82,7 @@ function gradeSlice(onlineRatio: number, hasEvidence: boolean): BucketAvailabili
   return "partial";
 }
 
-/**
- * The gaps between connected sessions: what an operator actually wants listed,
- * with the reason the preceding session ended.
- */
+/** The gaps between sessions, with the reason the preceding one ended. */
 export function deriveOutages(
   monitoring: DeviceMonitoring,
   from: string,

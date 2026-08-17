@@ -13489,10 +13489,14 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "pipelineUnavailable": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
-                    "lastDataAt"
+                    "lastDataAt",
+                    "pipelineUnavailable"
                   ]
                 }
               }

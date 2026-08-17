@@ -1,16 +1,9 @@
 import type { DeviceLifecycleEvent, DeviceSession } from "../domains/iot/iot.schema";
 
 /**
- * Domain-pure derivation of a device's connectivity over a queried range:
- * lifecycle-event rows normalized and paired into sessions, with uptime over
- * the elapsed part of the range.
- *
- * Pairing rules: a connect opens a session (repeats keep the earliest start,
- * the latest connect's identifier names the live MQTT session); a disconnect
- * closes the open session it belongs to; a disconnect opening the range
- * implies a session running since range start; stale disconnects from an
- * older interleaved MQTT session and later orphans change nothing. A session
- * still open after the last event runs to the range end, clamped to now.
+ * Derive a device's connectivity over a range: lifecycle events paired into
+ * sessions, with uptime over the elapsed part. Pairing rules live on the
+ * steps below.
  */
 
 /** A lifecycle-event row as the warehouse returns it, before normalization. */

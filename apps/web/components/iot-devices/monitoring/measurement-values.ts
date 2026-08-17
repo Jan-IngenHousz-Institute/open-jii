@@ -11,13 +11,9 @@ export interface MeasurementValueTable {
 }
 
 /**
- * Flatten stored samples into warehouse-shaped columns and rows, so the
- * readings render through the same table as experiment data: one column per
- * reported field, typed from the values that arrived, and complex fields
- * carried as JSON text for the collapsible cells.
- *
- * A sample is device-defined JSON, either one object of readings or an array
- * of them (a burst); a burst becomes one row per reading.
+ * Flatten stored samples into warehouse-shaped columns and rows: one column
+ * per reported field, typed from the values that arrived. A sample is one
+ * JSON object of readings or a burst array; a burst becomes one row each.
  */
 export function buildMeasurementValueTable(
   measurements: DeviceMeasurement[],
@@ -36,8 +32,7 @@ export function buildMeasurementValueTable(
 
       const fields = Object.entries(reading).filter(([, value]) => value !== null);
       for (const [field, value] of fields) {
-        // Complex values travel as JSON text, the way the warehouse hands
-        // struct and variant columns to the cells that expand them.
+        // Complex values travel as JSON text, like warehouse struct columns.
         row[field] = typeof value === "object" ? JSON.stringify(value) : value;
         fieldValues.set(field, [...(fieldValues.get(field) ?? []), value]);
       }
@@ -48,8 +43,7 @@ export function buildMeasurementValueTable(
     }
   }
 
-  // Most-populated fields first: a field on every reading says more about the
-  // device than one that appeared once.
+  // Most-populated fields first.
   const ranked = [...fieldValues.entries()].sort((a, b) => b[1].length - a[1].length);
 
   return {
@@ -76,8 +70,8 @@ function parseReadings(sample: string | null): Record<string, unknown>[] {
     }
     return isRecord(parsed) ? [parsed] : [];
   } catch {
-    // A sample that will not parse is not tabulated; the record table in the
-    // data-flow panel still shows the measurement arrived.
+    // Unparsable samples are not tabulated; the data-flow record table still
+    // shows the measurement arrived.
     return [];
   }
 }
@@ -87,16 +81,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * The warehouse type a device-defined field is closest to, decided over every
- * value seen for it. Numeric arrays land on `ARRAY<DOUBLE>` so a spectrum
- * plots as a sparkline, exactly as it does in the experiment data tables;
- * values that disagree on type fall back to text.
+ * The warehouse type a field is closest to, over every value seen for it.
+ * Numeric arrays land on `ARRAY<DOUBLE>` so a spectrum plots as a sparkline;
+ * disagreeing values fall back to text.
  */
 export function inferColumnType(values: unknown[]): string {
   const types = new Set(values.map(nameOfType));
 
-  // Whole numbers and fractions are one numeric field the device happened to
-  // report at different precisions, not a disagreement.
+  // Whole numbers and fractions are one numeric field, not a disagreement.
   if (types.has("BIGINT") && types.has("DOUBLE")) {
     types.delete("BIGINT");
   }

@@ -1,5 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import type { IotDeviceActivity } from "@repo/api/domains/iot/iot.schema";
+
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
@@ -15,7 +17,7 @@ export class GetIotDeviceActivityUseCase {
     private readonly deviceRepository: IotDeviceRepository,
   ) {}
 
-  async execute(deviceId: string, userId: string): Promise<Result<{ lastDataAt: string | null }>> {
+  async execute(deviceId: string, userId: string): Promise<Result<IotDeviceActivity>> {
     this.logger.log({
       msg: "Getting device activity",
       operation: "getIotDeviceActivity",
@@ -31,8 +33,8 @@ export class GetIotDeviceActivityUseCase {
       return failure(AppError.notFound(`IotDevice with ID ${deviceId} not found`));
     }
 
-    // The warehouse read is an enrichment, never a gate: on failure the device
-    // renders "no data yet" rather than erroring the monitoring panel.
+    // Enrichment, never a gate: a failure is reported as unavailable so
+    // "never sent data" and "warehouse down" stay distinguishable.
     const activityResult = await this.databricksPort.getDeviceLastActivity(
       deviceResult.value.thingName,
     );
@@ -43,9 +45,9 @@ export class GetIotDeviceActivityUseCase {
         deviceId,
         errorCode: activityResult.error.code,
       });
-      return success({ lastDataAt: null });
+      return success({ lastDataAt: null, pipelineUnavailable: true });
     }
 
-    return success(activityResult.value);
+    return success({ ...activityResult.value, pipelineUnavailable: false });
   }
 }

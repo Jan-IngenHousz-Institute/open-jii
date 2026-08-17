@@ -54,7 +54,7 @@ describe("MonitoringTiles", () => {
     render(
       <MonitoringTiles
         device={connectedDevice()}
-        activity={{ lastDataAt: new Date().toISOString() }}
+        activity={{ pipelineUnavailable: false, lastDataAt: new Date().toISOString() }}
         monitoring={monitoring()}
         range={RANGE}
       />,
@@ -69,7 +69,7 @@ describe("MonitoringTiles", () => {
     render(
       <MonitoringTiles
         device={connectedDevice()}
-        activity={{ lastDataAt: "2026-08-13T00:00:00.000Z" }}
+        activity={{ pipelineUnavailable: false, lastDataAt: "2026-08-13T00:00:00.000Z" }}
         monitoring={monitoring()}
         range={RANGE}
       />,
@@ -84,7 +84,7 @@ describe("MonitoringTiles", () => {
         device={createIotDeviceDetail({
           connectivity: { connected: false, lastSeenAt: "2026-08-13T00:00:00.000Z" },
         })}
-        activity={{ lastDataAt: null }}
+        activity={{ pipelineUnavailable: false, lastDataAt: null }}
         monitoring={monitoring()}
         range={RANGE}
       />,
@@ -94,11 +94,27 @@ describe("MonitoringTiles", () => {
     expect(screen.getByText("iot.devices.monitoring.noData")).toBeInTheDocument();
   });
 
+  it("says unavailable, not silent, when the warehouse lookup failed", () => {
+    render(
+      <MonitoringTiles
+        device={connectedDevice()}
+        activity={{ pipelineUnavailable: true, lastDataAt: null }}
+        monitoring={monitoring()}
+        range={RANGE}
+      />,
+    );
+
+    // A Databricks outage must not read as a device-health alarm.
+    expect(screen.queryByText("iot.devices.monitoring.connectedButSilent")).not.toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.monitoring.noData")).not.toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.lastDataUnavailable")).toBeInTheDocument();
+  });
+
   it("reports uptime with its session count, or says the window holds no evidence", () => {
     render(
       <MonitoringTiles
         device={connectedDevice()}
-        activity={{ lastDataAt: null }}
+        activity={{ pipelineUnavailable: false, lastDataAt: null }}
         monitoring={monitoring({ uptimePercent: 99.5, sessions: [] })}
         range={RANGE}
       />,

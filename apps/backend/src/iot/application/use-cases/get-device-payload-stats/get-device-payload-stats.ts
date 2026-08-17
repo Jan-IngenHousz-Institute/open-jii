@@ -12,11 +12,9 @@ interface MixEntry {
 }
 
 /**
- * Payload-content profile of a device's measurements over a range: metadata
- * coverage, firmware mix, protocol mix (legacy-topic rows only), distinct
- * workbook runs, and the macros that ran. Everything but the macros folds
- * from one grouped scan; macros need their own, since the column is an array
- * and only expands into countable rows once exploded.
+ * Payload profile of a range. Everything but the macros folds from one
+ * grouped scan; macros need their own, being an array column that only
+ * expands into countable rows once exploded.
  */
 @Injectable()
 export class GetDevicePayloadStatsUseCase {
@@ -48,8 +46,7 @@ export class GetDevicePayloadStatsUseCase {
       { totalMeasurements: 0, withGps: 0, withBattery: 0 },
     );
 
-    // Distinct runs, not row counts: a run can span several firmware/protocol
-    // combinations; null marks rows outside any workbook run.
+    // Distinct runs, not row counts: a run can span several combinations.
     const workbookRuns = new Set(
       rows.flatMap((row) => (row.workbookRunId === null ? [] : [row.workbookRunId])),
     ).size;
@@ -58,22 +55,19 @@ export class GetDevicePayloadStatsUseCase {
       rows.map((row) => ({ key: row.deviceVersion, count: row.count })),
     ).map((entry) => ({ version: entry.key, count: entry.count }));
 
-    // Protocol attribution only exists on legacy-topic rows; the null group is
-    // every modern row and would drown the mix, so it is dropped, not shown.
+    // The null group is every modern (lean-topic) row; it would drown the mix.
     const protocolMix = this.sumMix(
       rows.flatMap((row) =>
         row.protocolId === null ? [] : [{ key: row.protocolId, count: row.count }],
       ),
     ).map((entry) => ({ protocolId: entry.key, count: entry.count }));
 
-    // Workbook attribution is absent on ad-hoc measurements, so the null group
-    // is kept: "sent outside any workbook" is a real answer here.
+    // Null kept: "sent outside any workbook" is a real answer here.
     const workbookMix = this.sumMix(
       rows.map((row) => ({ key: row.workbookVersionId, count: row.count })),
     ).map((entry) => ({ workbookVersionId: entry.key, count: entry.count }));
 
-    // Already grouped by macro id in SQL; the fold only orders it like its
-    // siblings, so the busiest macro leads.
+    // Already grouped in SQL; the fold only orders it, busiest first.
     const macroMix = this.sumMix(
       macroResult.value.map((row) => ({ key: row.macroId, count: row.count })),
     ).map((entry) => ({ macroId: entry.key, count: entry.count }));

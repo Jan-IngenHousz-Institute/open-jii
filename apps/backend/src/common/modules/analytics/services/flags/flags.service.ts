@@ -19,13 +19,10 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(FlagsService.name);
   private initialized = false;
 
-  // Every PostHog evaluation is an HTTP round trip, and polling surfaces call
-  // the flag-gated routes several times a minute. Flag decisions tolerate a
-  // minute of staleness, so successful evaluations are cached per user.
+  // Every evaluation is an HTTP round trip and polling surfaces hit flagged
+  // routes several times a minute; a minute of staleness is fine.
   private static readonly FLAG_CACHE_TTL_MS = 60_000;
-  // Keyed per (flag, user), so the ceiling keeps a large user base from
-  // growing the map without bound; insertion order makes the oldest entry the
-  // first eviction candidate.
+  // Keyed per (flag, user); insertion order makes the oldest the eviction candidate.
   private static readonly FLAG_CACHE_MAX_ENTRIES = 5_000;
   private readonly flagCache = new Map<string, { value: boolean; expiresAt: number }>();
 
@@ -134,9 +131,8 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         `Feature flag ${flagKey} for ${distinctId}: ${result} (PostHog returned: ${isEnabled})`,
       );
 
-      // Only a real evaluation is cached. A fallback default means PostHog had
-      // no answer yet, and pinning that for the TTL would keep a flag dark
-      // after it starts resolving.
+      // Cache only real evaluations; pinning a fallback default would keep a
+      // flag dark after PostHog starts resolving.
       if (typeof isEnabled === "boolean") {
         if (this.flagCache.size >= FlagsService.FLAG_CACHE_MAX_ENTRIES) {
           const oldest = this.flagCache.keys().next();

@@ -1,9 +1,7 @@
 import type { Result } from "../../../common/utils/fp-utils";
 import type { DeviceLifecycleEventRow } from "../models/device-lifecycle-event.model";
 
-/**
- * Injection token for the IoT Databricks port
- */
+/** Injection token for the IoT Databricks port */
 export const IOT_DATABRICKS_PORT = Symbol("IOT_DATABRICKS_PORT");
 
 /** One time bucket of measurement volume, attributed to an experiment. */
@@ -36,7 +34,7 @@ export interface DeviceMacroRow {
   count: number;
 }
 
-/** A firmware version the device reported, with the window it was seen in. */
+/** One (time bucket, version) group; a version reappears in later buckets. */
 export interface DeviceFirmwareVersionRow {
   version: string | null;
   firstSeen: string | null;
@@ -58,10 +56,8 @@ export interface DeviceMeasurementRow {
 }
 
 /**
- * Port interface for Databricks operations in the IoT domain: every
- * pipeline-computed fact about a device, namely last data arrival, lifecycle
- * events, measurement throughput, battery series and payload breakdown. Live
- * connectivity is not here; it comes from AWS directly.
+ * Every pipeline-computed fact about a device. Live connectivity is not
+ * here; it comes from AWS directly.
  */
 export interface DatabricksPort {
   getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>>;
@@ -97,6 +93,7 @@ export interface DatabricksPort {
     thingName: string,
     from: string,
     to: string,
+    bucket: "hour" | "day",
   ): Promise<Result<DeviceFirmwareVersionRow[]>>;
   getDeviceRecentMeasurements(
     thingName: string,

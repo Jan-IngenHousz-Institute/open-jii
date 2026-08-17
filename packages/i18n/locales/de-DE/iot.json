@@ -105,6 +105,7 @@
         "state": "Konnektivität",
         "lastData": "Zuletzt empfangene Daten",
         "noData": "Noch keine Daten empfangen",
+        "lastDataUnavailable": "Nicht verfügbar",
         "pipelineNote": "Von der Daten-Pipeline berechnet; entspricht dem letzten Pipeline-Lauf.",
         "range": {
           "last1h": "1 Std.",

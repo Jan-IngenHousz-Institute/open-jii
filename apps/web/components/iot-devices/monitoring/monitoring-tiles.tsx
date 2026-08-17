@@ -26,11 +26,7 @@ interface MonitoringTilesProps {
   range: MonitoringRange;
 }
 
-/**
- * The triage row: live state, then the window's headline figures. Each tile
- * carries its own context line, so a number is never shown without the frame
- * that makes it mean something.
- */
+/** The triage row: live state, then the window's headline figures. */
 export function MonitoringTiles({ device, activity, monitoring, range }: MonitoringTilesProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
@@ -39,8 +35,11 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
   // `undefined` is "still loading" and must not be read as "never sent data",
   // which would flash the silent warning on every page load.
   const lastDataAt = activity === undefined ? undefined : activity.lastDataAt;
+  // A failed lookup means unknown, not silent: no warning on an outage.
+  const activityKnown = activity !== undefined && !activity.pipelineUnavailable;
   const connectedButSilent =
     device?.connectivity?.connected === true &&
+    activityKnown &&
     lastDataAt !== undefined &&
     (lastDataAt === null || Date.now() - new Date(lastDataAt).getTime() > SILENT_THRESHOLD_MS);
 
@@ -77,9 +76,11 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
         ) : (
           <div className="space-y-1">
             <p className="text-lg font-semibold">
-              {lastDataAt === null || lastDataAt === undefined
-                ? t("iot.devices.monitoring.noData")
-                : formatRelativeTime(lastDataAt, locale)}
+              {activity.pipelineUnavailable
+                ? t("iot.devices.monitoring.lastDataUnavailable")
+                : activity.lastDataAt === null
+                  ? t("iot.devices.monitoring.noData")
+                  : formatRelativeTime(activity.lastDataAt, locale)}
             </p>
             <p className="text-muted-foreground text-xs font-normal">
               {t("iot.devices.monitoring.pipelineNote")}

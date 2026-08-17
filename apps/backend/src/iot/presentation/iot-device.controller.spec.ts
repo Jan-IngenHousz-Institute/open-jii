@@ -270,7 +270,10 @@ describe("IotDeviceController", () => {
         .withAuth(userId)
         .expect(StatusCodes.OK);
 
-      expect(response.body).toEqual({ lastDataAt: "2026-08-13T09:00:00.000Z" });
+      expect(response.body).toEqual({
+        lastDataAt: "2026-08-13T09:00:00.000Z",
+        pipelineUnavailable: false,
+      });
     });
 
     it("degrades to a null lastDataAt when the warehouse is unavailable (200)", async () => {
@@ -287,7 +290,7 @@ describe("IotDeviceController", () => {
         .withAuth(userId)
         .expect(StatusCodes.OK);
 
-      expect(response.body).toEqual({ lastDataAt: null });
+      expect(response.body).toEqual({ lastDataAt: null, pipelineUnavailable: true });
     });
 
     it("returns 403 for another user's private device", async () => {

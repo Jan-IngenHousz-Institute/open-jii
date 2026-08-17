@@ -1,14 +1,15 @@
 # Databricks notebook source
 # DBTITLE 1,Clean Connectivity Events - Streaming Table
-# Silver: normalized device connect/disconnect events. Presence events can
-# arrive out of order and redelivered, so rows are deduplicated on the event's
-# full identity (client, instant, type, MQTT session) within a watermark
-# window. Rows without a session identifier are kept: they are still real
-# events, and Spark treats their nulls as equal when deduplicating. The
-# watermark is wide because rows older than it are DROPPED, not just deduped:
-# the first Auto Loader backlog (archive accrues before the pipeline deploys)
-# and any pipeline downtime must not lose history. Presence volume is tiny,
-# so the extra dedup state is negligible.
+# Silver: normalized device connect/disconnect events, deduplicated on the
+# event's full identity within the watermark. Null session identifiers are
+# kept; Spark treats them as equal when deduplicating.
+#
+# The watermark DROPS rows landing >7 days behind the newest processed event.
+# Safe here because arrival tracks event time: the broker rule writes within
+# seconds under date-partitioned keys, and Auto Loader lists those
+# lexicographically, so backlog and downtime replay oldest-first. Manually
+# injected objects keyed further back need a full refresh, not a wider
+# watermark.
 
 # COMMAND ----------
 import dlt

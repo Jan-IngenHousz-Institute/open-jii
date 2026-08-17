@@ -105,6 +105,7 @@
         "state": "Connectivity",
         "lastData": "Last data received",
         "noData": "No data received yet",
+        "lastDataUnavailable": "Unavailable",
         "pipelineNote": "Computed by the data pipeline; reflects the last pipeline run.",
         "range": {
           "last1h": "1h",

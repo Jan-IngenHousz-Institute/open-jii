@@ -44,18 +44,11 @@ export type TimeBucketUnit = "minute" | "hour" | "day" | "week" | "month" | "qua
 export interface GroupByExpression {
   column: string;
   timeBucket?: TimeBucketUnit;
-  /**
-   * Projection name for the grouped column. Required when `column` is a struct
-   * path, since a dotted alias is not a valid SQL identifier.
-   */
+  // Required for struct paths: a dotted alias is not a valid SQL identifier.
   alias?: string;
 }
 
-/**
- * Expand an array column into one row per element before grouping, so the
- * elements can be grouped by. `alias` names the element in `groupBy` columns
- * and aggregate expressions (`macro.id` for an `array<struct<id,...>>`).
- */
+/** Expand an array column into one row per element; `alias` names the element. */
 export interface ExplodeSpec {
   column: string;
   alias: string;

@@ -66,7 +66,7 @@ export class GetDeviceMonitoringUseCase {
       this.getDeviceBattery.execute(thingName, from, to, bucket),
       this.getDevicePayloadStats.execute(thingName, from, to),
       this.getDeviceMeasurements.execute(thingName, from, to),
-      this.getDeviceFirmwareHistory.execute(thingName, from, to),
+      this.getDeviceFirmwareHistory.execute(thingName, from, to, bucket),
     ]);
     if (sessionsResult.isFailure()) {
       return failure(sessionsResult.error);

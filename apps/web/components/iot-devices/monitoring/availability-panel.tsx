@@ -30,10 +30,8 @@ interface AvailabilityPanelProps {
 }
 
 /**
- * Availability over the window as discrete, hoverable slices on the same time
- * axis as the data-flow chart directly below it, so a gap in measurements can
- * be read against the connectivity underneath it. The outage list answers the
- * follow-up question: when, how long, and why.
+ * Availability as discrete slices on the same time axis as the data-flow
+ * chart below, so a measurement gap reads against connectivity.
  */
 export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelProps) {
   const { t } = useTranslation("iot");
@@ -76,8 +74,7 @@ export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelPro
             {
               name: t("iot.devices.monitoring.availability"),
               x: slices.map((slice) => slice.start),
-              // Bar height is the share of the bucket spent online, so a
-              // partial bucket reads as partial instead of a flat block.
+              // Bar height is the share of the bucket spent online.
               y: slices.map((slice) => Math.round(slice.onlineRatio * 100)),
               marker: { color: slices.map((slice) => STATE_COLOR[slice.state]) },
               text: slices.map((slice) =>

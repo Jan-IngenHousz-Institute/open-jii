@@ -18,11 +18,7 @@ interface PayloadProfileProps {
   locale: string;
 }
 
-/**
- * What the device's payloads carried: the headline counts, how often the
- * optional channels were populated, and which firmware, protocols, workbooks
- * and macros produced the measurements.
- */
+/** What the payloads carried: counts, coverage, and the producing entities. */
 export function PayloadProfile({
   payload,
   visibleProtocols,
