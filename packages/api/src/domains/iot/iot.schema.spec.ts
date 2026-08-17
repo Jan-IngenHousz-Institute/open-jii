@@ -389,17 +389,29 @@ describe("Iot Schema", () => {
 
   describe("zIotDeviceActivity", () => {
     it("accepts a datetime lastDataAt", () => {
-      expect(zIotDeviceActivity.safeParse({ lastDataAt: "2025-01-10T00:00:00.000Z" }).success).toBe(
-        true,
-      );
+      expect(
+        zIotDeviceActivity.safeParse({
+          lastDataAt: "2025-01-10T00:00:00.000Z",
+          pipelineUnavailable: false,
+        }).success,
+      ).toBe(true);
     });
 
-    it("accepts null when no data has landed or the warehouse is unavailable", () => {
-      expect(zIotDeviceActivity.safeParse({ lastDataAt: null }).success).toBe(true);
+    it("accepts null when no data has landed", () => {
+      expect(
+        zIotDeviceActivity.safeParse({ lastDataAt: null, pipelineUnavailable: false }).success,
+      ).toBe(true);
     });
 
-    it("rejects a missing lastDataAt", () => {
+    it("accepts null marked unavailable when the lookup itself failed", () => {
+      expect(
+        zIotDeviceActivity.safeParse({ lastDataAt: null, pipelineUnavailable: true }).success,
+      ).toBe(true);
+    });
+
+    it("rejects a missing lastDataAt or availability flag", () => {
       expect(zIotDeviceActivity.safeParse({}).success).toBe(false);
+      expect(zIotDeviceActivity.safeParse({ lastDataAt: null }).success).toBe(false);
     });
   });
 
