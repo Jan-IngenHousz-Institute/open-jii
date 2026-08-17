@@ -31,6 +31,7 @@ export const MeasurementsRunRow = memo(function MeasurementsRunRow({
       onSync={summary.hasUnsynced ? onSync : undefined}
       onDelete={onDelete}
       peekToken={peekToken}
+      expanded={expanded}
     >
       <MeasurementRunItem
         id={entry.key}

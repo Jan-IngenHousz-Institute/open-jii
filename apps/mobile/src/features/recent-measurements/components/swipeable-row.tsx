@@ -12,6 +12,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { resolveSwipeSnap } from "~/features/recent-measurements/utils/resolve-swipe-snap";
 import { useTranslation } from "~/shared/i18n";
 import { cn } from "~/shared/ui/cn";
 import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
@@ -32,8 +33,10 @@ interface SwipeableRowProps {
   onSync?: (id: string) => void;
   onDelete?: (id: string) => void;
   peekToken?: number;
-  /** Nested under an expanded run: match the row's tint behind the actions. */
+  /** Nested under an expanded run: match the child row's tint. */
   indented?: boolean;
+  /** Open run header: match its stronger tint. */
+  expanded?: boolean;
   children: React.ReactNode;
 }
 
@@ -49,6 +52,7 @@ export const SwipeableRow = memo(function SwipeableRow({
   onDelete,
   peekToken = 0,
   indented = false,
+  expanded = false,
   children,
 }: SwipeableRowProps) {
   const { colors } = useTheme();
@@ -97,15 +101,14 @@ export const SwipeableRow = memo(function SwipeableRow({
       translateX.value = Math.min(0, Math.max(-actionWidthSV.value, next));
     })
     .onEnd((e) => {
-      // Velocity-first: a rightward flick always closes, leftward always opens.
-      if (e.velocityX > 150) {
-        translateX.value = withSpring(0, SPRING_CONFIG);
-      } else if (e.velocityX < -150) {
-        translateX.value = withSpring(-actionWidthSV.value, SPRING_CONFIG);
-      } else {
-        const snapOpen = translateX.value < -actionWidthSV.value / 2;
-        translateX.value = withSpring(snapOpen ? -actionWidthSV.value : 0, SPRING_CONFIG);
-      }
+      translateX.value = withSpring(
+        resolveSwipeSnap({
+          translateX: translateX.value,
+          velocityX: e.velocityX,
+          actionWidth: actionWidthSV.value,
+        }),
+        SPRING_CONFIG,
+      );
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -135,7 +138,9 @@ export const SwipeableRow = memo(function SwipeableRow({
         style={actionsStyle}
         className={cn(
           "border-divider absolute bottom-0 right-0 top-0 flex-row border-t",
-          indented ? "bg-jii-mint-light" : "bg-card",
+          // Match the row being swiped, or the actions flash a mismatched
+          // background from under a tinted run.
+          expanded ? "bg-jii-mint" : indented ? "bg-jii-mint-light" : "bg-card",
         )}
       >
         {showSync && (

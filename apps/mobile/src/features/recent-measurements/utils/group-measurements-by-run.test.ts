@@ -32,10 +32,10 @@ describe("groupMeasurementsByRun", () => {
   });
 
   it("collapses measurements that share a workbook run into one entry", () => {
-    const entries = groupMeasurementsByRun([item("a", "run-1"), item("b", "run-1")]);
+    const entries = groupMeasurementsByRun([item("a", "run-1"), item("b", "run-1")], "2026-05-18");
 
     expect(entries).toHaveLength(1);
-    expect(entries[0].key).toBe("run:run-1");
+    expect(entries[0].key).toBe("run:2026-05-18:run-1");
     expect(entries[0].runId).toBe("run-1");
     expect(entries[0].items.map((i) => i.key)).toEqual(["a", "b"]);
   });
@@ -56,37 +56,51 @@ describe("groupMeasurementsByRun", () => {
   });
 
   it("keeps list order, placing a run where its first measurement sat", () => {
-    const entries = groupMeasurementsByRun([
-      item("solo-1", ""),
-      item("a", "run-1"),
-      item("b", "run-1"),
-      item("solo-2", "run-2"),
-    ]);
+    const entries = groupMeasurementsByRun(
+      [item("solo-1", ""), item("a", "run-1"), item("b", "run-1"), item("solo-2", "run-2")],
+      "d1",
+    );
 
-    expect(entries.map((e) => e.key)).toEqual(["solo-1", "run:run-1", "solo-2"]);
+    expect(entries.map((e) => e.key)).toEqual(["solo-1", "run:d1:run-1", "solo-2"]);
   });
 
   it("pulls in later members of a run that other rows interleave", () => {
-    const entries = groupMeasurementsByRun([
-      item("a", "run-1"),
-      item("other", ""),
-      item("b", "run-1"),
-    ]);
+    const entries = groupMeasurementsByRun(
+      [item("a", "run-1"), item("other", ""), item("b", "run-1")],
+      "d1",
+    );
 
-    expect(entries.map((e) => e.key)).toEqual(["run:run-1", "other"]);
+    expect(entries.map((e) => e.key)).toEqual(["run:d1:run-1", "other"]);
     expect(entries[0].items.map((i) => i.key)).toEqual(["a", "b"]);
   });
 
   it("emits one entry per run", () => {
-    const entries = groupMeasurementsByRun([
-      item("a", "run-1"),
-      item("b", "run-1"),
-      item("c", "run-2"),
-      item("d", "run-2"),
-    ]);
+    const entries = groupMeasurementsByRun(
+      [item("a", "run-1"), item("b", "run-1"), item("c", "run-2"), item("d", "run-2")],
+      "d1",
+    );
 
-    expect(entries.map((e) => e.key)).toEqual(["run:run-1", "run:run-2"]);
+    expect(entries.map((e) => e.key)).toEqual(["run:d1:run-1", "run:d1:run-2"]);
     expect(entries.map((e) => e.items.length)).toEqual([2, 2]);
+  });
+
+  it("keeps the two halves of a run spanning midnight independent", () => {
+    // The screen groups per day section, so a run crossing midnight is grouped
+    // twice. Sharing one key would collide in the list, couple expansion, and
+    // point the run actions at the other day's measurements.
+    const before = groupMeasurementsByRun(
+      [item("late-1", "run-1"), item("late-2", "run-1")],
+      "2026-05-18",
+    );
+    const after = groupMeasurementsByRun(
+      [item("early-1", "run-1"), item("early-2", "run-1")],
+      "2026-05-19",
+    );
+
+    expect(before[0].key).not.toBe(after[0].key);
+    expect(before[0].runId).toBe(after[0].runId);
+    expect(before[0].items.map((i) => i.key)).toEqual(["late-1", "late-2"]);
+    expect(after[0].items.map((i) => i.key)).toEqual(["early-1", "early-2"]);
   });
 });
 

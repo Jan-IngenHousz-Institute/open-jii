@@ -5,7 +5,9 @@ import { useRecentMeasurementsActions } from "~/features/recent-measurements/hoo
 
 const mockUploadAll = vi.fn().mockResolvedValue(undefined);
 const mockUploadOne = vi.fn().mockResolvedValue(undefined);
+const mockUploadMany = vi.fn().mockResolvedValue(undefined);
 const mockRemoveMeasurement = vi.fn().mockResolvedValue(undefined);
+const mockRemoveMeasurements = vi.fn().mockResolvedValue(undefined);
 const mockClearSyncedMeasurements = vi.fn().mockResolvedValue(undefined);
 const mockUpdateMeasurementComment = vi.fn().mockResolvedValue(undefined);
 const mockInvalidate = vi.fn();
@@ -27,7 +29,9 @@ vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
     uploadAll: mockUploadAll,
     isUploading: false,
     uploadOne: mockUploadOne,
+    uploadMany: mockUploadMany,
     removeMeasurement: mockRemoveMeasurement,
+    removeMeasurements: mockRemoveMeasurements,
     clearSyncedMeasurements: mockClearSyncedMeasurements,
     updateMeasurementComment: mockUpdateMeasurementComment,
   })),
@@ -68,6 +72,10 @@ vi.mock("~/shared/i18n", () => ({
         "recentMeasurements:alerts.removeButton": "Remove",
         "recentMeasurements:alerts.deleteMeasurementError":
           "Failed to delete measurement. Please try again.",
+        "recentMeasurements:alerts.uploadRunTitle": "Upload Workbook Run",
+        "recentMeasurements:alerts.uploadRunMessage": `Upload ${count} unsynced from "${name}" run?`,
+        "recentMeasurements:alerts.deleteRunTitle": "Delete Workbook Run",
+        "recentMeasurements:alerts.deleteRunMessage": `Delete ${count} from "${name}" run?`,
         "recentMeasurements:alerts.uploadAllTitle": "Upload All Measurements",
         "recentMeasurements:alerts.uploadAllMessage":
           count === 1
@@ -274,6 +282,114 @@ describe("useRecentMeasurementsActions", () => {
       await act(() => new Promise((r) => setTimeout(r, 0)));
 
       expect(mockToastError).toHaveBeenCalledWith("Export failed. Please try again.");
+    });
+  });
+
+  describe("confirmSyncRun", () => {
+    const run = [
+      makeItem("r1", "failed", "Run Exp"),
+      makeItem("r2", "successful", "Run Exp"),
+      makeItem("r3", "pending", "Run Exp"),
+    ];
+
+    it("offers to upload only the run's unsynced measurements", () => {
+      const { result } = renderHook(() => useRecentMeasurementsActions("all"));
+
+      act(() => result.current.confirmSyncRun(run));
+
+      expect(mockShowAlert).toHaveBeenCalledWith(
+        "Upload Workbook Run",
+        'Upload 2 unsynced from "Run Exp" run?',
+        expect.any(Array),
+      );
+    });
+
+    it("enqueues every unsynced key in one call and invalidates", async () => {
+      const { result } = renderHook(() => useRecentMeasurementsActions("all"));
+
+      act(() => result.current.confirmSyncRun(run));
+      const [confirmBtn] = mockShowAlert.mock.calls[0][2];
+      await act(() => confirmBtn.onPress());
+
+      expect(mockUploadMany).toHaveBeenCalledTimes(1);
+      expect(mockUploadMany).toHaveBeenCalledWith(["r1", "r3"]);
+      expect(mockInvalidate).toHaveBeenCalled();
+    });
+
+    it("does not prompt for a fully synced run", () => {
+      const { result } = renderHook(() => useRecentMeasurementsActions("all"));
+
+      act(() => result.current.confirmSyncRun([makeItem("r2", "successful")]));
+
+      expect(mockShowAlert).not.toHaveBeenCalled();
+    });
+
+    it("reports an upload failure and still invalidates", async () => {
+      mockUploadMany.mockRejectedValueOnce(new Error("offline"));
+      const { result } = renderHook(() => useRecentMeasurementsActions("all"));
+
+      act(() => result.current.confirmSyncRun(run));
+      const [confirmBtn] = mockShowAlert.mock.calls[0][2];
+      await act(async () => {
+        confirmBtn.onPress();
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      expect(mockInvalidate).toHaveBeenCalled();
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Failed to upload measurement. Please try again.",
+      );
+    });
+  });
+
+  describe("confirmDeleteRun", () => {
+    const run = [makeItem("r1", "failed", "Run Exp"), makeItem("r2", "successful", "Run Exp")];
+
+    it("names the run and its size before deleting", () => {
+      const { result } = renderHook(() => useRecentMeasurementsActions("all"));
+
+      act(() => result.current.confirmDeleteRun(run));
+
+      expect(mockShowAlert).toHaveBeenCalledWith(
+        "Delete Workbook Run",
+        'Delete 2 from "Run Exp" run?',
+        expect.any(Array),
+      );
+    });
+
+    it("deletes every measurement of the run in one call", async () => {
+      const { result } = renderHook(() => useRecentMeasurementsActions("all"));
+
+      act(() => result.current.confirmDeleteRun(run));
+      const [confirmBtn] = mockShowAlert.mock.calls[0][2];
+      await act(() => confirmBtn.onPress());
+
+      expect(mockRemoveMeasurements).toHaveBeenCalledWith(["r1", "r2"]);
+      expect(mockInvalidate).toHaveBeenCalled();
+    });
+
+    it("does nothing for an empty run", () => {
+      const { result } = renderHook(() => useRecentMeasurementsActions("all"));
+
+      act(() => result.current.confirmDeleteRun([]));
+
+      expect(mockShowAlert).not.toHaveBeenCalled();
+    });
+
+    it("surfaces a failed deletion instead of reporting success", async () => {
+      mockRemoveMeasurements.mockRejectedValueOnce(new Error("db locked"));
+      const { result } = renderHook(() => useRecentMeasurementsActions("all"));
+
+      act(() => result.current.confirmDeleteRun(run));
+      const [confirmBtn] = mockShowAlert.mock.calls[0][2];
+      await act(async () => {
+        confirmBtn.onPress();
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Failed to delete measurement. Please try again.",
+      );
     });
   });
 

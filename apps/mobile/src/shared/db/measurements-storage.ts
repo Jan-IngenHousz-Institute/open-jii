@@ -448,6 +448,7 @@ export async function removeMeasurement(key: string): Promise<void> {
     db.delete(measurements).where(eq(measurements.id, key)).run();
   } catch (error) {
     log.error("Failed to remove measurement", { key, err: (error as Error)?.message });
+    throw error;
   }
 }
 
@@ -465,6 +466,9 @@ export async function removeMeasurements(keys: readonly string[]): Promise<void>
       count: keys.length,
       err: (error as Error)?.message,
     });
+    // Rethrown so the caller's confirmation can report the failure instead of
+    // reporting success over rows that are still there.
+    throw error;
   }
 }
 

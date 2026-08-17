@@ -859,6 +859,17 @@ describe("measurements-storage", () => {
 
       expect(sqlite.prepare("SELECT COUNT(*) AS n FROM measurements").get()).toEqual({ n: 1 });
     });
+
+    it("rejects when the delete fails, so the caller can report it", async () => {
+      insertRow("r1", "pending");
+      const mod = await import("~/shared/db/measurements-storage");
+      const logSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+      // A closed handle is the cheapest way to make the statement throw.
+      sqlite.close();
+
+      await expect(mod.removeMeasurements(["r1"])).rejects.toThrow();
+      logSpy.mockRestore();
+    });
   });
 
   // ---------------------------------------------------------------------------

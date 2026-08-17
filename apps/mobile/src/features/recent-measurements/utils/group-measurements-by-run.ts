@@ -8,7 +8,12 @@ import type { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-
  * measurement of one workbook run, collapsed behind an expandable row.
  */
 export interface MeasurementRunEntry {
-  /** List key: `run:<id>` for a group, the measurement key for a single row. */
+  /**
+   * List and expansion key: `run:<scope>:<id>` for a group, the measurement key
+   * for a single row. Scoped because a run spanning midnight is grouped once per
+   * day section, and those two rows must not share a key (duplicate list keys,
+   * coupled expansion, and run actions resolving to the other day's subset).
+   */
   key: string;
   /** The workbook run this entry collapses; "" for a standalone measurement. */
   runId: string;
@@ -24,7 +29,11 @@ export interface MeasurementRunEntry {
  * is just noise. Input order is preserved; no sorting, no date parsing, so this
  * stays cheap enough for the list build path (see OJD-1470).
  */
-export function groupMeasurementsByRun(items: MeasurementItem[]): MeasurementRunEntry[] {
+export function groupMeasurementsByRun(
+  items: MeasurementItem[],
+  /** Namespaces the run keys, e.g. the day section these items belong to. */
+  scope = "",
+): MeasurementRunEntry[] {
   const byRun = new Map<string, MeasurementItem[]>();
   for (const item of items) {
     if (!item.workbookRunId) continue;
@@ -43,7 +52,11 @@ export function groupMeasurementsByRun(items: MeasurementItem[]): MeasurementRun
     }
     if (emitted.has(item.workbookRunId)) continue;
     emitted.add(item.workbookRunId);
-    entries.push({ key: `run:${item.workbookRunId}`, runId: item.workbookRunId, items: bucket });
+    entries.push({
+      key: `run:${scope}:${item.workbookRunId}`,
+      runId: item.workbookRunId,
+      items: bucket,
+    });
   }
   return entries;
 }

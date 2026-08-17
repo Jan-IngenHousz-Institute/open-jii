@@ -1,42 +1,16 @@
-import { cva } from "class-variance-authority";
-import {
-  ChevronDown,
-  ChevronRight,
-  CloudAlert,
-  CloudCheck,
-  MessageCircleMore,
-  UploadCloud,
-} from "lucide-react-native";
+import { ChevronDown, ChevronRight, MessageCircleMore } from "lucide-react-native";
 import React, { memo } from "react";
 import { Pressable, Text, View } from "react-native";
+import {
+  answersTextStyle,
+  STATUS_ICON,
+} from "~/features/recent-measurements/components/measurement-row-visuals";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/time/format-time-ago";
 import { cn } from "~/shared/ui/cn";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-
-interface SemanticColors {
-  success: string;
-  info: string;
-  error: string;
-}
-
-const STATUS_ICON: Record<MeasurementStatus, (c: { semantic: SemanticColors }) => React.ReactNode> =
-  {
-    successful: (c) => <CloudCheck size={16} color={c.semantic.success} />,
-    pending: (c) => <UploadCloud size={16} color={c.semantic.info} />,
-    failed: (c) => <CloudAlert size={16} color={c.semantic.error} />,
-  };
-
-const answersTextStyle = cva("mb-1.5 text-base", {
-  variants: {
-    state: {
-      true: "font-medium",
-      false: "font-normal italic",
-    },
-  },
-});
 
 interface MeasurementRunItemProps {
   /** Run row id (`run:<workbookRunId>`), passed back by the toggle. */
@@ -79,8 +53,8 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
     <Pressable
       className={cn(
         "border-divider flex-row items-start border-t py-3 pl-1 pr-4",
-        // Open runs sit on `surface` so the header reads as the lid of the
-        // group rather than another measurement row.
+        // An open run is tinted so the header plus its children read as one
+        // block rather than as more measurement rows.
         expanded ? "bg-jii-mint" : "bg-card",
       )}
       onPress={() => onToggle(id)}

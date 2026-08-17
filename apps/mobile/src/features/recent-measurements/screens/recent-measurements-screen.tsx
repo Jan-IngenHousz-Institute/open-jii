@@ -115,8 +115,9 @@ export function RecentMeasurementsScreen() {
     for (const section of sections) {
       out.push({ kind: "header", key: `h:${section.key}`, section });
       // Runs collapse within a day, so a run that straddles midnight still
-      // lands under both day headers rather than jumping out of one.
-      for (const entry of groupMeasurementsByRun(section.data)) {
+      // lands under both day headers rather than jumping out of one. The day
+      // scopes the run key, keeping those two rows independent.
+      for (const entry of groupMeasurementsByRun(section.data, section.key)) {
         if (!entry.runId) {
           out.push({ kind: "row", key: entry.key, item: entry.items[0] });
           continue;
