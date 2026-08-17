@@ -259,6 +259,11 @@
     "tabRaw": "Ruwe gegevens",
     "processingError": "Verwerkingsfout: {{message}}",
     "noDataAvailable": "Geen gegevens beschikbaar",
+    "allFieldsEmpty": "De macro is uitgevoerd, maar heeft voor deze meting geen waarden gemeten.",
+    "emptyFields_one": "{{count}} veld zonder waarde",
+    "emptyFields_other": "{{count}} velden zonder waarde",
+    "structuredFields_one": "{{count}} gestructureerd veld",
+    "structuredFields_other": "{{count}} gestructureerde velden",
     "messages": {
       "criticalIssues": "Kritieke problemen",
       "warnings": "Waarschuwingen",

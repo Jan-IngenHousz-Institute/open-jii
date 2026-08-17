@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getMeasurementMqttTopic, QUESTIONS_PROTOCOL_ID } from "./measurement-topic";
+import {
+  getMeasurementMqttTopic,
+  parseMeasurementTopic,
+  QUESTIONS_PROTOCOL_ID,
+} from "./measurement-topic";
 
 vi.mock("~/shared/stores/device-identity-store", () => ({
   getLocalThingName: () => "mobile_9f2c1a2e-1111-4111-8111-111111111111",
@@ -42,5 +46,38 @@ describe("getMeasurementMqttTopic", () => {
     // The lean topic carries no protocol segment; question-only uploads mark
     // themselves in the payload instead.
     expect(QUESTIONS_PROTOCOL_ID).toBe("questions");
+  });
+});
+
+describe("parseMeasurementTopic", () => {
+  it("recovers the ids a topic was built from", () => {
+    const topic = getMeasurementMqttTopic({
+      experimentId: "experiment-42",
+      protocolId: "protocol-9",
+    });
+
+    expect(parseMeasurementTopic(topic)).toEqual({
+      experimentId: "experiment-42",
+      protocolId: "protocol-9",
+    });
+  });
+
+  it("reads positions off the template, not a hardcoded layout", () => {
+    expect(
+      parseMeasurementTopic(
+        "experiment/data_ingest/v1/exp-7/multispeq/v1.0/client-1/proto-3",
+        "experiment/data_ingest/v1/:experimentId/multispeq/v1.0/:clientId/:protocolId",
+      ),
+    ).toEqual({ experimentId: "exp-7", protocolId: "proto-3" });
+  });
+
+  it("returns nothing for a topic that doesn't match the template shape", () => {
+    expect(parseMeasurementTopic("some/other/topic")).toEqual({});
+  });
+
+  it("returns nothing for an empty segment rather than an empty id", () => {
+    expect(
+      parseMeasurementTopic("openjii/mobile-client-7/experiments//protocols/protocol-9"),
+    ).toEqual({ experimentId: undefined, protocolId: "protocol-9" });
   });
 });

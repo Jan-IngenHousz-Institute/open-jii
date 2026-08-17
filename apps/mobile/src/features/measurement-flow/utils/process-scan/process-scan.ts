@@ -1,5 +1,6 @@
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
+import type { MacroOutput } from "~/shared/measurements/macro-output";
 import { createLogger } from "~/shared/observability/logger";
 
 import { normalizeMacroInput } from "@repo/api/transforms/normalize-macro-input";
@@ -9,15 +10,8 @@ import { getPythonMacroRunner } from "./python-macro-runner";
 
 const log = createLogger("macro");
 
-interface MacroOutputMessages {
-  messages?: {
-    info?: string[];
-    warning?: string[];
-    danger?: string[];
-  };
-}
-
-export type MacroOutput = MacroOutputMessages & Record<string, any>;
+// Re-exported so existing call sites keep importing it from here.
+export type { MacroOutput } from "~/shared/measurements/macro-output";
 
 async function loadMathLib() {
   const asset = Asset.fromModule(mathLibResource);

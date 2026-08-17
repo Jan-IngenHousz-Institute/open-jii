@@ -259,6 +259,11 @@
     "tabRaw": "Raw data",
     "processingError": "Processing Error: {{message}}",
     "noDataAvailable": "No Data Available",
+    "allFieldsEmpty": "The macro ran, but measured no values for this measurement.",
+    "emptyFields_one": "{{count}} field with no value",
+    "emptyFields_other": "{{count}} fields with no value",
+    "structuredFields_one": "{{count}} structured field",
+    "structuredFields_other": "{{count}} structured fields",
     "messages": {
       "criticalIssues": "Critical Issues",
       "warnings": "Warnings",

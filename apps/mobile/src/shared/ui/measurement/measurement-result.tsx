@@ -1,39 +1,40 @@
-import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { ChevronRight, MessageCircleMore } from "lucide-react-native";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
-import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
-import { applyMacro } from "~/features/measurement-flow/utils/process-scan/process-scan";
 import { useTranslation } from "~/shared/i18n";
+import type { MacroMessageGroup, MacroOutput } from "~/shared/measurements/macro-output";
+import { partitionMacroOutput } from "~/shared/measurements/partition-macro-output";
 import { TabBar } from "~/shared/ui/TabBar";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { Chart } from "~/shared/ui/measurement/chart";
-import { KeyValue } from "~/shared/ui/measurement/key-value";
-
-import { MacroMessages, MacroMessageGroup } from "./components/macro-messages";
+import { MacroFieldDisclosure, MacroFieldGrid } from "~/shared/ui/measurement/macro-field-grid";
+import { MacroMessages } from "~/shared/ui/measurement/macro-messages";
 
 type TabKey = "result" | "raw";
 
 interface MeasurementResultProps {
+  /** The measurement the macro ran against; shown verbatim on the Raw tab. */
   rawMeasurement: any;
-  macro: any;
-  /** Upstream cell outputs the macro reads as `ctx.<name>` (flow context only). */
-  ctx?: Record<string, unknown>;
-  /** Prevents execution when an upstream output could not be normalized. */
-  inputError?: Error;
-  /** Called with the macro outputs once computed, so a flow can persist them. */
-  onProcessed?: (outputs: MacroOutput[]) => void;
+  /** Macro output, already computed by the caller (see useMacroOutputs). */
+  outputs: MacroOutput[] | undefined;
+  isLoading?: boolean;
+  error?: Error | null;
   /** When set, shows a Comment row that calls this on press */
   onCommentPress?: () => void;
 }
 
+/**
+ * Renders one macro run: its messages, then charts, values, the fields it
+ * measured nothing for, and structured leftovers, with the raw input behind a
+ * tab. Purely presentational, so the live flow and a stored measurement's
+ * re-run show the same thing.
+ */
 export function MeasurementResult({
   rawMeasurement,
-  macro,
-  ctx,
-  inputError,
-  onProcessed,
+  outputs,
+  isLoading = false,
+  error,
   onCommentPress,
 }: MeasurementResultProps) {
   const { classes, colors } = useTheme();
@@ -48,38 +49,8 @@ export function MeasurementResult({
     [t],
   );
 
-  const {
-    data: processedMeasurement,
-    isLoading: isProcessing,
-    error: processingError,
-  } = useQuery({
-    // applyMacro is a pure local computation; "always" keeps it from being
-    // paused by the onlineManager while offline.
-    networkMode: "always",
-    // ctx enters the key as a stable serialization so a changed upstream
-    // output recomputes, while an identical rebuild does not.
-    queryKey: [
-      "measurement-result",
-      rawMeasurement,
-      macro,
-      ctx ? JSON.stringify(ctx) : undefined,
-      inputError?.name,
-      inputError?.message,
-    ],
-    queryFn: () => {
-      if (inputError) throw inputError;
-      return applyMacro(rawMeasurement, macro, ctx ?? {});
-    },
-  });
-
-  // Surface the computed outputs so a flow can persist them (cellOutputs) for
-  // downstream branches/macros. No-op outside a flow (onProcessed unset).
-  useEffect(() => {
-    if (processedMeasurement && onProcessed) onProcessed(processedMeasurement);
-  }, [processedMeasurement, onProcessed]);
-
   const messageGroups: MacroMessageGroup[] =
-    processedMeasurement
+    outputs
       ?.map((output) => output.messages)
       .filter((msg): msg is MacroMessageGroup => msg !== undefined) ?? [];
 
@@ -89,22 +60,24 @@ export function MeasurementResult({
     </Text>
   );
 
+  const fields = useMemo(() => partitionMacroOutput(outputs), [outputs]);
+
   const renderProcessedContent = () => {
-    if (processingError) {
+    if (error) {
       return (
         <View className="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
           <Text className={clsx("text-sm text-red-600 dark:text-red-400", classes.text)}>
-            {t("measurementFlow:result.processingError", { message: processingError.message })}
+            {t("measurementFlow:result.processingError", { message: error.message })}
           </Text>
         </View>
       );
     }
 
-    if (isProcessing) {
+    if (isLoading) {
       return <ActivityIndicator size="large" color={colors.brand} />;
     }
 
-    if (!processedMeasurement?.length) {
+    if (!outputs?.length || fields.isEmpty) {
       return (
         <View className="items-center justify-center p-6">
           <Text className={clsx("text-center text-lg", classes.textSecondary)}>
@@ -114,26 +87,48 @@ export function MeasurementResult({
       );
     }
 
+    // Charts first (the visual payload), then the scalars worth scanning, then
+    // what the macro reported without a value, then structured leftovers.
     return (
-      <View>
-        {processedMeasurement.map((output, outputIndex) => {
-          return (
-            <View key={outputIndex}>
-              {Object.keys(output)
-                .filter((key) => key !== "messages")
-                .map((key) => {
-                  const value = output[key];
-                  if (typeof value === "string" || typeof value === "number") {
-                    return <KeyValue key={key} value={value} name={key} />;
-                  }
-                  if (Array.isArray(value) && typeof value[0] === "number") {
-                    return <Chart key={key} name={key} values={value} />;
-                  }
-                  return null;
-                })}
+      <View className="gap-3">
+        {fields.charts.map((field) => (
+          <Chart key={field.name} name={field.name} values={field.values} />
+        ))}
+
+        {fields.values.length > 0 && <MacroFieldGrid fields={fields.values} />}
+
+        {fields.values.length === 0 && fields.charts.length === 0 && (
+          <Text className={clsx("text-sm", classes.textSecondary)}>
+            {t("measurementFlow:result.allFieldsEmpty")}
+          </Text>
+        )}
+
+        {fields.empties.length > 0 && (
+          <MacroFieldDisclosure
+            label={t("measurementFlow:result.emptyFields", { count: fields.empties.length })}
+          >
+            <MacroFieldGrid fields={fields.empties} muted />
+          </MacroFieldDisclosure>
+        )}
+
+        {fields.others.length > 0 && (
+          <MacroFieldDisclosure
+            label={t("measurementFlow:result.structuredFields", { count: fields.others.length })}
+          >
+            <View className="gap-3">
+              {fields.others.map((field) => (
+                <View key={field.name} className="gap-1">
+                  <Text className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
+                    {field.name}
+                  </Text>
+                  <Text className={clsx("font-mono text-xs leading-5", classes.text)}>
+                    {field.json}
+                  </Text>
+                </View>
+              ))}
             </View>
-          );
-        })}
+          </MacroFieldDisclosure>
+        )}
       </View>
     );
   };

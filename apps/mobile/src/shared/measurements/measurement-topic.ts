@@ -25,3 +25,19 @@ function appVersionSegment(): string {
 export function getMeasurementMqttTopic({ experimentId }: { experimentId: string }): string {
   return `${buildIngestTopicPrefix(experimentId, SENSOR_TYPE)}/${appVersionSegment()}/${getLocalThingName()}`;
 }
+
+/**
+ * Recovers the experiment id a stored topic was built from. A stored
+ * measurement carries no experiment id of its own, so this is how a saved row
+ * finds the experiment (and workbook) it belongs to. Both the current lean
+ * format and the legacy templated format put the experiment id at segment 3
+ * of the same `experiment/data_ingest/v1/…` prefix:
+ *   current: experiment/data_ingest/v1/<experimentId>/<sensorType>/<version>/<sensorId>
+ *   legacy:  experiment/data_ingest/v1/<experimentId>/multispeq/v1.0/<clientId>/<protocolId>
+ * Anything else is not a measurement topic this app wrote.
+ */
+export function parseMeasurementTopic(topic: string): { experimentId?: string } {
+  const parts = topic.split("/");
+  if (parts[0] !== "experiment" || parts[1] !== "data_ingest" || parts[2] !== "v1") return {};
+  return { experimentId: parts[3] || undefined };
+}
