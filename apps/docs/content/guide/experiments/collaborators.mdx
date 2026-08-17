@@ -3,7 +3,7 @@ title: "Collaborators & access levels"
 description: "Add people or organizations to your experiment, choose between Can view and Can edit, and handle requests to join."
 ---
 
-{/* verified: code@efd66bdd4 2026-08-04 */}
+{/* verified: code@2a0698c44 2026-08-17 */}
 
 Experiments are meant to be shared. Everyone you share an experiment with directly
 appears in one list, and each row carries one setting: how much they can do.
@@ -90,8 +90,12 @@ owns the experiment, so you can see at a glance who is external. What they can d
 still comes from their access level.
 
 <Callout type="info">
-  An experiment always needs at least one collaborator with **Can edit**. Removing or lowering the
-  last one is refused, and the reason is shown.
+  What has to hold is that the experiment stays administrable — not that it keeps a **Can edit**
+  collaborator. While the organization that owns it still has an owner, that owner is in full
+  control, so you can remove or lower anyone here, including the last **Can edit**. The refusal
+  appears only once that organization has no owner left and this row is the last *person* who
+  could still administer the experiment — a shared organization does not count. The reason is
+  shown when it does.
 </Callout>
 
 <Callout type="warn">
@@ -111,6 +115,7 @@ contributor credit (names and avatars) and nothing about who holds which level.
 If you hold **Can view**, the Collaborators tab shows you a **Your access** card
 instead of the list, with a **Leave** button for giving up your own access.
 
-For access to macros, protocols and workbooks, see
+For access to macros, protocols, workbooks and devices, see
 [Sharing & Collaboration](/guide/sharing) — those resources use the same two
-levels on their own **Collaborators** tab.
+levels on their own **Collaborators** tab, except that a device is never
+publishable.
