@@ -29,7 +29,7 @@ describe("IotDeviceTableRow", () => {
     expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
   });
 
-  it("shows connected-now in the last-seen cell for an online device", () => {
+  it("shows since-when in the last-seen cell for an online device", () => {
     renderRow(
       createIotDevice({
         name: "Greenhouse 1",
@@ -37,7 +37,7 @@ describe("IotDeviceTableRow", () => {
       }),
     );
 
-    expect(screen.getByText("iot.devices.connectivity.connectedNow")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.connectivity.onlineSince")).toBeInTheDocument();
   });
 
   it("shows the unknown last-seen fallback when the fleet index is unavailable", () => {

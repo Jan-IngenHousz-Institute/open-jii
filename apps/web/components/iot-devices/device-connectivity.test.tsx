@@ -28,10 +28,18 @@ describe("ConnectivityDot", () => {
 });
 
 describe("useFormatLastSeen", () => {
-  it("labels a connected device as connected now", () => {
+  it("says since when a connected device has been online", () => {
     const { result } = renderHook(() => useFormatLastSeen());
 
     expect(result.current({ connected: true, lastSeenAt: "2026-08-13T08:00:00.000Z" })).toBe(
+      "iot.devices.connectivity.onlineSince",
+    );
+  });
+
+  it("falls back to currently-connected when the connect instant is unknown", () => {
+    const { result } = renderHook(() => useFormatLastSeen());
+
+    expect(result.current({ connected: true, lastSeenAt: null })).toBe(
       "iot.devices.connectivity.connectedNow",
     );
   });

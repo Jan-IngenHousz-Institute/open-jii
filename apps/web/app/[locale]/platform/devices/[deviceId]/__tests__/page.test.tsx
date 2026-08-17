@@ -62,7 +62,7 @@ describe("DeviceOverviewPage", () => {
     renderPage();
 
     expect(await screen.findByText("iot.devices.connectivity.connected")).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.connectivity.connectedNow")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.connectivity.onlineSince")).toBeInTheDocument();
   });
 
   it("shows the disconnected state with its relative last-seen", async () => {

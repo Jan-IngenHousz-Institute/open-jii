@@ -15,16 +15,19 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui/components/table";
+import { cn } from "@repo/ui/lib/utils";
 
 import type { ActivityEntry, ActivityKind } from "./device-activity";
 
 const PAGE_SIZE = 25;
 
-const KIND_VARIANT: Record<ActivityKind, "default" | "secondary" | "outline"> = {
-  connected: "default",
-  disconnected: "secondary",
-  firmwareChanged: "outline",
-  registered: "outline",
+// Status tints, not the primary badge: black on the primary teal is unreadable.
+const KIND_CLASS: Record<ActivityKind, string> = {
+  connected:
+    "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  disconnected: "border-transparent bg-secondary text-secondary-foreground",
+  firmwareChanged: "",
+  registered: "",
 };
 
 interface EventLogProps {
@@ -71,7 +74,7 @@ export function EventLog({ entries }: EventLogProps) {
                   {formatTimestamp(entry.timestamp, locale)}
                 </TableCell>
                 <TableCell className="text-xs">
-                  <Badge variant={KIND_VARIANT[entry.kind]} className="font-normal">
+                  <Badge variant="outline" className={cn("font-normal", KIND_CLASS[entry.kind])}>
                     {t(`iot.devices.monitoring.activity.${entry.kind}`)}
                   </Badge>
                 </TableCell>

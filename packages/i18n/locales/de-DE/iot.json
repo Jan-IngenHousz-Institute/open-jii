@@ -94,7 +94,8 @@
       },
       "connectivity": {
         "connected": "Verbunden",
-        "connectedNow": "Jetzt verbunden",
+        "connectedNow": "Derzeit verbunden",
+        "onlineSince": "Online seit {{time}}",
         "disconnected": "Getrennt",
         "unknown": "Unbekannt",
         "never": "Nie verbunden"

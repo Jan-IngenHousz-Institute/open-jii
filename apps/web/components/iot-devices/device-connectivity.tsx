@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
-import { formatRelativeTime } from "@/util/date";
+import { formatDateTime, formatRelativeTime } from "@/util/date";
 
 import type { DeviceConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -61,7 +61,11 @@ export function useFormatLastSeen(): (connectivity: DeviceConnectivity | null) =
       return t("iot.devices.connectivity.unknown");
     }
     if (connectivity.connected) {
-      return t("iot.devices.connectivity.connectedNow");
+      return connectivity.lastSeenAt === null
+        ? t("iot.devices.connectivity.connectedNow")
+        : t("iot.devices.connectivity.onlineSince", {
+            time: formatDateTime(connectivity.lastSeenAt, locale),
+          });
     }
     if (connectivity.lastSeenAt === null) {
       return t("iot.devices.connectivity.never");
