@@ -35,8 +35,11 @@ vi.mock("../workbook-code-editor", () => ({
           <button data-testid="simulate-invalid" onClick={() => onChange("not json")}>
             invalid
           </button>
-          <button data-testid="simulate-non-array" onClick={() => onChange('{"x":1}')}>
-            non-array
+          <button data-testid="simulate-object" onClick={() => onChange('{"x":1}')}>
+            object
+          </button>
+          <button data-testid="simulate-string" onClick={() => onChange('"just a string"')}>
+            string
           </button>
           <button data-testid="simulate-same" onClick={() => onChange(value)}>
             same
@@ -262,7 +265,30 @@ describe("ProtocolCellComponent", () => {
     vi.useRealTimers();
   });
 
-  it("does not persist when the parsed JSON is not an array", async () => {
+  it("persists a non-array JSON object document", async () => {
+    // The save contract accepts any non-string JSON document (OJD-1711);
+    // only execution still requires an array.
+    server.mount(contract.protocols.getProtocol, {
+      body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
+    });
+    const updateSpy = server.mount(contract.protocols.updateProtocol, {
+      body: createProtocol({ id: "p1" }),
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("simulate-object")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-object"));
+
+    await waitFor(() => expect(updateSpy.called).toBe(true), { timeout: 3000 });
+    expect(updateSpy.body).toEqual({ code: { x: 1 } });
+  });
+
+  it("does not persist when the parsed JSON is a bare string", async () => {
+    // A string document would be stored looking double-encoded (OJD-1711).
     vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.protocols.getProtocol, {
       body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
@@ -276,8 +302,8 @@ describe("ProtocolCellComponent", () => {
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
     );
 
-    await waitFor(() => expect(screen.getByTestId("simulate-non-array")).toBeInTheDocument());
-    await user.click(screen.getByTestId("simulate-non-array"));
+    await waitFor(() => expect(screen.getByTestId("simulate-string")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-string"));
     await vi.advanceTimersByTimeAsync(1500);
 
     expect(updateSpy.called).toBe(false);
