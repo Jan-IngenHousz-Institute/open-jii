@@ -28,7 +28,11 @@
     "emptyHintSynced": "Nog geen gesynchroniseerde metingen",
     "emptyHintUnsynced": "Alle metingen zijn gesynchroniseerd",
     "exportButton": "Metingen exporteren",
-    "noQuestionsAnswered": "Geen vragen beantwoord"
+    "noQuestionsAnswered": "Geen vragen beantwoord",
+    "runMeasurementCount_one": "{{count}} meting",
+    "runMeasurementCount_other": "{{count}} metingen",
+    "expandRun": "Workbookrun uitklappen",
+    "collapseRun": "Workbookrun inklappen"
   },
   "swipe": {
     "uploadButton": "Uploaden",
@@ -67,6 +71,12 @@
     "removeMeasurementMessage": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Dit verwijdert het uit lokale opslag.",
     "removeButton": "Verwijderen",
     "deleteMeasurementError": "Kon meting niet verwijderen. Probeer het opnieuw.",
+    "uploadRunTitle": "Workbookrun uploaden",
+    "uploadRunMessage_one": "{{count}} niet-gesynchroniseerde meting uit deze \"{{name}}\"-run uploaden?",
+    "uploadRunMessage_other": "{{count}} niet-gesynchroniseerde metingen uit deze \"{{name}}\"-run uploaden?",
+    "deleteRunTitle": "Workbookrun verwijderen",
+    "deleteRunMessage_one": "{{count}} meting uit deze \"{{name}}\"-run uit lokale opslag verwijderen?",
+    "deleteRunMessage_other": "Alle {{count}} metingen uit deze \"{{name}}\"-run uit lokale opslag verwijderen?",
     "uploadAllTitle": "Alle metingen uploaden",
     "uploadAllMessage_one": "Weet je zeker dat je {{count}} niet-gesynchroniseerde meting wilt synchroniseren?",
     "uploadAllMessage_other": "Weet je zeker dat je {{count}} niet-gesynchroniseerde metingen wilt synchroniseren?",

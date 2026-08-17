@@ -13,6 +13,7 @@ const migrationFiles = [
   "0002_dashing_lenny_balinger.sql",
   "0003_drop_uploading_status.sql",
   "0004_add_day_key.sql",
+  "0005_add_workbook_run_id.sql",
 ];
 const migrationSqls = migrationFiles.map((f) =>
   readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"),
@@ -210,6 +211,37 @@ describe("measurements-storage", () => {
       };
       expect(row.has_comment).toBe(0);
     });
+
+    it("lifts workbook_run_id out of the payload so the list can group a run", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.saveMeasurement(
+        {
+          topic: "t/t",
+          measurementResult: { workbook_run_id: "run-abc", questions: [] },
+          metadata: {
+            experimentName: "Exp",
+            protocolName: "proto-1",
+            timestamp: "2026-03-02T10:00:00.000Z",
+          },
+        },
+        "pending",
+      );
+
+      const row = sqlite.prepare("SELECT workbook_run_id FROM measurements").get() as {
+        workbook_run_id: string;
+      };
+      expect(row.workbook_run_id).toBe("run-abc");
+    });
+
+    it("writes an empty workbook_run_id (never NULL) when the payload has none", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.saveMeasurement(mockMeasurement, "pending");
+
+      const row = sqlite.prepare("SELECT workbook_run_id FROM measurements").get() as {
+        workbook_run_id: string;
+      };
+      expect(row.workbook_run_id).toBe("");
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -291,12 +323,13 @@ describe("measurements-storage", () => {
       timestamp: string,
       questionsText: string | null = null,
       hasComment = 0,
+      workbookRunId: string | null = "",
     ) {
       sqlite
         .prepare(
           `INSERT INTO measurements
-           (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, workbook_run_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           id,
@@ -309,6 +342,7 @@ describe("measurements-storage", () => {
           Date.now(),
           questionsText,
           hasComment,
+          workbookRunId,
         );
     }
 
@@ -354,6 +388,19 @@ describe("measurements-storage", () => {
       const [row] = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
 
       expect(row.questions).toEqual([]);
+    });
+
+    it('surfaces workbook_run_id, and "" for legacy rows still pending backfill', async () => {
+      insertListRow("grouped", "failed", "2026-01-01T11:00:00Z", null, 0, "run-abc");
+      insertListRow("legacy", "failed", "2026-01-01T10:00:00Z", null, 0, null);
+
+      const mod = await import("~/shared/db/measurements-storage");
+      const rows = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      expect(rows.map((r) => [r.id, r.workbookRunId])).toEqual([
+        ["grouped", "run-abc"],
+        ["legacy", ""],
+      ]);
     });
 
     it("falls back to [] for a single malformed questions_text row without failing the rest", async () => {
@@ -788,6 +835,29 @@ describe("measurements-storage", () => {
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
       expect(rows[0].id).toBe("keep");
+    });
+  });
+
+  describe("removeMeasurements", () => {
+    it("removes every key of a workbook run in one statement", async () => {
+      insertRow("r1", "pending");
+      insertRow("r2", "failed");
+      insertRow("other", "successful");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.removeMeasurements(["r1", "r2"]);
+
+      const rows = sqlite.prepare("SELECT id FROM measurements").all() as { id: string }[];
+      expect(rows.map((r) => r.id)).toEqual(["other"]);
+    });
+
+    it("is a no-op for an empty key list", async () => {
+      insertRow("keep", "pending");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.removeMeasurements([]);
+
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM measurements").get()).toEqual({ n: 1 });
     });
   });
 

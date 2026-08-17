@@ -5,7 +5,7 @@ import { getCommentFromMeasurementResult } from "~/shared/measurements/measureme
 import { createLogger } from "~/shared/observability/logger";
 
 import { db } from "./client";
-import { computeDayKey } from "./measurements-storage";
+import { computeDayKey, extractWorkbookRunId } from "./measurements-storage";
 import { measurements } from "./schema";
 
 const log = createLogger("measurements");
@@ -13,16 +13,16 @@ const log = createLogger("measurements");
 const BATCH_SIZE = 100;
 
 /**
- * Populate the derived list-only columns (`questions_text`, `has_comment`, `day_key`)
- * for rows that pre-date migration 0004. New saves write these columns
- * directly; this runs once at app launch to catch the legacy rows.
+ * Populate the derived list-only columns (`questions_text`, `has_comment`,
+ * `day_key`, `workbook_run_id`) for rows that pre-date migrations 0004/0005.
+ * New saves write these columns directly; this runs once at app launch to catch
+ * the legacy rows.
  *
  * Done in batches with `setTimeout(0)` yields between batches so the UI stays
  * responsive while a large library decompresses ~150 KB payloads one at a time.
- * Rows whose payload fails to decompress are marked with `questions_text = "[]"`
- * (day_key still derives from the timestamp) so we don't retry them forever —
- * they'll still open correctly via getMeasurement(id) since that decompresses
- * on demand.
+ * Every pass writes non-null values (`questions_text = "[]"`, `workbook_run_id
+ * = ""` when the payload has none), so a row is never rescanned forever; it
+ * still opens correctly via getMeasurement(id), which decompresses on demand.
  */
 export async function backfillDerivedColumns(): Promise<void> {
   let totalUpdated = 0;
@@ -35,11 +35,18 @@ export async function backfillDerivedColumns(): Promise<void> {
         timestamp: measurements.timestamp,
         questionsText: measurements.questionsText,
         hasComment: measurements.hasComment,
+        workbookRunId: measurements.workbookRunId,
       })
       .from(measurements)
-      // Catch both pre-0003 rows (no questions_text) and pre-0004 rows that
-      // were questions-backfilled earlier but still have a null day_key.
-      .where(or(isNull(measurements.questionsText), isNull(measurements.dayKey)))
+      // Catch pre-0003 rows (no questions_text) plus rows backfilled by an
+      // earlier pass that still have a null day_key or workbook_run_id.
+      .where(
+        or(
+          isNull(measurements.questionsText),
+          isNull(measurements.dayKey),
+          isNull(measurements.workbookRunId),
+        ),
+      )
       .limit(BATCH_SIZE)
       .all();
     if (rows.length === 0) break;
@@ -54,6 +61,7 @@ export async function backfillDerivedColumns(): Promise<void> {
           questionsText: JSON.stringify(parseQuestions(result)),
           hasComment: !!getCommentFromMeasurementResult(result),
           dayKey: computeDayKey(row.timestamp),
+          workbookRunId: extractWorkbookRunId(result),
         };
       } catch {
         // Decompress/parse failed: only backfill what's actually missing so we
@@ -64,6 +72,7 @@ export async function backfillDerivedColumns(): Promise<void> {
           questionsText: row.questionsText ?? "[]",
           hasComment: row.hasComment ?? false,
           dayKey: computeDayKey(row.timestamp),
+          workbookRunId: row.workbookRunId ?? "",
         };
       }
     });
@@ -71,7 +80,12 @@ export async function backfillDerivedColumns(): Promise<void> {
     db.transaction((tx) => {
       for (const u of updates) {
         tx.update(measurements)
-          .set({ questionsText: u.questionsText, hasComment: u.hasComment, dayKey: u.dayKey })
+          .set({
+            questionsText: u.questionsText,
+            hasComment: u.hasComment,
+            dayKey: u.dayKey,
+            workbookRunId: u.workbookRunId,
+          })
           .where(eq(measurements.id, u.id))
           .run();
       }

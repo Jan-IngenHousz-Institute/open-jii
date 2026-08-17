@@ -6,6 +6,7 @@ import {
   getMeasurements,
   markAsFailed,
   removeMeasurement as removeMeasurementFromStorage,
+  removeMeasurements as removeMeasurementsFromStorage,
   saveMeasurement as saveMeasurementToStorage,
   updateMeasurement,
 } from "~/shared/db/measurements-storage";
@@ -34,6 +35,13 @@ export function useMeasurements() {
     await queryClient.invalidateQueries({ queryKey: queryKeys.root });
   };
 
+  // Whole workbook run: one enqueue burst, one invalidation.
+  const uploadMany = async (keys: readonly string[]) => {
+    if (keys.length === 0) return;
+    getOutbox().enqueueMany(keys);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.root });
+  };
+
   const saveMeasurement = async (upload: Measurement, status: MeasurementStatus) => {
     const id = await saveMeasurementToStorage(upload, status);
     await queryClient.invalidateQueries({ queryKey: queryKeys.root });
@@ -47,6 +55,12 @@ export function useMeasurements() {
 
   const removeMeasurement = async (key: string) => {
     await removeMeasurementFromStorage(key);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.root });
+  };
+
+  const removeMeasurements = async (keys: readonly string[]) => {
+    if (keys.length === 0) return;
+    await removeMeasurementsFromStorage(keys);
     await queryClient.invalidateQueries({ queryKey: queryKeys.root });
   };
 
@@ -69,9 +83,11 @@ export function useMeasurements() {
     isUploading: uploadMutation.isPending,
     uploadAll: () => uploadMutation.mutateAsync(),
     uploadOne,
+    uploadMany,
     saveMeasurement,
     markFailed,
     removeMeasurement,
+    removeMeasurements,
     clearSyncedMeasurements,
     updateMeasurementComment,
   };

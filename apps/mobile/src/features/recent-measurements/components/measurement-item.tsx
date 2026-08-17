@@ -51,6 +51,8 @@ interface MeasurementItemProps {
   hideActions?: boolean;
   /** When true, shows a comment indicator icon */
   hasComment?: boolean;
+  /** When true, indents the row: it sits under an expanded workbook-run row */
+  indented?: boolean;
 }
 
 export const MeasurementItem = memo(function MeasurementItem({
@@ -64,6 +66,7 @@ export const MeasurementItem = memo(function MeasurementItem({
   onDelete,
   hideActions = false,
   hasComment = false,
+  indented = false,
 }: MeasurementItemProps) {
   const { colors } = useTheme();
   const { t } = useTranslation(["common", "recentMeasurements"]);
@@ -73,7 +76,15 @@ export const MeasurementItem = memo(function MeasurementItem({
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
 
   return (
-    <Pressable className="border-divider bg-card border-t px-4 py-3" onPress={() => onPress?.(id)}>
+    <Pressable
+      className={cn(
+        "border-divider border-t py-3 pr-4",
+        // Nested rows carry a lighter shade of the open run's tint, so the
+        // whole run reads as one block.
+        indented ? "bg-jii-mint-light border-l-2 pl-8" : "bg-card pl-4",
+      )}
+      onPress={() => onPress?.(id)}
+    >
       {/* Top: answers */}
       <Text
         className={cn(

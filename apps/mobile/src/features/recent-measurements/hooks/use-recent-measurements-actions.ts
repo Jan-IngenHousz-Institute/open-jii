@@ -6,6 +6,7 @@ import type {
 import { useAllMeasurements } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useExportMeasurements } from "~/features/recent-measurements/hooks/use-export-measurements";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
+import { isUnsynced } from "~/shared/db/measurement-status";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
@@ -43,7 +44,9 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
   const {
     uploadAll,
     uploadOne,
+    uploadMany,
     removeMeasurement,
+    removeMeasurements,
     clearSyncedMeasurements,
     updateMeasurementComment,
   } = useMeasurements();
@@ -80,6 +83,48 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
       errorMessage: t("recentMeasurements:alerts.deleteMeasurementError"),
       run: async () => {
         await removeMeasurement(m.key);
+        invalidate();
+      },
+    });
+  };
+
+  // Run-level variants of the two row actions, so a collapsed run can be
+  // uploaded or deleted without expanding it first.
+  const confirmSyncRun = (items: MeasurementItem[]) => {
+    const keys = items.filter((m) => isUnsynced(m.status)).map((m) => m.key);
+    if (keys.length === 0) return;
+    confirmAndRun(t, {
+      title: t("recentMeasurements:alerts.uploadRunTitle"),
+      message: t("recentMeasurements:alerts.uploadRunMessage", {
+        count: keys.length,
+        name: items[0].experimentName,
+      }),
+      confirmText: t("recentMeasurements:alerts.uploadButton"),
+      variant: "primary",
+      errorMessage: t("recentMeasurements:alerts.uploadMeasurementError"),
+      run: async () => {
+        try {
+          await uploadMany(keys);
+        } finally {
+          invalidate();
+        }
+      },
+    });
+  };
+
+  const confirmDeleteRun = (items: MeasurementItem[]) => {
+    if (items.length === 0) return;
+    confirmAndRun(t, {
+      title: t("recentMeasurements:alerts.deleteRunTitle"),
+      message: t("recentMeasurements:alerts.deleteRunMessage", {
+        count: items.length,
+        name: items[0].experimentName,
+      }),
+      confirmText: t("common:delete"),
+      variant: "primary",
+      errorMessage: t("recentMeasurements:alerts.deleteMeasurementError"),
+      run: async () => {
+        await removeMeasurements(items.map((m) => m.key));
         invalidate();
       },
     });
@@ -125,6 +170,8 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
     isFetchingNextPage,
     confirmSync,
     confirmDelete,
+    confirmSyncRun,
+    confirmDeleteRun,
     confirmSyncAll,
     confirmDeleteAllSynced,
     handleExport: exportMeasurements,

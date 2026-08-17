@@ -3,9 +3,9 @@ import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-cor
 
 /**
  * Measurement lifecycle:
- *   pending     — saved locally, not yet acknowledged by the broker.
- *   failed      — Outbox exhausted retries; requires user action.
- *   successful  — broker acked (QoS 1 PUBACK).
+ *   pending     - saved locally, not yet acknowledged by the broker.
+ *   failed      - Outbox exhausted retries; requires user action.
+ *   successful  - broker acked (QoS 1 PUBACK).
  *
  * In-flight state lives in the Outbox (Pacer AsyncQueuer), not the DB.
  * `getOutbox().isProcessing(id)` answers the "is this in flight now"
@@ -33,6 +33,11 @@ export const measurements = sqliteTable(
     // Local calendar date "YYYY-MM-DD" computed at save time from timestamp + resolved timezone.
     // Used to group the Recent list by day. Nullable for legacy rows pending backfill.
     dayKey: text("day_key"),
+    // Workbook attempt that produced this row, lifted out of the payload at
+    // save time so the Recent list can collapse a run into one expandable
+    // entry. Nullable for legacy rows pending backfill; "" once backfilled and
+    // the payload carried no run id.
+    workbookRunId: text("workbook_run_id"),
   },
   (table) => [
     check("measurements_status_check", sql`${table.status} IN ('pending', 'failed', 'successful')`),

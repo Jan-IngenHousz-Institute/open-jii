@@ -100,6 +100,7 @@ const makeItem = (
   questions: [],
   hasComment: false,
   dayKey: "2026-01-01",
+  workbookRunId: "",
 });
 
 const mockAllMeasurements: MeasurementItem[] = [
