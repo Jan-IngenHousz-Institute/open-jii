@@ -313,19 +313,30 @@ resource "aws_iam_policy" "databricks_device_lifecycle_read" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["s3:GetObject"]
-        Resource = "${var.s3_archive_bucket_arn}/device-lifecycle-events/*"
+        Effect = "Allow"
+        Action = ["s3:GetObject"]
+        Resource = [
+          # S3A resolves a path by HEADing the prefix key itself before it
+          # lists anything under it. Denied, that probe returns 403, which it
+          # treats as fatal, where a permitted probe returns a harmless 404.
+          "${var.s3_archive_bucket_arn}/device-lifecycle-events",
+          "${var.s3_archive_bucket_arn}/device-lifecycle-events/*",
+        ]
       },
       {
         Effect   = "Allow"
         Action   = ["s3:ListBucket"]
         Resource = var.s3_archive_bucket_arn
         # The archive also holds raw measurement payloads; Auto Loader only
-        # ever lists its own prefix.
+        # ever lists its own prefix, listed here both with and without the
+        # trailing slash because the probe tries both.
         Condition = {
           StringLike = {
-            "s3:prefix" = ["device-lifecycle-events/", "device-lifecycle-events/*"]
+            "s3:prefix" = [
+              "device-lifecycle-events",
+              "device-lifecycle-events/",
+              "device-lifecycle-events/*",
+            ]
           }
         }
       }
