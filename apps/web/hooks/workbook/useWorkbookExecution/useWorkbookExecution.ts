@@ -73,7 +73,10 @@ async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unkno
   // with no redundant backend round-trip. Fall back to the last saved version
   // only when no editor is mounted for this protocol (or it holds invalid code).
   const live = getLiveProtocolCode(cell.payload.protocolId);
-  if (live && live.length > 0) return live;
+  // A mounted editor is the source of truth, even when cleared to []: falling
+  // back to the last saved version would execute stale code. Malformed live
+  // code (non-record elements) does fall back, never reaching a device.
+  if (live !== null && isRunnableCode(live)) return live;
 
   try {
     const result = await orpcClient.protocols.getProtocol({ id: cell.payload.protocolId });

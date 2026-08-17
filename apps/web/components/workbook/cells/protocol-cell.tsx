@@ -72,12 +72,13 @@ export function ProtocolCellComponent({
   const protocolLoading = !useSnapshot && liveLoading;
   const protocolName = protocolData?.name;
   // Newly-created protocols have an empty code array; render that as "[]" so owners can fill it in
-  // rather than treating it as a load failure.
+  // rather than treating it as a load failure. Presence, not truthiness: 0 and
+  // false are valid stored JSON documents under the widened contract (OJD-1711).
   const protocolCode = useSnapshot
     ? formatJson(snapshot.code ?? [], { style })
-    : protocolData?.code
-      ? formatJson(protocolData.code, { style })
-      : null;
+    : protocolData?.code === null || protocolData?.code === undefined
+      ? null
+      : formatJson(protocolData.code, { style });
 
   const protocolFamily = useSnapshot ? snapshot.family : protocolData?.family;
   // Capability, not ownership: see the macro cell, the detail payload
