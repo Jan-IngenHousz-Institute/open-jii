@@ -836,6 +836,14 @@ describe("measurements-storage", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0].id).toBe("keep");
     });
+
+    it("rejects when the delete fails, so the caller can report it", async () => {
+      insertRow("gone", "failed");
+      const mod = await import("~/shared/db/measurements-storage");
+      sqlite.close();
+
+      await expect(mod.removeMeasurement("gone")).rejects.toThrow();
+    });
   });
 
   describe("removeMeasurements", () => {

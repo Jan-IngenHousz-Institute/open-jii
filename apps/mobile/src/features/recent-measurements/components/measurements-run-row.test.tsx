@@ -133,6 +133,20 @@ describe("MeasurementsRunRow", () => {
     expect(screen.queryByLabelText("Upload")).toBeNull();
   });
 
+  it("shows a failed run's status, not just synced and pending", () => {
+    render(
+      <MeasurementsRunRow
+        {...defaultProps}
+        entry={entry(item("a", "successful"), item("b", "failed"))}
+      />,
+    );
+
+    // Worst-of status: one failed upload makes the whole run read as failed,
+    // and its icon still offers the retry.
+    expect(screen.getByLabelText("Upload")).toBeTruthy();
+    expect(screen.getByText("2 measurements")).toBeTruthy();
+  });
+
   it("deletes the whole run, keyed by the run row id", () => {
     const onDelete = vi.fn();
     render(

@@ -23,19 +23,38 @@ vi.mock("~/shared/ui/hooks/use-is-online", () => ({
   useIsOnline: () => mockUseIsOnline(),
 }));
 
+interface PanHandlers {
+  onStart?: () => void;
+  onUpdate?: (e: { translationX: number }) => void;
+  onEnd?: (e: { velocityX: number }) => void;
+}
+
+// Records the pan callbacks so a test can drive them: on a device they run on
+// the UI runtime, and a gesture stub that drops them leaves that logic unrun.
+const { panHandlers } = vi.hoisted<{ panHandlers: PanHandlers }>(() => ({
+  panHandlers: {},
+}));
+
 vi.mock("react-native-gesture-handler", () => {
   const GestureDetector = ({ children }: { children?: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children);
-  const Gesture = {
-    Pan: () => ({
-      activeOffsetX: () => Gesture.Pan(),
-      failOffsetY: () => Gesture.Pan(),
-      onStart: () => Gesture.Pan(),
-      onUpdate: () => Gesture.Pan(),
-      onEnd: () => Gesture.Pan(),
-    }),
+  const builder = {
+    activeOffsetX: () => builder,
+    failOffsetY: () => builder,
+    onStart: (fn: () => void) => {
+      panHandlers.onStart = fn;
+      return builder;
+    },
+    onUpdate: (fn: (e: { translationX: number }) => void) => {
+      panHandlers.onUpdate = fn;
+      return builder;
+    },
+    onEnd: (fn: (e: { velocityX: number }) => void) => {
+      panHandlers.onEnd = fn;
+      return builder;
+    },
   };
-  return { __esModule: true, GestureDetector, Gesture };
+  return { __esModule: true, GestureDetector, Gesture: { Pan: () => builder } };
 });
 
 function renderRow(props: Partial<React.ComponentProps<typeof SwipeableRow>> = {}) {
@@ -114,5 +133,24 @@ describe("SwipeableRow", () => {
 
     renderRow({ expanded: true, onDelete: vi.fn() });
     expect(screen.getAllByText("row body").length).toBeGreaterThan(0);
+  });
+
+  it("drives a drag through the pan handlers without error", () => {
+    renderRow({ onSync: vi.fn(), onDelete: vi.fn() });
+
+    // The action layer measures itself before a swipe can be clamped to it.
+    const actionLayer = screen.getByLabelText("Delete").parent;
+    if (actionLayer) {
+      fireEvent(actionLayer, "layout", { nativeEvent: { layout: { width: 104 } } });
+    }
+
+    expect(panHandlers.onStart).toBeDefined();
+    panHandlers.onStart?.();
+    panHandlers.onUpdate?.({ translationX: -60 });
+    panHandlers.onUpdate?.({ translationX: 40 });
+    panHandlers.onEnd?.({ velocityX: -800 });
+    panHandlers.onEnd?.({ velocityX: 800 });
+
+    expect(screen.getByText("row body")).toBeTruthy();
   });
 });
