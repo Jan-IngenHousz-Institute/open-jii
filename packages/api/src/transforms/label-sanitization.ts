@@ -2,7 +2,7 @@
  * Canonicalize a flow node label to the column key the data pipeline emits
  * for `questions_data`. Allowlist: lowercase ASCII letters, digits, underscore;
  * everything else collapses to `_`. Mirrors `sanitize_label` in
- * apps/data/src/pipelines/centrum_pipeline.py. Keep them in sync.
+ * apps/data/src/pipelines/centrum/gold/experiment_raw_data.py. Keep them in sync.
  */
 export function sanitizeQuestionLabel(label: string): string {
   if (!label) return "question_empty";

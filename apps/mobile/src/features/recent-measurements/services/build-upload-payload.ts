@@ -17,8 +17,8 @@ export interface BuildUploadPayloadArgs {
   timezone: string;
   questions: AnswerData[];
   commentText?: string;
-  /** One uuid per multi-device round (see CONTEXT.md: Workbook run). */
-  workbookRunId?: string;
+  /** Stable UUID for the complete workbook attempt (see CONTEXT.md: Workbook run). */
+  workbookRunId: string;
   /** Immutable workbook version that owns the macro snapshot. */
   workbookVersionId?: string;
   /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
@@ -69,7 +69,7 @@ export function buildUploadPayload({
     ...(rawMeasurement.device_id == null && fallbackDeviceId
       ? { device_id: fallbackDeviceId }
       : {}),
-    ...(workbookRunId ? { workbook_run_id: workbookRunId } : {}),
+    workbook_run_id: workbookRunId,
     ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
     ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
