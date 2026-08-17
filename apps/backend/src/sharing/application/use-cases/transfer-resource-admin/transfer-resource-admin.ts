@@ -1,20 +1,15 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
-
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, success } from "../../../../common/utils/fp-utils";
+import type { ResourceRef } from "../../../core/models/sharing.model";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
 
-export interface AdminTransfer {
-  resourceType: SharingResourceType;
-  resourceId: string;
+export interface AdminTransfer extends ResourceRef {
   targetUserId: string;
 }
 
-export interface AdminTransferResult {
-  resourceType: SharingResourceType;
-  resourceId: string;
+export interface AdminTransferResult extends ResourceRef {
   success: boolean;
   error?: string;
 }

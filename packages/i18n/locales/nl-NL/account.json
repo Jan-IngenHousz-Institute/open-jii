@@ -136,6 +136,11 @@
           "workbook": "Werkmap",
           "device": "Apparaat"
         }
+      },
+      "organizationBlockers": {
+        "title": "Draag je organisaties eerst over",
+        "description": "Je bent de enige eigenaar van de onderstaande organisaties, waardoor er niemand overblijft die ze kan beheren. Maak iemand anders eigenaar of verwijder de organisatie en kom dan hier terug.",
+        "manageLink": "Leden openen"
       }
     },
     "cancel": "Annuleren"

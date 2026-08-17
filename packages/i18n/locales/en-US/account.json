@@ -136,6 +136,11 @@
           "workbook": "Workbook",
           "device": "Device"
         }
+      },
+      "organizationBlockers": {
+        "title": "Hand over your organizations first",
+        "description": "You're the only owner of the organizations below, so nobody would be left who can run them. Make someone else an owner, or delete the organization, then come back here.",
+        "manageLink": "Open members"
       }
     },
     "cancel": "Cancel"

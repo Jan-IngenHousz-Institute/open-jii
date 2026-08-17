@@ -136,6 +136,11 @@
           "workbook": "Arbeitsmappe",
           "device": "Gerät"
         }
+      },
+      "organizationBlockers": {
+        "title": "Übergeben Sie zuerst Ihre Organisationen",
+        "description": "Sie sind die einzige Eigentümerin bzw. der einzige Eigentümer der unten aufgeführten Organisationen – es bliebe niemand übrig, der sie führen kann. Ernennen Sie eine andere Person zur Eigentümerin bzw. zum Eigentümer oder löschen Sie die Organisation, und kommen Sie dann hierher zurück.",
+        "manageLink": "Mitglieder öffnen"
       }
     },
     "cancel": "Abbrechen"

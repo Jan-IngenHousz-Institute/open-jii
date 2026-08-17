@@ -23,6 +23,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
 import { DeleteAccountBlockers } from "./delete-account-blockers";
+import { DeleteAccountOrganizationBlockers } from "./delete-account-organization-blockers";
 
 interface DeleteAccountDialogProps {
   userId: string;
@@ -43,12 +44,16 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
   const [blockersExpanded, setBlockersExpanded] = useState(false);
   const signOut = useSignOut();
 
-  // Resources where the user is the sole admin block deletion; surfaced when the dialog opens.
+  // Resources where the user is the sole admin, and organizations they are the sole owner of,
+  // both block deletion; surfaced when the dialog opens.
   const { data: blockersData, isLoading: isLoadingBlockers } = useDeletionBlockers(userId, {
     enabled: open,
   });
   const blockers = blockersData?.resources ?? [];
+  const organizationBlockers = blockersData?.organizations ?? [];
   const hasBlockers = blockers.length > 0;
+  const hasOrganizationBlockers = organizationBlockers.length > 0;
+  const isBlocked = hasBlockers || hasOrganizationBlockers;
   // Expanded only matters while blockers remain; once everything is transferred the section
   // collapses on its own so the erase/preserve summary comes back on screen.
   const isExpanded = blockersExpanded && hasBlockers;
@@ -118,7 +123,12 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
           </DialogHeader>
 
           {/* Scroll container on mobile; on desktop the inner list scrolls instead. */}
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:overflow-visible">
+          <div
+            className={cn(
+              "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto",
+              isExpanded && "sm:overflow-visible",
+            )}
+          >
             {/* What deletion erases / preserves — laid out side by side when there's room */}
             {!isExpanded && (
               <div className="border-destructive/30 bg-muted shrink-0 rounded-md border p-3 text-sm">
@@ -153,6 +163,15 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
               </div>
             )}
 
+            {/* Organizations are cleared elsewhere, so they stay visible alongside the
+                resource hand-off — except while that section has taken over the body. */}
+            {!isLoadingBlockers && !isExpanded && hasOrganizationBlockers && (
+              <DeleteAccountOrganizationBlockers
+                organizations={organizationBlockers}
+                locale={locale}
+              />
+            )}
+
             {/* Hand over experiments (fills remaining height, scrolls), or confirm */}
             {isLoadingBlockers ? (
               <div className="text-muted-foreground flex items-center gap-2 text-sm">
@@ -167,7 +186,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
                 expanded={isExpanded}
                 onToggleExpanded={() => setBlockersExpanded((v) => !v)}
               />
-            ) : (
+            ) : hasOrganizationBlockers ? null : (
               <div className="space-y-2">
                 <p className="text-muted-foreground text-sm">
                   {t("dangerZone.delete.confirmPrompt")}{" "}
@@ -196,7 +215,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
                 confirmation !== t("dangerZone.delete.confirmWord") ||
                 isDeleting ||
                 isLoadingBlockers ||
-                hasBlockers
+                isBlocked
               }
             >
               {isDeleting

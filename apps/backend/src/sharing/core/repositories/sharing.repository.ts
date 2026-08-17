@@ -56,6 +56,7 @@ import type {
   DirectGrantRow,
   EnrichedGrant,
   ResourceCollaborator,
+  ResourceRef,
 } from "../models/sharing.model";
 import {
   assertResourceStaysStaffed,
@@ -173,12 +174,6 @@ interface OwningOrg {
   name: string;
 }
 
-/** One resource to count collaborators on. */
-export interface CollaboratorCountTarget {
-  resourceType: SharingResourceType;
-  resourceId: string;
-}
-
 /**
  * How {@link SharingRepository.countCollaborators} keys its answer. A grant table is
  * polymorphic, so neither half identifies a resource on its own.
@@ -193,95 +188,91 @@ export class SharingRepository {
   constructor(@Inject("DATABASE") private readonly db: DatabaseInstance) {}
 
   /**
-   * How many **rows** the collaborators surface would show for each of `resources` —
-   * literally `list()`'s output length, because a card saying 7 beside a tab listing 4
-   * is the whole failure mode. So: one per living owner, one per grant that is not an
-   * owner's own, and one for each of the admin and member summaries that is not empty.
-   * A team, an organization or a summary counts as the single row it is, never
-   * expanded to the people behind it.
+   * How many rows the collaborators surface would show for each resource — literally
+   * `list()`'s output length, since a card saying 7 beside a tab listing 4 is the
+   * failure mode. A team, an organization or a summary counts as the one row it is.
    *
-   * Both surfaces read the same three membership fragments, which is where the
-   * definition actually lives; the arithmetic over them is restated here only because
-   * this answers for a whole page in one statement and `list()` answers for one
-   * resource. `list-organization-resources.spec.ts` asserts the two against each other
-   * rather than against an integer, so they cannot drift without failing.
-   *
-   * The asked-for pairs go in as a `VALUES` list and are left-joined, so the grants
-   * read is one grouped scan and a resource with no grants still comes back. All of
-   * `resources` must belong to `owningOrganizationId`.
+   * Org-derived rows are identical for every resource here, so they are counted once
+   * and only the grants are scanned per resource; a resource with no grants keeps that
+   * baseline, which is not zero. All of `resources` must belong to the organization.
    */
   countCollaborators(
-    // Nullable for the same reason `list()` is: a resource with no owning organization
-    // has no org-derived rows, and every membership fragment already matches nothing
-    // on a NULL id — so that case needs no branch of its own.
+    // Null for a resource with no owning organization; the fragments match nothing on it.
     owningOrganizationId: string | null,
-    resources: readonly CollaboratorCountTarget[],
+    resources: readonly ResourceRef[],
   ): Promise<Result<Map<string, number>>> {
     return tryCatch(async () => {
       const counts = new Map<string, number>();
       if (resources.length === 0) return counts;
 
-      const asked = sql.join(
-        resources.map(
-          (resource) =>
-            sql`(${resource.resourceType}::"resource_type", ${resource.resourceId}::uuid)`,
-        ),
-        sql`, `,
-      );
-
-      const rows = await this.db.execute<{
-        resource_type: SharingResourceType;
-        resource_id: string;
-        collaborator_count: number;
+      const organizationId = sql`${owningOrganizationId}::uuid`;
+      const [orgRoster] = await this.db.execute<{
+        owners: number;
+        admins: number;
+        members: number;
       }>(sql`
-        WITH "owners" AS (${livingOrgOwnerIdsSql(sql`${owningOrganizationId}::uuid`)}),
-        "admins" AS (${livingOrgAdminIdsSql(sql`${owningOrganizationId}::uuid`)}),
-        "members" AS (${livingOrgPlainMemberIdsSql(sql`${owningOrganizationId}::uuid`)}),
-        "asked" ("resource_type", "resource_id") AS (VALUES ${asked}),
-        "granted" AS (
-          SELECT ${resourceGrants.resourceType} AS "resource_type",
-                 ${resourceGrants.resourceId} AS "resource_id",
-                 -- Rows the surface renders: an owner's own grant rides on their
-                 -- individual row instead of adding one.
-                 COUNT(*) FILTER (
-                   WHERE NOT (
-                     ${resourceGrants.granteeType} = 'user'
-                     AND ${resourceGrants.granteeId} IN (SELECT "user_id" FROM "owners")
-                   )
-                 )::int AS "grant_rows",
-                 -- Whoever a grant broke out of a summary, so the summary is only
-                 -- counted while somebody is still left in it.
-                 COUNT(*) FILTER (
-                   WHERE ${resourceGrants.granteeType} = 'user'
-                     AND ${resourceGrants.granteeId} IN (SELECT "user_id" FROM "admins")
-                 )::int AS "broken_out_admins",
-                 COUNT(*) FILTER (
-                   WHERE ${resourceGrants.granteeType} = 'user'
-                     AND ${resourceGrants.granteeId} IN (SELECT "user_id" FROM "members")
-                 )::int AS "broken_out_members"
-          FROM ${resourceGrants}
-          JOIN "asked" ON "asked"."resource_type" = ${resourceGrants.resourceType}
-                      AND "asked"."resource_id" = ${resourceGrants.resourceId}
-          GROUP BY 1, 2
-        )
-        SELECT "asked"."resource_type"::text AS "resource_type",
-               "asked"."resource_id"::text AS "resource_id",
-               (SELECT COUNT(*)::int FROM "owners")
-                 + COALESCE("granted"."grant_rows", 0)
-                 + CASE WHEN (SELECT COUNT(*) FROM "admins")
-                             > COALESCE("granted"."broken_out_admins", 0) THEN 1 ELSE 0 END
-                 + CASE WHEN (SELECT COUNT(*) FROM "members")
-                             > COALESCE("granted"."broken_out_members", 0) THEN 1 ELSE 0 END
-                 AS "collaborator_count"
-        FROM "asked"
-        LEFT JOIN "granted" ON "granted"."resource_type" = "asked"."resource_type"
-                           AND "granted"."resource_id" = "asked"."resource_id"
+        SELECT (SELECT COUNT(*)::int FROM (${livingOrgOwnerIdsSql(organizationId)}) o) AS "owners",
+               (SELECT COUNT(*)::int FROM (${livingOrgAdminIdsSql(organizationId)}) a) AS "admins",
+               (SELECT COUNT(*)::int FROM (${livingOrgPlainMemberIdsSql(organizationId)}) m)
+                 AS "members"
       `);
 
-      for (const row of rows) {
+      const owners = Number(orgRoster.owners);
+      const admins = Number(orgRoster.admins);
+      const members = Number(orgRoster.members);
+
+      // One row per living owner, plus a summary row per non-empty group — true of every
+      // resource until a grant breaks somebody out of a summary below.
+      const summaryRows = (admins > 0 ? 1 : 0) + (members > 0 ? 1 : 0);
+      for (const resource of resources) {
         counts.set(
-          collaboratorCountKey(row.resource_type, row.resource_id),
-          Number(row.collaborator_count),
+          collaboratorCountKey(resource.resourceType, resource.resourceId),
+          owners + summaryRows,
+        );
+      }
+
+      // Exact pairs, never two crossed `inArray`s: ids are only unique within a type.
+      const asked = resources.map((resource) =>
+        and(
+          eq(resourceGrants.resourceType, resource.resourceType),
+          eq(resourceGrants.resourceId, resource.resourceId),
+        ),
+      );
+
+      const granted = await this.db
+        .select({
+          resourceType: resourceGrants.resourceType,
+          resourceId: resourceGrants.resourceId,
+          // Rows the surface renders: an owner's own grant rides on their individual
+          // row instead of adding one.
+          grantRows: sql<number>`COUNT(*) FILTER (
+            WHERE NOT (
+              ${resourceGrants.granteeType} = 'user'
+              AND ${resourceGrants.granteeId} IN (${livingOrgOwnerIdsSql(organizationId)})
+            )
+          )::int`,
+          // Whoever a grant broke out of a summary, so the summary is only counted
+          // while somebody is still left in it.
+          brokenOutAdmins: sql<number>`COUNT(*) FILTER (
+            WHERE ${resourceGrants.granteeType} = 'user'
+              AND ${resourceGrants.granteeId} IN (${livingOrgAdminIdsSql(organizationId)})
+          )::int`,
+          brokenOutMembers: sql<number>`COUNT(*) FILTER (
+            WHERE ${resourceGrants.granteeType} = 'user'
+              AND ${resourceGrants.granteeId} IN (${livingOrgPlainMemberIdsSql(organizationId)})
+          )::int`,
+        })
+        .from(resourceGrants)
+        .where(or(...asked))
+        .groupBy(resourceGrants.resourceType, resourceGrants.resourceId);
+
+      for (const row of granted) {
+        counts.set(
+          collaboratorCountKey(row.resourceType, row.resourceId),
+          owners +
+            Number(row.grantRows) +
+            (admins > Number(row.brokenOutAdmins) ? 1 : 0) +
+            (members > Number(row.brokenOutMembers) ? 1 : 0),
         );
       }
       return counts;
@@ -607,12 +598,9 @@ export class SharingRepository {
   }
 
   /** Change a grant's role by id. Resolves to null when no grant matched. */
-  updateRole(params: {
-    resourceType: SharingResourceType;
-    resourceId: string;
-    grantId: string;
-    role: ShareableRole;
-  }): Promise<Result<DirectGrantRow | null>> {
+  updateRole(
+    params: ResourceRef & { grantId: string; role: ShareableRole },
+  ): Promise<Result<DirectGrantRow | null>> {
     return this.guardedWrite(
       {
         resourceType: params.resourceType,
@@ -625,11 +613,7 @@ export class SharingRepository {
   }
 
   /** Delete a grant by id. Resolves to null when no grant matched. */
-  revoke(params: {
-    resourceType: SharingResourceType;
-    resourceId: string;
-    grantId: string;
-  }): Promise<Result<DirectGrantRow | null>> {
+  revoke(params: ResourceRef & { grantId: string }): Promise<Result<DirectGrantRow | null>> {
     return this.guardedWrite(
       {
         resourceType: params.resourceType,
@@ -646,11 +630,7 @@ export class SharingRepository {
    * the grants list is share-gated. Resolves to null when they hold no grant here,
    * and the archived refusal is deferred so that case discloses nothing.
    */
-  leave(params: {
-    resourceType: SharingResourceType;
-    resourceId: string;
-    userId: string;
-  }): Promise<Result<DirectGrantRow | null>> {
+  leave(params: ResourceRef & { userId: string }): Promise<Result<DirectGrantRow | null>> {
     return this.guardedWrite(
       {
         resourceType: params.resourceType,
@@ -679,12 +659,9 @@ export class SharingRepository {
    * Proven inside the writing transaction, on the deletion guard's own locks, because
    * a pre-flight answer can go stale.
    */
-  ensureDirectAdminGrant(params: {
-    resourceType: SharingResourceType;
-    resourceId: string;
-    userId: string;
-    createdBy: string;
-  }): Promise<Result<void>> {
+  ensureDirectAdminGrant(
+    params: ResourceRef & { userId: string; createdBy: string },
+  ): Promise<Result<void>> {
     return tryCatch(() =>
       this.db.transaction(async (tx) => {
         if (!(await lockUserAccount(tx, params.userId))) {

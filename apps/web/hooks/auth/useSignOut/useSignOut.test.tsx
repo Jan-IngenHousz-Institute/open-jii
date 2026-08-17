@@ -61,7 +61,7 @@ describe("useSignOut", () => {
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
     });
-    queryClient.setQueryData(deletionBlockersKey, { resources: [] });
+    queryClient.setQueryData(deletionBlockersKey, { resources: [], organizations: [] });
 
     const { result } = renderHook(() => useSignOut(), { queryClient });
     await result.current.mutateAsync();

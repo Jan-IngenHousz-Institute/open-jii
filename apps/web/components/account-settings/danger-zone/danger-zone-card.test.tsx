@@ -24,7 +24,7 @@ describe("DangerZoneCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     server.mount(contract.users.getDeletionBlockers, {
-      body: { resources: [] },
+      body: { resources: [], organizations: [] },
       status: 200,
     });
   });
@@ -230,6 +230,60 @@ describe("DangerZoneCard", () => {
           variant: "destructive",
         }),
       );
+    });
+
+    // Solely-owned organizations cannot be handed over from this dialog — the only ways
+    // out live on the organization's own pages, so the row is a link there.
+    describe("when the user is an organization's last owner", () => {
+      const mountOrganizationBlocker = () =>
+        server.mount(contract.users.getDeletionBlockers, {
+          body: {
+            resources: [],
+            organizations: [
+              { id: "11111111-1111-4111-8111-111111111111", name: "Solo Lab", slug: "solo-lab" },
+            ],
+          },
+          status: 200,
+        });
+
+      it("lists the organization with a link to its members page", async () => {
+        mountOrganizationBlocker();
+        const user = userEvent.setup();
+        renderCard();
+
+        await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+
+        // The dialog body is portaled out of render()'s container, so these are
+        // screen-scoped like every other assertion against it in this file.
+        expect(
+          await screen.findByText("dangerZone.delete.organizationBlockers.title"),
+        ).toBeInTheDocument();
+        expect(screen.getByText("Solo Lab")).toBeInTheDocument();
+        expect(
+          screen.getByRole("link", {
+            name: "dangerZone.delete.organizationBlockers.manageLink",
+          }),
+        ).toHaveAttribute(
+          "href",
+          "/en-US/platform/organizations/11111111-1111-4111-8111-111111111111/members",
+        );
+      });
+
+      it("keeps the delete button disabled and hides the confirmation input", async () => {
+        mountOrganizationBlocker();
+        const user = userEvent.setup();
+        renderCard();
+
+        await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+        await screen.findByText("dangerZone.delete.organizationBlockers.title");
+
+        expect(
+          screen.queryByPlaceholderText("dangerZone.delete.confirmPlaceholder"),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "dangerZone.delete.buttonConfirm" }),
+        ).toBeDisabled();
+      });
     });
 
     it("shows deleting state when pending", async () => {

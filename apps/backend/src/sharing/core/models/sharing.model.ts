@@ -18,15 +18,18 @@ export type ResourceCollaborator =
   | ResourceOrgMembersDto
   | EnrichedGrant;
 
+export interface ResourceRef {
+  resourceType: SharingResourceType;
+  resourceId: string;
+}
+
 /** A plain direct-grant row: what the guarded write paths resolve to. */
 export interface DirectGrantRow {
   id: string;
   role: string;
 }
 
-export interface CreateGrantInput {
-  resourceType: SharingResourceType;
-  resourceId: string;
+export interface CreateGrantInput extends ResourceRef {
   granteeType: SharingGranteeType;
   granteeId: string;
   // The grantable set, not the stored one: a caller may not mint an `owner`, though a

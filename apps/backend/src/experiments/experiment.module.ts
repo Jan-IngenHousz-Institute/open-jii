@@ -119,8 +119,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     UserModule,
     MacroModule,
     WorkbookModule,
-    // For the overview's collaborator count, read from the same place the
-    // collaborators surface and the organization showcase read it.
     SharingModule,
   ],
   controllers: [

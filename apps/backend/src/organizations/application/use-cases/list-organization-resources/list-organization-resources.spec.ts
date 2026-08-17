@@ -214,7 +214,7 @@ describe("listOrganizationResources", () => {
     });
   });
 
-  describe("one read for the whole page", () => {
+  describe("a fixed number of reads for the whole page", () => {
     /** A resource of every showcased type, so the page spans all four. */
     async function seedOneOfEveryType(count: number) {
       for (let index = 0; index < count; index++) {
@@ -258,7 +258,7 @@ describe("listOrganizationResources", () => {
       );
     });
 
-    it("issues one statement whatever the resource count is", async () => {
+    it("issues the same number of statements whatever the resource count is", async () => {
       await seedOneOfEveryType(3);
       const rows = await listResources.execute(organizationId, owner);
       assertSuccess(rows);
@@ -268,15 +268,32 @@ describe("listOrganizationResources", () => {
       }));
 
       const database = testApp.module.get<DatabaseInstance>("DATABASE");
-      const execute = vi.spyOn(database, "execute");
 
-      const counts = await sharingRepository.countCollaborators(organizationId, asked);
-      assertSuccess(counts);
+      /**
+       * Both entry points, because the two reads take different ones: the org roster
+       * goes through `execute` and the grant scan is a query builder. Counting only
+       * one of them would miss the other entirely and pass without meaning it.
+       */
+      const statementsFor = async (subset: typeof asked) => {
+        const execute = vi.spyOn(database, "execute");
+        const select = vi.spyOn(database, "select");
+        const counts = await sharingRepository.countCollaborators(organizationId, subset);
+        assertSuccess(counts);
+        const statements = execute.mock.calls.length + select.mock.calls.length;
+        execute.mockRestore();
+        select.mockRestore();
+        return { statements, size: counts.value.size };
+      };
 
-      // Nothing else runs in this window, so the call count *is* the query count.
-      expect(execute).toHaveBeenCalledTimes(1);
+      const few = await statementsFor(asked.slice(0, 3));
+      const many = await statementsFor(asked);
+
+      // Two reads, one per granularity the answer has, and neither grows with the
+      // page — a loop over the rows would be one statement per resource.
+      expect(many.statements).toBe(few.statements);
+      expect(many.statements).toBe(2);
       // And every asked-for resource came back, including the ones with no grants at all.
-      expect(counts.value.size).toBe(asked.length);
+      expect(many.size).toBe(asked.length);
     });
 
     it("asks for nothing when the organization owns nothing", async () => {

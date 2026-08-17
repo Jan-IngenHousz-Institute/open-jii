@@ -123,6 +123,7 @@ export enum ErrorCodes {
   USER_NOT_FOUND = "USER_NOT_FOUND", // User not found
   USER_PROFILE_NOT_FOUND = "USER_PROFILE_NOT_FOUND", // User profile not found
   USER_IS_ONLY_ADMIN = "USER_IS_ONLY_ADMIN", // Cannot delete sole admin
+  USER_IS_ONLY_ORG_OWNER = "USER_IS_ONLY_ORG_OWNER", // Cannot delete the sole owner of a shared organization
 
   // ==================== Domain Operations - Experiments Core ====================
   // Location: src/experiments/application/use-cases/

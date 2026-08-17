@@ -3623,38 +3623,50 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "userId": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "firstName": {
-                        "type": "string"
-                      },
-                      "lastName": {
-                        "type": "string"
-                      },
-                      "avatarUrl": {
-                        "anyOf": [
-                          {
+                  "type": "object",
+                  "properties": {
+                    "contributors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "userId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "firstName": {
                             "type": "string"
                           },
-                          {
-                            "type": "null"
+                          "lastName": {
+                            "type": "string"
+                          },
+                          "avatarUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
+                        },
+                        "required": [
+                          "userId",
+                          "firstName",
+                          "lastName",
+                          "avatarUrl"
                         ]
                       }
                     },
-                    "required": [
-                      "userId",
-                      "firstName",
-                      "lastName",
-                      "avatarUrl"
-                    ]
-                  }
+                    "collaboratorCount": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "contributors",
+                    "collaboratorCount"
+                  ]
                 }
               }
             }
@@ -18275,6 +18287,9 @@
                             "type": "string",
                             "format": "uuid"
                           },
+                          "organizationName": {
+                            "type": "string"
+                          },
                           "grantee": {
                             "type": "object",
                             "properties": {
@@ -18334,13 +18349,91 @@
                               "avatarUrl",
                               "memberCount"
                             ]
+                          },
+                          "inertGrant": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "owner",
+                                      "admin",
+                                      "viewer"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "kind",
                           "granteeType",
                           "granteeId",
-                          "grantee"
+                          "organizationName",
+                          "grantee",
+                          "inertGrant"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgAdmins"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "adminCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "adminCount"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgMembers"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "memberCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "memberCount"
                         ]
                       },
                       {
@@ -18463,6 +18556,37 @@
                           },
                           "kind": {
                             "const": "grant"
+                          },
+                          "owningOrganization": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "admin",
+                                      "member"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -18476,7 +18600,8 @@
                           "createdBy",
                           "isOutsideCollaborator",
                           "grantee",
-                          "kind"
+                          "kind",
+                          "owningOrganization"
                         ]
                       }
                     ]
@@ -18574,6 +18699,9 @@
                             "type": "string",
                             "format": "uuid"
                           },
+                          "organizationName": {
+                            "type": "string"
+                          },
                           "grantee": {
                             "type": "object",
                             "properties": {
@@ -18633,13 +18761,91 @@
                               "avatarUrl",
                               "memberCount"
                             ]
+                          },
+                          "inertGrant": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "owner",
+                                      "admin",
+                                      "viewer"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "kind",
                           "granteeType",
                           "granteeId",
-                          "grantee"
+                          "organizationName",
+                          "grantee",
+                          "inertGrant"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgAdmins"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "adminCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "adminCount"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgMembers"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "memberCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "memberCount"
                         ]
                       },
                       {
@@ -18762,6 +18968,37 @@
                           },
                           "kind": {
                             "const": "grant"
+                          },
+                          "owningOrganization": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "admin",
+                                      "member"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -18775,7 +19012,8 @@
                           "createdBy",
                           "isOutsideCollaborator",
                           "grantee",
-                          "kind"
+                          "kind",
+                          "owningOrganization"
                         ]
                       }
                     ]
@@ -18871,6 +19109,9 @@
                             "type": "string",
                             "format": "uuid"
                           },
+                          "organizationName": {
+                            "type": "string"
+                          },
                           "grantee": {
                             "type": "object",
                             "properties": {
@@ -18930,13 +19171,91 @@
                               "avatarUrl",
                               "memberCount"
                             ]
+                          },
+                          "inertGrant": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "owner",
+                                      "admin",
+                                      "viewer"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "kind",
                           "granteeType",
                           "granteeId",
-                          "grantee"
+                          "organizationName",
+                          "grantee",
+                          "inertGrant"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgAdmins"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "adminCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "adminCount"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgMembers"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "memberCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "memberCount"
                         ]
                       },
                       {
@@ -19059,6 +19378,37 @@
                           },
                           "kind": {
                             "const": "grant"
+                          },
+                          "owningOrganization": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "admin",
+                                      "member"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -19072,7 +19422,8 @@
                           "createdBy",
                           "isOutsideCollaborator",
                           "grantee",
-                          "kind"
+                          "kind",
+                          "owningOrganization"
                         ]
                       }
                     ]
@@ -19254,6 +19605,147 @@
                       "id",
                       "name",
                       "slug"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/{resourceType}/{id}/grantee-users": {
+      "get": {
+        "operationId": "sharing.searchGranteeUsers",
+        "parameters": [
+          {
+            "name": "resourceType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "experiment",
+                "macro",
+                "protocol",
+                "workbook",
+                "device"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the resource being shared"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "description": "Name or email substring to match"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maximum number of users to return"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "userId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "firstName": {
+                        "type": "string"
+                      },
+                      "lastName": {
+                        "type": "string"
+                      },
+                      "email": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "avatarUrl": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "organizationRole": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "member"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "existingGrantRole": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "viewer"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "userId",
+                      "firstName",
+                      "lastName",
+                      "email",
+                      "avatarUrl",
+                      "organizationRole",
+                      "existingGrantRole"
                     ]
                   }
                 }
@@ -19930,10 +20422,34 @@
                           "candidates"
                         ]
                       }
+                    },
+                    "organizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug"
+                        ]
+                      }
                     }
                   },
                   "required": [
-                    "resources"
+                    "resources",
+                    "organizations"
                   ]
                 }
               }

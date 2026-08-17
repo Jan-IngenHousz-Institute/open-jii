@@ -145,7 +145,12 @@ export function DeleteAccountBlockers({
   };
 
   return (
-    <div className="border-destructive/30 bg-muted flex flex-col gap-3 rounded-md border p-3 text-sm shadow-sm sm:min-h-0 sm:flex-1">
+    <div
+      className={cn(
+        "border-destructive/30 bg-muted flex flex-col gap-3 rounded-md border p-3 text-sm shadow-sm",
+        expanded && "sm:min-h-0 sm:flex-1",
+      )}
+    >
       <div className="flex items-start gap-3">
         <div className="bg-destructive/10 text-destructive flex h-9 w-9 shrink-0 items-center justify-center rounded-md">
           <AlertTriangle className="h-5 w-5" />
@@ -217,7 +222,12 @@ export function DeleteAccountBlockers({
         </div>
       )}
 
-      <ul className="space-y-2 sm:min-h-0 sm:flex-1 sm:overflow-y-auto sm:pr-1 sm:[scrollbar-gutter:stable]">
+      <ul
+        className={cn(
+          "space-y-2 sm:pr-1 sm:[scrollbar-gutter:stable]",
+          expanded ? "sm:min-h-0 sm:flex-1 sm:overflow-y-auto" : "sm:max-h-64 sm:overflow-y-auto",
+        )}
+      >
         {blockers.map((blocker) => {
           const key = blockerKey(blocker);
           const selectedUser = assignments[key] ?? null;

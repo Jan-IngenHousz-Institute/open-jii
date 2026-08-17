@@ -44,7 +44,9 @@ import {
   getAnonymizedEmail,
 } from "../../../common/utils/profile-anonymization";
 import {
+  findBlockingOrganizations,
   findBlockingResources,
+  lockAndFindBlockingOrganizations,
   lockAndFindBlockingResources,
   lockUserAccount,
 } from "../../../sharing/core/resource-staffing";
@@ -58,7 +60,18 @@ import {
   CreateUserProfileDto,
   UserProfileMetadata,
   SoleAdminResource,
+  SoleOwnedOrganization,
 } from "../models/user.model";
+
+/**
+ * The two refusals account deletion can produce. Shared with the use case's pre-flight
+ * check, so the user sees the same wording whichever of the two fires.
+ */
+export const SOLE_RESOURCE_ADMIN_MESSAGE =
+  "Cannot delete account - you are the only admin of one or more experiments, macros, protocols, workbooks or devices. Please assign other admins before deleting.";
+
+export const SOLE_ORGANIZATION_OWNER_MESSAGE =
+  "Cannot delete account - you are the only owner of one or more organizations. Please make someone else an owner, or delete those organizations, before deleting your account.";
 
 @Injectable()
 export class UserRepository {
@@ -250,26 +263,41 @@ export class UserRepository {
     return hydrated.flat();
   }
 
+  /**
+   * Shared organizations whose only living owner is this user — see
+   * {@link findBlockingOrganizations}. Pre-flight only; the authoritative re-check runs
+   * inside the deletion transaction.
+   */
+  async findSoleOwnedOrganizations(userId: string): Promise<Result<SoleOwnedOrganization[]>> {
+    return tryCatch(async () => {
+      const rows = await findBlockingOrganizations(this.database, userId);
+      return rows.map(({ id, name, slug }) => ({ id, name, slug }));
+    });
+  }
+
   async isOnlyAdminOfAnyResources(userId: string): Promise<Result<boolean>> {
     const result = await this.findSoleAdminResources(userId);
     return result.map((soleAdminResources: SoleAdminResource[]) => soleAdminResources.length > 0);
   }
 
   /**
-   * The deletion guard: refuses when the user is the last answerable person for any
-   * resource. Shares {@link lockAndFindBlockingResources} with
-   * {@link findSoleAdminResources} and with the deletion hand-off, so the pre-flight
-   * list, this guard and the hand-off cannot disagree about who is blocked.
+   * The deletion guard: refuses when the user is the last person answerable for a
+   * resource or a shared organization. Organizations first, so owner rows are claimed
+   * before any grant row — the lock order every other path uses.
    *
-   * @throws AppError (403) when the user is the last answerable person for a resource
+   * @throws AppError (403) when the user is the last answerable person for either
    */
-  private async assertNotSoleAdmin(tx: Transaction, userId: string): Promise<void> {
+  private async assertDeletionUnblocked(tx: Transaction, userId: string): Promise<void> {
+    const blockingOrganizations = await lockAndFindBlockingOrganizations(tx, userId);
+
+    if (blockingOrganizations.length > 0) {
+      throw AppError.forbidden(SOLE_ORGANIZATION_OWNER_MESSAGE);
+    }
+
     const blocking = await lockAndFindBlockingResources(tx, userId);
 
     if (blocking.length > 0) {
-      throw AppError.forbidden(
-        "Cannot delete account - you are the only admin of one or more experiments, macros, protocols, workbooks or devices. Please assign other admins before deleting.",
-      );
+      throw AppError.forbidden(SOLE_RESOURCE_ADMIN_MESSAGE);
     }
   }
 
@@ -323,11 +351,11 @@ export class UserRepository {
         await tx.delete(accounts).where(eq(accounts.userId, id));
         await tx.delete(sessions).where(eq(sessions.userId, id));
 
-        // 2. Re-check the sole-admin invariant inside the transaction. The
-        //    pre-flight check in DeleteUserUseCase drives the hand-off UX but is
-        //    raceable on its own: two last admins deleting at once would both see
-        //    the other and both commit.
-        await this.assertNotSoleAdmin(tx, id);
+        // 2. Re-check the deletion blockers inside the transaction. The pre-flight
+        //    checks in DeleteUserUseCase drive the hand-off UX but are raceable on
+        //    their own: two last admins — or two co-owners of one organization —
+        //    deleting at once would both see the other and both commit.
+        await this.assertDeletionUnblocked(tx, id);
 
         // Clear the dormant roster rows and every grant. `can()` reads
         // resource_grants, so leaving grants behind keeps a deleted account's access

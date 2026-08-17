@@ -119,10 +119,9 @@ export type UserMetadataWebhookResponse = z.infer<typeof zUserMetadataWebhookRes
 export type WebhookSuccessResponse = z.infer<typeof zWebhookSuccessResponse>;
 export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
 
-// A shared resource blocks account deletion when the user is its only admin — any of the four
-// types, since every one of them is created with a creator admin grant. Each blocker carries that
-// resource's other collaborators (as user metadata) so the delete dialog can suggest who to hand
-// admin to, per resource.
+// A resource blocks account deletion while the user is the last person answerable for it —
+// `blockingResourcesQuery` defines what that means. Carries the resource's other collaborators
+// so the dialog can suggest who to hand admin to.
 export const zDeletionBlocker = z.object({
   resourceType: zSharingResourceType,
   id: z.string().uuid(),
@@ -132,11 +131,22 @@ export const zDeletionBlocker = z.object({
   candidates: z.array(zUserMetadata),
 });
 
+// A shared organization the user solely owns blocks too, whether or not it owns anything;
+// never a personal workspace. A sibling of `resources` rather than a pseudo resource type,
+// because it is cleared by promoting another owner or deleting it, never by the hand-off.
+export const zDeletionBlockerOrganization = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  slug: z.string(),
+});
+
 export const zDeletionBlockersResponse = z.object({
   resources: z.array(zDeletionBlocker),
+  organizations: z.array(zDeletionBlockerOrganization),
 });
 
 export type DeletionBlocker = z.infer<typeof zDeletionBlocker>;
+export type DeletionBlockerOrganization = z.infer<typeof zDeletionBlockerOrganization>;
 export type DeletionBlockersResponse = z.infer<typeof zDeletionBlockersResponse>;
 
 export const zInvitationStatus = z.enum(["pending", "accepted", "revoked"]);

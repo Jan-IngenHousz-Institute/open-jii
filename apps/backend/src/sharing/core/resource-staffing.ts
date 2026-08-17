@@ -10,8 +10,10 @@ import {
   inArray,
   iotDevices,
   isNotNull,
+  isNotPersonalOrgSql,
   macros,
   organizationMembers,
+  organizations,
   profiles,
   protocols,
   resourceGrants,
@@ -23,6 +25,7 @@ import {
 import type { AnyColumn, DbOrTx, SQL, Transaction } from "@repo/database";
 
 import { AppError } from "../../common/utils/fp-utils";
+import type { ResourceRef } from "./models/sharing.model";
 
 /** Whether a grant role staffs a resource (confers full control). */
 function isStaffingRole(role: string): boolean {
@@ -469,9 +472,7 @@ export type StaffingTarget =
   | { by: "grant"; grantId: string }
   | { by: "grantee"; granteeType: SharingGranteeType; granteeId: string };
 
-export interface StaffingGuardedWrite {
-  resourceType: SharingResourceType;
-  resourceId: string;
+export interface StaffingGuardedWrite extends ResourceRef {
   target: StaffingTarget;
   /** The role the grant will carry afterwards; `null` for a revoke. */
   nextRole: string | null;
@@ -654,6 +655,91 @@ function blockingResourcesQuery(userId: string) {
   `;
 }
 
+/** One row of the sole-owner organization queries below. */
+export type BlockingOrganizationRow = Record<string, unknown> & {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+/**
+ * `organizations.id`, written out rather than interpolated: whether drizzle
+ * table-qualifies a column depends on the surrounding query's shape, and an
+ * unqualified `"id"` binds to the correlated subquery's own table instead.
+ */
+const ORGANIZATION_ID = sql`${sql.identifier("organizations")}.${sql.identifier("id")}`;
+
+/**
+ * Organizations whose only living owner is `userId` — the ones this deletion would
+ * leave with nobody answerable for them.
+ *
+ * Personal organizations are excluded and must be: everyone permanently solely owns
+ * their own, so counting them would block every account deletion on the platform.
+ * Fires whether or not the organization owns anything, and on owners only — one left
+ * with admins alone could never grant the owner role again.
+ */
+function blockingOrganizationsQuery(userId: string) {
+  return sql`
+    SELECT ${ORGANIZATION_ID} AS "id",
+           ${sql.identifier("organizations")}.${sql.identifier("name")} AS "name",
+           ${sql.identifier("organizations")}.${sql.identifier("slug")} AS "slug"
+    FROM ${organizations}
+    WHERE ${isNotPersonalOrgSql()}
+      AND (SELECT count(*) FROM (${livingOrgOwnerIdsSql(ORGANIZATION_ID)}) o) = 1
+      AND EXISTS (
+            SELECT 1 FROM (${livingOrgOwnerIdsSql(ORGANIZATION_ID)}) o
+            WHERE o."user_id" = ${userId}
+          )
+    ORDER BY ${sql.identifier("organizations")}.${sql.identifier("name")}, ${ORGANIZATION_ID}
+  `;
+}
+
+/**
+ * The predicate without locks: the pre-flight read behind the dialog's list. Raceable,
+ * so the deletion itself uses {@link lockAndFindBlockingOrganizations}.
+ */
+export async function findBlockingOrganizations(
+  tx: DbOrTx,
+  userId: string,
+): Promise<BlockingOrganizationRow[]> {
+  return tx.execute<BlockingOrganizationRow>(blockingOrganizationsQuery(userId));
+}
+
+/**
+ * Claim the owner rows of every organization `userId` owns — the anchor both deletion
+ * blockers and resource creation serialize on. Fixed order, because two deletions with
+ * overlapping sets would otherwise take them in opposite orders and deadlock.
+ */
+async function lockOwnedOrganizations(tx: Transaction, userId: string): Promise<void> {
+  const ownedOrgs = await tx
+    .selectDistinct({ organizationId: organizationMembers.organizationId })
+    .from(organizationMembers)
+    .where(
+      and(
+        eq(organizationMembers.userId, userId),
+        orgRoleIsOwnerSql(sql`${organizationMembers.role}`),
+      ),
+    )
+    .orderBy(organizationMembers.organizationId);
+
+  for (const { organizationId } of ownedOrgs) {
+    await lockOrgOwnerships(tx, organizationId);
+  }
+}
+
+/**
+ * Locks those rows, then answers. Must run in a transaction. Without the lock two
+ * co-owners deleting at once would each see the other living and both commit, leaving
+ * the organization with no owner at all.
+ */
+export async function lockAndFindBlockingOrganizations(
+  tx: Transaction,
+  userId: string,
+): Promise<BlockingOrganizationRow[]> {
+  await lockOwnedOrganizations(tx, userId);
+  return tx.execute<BlockingOrganizationRow>(blockingOrganizationsQuery(userId));
+}
+
 /**
  * Everything the sole-admin question has to lock before it decides: the resources
  * either prong could name. Locking these serializes the decision against a
@@ -714,20 +800,7 @@ export async function lockAndFindBlockingResources(
   // 1. Owner-membership rows of every org this user owns, in a fixed order. Grant
   //    rows cannot anchor this — a resource owned outright has none. Creation takes
   //    the same lock, which orders this against an in-flight create.
-  const ownedOrgs = await tx
-    .selectDistinct({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        orgRoleIsOwnerSql(sql`${organizationMembers.role}`),
-      ),
-    )
-    .orderBy(organizationMembers.organizationId);
-
-  for (const { organizationId } of ownedOrgs) {
-    await lockOrgOwnerships(tx, organizationId);
-  }
+  await lockOwnedOrganizations(tx, userId);
 
   // A grant-write caller claims its concrete resource here, preserving the global
   // organization → resource → grants order. Account deletion has no resource
