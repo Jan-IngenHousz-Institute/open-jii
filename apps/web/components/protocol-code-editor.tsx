@@ -33,8 +33,8 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 interface ProtocolCodeEditorProps {
-  // Anything JSON-serializable: a protocol's shape is device-defined. Raw text
-  // while the user is mid-keystroke arrives through `onChange` as a string.
+  // Anything JSON-serializable: a protocol's shape is device-defined. Parsed
+  // documents leave through `onChange`; unparseable text arrives as undefined.
   value: unknown;
   onChange: (value: JsonValue | undefined) => void;
   onValidationChange?: (isValid: boolean) => void;
@@ -190,12 +190,9 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       // Always set valid in warning mode, or when validation passes
       onValidationChangeRef.current?.(true);
 
-      // Return parsed value
-      if (Array.isArray(parsedValue)) {
-        onChangeRef.current(parsedValue as JsonValue);
-      } else {
-        onChangeRef.current(debouncedEditorCode);
-      }
+      // Emit the parsed document for every valid JSON, not only arrays:
+      // handing back the raw string would store it double-encoded (OJD-1711).
+      onChangeRef.current(parsedValue as JsonValue);
     } catch {
       setIsValidJson(false);
       setValidationWarnings(["Invalid JSON syntax"]);

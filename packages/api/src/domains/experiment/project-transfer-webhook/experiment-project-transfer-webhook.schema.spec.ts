@@ -142,7 +142,7 @@ describe("zExperimentProjectTransferWebhookPayload", () => {
     expect(() => zExperimentProjectTransferWebhookPayload.parse(payload)).toThrow();
   });
 
-  it("should reject empty protocol code array", () => {
+  it("accepts an empty protocol code array", () => {
     const payload = {
       ...validPayload,
       protocol: { ...validPayload.protocol, code: [] },

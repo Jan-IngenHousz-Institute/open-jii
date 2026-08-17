@@ -59,6 +59,15 @@ function resolveSensorFamily(_cells: WorkbookCell[]): SensorFamily {
   return "multispeq";
 }
 
+// Only an array of protocol-set records can run on a device; an array holding
+// scalars or nested arrays (e.g. from another family) has nothing to run here.
+function isRunnableCode(code: unknown): code is Record<string, unknown>[] {
+  return (
+    Array.isArray(code) &&
+    code.every((item) => typeof item === "object" && item !== null && !Array.isArray(item))
+  );
+}
+
 async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unknown>[] | null> {
   // Prefer the live editor code so the device runs exactly what is on screen,
   // with no redundant backend round-trip. Fall back to the last saved version
@@ -71,7 +80,7 @@ async function getProtocolCode(cell: ProtocolCell): Promise<Record<string, unkno
     // Only MultispeQ-style arrays can run on a device; a non-array document
     // from another family has nothing to run here.
     const code = result.code;
-    return Array.isArray(code) && code.length > 0 ? (code as Record<string, unknown>[]) : null;
+    return isRunnableCode(code) && code.length > 0 ? code : null;
   } catch {
     return null;
   }

@@ -187,6 +187,44 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.error.message).toContain("Failed to create protocol");
     });
 
+    it("should fail when MultispeQ protocol code is not an array", async () => {
+      // This flow bypasses the protocol controller's validateProtocolCode, so
+      // the use case itself must refuse a code the device can't execute.
+      const createSpy = vi.spyOn(ProtocolRepository.prototype, "create");
+      const payload = buildPayload({
+        protocol: {
+          name: "Non-array MultispeQ code",
+          code: { not: "an array" },
+          family: "multispeq",
+          createdBy: testUserId,
+        },
+      });
+
+      const result = await useCase.execute(payload);
+
+      expect(result.isFailure()).toBe(true);
+      assertFailure(result);
+      expect(result.error.message).toContain("MultispeQ protocol code must be an array");
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should accept non-array protocol code for other families", async () => {
+      const payload = buildPayload({
+        protocol: {
+          name: "Generic document code",
+          code: { some: "document" },
+          family: "generic",
+          createdBy: testUserId,
+        },
+      });
+
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(result.value.protocolId).toBeDefined();
+      expect(result.value.protocolId).not.toBeNull();
+    });
+
     it("should fail when macro creation fails", async () => {
       vi.spyOn(MacroRepository.prototype, "create").mockResolvedValue(
         failure(AppError.internal("DB error")),

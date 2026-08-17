@@ -212,6 +212,14 @@ describe("Protocol Schema", () => {
       expect(() => zCreateProtocolRequestBody.parse({ name: "X", family: "multispeq" })).toThrow();
     });
 
+    it("accepts a string code at schema level", () => {
+      // zJsonValue includes strings, so this parses — but the backend write
+      // path (validateJsonStructure in the protocol controller) rejects
+      // strings so new rows can't be stored double-encoded (OJD-1711).
+      const str = { name: "X", code: '[{"step":1}]', family: "multispeq" };
+      expect(zCreateProtocolRequestBody.parse(str)).toEqual(str);
+    });
+
     it("rejects invalid family", () => {
       const bad = { name: "X", code: [], family: "weird" };
       expect(() => zCreateProtocolRequestBody.parse(bad)).toThrow();

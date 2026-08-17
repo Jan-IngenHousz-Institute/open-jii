@@ -107,7 +107,7 @@ export function ProtocolDetailsCard({
   // The on-device runner only understands MultispeQ-style arrays; a non-array
   // document (raw text mid-keystroke, or another family's shape) can't run.
   const watchedCode = form.watch("code");
-  const runnerCode = (Array.isArray(watchedCode) ? watchedCode : [{}]) as Record<string, unknown>[];
+  const runnerCode = (Array.isArray(watchedCode) ? watchedCode : []) as Record<string, unknown>[];
 
   return (
     <Form {...form}>

@@ -30,7 +30,9 @@ import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
 
 export function parseProtocolCode(code: unknown, logger: Logger): JsonValue {
-  if (!code) {
+  // Only an absent value falls back: 0, false, and "" are valid JSON
+  // documents under the widened contract and must pass through.
+  if (code === null || code === undefined) {
     return [{}];
   }
 
@@ -54,8 +56,14 @@ export function parseProtocolCode(code: unknown, logger: Logger): JsonValue {
 }
 
 function validateJsonStructure(code: unknown, logger: Logger) {
-  if (!code) {
+  if (code === null || code === undefined) {
     return failure(AppError.badRequest("Protocol code is required"));
+  }
+
+  // A string here is a serialized document; storing it would reintroduce the
+  // double-encoding this path was fixed for (OJD-1711).
+  if (typeof code === "string") {
+    return failure(AppError.badRequest("Protocol code must be a JSON document, not a string"));
   }
 
   try {
