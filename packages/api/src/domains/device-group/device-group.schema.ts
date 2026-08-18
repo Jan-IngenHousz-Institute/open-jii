@@ -44,6 +44,30 @@ export const zDeviceGroupMember = z.object({
 
 export const zDeviceGroupMemberList = z.array(zDeviceGroupMember);
 
+/**
+ * Health facts for one member. Verdicts (silent, X-of-Y rollups) are computed
+ * client-side from these facts, with the same policy as the device page.
+ */
+export const zDeviceGroupMemberHealth = z.object({
+  deviceId: z.string().uuid(),
+  name: z.string().nullable(),
+  serialNumber: z.string(),
+  deviceType: zDeviceType,
+  connectivity: z
+    .object({
+      connected: z.boolean(),
+      lastSeenAt: z.string().datetime().nullable(),
+    })
+    .nullable(),
+  lastDataAt: z.string().datetime().nullable(),
+});
+
+export const zDeviceGroupMonitoring = z.object({
+  members: z.array(zDeviceGroupMemberHealth),
+  // Last-data lookup failed: facts degrade to unknown, never to "silent".
+  pipelineUnavailable: z.boolean(),
+});
+
 export const zCreateDeviceGroupBody = z.object({
   name: z.string().trim().min(1).max(255),
   description: z.string().max(2000).optional(),
@@ -74,5 +98,7 @@ export type DeviceGroup = z.infer<typeof zDeviceGroup>;
 export type DeviceGroupListItem = z.infer<typeof zDeviceGroupListItem>;
 export type DeviceGroupDetail = z.infer<typeof zDeviceGroupDetail>;
 export type DeviceGroupMember = z.infer<typeof zDeviceGroupMember>;
+export type DeviceGroupMemberHealth = z.infer<typeof zDeviceGroupMemberHealth>;
+export type DeviceGroupMonitoring = z.infer<typeof zDeviceGroupMonitoring>;
 export type CreateDeviceGroupBody = z.infer<typeof zCreateDeviceGroupBody>;
 export type UpdateDeviceGroupBody = z.infer<typeof zUpdateDeviceGroupBody>;
