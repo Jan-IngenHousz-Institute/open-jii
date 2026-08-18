@@ -142,7 +142,7 @@ export function GroupOnboardingContent() {
 
     return (
       <li key={member.deviceId}>
-        <Label className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 font-normal">
+        <Label className="hover:bg-muted/30 flex cursor-pointer items-center gap-3 px-3 py-2.5 font-normal">
           <Checkbox
             checked={eligibleMember && !deselectedIds.has(member.deviceId)}
             disabled={!eligibleMember}
@@ -179,66 +179,74 @@ export function GroupOnboardingContent() {
           <CardTitle className="text-base">{t("iot.groups.onboarding.title")}</CardTitle>
           <CardDescription>{t("iot.groups.onboarding.description")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t("iot.groups.onboarding.experimentsLabel")}</p>
-            {experiments.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                {t("iot.groups.onboarding.noExperiments")}
-              </p>
-            ) : (
-              <ul className="max-h-56 space-y-1 overflow-y-auto">
-                {experiments.map((experiment) => (
-                  <DeviceSelectableExperimentRow
-                    key={experiment.id}
-                    experiment={experiment}
-                    isSelected={experimentIds.includes(experiment.id)}
-                    onToggle={handleExperimentToggle}
-                  />
-                ))}
-              </ul>
-            )}
-            <p className="text-muted-foreground text-xs">
-              {t("iot.groups.onboarding.reissueHint")}
+        <CardContent className="space-y-2">
+          {experiments.length === 0 ? (
+            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+              {t("iot.groups.onboarding.noExperiments")}
             </p>
-          </div>
+          ) : (
+            <ul className="divide-y rounded-lg border">
+              {experiments.map((experiment) => (
+                <DeviceSelectableExperimentRow
+                  key={experiment.id}
+                  experiment={experiment}
+                  isSelected={experimentIds.includes(experiment.id)}
+                  onToggle={handleExperimentToggle}
+                />
+              ))}
+            </ul>
+          )}
+          <p className="text-muted-foreground text-xs">{t("iot.groups.onboarding.reissueHint")}</p>
+        </CardContent>
+      </Card>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">
-              {t("iot.groups.onboarding.devicesLabel", {
+      <Card className="shadow-none">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            {t("iot.groups.onboarding.devicesTitle")}
+            <Badge variant="secondary">
+              {t("iot.groups.onboarding.devicesSelected", {
                 selected: selectedIds.length,
                 total: members.length,
               })}
+            </Badge>
+          </CardTitle>
+          <CardDescription>{t("iot.groups.onboarding.devicesDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {members.length === 0 ? (
+            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+              {t("iot.groups.noMembers")}
             </p>
-            {members.length === 0 ? (
-              <p className="text-muted-foreground text-sm">{t("iot.groups.noMembers")}</p>
-            ) : (
-              <ul className="max-h-72 space-y-1 overflow-y-auto">{members.map(renderMemberRow)}</ul>
-            )}
-          </div>
+          ) : (
+            <ul className="divide-y rounded-lg border">{members.map(renderMemberRow)}</ul>
+          )}
 
-          <div className="flex items-center gap-2">
-            <Switch
-              id="group-include-workbook"
-              checked={includeWorkbook}
-              onCheckedChange={setIncludeWorkbook}
-            />
-            <Label htmlFor="group-include-workbook" className="text-sm font-normal">
-              {t("iot.onboarding.includeWorkbook")}
-            </Label>
-          </div>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="group-include-workbook"
+                checked={includeWorkbook}
+                onCheckedChange={setIncludeWorkbook}
+              />
+              <Label htmlFor="group-include-workbook" className="text-sm font-normal">
+                {t("iot.onboarding.includeWorkbook")}
+              </Label>
+            </div>
 
-          <Button
-            onClick={handleOnboard}
-            disabled={selectedIds.length === 0 || onboardGroup.isPending}
-          >
-            {onboardGroup.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <Rocket className="mr-2 h-4 w-4" aria-hidden />
-            )}
-            {t("iot.groups.onboarding.onboard", { count: selectedIds.length })}
-          </Button>
+            <Button
+              className="w-fit"
+              onClick={handleOnboard}
+              disabled={selectedIds.length === 0 || onboardGroup.isPending}
+            >
+              {onboardGroup.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Rocket className="mr-2 h-4 w-4" aria-hidden />
+              )}
+              {t("iot.groups.onboarding.onboard", { count: selectedIds.length })}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

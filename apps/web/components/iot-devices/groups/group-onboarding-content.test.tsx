@@ -50,7 +50,7 @@ describe("GroupOnboardingContent", () => {
 
     expect(await screen.findByText("Gateway")).toBeInTheDocument();
     // 1 of 3: only the active non-phone counts as selected.
-    expect(screen.getByText("iot.groups.onboarding.devicesLabel")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.onboarding.devicesSelected")).toBeInTheDocument();
     expect(screen.getByText("iot.groups.onboarding.inactiveIneligible")).toBeInTheDocument();
     expect(screen.getByText("iot.groups.onboarding.mobileIneligible")).toBeInTheDocument();
     expect(

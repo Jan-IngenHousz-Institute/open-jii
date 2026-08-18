@@ -10,6 +10,9 @@ const nextConfig = {
   transpilePackages: [
     "@repo/api",
     "@repo/auth",
+    // Locale JSON loads through this package; transpiling it makes the dev
+    // server watch the files, so new i18n keys stop needing a restart.
+    "@repo/i18n",
     "@repo/iot",
     "@repo/ui",
     "@repo/cms",
