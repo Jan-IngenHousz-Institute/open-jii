@@ -35,6 +35,24 @@ describe("VariantSchema.topLevelFieldNames", () => {
     expect(VariantSchema.topLevelFieldNames("OBJECT<`my field`: STRING>")).toEqual(["my field"]);
   });
 
+  it("unescapes doubled backticks inside a quoted field name", () => {
+    // Truncating at the first backtick yields "a", and a dialect that then
+    // addresses the field by that name extracts a key that doesn't exist.
+    expect(VariantSchema.topLevelFieldNames("OBJECT<`a``b`: DOUBLE>")).toEqual(["a`b"]);
+    expect(VariantSchema.topLevelFields("OBJECT<`a``b`: DOUBLE>")).toEqual([
+      { name: "a`b", type: "DOUBLE" },
+    ]);
+  });
+
+  it("keeps the quote state balanced across doubled backticks", () => {
+    // An unbalanced toggle leaves the rest of the string "quoted", so the
+    // top-level comma stops splitting and both fields collapse into one.
+    expect(VariantSchema.topLevelFieldNames("OBJECT<`a``b`: DOUBLE, plain: STRING>")).toEqual([
+      "a`b",
+      "plain",
+    ]);
+  });
+
   it("returns [] for inputs that aren't OBJECT<...>/STRUCT<...>", () => {
     expect(VariantSchema.topLevelFieldNames("INT")).toEqual([]);
     expect(VariantSchema.topLevelFieldNames("")).toEqual([]);

@@ -45,8 +45,13 @@ export class VariantSchema {
     let start = 0;
     for (let i = 0; i < s.length; i++) {
       const c = s[i];
-      const isQuoteToggle = c === "`";
-      if (isQuoteToggle) {
+      if (c === "`") {
+        // A doubled backtick is an escaped literal inside a quoted name, not
+        // a quote toggle; consuming both keeps the quote state balanced.
+        if (inQuotes && s[i + 1] === "`") {
+          i++;
+          continue;
+        }
         inQuotes = !inQuotes;
         continue;
       }
@@ -70,19 +75,43 @@ export class VariantSchema {
     const trimmed = segment.trim();
     if (trimmed.length === 0) return "";
     if (trimmed.startsWith("`")) {
-      const end = trimmed.indexOf("`", 1);
-      return end > 0 ? trimmed.slice(1, end) : trimmed.slice(1);
+      return VariantSchema.readQuotedName(trimmed).name;
     }
     const colon = trimmed.indexOf(":");
     return colon >= 0 ? trimmed.slice(0, colon).trim() : trimmed;
   }
 
+  /**
+   * Read a backticked name, unescaping doubled backticks, and report where it
+   * ended. Stopping at the first backtick would truncate `` `a``b` `` to "a",
+   * and dialects that address the field by that parsed name then extract a
+   * key that does not exist — an all-null column, with no error.
+   */
+  private static readQuotedName(segment: string): { name: string; endIndex: number } {
+    let name = "";
+    let i = 1;
+    while (i < segment.length) {
+      if (segment[i] === "`") {
+        if (segment[i + 1] === "`") {
+          name += "`";
+          i += 2;
+          continue;
+        }
+        return { name, endIndex: i };
+      }
+      name += segment[i];
+      i++;
+    }
+    return { name, endIndex: segment.length };
+  }
+
   /** Pull the DDL type from a `name: TYPE` segment; empty when absent. */
   private static extractType(segment: string): string {
     const trimmed = segment.trim();
-    // For backticked names the type colon is the first one after the
-    // closing backtick; bare names can't contain ":".
-    const start = trimmed.startsWith("`") ? trimmed.indexOf("`", 1) + 1 : 0;
+    // For backticked names the type colon is the first one after the closing
+    // backtick, which doubled backticks push rightwards; bare names can't
+    // contain ":".
+    const start = trimmed.startsWith("`") ? VariantSchema.readQuotedName(trimmed).endIndex + 1 : 0;
     const colon = trimmed.indexOf(":", start);
     return colon >= 0 ? trimmed.slice(colon + 1).trim() : "";
   }
