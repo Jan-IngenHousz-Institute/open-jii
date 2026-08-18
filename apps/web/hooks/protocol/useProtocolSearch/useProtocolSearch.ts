@@ -1,7 +1,7 @@
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 
-import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolList } from "@repo/api/domains/protocol/protocol.schema";
 
 /**
  * Hook to fetch a list of protocols with optional search functionality
@@ -10,7 +10,7 @@ import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
  */
 
 interface useProtocolSearchResult {
-  protocols: Protocol[] | undefined;
+  protocols: ProtocolList | undefined;
   isLoading: boolean;
   error: unknown;
 }

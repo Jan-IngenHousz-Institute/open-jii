@@ -40,6 +40,22 @@ const tsvector = customType<{ data: string }>({
   },
 });
 
+// postgres-js already parses jsonb values. Drizzle's built-in jsonb column
+// parses string driver values a second time, which corrupts valid string
+// documents such as "[1,2]" into arrays. Keep the normal write serialization,
+// but trust this repository's sole driver on reads.
+const postgresJsJsonb = customType<{ data: unknown; driverData: unknown }>({
+  dataType() {
+    return "jsonb";
+  },
+  toDriver(value) {
+    return JSON.stringify(value);
+  },
+  fromDriver(value) {
+    return value;
+  },
+});
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
@@ -459,7 +475,7 @@ export const protocols = pgTable("protocols", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   description: text("description"),
-  code: jsonb("code").notNull(),
+  code: postgresJsJsonb("code").notNull(),
   family: sensorFamilyEnum("family").notNull(),
   sortOrder: integer("sort_order"),
   createdBy: uuid("created_by")

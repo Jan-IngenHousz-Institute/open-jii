@@ -143,6 +143,21 @@ describe("useMeasurementCapture", () => {
     expect(mocks.flowState.nextStep).toHaveBeenCalledOnce();
   });
 
+  it("does not dispatch a non-array protocol document to the scanner", async () => {
+    const content: MeasurementContent = {
+      protocolId: "string-protocol",
+      protocol: { code: "device-defined source", name: "String protocol" },
+    };
+    const { result } = renderHook(() => useMeasurementCapture(content, "measurement-cell"));
+
+    await act(async () => result.current.startScan());
+
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "measurementFlow:measurementNode.toast.protocolUnavailable",
+    );
+    expect(mocks.executeScanAll).not.toHaveBeenCalled();
+  });
+
   it("resolves each dispatch target independently and preserves payload provenance", async () => {
     mocks.devices = [DEVICE_A, DEVICE_B, DEVICE_C, DEVICE_D, DEVICE_E];
     mocks.refetchConnectedDevices.mockResolvedValue({ data: mocks.devices });

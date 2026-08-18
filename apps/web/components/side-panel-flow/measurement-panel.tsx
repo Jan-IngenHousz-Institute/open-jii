@@ -4,7 +4,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useState } from "react";
 import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 
-import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
@@ -29,7 +29,7 @@ export function MeasurementPanel({
   const { protocols: protocolList, isLoading: isFetchingProtocols } =
     useProtocolSearch(debouncedProtocolSearch);
 
-  const availableProtocols: Protocol[] = protocolList ?? [];
+  const availableProtocols: ProtocolListItem[] = protocolList ?? [];
 
   const handleAddProtocol = (protocolId: string) => {
     if (disabled) return;

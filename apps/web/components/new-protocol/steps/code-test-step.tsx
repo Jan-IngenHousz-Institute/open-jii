@@ -3,25 +3,24 @@
 import { CodeTesterLayout } from "@/components/shared/code-tester-layout";
 import type { ComponentType } from "react";
 
-import type {
-  CreateProtocolRequestBody,
-  SensorFamily,
-} from "@repo/api/domains/protocol/protocol.schema";
+import type { JsonValue, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { zCreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { FormField } from "@repo/ui/components/form";
 import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
+import type { NewProtocolFormValues } from "../new-protocol-form-values";
+
 // Validation schema for step 2 — code only
 export const codeSchema = zCreateProtocolRequestBody.pick({ code: true });
 
-interface CodeTestStepProps extends WizardStepProps<CreateProtocolRequestBody> {
+interface CodeTestStepProps extends WizardStepProps<NewProtocolFormValues> {
   browserSupport: { bluetooth: boolean; serial: boolean; any: boolean };
   setIsCodeValid: (v: boolean) => void;
   ProtocolCodeEditor: ComponentType<{
-    value: Record<string, unknown>[];
-    onChange: (v: Record<string, unknown>[] | string | undefined) => void;
+    value: unknown;
+    onChange: (v: JsonValue | undefined) => void;
     onValidationChange: (v: boolean) => void;
     label: string;
     placeholder: string;
@@ -30,7 +29,7 @@ interface CodeTestStepProps extends WizardStepProps<CreateProtocolRequestBody> {
     borderless: boolean;
   }>;
   IotProtocolRunner: ComponentType<{
-    protocolCode: Record<string, unknown>[];
+    protocolCode: unknown;
     sensorFamily: SensorFamily;
     layout: "horizontal" | "vertical";
   }>;
@@ -49,6 +48,8 @@ export function CodeTestStep({
   IotProtocolRunner,
 }: CodeTestStepProps) {
   const { t } = useTranslation();
+
+  const watchedCode = form.watch("code");
 
   const codeEditorContent = (
     <FormField
@@ -78,7 +79,7 @@ export function CodeTestStep({
         codePanel={codeEditorContent}
         testerPanel={
           <IotProtocolRunner
-            protocolCode={form.watch("code")}
+            protocolCode={watchedCode}
             sensorFamily={form.watch("family")}
             layout="vertical"
           />

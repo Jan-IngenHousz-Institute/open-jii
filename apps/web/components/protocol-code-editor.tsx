@@ -21,6 +21,7 @@ import {
   getErrorMessage,
   validateProtocolJson,
 } from "@repo/api/domains/protocol/protocol-validator";
+import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";
 import {
@@ -32,8 +33,10 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 interface ProtocolCodeEditorProps {
-  value: Record<string, unknown>[] | string;
-  onChange: (value: Record<string, unknown>[] | string | undefined) => void;
+  // Anything JSON-serializable: a protocol's shape is device-defined. Parsed
+  // documents leave through `onChange`; unparseable text arrives as undefined.
+  value: unknown;
+  onChange: (value: JsonValue | undefined) => void;
   onValidationChange?: (isValid: boolean) => void;
   label: string;
   placeholder?: string;
@@ -111,8 +114,9 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
     useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING) ??
     FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING];
 
-  // Convert array to JSON string for editor if needed
-  const initialEditorValue = typeof value === "string" ? value : formatJson(value, { style });
+  // Props are stored JSON values, so even a string document is serialized with
+  // quotes. Raw mid-typing text lives in editorCode and is never re-serialized.
+  const initialEditorValue = formatJson(value, { style });
 
   // Initialize editor code from props only once. This must happen on the very
   // first effect flush: `onChange` feeds back into `value`, so a deferred seed
@@ -157,10 +161,16 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const stats = getJsonStats();
 
   useEffect(() => {
+    // Not seeded yet (debounce window after mount): nothing to report — an
+    // "invalid" verdict here would flash red on every open before text exists.
+    if (debouncedEditorCode === undefined) return;
+
+    // Seeded but empty: the user cleared the editor. Report no value and
+    // invalid, so a cleared editor can never silently persist "".
     if (!debouncedEditorCode) {
-      onChangeRef.current(debouncedEditorCode);
-      setIsValidJson(true);
-      onValidationChangeRef.current?.(true);
+      onChangeRef.current(undefined);
+      setIsValidJson(false);
+      onValidationChangeRef.current?.(false);
       return;
     }
 
@@ -187,12 +197,9 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       // Always set valid in warning mode, or when validation passes
       onValidationChangeRef.current?.(true);
 
-      // Return parsed value
-      if (Array.isArray(parsedValue)) {
-        onChangeRef.current(parsedValue as Record<string, unknown>[]);
-      } else {
-        onChangeRef.current(debouncedEditorCode);
-      }
+      // Emit the parsed document for every valid JSON, including string values.
+      // Emitting the editor source instead would add another encoding layer.
+      onChangeRef.current(parsedValue as JsonValue);
     } catch {
       setIsValidJson(false);
       setValidationWarnings(["Invalid JSON syntax"]);

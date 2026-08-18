@@ -1,6 +1,6 @@
 {
-  "id": "5bf8f94e-4f48-49b7-9821-1f1f5b2fe6c2",
-  "prevId": "c449c845-e14c-44e8-90ec-75a0fbcd26ee",
+  "id": "eebeda37-bc65-490a-9685-dcc18dda901a",
+  "prevId": "5bf8f94e-4f48-49b7-9821-1f1f5b2fe6c2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3592,7 +3592,8 @@
         "ambyte",
         "minipar",
         "generic",
-        "ambit"
+        "ambit",
+        "mobile"
       ]
     },
     "public.visibility": {
