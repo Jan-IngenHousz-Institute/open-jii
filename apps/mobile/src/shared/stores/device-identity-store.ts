@@ -83,7 +83,7 @@ export const useDeviceIdentityStore = create<
             // minted: refusing to load would hold the gate shut and brick
             // publishing, which is worse than a possible identity fork.
             log.error("Device identity rehydration failed; starting empty", {
-              error: error instanceof Error ? error.message : String(error),
+              error: error instanceof Error ? error.message : JSON.stringify(error),
             });
           }
           useDeviceIdentityStore.setState({ isLoaded: true });
