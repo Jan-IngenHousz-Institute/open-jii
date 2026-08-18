@@ -396,6 +396,22 @@
         "members": "Devices",
         "created": "Created"
       },
+      "monitoring": {
+        "description": "Fleet health at a glance, aggregated from every member's data.",
+        "rosterTitle": "Members",
+        "rosterHint": "Live state per member; open a row for that device's own dashboard.",
+        "unknownMember": "Unknown device",
+        "silentCount_one": "{{count}} connected but silent",
+        "silentCount_other": "{{count}} connected but silent",
+        "onlineLabel": "Online",
+        "onlineValue": "{{online}} of {{total}}",
+        "unknownLabel": "Unknown",
+        "stateColumn": "State",
+        "lastSeenColumn": "Last seen",
+        "lastDataColumn": "Last data",
+        "noData": "No data yet",
+        "pipelineUnavailable": "The data pipeline is unreachable, so silence cannot be judged."
+      },
       "nameLabel": "Name",
       "namePlaceholder": "e.g. Greenhouse A",
       "noAddableDevices": "All of your devices are already in this group.",
@@ -406,7 +422,6 @@
       "pageTitle": "Device group",
       "comingSoon": {
         "credentials": "Rotate, issue, and revoke credentials for every device in this group at once.",
-        "monitoring": "Group health at a glance: how many devices are online, silent, or missing.",
         "onboarding": "Onboard the whole group onto experiments and download all configs together."
       }
     }

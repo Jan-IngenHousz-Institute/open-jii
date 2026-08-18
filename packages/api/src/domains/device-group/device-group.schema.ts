@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
-import { zIotDeviceStatus, zDeviceType } from "../iot/iot.schema";
+import { zIotDeviceStatus, zDeviceType, zMonitoringBucket } from "../iot/iot.schema";
 
 // Platform-native grouping: groups never mirror to AWS thing groups, whose
 // quota stays reserved for the parked broker-enforcement design.
@@ -62,9 +62,26 @@ export const zDeviceGroupMemberHealth = z.object({
   lastDataAt: z.string().datetime().nullable(),
 });
 
+/** One (bucket, member) measurement count; deviceId null for unmapped rows. */
+export const zDeviceGroupThroughputBucket = z.object({
+  bucketStart: z.string().nullable(),
+  deviceId: z.string().uuid().nullable(),
+  count: z.number().int(),
+});
+
+/** A member's broker lifecycle event inside the window. */
+export const zDeviceGroupLifecycleEvent = z.object({
+  deviceId: z.string().uuid().nullable(),
+  eventType: z.string().nullable(),
+  eventTimestamp: z.string().datetime().nullable(),
+  disconnectReason: z.string().nullable(),
+});
+
 export const zDeviceGroupMonitoring = z.object({
   members: z.array(zDeviceGroupMemberHealth),
-  // Last-data lookup failed: facts degrade to unknown, never to "silent".
+  throughput: z.array(zDeviceGroupThroughputBucket),
+  events: z.array(zDeviceGroupLifecycleEvent),
+  // Warehouse lookups failed: facts degrade to unknown, never to "silent".
   pipelineUnavailable: z.boolean(),
 });
 
@@ -94,11 +111,31 @@ export const zRemoveDeviceGroupMemberParams = zDeviceGroupPathParam.extend({
   deviceId: z.string().uuid(),
 });
 
+/** Same window/bucket contract as the device dashboard, group-addressed. */
+export const zDeviceGroupMonitoringQuery = zDeviceGroupPathParam
+  .extend({
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+    bucket: zMonitoringBucket,
+  })
+  .refine((range) => new Date(range.from).getTime() < new Date(range.to).getTime(), {
+    message: "from must be before to",
+    path: ["from"],
+  })
+  // The UI presets top out at 30 days; an unbounded span would let one request
+  // scan and return an arbitrarily large slice of the warehouse.
+  .refine(
+    (range) => new Date(range.to).getTime() - new Date(range.from).getTime() <= 31 * 86_400_000,
+    { message: "range must not exceed 31 days", path: ["to"] },
+  );
+
 export type DeviceGroup = z.infer<typeof zDeviceGroup>;
 export type DeviceGroupListItem = z.infer<typeof zDeviceGroupListItem>;
 export type DeviceGroupDetail = z.infer<typeof zDeviceGroupDetail>;
 export type DeviceGroupMember = z.infer<typeof zDeviceGroupMember>;
 export type DeviceGroupMemberHealth = z.infer<typeof zDeviceGroupMemberHealth>;
 export type DeviceGroupMonitoring = z.infer<typeof zDeviceGroupMonitoring>;
+export type DeviceGroupThroughputBucket = z.infer<typeof zDeviceGroupThroughputBucket>;
+export type DeviceGroupLifecycleEvent = z.infer<typeof zDeviceGroupLifecycleEvent>;
 export type CreateDeviceGroupBody = z.infer<typeof zCreateDeviceGroupBody>;
 export type UpdateDeviceGroupBody = z.infer<typeof zUpdateDeviceGroupBody>;

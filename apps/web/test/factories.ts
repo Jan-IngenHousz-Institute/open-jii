@@ -14,6 +14,7 @@ import type {
   DeviceGroupDetail,
   DeviceGroupListItem,
   DeviceGroupMember,
+  DeviceGroupMemberHealth,
 } from "@repo/api/domains/device-group/device-group.schema";
 import type {
   ExperimentDashboardLayout,
@@ -930,6 +931,20 @@ export function createDeviceGroupDetail(
   return {
     ...createDeviceGroup(),
     capabilities: createCapabilities(),
+    ...overrides,
+  };
+}
+
+export function createDeviceGroupMemberHealth(
+  overrides: Partial<DeviceGroupMemberHealth> = {},
+): DeviceGroupMemberHealth {
+  return {
+    deviceId: crypto.randomUUID(),
+    name: null,
+    serialNumber: "AA:BB:CC:DD",
+    deviceType: "ambyte",
+    connectivity: null,
+    lastDataAt: null,
     ...overrides,
   };
 }

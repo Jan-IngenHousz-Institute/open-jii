@@ -20,6 +20,8 @@ import type {
   DeviceMeasurementRow,
   DevicePayloadBreakdownRow,
   DeviceThroughputRow,
+  GroupLifecycleEventRow,
+  GroupThroughputRow,
 } from "../../../iot/core/ports/databricks.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
@@ -371,6 +373,96 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     return success({
       lastDataAt: firstRow === undefined ? null : this.toIsoOrNull(firstRow[index.last_data_at]),
     });
+  }
+
+  /** Batched last data arrival, keyed by thing name; absent rows mean no data yet. */
+  async getDevicesLastActivity(thingNames: string[]): Promise<Result<Map<string, string | null>>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.device_last_activity`,
+      columns: ["client_id", "last_data_at"],
+      filters: [{ column: "client_id", operator: "in", value: thingNames }],
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    const activity = new Map<string, string | null>();
+    for (const row of rows) {
+      const clientId = row[index.client_id];
+      if (clientId !== null) {
+        activity.set(clientId, this.toIsoOrNull(row[index.last_data_at]));
+      }
+    }
+    return success(activity);
+  }
+
+  /** Batched measurement volume per (bucket, thing) for a group of things. */
+  async getDevicesThroughput(
+    thingNames: string[],
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<GroupThroughputRow[]>> {
+    const bucketAlias = `timestamp_${bucket}`;
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      filters: [
+        { column: "client_id", operator: "in", value: thingNames },
+        { column: "timestamp", operator: "between", value: [from, to] },
+      ],
+      aggregation: {
+        groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "client_id" }],
+        functions: [{ column: "*", function: "count", alias: "measurement_count" }],
+      },
+      orderBy: bucketAlias,
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
+        clientId: row[index.client_id] ?? null,
+        count: Number(row[index.measurement_count] ?? 0),
+      })),
+    );
+  }
+
+  /** Latest lifecycle events across a group of things, newest first. */
+  async getDevicesLifecycleEvents(
+    thingNames: string[],
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<GroupLifecycleEventRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_device_lifecycle_events`,
+      columns: ["client_id", "event_type", "event_timestamp", "disconnect_reason"],
+      filters: [
+        { column: "client_id", operator: "in", value: thingNames },
+        { column: "event_timestamp", operator: "between", value: [from, to] },
+      ],
+      orderBy: "event_timestamp",
+      orderDirection: "DESC",
+      limit,
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        clientId: row[index.client_id] ?? null,
+        eventType: row[index.event_type] ?? null,
+        eventTimestamp: this.toIsoOrNull(row[index.event_timestamp]),
+        disconnectReason: row[index.disconnect_reason] ?? null,
+      })),
+    );
   }
 
   /** Lifecycle events in a range, ascending, capped at `limit`. */

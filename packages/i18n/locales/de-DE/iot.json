@@ -396,6 +396,22 @@
         "members": "Geräte",
         "created": "Erstellt"
       },
+      "monitoring": {
+        "description": "Flottenzustand auf einen Blick, aggregiert über alle Mitglieder.",
+        "rosterTitle": "Mitglieder",
+        "rosterHint": "Live-Status pro Mitglied; eine Zeile öffnet das Dashboard des Geräts.",
+        "unknownMember": "Unbekanntes Gerät",
+        "silentCount_one": "{{count}} verbunden, aber still",
+        "silentCount_other": "{{count}} verbunden, aber still",
+        "onlineLabel": "Online",
+        "onlineValue": "{{online}} von {{total}}",
+        "unknownLabel": "Unbekannt",
+        "stateColumn": "Status",
+        "lastSeenColumn": "Zuletzt gesehen",
+        "lastDataColumn": "Letzte Daten",
+        "noData": "Noch keine Daten",
+        "pipelineUnavailable": "Die Datenpipeline ist nicht erreichbar, Stille kann nicht beurteilt werden."
+      },
       "nameLabel": "Name",
       "namePlaceholder": "z. B. Gewächshaus A",
       "noAddableDevices": "Alle Ihre Geräte sind bereits in dieser Gruppe.",
@@ -406,7 +422,6 @@
       "pageTitle": "Gerätegruppe",
       "comingSoon": {
         "credentials": "Zertifikate für alle Geräte dieser Gruppe gemeinsam ausstellen, rotieren und widerrufen.",
-        "monitoring": "Gruppenstatus auf einen Blick: wie viele Geräte online, still oder abwesend sind.",
         "onboarding": "Die gesamte Gruppe auf Experimente onboarden und alle Konfigurationen gemeinsam herunterladen."
       }
     }

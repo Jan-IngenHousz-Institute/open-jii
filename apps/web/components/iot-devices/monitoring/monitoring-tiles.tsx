@@ -14,10 +14,7 @@ import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import type { MonitoringRange } from "./monitoring-range";
-
-// Beyond this silence, a connected device's tile turns amber: online but not
-// delivering. A fixed threshold until cadence inference exists.
-const SILENT_THRESHOLD_MS = 3_600_000;
+import { SILENT_THRESHOLD_MS } from "./silent-threshold";
 
 interface MonitoringTilesProps {
   device: IotDeviceDetail | undefined;

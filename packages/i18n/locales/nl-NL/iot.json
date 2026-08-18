@@ -396,6 +396,22 @@
         "members": "Apparaten",
         "created": "Aangemaakt"
       },
+      "monitoring": {
+        "description": "Vlootstatus in één oogopslag, samengevoegd uit alle leden.",
+        "rosterTitle": "Leden",
+        "rosterHint": "Live status per lid; open een rij voor het dashboard van dat apparaat.",
+        "unknownMember": "Onbekend apparaat",
+        "silentCount_one": "{{count}} verbonden maar stil",
+        "silentCount_other": "{{count}} verbonden maar stil",
+        "onlineLabel": "Online",
+        "onlineValue": "{{online}} van {{total}}",
+        "unknownLabel": "Onbekend",
+        "stateColumn": "Status",
+        "lastSeenColumn": "Laatst gezien",
+        "lastDataColumn": "Laatste data",
+        "noData": "Nog geen data",
+        "pipelineUnavailable": "De datapipeline is onbereikbaar, dus stilte kan niet worden beoordeeld."
+      },
       "nameLabel": "Naam",
       "namePlaceholder": "bijv. Kas A",
       "noAddableDevices": "Al uw apparaten zitten al in deze groep.",
@@ -406,7 +422,6 @@
       "pageTitle": "Apparaatgroep",
       "comingSoon": {
         "credentials": "Certificaten voor alle apparaten in deze groep tegelijk uitgeven, roteren en intrekken.",
-        "monitoring": "Groepsstatus in één oogopslag: hoeveel apparaten online, stil of afwezig zijn.",
         "onboarding": "De hele groep op experimenten onboarden en alle configuraties samen downloaden."
       }
     }

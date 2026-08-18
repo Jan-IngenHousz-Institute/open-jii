@@ -4,6 +4,21 @@ import type { DeviceLifecycleEventRow } from "../models/device-lifecycle-event.m
 /** Injection token for the IoT Databricks port */
 export const IOT_DATABRICKS_PORT = Symbol("IOT_DATABRICKS_PORT");
 
+/** One (bucket, device) measurement count for a group of things. */
+export interface GroupThroughputRow {
+  bucketStart: string | null;
+  clientId: string | null;
+  count: number;
+}
+
+/** A broker lifecycle event carrying which thing it belongs to. */
+export interface GroupLifecycleEventRow {
+  clientId: string | null;
+  eventType: string | null;
+  eventTimestamp: string | null;
+  disconnectReason: string | null;
+}
+
 /** One time bucket of measurement volume, attributed to an experiment. */
 export interface DeviceThroughputRow {
   bucketStart: string | null;
@@ -61,6 +76,19 @@ export interface DeviceMeasurementRow {
  */
 export interface DatabricksPort {
   getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>>;
+  getDevicesLastActivity(thingNames: string[]): Promise<Result<Map<string, string | null>>>;
+  getDevicesThroughput(
+    thingNames: string[],
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<GroupThroughputRow[]>>;
+  getDevicesLifecycleEvents(
+    thingNames: string[],
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<GroupLifecycleEventRow[]>>;
   getDeviceLifecycleEvents(
     thingName: string,
     from: string,

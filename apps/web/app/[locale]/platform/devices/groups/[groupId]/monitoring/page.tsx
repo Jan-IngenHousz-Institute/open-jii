@@ -1,4 +1,4 @@
-import { GroupComingSoon } from "@/components/iot-devices/groups/group-coming-soon";
+import { GroupMonitoringContent } from "@/components/iot-devices/groups/group-monitoring-content";
 import { buildDeviceGroupMetadata } from "@/lib/platform-metadata";
 import { safeMetadata } from "@/lib/safe-metadata";
 import type { Metadata } from "next";
@@ -15,5 +15,5 @@ export function generateMetadata({ params }: PageProps): Promise<Metadata> {
 }
 
 export default function DeviceGroupMonitoringPage() {
-  return <GroupComingSoon section="monitoring" />;
+  return <GroupMonitoringContent />;
 }
