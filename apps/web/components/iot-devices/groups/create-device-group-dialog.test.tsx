@@ -32,6 +32,6 @@ describe("CreateDeviceGroupDialog", () => {
     });
     // An untouched description stays absent instead of arriving as "".
     expect(create.calls[0].body).toEqual({ name: "Greenhouse A" });
-    expect(push).toHaveBeenCalledWith(`/en-US/platform/device-groups/${group.id}`);
+    expect(push).toHaveBeenCalledWith(`/en-US/platform/devices/groups/${group.id}`);
   });
 });

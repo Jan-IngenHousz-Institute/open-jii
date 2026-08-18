@@ -6,7 +6,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import DeviceGroupsLayout from "../../layout";
 import GroupCollaboratorsContent from "../collaborators/group-collaborators-content";
 import { generateMetadata as collaboratorsMetadata } from "../collaborators/page";
 import DeviceGroupCredentialsPage, {
@@ -84,15 +83,5 @@ describe("device group section pages", () => {
     await expect(monitoringMetadata({ params })).resolves.toEqual({
       title: `monitoring:${GROUP_ID}`,
     });
-  });
-
-  it("wraps every group route in the shared fluid container", () => {
-    render(
-      <DeviceGroupsLayout>
-        <div>Group Route</div>
-      </DeviceGroupsLayout>,
-    );
-
-    expect(screen.getByText("Group Route")).toBeInTheDocument();
   });
 });

@@ -38,13 +38,13 @@ describe("<DeviceGroupLayout />", () => {
     expect(await screen.findByRole("heading", { name: "Greenhouse A" })).toBeInTheDocument();
     expect(screen.getByText("The field fleet.")).toBeInTheDocument();
     expect(tabHref("iot.devices.detailTabs.overview")).toBe(
-      `/en-US/platform/device-groups/${GROUP_ID}`,
+      `/en-US/platform/devices/groups/${GROUP_ID}`,
     );
     expect(tabHref("iot.devices.detailTabs.collaborators")).toBe(
-      `/en-US/platform/device-groups/${GROUP_ID}/collaborators`,
+      `/en-US/platform/devices/groups/${GROUP_ID}/collaborators`,
     );
     expect(tabHref("iot.devices.detailTabs.monitoring")).toBe(
-      `/en-US/platform/device-groups/${GROUP_ID}/monitoring`,
+      `/en-US/platform/devices/groups/${GROUP_ID}/monitoring`,
     );
     expect(screen.getByText("Child Content")).toBeInTheDocument();
   });

@@ -15,7 +15,7 @@ export function GroupCard({ group, locale }: GroupCardProps) {
   const { t } = useTranslation("iot");
 
   return (
-    <Link href={`/${locale}/platform/device-groups/${group.id}`} className="block">
+    <Link href={`/${locale}/platform/devices/groups/${group.id}`} className="block">
       <Card className="hover:border-primary/40 h-full shadow-none transition-colors">
         <CardContent className="space-y-1 p-4">
           <p className="font-medium">{group.name}</p>

@@ -1,8 +1,9 @@
-import { Controller, Logger } from "@nestjs/common";
+import { Controller, Inject, Logger } from "@nestjs/common";
 import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { deviceGroupContract } from "@repo/api/domains/device-group/device-group.contract";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
@@ -10,7 +11,8 @@ import { CanAccess } from "../../authorization/can-access.decorator";
 import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { resolveResourceCapabilities } from "../../authorization/resource-capabilities";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { AppError } from "../../common/utils/fp-utils";
+import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AddIotDeviceGroupMembersUseCase } from "../application/use-cases/add-iot-device-group-members/add-iot-device-group-members";
 import { CreateIotDeviceGroupUseCase } from "../application/use-cases/create-iot-device-group/create-iot-device-group";
 import { DeleteIotDeviceGroupUseCase } from "../application/use-cases/delete-iot-device-group/delete-iot-device-group";
@@ -19,12 +21,17 @@ import { ListIotDeviceGroupMembersUseCase } from "../application/use-cases/list-
 import { ListIotDeviceGroupsUseCase } from "../application/use-cases/list-iot-device-groups/list-iot-device-groups";
 import { RemoveIotDeviceGroupMemberUseCase } from "../application/use-cases/remove-iot-device-group-member/remove-iot-device-group-member";
 import { UpdateIotDeviceGroupUseCase } from "../application/use-cases/update-iot-device-group/update-iot-device-group";
+import { ANALYTICS_PORT } from "../core/ports/analytics.port";
+import type { AnalyticsPort } from "../core/ports/analytics.port";
 
+// Groups ride the same feature flag as the device registry they organize.
 @Controller()
 export class IotDeviceGroupController {
   private readonly logger = new Logger(IotDeviceGroupController.name);
 
   constructor(
+    @Inject(ANALYTICS_PORT)
+    private readonly analyticsPort: AnalyticsPort,
     private readonly createIotDeviceGroupUseCase: CreateIotDeviceGroupUseCase,
     private readonly listIotDeviceGroupsUseCase: ListIotDeviceGroupsUseCase,
     private readonly getIotDeviceGroupUseCase: GetIotDeviceGroupUseCase,
@@ -36,9 +43,26 @@ export class IotDeviceGroupController {
     private readonly authz: AuthorizationService,
   ) {}
 
+  private devicesEnabled(session: UserSession): Promise<boolean> {
+    return this.analyticsPort.isFeatureFlagEnabled(
+      FEATURE_FLAGS.IOT_DEVICES,
+      session.user.email || session.user.id,
+    );
+  }
+
+  private disabled(operation: string): never {
+    return throwOrpcError(
+      AppError.forbidden("The device registry is currently disabled"),
+      this.logger,
+      operation,
+    );
+  }
+
   @Implement(deviceGroupContract.listDeviceGroups)
   listDeviceGroups(@Session() session: UserSession) {
     return implement(deviceGroupContract.listDeviceGroups).handler(async () => {
+      if (!(await this.devicesEnabled(session))) this.disabled("listDeviceGroups");
+
       const result = await this.listIotDeviceGroupsUseCase.execute(session.user.id);
 
       if (result.isSuccess()) {
@@ -53,6 +77,8 @@ export class IotDeviceGroupController {
   @Implement(deviceGroupContract.createDeviceGroup)
   createDeviceGroup(@Session() session: UserSession) {
     return implement(deviceGroupContract.createDeviceGroup).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("createDeviceGroup");
+
       const result = await this.createIotDeviceGroupUseCase.execute(input, session.user.id);
 
       if (result.isSuccess()) {
@@ -67,6 +93,8 @@ export class IotDeviceGroupController {
   @Implement(deviceGroupContract.getDeviceGroup)
   getDeviceGroup(@Session() session: UserSession) {
     return implement(deviceGroupContract.getDeviceGroup).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("getDeviceGroup");
+
       const result = await this.getIotDeviceGroupUseCase.execute(input.groupId);
 
       if (result.isSuccess()) {
@@ -87,6 +115,8 @@ export class IotDeviceGroupController {
   @Implement(deviceGroupContract.updateDeviceGroup)
   updateDeviceGroup(@Session() session: UserSession) {
     return implement(deviceGroupContract.updateDeviceGroup).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("updateDeviceGroup");
+
       const { groupId, ...body } = input;
       const result = await this.updateIotDeviceGroupUseCase.execute(groupId, body, session.user.id);
 
@@ -102,6 +132,8 @@ export class IotDeviceGroupController {
   @Implement(deviceGroupContract.deleteDeviceGroup)
   deleteDeviceGroup(@Session() session: UserSession) {
     return implement(deviceGroupContract.deleteDeviceGroup).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("deleteDeviceGroup");
+
       const result = await this.deleteIotDeviceGroupUseCase.execute(input.groupId, session.user.id);
 
       if (result.isSuccess()) {
@@ -114,8 +146,10 @@ export class IotDeviceGroupController {
 
   @CanAccess({ resource: "device_group", action: "read", param: "groupId" })
   @Implement(deviceGroupContract.listDeviceGroupMembers)
-  listDeviceGroupMembers() {
+  listDeviceGroupMembers(@Session() session: UserSession) {
     return implement(deviceGroupContract.listDeviceGroupMembers).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("listDeviceGroupMembers");
+
       const result = await this.listIotDeviceGroupMembersUseCase.execute(input.groupId);
 
       if (result.isSuccess()) {
@@ -130,6 +164,8 @@ export class IotDeviceGroupController {
   @Implement(deviceGroupContract.addDeviceGroupMembers)
   addDeviceGroupMembers(@Session() session: UserSession) {
     return implement(deviceGroupContract.addDeviceGroupMembers).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("addDeviceGroupMembers");
+
       const result = await this.addIotDeviceGroupMembersUseCase.execute(
         input.groupId,
         input.deviceIds,
@@ -148,6 +184,8 @@ export class IotDeviceGroupController {
   @Implement(deviceGroupContract.removeDeviceGroupMember)
   removeDeviceGroupMember(@Session() session: UserSession) {
     return implement(deviceGroupContract.removeDeviceGroupMember).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("removeDeviceGroupMember");
+
       const result = await this.removeIotDeviceGroupMemberUseCase.execute(
         input.groupId,
         input.deviceId,

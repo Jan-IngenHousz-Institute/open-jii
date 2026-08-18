@@ -39,7 +39,7 @@ export function DeviceGroupDetailTabs({
   const pathname = usePathname();
   const locale = useLocale();
 
-  const basePath = `/${locale}/platform/device-groups/${groupId}`;
+  const basePath = `/${locale}/platform/devices/groups/${groupId}`;
   const tabs = GROUP_TABS.filter((tab) => {
     if (tab.value === "collaborators") return canShare || canLeave;
     if (tab.value === "credentials") return canManage;

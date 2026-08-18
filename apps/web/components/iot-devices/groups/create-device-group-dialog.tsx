@@ -55,7 +55,7 @@ export function CreateDeviceGroupDialog({
     onSuccess: (group) => {
       onOpenChange(false);
       form.reset();
-      router.push(`/${locale}/platform/device-groups/${group.id}`);
+      router.push(`/${locale}/platform/devices/groups/${group.id}`);
     },
   });
 
