@@ -703,18 +703,19 @@ describe("DatabricksAdapter", () => {
           status: { state: "SUCCEEDED" },
           manifest: {
             schema: {
-              column_count: 3,
+              column_count: 4,
               columns: [
                 { name: "export_id", type_name: "string", type_text: "string", position: 0 },
                 { name: "file_path", type_name: "string", type_text: "string", position: 1 },
                 { name: "table_name", type_name: "string", type_text: "string", position: 2 },
+                { name: "completed_at", type_name: "string", type_text: "string", position: 3 },
               ],
             },
             total_row_count: 1,
             truncated: false,
           },
           result: {
-            data_array: [[exportId, filePath, "raw_data"]],
+            data_array: [[exportId, filePath, "raw_data", "2026-01-02 03:04:05"]],
             chunk_index: 0,
             row_count: 1,
             row_offset: 0,
@@ -739,7 +740,60 @@ describe("DatabricksAdapter", () => {
       assertSuccess(result);
       expect(result.value.filePath).toBe(filePath);
       expect(result.value.tableName).toBe("raw_data");
+      expect(result.value.completedAt).toBe("2026-01-02 03:04:05");
       expect(result.value.stream).toBeInstanceOf(Object);
+    });
+
+    it("should return a null completion time when the column is absent", async () => {
+      const exportId = "export-no-completed-at";
+      const experimentId = "exp-456";
+      const filePath = "/volumes/catalog/schema/exports/export-abc/raw_data.csv";
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "stmt-1b",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 3,
+              columns: [
+                { name: "export_id", type_name: "string", type_text: "string", position: 0 },
+                { name: "file_path", type_name: "string", type_text: "string", position: 1 },
+                { name: "table_name", type_name: "string", type_text: "string", position: 2 },
+              ],
+            },
+            total_row_count: 1,
+            truncated: false,
+          },
+          result: {
+            data_array: [[exportId, filePath, "raw_data"]],
+            chunk_index: 0,
+            row_count: 1,
+            row_offset: 0,
+          },
+        });
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(`${DatabricksFilesService.FILES_ENDPOINT}${filePath}`)
+        .reply(200, "csv-content", { "content-type": "text/csv" });
+
+      const result = await databricksAdapter.streamExport(exportId, experimentId);
+
+      assertSuccess(result);
+      expect(result.value.completedAt).toBeNull();
     });
 
     it("should return not found when export does not exist", async () => {
@@ -2156,7 +2210,7 @@ describe("DatabricksAdapter", () => {
               job_parameters: [
                 { name: "EXPERIMENT_ID", value: experimentId },
                 { name: "SOURCE_KIND", value: "csv" },
-                // UPLOAD_ID + USER_ID deliberately omitted — run wasn't triggered by us.
+                // UPLOAD_ID + USER_ID deliberately omitted: run wasn't triggered by us.
               ],
             },
           ],
