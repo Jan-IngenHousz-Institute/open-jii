@@ -326,7 +326,16 @@ class OutboxImpl implements Outbox {
         kind,
         err: (err as Error)?.message,
       });
-      await markAsFailed(id);
+      try {
+        await markAsFailed(id);
+      } catch (dbErr) {
+        // The publish failure is terminal either way; if the status write
+        // fails the row stays "pending" and is retried on the next drain.
+        log.error("terminal publish failure but markAsFailed failed", {
+          id,
+          err: (dbErr as Error)?.message,
+        });
+      }
       this.scheduleSettled({ id, status: "failed" });
       trace?.event("marked_failed", { kind });
       trace?.end("error", { err: (err as Error)?.message, kind });

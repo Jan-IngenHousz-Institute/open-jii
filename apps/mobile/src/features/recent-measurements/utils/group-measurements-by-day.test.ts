@@ -16,6 +16,7 @@ function item(iso: string, key = iso): MeasurementItem {
     questions: [],
     hasComment: false,
     dayKey: iso.split("T")[0],
+    workbookRunId: "",
   };
 }
 
