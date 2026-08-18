@@ -901,6 +901,7 @@ export function resetFactories() {
   dashboardSeq = 0;
   dashboardWidgetSeq = 0;
   grantSeq = 0;
+  deviceGroupSeq = 0;
 }
 
 let deviceGroupSeq = 0;

@@ -1,7 +1,7 @@
 "use client";
 
 import { ResourceCollaboratorsRoute } from "@/components/sharing/resource-collaborators-route";
-import { useDeviceGroup } from "@/hooks/device-groups/use-device-groups";
+import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { use } from "react";
 
 interface GroupCollaboratorsContentProps {
@@ -11,7 +11,7 @@ interface GroupCollaboratorsContentProps {
 /** Group collaborators route; the layout's detail query supplies cached access. */
 export default function GroupCollaboratorsContent({ params }: GroupCollaboratorsContentProps) {
   const { groupId } = use(params);
-  const { data } = useDeviceGroup(groupId);
+  const { data } = useIotDeviceGroup(groupId);
 
   return (
     <ResourceCollaboratorsRoute

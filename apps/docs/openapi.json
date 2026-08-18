@@ -15407,7 +15407,8 @@
                           "ambyte",
                           "minipar",
                           "generic",
-                          "ambit"
+                          "ambit",
+                          "mobile"
                         ],
                         "type": "string"
                       },
@@ -15510,7 +15511,8 @@
                           "ambyte",
                           "minipar",
                           "generic",
-                          "ambit"
+                          "ambit",
+                          "mobile"
                         ],
                         "type": "string"
                       },

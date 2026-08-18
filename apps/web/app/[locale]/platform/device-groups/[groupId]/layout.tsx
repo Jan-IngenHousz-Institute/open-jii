@@ -1,8 +1,8 @@
 "use client";
 
-import { DeviceGroupLayoutContent } from "@/components/device-groups/device-group-layout-content";
+import { DeviceGroupLayoutContent } from "@/components/iot-devices/groups/device-group-layout-content";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
-import { useDeviceGroup } from "@/hooks/device-groups/use-device-groups";
+import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useParams } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
@@ -18,7 +18,7 @@ interface DeviceGroupLayoutProps {
 export default function DeviceGroupLayout({ children }: DeviceGroupLayoutProps) {
   const { groupId } = useParams<{ groupId: string }>();
   const { t } = useTranslation("iot");
-  const { data, isLoading, error } = useDeviceGroup(groupId);
+  const { data, isLoading, error } = useIotDeviceGroup(groupId);
 
   return (
     <EntityLayoutShell

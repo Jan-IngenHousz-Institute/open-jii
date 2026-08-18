@@ -1,4 +1,4 @@
-import { DeviceGroupContent } from "@/components/device-groups/device-group-content";
+import { DeviceGroupContent } from "@/components/iot-devices/groups/device-group-content";
 import { buildDeviceGroupMetadata } from "@/lib/platform-metadata";
 import { safeMetadata } from "@/lib/safe-metadata";
 import type { Metadata } from "next";

@@ -1,4 +1,4 @@
-import { GroupComingSoon } from "@/components/device-groups/group-coming-soon";
+import { GroupComingSoon } from "@/components/iot-devices/groups/group-coming-soon";
 import { buildDeviceGroupMetadata } from "@/lib/platform-metadata";
 import { safeMetadata } from "@/lib/safe-metadata";
 import type { Metadata } from "next";

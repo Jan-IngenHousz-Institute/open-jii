@@ -1,6 +1,6 @@
 "use client";
 
-import { DeviceGroupsView } from "@/components/device-groups/device-groups-view";
+import { DeviceGroupsView } from "@/components/iot-devices/groups/device-groups-view";
 
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
