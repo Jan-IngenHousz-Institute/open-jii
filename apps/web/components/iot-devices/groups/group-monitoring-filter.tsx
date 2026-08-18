@@ -67,6 +67,7 @@ export function GroupMonitoringFilter({
           aria-hidden
         />
         <Input
+          aria-label={t("iot.groups.monitoring.filter.searchPlaceholder")}
           value={filter.search}
           onChange={(event) => {
             onFilterChange({ ...filter, search: event.target.value });

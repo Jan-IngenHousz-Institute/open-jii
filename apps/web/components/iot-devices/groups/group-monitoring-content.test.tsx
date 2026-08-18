@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type { DeviceGroupMonitoring } from "@repo/api/domains/device-group/device-group.schema";
 
 import { GroupMonitoringContent } from "./group-monitoring-content";
 
@@ -18,19 +19,8 @@ const GROUP_ID = "11111111-1111-4111-8111-111111111111";
 
 const STALE = "2026-08-18T00:00:00.000Z";
 
-interface MonitoringBody {
-  members: ReturnType<typeof createDeviceGroupMemberHealth>[];
-  throughput?: { bucketStart: string | null; deviceId: string | null; count: number }[];
-  dataByExperiment?: { bucketStart: string | null; experimentId: string | null; count: number }[];
-  firmware?: { deviceId: string | null; version: string | null; lastSeen: string | null }[];
-  events?: {
-    deviceId: string | null;
-    eventType: string | null;
-    eventTimestamp: string | null;
-    disconnectReason: string | null;
-  }[];
-  pipelineUnavailable?: boolean;
-}
+type MonitoringBody = Pick<DeviceGroupMonitoring, "members"> &
+  Partial<Omit<DeviceGroupMonitoring, "members">>;
 
 function mountMonitoring(body: MonitoringBody) {
   server.mount(contract.experiments.listExperiments, { body: [] });

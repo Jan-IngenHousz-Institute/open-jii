@@ -97,9 +97,14 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           <Skeleton className="h-4 w-16" />
         ) : (
           <div className="space-y-1">
-            <p className="text-lg font-semibold tabular-nums">{total}</p>
+            <p className="text-lg font-semibold tabular-nums">{total.toLocaleString(locale)}</p>
             <p className="text-muted-foreground text-xs font-normal tabular-nums">
-              {t("iot.devices.monitoring.perHour", { rate: perHour.toFixed(1) })}
+              {t("iot.devices.monitoring.perHour", {
+                rate: perHour.toLocaleString(locale, {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                }),
+              })}
             </p>
           </div>
         )}

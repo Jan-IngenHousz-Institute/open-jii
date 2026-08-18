@@ -379,6 +379,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
   /** Batched last data arrival, keyed by thing name; absent rows mean no data yet. */
   async getDevicesLastActivity(thingNames: string[]): Promise<Result<Map<string, string | null>>> {
+    if (thingNames.length === 0) {
+      return success(new Map());
+    }
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.device_last_activity`,
       columns: ["client_id", "last_data_at"],
@@ -405,7 +408,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     from: string,
     to: string,
     bucket: "hour" | "day",
+    limit: number,
   ): Promise<Result<GroupThroughputRow[]>> {
+    if (thingNames.length === 0) {
+      return success([]);
+    }
     const bucketAlias = `timestamp_${bucket}`;
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
@@ -419,6 +426,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       },
       orderBy: bucketAlias,
       orderDirection: "ASC",
+      limit,
     });
     if (result.isFailure()) {
       return failure(result.error);
@@ -440,7 +448,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     from: string,
     to: string,
     bucket: "hour" | "day",
+    limit: number,
   ): Promise<Result<GroupExperimentRow[]>> {
+    if (thingNames.length === 0) {
+      return success([]);
+    }
     const bucketAlias = `timestamp_${bucket}`;
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
@@ -454,6 +466,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       },
       orderBy: bucketAlias,
       orderDirection: "ASC",
+      limit,
     });
     if (result.isFailure()) {
       return failure(result.error);
@@ -474,7 +487,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     thingNames: string[],
     from: string,
     to: string,
+    limit: number,
   ): Promise<Result<GroupFirmwareRow[]>> {
+    if (thingNames.length === 0) {
+      return success([]);
+    }
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
       filters: [
@@ -485,6 +502,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         groupBy: [{ column: "client_id" }, { column: "device_version" }],
         functions: [{ column: "timestamp", function: "max", alias: "last_seen" }],
       },
+      limit,
     });
     if (result.isFailure()) {
       return failure(result.error);
@@ -500,13 +518,20 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     );
   }
 
-  /** Latest lifecycle events across a group of things, newest first. */
+  /**
+   * Latest lifecycle events across a group of things, newest first. `limit`
+   * caps the whole group after ordering, deliberately: this feeds a merged
+   * log, so a reconnect-storming member may fill the window it dominates.
+   */
   async getDevicesLifecycleEvents(
     thingNames: string[],
     from: string,
     to: string,
     limit: number,
   ): Promise<Result<GroupLifecycleEventRow[]>> {
+    if (thingNames.length === 0) {
+      return success([]);
+    }
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_device_lifecycle_events`,
       columns: ["client_id", "event_type", "event_timestamp", "disconnect_reason"],

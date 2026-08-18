@@ -15787,7 +15787,8 @@
                           "bucketStart": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "format": "date-time"
                               },
                               {
                                 "type": "null"
@@ -15824,7 +15825,8 @@
                           "bucketStart": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "string",
+                                "format": "date-time"
                               },
                               {
                                 "type": "null"

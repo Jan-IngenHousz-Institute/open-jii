@@ -46,6 +46,17 @@ export interface IotDeviceGroupMonitoringDto {
 /** Latest-first event cap: enough for a busy window without unbounded payloads. */
 const EVENT_LIMIT = 200;
 
+/** A member rarely runs many versions in one window; a ceiling, not a target. */
+const FIRMWARE_VERSIONS_PER_MEMBER = 25;
+
+const BUCKET_MS = { hour: 3_600_000, day: 86_400_000 } as const;
+
+/** Bucket count of the window, for sizing the grouped scans' row ceilings. */
+function bucketsInWindow(window: MonitoringWindow): number {
+  const span = new Date(window.to).getTime() - new Date(window.from).getTime();
+  return Math.ceil(span / BUCKET_MS[window.bucket]) + 1;
+}
+
 /**
  * The group dashboard's one orchestrated read: live connectivity from the
  * fleet index, then last-data, per-member throughput, and lifecycle events
@@ -91,13 +102,16 @@ export class GetIotDeviceGroupMonitoringUseCase {
 
     // One grouped scan per fact family, all in flight together: the dashboard's
     // latency is the slowest scan, not the sum.
+    // Row ceilings derived from the window and roster keep one dashboard load
+    // from returning an unbounded result set; legitimate data never hits them.
+    const scanLimit = bucketsInWindow(window) * thingNames.length;
     const [connectivity, activity, throughput, dataByExperiment, firmware, events] =
       await Promise.all([
         this.lookupConnectivity(thingNames),
         this.lookupActivity(thingNames),
-        this.lookupThroughput(thingNames, window),
-        this.lookupDataByExperiment(thingNames, window),
-        this.lookupFirmware(thingNames, window),
+        this.lookupThroughput(thingNames, window, scanLimit),
+        this.lookupDataByExperiment(thingNames, window, scanLimit),
+        this.lookupFirmware(thingNames, window, FIRMWARE_VERSIONS_PER_MEMBER * thingNames.length),
         this.lookupEvents(thingNames, window),
       ]);
 
@@ -165,12 +179,14 @@ export class GetIotDeviceGroupMonitoringUseCase {
   private async lookupThroughput(
     thingNames: string[],
     window: MonitoringWindow,
+    limit: number,
   ): Promise<GroupThroughputRow[] | null> {
     const result = await this.databricksPort.getDevicesThroughput(
       thingNames,
       window.from,
       window.to,
       window.bucket,
+      limit,
     );
     if (result.isFailure()) {
       this.warn("Warehouse throughput lookup failed", result);
@@ -182,12 +198,14 @@ export class GetIotDeviceGroupMonitoringUseCase {
   private async lookupDataByExperiment(
     thingNames: string[],
     window: MonitoringWindow,
+    limit: number,
   ): Promise<GroupExperimentRow[] | null> {
     const result = await this.databricksPort.getDevicesDataByExperiment(
       thingNames,
       window.from,
       window.to,
       window.bucket,
+      limit,
     );
     if (result.isFailure()) {
       this.warn("Warehouse data-by-experiment lookup failed", result);
@@ -199,8 +217,14 @@ export class GetIotDeviceGroupMonitoringUseCase {
   private async lookupFirmware(
     thingNames: string[],
     window: MonitoringWindow,
+    limit: number,
   ): Promise<GroupFirmwareRow[] | null> {
-    const result = await this.databricksPort.getDevicesFirmware(thingNames, window.from, window.to);
+    const result = await this.databricksPort.getDevicesFirmware(
+      thingNames,
+      window.from,
+      window.to,
+      limit,
+    );
     if (result.isFailure()) {
       this.warn("Warehouse firmware lookup failed", result);
       return null;

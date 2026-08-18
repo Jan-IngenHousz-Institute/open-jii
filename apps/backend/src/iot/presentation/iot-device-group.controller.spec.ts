@@ -312,6 +312,20 @@ describe("IotDeviceGroupController", () => {
       ]);
     });
 
+    it("accepts a window of exactly 31 days (200)", async () => {
+      const group = await createGroup();
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .query({ from: "2026-01-01T00:00:00.000Z", to: "2026-02-01T00:00:00.000Z", bucket: "day" })
+        .expect(StatusCodes.OK);
+    });
+
     it("rejects a window wider than 31 days (400)", async () => {
       const group = await createGroup();
 

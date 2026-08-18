@@ -64,14 +64,14 @@ export const zDeviceGroupMemberHealth = z.object({
 
 /** One (bucket, member) measurement count; deviceId null for unmapped rows. */
 export const zDeviceGroupThroughputBucket = z.object({
-  bucketStart: z.string().nullable(),
+  bucketStart: z.string().datetime().nullable(),
   deviceId: z.string().uuid().nullable(),
   count: z.number().int(),
 });
 
 /** One (bucket, experiment) measurement count aggregated across the group. */
 export const zDeviceGroupExperimentBucket = z.object({
-  bucketStart: z.string().nullable(),
+  bucketStart: z.string().datetime().nullable(),
   experimentId: z.string().uuid().nullable(),
   count: z.number().int(),
 });

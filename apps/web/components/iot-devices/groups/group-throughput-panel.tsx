@@ -68,7 +68,11 @@ export function GroupThroughputPanel({
     t("iot.devices.monitoring.otherSeries"),
     t("iot.groups.monitoring.unknownMember"),
   );
-  const total = throughput.reduce((sum, bucket) => sum + bucket.count, 0);
+  // Sum what the chart and table actually show: rows without a bucket are dropped there too.
+  const total = throughput.reduce(
+    (sum, bucket) => (bucket.bucketStart === null ? sum : sum + bucket.count),
+    0,
+  );
 
   return (
     <div className="space-y-3">

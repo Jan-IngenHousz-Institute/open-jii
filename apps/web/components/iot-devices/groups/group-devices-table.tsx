@@ -103,9 +103,11 @@ export function GroupDevicesTable({
           {formatLastSeen(member.connectivity)}
         </TableCell>
         <TableCell className={cn("px-6 py-3 text-[13px]", LIST_TEXT_MUTED)}>
-          {member.lastDataAt === null
-            ? t("iot.groups.monitoring.noData")
-            : formatRelativeTime(member.lastDataAt, locale)}
+          {monitoring.pipelineUnavailable
+            ? t("iot.devices.monitoring.lastDataUnavailable")
+            : member.lastDataAt === null
+              ? t("iot.groups.monitoring.noData")
+              : formatRelativeTime(member.lastDataAt, locale)}
         </TableCell>
         {showVersions && (
           <TableCell className={cn("px-6 py-3 font-mono text-xs", LIST_TEXT_MUTED)}>

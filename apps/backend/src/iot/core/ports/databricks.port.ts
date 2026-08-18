@@ -96,6 +96,7 @@ export interface DatabricksPort {
     from: string,
     to: string,
     bucket: "hour" | "day",
+    limit: number,
   ): Promise<Result<GroupThroughputRow[]>>;
   getDevicesLifecycleEvents(
     thingNames: string[],
@@ -108,11 +109,13 @@ export interface DatabricksPort {
     from: string,
     to: string,
     bucket: "hour" | "day",
+    limit: number,
   ): Promise<Result<GroupExperimentRow[]>>;
   getDevicesFirmware(
     thingNames: string[],
     from: string,
     to: string,
+    limit: number,
   ): Promise<Result<GroupFirmwareRow[]>>;
   getDeviceLifecycleEvents(
     thingName: string,
