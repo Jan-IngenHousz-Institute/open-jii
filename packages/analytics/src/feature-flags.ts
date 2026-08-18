@@ -27,3 +27,29 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
   [FEATURE_FLAGS.WORKBOOK_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.IOT_DEVICES]: false, // Device registry & certificates hidden until released
 };
+
+/**
+ * Local-dev escape hatch: `FEATURE_FLAGS_FORCE` (server) or
+ * `NEXT_PUBLIC_FEATURE_FLAGS_FORCE` (web client, inlined at build) force flags
+ * on before any PostHog evaluation. "all" or a comma-separated list of flag
+ * keys. Never set in a deployed environment.
+ */
+export function isFlagForcedOn(flagKey: FeatureFlagKey): boolean {
+  // Tests exercise the real evaluation logic; a developer's local force
+  // switch must not leak into them.
+  if (process.env.NODE_ENV === "test") {
+    return false;
+  }
+
+  const raw = process.env.FEATURE_FLAGS_FORCE ?? process.env.NEXT_PUBLIC_FEATURE_FLAGS_FORCE;
+  if (!raw) {
+    return false;
+  }
+  if (raw === "all") {
+    return true;
+  }
+  return raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .includes(flagKey);
+}
