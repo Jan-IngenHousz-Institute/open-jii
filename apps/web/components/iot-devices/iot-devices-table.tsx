@@ -1,6 +1,6 @@
 "use client";
 
-import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
+import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {
@@ -17,7 +17,7 @@ import { IotDeviceTableRow } from "./iot-device-table-row";
 import { LIST_HEADER_BG, LIST_TABLE_BORDER, LIST_TEXT_MUTED } from "./iot-devices-list-tokens";
 
 interface IotDevicesTableProps {
-  devices: IotDevice[];
+  devices: IotDeviceWithConnectivity[];
   isLoading?: boolean;
 }
 
@@ -33,6 +33,7 @@ export function IotDevicesTable({ devices, isLoading }: IotDevicesTableProps) {
             <ColumnHead>{t("iot.devices.columns.status")}</ColumnHead>
             <ColumnHead>{t("iot.devices.columns.type")}</ColumnHead>
             <ColumnHead>{t("iot.devices.columns.serial")}</ColumnHead>
+            <ColumnHead>{t("iot.devices.columns.lastSeen")}</ColumnHead>
             <ColumnHead>{t("iot.devices.columns.created")}</ColumnHead>
             <TableHead aria-hidden className="w-12" />
           </TableRow>
@@ -74,6 +75,9 @@ function SkeletonRow() {
       </TableCell>
       <TableCell className="px-6 py-3">
         <Skeleton className="h-4 w-28" />
+      </TableCell>
+      <TableCell className="px-6 py-3">
+        <Skeleton className="h-4 w-20" />
       </TableCell>
       <TableCell className="px-6 py-3">
         <Skeleton className="h-4 w-24" />

@@ -65,3 +65,15 @@ variable "large_iot_bucket_arn" {
   type        = string
   default     = ""
 }
+
+variable "enable_fleet_indexing" {
+  description = "Enable AWS IoT Fleet Indexing with thing-connectivity status (account/region singleton; enable once per account)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_databricks_lifecycle_read" {
+  description = "Create the IAM policy granting the Databricks storage-credential role read access to the raw archive's device-lifecycle-events prefix"
+  type        = bool
+  default     = false
+}

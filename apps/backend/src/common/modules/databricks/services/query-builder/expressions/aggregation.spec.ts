@@ -90,6 +90,33 @@ describe("wrapWithAggregation", () => {
     );
   });
 
+  it("explode expands an array column before grouping", () => {
+    const sql = wrapWithAggregation("SELECT * FROM t", {
+      aggregation: {
+        explode: { column: "macros", alias: "macro" },
+        groupBy: [{ column: "macro.id", alias: "macro_id" }],
+        functions: [{ column: "*", function: "count", alias: "row_count" }],
+      },
+    });
+    expect(sql).toBe(
+      "SELECT `macro`.`id` AS `macro_id`, COUNT(*) AS `row_count` " +
+        "FROM (SELECT * FROM t) LATERAL VIEW EXPLODE(`macros`) AS `macro` " +
+        "GROUP BY `macro`.`id`",
+    );
+  });
+
+  it("a grouped struct path needs its own alias, since a dotted one is no identifier", () => {
+    const sql = wrapWithAggregation("SELECT * FROM t", {
+      aggregation: {
+        groupBy: [{ column: "contributor.name" }],
+        functions: [{ column: "*", function: "count" }],
+      },
+    });
+    // Without an alias the projection name is the raw column, which is why
+    // callers grouping by a path pass one.
+    expect(sql).toContain("`contributor`.`name` AS `contributor`.`name`");
+  });
+
   it("time-bucketed groupBy projects via date_trunc + derived alias", () => {
     const sql = wrapWithAggregation("SELECT * FROM t", {
       aggregation: {

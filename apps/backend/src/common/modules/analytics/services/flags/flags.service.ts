@@ -19,6 +19,13 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(FlagsService.name);
   private initialized = false;
 
+  // Every evaluation is an HTTP round trip and polling surfaces hit flagged
+  // routes several times a minute; a minute of staleness is fine.
+  private static readonly FLAG_CACHE_TTL_MS = 60_000;
+  // Keyed per (flag, user); insertion order makes the oldest the eviction candidate.
+  private static readonly FLAG_CACHE_MAX_ENTRIES = 5_000;
+  private readonly flagCache = new Map<string, { value: boolean; expiresAt: number }>();
+
   constructor(private readonly configService: AnalyticsConfigService) {}
 
   /* v8 ignore next 3 */
@@ -100,6 +107,12 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
    * @returns Whether the flag is enabled (falls back to default on error)
    */
   async isFeatureFlagEnabled(flagKey: FeatureFlagKey, distinctId = "anonymous"): Promise<boolean> {
+    const cacheKey = `${flagKey}:${distinctId}`;
+    const cached = this.flagCache.get(cacheKey);
+    if (cached !== undefined && cached.expiresAt > Date.now()) {
+      return cached.value;
+    }
+
     try {
       const client = this.getPostHogClient();
 
@@ -117,6 +130,21 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
       this.logger.debug(
         `Feature flag ${flagKey} for ${distinctId}: ${result} (PostHog returned: ${isEnabled})`,
       );
+
+      // Cache only real evaluations; pinning a fallback default would keep a
+      // flag dark after PostHog starts resolving.
+      if (typeof isEnabled === "boolean") {
+        if (this.flagCache.size >= FlagsService.FLAG_CACHE_MAX_ENTRIES) {
+          const oldest = this.flagCache.keys().next();
+          if (!oldest.done) {
+            this.flagCache.delete(oldest.value);
+          }
+        }
+        this.flagCache.set(cacheKey, {
+          value: isEnabled,
+          expiresAt: Date.now() + FlagsService.FLAG_CACHE_TTL_MS,
+        });
+      }
 
       return result;
     } catch (error) {

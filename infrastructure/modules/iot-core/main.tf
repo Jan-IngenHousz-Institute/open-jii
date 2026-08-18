@@ -255,8 +255,8 @@ resource "aws_iam_policy" "databricks_large_iot_read" {
 resource "aws_iot_topic_rule" "iot_rules" {
   for_each = local.ingest_channels
 
-  name    = local.iot_rule_names[each.key]
-  enabled = true
+  name        = local.iot_rule_names[each.key]
+  enabled     = true
   sql         = "SELECT topic() as topic, clientid() as client_id, * FROM '${local.iot_topic_filters[each.key]}'"
   sql_version = "2016-03-23"
 
@@ -271,4 +271,73 @@ resource "aws_iot_topic_rule" "iot_rules" {
     bucket_name = var.s3_archive_bucket_name
     key         = "raw-iot/$${parse_time(\"yyyy/MM/dd\", timestamp())}/$${newuuid()}.json"
   }
+}
+
+# --------------------------------------------------
+# Device connectivity: lifecycle events + fleet index
+# --------------------------------------------------
+# Presence lifecycle events ($aws/events/presence/...) are archived to S3 only.
+# They must never reach the Kinesis measurement stream: bronze consumes the
+# whole stream unconditionally and is non-resettable.
+resource "aws_iot_topic_rule" "device_lifecycle_events" {
+  name        = "open_jii_${var.environment}_iot_rule_device_lifecycle_events"
+  enabled     = true
+  sql         = "SELECT *, topic() as topic FROM '$aws/events/presence/#'"
+  sql_version = "2016-03-23"
+
+  s3 {
+    role_arn    = aws_iam_role.iot_s3_role.arn
+    bucket_name = var.s3_archive_bucket_name
+    key         = "device-lifecycle-events/$${parse_time(\"yyyy/MM/dd\", timestamp())}/$${newuuid()}.json"
+  }
+}
+
+# Account/region singleton: dev and prod live in separate accounts, but the
+# variable gate keeps additional environments in a shared account safe.
+resource "aws_iot_indexing_configuration" "fleet_indexing" {
+  count = var.enable_fleet_indexing ? 1 : 0
+
+  thing_indexing_configuration {
+    thing_indexing_mode              = "REGISTRY"
+    thing_connectivity_indexing_mode = "STATUS"
+  }
+}
+
+# Read access for the Databricks storage-credential role to the device-lifecycle-events
+# prefix of the raw archive (Auto Loader source for connectivity history).
+resource "aws_iam_policy" "databricks_device_lifecycle_read" {
+  count = var.enable_databricks_lifecycle_read ? 1 : 0
+
+  name = "open_jii_${var.environment}_databricks_device_lifecycle_read"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = ["s3:GetObject"]
+        Resource = [
+          # S3A HEADs the bare prefix key first; denied it gets a fatal 403
+          # where a permitted probe gets a harmless 404.
+          "${var.s3_archive_bucket_arn}/device-lifecycle-events",
+          "${var.s3_archive_bucket_arn}/device-lifecycle-events/*",
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = var.s3_archive_bucket_arn
+        # Scoped to this prefix: the archive also holds raw measurement
+        # payloads. Both slash forms, because the probe tries both.
+        Condition = {
+          StringLike = {
+            "s3:prefix" = [
+              "device-lifecycle-events",
+              "device-lifecycle-events/",
+              "device-lifecycle-events/*",
+            ]
+          }
+        }
+      }
+    ]
+  })
 }

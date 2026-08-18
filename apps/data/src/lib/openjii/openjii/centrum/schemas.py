@@ -8,6 +8,7 @@ from __future__ import annotations
 from pyspark.sql.types import (
     ArrayType,
     DoubleType,
+    LongType,
     StringType,
     StructField,
     StructType,
@@ -111,5 +112,21 @@ large_iot_schema = StructType(
         # GPS fix at measurement time; absent without permission or fix.
         StructField("latitude", DoubleType(), True),
         StructField("longitude", DoubleType(), True),
+    ]
+)
+
+# Schema for AWS IoT presence lifecycle events archived by the lifecycle topic
+# rule ($aws/events/presence/connected|disconnected/{clientId}). The timestamp
+# is epoch milliseconds; disconnectReason is present on disconnect events only.
+device_lifecycle_event_schema = StructType(
+    [
+        StructField("clientId", StringType(), True),
+        StructField("timestamp", LongType(), True),
+        StructField("eventType", StringType(), True),
+        StructField("sessionIdentifier", StringType(), True),
+        StructField("principalIdentifier", StringType(), True),
+        StructField("disconnectReason", StringType(), True),
+        StructField("versionNumber", LongType(), True),
+        StructField("topic", StringType(), True),
     ]
 )

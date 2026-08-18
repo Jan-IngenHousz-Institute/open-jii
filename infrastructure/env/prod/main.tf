@@ -156,6 +156,9 @@ module "iot_core" {
   iot_s3_policy_name     = "open_jii_${var.environment}_iot_s3_policy"
 
   large_iot_bucket_arn = module.large_iot_s3.bucket_arn
+
+  enable_fleet_indexing            = true
+  enable_databricks_lifecycle_read = true
 }
 
 module "cognito" {
@@ -376,12 +379,15 @@ module "event_hooks_secret_scope" {
 module "storage_credential" {
   source = "../../modules/databricks/workspace-storage-credential"
 
-  credential_name        = "open-jii-${var.environment}-metastore-access"
-  role_name              = "open-jii-${var.environment}-uc-access"
-  environment            = var.environment
-  bucket_name            = var.centralized_metastore_bucket_name
-  isolation_mode         = "ISOLATION_MODE_OPEN"
-  additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
+  credential_name = "open-jii-${var.environment}-metastore-access"
+  role_name       = "open-jii-${var.environment}-uc-access"
+  environment     = var.environment
+  bucket_name     = var.centralized_metastore_bucket_name
+  isolation_mode  = "ISOLATION_MODE_OPEN"
+  additional_policy_arns = [
+    module.iot_core.databricks_large_iot_read_policy_arn,
+    module.iot_core.databricks_device_lifecycle_read_policy_arn,
+  ]
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -428,6 +434,32 @@ module "large_iot_external_location" {
   storage_credential_name = module.storage_credential.storage_credential_name
   environment             = var.environment
   comment                 = "External location for large IoT payloads (>128 KB) uploaded via pre-signed URL"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+  read_only               = true
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_FILES"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
+}
+
+module "device_lifecycle_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "device-lifecycle-events-${var.environment}"
+  bucket_name             = module.iot_raw_archive_s3.bucket_id
+  external_location_path  = "device-lifecycle-events"
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for AWS IoT lifecycle (presence) events archived by the lifecycle topic rule"
   isolation_mode          = "ISOLATION_MODE_ISOLATED"
   read_only               = true
 
@@ -530,9 +562,12 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_imported_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_uploaded_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_large_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/raw_device_lifecycle_events",
     # silver
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/silver/clean_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/silver/clean_device_lifecycle_events",
     # gold
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/device_last_activity",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_status",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_raw_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_device_data",
@@ -551,17 +586,18 @@ module "centrum_pipeline" {
   ]
 
   configuration = {
-    "CATALOG_NAME"               = module.databricks_catalog.catalog_name
-    "BRONZE_TABLE"               = "raw_data"
-    "SILVER_TABLE"               = "clean_data"
-    "RAW_KINESIS_TABLE"          = "raw_kinesis_data"
-    "KINESIS_STREAM_NAME"        = module.kinesis.kinesis_stream_name
-    "SERVICE_CREDENTIAL_NAME"    = "unity-catalog-kinesis-role-${var.environment}"
-    "CHECKPOINT_PATH"            = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
-    "ENVIRONMENT"                = upper(var.environment)
-    "MONITORING_SLACK_CHANNEL"   = var.slack_channel
-    "pipelines.trigger.interval" = "120 seconds"
-    "LARGE_IOT_S3_PATH"          = "s3://${module.large_iot_s3.bucket_id}/"
+    "CATALOG_NAME"                    = module.databricks_catalog.catalog_name
+    "BRONZE_TABLE"                    = "raw_data"
+    "SILVER_TABLE"                    = "clean_data"
+    "RAW_KINESIS_TABLE"               = "raw_kinesis_data"
+    "KINESIS_STREAM_NAME"             = module.kinesis.kinesis_stream_name
+    "SERVICE_CREDENTIAL_NAME"         = "unity-catalog-kinesis-role-${var.environment}"
+    "CHECKPOINT_PATH"                 = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
+    "ENVIRONMENT"                     = upper(var.environment)
+    "MONITORING_SLACK_CHANNEL"        = var.slack_channel
+    "pipelines.trigger.interval"      = "120 seconds"
+    "LARGE_IOT_S3_PATH"               = "s3://${module.large_iot_s3.bucket_id}/"
+    "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }

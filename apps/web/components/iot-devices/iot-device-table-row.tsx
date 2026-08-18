@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
+import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -38,10 +38,11 @@ import { TableCell, TableRow } from "@repo/ui/components/table";
 import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
+import { useFormatLastSeen } from "./device-connectivity";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 import { LIST_TABLE_BORDER, LIST_TEXT_MUTED, LIST_TEXT_STRONG } from "./iot-devices-list-tokens";
 
-export function IotDeviceTableRow({ device }: { device: IotDevice }) {
+export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivity }) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
@@ -49,6 +50,7 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const { mutate: deleteDevice, isPending: isDeleting } = useDeleteIotDevice();
+  const formatLastSeen = useFormatLastSeen();
 
   const viewHref = `/${locale}/platform/devices/${device.id}`;
   // Registry identity hierarchy: name, then canonical product name, then a
@@ -111,6 +113,9 @@ export function IotDeviceTableRow({ device }: { device: IotDevice }) {
         </TableCell>
         <TableCell className={cn("px-6 py-3 font-mono text-xs", LIST_TEXT_MUTED)}>
           {device.serialNumber}
+        </TableCell>
+        <TableCell className={cn("px-6 py-3 text-[13px]", LIST_TEXT_MUTED)}>
+          {formatLastSeen(device.connectivity)}
         </TableCell>
         <TableCell className={cn("px-6 py-3 text-[13px] tabular-nums", LIST_TEXT_MUTED)}>
           {formatDate(device.createdAt)}

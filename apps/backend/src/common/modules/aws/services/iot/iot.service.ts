@@ -9,7 +9,9 @@ import {
   AttachPolicyCommand,
   UpdateCertificateCommand,
   DescribeEndpointCommand,
+  SearchIndexCommand,
 } from "@aws-sdk/client-iot";
+import type { ThingDocument } from "@aws-sdk/client-iot";
 import { Injectable } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -20,7 +22,17 @@ import type {
   CreatedThing,
   CertificateResult,
   CertificateStatus,
+  ThingConnectivity,
 } from "./iot.types";
+
+// The fleet-index query string is capped at 1000 characters, so thing names
+// are batched by accumulated length with a generous count ceiling.
+const SEARCH_INDEX_MAX_QUERY_CHARS = 900;
+const SEARCH_INDEX_MAX_TERMS = 50;
+// Thing names are quoted in the query: colons and hyphens are operators in the
+// fleet-index syntax, and an unquoted name makes the whole query invalid
+// (InvalidQueryException), which would degrade every device to "unknown".
+const SEARCH_INDEX_TERM_OVERHEAD = 'thingName:""'.length + " OR ".length;
 
 @Injectable()
 export class AwsIotService {
@@ -158,6 +170,87 @@ export class AwsIotService {
     }
 
     return result;
+  }
+
+  // Live broker connectivity from the fleet index (thingConnectivity STATUS
+  // indexing). Things absent from the response (not yet indexed, or the index
+  // still building after first enable) are simply missing from the map.
+  async searchThingsConnectivity(
+    thingNames: string[],
+  ): Promise<Result<Map<string, ThingConnectivity>>> {
+    return tryCatch(
+      async () => {
+        const chunks = this.chunkThingNames(thingNames);
+        const documents = (
+          await Promise.all(chunks.map((chunk) => this.searchThingsChunk(chunk)))
+        ).flat();
+
+        const connectivity = new Map<string, ThingConnectivity>();
+        for (const thing of documents) {
+          if (thing.thingName) {
+            connectivity.set(thing.thingName, this.toThingConnectivity(thing.thingName, thing));
+          }
+        }
+
+        return connectivity;
+      },
+      (error) => this.mapError(error, ErrorCodes.AWS_IOT_SEARCH_INDEX_FAILED),
+    );
+  }
+
+  private async searchThingsChunk(thingNames: string[]): Promise<ThingDocument[]> {
+    const queryString = thingNames.map((name) => `thingName:"${name}"`).join(" OR ");
+    const things: ThingDocument[] = [];
+    let nextToken: string | undefined;
+
+    do {
+      const response = await this.iotClient.send(
+        new SearchIndexCommand({ queryString, nextToken }),
+      );
+      things.push(...(response.things ?? []));
+      nextToken = response.nextToken;
+    } while (nextToken !== undefined);
+
+    return things;
+  }
+
+  private toThingConnectivity(thingName: string, thing: ThingDocument): ThingConnectivity {
+    const timestamp = thing.connectivity?.timestamp;
+
+    return {
+      thingName,
+      connected: thing.connectivity?.connected ?? false,
+      lastSeenAt:
+        timestamp !== undefined && timestamp > 0 ? new Date(timestamp).toISOString() : null,
+    };
+  }
+
+  private chunkThingNames(thingNames: string[]): string[][] {
+    const chunks: string[][] = [];
+    let current: string[] = [];
+    let currentLength = 0;
+
+    for (const name of thingNames) {
+      const termLength = name.length + SEARCH_INDEX_TERM_OVERHEAD;
+      if (
+        current.length > 0 &&
+        (current.length >= SEARCH_INDEX_MAX_TERMS ||
+          currentLength + termLength > SEARCH_INDEX_MAX_QUERY_CHARS)
+      ) {
+        chunks.push(current);
+        current = [];
+        currentLength = 0;
+      }
+
+      current.push(name);
+      currentLength += termLength;
+    }
+
+    if (current.length > 0) {
+      chunks.push(current);
+    }
+
+    return chunks;
   }
 
   async updateCertificateStatus(

@@ -14,6 +14,8 @@ import { formatDates, formatDatesList } from "../../common/utils/date-formatter"
 import { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { DeleteIotDeviceUseCase } from "../application/use-cases/delete-iot-device/delete-iot-device";
+import { GetDeviceMonitoringUseCase } from "../application/use-cases/get-device-monitoring/get-device-monitoring";
+import { GetIotDeviceActivityUseCase } from "../application/use-cases/get-iot-device-activity/get-iot-device-activity";
 import { GetIotDeviceUseCase } from "../application/use-cases/get-iot-device/get-iot-device";
 import { IssueIotCredentialsUseCase } from "../application/use-cases/issue-iot-credentials/issue-iot-credentials";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
@@ -33,6 +35,8 @@ export class IotDeviceController {
     private readonly registerIotDeviceUseCase: RegisterIotDeviceUseCase,
     private readonly listIotDevicesUseCase: ListIotDevicesUseCase,
     private readonly getIotDeviceUseCase: GetIotDeviceUseCase,
+    private readonly getIotDeviceActivityUseCase: GetIotDeviceActivityUseCase,
+    private readonly getDeviceMonitoringUseCase: GetDeviceMonitoringUseCase,
     private readonly deleteIotDeviceUseCase: DeleteIotDeviceUseCase,
     private readonly issueIotCredentialsUseCase: IssueIotCredentialsUseCase,
     private readonly revokeIotCredentialsUseCase: RevokeIotCredentialsUseCase,
@@ -113,6 +117,47 @@ export class IotDeviceController {
       }
 
       return throwOrpcFailure(result, this.logger, "getIotDevice");
+    });
+  }
+
+  @CanAccess({ resource: "device", action: "read", param: "deviceId" })
+  @Implement(iotContract.getIotDeviceActivity)
+  getIotDeviceActivity(@Session() session: UserSession) {
+    return implement(iotContract.getIotDeviceActivity).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("getIotDeviceActivity");
+
+      const result = await this.getIotDeviceActivityUseCase.execute(
+        input.deviceId,
+        session.user.id,
+      );
+
+      if (result.isSuccess()) {
+        return result.value;
+      }
+
+      return throwOrpcFailure(result, this.logger, "getIotDeviceActivity");
+    });
+  }
+
+  @CanAccess({ resource: "device", action: "read", param: "deviceId" })
+  @Implement(iotContract.getDeviceMonitoring)
+  getDeviceMonitoring(@Session() session: UserSession) {
+    return implement(iotContract.getDeviceMonitoring).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("getDeviceMonitoring");
+
+      const result = await this.getDeviceMonitoringUseCase.execute(
+        input.deviceId,
+        input.from,
+        input.to,
+        input.bucket,
+        session.user.id,
+      );
+
+      if (result.isSuccess()) {
+        return result.value;
+      }
+
+      return throwOrpcFailure(result, this.logger, "getDeviceMonitoring");
     });
   }
 

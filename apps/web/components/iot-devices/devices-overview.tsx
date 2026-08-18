@@ -3,13 +3,13 @@
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { useMemo } from "react";
 
-import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
+import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 
 export function DevicesOverview() {
   const { t } = useTranslation("iot");
   const { data } = useIotDevices();
-  const devices = useMemo<IotDevice[]>(() => data ?? [], [data]);
+  const devices = useMemo<IotDeviceWithConnectivity[]>(() => data ?? [], [data]);
 
   const stats = useMemo(
     () => [
