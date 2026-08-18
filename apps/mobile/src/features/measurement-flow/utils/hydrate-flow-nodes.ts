@@ -29,7 +29,7 @@ export function hydrateFlowNodes(
         content: {
           ...node.content,
           protocol: {
-            code: (snapshot?.code ?? []) as Record<string, unknown>[],
+            code: snapshot?.code ?? [],
             family: snapshot?.family,
             name: cell?.payload.name,
           },

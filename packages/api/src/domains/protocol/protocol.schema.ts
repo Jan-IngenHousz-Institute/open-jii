@@ -141,6 +141,7 @@ export type SensorFamily = z.infer<typeof zSensorFamily>;
 export type Protocol = z.infer<typeof zProtocol>;
 export type ProtocolDetail = z.infer<typeof zProtocolDetail>;
 export type ProtocolList = z.infer<typeof zProtocolList>;
+export type ProtocolListItem = ProtocolList[number];
 export type ProtocolFilterQuery = z.infer<typeof zProtocolFilterQuery>;
 export type ProtocolFilter = ProtocolFilterQuery["search"];
 export type ProtocolIdPathParam = z.infer<typeof zProtocolIdPathParam>;

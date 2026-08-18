@@ -37,6 +37,9 @@ export function parseProtocolCode(code: unknown, logger: Logger): JsonValue {
     return [{}];
   }
 
+  // oRPC walks this value again through zProtocol on output. The duplicate
+  // validation is deliberate: this boundary turns corrupt stored data into a
+  // safe fallback instead of allowing output validation to surface a 500.
   const parsed = zJsonValue.safeParse(code);
   if (!parsed.success) {
     logger.error({

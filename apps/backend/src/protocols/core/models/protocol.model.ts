@@ -36,7 +36,9 @@ export const updateProtocolSchema = createInsertSchema(protocols, {
     searchVector: true,
   });
 
-export const selectProtocolSchema = createSelectSchema(protocols)
+export const selectProtocolSchema = createSelectSchema(protocols, {
+  code: protocolCodeSchema,
+})
   .omit({ searchVector: true })
   .extend({
     createdByName: z.string().optional(),

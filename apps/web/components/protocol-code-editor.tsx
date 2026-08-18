@@ -162,9 +162,9 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
 
   useEffect(() => {
     if (!debouncedEditorCode) {
-      onChangeRef.current(debouncedEditorCode);
-      setIsValidJson(true);
-      onValidationChangeRef.current?.(true);
+      onChangeRef.current(undefined);
+      setIsValidJson(false);
+      onValidationChangeRef.current?.(false);
       return;
     }
 

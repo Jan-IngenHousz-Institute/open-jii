@@ -155,11 +155,14 @@ export function NewProtocolForm() {
   );
 
   function onSubmit(data: NewProtocolFormValues) {
+    const code = zJsonValue.optional().parse(data.code);
+    if (code === undefined) return;
+
     setIsSubmitting(true);
     createProtocol({
       name: data.name,
       description: data.description,
-      code: zJsonValue.parse(data.code),
+      code,
       family: data.family,
       visibility: data.visibility,
     });

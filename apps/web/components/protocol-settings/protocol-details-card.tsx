@@ -100,7 +100,7 @@ export function ProtocolDetailsCard({
     await updateProtocol({
       id: protocolId,
       ...data,
-      code: zJsonValue.parse(data.code),
+      code: zJsonValue.optional().parse(data.code),
     });
     toast({ description: t("protocols.protocolUpdated") });
   }
