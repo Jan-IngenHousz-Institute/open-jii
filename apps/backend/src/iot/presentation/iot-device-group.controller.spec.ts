@@ -11,6 +11,8 @@ import type {
 } from "@repo/api/domains/device-group/device-group.schema";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
+import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
+import { success } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -79,6 +81,15 @@ describe("IotDeviceGroupController", () => {
         groupId: group.id,
       });
       await testApp.get(membersPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.onboardDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.FORBIDDEN);
       await testApp
         .post(membersPath)
         .withAuth(userId)
@@ -234,6 +245,57 @@ describe("IotDeviceGroupController", () => {
         .get(testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroup, { groupId: group.id }))
         .withAuth(userId)
         .expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("onboardDeviceGroup", () => {
+    it("returns a per-device outcome list (200)", async () => {
+      const group = await createGroup();
+      const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.addDeviceGroupMembers, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ deviceIds: [device.id] })
+        .expect(StatusCodes.OK);
+      const awsAdapter = testApp.module.get(AwsAdapter);
+      vi.spyOn(awsAdapter, "getIotDataEndpoint").mockResolvedValue(
+        success("data.iot.example.amazonaws.com"),
+      );
+
+      const response: SuperTestResponse<{
+        devices: { deviceId: string; config: { thingName: string } | null; error: string | null }[];
+      }> = await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.onboardDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.devices).toHaveLength(1);
+      expect(response.body.devices[0].deviceId).toBe(device.id);
+      expect(response.body.devices[0].config?.thingName).toBe(device.thingName);
+    });
+
+    it("returns 403 for a viewer without contribute access", async () => {
+      const group = await createGroup();
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.onboardDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(stranger)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.FORBIDDEN);
     });
   });
 

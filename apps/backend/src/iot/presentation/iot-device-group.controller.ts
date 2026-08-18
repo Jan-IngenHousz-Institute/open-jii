@@ -19,6 +19,7 @@ import { DeleteIotDeviceGroupUseCase } from "../application/use-cases/delete-iot
 import { GetIotDeviceGroupUseCase } from "../application/use-cases/get-iot-device-group/get-iot-device-group";
 import { ListIotDeviceGroupMembersUseCase } from "../application/use-cases/list-iot-device-group-members/list-iot-device-group-members";
 import { ListIotDeviceGroupsUseCase } from "../application/use-cases/list-iot-device-groups/list-iot-device-groups";
+import { OnboardIotDeviceGroupUseCase } from "../application/use-cases/onboard-iot-device-group/onboard-iot-device-group";
 import { RemoveIotDeviceGroupMemberUseCase } from "../application/use-cases/remove-iot-device-group-member/remove-iot-device-group-member";
 import { UpdateIotDeviceGroupUseCase } from "../application/use-cases/update-iot-device-group/update-iot-device-group";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
@@ -38,6 +39,7 @@ export class IotDeviceGroupController {
     private readonly updateIotDeviceGroupUseCase: UpdateIotDeviceGroupUseCase,
     private readonly deleteIotDeviceGroupUseCase: DeleteIotDeviceGroupUseCase,
     private readonly listIotDeviceGroupMembersUseCase: ListIotDeviceGroupMembersUseCase,
+    private readonly onboardIotDeviceGroupUseCase: OnboardIotDeviceGroupUseCase,
     private readonly addIotDeviceGroupMembersUseCase: AddIotDeviceGroupMembersUseCase,
     private readonly removeIotDeviceGroupMemberUseCase: RemoveIotDeviceGroupMemberUseCase,
     private readonly authz: AuthorizationService,
@@ -141,6 +143,30 @@ export class IotDeviceGroupController {
       }
 
       return throwOrpcFailure(result, this.logger, "deleteDeviceGroup");
+    });
+  }
+
+  @CanAccess({ resource: "device_group", action: "contribute", param: "groupId" })
+  @Implement(deviceGroupContract.onboardDeviceGroup)
+  onboardDeviceGroup(@Session() session: UserSession) {
+    return implement(deviceGroupContract.onboardDeviceGroup).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("onboardDeviceGroup");
+
+      const result = await this.onboardIotDeviceGroupUseCase.execute(
+        input.groupId,
+        {
+          experimentIds: input.experimentIds,
+          deviceIds: input.deviceIds,
+          includeWorkbook: input.includeWorkbook,
+        },
+        session.user.id,
+      );
+
+      if (result.isSuccess()) {
+        return result.value;
+      }
+
+      return throwOrpcFailure(result, this.logger, "onboardDeviceGroup");
     });
   }
 

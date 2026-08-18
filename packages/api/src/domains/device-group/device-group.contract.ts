@@ -8,7 +8,9 @@ import {
   zDeviceGroupDetail,
   zDeviceGroupList,
   zDeviceGroupMemberList,
+  zDeviceGroupOnboardResult,
   zDeviceGroupPathParam,
+  zOnboardDeviceGroupBody,
   zRemoveDeviceGroupMemberParams,
   zUpdateDeviceGroupBody,
 } from "./device-group.schema";
@@ -33,6 +35,14 @@ export const deviceGroupContract = {
     .route({ method: "DELETE", path: "/api/v1/device-groups/{groupId}", successStatus: 204 })
     .input(zDeviceGroupPathParam)
     .output(z.void()),
+  onboardDeviceGroup: oc
+    .route({
+      method: "POST",
+      path: "/api/v1/device-groups/{groupId}/onboard",
+      successStatus: 200,
+    })
+    .input(zOnboardDeviceGroupBody)
+    .output(zDeviceGroupOnboardResult),
   listDeviceGroupMembers: oc
     .route({ method: "GET", path: "/api/v1/device-groups/{groupId}/devices", successStatus: 200 })
     .input(zDeviceGroupPathParam)

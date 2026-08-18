@@ -1,0 +1,112 @@
+"use client";
+
+import { downloadText, downloadZip } from "@/components/iot-devices/iot-credential-file";
+import { AlertTriangle, Check, Download } from "lucide-react";
+
+import type { DeviceGroupOnboardRow } from "@repo/api/domains/device-group/device-group.schema";
+import type { DeviceAnswer, DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
+import { applyPlanAnswers } from "@repo/api/transforms/workbook-device-plan";
+import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+
+interface GroupOnboardResultsProps {
+  groupName: string;
+  rows: DeviceGroupOnboardRow[];
+  labelByDeviceId: Map<string, string>;
+  /** Plan answers, applied identically to every delivered config. */
+  answers: Record<string, DeviceAnswer>;
+  /** Required plan questions still unanswered block delivery, never onboarding. */
+  deliveryBlocked: boolean;
+}
+
+function configFileName(config: DeviceOnboardingConfig): string {
+  return `${config.thingName}-config.json`;
+}
+
+/**
+ * Per-device outcomes plus delivery: each successful device's config as its
+ * own file, and the whole batch as one zip with a manifest.
+ */
+export function GroupOnboardResults({
+  groupName,
+  rows,
+  labelByDeviceId,
+  answers,
+  deliveryBlocked,
+}: GroupOnboardResultsProps) {
+  const { t } = useTranslation("iot");
+
+  const delivered = (config: DeviceOnboardingConfig) => applyPlanAnswers(config, answers);
+  const succeeded = rows.flatMap((row) => (row.config === null ? [] : [row.config]));
+
+  function downloadOne(config: DeviceOnboardingConfig) {
+    downloadText(configFileName(config), JSON.stringify(delivered(config), null, 2));
+  }
+
+  function downloadAll() {
+    const files = succeeded.map((config) => ({
+      filename: configFileName(config),
+      content: JSON.stringify(delivered(config), null, 2),
+    }));
+    files.push({
+      filename: "manifest.json",
+      content: JSON.stringify(
+        {
+          group: groupName,
+          devices: succeeded.map((config) => config.thingName),
+          experiments: [
+            ...new Set(
+              succeeded.flatMap((config) =>
+                config.experiments.map((experiment) => experiment.experimentId),
+              ),
+            ),
+          ],
+        },
+        null,
+        2,
+      ),
+    });
+    downloadZip(`${groupName}-configs.zip`, files);
+  }
+
+  function renderRow(row: DeviceGroupOnboardRow) {
+    const label = labelByDeviceId.get(row.deviceId) ?? row.deviceId;
+
+    return (
+      <li key={row.deviceId} className="flex items-center gap-2 py-1.5 text-sm">
+        {row.error === null ? (
+          <Check className="h-4 w-4 shrink-0 text-green-600" aria-hidden />
+        ) : (
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+        )}
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {row.error !== null && <span className="text-muted-foreground text-xs">{row.error}</span>}
+        {row.config !== null && (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={deliveryBlocked}
+            onClick={() => {
+              if (row.config !== null) downloadOne(row.config);
+            }}
+          >
+            <Download className="h-3.5 w-3.5" aria-hidden />
+          </Button>
+        )}
+      </li>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <ul className="divide-y rounded-lg border px-3">{rows.map(renderRow)}</ul>
+
+      {succeeded.length > 0 && (
+        <Button disabled={deliveryBlocked} onClick={downloadAll}>
+          <Download className="mr-2 h-4 w-4" aria-hidden />
+          {t("iot.groups.onboarding.downloadAll", { count: succeeded.length })}
+        </Button>
+      )}
+    </div>
+  );
+}

@@ -403,11 +403,26 @@
       "remove": "Entfernen",
       "sectionHint": "Geräte in Gruppen organisieren, gemeinsam überwachen und onboarden.",
       "statusColumn": "Status",
+      "onboarding": {
+        "title": "Gruppe onboarden",
+        "description": "Die ausgewählten Geräte an Experimente binden und jedem seine Konfiguration übergeben.",
+        "experimentsLabel": "Experimente",
+        "noExperiments": "Sie sind noch kein Mitglied eines Experiments.",
+        "reissueHint": "Ohne ausgewähltes Experiment wird die aktuelle Konfiguration jedes Geräts neu ausgestellt.",
+        "devicesLabel": "Geräte ({{selected}} von {{total}} ausgewählt)",
+        "mobileIneligible": "Telefone onboarden sich selbst",
+        "inactiveIneligible": "Keine aktiven Zugangsdaten",
+        "onboard_one": "{{count}} Gerät onboarden",
+        "onboard_other": "{{count}} Geräte onboarden",
+        "onboardSuccess": "Gruppe onboardet",
+        "resultsTitle": "Ergebnisse und Konfigurationen",
+        "downloadAll_one": "{{count}} Konfiguration herunterladen (ZIP)",
+        "downloadAll_other": "{{count}} Konfigurationen herunterladen (ZIP)"
+      },
       "pageTitle": "Gerätegruppe",
       "comingSoon": {
         "credentials": "Zertifikate für alle Geräte dieser Gruppe gemeinsam ausstellen, rotieren und widerrufen.",
-        "monitoring": "Gruppenstatus auf einen Blick: wie viele Geräte online, still oder abwesend sind.",
-        "onboarding": "Die gesamte Gruppe auf Experimente onboarden und alle Konfigurationen gemeinsam herunterladen."
+        "monitoring": "Gruppenstatus auf einen Blick: wie viele Geräte online, still oder abwesend sind."
       }
     }
   }

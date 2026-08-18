@@ -403,11 +403,26 @@
       "remove": "Verwijderen",
       "sectionHint": "Organiseer apparaten in groepen die u samen kunt monitoren en onboarden.",
       "statusColumn": "Status",
+      "onboarding": {
+        "title": "Groep onboarden",
+        "description": "Bind de geselecteerde apparaten aan experimenten en geef elk zijn configuratie.",
+        "experimentsLabel": "Experimenten",
+        "noExperiments": "U bent nog geen lid van een experiment.",
+        "reissueHint": "Zonder geselecteerd experiment wordt de huidige configuratie van elk apparaat opnieuw uitgegeven.",
+        "devicesLabel": "Apparaten ({{selected}} van {{total}} geselecteerd)",
+        "mobileIneligible": "Telefoons onboarden zichzelf",
+        "inactiveIneligible": "Geen actieve inloggegevens",
+        "onboard_one": "{{count}} apparaat onboarden",
+        "onboard_other": "{{count}} apparaten onboarden",
+        "onboardSuccess": "Groep onboardet",
+        "resultsTitle": "Resultaten en configuraties",
+        "downloadAll_one": "{{count}} configuratie downloaden (zip)",
+        "downloadAll_other": "{{count}} configuraties downloaden (zip)"
+      },
       "pageTitle": "Apparaatgroep",
       "comingSoon": {
         "credentials": "Certificaten voor alle apparaten in deze groep tegelijk uitgeven, roteren en intrekken.",
-        "monitoring": "Groepsstatus in één oogopslag: hoeveel apparaten online, stil of afwezig zijn.",
-        "onboarding": "De hele groep op experimenten onboarden en alle configuraties samen downloaden."
+        "monitoring": "Groepsstatus in één oogopslag: hoeveel apparaten online, stil of afwezig zijn."
       }
     }
   }

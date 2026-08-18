@@ -403,11 +403,26 @@
       "remove": "Remove",
       "sectionHint": "Organize devices into groups you can monitor and onboard together.",
       "statusColumn": "Status",
+      "onboarding": {
+        "title": "Onboard the group",
+        "description": "Bind the selected devices to experiments and hand each one its config.",
+        "experimentsLabel": "Experiments",
+        "noExperiments": "You are not a member of any experiment yet.",
+        "reissueHint": "With no experiment selected, every device's current config is re-issued.",
+        "devicesLabel": "Devices ({{selected}} of {{total}} selected)",
+        "mobileIneligible": "Phones onboard themselves",
+        "inactiveIneligible": "No active credentials",
+        "onboard_one": "Onboard {{count}} device",
+        "onboard_other": "Onboard {{count}} devices",
+        "onboardSuccess": "Group onboarded",
+        "resultsTitle": "Results and configs",
+        "downloadAll_one": "Download {{count}} config (zip)",
+        "downloadAll_other": "Download {{count}} configs (zip)"
+      },
       "pageTitle": "Device group",
       "comingSoon": {
         "credentials": "Rotate, issue, and revoke credentials for every device in this group at once.",
-        "monitoring": "Group health at a glance: how many devices are online, silent, or missing.",
-        "onboarding": "Onboard the whole group onto experiments and download all configs together."
+        "monitoring": "Group health at a glance: how many devices are online, silent, or missing."
       }
     }
   }

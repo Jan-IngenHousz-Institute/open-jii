@@ -1,0 +1,114 @@
+import {
+  createDeviceGroupDetail,
+  createDeviceGroupMember,
+  createExperiment,
+} from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen } from "@/test/test-utils";
+import userEvent from "@testing-library/user-event";
+import { useParams } from "next/navigation";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api/contract";
+
+import { GroupOnboardingContent } from "./group-onboarding-content";
+
+const GROUP_ID = "11111111-1111-4111-8111-111111111111";
+
+function deviceConfig(thingName: string) {
+  return {
+    thingName,
+    deviceType: "ambyte",
+    endpoint: "data.iot.example.amazonaws.com",
+    experiments: [],
+  };
+}
+
+function mountGroup(members: ReturnType<typeof createDeviceGroupMember>[]) {
+  server.mount(contract.deviceGroups.getDeviceGroup, {
+    body: createDeviceGroupDetail({ id: GROUP_ID, name: "Greenhouse A" }),
+  });
+  server.mount(contract.deviceGroups.listDeviceGroupMembers, { body: members });
+  server.mount(contract.experiments.listExperiments, {
+    body: [createExperiment({ name: "Field trial" })],
+  });
+}
+
+describe("GroupOnboardingContent", () => {
+  beforeEach(() => {
+    vi.mocked(useParams).mockReturnValue({ groupId: GROUP_ID });
+  });
+
+  it("preselects eligible devices and marks ineligible ones", async () => {
+    mountGroup([
+      createDeviceGroupMember({ name: "Gateway", status: "active" }),
+      createDeviceGroupMember({ name: "Waiting", status: "pending" }),
+      createDeviceGroupMember({ name: "Phone", deviceType: "mobile" }),
+    ]);
+
+    render(<GroupOnboardingContent />);
+
+    expect(await screen.findByText("Gateway")).toBeInTheDocument();
+    // 1 of 3: only the active non-phone counts as selected.
+    expect(screen.getByText("iot.groups.onboarding.devicesLabel")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.onboarding.inactiveIneligible")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.onboarding.mobileIneligible")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("onboards the selection and offers the config zip", async () => {
+    const user = userEvent.setup();
+    const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
+    const broken = createDeviceGroupMember({ name: "Broken", status: "active" });
+    mountGroup([gateway, broken]);
+    const onboard = server.mount(contract.deviceGroups.onboardDeviceGroup, {
+      body: {
+        devices: [
+          { deviceId: gateway.deviceId, config: deviceConfig("ambyte_GW-1"), error: null },
+          { deviceId: broken.deviceId, config: null, error: "no live credentials" },
+        ],
+      },
+    });
+
+    render(<GroupOnboardingContent />);
+
+    await user.click(await screen.findByText("Field trial"));
+    await user.click(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ }));
+
+    await vi.waitFor(() => {
+      expect(onboard.calls).toHaveLength(1);
+    });
+    expect(onboard.calls[0].body).toMatchObject({
+      deviceIds: [gateway.deviceId, broken.deviceId],
+      includeWorkbook: true,
+    });
+
+    // Per-device outcomes: the failure inline, the zip only counting successes.
+    expect(await screen.findByText("no live credentials")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /iot.groups.onboarding.downloadAll/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps deselected devices out of the batch", async () => {
+    const user = userEvent.setup();
+    const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
+    const spare = createDeviceGroupMember({ name: "Spare", status: "active" });
+    mountGroup([gateway, spare]);
+    const onboard = server.mount(contract.deviceGroups.onboardDeviceGroup, {
+      body: { devices: [{ deviceId: gateway.deviceId, config: null, error: null }] },
+    });
+
+    render(<GroupOnboardingContent />);
+
+    await user.click(await screen.findByText("Spare"));
+    await user.click(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ }));
+
+    await vi.waitFor(() => {
+      expect(onboard.calls).toHaveLength(1);
+    });
+    expect(onboard.calls[0].body).toMatchObject({ deviceIds: [gateway.deviceId] });
+  });
+});
