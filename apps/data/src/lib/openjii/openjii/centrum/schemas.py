@@ -80,6 +80,9 @@ sensor_schema = StructType(
         # uploads). Lean-topic rows are unattributed without it; the legacy
         # topic's trailing segment takes precedence when both exist.
         StructField("protocol_id", StringType(), True),
+        StructField("workbook_version_id", StringType(), True),
+        # Stays a JSON string because its keys are dynamic.
+        StructField("macro_context", StringType(), True),
         # GPS fix at measurement time; absent on older payloads and when the
         # app had no location permission or fix.
         StructField("latitude", DoubleType(), True),
