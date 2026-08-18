@@ -28,8 +28,16 @@ describe("generateMetadata", () => {
 describe("DeviceGroupMonitoringPage", () => {
   it("renders the live group health surface", async () => {
     vi.mocked(useParams).mockReturnValue({ groupId: GROUP_ID });
+    server.mount(contract.experiments.listExperiments, { body: [] });
     server.mount(contract.deviceGroups.getDeviceGroupMonitoring, {
-      body: { members: [], throughput: [], events: [], pipelineUnavailable: false },
+      body: {
+        members: [],
+        throughput: [],
+        dataByExperiment: [],
+        firmware: [],
+        events: [],
+        pipelineUnavailable: false,
+      },
     });
 
     render(<DeviceGroupMonitoringPage />);

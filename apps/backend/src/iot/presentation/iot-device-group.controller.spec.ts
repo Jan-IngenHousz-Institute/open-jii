@@ -286,6 +286,8 @@ describe("IotDeviceGroupController", () => {
         ]),
       );
       vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicesFirmware").mockResolvedValue(success([]));
 
       const response: SuperTestResponse<{
         members: { deviceId: string; connectivity: { connected: boolean } | null }[];

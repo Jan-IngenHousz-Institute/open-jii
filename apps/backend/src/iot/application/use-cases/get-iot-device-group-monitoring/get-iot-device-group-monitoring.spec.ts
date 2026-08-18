@@ -86,6 +86,15 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
         },
       ]),
     );
+    vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockResolvedValue(
+      success([{ bucketStart: "2026-08-17T10:00:00.000Z", experimentId: null, count: 4 }]),
+    );
+    vi.spyOn(databricksAdapter, "getDevicesFirmware").mockResolvedValue(
+      success([
+        { clientId: device.thingName, version: "1.0.0", lastSeen: "2026-08-17T09:00:00.000Z" },
+        { clientId: device.thingName, version: "1.1.0", lastSeen: "2026-08-17T11:00:00.000Z" },
+      ]),
+    );
 
     const result = await useCase.execute(groupId, WINDOW);
 
@@ -109,6 +118,13 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
         disconnectReason: "CONNECTION_LOST",
       },
     ]);
+    expect(result.value.dataByExperiment).toEqual([
+      { bucketStart: "2026-08-17T10:00:00.000Z", experimentId: null, count: 4 },
+    ]);
+    // Two versions in the window: only the most recently seen one is current.
+    expect(result.value.firmware).toEqual([
+      { deviceId: device.id, version: "1.1.0", lastSeen: "2026-08-17T11:00:00.000Z" },
+    ]);
   });
 
   it("returns an empty roster without touching AWS or the warehouse", async () => {
@@ -124,6 +140,8 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
     expect(result.value).toEqual({
       members: [],
       throughput: [],
+      dataByExperiment: [],
+      firmware: [],
       events: [],
       pipelineUnavailable: false,
     });
@@ -139,6 +157,8 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
     vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
     vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDevicesFirmware").mockResolvedValue(success([]));
 
     const result = await useCase.execute(groupId, WINDOW);
 
@@ -155,6 +175,8 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
     );
     vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDevicesFirmware").mockResolvedValue(success([]));
 
     const result = await useCase.execute(groupId, WINDOW);
 

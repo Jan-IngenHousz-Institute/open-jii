@@ -10,17 +10,25 @@ import { MonitoringRangeControl } from "@/components/iot-devices/monitoring/moni
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useIotDeviceGroupMonitoring } from "@/hooks/iot/useIotDeviceGroupMonitoring/useIotDeviceGroupMonitoring";
 import { useLocale } from "@/hooks/useLocale";
+import { orpc } from "@/lib/orpc";
 import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import type { DeviceGroupMemberHealth } from "@repo/api/domains/device-group/device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { buildGroupActivity, memberLabels } from "./group-activity";
+import { GroupDataByExperimentPanel } from "./group-data-by-experiment-panel";
+import { GroupFirmwarePanel } from "./group-firmware-panel";
+import type { MemberFilter } from "./group-health";
+import { filterGroupMembers, summarizeGroupHealth } from "./group-health";
+import { GroupMonitoringFilter } from "./group-monitoring-filter";
 import { GroupMonitoringTiles } from "./group-monitoring-tiles";
 import { GroupRosterPanel } from "./group-roster-panel";
 import { GroupThroughputPanel } from "./group-throughput-panel";
@@ -35,8 +43,8 @@ interface RangeSelection {
 /**
  * The group dashboard, ordered the way an operator reads it: is the fleet
  * healthy right now, how is each member doing, did data flow and from whom,
- * and finally the broker's event record. Every time-series panel shares the
- * one selected range, mirroring the device dashboard it aggregates.
+ * where did it land, what is the fleet running, and finally the broker's
+ * event record. One selected range and one member filter drive every panel.
  */
 export function GroupMonitoringContent() {
   const { t } = useTranslation("iot");
@@ -47,6 +55,7 @@ export function GroupMonitoringContent() {
     range: resolveMonitoringPreset(DEFAULT_PRESET),
     preset: DEFAULT_PRESET,
   }));
+  const [filter, setFilter] = useState<MemberFilter>({ search: "", status: "all" });
 
   const {
     data: monitoring,
@@ -55,25 +64,68 @@ export function GroupMonitoringContent() {
     isError,
     refetch,
   } = useIotDeviceGroupMonitoring(params.groupId, selection.range);
+  // Names for experiments the viewer is a member of; ids outside this list stay
+  // unnamed, since the group publishing to an experiment says nothing about the
+  // viewer's access to it.
+  const { data: visibleExperiments } = useQuery(
+    orpc.experiments.listExperiments.queryOptions({ input: { filter: "member" } }),
+  );
 
   const handleRangeChange = (range: MonitoringRange, preset: MonitoringPresetId | null) => {
     setSelection({ range, preset });
   };
 
   const now = Date.now();
+
+  function labelFor(member: DeviceGroupMemberHealth): string {
+    return resolveDevicePrimaryLabel(
+      presentDevice({ name: member.name, family: member.deviceType, id: member.serialNumber }),
+      t,
+    );
+  }
+
   const labels =
     monitoring === undefined
       ? new Map<string, string>()
-      : memberLabels(monitoring.members, (member) =>
-          resolveDevicePrimaryLabel(
-            presentDevice({
-              name: member.name,
-              family: member.deviceType,
-              id: member.serialNumber,
-            }),
-            t,
-          ),
+      : memberLabels(monitoring.members, labelFor);
+
+  const filteredMembers =
+    monitoring === undefined
+      ? []
+      : filterGroupMembers(
+          monitoring.members,
+          filter,
+          monitoring.pipelineUnavailable,
+          now,
+          labelFor,
         );
+  const filteredIds = new Set(filteredMembers.map((member) => member.deviceId));
+  const isFiltered =
+    monitoring !== undefined && filteredMembers.length !== monitoring.members.length;
+
+  // Member-attributed facts follow the filter; unattributed rows only surface
+  // in the unfiltered view, so a filtered chart never shows orphan volume.
+  const filteredThroughput =
+    monitoring === undefined
+      ? []
+      : monitoring.throughput.filter((row) =>
+          row.deviceId === null ? !isFiltered : filteredIds.has(row.deviceId),
+        );
+  const filteredEvents =
+    monitoring === undefined
+      ? []
+      : monitoring.events.filter((row) =>
+          row.deviceId === null ? !isFiltered : filteredIds.has(row.deviceId),
+        );
+  const filteredFirmware =
+    monitoring === undefined
+      ? []
+      : monitoring.firmware.filter((row) => row.deviceId !== null && filteredIds.has(row.deviceId));
+  const versionByDeviceId = new Map(
+    filteredFirmware.flatMap((row) =>
+      row.deviceId !== null && row.version !== null ? [[row.deviceId, row.version] as const] : [],
+    ),
+  );
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -90,8 +142,18 @@ export function GroupMonitoringContent() {
         />
       </div>
 
+      {monitoring !== undefined && monitoring.members.length > 0 && (
+        <GroupMonitoringFilter
+          filter={filter}
+          onFilterChange={setFilter}
+          summary={summarizeGroupHealth(monitoring.members, monitoring.pipelineUnavailable, now)}
+        />
+      )}
+
       <GroupMonitoringTiles
         monitoring={monitoring}
+        members={filteredMembers}
+        throughput={filteredThroughput}
         range={selection.range}
         locale={locale}
         now={now}
@@ -139,7 +201,9 @@ export function GroupMonitoringContent() {
           >
             <GroupRosterPanel
               monitoring={monitoring}
+              members={filteredMembers}
               labelByDeviceId={labels}
+              versionByDeviceId={versionByDeviceId}
               locale={locale}
               now={now}
             />
@@ -150,9 +214,35 @@ export function GroupMonitoringContent() {
             description={t("iot.devices.monitoring.pipelineNote")}
           >
             <GroupThroughputPanel
-              monitoring={monitoring}
+              throughput={filteredThroughput}
               labelByDeviceId={labels}
               range={selection.range}
+              locale={locale}
+            />
+          </PanelCard>
+
+          <PanelCard
+            title={t("iot.devices.monitoring.dataByExperimentTitle")}
+            description={
+              isFiltered
+                ? t("iot.groups.monitoring.experimentsGroupWide")
+                : t("iot.groups.monitoring.experimentsHint")
+            }
+          >
+            <GroupDataByExperimentPanel
+              dataByExperiment={monitoring.dataByExperiment}
+              visibleExperiments={visibleExperiments ?? []}
+              locale={locale}
+            />
+          </PanelCard>
+
+          <PanelCard
+            title={t("iot.groups.monitoring.firmwareTitle")}
+            description={t("iot.groups.monitoring.firmwareHint")}
+          >
+            <GroupFirmwarePanel
+              firmware={filteredFirmware}
+              labelByDeviceId={labels}
               locale={locale}
             />
           </PanelCard>
@@ -160,7 +250,7 @@ export function GroupMonitoringContent() {
           <PanelCard title={t("iot.devices.monitoring.eventLogTitle")}>
             <EventLog
               entries={buildGroupActivity(
-                monitoring.events,
+                filteredEvents,
                 labels,
                 t("iot.groups.monitoring.unknownMember"),
               )}

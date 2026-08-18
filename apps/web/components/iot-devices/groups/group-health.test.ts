@@ -1,7 +1,7 @@
 import { createDeviceGroupMemberHealth } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
-import { isMemberSilent, summarizeGroupHealth } from "./group-health";
+import { filterGroupMembers, isMemberSilent, summarizeGroupHealth } from "./group-health";
 
 const NOW = new Date("2026-08-18T12:00:00.000Z").getTime();
 const RECENT = "2026-08-18T11:30:00.000Z";
@@ -66,5 +66,71 @@ describe("summarizeGroupHealth", () => {
       unknown: 1,
       silent: 1,
     });
+  });
+});
+
+describe("filterGroupMembers", () => {
+  const label = (member: { name: string | null }) => member.name ?? "unnamed";
+  const members = [
+    createDeviceGroupMemberHealth({
+      name: "Greenhouse Gateway",
+      serialNumber: "AA:11",
+      connectivity: online,
+      lastDataAt: RECENT,
+    }),
+    createDeviceGroupMemberHealth({
+      name: "Field Node",
+      serialNumber: "BB:22",
+      connectivity: online,
+      lastDataAt: STALE,
+    }),
+    createDeviceGroupMemberHealth({
+      name: "Cold Spare",
+      serialNumber: "CC:33",
+      connectivity: { connected: false, lastSeenAt: null },
+    }),
+    createDeviceGroupMemberHealth({ name: null, serialNumber: "DD:44", connectivity: null }),
+  ];
+
+  it("searches names and serials case-insensitively", () => {
+    const byName = filterGroupMembers(
+      members,
+      { search: "greenhouse", status: "all" },
+      false,
+      NOW,
+      label,
+    );
+    expect(byName.map(label)).toEqual(["Greenhouse Gateway"]);
+
+    const bySerial = filterGroupMembers(
+      members,
+      { search: "dd:44", status: "all" },
+      false,
+      NOW,
+      label,
+    );
+    expect(bySerial.map(label)).toEqual(["unnamed"]);
+  });
+
+  it("filters by each status chip", () => {
+    const pick = (status: "all" | "online" | "offline" | "silent" | "unknown") =>
+      filterGroupMembers(members, { search: "", status }, false, NOW, label).map(label);
+
+    expect(pick("all")).toHaveLength(4);
+    expect(pick("online")).toEqual(["Greenhouse Gateway", "Field Node"]);
+    expect(pick("offline")).toEqual(["Cold Spare"]);
+    expect(pick("silent")).toEqual(["Field Node"]);
+    expect(pick("unknown")).toEqual(["unnamed"]);
+  });
+
+  it("combines search and status", () => {
+    const result = filterGroupMembers(
+      members,
+      { search: "node", status: "silent" },
+      false,
+      NOW,
+      label,
+    );
+    expect(result.map(label)).toEqual(["Field Node"]);
   });
 });

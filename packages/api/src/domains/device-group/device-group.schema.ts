@@ -69,6 +69,20 @@ export const zDeviceGroupThroughputBucket = z.object({
   count: z.number().int(),
 });
 
+/** One (bucket, experiment) measurement count aggregated across the group. */
+export const zDeviceGroupExperimentBucket = z.object({
+  bucketStart: z.string().nullable(),
+  experimentId: z.string().uuid().nullable(),
+  count: z.number().int(),
+});
+
+/** A member's most recent firmware version inside the window. */
+export const zDeviceGroupFirmware = z.object({
+  deviceId: z.string().uuid().nullable(),
+  version: z.string().nullable(),
+  lastSeen: z.string().datetime().nullable(),
+});
+
 /** A member's broker lifecycle event inside the window. */
 export const zDeviceGroupLifecycleEvent = z.object({
   deviceId: z.string().uuid().nullable(),
@@ -80,6 +94,8 @@ export const zDeviceGroupLifecycleEvent = z.object({
 export const zDeviceGroupMonitoring = z.object({
   members: z.array(zDeviceGroupMemberHealth),
   throughput: z.array(zDeviceGroupThroughputBucket),
+  dataByExperiment: z.array(zDeviceGroupExperimentBucket),
+  firmware: z.array(zDeviceGroupFirmware),
   events: z.array(zDeviceGroupLifecycleEvent),
   // Warehouse lookups failed: facts degrade to unknown, never to "silent".
   pipelineUnavailable: z.boolean(),
@@ -137,5 +153,7 @@ export type DeviceGroupMemberHealth = z.infer<typeof zDeviceGroupMemberHealth>;
 export type DeviceGroupMonitoring = z.infer<typeof zDeviceGroupMonitoring>;
 export type DeviceGroupThroughputBucket = z.infer<typeof zDeviceGroupThroughputBucket>;
 export type DeviceGroupLifecycleEvent = z.infer<typeof zDeviceGroupLifecycleEvent>;
+export type DeviceGroupExperimentBucket = z.infer<typeof zDeviceGroupExperimentBucket>;
+export type DeviceGroupFirmware = z.infer<typeof zDeviceGroupFirmware>;
 export type CreateDeviceGroupBody = z.infer<typeof zCreateDeviceGroupBody>;
 export type UpdateDeviceGroupBody = z.infer<typeof zUpdateDeviceGroupBody>;

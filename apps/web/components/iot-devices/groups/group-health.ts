@@ -29,6 +29,45 @@ export function isMemberSilent(
   );
 }
 
+export type MemberStatus = "online" | "offline" | "unknown";
+
+export function memberStatus(member: DeviceGroupMemberHealth): MemberStatus {
+  if (member.connectivity === null) return "unknown";
+  return member.connectivity.connected ? "online" : "offline";
+}
+
+export type MemberStatusFilter = MemberStatus | "silent" | "all";
+
+export interface MemberFilter {
+  search: string;
+  status: MemberStatusFilter;
+}
+
+/**
+ * Case-insensitive name/serial search plus one status chip. Silence is a flag
+ * on top of "online", so it filters as its own chip rather than a fourth state.
+ */
+export function filterGroupMembers(
+  members: DeviceGroupMemberHealth[],
+  filter: MemberFilter,
+  pipelineUnavailable: boolean,
+  now: number,
+  labelFor: (member: DeviceGroupMemberHealth) => string,
+): DeviceGroupMemberHealth[] {
+  const needle = filter.search.trim().toLowerCase();
+
+  return members.filter((member) => {
+    if (needle !== "") {
+      const haystack = `${labelFor(member)} ${member.serialNumber}`.toLowerCase();
+      if (!haystack.includes(needle)) return false;
+    }
+
+    if (filter.status === "all") return true;
+    if (filter.status === "silent") return isMemberSilent(member, pipelineUnavailable, now);
+    return memberStatus(member) === filter.status;
+  });
+}
+
 export function summarizeGroupHealth(
   members: DeviceGroupMemberHealth[],
   pipelineUnavailable: boolean,
@@ -36,8 +75,8 @@ export function summarizeGroupHealth(
 ): GroupHealthSummary {
   return {
     total: members.length,
-    online: members.filter((member) => member.connectivity?.connected === true).length,
-    unknown: members.filter((member) => member.connectivity === null).length,
+    online: members.filter((member) => memberStatus(member) === "online").length,
+    unknown: members.filter((member) => memberStatus(member) === "unknown").length,
     silent: members.filter((member) => isMemberSilent(member, pipelineUnavailable, now)).length,
   };
 }

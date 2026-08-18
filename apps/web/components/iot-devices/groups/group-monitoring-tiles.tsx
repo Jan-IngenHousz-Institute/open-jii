@@ -3,7 +3,11 @@
 import { formatRelativeTime } from "@/util/date";
 import { AlertTriangle } from "lucide-react";
 
-import type { DeviceGroupMonitoring } from "@repo/api/domains/device-group/device-group.schema";
+import type {
+  DeviceGroupMemberHealth,
+  DeviceGroupMonitoring,
+  DeviceGroupThroughputBucket,
+} from "@repo/api/domains/device-group/device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -12,6 +16,9 @@ import { summarizeGroupHealth } from "./group-health";
 
 interface GroupMonitoringTilesProps {
   monitoring: DeviceGroupMonitoring | undefined;
+  /** The filtered member subset the whole dashboard is scoped to. */
+  members: DeviceGroupMemberHealth[];
+  throughput: DeviceGroupThroughputBucket[];
   range: MonitoringRange;
   locale: string;
   now: number;
@@ -20,6 +27,8 @@ interface GroupMonitoringTilesProps {
 /** The triage row: who is on right now, how fresh the data is, and the window's volume. */
 export function GroupMonitoringTiles({
   monitoring,
+  members,
+  throughput,
   range,
   locale,
   now,
@@ -29,9 +38,9 @@ export function GroupMonitoringTiles({
   const summary =
     monitoring === undefined
       ? undefined
-      : summarizeGroupHealth(monitoring.members, monitoring.pipelineUnavailable, now);
+      : summarizeGroupHealth(members, monitoring.pipelineUnavailable, now);
 
-  const freshest = monitoring?.members.reduce<string | null>(
+  const freshest = members.reduce<string | null>(
     (latest, member) =>
       member.lastDataAt !== null && (latest === null || member.lastDataAt > latest)
         ? member.lastDataAt
@@ -39,7 +48,10 @@ export function GroupMonitoringTiles({
     null,
   );
 
-  const total = monitoring?.throughput.reduce((sum, bucket) => sum + bucket.count, 0);
+  const total =
+    monitoring === undefined
+      ? undefined
+      : throughput.reduce((sum, bucket) => sum + bucket.count, 0);
   // Fractional hours: truncating would misstate the rate on sub-day windows.
   const windowMs = new Date(range.to).getTime() - new Date(range.from).getTime();
   const windowHours = Math.max(1, windowMs / 3_600_000);
@@ -75,7 +87,7 @@ export function GroupMonitoringTiles({
           <p className="text-lg font-semibold">
             {monitoring.pipelineUnavailable
               ? t("iot.devices.monitoring.lastDataUnavailable")
-              : freshest == null
+              : freshest === null
                 ? t("iot.groups.monitoring.noData")
                 : formatRelativeTime(freshest, locale)}
           </p>

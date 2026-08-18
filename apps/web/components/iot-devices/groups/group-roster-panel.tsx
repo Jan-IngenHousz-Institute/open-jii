@@ -23,7 +23,10 @@ import { isMemberSilent } from "./group-health";
 
 interface GroupRosterPanelProps {
   monitoring: DeviceGroupMonitoring;
+  /** The filtered subset to render; facts still come from `monitoring`. */
+  members: DeviceGroupMemberHealth[];
   labelByDeviceId: Map<string, string>;
+  versionByDeviceId: Map<string, string>;
   locale: string;
   now: number;
 }
@@ -31,7 +34,9 @@ interface GroupRosterPanelProps {
 /** Per-member live state; each row deep-links to that device's own dashboard. */
 export function GroupRosterPanel({
   monitoring,
+  members,
   labelByDeviceId,
+  versionByDeviceId,
   locale,
   now,
 }: GroupRosterPanelProps) {
@@ -62,6 +67,9 @@ export function GroupRosterPanel({
             ? t("iot.groups.monitoring.noData")
             : formatRelativeTime(member.lastDataAt, locale)}
         </TableCell>
+        <TableCell className="text-muted-foreground font-mono text-xs">
+          {versionByDeviceId.get(member.deviceId)}
+        </TableCell>
         <TableCell>
           {silent && (
             <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
@@ -74,6 +82,14 @@ export function GroupRosterPanel({
     );
   }
 
+  if (members.length === 0) {
+    return (
+      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+        {t("iot.groups.monitoring.filter.noMatches")}
+      </p>
+    );
+  }
+
   return (
     <div className="rounded-lg border">
       <Table>
@@ -83,10 +99,11 @@ export function GroupRosterPanel({
             <TableHead>{t("iot.groups.monitoring.stateColumn")}</TableHead>
             <TableHead>{t("iot.groups.monitoring.lastSeenColumn")}</TableHead>
             <TableHead>{t("iot.groups.monitoring.lastDataColumn")}</TableHead>
+            <TableHead>{t("iot.groups.monitoring.versionColumn")}</TableHead>
             <TableHead className="w-40" />
           </TableRow>
         </TableHeader>
-        <TableBody>{monitoring.members.map(renderMemberRow)}</TableBody>
+        <TableBody>{members.map(renderMemberRow)}</TableBody>
       </Table>
     </div>
   );

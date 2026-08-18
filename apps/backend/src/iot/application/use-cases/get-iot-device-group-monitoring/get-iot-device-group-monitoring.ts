@@ -7,6 +7,8 @@ import type { AwsPort, ThingConnectivity } from "../../../core/ports/aws.port";
 import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type {
   DatabricksPort,
+  GroupExperimentRow,
+  GroupFirmwareRow,
   GroupLifecycleEventRow,
   GroupThroughputRow,
 } from "../../../core/ports/databricks.port";
@@ -30,6 +32,8 @@ export interface IotDeviceGroupMemberHealthDto {
 export interface IotDeviceGroupMonitoringDto {
   members: IotDeviceGroupMemberHealthDto[];
   throughput: { bucketStart: string | null; deviceId: string | null; count: number }[];
+  dataByExperiment: { bucketStart: string | null; experimentId: string | null; count: number }[];
+  firmware: { deviceId: string | null; version: string | null; lastSeen: string | null }[];
   events: {
     deviceId: string | null;
     eventType: string | null;
@@ -72,18 +76,30 @@ export class GetIotDeviceGroupMonitoringUseCase {
 
     const members = membersResult.value;
     if (members.length === 0) {
-      return success({ members: [], throughput: [], events: [], pipelineUnavailable: false });
+      return success({
+        members: [],
+        throughput: [],
+        dataByExperiment: [],
+        firmware: [],
+        events: [],
+        pipelineUnavailable: false,
+      });
     }
 
     const thingNames = members.map((member) => member.thingName);
     const deviceIdByThing = new Map(members.map((member) => [member.thingName, member.deviceId]));
 
-    const [connectivity, activity, throughput, events] = await Promise.all([
-      this.lookupConnectivity(thingNames),
-      this.lookupActivity(thingNames),
-      this.lookupThroughput(thingNames, window),
-      this.lookupEvents(thingNames, window),
-    ]);
+    // One grouped scan per fact family, all in flight together: the dashboard's
+    // latency is the slowest scan, not the sum.
+    const [connectivity, activity, throughput, dataByExperiment, firmware, events] =
+      await Promise.all([
+        this.lookupConnectivity(thingNames),
+        this.lookupActivity(thingNames),
+        this.lookupThroughput(thingNames, window),
+        this.lookupDataByExperiment(thingNames, window),
+        this.lookupFirmware(thingNames, window),
+        this.lookupEvents(thingNames, window),
+      ]);
 
     const toDeviceId = (clientId: string | null) =>
       clientId === null ? null : (deviceIdByThing.get(clientId) ?? null);
@@ -105,13 +121,24 @@ export class GetIotDeviceGroupMonitoringUseCase {
         deviceId: toDeviceId(row.clientId),
         count: row.count,
       })),
+      dataByExperiment: dataByExperiment ?? [],
+      firmware: this.latestFirmwarePerMember(firmware ?? []).map((row) => ({
+        deviceId: toDeviceId(row.clientId),
+        version: row.version,
+        lastSeen: row.lastSeen,
+      })),
       events: (events ?? []).map((row) => ({
         deviceId: toDeviceId(row.clientId),
         eventType: row.eventType,
         eventTimestamp: row.eventTimestamp,
         disconnectReason: row.disconnectReason,
       })),
-      pipelineUnavailable: activity === null || throughput === null || events === null,
+      pipelineUnavailable:
+        activity === null ||
+        throughput === null ||
+        dataByExperiment === null ||
+        firmware === null ||
+        events === null,
     });
   }
 
@@ -152,6 +179,35 @@ export class GetIotDeviceGroupMonitoringUseCase {
     return result.value;
   }
 
+  private async lookupDataByExperiment(
+    thingNames: string[],
+    window: MonitoringWindow,
+  ): Promise<GroupExperimentRow[] | null> {
+    const result = await this.databricksPort.getDevicesDataByExperiment(
+      thingNames,
+      window.from,
+      window.to,
+      window.bucket,
+    );
+    if (result.isFailure()) {
+      this.warn("Warehouse data-by-experiment lookup failed", result);
+      return null;
+    }
+    return result.value;
+  }
+
+  private async lookupFirmware(
+    thingNames: string[],
+    window: MonitoringWindow,
+  ): Promise<GroupFirmwareRow[] | null> {
+    const result = await this.databricksPort.getDevicesFirmware(thingNames, window.from, window.to);
+    if (result.isFailure()) {
+      this.warn("Warehouse firmware lookup failed", result);
+      return null;
+    }
+    return result.value;
+  }
+
   private async lookupEvents(
     thingNames: string[],
     window: MonitoringWindow,
@@ -167,6 +223,19 @@ export class GetIotDeviceGroupMonitoringUseCase {
       return null;
     }
     return result.value;
+  }
+
+  /** A member's current version is its most recently seen one in the window. */
+  private latestFirmwarePerMember(rows: GroupFirmwareRow[]): GroupFirmwareRow[] {
+    const latest = new Map<string, GroupFirmwareRow>();
+    for (const row of rows) {
+      if (row.clientId === null || row.lastSeen === null) continue;
+      const current = latest.get(row.clientId);
+      if (current?.lastSeen == null || row.lastSeen > current.lastSeen) {
+        latest.set(row.clientId, row);
+      }
+    }
+    return [...latest.values()];
   }
 
   private warn(msg: string, result: { error: { code: string } }) {

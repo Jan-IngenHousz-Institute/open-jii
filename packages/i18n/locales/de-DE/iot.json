@@ -397,6 +397,20 @@
         "created": "Erstellt"
       },
       "monitoring": {
+        "filter": {
+          "searchPlaceholder": "Geräte durchsuchen",
+          "all": "Alle",
+          "offline": "Offline",
+          "silent": "Still",
+          "noMatches": "Keine Mitglieder entsprechen dem aktuellen Filter."
+        },
+        "versionColumn": "Firmware",
+        "firmwareTitle": "Firmware",
+        "firmwareHint": "Im Zeitfenster gemeldete Versionen, pro Mitglied.",
+        "noFirmware": "Keine Firmware-Versionen in diesem Zeitraum gemeldet.",
+        "mixedFirmware": "{{count}} Versionen im Einsatz",
+        "experimentsHint": "Wo die Daten der Gruppe im Zeitfenster gelandet sind.",
+        "experimentsGroupWide": "Gesamte Gruppe; dieses Panel folgt dem Mitgliederfilter nicht.",
         "description": "Flottenzustand auf einen Blick, aggregiert über alle Mitglieder.",
         "rosterTitle": "Mitglieder",
         "rosterHint": "Live-Status pro Mitglied; eine Zeile öffnet das Dashboard des Geräts.",

@@ -15816,6 +15816,88 @@
                         ]
                       }
                     },
+                    "dataByExperiment": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "bucketStart": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "experimentId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "bucketStart",
+                          "experimentId",
+                          "count"
+                        ]
+                      }
+                    },
+                    "firmware": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "deviceId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "version": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lastSeen": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "deviceId",
+                          "version",
+                          "lastSeen"
+                        ]
+                      }
+                    },
                     "events": {
                       "type": "array",
                       "items": {
@@ -15879,6 +15961,8 @@
                   "required": [
                     "members",
                     "throughput",
+                    "dataByExperiment",
+                    "firmware",
                     "events",
                     "pipelineUnavailable"
                   ]

@@ -397,6 +397,20 @@
         "created": "Created"
       },
       "monitoring": {
+        "filter": {
+          "searchPlaceholder": "Search devices",
+          "all": "All",
+          "offline": "Offline",
+          "silent": "Silent",
+          "noMatches": "No members match the current filter."
+        },
+        "versionColumn": "Firmware",
+        "firmwareTitle": "Firmware",
+        "firmwareHint": "Versions reported in the window's data, per member.",
+        "noFirmware": "No firmware versions reported in this range.",
+        "mixedFirmware": "{{count}} versions in the field",
+        "experimentsHint": "Where the group's data landed over the window.",
+        "experimentsGroupWide": "Whole group; this panel does not follow the member filter.",
         "description": "Fleet health at a glance, aggregated from every member's data.",
         "rosterTitle": "Members",
         "rosterHint": "Live state per member; open a row for that device's own dashboard.",

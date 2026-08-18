@@ -11,6 +11,20 @@ export interface GroupThroughputRow {
   count: number;
 }
 
+/** One (bucket, experiment) measurement count aggregated across a group. */
+export interface GroupExperimentRow {
+  bucketStart: string | null;
+  experimentId: string | null;
+  count: number;
+}
+
+/** A (thing, firmware version) pair with its most recent sighting. */
+export interface GroupFirmwareRow {
+  clientId: string | null;
+  version: string | null;
+  lastSeen: string | null;
+}
+
 /** A broker lifecycle event carrying which thing it belongs to. */
 export interface GroupLifecycleEventRow {
   clientId: string | null;
@@ -89,6 +103,17 @@ export interface DatabricksPort {
     to: string,
     limit: number,
   ): Promise<Result<GroupLifecycleEventRow[]>>;
+  getDevicesDataByExperiment(
+    thingNames: string[],
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<GroupExperimentRow[]>>;
+  getDevicesFirmware(
+    thingNames: string[],
+    from: string,
+    to: string,
+  ): Promise<Result<GroupFirmwareRow[]>>;
   getDeviceLifecycleEvents(
     thingName: string,
     from: string,

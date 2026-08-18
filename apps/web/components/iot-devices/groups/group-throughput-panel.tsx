@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 
-import type {
-  DeviceGroupMonitoring,
-  DeviceGroupThroughputBucket,
-} from "@repo/api/domains/device-group/device-group.schema";
+import type { DeviceGroupThroughputBucket } from "@repo/api/domains/device-group/device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
 
@@ -17,7 +14,7 @@ import type { MonitoringRange } from "../monitoring/monitoring-range";
 import { GroupThroughputTable } from "./group-throughput-table";
 
 interface GroupThroughputPanelProps {
-  monitoring: DeviceGroupMonitoring;
+  throughput: DeviceGroupThroughputBucket[];
   labelByDeviceId: Map<string, string>;
   range: MonitoringRange;
   locale: string;
@@ -82,7 +79,7 @@ function buildSeries(
  * silent periods visible as real gaps instead of a compressed axis.
  */
 export function GroupThroughputPanel({
-  monitoring,
+  throughput,
   labelByDeviceId,
   range,
   locale,
@@ -92,13 +89,13 @@ export function GroupThroughputPanel({
 
   const axis = bucketAxis(range.from, range.to, range.bucket);
   const series = buildSeries(
-    monitoring.throughput,
+    throughput,
     labelByDeviceId,
     axis,
     t("iot.devices.monitoring.otherSeries"),
     t("iot.groups.monitoring.unknownMember"),
   );
-  const total = monitoring.throughput.reduce((sum, bucket) => sum + bucket.count, 0);
+  const total = throughput.reduce((sum, bucket) => sum + bucket.count, 0);
 
   return (
     <div className="space-y-3">

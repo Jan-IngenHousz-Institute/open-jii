@@ -20,6 +20,8 @@ import type {
   DeviceMeasurementRow,
   DevicePayloadBreakdownRow,
   DeviceThroughputRow,
+  GroupExperimentRow,
+  GroupFirmwareRow,
   GroupLifecycleEventRow,
   GroupThroughputRow,
 } from "../../../iot/core/ports/databricks.port";
@@ -428,6 +430,72 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
         clientId: row[index.client_id] ?? null,
         count: Number(row[index.measurement_count] ?? 0),
+      })),
+    );
+  }
+
+  /** Measurement volume per (bucket, experiment) aggregated across a group. */
+  async getDevicesDataByExperiment(
+    thingNames: string[],
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<GroupExperimentRow[]>> {
+    const bucketAlias = `timestamp_${bucket}`;
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      filters: [
+        { column: "client_id", operator: "in", value: thingNames },
+        { column: "timestamp", operator: "between", value: [from, to] },
+      ],
+      aggregation: {
+        groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "experiment_id" }],
+        functions: [{ column: "*", function: "count", alias: "measurement_count" }],
+      },
+      orderBy: bucketAlias,
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
+        experimentId: row[index.experiment_id] ?? null,
+        count: Number(row[index.measurement_count] ?? 0),
+      })),
+    );
+  }
+
+  /** Firmware versions seen per thing in the window, with last sighting. */
+  async getDevicesFirmware(
+    thingNames: string[],
+    from: string,
+    to: string,
+  ): Promise<Result<GroupFirmwareRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      filters: [
+        { column: "client_id", operator: "in", value: thingNames },
+        { column: "timestamp", operator: "between", value: [from, to] },
+      ],
+      aggregation: {
+        groupBy: [{ column: "client_id" }, { column: "device_version" }],
+        functions: [{ column: "timestamp", function: "max", alias: "last_seen" }],
+      },
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        clientId: row[index.client_id] ?? null,
+        version: row[index.device_version] ?? null,
+        lastSeen: this.toIsoOrNull(row[index.last_seen]),
       })),
     );
   }
