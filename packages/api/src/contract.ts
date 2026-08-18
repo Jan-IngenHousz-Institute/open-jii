@@ -1,3 +1,4 @@
+import { deviceGroupContract } from "./domains/device-group/device-group.contract";
 import { experimentContributorsContract } from "./domains/experiment/contributors/experiment-contributors.contract";
 import { experimentDashboardsContract } from "./domains/experiment/dashboards/experiment-dashboards.contract";
 import { experimentDataAnnotationsContract } from "./domains/experiment/data-annotations/experiment-data-annotations.contract";
@@ -15,7 +16,6 @@ import { experimentUploadsContract } from "./domains/experiment/uploads/experime
 import { experimentVisualizationsContract } from "./domains/experiment/visualizations/experiment-visualizations.contract";
 import { experimentWorkbooksContract } from "./domains/experiment/workbooks/experiment-workbooks.contract";
 import { healthContract } from "./domains/health/health.contract";
-import { deviceGroupContract } from "./domains/device-group/device-group.contract";
 import { iotContract } from "./domains/iot/iot.contract";
 import { macroContract } from "./domains/macro/macro.contract";
 import { newsletterContract } from "./domains/newsletter/newsletter.contract";

@@ -219,6 +219,23 @@
         "description": "Versuchen Sie einen anderen Suchbegriff oder Statusfilter.",
         "clear": "Filter zurücksetzen"
       },
+      "bulkDialog": {
+        "open": "Sammelregistrierung",
+        "title": "Geräte gesammelt registrieren",
+        "description": "Registrieren Sie einen Stapel Geräte eines Typs, optional direkt in eine Gruppe.",
+        "serialsLabel": "Seriennummern",
+        "serialsPlaceholder": "Ein Gerät pro Zeile: Seriennummer, oder Seriennummer, Name",
+        "groupLabel": "Gruppe",
+        "groupNone": "Keine Gruppe",
+        "groupExisting": "Bestehende Gruppe",
+        "groupNew": "Neue Gruppe",
+        "groupSelectPlaceholder": "Gruppe auswählen",
+        "groupNamePlaceholder": "z. B. Gewächshaus B",
+        "submit": "Geräte registrieren",
+        "successToast": "{{count}} Geräte registriert",
+        "groupError": "Gruppe: {{error}}",
+        "done": "Fertig"
+      },
       "dialog": {
         "title": "Gerät registrieren",
         "description": "Registrieren Sie ein Hardware-Gerät. In diesem Schritt wird kein Zertifikat ausgestellt.",

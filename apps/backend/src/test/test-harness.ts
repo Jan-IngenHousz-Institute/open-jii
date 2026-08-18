@@ -11,6 +11,7 @@ import request from "supertest";
 import type { Response } from "supertest";
 import type { App } from "supertest/types";
 
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { auth } from "@repo/auth/server";
 import type { DatabaseInstance } from "@repo/database";
 import {
@@ -428,11 +429,7 @@ export class TestHarness {
    * admin: the `create*` helpers deliberately do not call it, because a creator
    * grant is a state no create path produces.
    */
-  public addResourceAdmin(
-    resourceType: "experiment" | "protocol" | "macro" | "workbook" | "device",
-    resourceId: string,
-    userId: string,
-  ) {
+  public addResourceAdmin(resourceType: SharingResourceType, resourceId: string, userId: string) {
     return this.addResourceGrant({
       resourceType,
       resourceId,
@@ -474,7 +471,7 @@ export class TestHarness {
 
   /** Seed a resource grant. */
   public async addResourceGrant(data: {
-    resourceType: "experiment" | "protocol" | "macro" | "workbook" | "device";
+    resourceType: SharingResourceType;
     resourceId: string;
     granteeType: "user" | "team" | "organization";
     granteeId: string;

@@ -37,6 +37,7 @@ describe("<DevicesLayout />", () => {
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("iot.devices.title");
     expect(screen.getByRole("button", { name: "iot.devices.register" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "iot.devices.bulkDialog.open" })).toBeInTheDocument();
     expect(screen.getByText("Child Content")).toBeInTheDocument();
   });
 

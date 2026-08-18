@@ -19,6 +19,8 @@ import {
   zIotUploadUrlRequest,
   zIssueIotCredentialsResponse,
   zOnboardDeviceBody,
+  zBulkRegisterIotDevicesBody,
+  zBulkRegisterIotDevicesResult,
   zRegisterIotDeviceBody,
   zRegisterIotDeviceResponse,
 } from "./iot.schema";
@@ -53,6 +55,10 @@ export const iotContract = {
     .route({ method: "POST", path: "/api/v1/devices", successStatus: 201 })
     .input(zRegisterIotDeviceBody)
     .output(zRegisterIotDeviceResponse),
+  bulkRegisterIotDevices: oc
+    .route({ method: "POST", path: "/api/v1/devices/bulk", successStatus: 200 })
+    .input(zBulkRegisterIotDevicesBody)
+    .output(zBulkRegisterIotDevicesResult),
   getIotDevice: oc
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}", successStatus: 200 })
     .input(zIotDevicePathParam)

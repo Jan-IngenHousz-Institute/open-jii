@@ -8,6 +8,7 @@ import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapt
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { AddIotDeviceGroupMembersUseCase } from "./application/use-cases/add-iot-device-group-members/add-iot-device-group-members";
+import { BulkRegisterIotDevicesUseCase } from "./application/use-cases/bulk-register-iot-devices/bulk-register-iot-devices";
 import { CreateIotDeviceGroupUseCase } from "./application/use-cases/create-iot-device-group/create-iot-device-group";
 import { DeleteIotDeviceGroupUseCase } from "./application/use-cases/delete-iot-device-group/delete-iot-device-group";
 import { DeleteIotDeviceUseCase } from "./application/use-cases/delete-iot-device/delete-iot-device";
@@ -64,6 +65,7 @@ import { IotController } from "./presentation/iot.controller";
     GetIotCredentialsUseCase,
     GetIotUploadUrlUseCase,
     RegisterIotDeviceUseCase,
+    BulkRegisterIotDevicesUseCase,
     EnsureMobileDeviceUseCase,
     ListIotDevicesUseCase,
     GetIotDeviceUseCase,

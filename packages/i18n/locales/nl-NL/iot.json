@@ -219,6 +219,23 @@
         "description": "Probeer een andere zoekterm of statusfilter.",
         "clear": "Filters wissen"
       },
+      "bulkDialog": {
+        "open": "Bulkregistratie",
+        "title": "Apparaten in bulk registreren",
+        "description": "Registreer een batch apparaten van één type, optioneel direct in een groep.",
+        "serialsLabel": "Serienummers",
+        "serialsPlaceholder": "Eén apparaat per regel: serienummer, of serienummer, naam",
+        "groupLabel": "Groep",
+        "groupNone": "Geen groep",
+        "groupExisting": "Bestaande groep",
+        "groupNew": "Nieuwe groep",
+        "groupSelectPlaceholder": "Kies een groep",
+        "groupNamePlaceholder": "bijv. Kas B",
+        "submit": "Apparaten registreren",
+        "successToast": "{{count}} apparaten geregistreerd",
+        "groupError": "Groep: {{error}}",
+        "done": "Klaar"
+      },
       "dialog": {
         "title": "Apparaat registreren",
         "description": "Registreer een hardware-apparaat. In deze stap wordt geen certificaat uitgegeven.",

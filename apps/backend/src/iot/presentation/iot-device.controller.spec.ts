@@ -3,7 +3,12 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import type { IotDevice, IotDeviceDetail, IotDeviceList } from "@repo/api/domains/iot/iot.schema";
+import type {
+  BulkRegisterIotDevicesResult,
+  IotDevice,
+  IotDeviceDetail,
+  IotDeviceList,
+} from "@repo/api/domains/iot/iot.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
@@ -74,6 +79,11 @@ describe("IotDeviceController", () => {
         .send(registerBody)
         .expect(StatusCodes.FORBIDDEN);
       await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.bulkRegisterIotDevices))
+        .withAuth(userId)
+        .send({ devices: [{ serialNumber: "S-1" }], deviceType: "ambyte" })
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
         .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
         .withAuth(userId)
         .send({ installId: "9f2c1a2e-1111-4111-8111-111111111111" })
@@ -138,6 +148,132 @@ describe("IotDeviceController", () => {
         .withAuth(userId)
         .send(registerBody)
         .expect(StatusCodes.CONFLICT);
+    });
+  });
+
+  describe("bulkRegisterIotDevices", () => {
+    const bulkPath = () => testApp.resolveOrpcPath(contract.iot.bulkRegisterIotDevices);
+
+    beforeEach(() => {
+      // The batch persists several rows, so each Thing must keep its own name.
+      vi.spyOn(awsAdapter, "createThing").mockImplementation((input) =>
+        Promise.resolve(
+          success({
+            thingName: input.thingName,
+            thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${input.thingName}`,
+          }),
+        ),
+      );
+    });
+
+    async function bulkRegister(
+      body: object,
+    ): Promise<SuperTestResponse<BulkRegisterIotDevicesResult>> {
+      return testApp.post(bulkPath()).withAuth(userId).send(body).expect(StatusCodes.OK);
+    }
+
+    it("registers every serial and reports per-device results", async () => {
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }, { serialNumber: "S-2", name: "Second" }],
+        deviceType: "ambyte",
+      });
+
+      expect(response.body.devices).toHaveLength(2);
+      for (const row of response.body.devices) {
+        expect(row.error).toBeNull();
+        expect(row.device?.thingName).toBe(`ambyte_${row.serialNumber}`);
+      }
+      expect(response.body.groupId).toBeNull();
+      expect(response.body.groupError).toBeNull();
+    });
+
+    it("continues past a duplicate serial and reports it inline", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
+        .withAuth(userId)
+        .send({ serialNumber: "S-1", deviceType: "ambyte" })
+        .expect(StatusCodes.CREATED);
+
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }, { serialNumber: "S-2" }],
+        deviceType: "ambyte",
+      });
+
+      const [first, second] = response.body.devices;
+      expect(first.device).toBeNull();
+      expect(first.error).toContain("already registered");
+      expect(second.device).not.toBeNull();
+      expect(second.error).toBeNull();
+    });
+
+    it("creates a group around the batch when asked", async () => {
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }, { serialNumber: "S-2" }],
+        deviceType: "ambyte",
+        group: { name: "Fresh batch" },
+      });
+
+      const groupId = response.body.groupId;
+      expect(groupId).not.toBeNull();
+      expect(response.body.groupError).toBeNull();
+
+      const members: SuperTestResponse<{ deviceId: string }[]> = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.deviceGroups.listDeviceGroupMembers, {
+            groupId: groupId ?? "",
+          }),
+        )
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+      expect(members.body).toHaveLength(2);
+    });
+
+    it("adds the batch to an existing group", async () => {
+      const group: SuperTestResponse<{ id: string }> = await testApp
+        .post(testApp.resolveOrpcPath(contract.deviceGroups.createDeviceGroup))
+        .withAuth(userId)
+        .send({ name: "Existing" })
+        .expect(StatusCodes.CREATED);
+
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-9" }],
+        deviceType: "ambyte",
+        group: { groupId: group.body.id },
+      });
+
+      expect(response.body.groupId).toBe(group.body.id);
+      expect(response.body.groupError).toBeNull();
+    });
+
+    it("reports group trouble without failing the registrations", async () => {
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }],
+        deviceType: "ambyte",
+        group: { groupId: faker.string.uuid() },
+      });
+
+      expect(response.body.devices[0].device).not.toBeNull();
+      expect(response.body.groupId).toBeNull();
+      expect(response.body.groupError).toBe("Device group not found");
+    });
+
+    it("rejects duplicate serials within one batch (400)", async () => {
+      await testApp
+        .post(bulkPath())
+        .withAuth(userId)
+        .send({
+          devices: [{ serialNumber: "S-1" }, { serialNumber: "S-1" }],
+          deviceType: "ambyte",
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("rejects the mobile family like the single register (400)", async () => {
+      await testApp
+        .post(bulkPath())
+        .withAuth(userId)
+        .send({ devices: [{ serialNumber: "S-1" }], deviceType: "mobile" })
+        .expect(StatusCodes.BAD_REQUEST);
     });
   });
 
