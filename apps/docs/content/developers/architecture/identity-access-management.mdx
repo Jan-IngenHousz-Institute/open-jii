@@ -22,10 +22,10 @@ transfers, the directory — read [Organizations](/guide/organizations) and
 [Who can access your work?](/guide/access) in the user guide.
 
 <Callout type="info">
-  The model shipped in four phases: the organization substrate, the authorization
-  substrate, grants becoming the only source of resource access, and the product surface
-  that made organizations reachable at all. That sequence is history now — everything
-  below describes the current system, not a direction of travel.
+  The model shipped in four phases: the organization substrate, the authorization substrate, grants
+  becoming the only source of resource access, and the product surface that made organizations
+  reachable at all. That sequence is history now — everything below describes the current system,
+  not a direction of travel.
 </Callout>
 
 ## Authentication paths
@@ -128,7 +128,7 @@ resource exists and ownership loads
 single most important thing on this page. A source whose tier does not cover the
 requested action **falls through** rather than denying, so effective access is
 the strongest that any source grants. The order decides which source an allowed
-decision is *credited to* — `org-role`, a grant tier, or `public` — not which
+decision is _credited to_ — `org-role`, a grant tier, or `public` — not which
 source gets to refuse.
 
 Two consequences follow. A grant can only ever raise access, never lower it: an
@@ -159,8 +159,8 @@ every type because Better Auth needs one literal action list.
 
 The file exports two role matrices:
 
-| Matrix       | Role stored on              | Read by          | Middle tier                                    |
-| ------------ | --------------------------- | ---------------- | ---------------------------------------------- |
+| Matrix       | Role stored on              | Read by          | Middle tier                                           |
+| ------------ | --------------------------- | ---------------- | ----------------------------------------------------- |
 | `roles`      | `organization_members.role` | `orgRoleCan()`   | `member` → `read`, plus `contribute` on an experiment |
 | `grantRoles` | `resource_grants.role`      | `grantRoleCan()` | `viewer` → `read`, plus `contribute` on an experiment |
 
@@ -184,7 +184,7 @@ matrix and a `WHERE role = 'viewer'` trustworthy.
 
 **Both matrices read a possibly multi-valued column.** `organization_members.role`
 holds Better Auth's role string, which can be comma-joined (`"member,admin"`),
-and both helpers split, trim and accept the row if *any* token grants. Unknown
+and both helpers split, trim and accept the row if _any_ token grants. Unknown
 tokens are ignored, so a stale or renamed role confers nothing.
 
 `organizations.base_permission` remains in the schema with a `read` default and
@@ -216,11 +216,12 @@ are questions Better Auth models.
   invitation is for reaching an address that may have nobody behind it, while somebody
   picked out of the platform's own user search already has an account.
 
-  The consequence for a reader of this code: the canonical-role guard in Better Auth's
-  `beforeAddMember` hook **does not protect this path.** What holds the role to one
-  spelling here is the contract's enum plus `canGrantOrganizationRole` in
-  `apps/backend/src/organizations/core/organization-access.ts`. Two paths write the same
-  table under two different guards.
+The consequence for a reader of this code: the canonical-role guard in Better Auth's
+`beforeAddMember` hook **does not protect this path.** What holds the role to one
+spelling here is the contract's enum plus `canGrantOrganizationRole` in
+`apps/backend/src/organizations/core/organization-access.ts`. Two paths write the same
+table under two different guards.
+
 </Callout>
 
 Better Auth's own validation is weaker than the product needs in three places,
@@ -231,8 +232,8 @@ which is what the plugin's hooks exist to correct:
   width, and reserves the `personal-` prefix. Without that guard,
   `create({ slug: "personal-lab" })` mints an organization the whole personal-workspace
   treatment misclassifies — undeletable, memberless, permanently unmanageable.
-- **Role spelling.** Better Auth validates a role *after* trimming but gates who
-  may hand out the creator role on the *untrimmed* string, then stores it
+- **Role spelling.** Better Auth validates a role _after_ trimming but gates who
+  may hand out the creator role on the _untrimmed_ string, then stores it
   verbatim. So `" owner"` or `"member, owner"` passes its check and lands in the
   column; every reader trims, so such a row reads as a full owner that Better
   Auth's own permission check and last-owner counters do not recognise. All three
@@ -255,11 +256,11 @@ having been made by nobody.
 There are three placements, and which one a rule needs is decided by what
 Better Auth actually fires — not by preference.
 
-| Placement | Where | Use it for |
-| --- | --- | --- |
-| `organizationHooks` | `packages/auth/src/organization/plugin.ts` | The plugin's own writes: create, update, invitation, add member, role change, team create, delete |
-| Plugin `hooks.before` / `hooks.after` | same file | Narrowing **reads**, which no `organizationHooks` entry covers |
-| Nest `@BeforeHook` / `@AfterHook` | `apps/backend/src/*/presentation/hooks/` | Paths Better Auth fires no organization hook for at all |
+| Placement                             | Where                                      | Use it for                                                                                        |
+| ------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `organizationHooks`                   | `packages/auth/src/organization/plugin.ts` | The plugin's own writes: create, update, invitation, add member, role change, team create, delete |
+| Plugin `hooks.before` / `hooks.after` | same file                                  | Narrowing **reads**, which no `organizationHooks` entry covers                                    |
+| Nest `@BeforeHook` / `@AfterHook`     | `apps/backend/src/*/presentation/hooks/`   | Paths Better Auth fires no organization hook for at all                                           |
 
 Three details make this concrete:
 
@@ -313,7 +314,7 @@ The consequence is that **nothing cleans up after itself.** Delete a team or an
 organization and the grants naming it survive as access nobody can see or
 revoke, ready to be re-associated with a future team or organization that reuses
 the id. So teardown is explicit: `afterDeleteOrganization` and `afterDeleteTeam`
-sweep the rows. They are *after* hooks on purpose — a refused delete must leave
+sweep the rows. They are _after_ hooks on purpose — a refused delete must leave
 the grants it would have torn down exactly where they were.
 
 Any new grantee kind, or any new way to delete one, has to add its own teardown.
@@ -327,10 +328,10 @@ A **husk** is an organization nobody can be held answerable for: one whose
 living owners are all gone. Most of the rules below exist to prevent or escape
 it. Two definitions of "living membership" are in play, deliberately:
 
-| Test | Counts | Read by | Swapping it in would |
-| --- | --- | --- | --- |
-| **Answerability** | Owners only (`livingOrgOwnerIdsSql`) | The staffing invariant, both account-deletion blockers | Let an organization with admins but no owner read as answerable, though nobody in it can grant the owner role again |
-| **Operability** | Owners **and** admins (`orgHasLivingFullControlMember`) | Transfer's husk escape | Treat an organization that merely lost its owner as abandoned |
+| Test              | Counts                                                  | Read by                                                | Swapping it in would                                                                                                |
+| ----------------- | ------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| **Answerability** | Owners only (`livingOrgOwnerIdsSql`)                    | The staffing invariant, both account-deletion blockers | Let an organization with admins but no owner read as answerable, though nobody in it can grant the owner role again |
+| **Operability**   | Owners **and** admins (`orgHasLivingFullControlMember`) | Transfer's husk escape                                 | Treat an organization that merely lost its owner as abandoned                                                       |
 
 Ownership is what another member cannot take away, which is why answerability
 hangs on it alone.
@@ -347,8 +348,8 @@ move somebody else's work into their own personal workspace and lock the owning
 organization out of it.
 
 A husk is the exception, having nobody to expropriate from: where every owner
-*and* admin has closed their account, whoever still holds control through a grant
-may carry the resource out, or it is stranded. That is the *operability* test.
+_and_ admin has closed their account, whoever still holds control through a grant
+may carry the resource out, or it is stranded. That is the _operability_ test.
 
 The transaction re-asks both halves on its own handle once its locks are held,
 using the same `can()` evaluator rather than a second reading of the grant
@@ -361,9 +362,9 @@ Account deletion is refused while either is true:
 
 1. **The user is the last person answerable for a resource** — two prongs in
    `blockingResourcesQuery` (`resource-staffing.ts`): the owning organization's
-   sole living owner is this user, or the organization is *already* a husk and
+   sole living owner is this user, or the organization is _already_ a husk and
    this user holds the only full-control grant. **Prong one needs no grant at
-   all.** Both escape when somebody *else* holds an `admin`/`owner` grant.
+   all.** Both escape when somebody _else_ holds an `admin`/`owner` grant.
 2. **The user is the sole living owner of a non-personal organization**, whether
    or not it owns anything. Personal workspaces are excluded and have to be:
    everyone permanently and solely owns their own, so counting them would refuse
@@ -389,27 +390,27 @@ The way out is to transfer or delete each resource.
 
 ## Implementation map
 
-| Concern                               | Source                                                                        |
-| ------------------------------------- | ----------------------------------------------------------------------------- |
-| Better Auth server, sessions, plugins | `packages/auth/src/server.ts`                                                 |
-| Organization plugin, hooks, read gates | `packages/auth/src/organization/plugin.ts`                                    |
-| Organization lifecycle and grant teardown | `packages/auth/src/organization/lifecycle.ts`                              |
-| Browser auth client                   | `packages/auth/src/clients/client.web.ts`                                     |
-| API-key session boundary              | `packages/auth/src/api-key-session.ts`                                        |
-| Shared role/action matrices           | `packages/auth/src/access.ts`                                                 |
-| Personal organization provisioning    | `packages/database/src/organizations.ts`                                      |
-| Resource ownership and grants         | `packages/database/src/schema.ts`, `packages/database/src/resource-grants.ts` |
-| Central resource decisions            | `apps/backend/src/authorization/authorization.service.ts`                     |
-| Controller policy guards              | `apps/backend/src/authorization/*guard.ts`                                     |
-| Organization reads, join requests     | `apps/backend/src/organizations/`                                             |
-| Nest-side auth hooks                  | `apps/backend/src/organizations/presentation/hooks/`                          |
-| Organization role authority checks    | `apps/backend/src/organizations/core/organization-access.ts`                  |
-| Grant read/write surface              | `apps/backend/src/sharing/`                                                   |
-| Staffing invariants and row locks     | `apps/backend/src/sharing/core/resource-staffing.ts`                          |
-| Transfer authority gate               | `apps/backend/src/sharing/core/transfer-authority.ts`                         |
-| One-way visibility transitions        | `apps/backend/src/visibility/`                                                |
-| List-query access scoping             | `apps/backend/src/common/utils/resource-access-scope.ts`                      |
-| Account security UI                   | `apps/web/components/account-settings/`, `apps/web/components/auth/`          |
+| Concern                                   | Source                                                                        |
+| ----------------------------------------- | ----------------------------------------------------------------------------- |
+| Better Auth server, sessions, plugins     | `packages/auth/src/server.ts`                                                 |
+| Organization plugin, hooks, read gates    | `packages/auth/src/organization/plugin.ts`                                    |
+| Organization lifecycle and grant teardown | `packages/auth/src/organization/lifecycle.ts`                                 |
+| Browser auth client                       | `packages/auth/src/clients/client.web.ts`                                     |
+| API-key session boundary                  | `packages/auth/src/api-key-session.ts`                                        |
+| Shared role/action matrices               | `packages/auth/src/access.ts`                                                 |
+| Personal organization provisioning        | `packages/database/src/organizations.ts`                                      |
+| Resource ownership and grants             | `packages/database/src/schema.ts`, `packages/database/src/resource-grants.ts` |
+| Central resource decisions                | `apps/backend/src/authorization/authorization.service.ts`                     |
+| Controller policy guards                  | `apps/backend/src/authorization/*guard.ts`                                    |
+| Organization reads, join requests         | `apps/backend/src/organizations/`                                             |
+| Nest-side auth hooks                      | `apps/backend/src/organizations/presentation/hooks/`                          |
+| Organization role authority checks        | `apps/backend/src/organizations/core/organization-access.ts`                  |
+| Grant read/write surface                  | `apps/backend/src/sharing/`                                                   |
+| Staffing invariants and row locks         | `apps/backend/src/sharing/core/resource-staffing.ts`                          |
+| Transfer authority gate                   | `apps/backend/src/sharing/core/transfer-authority.ts`                         |
+| One-way visibility transitions            | `apps/backend/src/visibility/`                                                |
+| List-query access scoping                 | `apps/backend/src/common/utils/resource-access-scope.ts`                      |
+| Account security UI                       | `apps/web/components/account-settings/`, `apps/web/components/auth/`          |
 
 For the user-facing workflow, read
 [Account security & API keys](/guide/get-started/account-security-api-keys) and

@@ -70,9 +70,7 @@
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Blank Details step shows the observed four-step wizard, name, description, and workbook picker; no account or experiment data entered.",
       "redactions": [],
-      "live_checks_observed": [
-        "Four-step create wizard Details screen observed on dev."
-      ]
+      "live_checks_observed": ["Four-step create wizard Details screen observed on dev."]
     },
     {
       "asset": "create-experiment-entry.png",
@@ -118,9 +116,7 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": [
-        "Authenticated dashboard and experiment cards observed on dev."
-      ]
+      "live_checks_observed": ["Authenticated dashboard and experiment cards observed on dev."]
     },
     {
       "asset": "data-first-measurement.png",
@@ -144,9 +140,7 @@
         "testing-account avatar hidden",
         "visible UUID identifiers replaced with [id hidden]"
       ],
-      "live_checks_observed": [
-        "Representative populated measurement table observed on dev."
-      ]
+      "live_checks_observed": ["Representative populated measurement table observed on dev."]
     },
     {
       "asset": "experiments-list.png",
@@ -169,9 +163,7 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": [
-        "Search/filter controls and experiment cards observed on dev."
-      ]
+      "live_checks_observed": ["Search/filter controls and experiment cards observed on dev."]
     },
     {
       "asset": "export-dialog.png",
@@ -217,9 +209,7 @@
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Public dev auth screen only; email and OTP fields are empty, no account data is visible, cookie banner dismissed, stable background selected, and GitHub/ORCID/email methods match the verified Guide copy.",
       "redactions": [],
-      "live_checks_observed": [
-        "Dev login offers email, GitHub, and ORCID."
-      ]
+      "live_checks_observed": ["Dev login offers email, GitHub, and ORCID."]
     },
     {
       "asset": "metadata-import.png",
@@ -243,9 +233,7 @@
         "testing-account avatar hidden",
         "visible UUID identifiers replaced with [id hidden]"
       ],
-      "live_checks_observed": [
-        "Metadata CSV preview and identifier mapping UI observed on dev."
-      ]
+      "live_checks_observed": ["Metadata CSV preview and identifier mapping UI observed on dev."]
     },
     {
       "asset": "project-transfer-history.png",
@@ -264,9 +252,7 @@
       "reviewed_at": "2026-07-19T22:17:36.001541+00:00",
       "reviewer": "ticket-06-media-pass",
       "review_notes": "Previous Requests view shows observed Completed statuses and dates; project identifiers and URLs hidden.",
-      "redactions": [
-        "project identifiers and URLs hidden"
-      ],
+      "redactions": ["project identifiers and URLs hidden"],
       "live_checks_observed": [
         "Previous Requests view and its current status labels/empty state observed on dev."
       ]
@@ -341,9 +327,7 @@
         "testing-account avatar hidden",
         "visible UUID identifiers replaced with [id hidden]"
       ],
-      "live_checks_observed": [
-        "Picker shows protocol name, creator, and sensor family on dev."
-      ]
+      "live_checks_observed": ["Picker shows protocol name, creator, and sensor family on dev."]
     },
     {
       "asset": "quick-start-web.webm",
@@ -400,9 +384,7 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": [
-        "In-product Report bug link observed on dev."
-      ]
+      "live_checks_observed": ["In-product Report bug link observed on dev."]
     },
     {
       "asset": "visibility-embargo.png",
@@ -450,9 +432,7 @@
         "visible email addresses replaced with [email hidden]",
         "testing-account avatar hidden"
       ],
-      "live_checks_observed": [
-        "Linked workbook and pinned version badge observed on dev."
-      ]
+      "live_checks_observed": ["Linked workbook and pinned version badge observed on dev."]
     },
     {
       "asset": "workbook-version-history.png",
@@ -589,9 +569,7 @@
       "reviewed_at": "2026-08-17T00:00:00+00:00",
       "reviewer": "p4-5-b-iam-docs",
       "review_notes": "Re-captured to remove internal jargon: the previous frame was twelve cards of which ten were named 'P4 <something>', and eleven read 'No description provided'. Now nine plausibly-named research groups, each with a description, its member and resource counts, and its Private badge where it is private, plus the search box, the filter and the Create organization action. Filter is on 'My organizations'; the '?filter=all' directory reading is deliberately not published - this persona belongs to every organization seeded here, so that frame renders the same grid with a different label and would teach the opposite of what the directory page is about.",
-      "redactions": [
-        "none required - every organization in frame is created by the capture run"
-      ],
+      "redactions": ["none required - every organization in frame is created by the capture run"],
       "live_checks_observed": [
         "Member and resource counts rendered per card; a mix of public and private, which is correct for a listing that shows the caller's own organizations whatever their visibility.",
         "Reviewed against both bars; no phase numbers and no 'No description provided' placeholders remain."

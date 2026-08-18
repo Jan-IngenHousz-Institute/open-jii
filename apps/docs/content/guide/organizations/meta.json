@@ -1,11 +1,4 @@
 {
   "title": "Organizations",
-  "pages": [
-    "index",
-    "creating",
-    "people-and-roles",
-    "finding-and-joining",
-    "teams",
-    "deleting"
-  ]
+  "pages": ["index", "creating", "people-and-roles", "finding-and-joining", "teams", "deleting"]
 }

@@ -1,11 +1,4 @@
 {
   "title": "Reference",
-  "pages": [
-    "index",
-    "glossary",
-    "access-troubleshooting",
-    "faq",
-    "getting-help",
-    "whats-new"
-  ]
+  "pages": ["index", "glossary", "access-troubleshooting", "faq", "getting-help", "whats-new"]
 }
