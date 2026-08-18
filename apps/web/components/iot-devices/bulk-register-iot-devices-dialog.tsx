@@ -85,12 +85,6 @@ const bulkRegisterFormSchema = z
         path: ["serials"],
         message: `Invalid line: ${badLine}`,
       });
-    } else if (devices.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["serials"],
-        message: "Enter at least one serial number",
-      });
     } else if (new Set(devices.map((device) => device.serialNumber)).size !== devices.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

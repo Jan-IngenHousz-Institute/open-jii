@@ -1,7 +1,8 @@
 import { and, eq, resourceGrants } from "@repo/database";
 
-import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { CreateIotDeviceGroupUseCase } from "./create-iot-device-group";
 
 describe("CreateIotDeviceGroupUseCase", () => {
@@ -68,5 +69,14 @@ describe("CreateIotDeviceGroupUseCase", () => {
     expect(grants[0].granteeType).toBe("user");
     expect(grants[0].granteeId).toBe(userId);
     expect(grants[0].role).toBe("admin");
+  });
+
+  it("propagates a repository failure", async () => {
+    const repo = testApp.module.get(IotDeviceGroupRepository);
+    vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("boom")));
+
+    const result = await useCase.execute({ name: "Doomed" }, userId);
+
+    assertFailure(result);
   });
 });

@@ -6,8 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import GroupCollaboratorsContent from "../group-collaborators-content";
-import { generateMetadata } from "../page";
+import GroupCollaboratorsPage, { generateMetadata } from "../page";
 
 vi.mock("@/lib/platform-metadata", () => ({
   buildDeviceGroupMetadata: vi.fn(({ groupId, section }: { groupId: string; section: string }) => ({
@@ -35,7 +34,7 @@ describe("generateMetadata", () => {
   });
 });
 
-describe("GroupCollaboratorsContent", () => {
+describe("GroupCollaboratorsPage", () => {
   beforeEach(() => {
     vi.mocked(use).mockReturnValue({ groupId: GROUP_ID });
   });
@@ -45,7 +44,9 @@ describe("GroupCollaboratorsContent", () => {
       body: createDeviceGroupDetail({ id: GROUP_ID }),
     });
 
-    render(<GroupCollaboratorsContent params={Promise.resolve({ groupId: GROUP_ID })} />);
+    render(
+      <GroupCollaboratorsPage params={Promise.resolve({ locale: "en-US", groupId: GROUP_ID })} />,
+    );
 
     expect(await screen.findByTestId("collaborators-route")).toHaveTextContent(
       `device_group:${GROUP_ID}`,

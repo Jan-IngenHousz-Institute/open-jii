@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
-import { assertSuccess, success } from "../../../../common/utils/fp-utils";
+import { AppError, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { CreateIotDeviceGroupUseCase } from "../create-iot-device-group/create-iot-device-group";
@@ -126,5 +126,47 @@ describe("BulkRegisterIotDevicesUseCase", () => {
     const group = await groupRepository.findById(created.value.id);
     assertSuccess(group);
     expect(group.value?.memberCount).toBe(1);
+  });
+
+  it("reports when nothing registered, so the group is never touched", async () => {
+    await registerDevice.execute({ serialNumber: "S-1", deviceType: "ambyte" }, userId);
+
+    const result = await useCase.execute(
+      { devices: [{ serialNumber: "S-1" }], deviceType: "ambyte", group: { name: "Never made" } },
+      userId,
+    );
+
+    assertSuccess(result);
+    expect(result.value.devices[0].device).toBeNull();
+    expect(result.value.groupId).toBeNull();
+    expect(result.value.groupError).toBe("No devices were registered, so no group was touched");
+  });
+
+  it("surfaces a group-creation failure as groupError, keeping the registrations", async () => {
+    vi.spyOn(groupRepository, "create").mockResolvedValue(failure(AppError.internal("boom")));
+
+    const result = await useCase.execute(
+      { devices: [{ serialNumber: "S-1" }], deviceType: "ambyte", group: { name: "Doomed" } },
+      userId,
+    );
+
+    assertSuccess(result);
+    expect(result.value.devices[0].device).not.toBeNull();
+    expect(result.value.groupId).toBeNull();
+    expect(result.value.groupError).toBe("boom");
+  });
+
+  it("surfaces a membership-insert failure as groupError, keeping the registrations", async () => {
+    vi.spyOn(groupRepository, "addMembers").mockResolvedValue(failure(AppError.internal("boom")));
+
+    const result = await useCase.execute(
+      { devices: [{ serialNumber: "S-1" }], deviceType: "ambyte", group: { name: "Half made" } },
+      userId,
+    );
+
+    assertSuccess(result);
+    expect(result.value.devices[0].device).not.toBeNull();
+    expect(result.value.groupId).toBeNull();
+    expect(result.value.groupError).toBe("boom");
   });
 });

@@ -1,5 +1,6 @@
 import { render, screen } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { usePathname } from "next/navigation";
+import { describe, expect, it, vi } from "vitest";
 
 import { DeviceGroupDetailTabs } from "./device-group-detail-tabs";
 
@@ -32,5 +33,14 @@ describe("DeviceGroupDetailTabs", () => {
     expect(screen.queryByText("iot.devices.detailTabs.credentials")).not.toBeInTheDocument();
     expect(screen.queryByText("iot.devices.detailTabs.collaborators")).not.toBeInTheDocument();
     expect(screen.getByText("iot.devices.detailTabs.monitoring")).toBeInTheDocument();
+  });
+
+  it("highlights no tab when the active route is filtered out", () => {
+    vi.mocked(usePathname).mockReturnValue("/en-US/platform/devices/groups/g-1/credentials");
+    renderTabs({ canManage: false });
+
+    for (const tab of screen.getAllByRole("tab")) {
+      expect(tab).toHaveAttribute("aria-selected", "false");
+    }
   });
 });

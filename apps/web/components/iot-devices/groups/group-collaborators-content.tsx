@@ -9,7 +9,7 @@ interface GroupCollaboratorsContentProps {
 }
 
 /** Group collaborators route; the layout's detail query supplies cached access. */
-export default function GroupCollaboratorsContent({ params }: GroupCollaboratorsContentProps) {
+export function GroupCollaboratorsContent({ params }: GroupCollaboratorsContentProps) {
   const { groupId } = use(params);
   const { data } = useIotDeviceGroup(groupId);
 

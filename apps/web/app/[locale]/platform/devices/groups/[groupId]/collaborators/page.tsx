@@ -1,8 +1,7 @@
+import { GroupCollaboratorsContent } from "@/components/iot-devices/groups/group-collaborators-content";
 import { buildDeviceGroupMetadata } from "@/lib/platform-metadata";
 import { safeMetadata } from "@/lib/safe-metadata";
 import type { Metadata } from "next";
-
-import GroupCollaboratorsContent from "./group-collaborators-content";
 
 interface PageProps {
   params: Promise<{ locale: string; groupId: string }>;

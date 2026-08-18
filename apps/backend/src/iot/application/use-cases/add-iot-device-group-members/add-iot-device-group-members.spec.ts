@@ -1,7 +1,8 @@
 import { faker } from "@faker-js/faker";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { CreateIotDeviceGroupUseCase } from "../create-iot-device-group/create-iot-device-group";
 import { AddIotDeviceGroupMembersUseCase } from "./add-iot-device-group-members";
 
@@ -75,5 +76,24 @@ describe("AddIotDeviceGroupMembersUseCase", () => {
 
     assertSuccess(result);
     expect(result.value).toHaveLength(1);
+  });
+
+  it("propagates an existence-check failure", async () => {
+    const repo = testApp.module.get(IotDeviceGroupRepository);
+    vi.spyOn(repo, "existingDeviceIds").mockResolvedValue(failure(AppError.internal("boom")));
+
+    const result = await useCase.execute(faker.string.uuid(), [faker.string.uuid()], userId);
+
+    assertFailure(result);
+  });
+
+  it("propagates an insert failure", async () => {
+    const repo = testApp.module.get(IotDeviceGroupRepository);
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    vi.spyOn(repo, "addMembers").mockResolvedValue(failure(AppError.internal("boom")));
+
+    const result = await useCase.execute(faker.string.uuid(), [device.id], userId);
+
+    assertFailure(result);
   });
 });

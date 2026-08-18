@@ -103,6 +103,25 @@ describe("DeviceGroupContent", () => {
     });
   });
 
+  it("opens the add-devices dialog from the actions row", async () => {
+    const user = userEvent.setup();
+    mountGroup();
+
+    render(<DeviceGroupContent />);
+
+    await user.click(await screen.findByText("iot.groups.addDevices"));
+    expect(await screen.findByText("iot.groups.addDevicesTitle")).toBeInTheDocument();
+  });
+
+  it("surfaces a load error", async () => {
+    server.mount(contract.deviceGroups.getDeviceGroup, { status: 500 });
+    server.mount(contract.deviceGroups.listDeviceGroupMembers, { body: [] });
+
+    render(<DeviceGroupContent />);
+
+    expect(await screen.findByText("iot.groups.loadError")).toBeInTheDocument();
+  });
+
   it("shows the empty roster hint", async () => {
     mountGroup({}, []);
 

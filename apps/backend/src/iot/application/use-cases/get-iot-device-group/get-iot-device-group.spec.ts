@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { CreateIotDeviceGroupUseCase } from "../create-iot-device-group/create-iot-device-group";
@@ -52,5 +52,13 @@ describe("GetIotDeviceGroupUseCase", () => {
 
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
+  });
+
+  it("propagates a repository failure", async () => {
+    vi.spyOn(groupRepository, "findById").mockResolvedValue(failure(AppError.internal("boom")));
+
+    const result = await useCase.execute(faker.string.uuid());
+
+    assertFailure(result);
   });
 });

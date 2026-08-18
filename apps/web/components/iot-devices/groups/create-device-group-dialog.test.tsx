@@ -16,6 +16,19 @@ vi.mock("next/navigation", async (importOriginal) => ({
 }));
 
 describe("CreateDeviceGroupDialog", () => {
+  it("closes on cancel without creating", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const create = server.mount(contract.deviceGroups.createDeviceGroup, { status: 500 });
+
+    render(<CreateDeviceGroupDialog open onOpenChange={onOpenChange} locale="en-US" />);
+
+    await user.click(screen.getByText("common.cancel"));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(create.calls).toHaveLength(0);
+  });
+
   it("creates the group and routes to its detail page", async () => {
     const user = userEvent.setup();
     const group = createDeviceGroup({ name: "Greenhouse A" });

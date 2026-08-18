@@ -55,6 +55,42 @@ describe("AddGroupMembersDialog", () => {
     expect(add.calls[0].body).toMatchObject({ deviceIds: [mine.id] });
   });
 
+  it("closes and clears the selection after a successful add", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const mine = createIotDevice({ createdBy: "user-1", name: "Mine" });
+    server.mount(contract.iot.listIotDevices, { body: [mine] });
+    server.mount(contract.deviceGroups.listDeviceGroupMembers, { body: [] });
+    server.mount(contract.deviceGroups.getDeviceGroup, { status: 404 });
+    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+    server.mount(contract.deviceGroups.addDeviceGroupMembers, { body: [] });
+
+    render(
+      <AddGroupMembersDialog groupId={GROUP_ID} memberIds={[]} open onOpenChange={onOpenChange} />,
+    );
+
+    await user.click(await screen.findByText("Mine"));
+    await user.click(screen.getByText("iot.groups.addSelected"));
+
+    await vi.waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("closes on cancel", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    server.mount(contract.iot.listIotDevices, { body: [] });
+
+    render(
+      <AddGroupMembersDialog groupId={GROUP_ID} memberIds={[]} open onOpenChange={onOpenChange} />,
+    );
+
+    await user.click(screen.getByText("common.cancel"));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it("says so when every device is already a member", async () => {
     const mine = createIotDevice({ createdBy: "user-1" });
     server.mount(contract.iot.listIotDevices, { body: [mine] });
