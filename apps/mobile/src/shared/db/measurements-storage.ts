@@ -29,7 +29,7 @@ export { UNSYNCED_STATUSES, isUnsynced } from "./measurement-status";
 
 export interface Measurement {
   topic: string;
-  measurementResult: object;
+  measurementResult: Record<string, unknown>;
   metadata: { experimentName: string; protocolName: string; timestamp: string };
 }
 
@@ -130,7 +130,7 @@ export async function saveMeasurement(
 // Computed at save/update time so the list query never decompresses
 // measurement_result. Keep this in sync with the schema columns.
 function deriveListColumns(
-  measurementResult: object,
+  measurementResult: Record<string, unknown>,
   timestamp: string,
 ): {
   questionsText: string;
@@ -140,7 +140,7 @@ function deriveListColumns(
 } {
   return {
     questionsText: JSON.stringify(parseQuestions(measurementResult)),
-    hasComment: !!getCommentFromMeasurementResult(measurementResult as Record<string, unknown>),
+    hasComment: !!getCommentFromMeasurementResult(measurementResult),
     dayKey: computeDayKey(timestamp),
     workbookRunId: extractWorkbookRunId(measurementResult),
   };
@@ -149,8 +149,8 @@ function deriveListColumns(
 // The workbook attempt a payload belongs to; "" when it carries none (payloads
 // written before run ids existed, dev seeds). Never null, so the legacy
 // backfill can't keep rescanning the same row on every launch.
-export function extractWorkbookRunId(measurementResult: object): string {
-  const runId = (measurementResult as Record<string, unknown>).workbook_run_id;
+export function extractWorkbookRunId(measurementResult: Record<string, unknown>): string {
+  const runId = measurementResult.workbook_run_id;
   return typeof runId === "string" ? runId : "";
 }
 
@@ -333,6 +333,10 @@ export async function getMeasurementIdsByRunId(
   runId: string,
   statuses?: readonly MeasurementStatus[],
 ): Promise<string[]> {
+  // "" is the sentinel for "no run" (backfill and new saves both write it), so
+  // querying with it would match every non-run measurement. Callers guard on a
+  // truthy runId; this keeps a forgetful future caller safe too.
+  if (!runId) return [];
   await ensureMigrated();
   try {
     const where =

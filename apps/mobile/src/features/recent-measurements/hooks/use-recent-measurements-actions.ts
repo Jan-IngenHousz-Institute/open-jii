@@ -152,6 +152,9 @@ export function useRecentMeasurementsActions(filter: MeasurementFilter) {
 
   const confirmDeleteRun = useCallback(
     async (runId: string, experimentName: string) => {
+      // Whole-run semantics, deliberately: deleting from the Aug-17 day row of
+      // a midnight-straddling run also deletes its Aug-18 members. The
+      // confirmation discloses the true (whole-run) count.
       let keys: string[];
       try {
         keys = await getMeasurementIdsByRunId(runId);

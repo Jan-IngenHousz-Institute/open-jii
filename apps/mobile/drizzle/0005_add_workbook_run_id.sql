@@ -8,3 +8,7 @@
 -- rescanned forever.
 
 ALTER TABLE `measurements` ADD `workbook_run_id` text;
+
+-- Run-level actions (delete/upload a whole workbook run) look members up by
+-- run id; every other queried column on this table is already indexed.
+CREATE INDEX `idx_measurements_workbook_run_id` ON `measurements` (`workbook_run_id`);

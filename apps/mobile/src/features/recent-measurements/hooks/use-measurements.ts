@@ -18,9 +18,10 @@ import {
   getFlagTypeFromMeasurementResult,
 } from "~/shared/measurements/measurement-annotations";
 
-// Everything below is useCallback'd on [queryClient]: row-action callbacks in
-// the list screen hang off these, and a new closure per render would break the
-// memo on every visible row.
+// The row-action functions below are useCallback'd on [queryClient]:
+// row-action callbacks in the list screen hang off these, and a new closure
+// per render would break the memo on every visible row. (`uploadAll` feeds the
+// toolbar instead and stays a plain closure.)
 export function useMeasurements() {
   const queryClient = useQueryClient();
 
@@ -93,9 +94,7 @@ export function useMeasurements() {
 
   const updateMeasurementComment = useCallback(
     async (key: string, data: Measurement, commentText: string) => {
-      const flagType = getFlagTypeFromMeasurementResult(
-        data.measurementResult as Record<string, unknown>,
-      );
+      const flagType = getFlagTypeFromMeasurementResult(data.measurementResult);
       const annotations = buildAnnotations(commentText, flagType);
       const measurementResult = { ...data.measurementResult, annotations };
       await updateMeasurement(key, { ...data, measurementResult });

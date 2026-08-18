@@ -12,7 +12,8 @@ export interface MeasurementRunEntry {
    * List and expansion key: `run:<scope>:<id>` for a group, the measurement key
    * for a single row. Scoped because a run spanning midnight is grouped once per
    * day section, and those two rows must not share a key (duplicate list keys,
-   * coupled expansion, and run actions resolving to the other day's subset).
+   * coupled expansion state). Run actions are unaffected by the scope: they
+   * resolve the whole run's membership from storage by `runId`.
    */
   key: string;
   /** The workbook run this entry collapses; "" for a standalone measurement. */
@@ -31,6 +32,12 @@ export interface MeasurementRunEntry {
  * a dropdown around one item is just noise. Input order is preserved; no
  * sorting, no date parsing, so this stays cheap enough for the list build
  * path (see OJD-1470).
+ *
+ * Two display caveats, both self-correcting and never affecting actions
+ * (which resolve membership from storage): a run straddling midnight groups
+ * once per day section, and a run straddling a page boundary renders its
+ * loaded members only — as a standalone row while just one is loaded — until
+ * the next page arrives.
  */
 export function groupMeasurementsByRun(
   items: MeasurementItem[],

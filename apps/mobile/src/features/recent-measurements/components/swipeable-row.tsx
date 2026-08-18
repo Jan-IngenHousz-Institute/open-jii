@@ -25,7 +25,7 @@ const ACTIVATE_OFFSET_X = 8;
 const SEGMENT_WIDTH = 52;
 
 interface SwipeableRowProps {
-  /** Row identity: a measurement id, or `run:<id>` for a collapsed run. */
+  /** Row identity: a measurement id, or `run:<scope>:<id>` for a collapsed run. */
   id: string;
   /** Drives which actions apply; for a run, the worst-of status. */
   status: MeasurementStatus;

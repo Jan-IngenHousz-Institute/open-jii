@@ -44,5 +44,7 @@ export const measurements = sqliteTable(
     index("idx_measurements_status").on(table.status),
     index("idx_measurements_status_ts").on(table.status, table.timestamp),
     index("idx_measurements_created_at").on(table.createdAt),
+    // Run actions resolve membership by run id (getMeasurementIdsByRunId).
+    index("idx_measurements_workbook_run_id").on(table.workbookRunId),
   ],
 );

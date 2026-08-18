@@ -943,6 +943,15 @@ describe("measurements-storage", () => {
       expect(await mod.getMeasurementIdsByRunId("nope")).toEqual([]);
     });
 
+    it("returns an empty list for the empty run id, the no-run sentinel", async () => {
+      // "" marks every non-run measurement; querying with it must not match them.
+      insertRunRow("r1", "pending", "run-1");
+      insertRunRow("loose", "pending", "");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      expect(await mod.getMeasurementIdsByRunId("")).toEqual([]);
+    });
+
     it("rejects when the query fails, so the caller doesn't act on nothing", async () => {
       const mod = await import("~/shared/db/measurements-storage");
       sqlite.prepare("DROP TABLE measurements").run();
