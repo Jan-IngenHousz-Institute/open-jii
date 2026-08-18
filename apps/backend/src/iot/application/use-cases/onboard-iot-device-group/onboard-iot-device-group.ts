@@ -3,9 +3,12 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
-import { Result, success } from "../../../../common/utils/fp-utils";
+import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { OnboardDeviceUseCase } from "../onboard-device/onboard-device";
+
+/** Mirrors the contract's cap on an explicit `deviceIds` selection. */
+const MAX_BATCH = 100;
 
 export interface OnboardDeviceGroupWindow {
   experimentIds: string[];
@@ -60,6 +63,17 @@ export class OnboardIotDeviceGroupUseCase {
 
     const memberIds = new Set(membersResult.value.map((member) => member.deviceId));
     const selection = body.deviceIds ?? [...memberIds];
+
+    // Same ceiling the contract puts on an explicit selection: each onboard is
+    // a multi-query operation, so an oversized default-everyone batch asks for
+    // an explicit subset instead of silently processing part of the group.
+    if (selection.length > MAX_BATCH) {
+      return failure(
+        AppError.badRequest(
+          `The group has more than ${String(MAX_BATCH)} members; onboard an explicit selection instead`,
+        ),
+      );
+    }
 
     const devices: IotDeviceGroupOnboardRowDto[] = [];
     for (const deviceId of selection) {

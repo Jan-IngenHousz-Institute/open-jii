@@ -23,6 +23,12 @@ function configFileName(config: DeviceOnboardingConfig): string {
   return `${config.thingName}-config.json`;
 }
 
+// Group names are free text; keep the archive name filesystem-safe.
+function zipFileName(groupName: string): string {
+  const safe = groupName.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  return `${safe === "" ? "group" : safe}-configs.zip`;
+}
+
 /**
  * Per-device outcomes plus delivery: each successful device's config as its
  * own file, and the whole batch as one zip with a manifest.
@@ -66,7 +72,7 @@ export function GroupOnboardResults({
         2,
       ),
     });
-    downloadZip(`${groupName}-configs.zip`, files);
+    downloadZip(zipFileName(groupName), files);
   }
 
   function renderRow(row: DeviceGroupOnboardRow) {
@@ -85,6 +91,7 @@ export function GroupOnboardResults({
           <Button
             variant="ghost"
             size="sm"
+            aria-label={t("iot.groups.onboarding.downloadOne", { device: label })}
             disabled={deliveryBlocked}
             onClick={() => {
               if (row.config !== null) downloadOne(row.config);

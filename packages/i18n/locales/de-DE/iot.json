@@ -418,6 +418,7 @@
         "onboard_other": "{{count}} Geräte onboarden",
         "onboardSuccess": "Gruppe onboardet",
         "resultsTitle": "Ergebnisse und Konfigurationen",
+        "downloadOne": "Konfiguration für {{device}} herunterladen",
         "downloadAll_one": "{{count}} Konfiguration herunterladen (ZIP)",
         "downloadAll_other": "{{count}} Konfigurationen herunterladen (ZIP)"
       },

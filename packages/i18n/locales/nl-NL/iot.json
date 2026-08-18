@@ -418,6 +418,7 @@
         "onboard_other": "{{count}} apparaten onboarden",
         "onboardSuccess": "Groep onboardet",
         "resultsTitle": "Resultaten en configuraties",
+        "downloadOne": "Configuratie voor {{device}} downloaden",
         "downloadAll_one": "{{count}} configuratie downloaden (zip)",
         "downloadAll_other": "{{count}} configuraties downloaden (zip)"
       },

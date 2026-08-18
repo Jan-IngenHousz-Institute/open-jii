@@ -418,6 +418,7 @@
         "onboard_other": "Onboard {{count}} devices",
         "onboardSuccess": "Group onboarded",
         "resultsTitle": "Results and configs",
+        "downloadOne": "Download the config for {{device}}",
         "downloadAll_one": "Download {{count}} config (zip)",
         "downloadAll_other": "Download {{count}} configs (zip)"
       },
