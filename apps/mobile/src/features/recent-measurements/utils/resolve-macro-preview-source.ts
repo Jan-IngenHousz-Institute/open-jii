@@ -35,7 +35,7 @@ export interface MacroPreviewSource {
 export function resolveMacroPreviewSource(
   measurement: StoredMeasurement,
 ): { ok: true; source: MacroPreviewSource } | { ok: false; blocker: MacroPreviewBlocker } {
-  const payload = measurement.data.measurementResult as Record<string, unknown>;
+  const payload = measurement.data.measurementResult;
 
   const macros = payload.macros;
   const macroId = Array.isArray(macros)
