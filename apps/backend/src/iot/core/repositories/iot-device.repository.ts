@@ -1,11 +1,13 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import {
+  and,
   desc,
   deleteResourceGrants,
   eq,
   inArray,
   iotDevices,
+  isNull,
   or,
   ensurePersonalOrganization,
 } from "@repo/database";
@@ -107,6 +109,21 @@ export class IotDeviceRepository {
         .from(iotDevices)
         .where(inArray(iotDevices.thingName, thingNames));
       return results;
+    });
+  }
+
+  /**
+   * Set the name only while it is still NULL, atomically: a concurrent rename
+   * between read and write must win over a device-model fill.
+   */
+  async fillNameIfMissing(deviceId: string, name: string): Promise<Result<IotDeviceDto | null>> {
+    return tryCatch(async () => {
+      const results = await this.database
+        .update(iotDevices)
+        .set({ name })
+        .where(and(eq(iotDevices.id, deviceId), isNull(iotDevices.name)))
+        .returning();
+      return results.length === 0 ? null : results[0];
     });
   }
 

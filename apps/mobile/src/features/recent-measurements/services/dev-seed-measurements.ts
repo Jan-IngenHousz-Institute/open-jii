@@ -16,16 +16,14 @@ const DEV_USER_ID = "00000000-0000-0000-0000-0000deadbeef";
 function buildFakeMeasurement(index: number): Measurement {
   const timestamp = new Date().toISOString();
   return {
-    topic: getMeasurementMqttTopic({
-      experimentId: DEV_EXPERIMENT_ID,
-      protocolId: DEV_PROTOCOL_ID,
-    }),
+    topic: getMeasurementMqttTopic({ experimentId: DEV_EXPERIMENT_ID }),
     measurementResult: {
       _dev_seed: true,
       _seed_index: index,
       sample: [{ light_intensity: 1000 + index, leaf_temp: 22 + (index % 5) }],
       timestamp,
       user_id: DEV_USER_ID,
+      protocol_id: DEV_PROTOCOL_ID,
       questions: [],
       macros: [],
       annotations: null,

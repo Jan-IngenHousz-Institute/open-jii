@@ -48,6 +48,21 @@ describe("DeviceOnboardingPage", () => {
     expect(await screen.findByText("iot.onboarding.currentEmpty")).toBeInTheDocument();
   });
 
+  it("sends a mobile device back to the overview, the app manages its own config", async () => {
+    server.mount(contract.iot.getIotDevice, {
+      body: createIotDeviceDetail({ id: DEVICE_ID, deviceType: "mobile", status: "active" }),
+    });
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
+
+    const { container, router } = renderPage();
+
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith(`/en-US/platform/devices/${DEVICE_ID}`),
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("sends someone below manage back to the device instead of a blank route", async () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({

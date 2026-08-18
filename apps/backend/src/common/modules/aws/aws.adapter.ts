@@ -154,6 +154,24 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
   }
 
   /**
+   * The caller's Cognito identity id, resolved through the same
+   * developer-identity path the credentials flow uses. This is the principal a
+   * mobile device's Thing is bound to.
+   */
+  async getCognitoIdentityId(userId: string): Promise<Result<string>> {
+    const tokenResult = await this.cognitoService.getOpenIdToken(userId);
+    if (tokenResult.isFailure()) {
+      return failure(tokenResult.error);
+    }
+
+    return success(tokenResult.value.identityId);
+  }
+
+  async listThingPrincipals(thingName: string): Promise<Result<string[]>> {
+    return this.awsIotService.listThingPrincipals(thingName);
+  }
+
+  /**
    * Register an AWS IoT Thing for a device (no certificate attached).
    */
   async createThing(input: CreateThingInput): Promise<Result<CreatedThing>> {
@@ -172,12 +190,12 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
     return this.awsIotService.createKeysAndCertificate();
   }
 
-  async attachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>> {
-    return this.awsIotService.attachThingPrincipal(thingName, certificateArn);
+  async attachThingPrincipal(thingName: string, principal: string): Promise<Result<void>> {
+    return this.awsIotService.attachThingPrincipal(thingName, principal);
   }
 
-  async detachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>> {
-    return this.awsIotService.detachThingPrincipal(thingName, certificateArn);
+  async detachThingPrincipal(thingName: string, principal: string): Promise<Result<void>> {
+    return this.awsIotService.detachThingPrincipal(thingName, principal);
   }
 
   /**

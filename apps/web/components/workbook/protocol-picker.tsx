@@ -7,7 +7,8 @@ import { Loader2, Microscope, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolFamily, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -44,8 +45,10 @@ export function ProtocolPicker({
   const [newName, setNewName] = useState("");
   // Protocols can only be created for a locally-runnable family; an ingest-only
   // (disabled) sensorFamily falls back to the default creatable one.
-  const creatableFamily: SensorFamily = isDisabledFamily(sensorFamily) ? "multispeq" : sensorFamily;
-  const [newFamily, setNewFamily] = useState<SensorFamily>(creatableFamily);
+  const creatableFamily: ProtocolFamily = isDisabledFamily(sensorFamily)
+    ? "multispeq"
+    : zProtocolFamily.parse(sensorFamily);
+  const [newFamily, setNewFamily] = useState<ProtocolFamily>(creatableFamily);
   const [isCreating, setIsCreating] = useState(false);
   const createProtocol = useProtocolCreate();
 
@@ -124,7 +127,10 @@ export function ProtocolPicker({
                 }}
                 autoFocus
               />
-              <Select value={newFamily} onValueChange={(v) => setNewFamily(v as SensorFamily)}>
+              <Select
+                value={newFamily}
+                onValueChange={(v) => setNewFamily(zProtocolFamily.parse(v))}
+              >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>

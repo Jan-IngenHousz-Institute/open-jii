@@ -9,6 +9,7 @@ import {
   AttachPolicyCommand,
   UpdateCertificateCommand,
   DescribeEndpointCommand,
+  ListThingPrincipalsCommand,
   SearchIndexCommand,
   InvalidRequestException,
 } from "@aws-sdk/client-iot";
@@ -231,6 +232,29 @@ describe("AwsIotService", () => {
 
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.AWS_IOT_ATTACH_PRINCIPAL_FAILED);
+    });
+  });
+
+  describe("listThingPrincipals", () => {
+    it("collects principals across pages", async () => {
+      iotMock
+        .on(ListThingPrincipalsCommand)
+        .resolvesOnce({ principals: ["arn:cert-1"], nextToken: "next" })
+        .resolvesOnce({ principals: ["eu-central-1:identity-1"] });
+
+      const result = await service.listThingPrincipals("thing-1");
+
+      assertSuccess(result);
+      expect(result.value).toEqual(["arn:cert-1", "eu-central-1:identity-1"]);
+    });
+
+    it("maps an SDK error to a list-principals failure", async () => {
+      iotMock.on(ListThingPrincipalsCommand).rejects(new Error("nope"));
+
+      const result = await service.listThingPrincipals("thing-1");
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_LIST_PRINCIPALS_FAILED);
     });
   });
 

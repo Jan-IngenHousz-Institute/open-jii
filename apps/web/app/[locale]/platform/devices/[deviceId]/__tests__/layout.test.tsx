@@ -112,6 +112,25 @@ describe("<DeviceLayout />", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("hides Credentials and Onboarding for a mobile device, phones carry neither", async () => {
+    server.mount(contract.iot.getIotDevice, {
+      body: createIotDeviceDetail({ id: DEVICE_ID, deviceType: "mobile", status: "active" }),
+    });
+
+    renderLayout();
+
+    await waitFor(() => expect(screen.getByText("Child Content")).toBeInTheDocument());
+    expect(
+      screen.queryByRole("tab", { name: "iot.devices.detailTabs.credentials" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "iot.devices.detailTabs.onboarding" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "iot.devices.detailTabs.monitoring" }),
+    ).toBeInTheDocument();
+  });
+
   it("highlights no tab when the route the caller is on has been filtered out", async () => {
     // Demoted while sitting on /credentials: the tab is gone, and the strip must not
     // claim Overview is the current page while the URL still says /credentials.

@@ -387,6 +387,18 @@ describe("Iot Schema", () => {
     });
   });
 
+  describe("zRegisterIotDeviceBody deviceType", () => {
+    it("rejects the mobile family at the contract: phones self-register via ensure", () => {
+      const body = { serialNumber: "AA:BB", deviceType: "mobile" };
+      expect(zRegisterIotDeviceBody.safeParse(body).success).toBe(false);
+    });
+
+    it("accepts an instrument family", () => {
+      const body = { serialNumber: "AA:BB", deviceType: "ambyte" };
+      expect(zRegisterIotDeviceBody.safeParse(body).success).toBe(true);
+    });
+  });
+
   describe("zIotDeviceActivity", () => {
     it("accepts a datetime lastDataAt", () => {
       expect(

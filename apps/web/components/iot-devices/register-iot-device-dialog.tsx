@@ -43,6 +43,9 @@ const registerIotDeviceFormSchema = zRegisterIotDeviceBody.extend({
   name: z.string().max(255).optional(),
 });
 
+// Phones register themselves through the app, never through this dialog.
+const registrableFamilies = zSensorFamily.options.filter((value) => value !== "mobile");
+
 type RegisterIotDeviceFormValues = z.infer<typeof registerIotDeviceFormSchema>;
 
 interface RegisterIotDeviceDialogProps {
@@ -129,7 +132,7 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {zSensorFamily.options.map((value) => (
+                      {registrableFamilies.map((value) => (
                         <SelectItem key={value} value={value}>
                           {getSensorFamilyLabel(value)}
                         </SelectItem>

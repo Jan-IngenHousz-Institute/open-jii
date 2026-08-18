@@ -144,6 +144,7 @@ export default function DeviceMonitoringPage() {
               monitoring={monitoring}
               from={selection.range.from}
               to={selection.range.to}
+              showVerdict={device?.deviceType !== "mobile"}
             />
           </PanelCard>
 

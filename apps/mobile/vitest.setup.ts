@@ -10,14 +10,10 @@ import { vi } from "vitest";
 const EXPO_ENV_DEFAULTS: Record<string, string> = {
   EXPO_PUBLIC_PROD_REGION: "test-region",
   EXPO_PUBLIC_PROD_IOT_ENDPOINT: "test-iot-endpoint",
-  EXPO_PUBLIC_PROD_CLIENT_ID: "test-client-id",
-  EXPO_PUBLIC_PROD_MQTT_TOPIC: "test-mqtt-topic",
   EXPO_PUBLIC_PROD_NEXT_AUTH_URI: "https://test-next-auth.invalid",
   EXPO_PUBLIC_PROD_BACKEND_URI: "https://test-backend.invalid",
   EXPO_PUBLIC_DEV_REGION: "test-region",
   EXPO_PUBLIC_DEV_IOT_ENDPOINT: "test-iot-endpoint",
-  EXPO_PUBLIC_DEV_CLIENT_ID: "test-client-id",
-  EXPO_PUBLIC_DEV_MQTT_TOPIC: "test-mqtt-topic",
   EXPO_PUBLIC_DEV_NEXT_AUTH_URI: "https://test-next-auth.invalid",
   EXPO_PUBLIC_DEV_BACKEND_URI: "https://test-backend.invalid",
   EXPO_PUBLIC_POSTHOG_API_KEY: "test-posthog-api-key",
@@ -35,6 +31,11 @@ for (const [key, value] of Object.entries(EXPO_ENV_DEFAULTS)) {
 // AsyncStorage wraps a native module that doesn't resolve under Node. Stub
 // with an in-memory store so persisted Zustand slices don't reject during
 // setState writes. (Stores that read on construction get an empty map.)
+// Expo native modules have no node implementation; identity/version reads
+// are deterministic in tests.
+vi.mock("expo-application", () => ({ nativeApplicationVersion: "0.0.0-test" }));
+vi.mock("expo-device", () => ({ modelName: "Test Phone" }));
+
 vi.mock("@react-native-async-storage/async-storage", () => {
   const store = new Map<string, string>();
   const api = {

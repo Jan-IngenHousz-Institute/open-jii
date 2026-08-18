@@ -190,6 +190,11 @@ describe("Protocol Schema", () => {
   describe("zCreateProtocolRequestBody", () => {
     const codeArr = [{ step: "init" }];
 
+    it("rejects the mobile family: phones never carry authored protocols", () => {
+      const b = { name: "My Protocol", code: codeArr, family: "mobile" };
+      expect(zCreateProtocolRequestBody.safeParse(b).success).toBe(false);
+    });
+
     it("minimal valid body", () => {
       const b = {
         name: "My Protocol",

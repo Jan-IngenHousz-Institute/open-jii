@@ -27,13 +27,18 @@ interface AvailabilityPanelProps {
   monitoring: DeviceMonitoring;
   from: string;
   to: string;
+  /**
+   * Phones connect only while the app is open, so gaps are normal life: the
+   * connection history stays, the uptime figure and outage list do not.
+   */
+  showVerdict: boolean;
 }
 
 /**
  * Availability as discrete slices on the same time axis as the data-flow
  * chart below, so a measurement gap reads against connectivity.
  */
-export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelProps) {
+export function AvailabilityPanel({ monitoring, from, to, showVerdict }: AvailabilityPanelProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
 
@@ -51,7 +56,7 @@ export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelPro
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-3xl font-semibold tabular-nums">{uptimeLabel}</p>
+          {showVerdict && <p className="text-3xl font-semibold tabular-nums">{uptimeLabel}</p>}
           <p className="text-muted-foreground text-xs">
             {t("iot.devices.monitoring.uptimeWindow", {
               from: formatDateTime(from, locale),
@@ -60,7 +65,9 @@ export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelPro
           </p>
         </div>
         <div className="flex gap-6 text-sm">
-          <Stat label={t("iot.devices.monitoring.outages")} value={outages.length} />
+          {showVerdict && (
+            <Stat label={t("iot.devices.monitoring.outages")} value={outages.length} />
+          )}
           <Stat label={t("iot.devices.monitoring.sessions")} value={monitoring.sessions.length} />
         </div>
       </div>
@@ -107,7 +114,7 @@ export function AvailabilityPanel({ monitoring, from, to }: AvailabilityPanelPro
         ))}
       </div>
 
-      {listedOutages.length > 0 && (
+      {showVerdict && listedOutages.length > 0 && (
         <div className="rounded-lg border">
           <p className="border-b px-3 py-2 text-xs font-medium">
             {t("iot.devices.monitoring.outageList")}

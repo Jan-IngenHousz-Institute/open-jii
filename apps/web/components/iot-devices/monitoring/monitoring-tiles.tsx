@@ -32,12 +32,17 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
   const locale = useLocale();
   const formatLastSeen = useFormatLastSeen();
 
+  // Phones connect only while the app is foregrounded; gaps and silence are
+  // normal life, not degradation, so neither verdict applies to them.
+  const isMobileFamily = device?.deviceType === "mobile";
+
   // `undefined` is "still loading" and must not be read as "never sent data",
   // which would flash the silent warning on every page load.
   const lastDataAt = activity === undefined ? undefined : activity.lastDataAt;
   // A failed lookup means unknown, not silent: no warning on an outage.
   const activityKnown = activity !== undefined && !activity.pipelineUnavailable;
   const connectedButSilent =
+    !isMobileFamily &&
     device?.connectivity?.connected === true &&
     activityKnown &&
     lastDataAt !== undefined &&
@@ -102,18 +107,28 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
         )}
       </Tile>
 
-      <Tile label={t("iot.devices.monitoring.uptimeLabel")}>
+      <Tile
+        label={
+          isMobileFamily
+            ? t("iot.devices.monitoring.sessionsLabel")
+            : t("iot.devices.monitoring.uptimeLabel")
+        }
+      >
         {monitoring === undefined ? (
           <Skeleton className="h-4 w-16" />
         ) : (
           <div className="space-y-1">
             <p className="text-lg font-semibold tabular-nums">
-              {monitoring.uptimePercent === null
-                ? t("iot.devices.monitoring.uptimeUnknown")
-                : `${monitoring.uptimePercent.toFixed(1)}%`}
+              {isMobileFamily
+                ? monitoring.sessions.length
+                : monitoring.uptimePercent === null
+                  ? t("iot.devices.monitoring.uptimeUnknown")
+                  : `${monitoring.uptimePercent.toFixed(1)}%`}
             </p>
             <p className="text-muted-foreground text-xs font-normal">
-              {t("iot.devices.monitoring.sessionCount", { count: monitoring.sessions.length })}
+              {isMobileFamily
+                ? t("iot.devices.monitoring.mobileSessionsNote")
+                : t("iot.devices.monitoring.sessionCount", { count: monitoring.sessions.length })}
             </p>
           </div>
         )}

@@ -20,5 +20,7 @@ export function sensorFamilyToDeviceType(sensorFamily: SensorFamily): DeviceType
       return "minipar";
     case "generic":
       return "generic";
+    case "mobile":
+      return "mobile";
   }
 }

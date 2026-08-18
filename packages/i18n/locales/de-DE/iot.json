@@ -154,6 +154,8 @@
         "availabilityHint": "Konnektivität je Intervall im gewählten Zeitraum, auf derselben Zeitachse wie die Daten darunter.",
         "availability": "Verfügbarkeit",
         "uptimeLabel": "Verfügbarkeit",
+        "sessionsLabel": "Sitzungen",
+        "mobileSessionsNote": "Telefone verbinden sich nur bei geöffneter App",
         "uptimeWindow": "{{from}} bis {{to}}",
         "outages": "Ausfälle",
         "sessions": "Sitzungen",

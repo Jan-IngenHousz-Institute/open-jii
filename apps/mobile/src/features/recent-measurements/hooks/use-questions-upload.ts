@@ -11,6 +11,7 @@ import {
   QUESTIONS_PROTOCOL_ID,
 } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
+import { whenDeviceIdentityLoaded } from "~/shared/stores/device-identity-store";
 
 import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
@@ -45,7 +46,8 @@ export function useQuestionsUpload() {
       workbookRunId: string;
       workbookVersionId?: string;
     }) => {
-      const topic = getMeasurementMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
+      await whenDeviceIdentityLoaded();
+      const topic = getMeasurementMqttTopic({ experimentId });
 
       const location = await getMeasurementLocation();
 
@@ -56,6 +58,7 @@ export function useQuestionsUpload() {
         timestamp,
         timezone,
         user_id: userId,
+        protocol_id: QUESTIONS_PROTOCOL_ID,
         workbook_run_id: workbookRunId,
         ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
         annotations: buildAnnotations(commentText, flagType),

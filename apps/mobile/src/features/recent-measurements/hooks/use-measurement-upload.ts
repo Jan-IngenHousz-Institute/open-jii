@@ -9,6 +9,7 @@ import { getMeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { getMeasurementMqttTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
+import { whenDeviceIdentityLoaded } from "~/shared/stores/device-identity-store";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
 const log = createLogger("measurement-upload");
@@ -108,6 +109,10 @@ export function useMeasurementUpload() {
         throw new Error("No measurements to upload");
       }
 
+      // Topics carry the phone's thing name; await rehydration structurally
+      // rather than relying on upload always happening late in the session.
+      await whenDeviceIdentityLoaded();
+
       // One fix per round: all devices measured at the same physical spot.
       const location = await getMeasurementLocation();
 
@@ -116,13 +121,11 @@ export function useMeasurementUpload() {
 
       for (const result of results) {
         const { rawMeasurement, device, macroContext } = result;
-        const topic = getMeasurementMqttTopic({
-          experimentId,
-          protocolId: result.protocolId ?? protocolId,
-        });
+        const topic = getMeasurementMqttTopic({ experimentId });
         const measurementData = buildUploadPayload({
           rawMeasurement,
           userId,
+          protocolId: result.protocolId ?? protocolId,
           macro,
           timestamp,
           timezone,
