@@ -25,12 +25,12 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { buildGroupActivity, memberLabels } from "./group-activity";
 import { GroupDataByExperimentPanel } from "./group-data-by-experiment-panel";
+import { GroupDevicesTable } from "./group-devices-table";
 import { GroupFirmwarePanel } from "./group-firmware-panel";
 import type { MemberFilter } from "./group-health";
 import { filterGroupMembers, summarizeGroupHealth } from "./group-health";
 import { GroupMonitoringFilter } from "./group-monitoring-filter";
 import { GroupMonitoringTiles } from "./group-monitoring-tiles";
-import { GroupRosterPanel } from "./group-roster-panel";
 import { GroupThroughputPanel } from "./group-throughput-panel";
 
 const DEFAULT_PRESET: MonitoringPresetId = "last24h";
@@ -195,19 +195,14 @@ export function GroupMonitoringContent() {
             </p>
           )}
 
-          <PanelCard
-            title={t("iot.groups.monitoring.rosterTitle")}
-            description={t("iot.groups.monitoring.rosterHint")}
-          >
-            <GroupRosterPanel
-              monitoring={monitoring}
-              members={filteredMembers}
-              labelByDeviceId={labels}
-              versionByDeviceId={versionByDeviceId}
-              locale={locale}
-              now={now}
-            />
-          </PanelCard>
+          <GroupDevicesTable
+            monitoring={monitoring}
+            members={filteredMembers}
+            labelByDeviceId={labels}
+            versionByDeviceId={versionByDeviceId}
+            locale={locale}
+            now={now}
+          />
 
           <PanelCard
             title={t("iot.devices.monitoring.throughputTitle")}
