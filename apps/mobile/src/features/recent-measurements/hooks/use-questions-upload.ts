@@ -11,6 +11,7 @@ import {
   QUESTIONS_PROTOCOL_ID,
 } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
+import { whenDeviceIdentityLoaded } from "~/shared/stores/device-identity-store";
 
 import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
@@ -48,6 +49,8 @@ export function useQuestionsUpload() {
       const topic = getMeasurementMqttTopic({ experimentId });
 
       const location = await getMeasurementLocation();
+
+      await whenDeviceIdentityLoaded();
 
       const payload = {
         questions,

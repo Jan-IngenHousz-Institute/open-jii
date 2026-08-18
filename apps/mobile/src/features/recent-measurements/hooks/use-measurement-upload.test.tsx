@@ -18,6 +18,9 @@ vi.mock("~/shared/composition/upload", () => ({
   getOutbox: () => ({ enqueueMany }),
 }));
 // Keeps the environment store out; the template shape is all that matters.
+vi.mock("~/shared/stores/device-identity-store", () => ({
+  whenDeviceIdentityLoaded: () => Promise.resolve(),
+}));
 vi.mock("~/shared/measurements/measurement-topic", () => ({
   getMeasurementMqttTopic: ({ experimentId }: { experimentId: string }) => `topic/${experimentId}`,
 }));

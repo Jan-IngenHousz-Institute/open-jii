@@ -64,9 +64,11 @@ export function buildUploadPayload({
     timestamp,
     timezone,
     user_id: userId,
-    // Attribution lives in the payload on the lean topic shape.
-    protocol_id: protocolId,
     ...rawMeasurement,
+    // After the spread: device-native output can carry its own protocol_id
+    // (device-defined, not a platform id) and must not clobber the platform
+    // attribution, including the "questions" sentinel.
+    protocol_id: protocolId,
     ...(hasInjectableSample ? { sample: injectedSample } : {}),
     annotations: buildAnnotations(commentText),
     // The firmware-provided device_id wins; the local USB/BT id is a weak

@@ -2,9 +2,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { createLogger } from "~/shared/observability/logger";
 import { getEnvName } from "~/shared/stores/environment-store";
 
 const MOBILE_THING_PREFIX = "mobile_";
+
+const log = createLogger("device-identity-store");
 
 /**
  * This phone's device identity against one backend environment. The installId
@@ -74,7 +77,15 @@ export const useDeviceIdentityStore = create<
       name: "device-identity-storage",
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => {
-        return () => {
+        return (_state, error) => {
+          if (error) {
+            // An unreadable store is treated as empty and a fresh identity
+            // minted: refusing to load would hold the gate shut and brick
+            // publishing, which is worse than a possible identity fork.
+            log.error("Device identity rehydration failed; starting empty", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
           useDeviceIdentityStore.setState({ isLoaded: true });
         };
       },

@@ -155,7 +155,7 @@
         "availability": "Beschikbaarheid",
         "uptimeLabel": "Beschikbaarheid",
         "sessionsLabel": "Sessies",
-        "mobileSessionsNote": "Telefoons verbinden alleen met de app geopend",
+        "mobileSessionsNote": "Telefoons maken alleen verbinding wanneer de app geopend is",
         "uptimeWindow": "{{from}} tot {{to}}",
         "outages": "Storingen",
         "sessions": "Sessies",
