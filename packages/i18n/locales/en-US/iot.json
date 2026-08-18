@@ -347,6 +347,36 @@
       "detachSuccess": "Device detached from the experiment",
       "detachError": "Could not detach the device",
       "loadError": "Could not load the devices. Try again."
+    },
+    "groups": {
+      "addDevices": "Add devices",
+      "addDevicesHint": "Your registered devices that are not yet members.",
+      "addDevicesTitle": "Add devices to the group",
+      "addSelected_one": "Add {{count}} device",
+      "addSelected_other": "Add {{count}} devices",
+      "backToDevices": "Devices",
+      "cancel": "Cancel",
+      "create": "Create group",
+      "createDescription": "Groups organize your devices; membership changes nothing on the devices themselves.",
+      "createTitle": "Create a device group",
+      "delete": "Delete group",
+      "deleteHint": "\"{{name}}\" will be deleted. The devices themselves are not affected.",
+      "deleteTitle": "Delete this group?",
+      "descriptionLabel": "Description",
+      "deviceColumn": "Device",
+      "emptyHint": "Create a group to organize your devices.",
+      "emptyTitle": "No groups yet",
+      "familyColumn": "Family",
+      "loadError": "Could not load device groups.",
+      "memberCount_one": "{{count}} device",
+      "memberCount_other": "{{count}} devices",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Greenhouse A",
+      "noAddableDevices": "All of your devices are already in this group.",
+      "noMembers": "No devices in this group yet.",
+      "remove": "Remove",
+      "sectionHint": "Organize devices into groups you can monitor and onboard together.",
+      "statusColumn": "Status"
     }
   }
 }

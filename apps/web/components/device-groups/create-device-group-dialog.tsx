@@ -1,0 +1,119 @@
+"use client";
+
+import { useCreateDeviceGroup } from "@/hooks/device-groups/use-device-groups";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+
+import { zCreateDeviceGroupBody } from "@repo/api/domains/device-group/device-group.schema";
+import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/ui/components/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@repo/ui/components/form";
+import { Input } from "@repo/ui/components/input";
+import { Textarea } from "@repo/ui/components/textarea";
+
+const formSchema = zCreateDeviceGroupBody.pick({ name: true, description: true });
+type FormValues = z.infer<typeof formSchema>;
+
+interface CreateDeviceGroupDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  locale: string;
+}
+
+export function CreateDeviceGroupDialog({
+  open,
+  onOpenChange,
+  locale,
+}: CreateDeviceGroupDialogProps) {
+  const { t } = useTranslation("iot");
+  const router = useRouter();
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { name: "", description: "" },
+  });
+
+  const createGroup = useCreateDeviceGroup({
+    onSuccess: (group) => {
+      onOpenChange(false);
+      form.reset();
+      router.push(`/${locale}/platform/device-groups/${group.id}`);
+    },
+  });
+
+  function onSubmit(values: FormValues) {
+    createGroup.mutate({ name: values.name, description: values.description || undefined });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("iot.groups.createTitle")}</DialogTitle>
+          <DialogDescription>{t("iot.groups.createDescription")}</DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("iot.groups.nameLabel")}</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder={t("iot.groups.namePlaceholder")} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("iot.groups.descriptionLabel")}</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false);
+                }}
+              >
+                {t("iot.groups.cancel")}
+              </Button>
+              <Button type="submit" disabled={createGroup.isPending}>
+                {t("iot.groups.create")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -347,6 +347,36 @@
       "detachSuccess": "Apparaat ontkoppeld van het experiment",
       "detachError": "Kon het apparaat niet ontkoppelen",
       "loadError": "Kon de apparaten niet laden. Probeer het opnieuw."
+    },
+    "groups": {
+      "addDevices": "Apparaten toevoegen",
+      "addDevicesHint": "Uw geregistreerde apparaten die nog geen lid zijn.",
+      "addDevicesTitle": "Apparaten aan de groep toevoegen",
+      "addSelected_one": "{{count}} apparaat toevoegen",
+      "addSelected_other": "{{count}} apparaten toevoegen",
+      "backToDevices": "Apparaten",
+      "cancel": "Annuleren",
+      "create": "Groep aanmaken",
+      "createDescription": "Groepen organiseren apparaten; lidmaatschap verandert niets aan de apparaten zelf.",
+      "createTitle": "Apparaatgroep aanmaken",
+      "delete": "Groep verwijderen",
+      "deleteHint": "\"{{name}}\" wordt verwijderd. De apparaten zelf blijven bestaan.",
+      "deleteTitle": "Deze groep verwijderen?",
+      "descriptionLabel": "Beschrijving",
+      "deviceColumn": "Apparaat",
+      "emptyHint": "Maak een groep aan om apparaten te organiseren.",
+      "emptyTitle": "Nog geen groepen",
+      "familyColumn": "Familie",
+      "loadError": "Apparaatgroepen konden niet worden geladen.",
+      "memberCount_one": "{{count}} apparaat",
+      "memberCount_other": "{{count}} apparaten",
+      "nameLabel": "Naam",
+      "namePlaceholder": "bijv. Kas A",
+      "noAddableDevices": "Al uw apparaten zitten al in deze groep.",
+      "noMembers": "Nog geen apparaten in deze groep.",
+      "remove": "Verwijderen",
+      "sectionHint": "Organiseer apparaten in groepen die u samen kunt monitoren en onboarden.",
+      "statusColumn": "Status"
     }
   }
 }
