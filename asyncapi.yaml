@@ -130,93 +130,156 @@ components:
       title: Experiment Data Ingestion Message
       summary: A message containing sensor data for an experiment.
       payload:
+        # Flat, top-level fields: this shape mirrors the pipeline's
+        # sensor_schema (apps/data .../centrum/schemas.py) field for field.
+        # The broker rule injects `topic` and `client_id` into the stored
+        # envelope; publishers never send those.
         type: object
+        additionalProperties: true
         properties:
-          data:
-            type: object
-            description: Sensor data payload.
-            additionalProperties: true
-            properties:
-              sample:
-                type: string
-                description: >
-                  Sensor sample data. May be a raw JSON string (legacy) or a
-                  gzip+base64 encoded string when _sample_encoding is set.
-              _sample_encoding:
-                type: string
-                enum: ["gzip+base64"]
-                description: >
-                  When present, indicates that the `sample` field has been
-                  compressed (gzip) and base64-encoded to reduce payload size.
-                  Absent on legacy (uncompressed) payloads.
-              timestamp:
-                type: string
-                description: >
-                  ISO 8601 timestamp with UTC offset captured at measurement
-                  time using the synced clock (e.g. "2026-03-09T10:30:00.000-05:00").
-              timezone:
-                type: string
-                description: >
-                  IANA timezone identifier resolved from GPS at measurement
-                  time (e.g. "America/Chicago"). Preserved across retries so
-                  the original measurement-time timezone is never lost.
-              protocol_id:
-                type: string
-                description: >
-                  Platform id of the protocol that produced this measurement,
-                  resolved by the publisher per result (a workbook run can span
-                  several protocols). Required on the lean topic shape for the
-                  row to be attributed; the sentinel value "questions" marks
-                  question-only uploads. On the legacy topic shape the topic's
-                  trailing segment takes precedence.
-              workbook_version_id:
-                type: string
-                description: >
-                  Platform id of the workbook version this measurement was
-                  produced under. Absent outside workbook runs.
-              workbook_run_id:
-                type: string
-                description: >
-                  Publisher-minted id shared by every measurement of one
-                  workbook run, correlating results across devices and
-                  protocols.
-              macros:
-                type: array
-                description: >
-                  Macros applied to this measurement. Publishers that embed a
-                  macros array (of macro ids) inside each sample object instead
-                  may omit this field; the pipeline reads either.
-                items:
+          sample:
+            type: string
+            description: >
+              Sensor sample data: a JSON object of readings or an array of
+              them (a burst). Raw JSON string, or gzip+base64 encoded when
+              _sample_encoding is set.
+          _sample_encoding:
+            type: string
+            enum: ["gzip+base64"]
+            description: >
+              When present, the `sample` field is compressed (gzip) and
+              base64-encoded. Absent on raw (uncompressed) payloads.
+          timestamp:
+            type: string
+            description: >
+              ISO 8601 timestamp with UTC offset captured at measurement
+              time using the synced clock (e.g. "2026-03-09T10:30:00.000-05:00").
+          timezone:
+            type: string
+            description: >
+              IANA timezone identifier at measurement time (e.g.
+              "America/Chicago"). Preserved across retries so the original
+              measurement-time timezone is never lost.
+          protocol_id:
+            type: string
+            description: >
+              Platform id of the protocol that produced this measurement,
+              resolved by the publisher per result (a workbook run can span
+              several protocols). Required on the lean topic shape for the
+              row to be attributed; the sentinel value "questions" marks
+              question-only uploads. On the legacy topic shape the topic's
+              trailing segment takes precedence.
+          workbook_version_id:
+            type: string
+            description: >
+              Platform id of the workbook version this measurement was
+              produced under. Absent outside workbook runs.
+          workbook_run_id:
+            type: string
+            description: >
+              Publisher-minted id shared by every measurement of one
+              workbook run, correlating results across devices and
+              protocols.
+          macro_context:
+            type: string
+            description: >
+              JSON-encoded macro execution context; stays a string because
+              its keys are dynamic.
+          macros:
+            type: array
+            description: >
+              Macros applied to this measurement. Publishers that embed a
+              macros array (of macro ids) inside each sample object instead
+              may omit this field; the pipeline reads either.
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Platform macro id.
+                name:
+                  type: string
+                filename:
+                  type: string
+          questions:
+            type: array
+            description: Question/answer entries attached to the measurement.
+            items:
+              type: object
+              properties:
+                question_label:
+                  type: string
+                question_text:
+                  type: string
+                question_answer:
+                  type: string
+          annotations:
+            type: array
+            description: Annotations attached at capture time.
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                rowId:
+                  type: string
+                type:
+                  type: string
+                  enum: ["comment", "flag"]
+                content:
                   type: object
                   properties:
-                    id:
+                    text:
                       type: string
-                      description: Platform macro id.
-                    name:
+                    flagType:
                       type: string
-                    filename:
-                      type: string
-              device_version:
-                type: string
-                description: Firmware version as reported by the device.
-              device_battery:
-                type: number
-                description: >
-                  Battery reading as the device reports it; the unit is
-                  device-defined (volts on some families, percent on others).
-              latitude:
-                type: number
-                description: GPS latitude at measurement time, if available.
-              longitude:
-                type: number
-                description: GPS longitude at measurement time, if available.
+                createdBy:
+                  type: string
+                createdByName:
+                  type: string
+                createdAt:
+                  type: string
+                updatedAt:
+                  type: string
+          user_id:
+            type: string
+            description: Platform id of the contributing user's session.
+          device_id:
+            type: string
+            description: Device identifier as reported by the instrument.
+          device_name:
+            type: string
+            description: Device name as reported by the instrument.
+          device_version:
+            type: string
+            description: Firmware version as reported by the device.
+          device_firmware:
+            type: string
+            description: Firmware identifier as reported by the device.
+          device_battery:
+            type: number
+            description: >
+              Battery reading as the device reports it; the unit is
+              device-defined (volts on some families, percent on others).
+          output:
+            type: string
+            description: Device-native output block, passed through as text.
+          latitude:
+            type: number
+            description: GPS latitude at measurement time, if available.
+          longitude:
+            type: number
+            description: GPS longitude at measurement time, if available.
         required:
-          - data
+          - timestamp
       examples:
         - payload:
-            data:
-              moisture: 30.5
-              temperature: 22.1
+            timestamp: "2026-03-09T10:30:00.000-05:00"
+            timezone: "America/Chicago"
+            protocol_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+            sample: '{"moisture": 30.5, "temperature": 22.1}'
+            device_version: "1.1.0"
+            device_battery: 4.1
 
     DeviceScriptMessage:
       contentType: application/json
