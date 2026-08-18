@@ -17,6 +17,8 @@ config.
 from .constants import (
     ANNOTATIONS_SOURCE_TABLE,
     BRONZE_TABLE_DEFAULT,
+    CLEAN_DEVICE_LIFECYCLE_EVENTS_TABLE,
+    DEVICE_LAST_ACTIVITY_TABLE,
     ENRICHED_MACRO_DATA_VIEW,
     ENRICHED_RAW_DATA_VIEW,
     ENRICHED_UPLOADED_DATA_VIEW,
@@ -30,6 +32,7 @@ from .constants import (
     EXPERIMENT_UPLOADED_DATA_TABLE,
     MACRO_ID_UUID_PATTERN,
     METADATA_SOURCE_TABLE,
+    RAW_DEVICE_LIFECYCLE_EVENTS_TABLE,
     RAW_IMPORTED_DATA_TABLE,
     RAW_LARGE_DATA_TABLE,
     RAW_UPLOADED_DATA_TABLE,
@@ -38,6 +41,7 @@ from .constants import (
 from .schemas import (
     annotation_content_schema,
     annotation_schema,
+    device_lifecycle_event_schema,
     large_iot_schema,
     macro_schema,
     question_schema,
@@ -48,6 +52,8 @@ __all__ = [
     # constants
     "ANNOTATIONS_SOURCE_TABLE",
     "BRONZE_TABLE_DEFAULT",
+    "CLEAN_DEVICE_LIFECYCLE_EVENTS_TABLE",
+    "DEVICE_LAST_ACTIVITY_TABLE",
     "ENRICHED_MACRO_DATA_VIEW",
     "ENRICHED_RAW_DATA_VIEW",
     "ENRICHED_UPLOADED_DATA_VIEW",
@@ -61,6 +67,7 @@ __all__ = [
     "EXPERIMENT_UPLOADED_DATA_TABLE",
     "MACRO_ID_UUID_PATTERN",
     "METADATA_SOURCE_TABLE",
+    "RAW_DEVICE_LIFECYCLE_EVENTS_TABLE",
     "RAW_IMPORTED_DATA_TABLE",
     "RAW_LARGE_DATA_TABLE",
     "RAW_UPLOADED_DATA_TABLE",
@@ -68,6 +75,7 @@ __all__ = [
     # schemas
     "annotation_content_schema",
     "annotation_schema",
+    "device_lifecycle_event_schema",
     "large_iot_schema",
     "macro_schema",
     "question_schema",

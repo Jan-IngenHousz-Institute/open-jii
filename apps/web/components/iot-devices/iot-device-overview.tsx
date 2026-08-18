@@ -30,6 +30,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ca
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { MetaField } from "../experiment-dashboards/meta-field";
+import { useFormatLastSeen } from "./device-connectivity";
 
 /** Device registry metadata and its manage-gated danger zone. */
 export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
@@ -53,6 +54,16 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
   });
   const displayName = resolveDevicePrimaryLabel(present, t);
   const roleLabels = resolveDeviceRoleLabels(present, t);
+  const formatLastSeen = useFormatLastSeen();
+
+  const connectivityLabel = (connectivity: IotDeviceDetail["connectivity"]) => {
+    if (connectivity === null) {
+      return t("iot.devices.connectivity.unknown");
+    }
+    return connectivity.connected
+      ? t("iot.devices.connectivity.connected")
+      : t("iot.devices.connectivity.disconnected");
+  };
 
   return (
     <div className="space-y-8">
@@ -74,6 +85,14 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
           value={formatDate(device.createdAt)}
         />
         <MetaField label={t("iot.devices.detail.meta.thingName")} value={device.thingName} />
+        <MetaField
+          label={t("iot.devices.detail.meta.connectivity")}
+          value={connectivityLabel(device.connectivity)}
+        />
+        <MetaField
+          label={t("iot.devices.detail.meta.lastSeen")}
+          value={formatLastSeen(device.connectivity)}
+        />
       </div>
 
       {device.capabilities.canManage && (

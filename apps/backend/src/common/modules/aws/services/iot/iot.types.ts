@@ -17,3 +17,14 @@ export interface CertificateResult {
 }
 
 export type CertificateStatus = "ACTIVE" | "INACTIVE" | "REVOKED";
+
+/**
+ * Broker connectivity of one thing from the fleet index. `lastSeenAt` is the
+ * ISO timestamp of the last connectivity state change; null when the index has
+ * never recorded one.
+ */
+export interface ThingConnectivity {
+  thingName: string;
+  connected: boolean;
+  lastSeenAt: string | null;
+}

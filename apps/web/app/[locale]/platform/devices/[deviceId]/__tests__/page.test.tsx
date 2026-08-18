@@ -51,6 +51,33 @@ describe("DeviceOverviewPage", () => {
     expect(screen.getByText("ambyte_SN-42")).toBeInTheDocument();
   });
 
+  it("shows live connectivity and last-seen in the registry metadata", async () => {
+    server.mount(contract.iot.getIotDevice, {
+      body: createIotDeviceDetail({
+        id: DEVICE_ID,
+        connectivity: { connected: true, lastSeenAt: "2026-08-13T08:00:00.000Z" },
+      }),
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("iot.devices.connectivity.connected")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.connectivity.onlineSince")).toBeInTheDocument();
+  });
+
+  it("shows the disconnected state with its relative last-seen", async () => {
+    server.mount(contract.iot.getIotDevice, {
+      body: createIotDeviceDetail({
+        id: DEVICE_ID,
+        connectivity: { connected: false, lastSeenAt: "2026-08-13T08:00:00.000Z" },
+      }),
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("iot.devices.connectivity.disconnected")).toBeInTheDocument();
+  });
+
   it("deletes from the danger zone and navigates back to the registry", async () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({ id: DEVICE_ID, name: "Doomed" }),

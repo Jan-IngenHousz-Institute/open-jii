@@ -35,12 +35,27 @@ import { DataTableHeader, DataTableRows, formatValue, LoadingRows } from "./data
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
-interface PaginationConfig {
+/**
+ * Paging a caller drives itself, because the rows come a page at a time from
+ * the server and only it knows the totals.
+ */
+interface ServerPaginationConfig {
+  mode: "server";
   state: PaginationState;
   onChange: OnChangeFn<PaginationState>;
   totalRows: number;
   totalPages: number;
+  pageSizeOptions?: number[];
 }
+
+/** Paging over rows the table already holds; it owns the page state. */
+interface ClientPaginationConfig {
+  mode: "client";
+  pageSize?: number;
+  pageSizeOptions?: number[];
+}
+
+type PaginationConfig = ServerPaginationConfig | ClientPaginationConfig;
 
 interface SortingConfig {
   column?: string;
@@ -134,6 +149,20 @@ export function DataTable({
   }, [columns, cellHandlers, toggleCellExpansion, isCellExpanded, errorColumn, selection]);
 
   const isPaged = pagination !== undefined;
+  const isServerPaged = pagination?.mode === "server";
+
+  const [clientPagination, setClientPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: pagination?.mode === "client" ? (pagination.pageSize ?? 10) : 10,
+  });
+
+  const pageState = pagination?.mode === "server" ? pagination.state : clientPagination;
+  const totalRows = pagination?.mode === "server" ? pagination.totalRows : rows.length;
+  const totalPages =
+    pagination?.mode === "server"
+      ? pagination.totalPages
+      : Math.max(1, Math.ceil(rows.length / pageState.pageSize));
+  const pageSizeOptions = pagination?.pageSizeOptions ?? PAGE_SIZE_OPTIONS;
 
   const table = useReactTable<DataRow>({
     data: rows,
@@ -142,14 +171,14 @@ export function DataTable({
     // Without a paging model every row renders. Supplying one unpaged would
     // silently cut the table at tanstack's default page size.
     ...(isPaged ? { getPaginationRowModel: getPaginationRowModel() } : {}),
-    manualPagination: isPaged,
+    manualPagination: isServerPaged,
     enableRowSelection: selection !== undefined,
     getRowId: (row) => String(row.id),
     onRowSelectionChange: selection?.onChange,
-    onPaginationChange: pagination?.onChange,
-    rowCount: pagination?.totalRows,
+    onPaginationChange: pagination?.mode === "server" ? pagination.onChange : setClientPagination,
+    rowCount: totalRows,
     state: {
-      ...(pagination ? { pagination: pagination.state } : {}),
+      ...(isPaged ? { pagination: pageState } : {}),
       ...(selection ? { rowSelection: selection.state } : {}),
     },
     defaultColumn: { size: 180 },
@@ -185,7 +214,14 @@ export function DataTable({
     <div className={cn("grid max-w-full", className)}>
       {toolbar}
 
-      <div className="text-muted-foreground relative -mt-px overflow-x-auto rounded-b-lg border">
+      <div
+        className={cn(
+          "text-muted-foreground relative overflow-x-auto border",
+          // The overlap and the squared top edge exist to meet a toolbar's
+          // bottom border; standalone, the table draws its own.
+          toolbar === undefined ? "rounded-lg" : "-mt-px rounded-b-lg",
+        )}
+      >
         <Table className="w-max min-w-full">
           <DataTableHeader
             headerGroups={table.getHeaderGroups()}
@@ -213,12 +249,12 @@ export function DataTable({
       {isPaged && (
         <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
           <div className="flex-1 whitespace-nowrap">
-            {t("dataTable.totalRows")}: {pagination.totalRows}
+            {t("dataTable.totalRows")}: {totalRows}
           </div>
           <div className="flex items-center space-x-2">
             <Label className="whitespace-nowrap">{t("dataTable.rowsPerPage")}:</Label>
             <Select
-              value={pagination.state.pageSize.toString()}
+              value={pageState.pageSize.toString()}
               onValueChange={(rowsPerPage) => {
                 table.setPageSize(Number(rowsPerPage));
               }}
@@ -227,7 +263,7 @@ export function DataTable({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((size) => (
+                {pageSizeOptions.map((size) => (
                   <SelectItem key={size} value={String(size)}>
                     {size}
                   </SelectItem>
@@ -253,8 +289,8 @@ export function DataTable({
               </PaginationItem>
               <PaginationItem>
                 <span>
-                  {t("dataTable.page")} {pagination.state.pageIndex + 1} {t("dataTable.pageOf")}{" "}
-                  {pagination.totalPages}
+                  {t("dataTable.page")} {pageState.pageIndex + 1} {t("dataTable.pageOf")}{" "}
+                  {totalPages}
                 </span>
               </PaginationItem>
               <PaginationItem>

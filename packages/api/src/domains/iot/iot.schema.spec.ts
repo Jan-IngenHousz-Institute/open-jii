@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   zIotCredentials,
   zIotDevice,
+  zIotDeviceActivity,
   zIotDeviceDetail,
   zIotDeviceList,
   zRegisterIotDeviceBody,
@@ -10,6 +11,7 @@ import {
   zOnboardDeviceBody,
   zDeviceOnboardingConfig,
   zDeviceExperiment,
+  zMonitoringRangeQuery,
 } from "./iot.schema";
 
 describe("Iot Schema", () => {
@@ -203,18 +205,41 @@ describe("Iot Schema", () => {
       canShare: true,
       canLeave: false,
     };
+    const connectivity = { connected: true, lastSeenAt: "2025-01-10T00:00:00.000Z" };
 
     it("accepts a device with its caller capabilities", () => {
-      expect(zIotDeviceDetail.safeParse({ ...validDevice, capabilities }).success).toBe(true);
+      expect(
+        zIotDeviceDetail.safeParse({ ...validDevice, capabilities, connectivity }).success,
+      ).toBe(true);
     });
 
     it("requires the capabilities object — the Collaborators tab is gated on it", () => {
-      expect(zIotDeviceDetail.safeParse(validDevice).success).toBe(false);
+      expect(zIotDeviceDetail.safeParse({ ...validDevice, connectivity }).success).toBe(false);
+    });
+
+    it("requires connectivity, nullable for a degraded fleet index", () => {
+      expect(zIotDeviceDetail.safeParse({ ...validDevice, capabilities }).success).toBe(false);
+      expect(
+        zIotDeviceDetail.safeParse({ ...validDevice, capabilities, connectivity: null }).success,
+      ).toBe(true);
     });
 
     it("keeps the list response free of capabilities, which cost a resolution per row", () => {
       expect(zIotDevice.safeParse({ ...validDevice, capabilities }).success).toBe(true);
-      expect(zIotDeviceList.safeParse([validDevice]).success).toBe(true);
+      expect(zIotDeviceList.safeParse([{ ...validDevice, connectivity }]).success).toBe(true);
+    });
+
+    it("accepts a device without connectivity, which the list response then rejects", () => {
+      expect(zIotDevice.safeParse(validDevice).success).toBe(true);
+      expect(zIotDeviceList.safeParse([validDevice]).success).toBe(false);
+    });
+
+    it("accepts a never-connected device in connectivity", () => {
+      expect(
+        zIotDeviceList.safeParse([
+          { ...validDevice, connectivity: { connected: false, lastSeenAt: null } },
+        ]).success,
+      ).toBe(true);
     });
   });
 
@@ -359,6 +384,79 @@ describe("Iot Schema", () => {
         addedAt: "yesterday",
       };
       expect(zDeviceExperiment.safeParse(binding).success).toBe(false);
+    });
+  });
+
+  describe("zIotDeviceActivity", () => {
+    it("accepts a datetime lastDataAt", () => {
+      expect(
+        zIotDeviceActivity.safeParse({
+          lastDataAt: "2025-01-10T00:00:00.000Z",
+          pipelineUnavailable: false,
+        }).success,
+      ).toBe(true);
+    });
+
+    it("accepts null when no data has landed", () => {
+      expect(
+        zIotDeviceActivity.safeParse({ lastDataAt: null, pipelineUnavailable: false }).success,
+      ).toBe(true);
+    });
+
+    it("accepts null marked unavailable when the lookup itself failed", () => {
+      expect(
+        zIotDeviceActivity.safeParse({ lastDataAt: null, pipelineUnavailable: true }).success,
+      ).toBe(true);
+    });
+
+    it("rejects a missing lastDataAt or availability flag", () => {
+      expect(zIotDeviceActivity.safeParse({}).success).toBe(false);
+      expect(zIotDeviceActivity.safeParse({ lastDataAt: null }).success).toBe(false);
+    });
+  });
+
+  describe("zMonitoringRangeQuery", () => {
+    const validRange = {
+      deviceId: "11111111-1111-4111-8111-111111111111",
+      from: "2026-08-13T00:00:00.000Z",
+      to: "2026-08-14T00:00:00.000Z",
+      bucket: "hour",
+    };
+
+    it("accepts an ordered range", () => {
+      expect(zMonitoringRangeQuery.safeParse(validRange).success).toBe(true);
+    });
+
+    it("accepts a span exactly at the ceiling", () => {
+      expect(
+        zMonitoringRangeQuery.safeParse({
+          ...validRange,
+          from: "2026-07-14T00:00:00.000Z",
+          to: "2026-08-14T00:00:00.000Z",
+        }).success,
+      ).toBe(true);
+    });
+
+    it("rejects a span past the preset ceiling", () => {
+      expect(
+        zMonitoringRangeQuery.safeParse({
+          ...validRange,
+          from: "2026-06-01T00:00:00.000Z",
+          to: "2026-08-14T00:00:00.000Z",
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a reversed or empty range", () => {
+      expect(zMonitoringRangeQuery.safeParse({ ...validRange, from: validRange.to }).success).toBe(
+        false,
+      );
+      expect(
+        zMonitoringRangeQuery.safeParse({
+          ...validRange,
+          from: "2026-08-15T00:00:00.000Z",
+        }).success,
+      ).toBe(false);
     });
   });
 });

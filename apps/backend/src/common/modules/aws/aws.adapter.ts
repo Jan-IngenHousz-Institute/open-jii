@@ -21,6 +21,7 @@ import type {
   CreatedThing,
   CertificateResult,
   CertificateStatus,
+  ThingConnectivity,
 } from "./services/iot/iot.types";
 import { AwsLambdaService } from "./services/lambda/lambda.service";
 import type { InvokeLambdaResponse } from "./services/lambda/lambda.types";
@@ -206,6 +207,16 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
    */
   async getIotDataEndpoint(): Promise<Result<string>> {
     return this.awsIotService.describeDataEndpoint();
+  }
+
+  /**
+   * Live broker connectivity per thing from the fleet index. Callers treat a
+   * failure as "connectivity unknown", never as a failed request.
+   */
+  async searchThingsConnectivity(
+    thingNames: string[],
+  ): Promise<Result<Map<string, ThingConnectivity>>> {
+    return this.awsIotService.searchThingsConnectivity(thingNames);
   }
 
   /**

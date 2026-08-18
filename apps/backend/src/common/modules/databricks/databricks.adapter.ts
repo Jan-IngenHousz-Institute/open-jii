@@ -12,6 +12,15 @@ import type { UploadMetadata } from "../../../experiments/core/models/experiment
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { DataUploadJobInput } from "../../../experiments/core/ports/databricks.port";
+import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
+import type {
+  DeviceBatteryRow,
+  DeviceFirmwareVersionRow,
+  DeviceMacroRow,
+  DeviceMeasurementRow,
+  DevicePayloadBreakdownRow,
+  DeviceThroughputRow,
+} from "../../../iot/core/ports/databricks.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -23,6 +32,7 @@ import { QueryBuilderService } from "./services/query-builder/query-builder.serv
 import type {
   AggregationSpec,
   FilterCondition,
+  QueryParams,
 } from "./services/query-builder/query-builder.types";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData } from "./services/sql/sql.types";
@@ -337,6 +347,329 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     return this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
+  }
+
+  /** Last data arrival from gold device_last_activity; lags by pipeline cadence. */
+  async getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.device_last_activity`,
+      whereConditions: [["client_id", thingName]],
+      limit: 1,
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    const firstRow = rows.at(0);
+
+    return success({
+      lastDataAt: firstRow === undefined ? null : this.toIsoOrNull(firstRow[index.last_data_at]),
+    });
+  }
+
+  /** Lifecycle events in a range, ascending, capped at `limit`. */
+  async getDeviceLifecycleEvents(
+    thingName: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<DeviceLifecycleEventRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_device_lifecycle_events`,
+      columns: ["event_type", "event_timestamp", "disconnect_reason", "session_identifier"],
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "event_timestamp", operator: "between", value: [from, to] }],
+      orderBy: "event_timestamp",
+      orderDirection: "ASC",
+      limit,
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        eventType: row[index.event_type] ?? null,
+        eventTimestamp: this.toIsoOrNull(row[index.event_timestamp]),
+        disconnectReason: row[index.disconnect_reason] ?? null,
+        sessionIdentifier: row[index.session_identifier] ?? null,
+      })),
+    );
+  }
+
+  /** Measurement counts per time bucket and experiment. */
+  async getDeviceThroughput(
+    thingName: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<DeviceThroughputRow[]>> {
+    const bucketAlias = `timestamp_${bucket}`;
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "experiment_id" }],
+        functions: [{ column: "*", function: "count", alias: "measurement_count" }],
+      },
+      orderBy: bucketAlias,
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
+        experimentId: row[index.experiment_id] ?? null,
+        count: Number(row[index.measurement_count] ?? 0),
+      })),
+    );
+  }
+
+  /** Average reported battery per bucket; AVG skips nulls, so a battery-less bucket is null. */
+  async getDeviceBatterySeries(
+    thingName: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<DeviceBatteryRow[]>> {
+    const bucketAlias = `timestamp_${bucket}`;
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "timestamp", timeBucket: bucket }],
+        functions: [{ column: "device_battery", function: "avg", alias: "average_battery" }],
+      },
+      orderBy: bucketAlias,
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => {
+        const raw = row[index.average_battery];
+        return {
+          bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
+          averageBattery: raw === null ? null : Number(raw),
+        };
+      }),
+    );
+  }
+
+  /**
+   * One grouped scan powering the payload profile. COUNT(column) skips nulls,
+   * which is what makes the coverage counts work.
+   */
+  async getDevicePayloadBreakdown(
+    thingName: string,
+    from: string,
+    to: string,
+  ): Promise<Result<DevicePayloadBreakdownRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [
+          { column: "device_version" },
+          { column: "protocol_id" },
+          { column: "workbook_version_id" },
+          { column: "workbook_run_id" },
+        ],
+        functions: [
+          { column: "*", function: "count", alias: "row_count" },
+          { column: "latitude", function: "count", alias: "gps_count" },
+          { column: "device_battery", function: "count", alias: "battery_count" },
+        ],
+      },
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        deviceVersion: row[index.device_version] ?? null,
+        protocolId: row[index.protocol_id] ?? null,
+        workbookVersionId: row[index.workbook_version_id] ?? null,
+        workbookRunId: row[index.workbook_run_id] ?? null,
+        count: Number(row[index.row_count] ?? 0),
+        withGps: Number(row[index.gps_count] ?? 0),
+        withBattery: Number(row[index.battery_count] ?? 0),
+      })),
+    );
+  }
+
+  /**
+   * Counts per macro. `macros` is an array per measurement, so rows are
+   * exploded before grouping and counts can exceed the measurement total.
+   */
+  async getDeviceMacroBreakdown(
+    thingName: string,
+    from: string,
+    to: string,
+  ): Promise<Result<DeviceMacroRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        explode: { column: "macros", alias: "macro" },
+        groupBy: [{ column: "macro.id", alias: "macro_id" }],
+        functions: [{ column: "*", function: "count", alias: "row_count" }],
+      },
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        macroId: row[index.macro_id] ?? null,
+        count: Number(row[index.row_count] ?? 0),
+      })),
+    );
+  }
+
+  /**
+   * Reported firmware per (time bucket, version): grouping by version alone
+   * would collapse a rollback into two overlapping windows.
+   */
+  async getDeviceFirmwareHistory(
+    thingName: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<DeviceFirmwareVersionRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "device_version" }],
+        functions: [
+          { column: "timestamp", function: "min", alias: "first_seen" },
+          { column: "timestamp", function: "max", alias: "last_seen" },
+          { column: "*", function: "count", alias: "row_count" },
+        ],
+      },
+      orderBy: "first_seen",
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        version: row[index.device_version] ?? null,
+        firstSeen: this.toIsoOrNull(row[index.first_seen]),
+        lastSeen: this.toIsoOrNull(row[index.last_seen]),
+        count: Number(row[index.row_count] ?? 0),
+      })),
+    );
+  }
+
+  /** Most recent measurements in a range, newest first. */
+  async getDeviceRecentMeasurements(
+    thingName: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<DeviceMeasurementRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      columns: [
+        "timestamp",
+        "experiment_id",
+        "protocol_id",
+        "workbook_version_id",
+        "device_version",
+        "device_battery",
+        "latitude",
+        "longitude",
+        "sample",
+      ],
+      whereConditions: [["client_id", thingName]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      orderBy: "timestamp",
+      orderDirection: "DESC",
+      limit,
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        timestamp: this.toIsoOrNull(row[index.timestamp]),
+        experimentId: row[index.experiment_id] ?? null,
+        protocolId: row[index.protocol_id] ?? null,
+        workbookVersionId: row[index.workbook_version_id] ?? null,
+        deviceVersion: row[index.device_version] ?? null,
+        battery: this.toNumberOrNull(row[index.device_battery]),
+        latitude: this.toNumberOrNull(row[index.latitude]),
+        longitude: this.toNumberOrNull(row[index.longitude]),
+        // Device-defined shape, so it travels as the stored JSON text.
+        sample: row[index.sample] ?? null,
+      })),
+    );
+  }
+
+  private toNumberOrNull(raw: string | null | undefined): number | null {
+    if (raw === null || raw === undefined) {
+      return null;
+    }
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  // Build the SQL, run it against the centrum schema, index columns by name.
+  private async runMonitoringQuery(
+    params: QueryParams,
+  ): Promise<Result<{ rows: (string | null)[][]; index: Record<string, number> }>> {
+    const queryResult = this.queryBuilder.buildQuery(params);
+    if (queryResult.isFailure()) {
+      return failure(queryResult.error);
+    }
+
+    const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    return success({ rows: result.value.rows, index: this.columnIndex(result.value.columns) });
+  }
+
+  private columnIndex(columns: { name: string }[]): Record<string, number> {
+    const index: Record<string, number> = {};
+    columns.forEach((column, i) => {
+      index[column.name] = i;
+    });
+    return index;
+  }
+
+  private toIsoOrNull(raw: string | null | undefined): string | null {
+    if (!raw) {
+      return null;
+    }
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   }
 
   /**

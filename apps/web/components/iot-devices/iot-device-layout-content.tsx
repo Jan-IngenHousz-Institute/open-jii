@@ -8,6 +8,7 @@ import Link from "next/link";
 import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 
+import { ConnectivityDot } from "./device-connectivity";
 import { IotDeviceDetailTabs } from "./iot-device-detail-tabs";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 
@@ -46,6 +47,7 @@ export function IotDeviceLayoutContent({
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold text-[#011111]">{displayName}</h1>
           <IotDeviceStatusBadge status={device.status} />
+          <ConnectivityDot connectivity={device.connectivity} />
         </div>
       </div>
 
