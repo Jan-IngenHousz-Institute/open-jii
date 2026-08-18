@@ -1,8 +1,8 @@
 "use client";
 
 import { PageContainer } from "@/components/page-container";
-import { useFeatureFlagEnabled } from "@/hooks/useFeatureFlag";
 import { notFound } from "next/navigation";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 

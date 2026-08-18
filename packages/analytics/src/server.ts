@@ -1,5 +1,5 @@
 import type { FeatureFlagKey } from "./feature-flags";
-import { FEATURE_FLAG_DEFAULTS, isFlagForcedOn } from "./feature-flags";
+import { FEATURE_FLAG_DEFAULTS } from "./feature-flags";
 import type { PostHogServerConfig } from "./posthog-config";
 
 /**
@@ -58,10 +58,6 @@ export async function isFeatureFlagEnabled(
   flagKey: FeatureFlagKey,
   distinctId = "anonymous",
 ): Promise<boolean> {
-  if (isFlagForcedOn(flagKey)) {
-    return true;
-  }
-
   try {
     const client = getPostHogServerClient();
 
