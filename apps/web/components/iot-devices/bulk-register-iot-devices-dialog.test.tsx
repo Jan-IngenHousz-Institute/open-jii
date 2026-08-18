@@ -154,7 +154,25 @@ describe("BulkRegisterIotDevicesDialog", () => {
     expect(bulk.calls).toHaveLength(0);
   });
 
-  it("rejects an invalid serial line before submitting", async () => {
+  it("counts recognized devices live and blocks an empty submit", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    // Nothing typed: hint shown, submit disabled.
+    expect(screen.getByText("iot.devices.bulkDialog.serialsHint")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /bulkDialog.submit/ })).toBeDisabled();
+
+    await user.type(screen.getByLabelText("iot.devices.bulkDialog.serialsLabel"), "S-1{enter}S-2");
+    expect(screen.getByText("iot.devices.bulkDialog.recognized")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /bulkDialog.submit/ })).toBeEnabled();
+
+    await user.type(screen.getByLabelText("iot.devices.bulkDialog.serialsLabel"), "{enter}!!");
+    expect(screen.getByText("iot.devices.bulkDialog.invalidLine")).toBeInTheDocument();
+  });
+
+  it("keeps an invalid serial line from ever submitting", async () => {
     const user = userEvent.setup();
     server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
     const bulk = server.mount(contract.iot.bulkRegisterIotDevices, { status: 500 });
@@ -164,9 +182,10 @@ describe("BulkRegisterIotDevicesDialog", () => {
     await user.click(screen.getByRole("combobox"));
     await user.click(await screen.findByRole("option", { name: "Ambyte" }));
     await user.type(screen.getByLabelText("iot.devices.bulkDialog.serialsLabel"), "not a serial!!");
-    await user.click(screen.getByRole("button", { name: "iot.devices.bulkDialog.submit" }));
 
-    expect(await screen.findByText(/Invalid line/)).toBeInTheDocument();
+    // The bad line is flagged live and the submit never becomes clickable.
+    expect(screen.getByText("iot.devices.bulkDialog.invalidLine")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /bulkDialog.submit/ })).toBeDisabled();
     expect(bulk.calls).toHaveLength(0);
   });
 });

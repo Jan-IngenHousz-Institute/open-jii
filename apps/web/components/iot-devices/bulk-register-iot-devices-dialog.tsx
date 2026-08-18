@@ -142,6 +142,9 @@ export function BulkRegisterIotDevicesDialog({
     },
   });
   const groupMode = form.watch("groupMode");
+  const serialsText = form.watch("serials");
+  const { devices: parsedDevices, badLine } = parseSerialLines(serialsText);
+  const parsedCount = parsedDevices.length;
 
   const bulkRegister = useBulkRegisterIotDevices({
     onSuccess: (outcome) => {
@@ -194,7 +197,7 @@ export function BulkRegisterIotDevicesDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{t("iot.devices.bulkDialog.title")}</DialogTitle>
           <DialogDescription>{t("iot.devices.bulkDialog.description")}</DialogDescription>
@@ -251,6 +254,23 @@ export function BulkRegisterIotDevicesDialog({
                         {...field}
                       />
                     </FormControl>
+                    {badLine !== null ? (
+                      <p className="text-xs text-amber-600 dark:text-amber-500">
+                        {t("iot.devices.bulkDialog.invalidLine", { line: badLine })}
+                      </p>
+                    ) : parsedCount > 100 ? (
+                      <p className="text-xs text-amber-600 dark:text-amber-500">
+                        {t("iot.devices.bulkDialog.overCap", { count: parsedCount })}
+                      </p>
+                    ) : parsedCount > 0 ? (
+                      <p className="text-muted-foreground text-xs tabular-nums">
+                        {t("iot.devices.bulkDialog.recognized", { count: parsedCount })}
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground text-xs">
+                        {t("iot.devices.bulkDialog.serialsHint")}
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -348,9 +368,9 @@ export function BulkRegisterIotDevicesDialog({
                 >
                   {tCommon("common.cancel")}
                 </Button>
-                <Button type="submit" disabled={isPending}>
+                <Button type="submit" disabled={isPending || parsedCount === 0}>
                   {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t("iot.devices.bulkDialog.submit")}
+                  {t("iot.devices.bulkDialog.submit", { count: parsedCount })}
                 </Button>
               </DialogFooter>
             </form>
