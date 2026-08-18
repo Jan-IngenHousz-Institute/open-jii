@@ -80,6 +80,24 @@ describe("EnsureMobileDeviceUseCase", () => {
     expect(attach).toHaveBeenCalledTimes(2);
   });
 
+  it("fills a missing name on a later ensure, but never overwrites one", async () => {
+    const first = await useCase.execute({ installId: body.installId }, userId);
+    assertSuccess(first);
+    expect(first.value.name).toBeNull();
+
+    const named = await useCase.execute({ installId: body.installId, name: "iPhone 15" }, userId);
+    assertSuccess(named);
+    expect(named.value.name).toBe("iPhone 15");
+
+    // An existing name may be the user's own rename; the device model loses.
+    const renamedAgain = await useCase.execute(
+      { installId: body.installId, name: "iPhone 16" },
+      userId,
+    );
+    assertSuccess(renamedAgain);
+    expect(renamedAgain.value.name).toBe("iPhone 15");
+  });
+
   it("returns 409 without leaking the owner when another user holds the install id", async () => {
     await useCase.execute(body, userId);
     const otherUser = await testApp.createTestUser({ name: "Other" });

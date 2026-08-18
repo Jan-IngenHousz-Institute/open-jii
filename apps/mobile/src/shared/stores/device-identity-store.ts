@@ -82,6 +82,24 @@ export const useDeviceIdentityStore = create<
   ),
 );
 
+/**
+ * Resolves once persisted identities have rehydrated. Callers that may run
+ * before rehydration await this instead of minting on a cold read, which
+ * would fork the phone's identity while the persisted one loads.
+ */
+export function whenDeviceIdentityLoaded(): Promise<void> {
+  if (useDeviceIdentityStore.getState().isLoaded) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    const unsubscribe = useDeviceIdentityStore.persist.onFinishHydration(() => {
+      unsubscribe();
+      resolve();
+    });
+  });
+}
+
 /** This phone's identity for the active environment, minting on first use. */
 export function getDeviceIdentity(): DeviceIdentity {
   const { isLoaded, mintInstallId } = useDeviceIdentityStore.getState();

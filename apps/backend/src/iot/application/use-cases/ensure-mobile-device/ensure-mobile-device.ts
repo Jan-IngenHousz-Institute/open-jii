@@ -41,7 +41,7 @@ export class EnsureMobileDeviceUseCase {
       return failure(existing.error);
     }
     if (existing.value) {
-      return this.resolveExisting(existing.value, userId);
+      return this.resolveExisting(existing.value, userId, body.name);
     }
 
     const thingName = this.buildThingName(body.installId);
@@ -76,7 +76,7 @@ export class EnsureMobileDeviceUseCase {
       // rollback would delete the winner's Thing.
       const raced = await this.deviceRepository.findBySerialNumber(body.installId);
       if (raced.isSuccess() && raced.value) {
-        return this.resolveExisting(raced.value, userId);
+        return this.resolveExisting(raced.value, userId, body.name);
       }
 
       await this.awsPort.deleteThing(thing.thingName);
@@ -98,6 +98,7 @@ export class EnsureMobileDeviceUseCase {
   private async resolveExisting(
     device: IotDeviceDto,
     userId: string,
+    name: string | undefined,
   ): Promise<Result<IotDeviceDto>> {
     if (device.createdBy !== userId) {
       return failure(
@@ -109,6 +110,15 @@ export class EnsureMobileDeviceUseCase {
     }
 
     await this.attachIdentity(device.thingName, userId);
+
+    // Fill a missing name only: an existing one may be the user's own rename
+    // and must never be overwritten by a device model.
+    if (device.name === null && name !== undefined) {
+      const renamed = await this.deviceRepository.update(device.id, { name });
+      if (renamed.isSuccess() && renamed.value) {
+        return success(renamed.value);
+      }
+    }
 
     return success(device);
   }

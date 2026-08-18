@@ -2,7 +2,11 @@ import { ORPCError } from "@orpc/client";
 import * as ExpoDevice from "expo-device";
 import { getApiClient } from "~/shared/api/client";
 import { createLogger } from "~/shared/observability/logger";
-import { getDeviceIdentity, useDeviceIdentityStore } from "~/shared/stores/device-identity-store";
+import {
+  getDeviceIdentity,
+  useDeviceIdentityStore,
+  whenDeviceIdentityLoaded,
+} from "~/shared/stores/device-identity-store";
 import { getEnvName } from "~/shared/stores/environment-store";
 
 const log = createLogger("device-identity");
@@ -24,6 +28,7 @@ export async function ensureDeviceRegistered(options?: { throttle?: boolean }): 
 
   inFlight = (async () => {
     try {
+      await whenDeviceIdentityLoaded();
       const envName = getEnvName();
       const identity = getDeviceIdentity();
 
@@ -46,8 +51,10 @@ export async function ensureDeviceRegistered(options?: { throttle?: boolean }): 
       }
 
       if (err instanceof ORPCError && err.status === 403) {
-        // Device registry feature flag is off for this user; retry later.
+        // Feature flag off for this user: a resolved answer, so the throttle
+        // applies; without it every foreground fires a doomed call.
         log.debug("Device registry disabled; skipping registration");
+        lastRunAt = Date.now();
         return;
       }
 

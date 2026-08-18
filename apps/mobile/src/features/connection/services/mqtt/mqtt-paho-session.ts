@@ -2,7 +2,7 @@ import { Client, Message } from "paho-mqtt";
 import "react-native-get-random-values";
 import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { createLogger } from "~/shared/observability/logger";
-import { getLocalThingName } from "~/shared/stores/device-identity-store";
+import { getLocalThingName, whenDeviceIdentityLoaded } from "~/shared/stores/device-identity-store";
 import { getEnvVar } from "~/shared/stores/environment-store";
 
 import { createSignedUrl, getCredentials } from "./aws-iot-auth";
@@ -135,6 +135,8 @@ export function createPahoSessionFactory(): PahoSessionFactory {
       // only tracks connections whose client id matches a Thing. Also invites
       // registration to self-heal without ever blocking the connect.
       void ensureDeviceRegistered({ throttle: true });
+      // Awaited, not assumed: connect can theoretically race rehydration.
+      await whenDeviceIdentityLoaded();
       const clientId = getLocalThingName();
 
       log.debug("connect: createSignedUrl start");

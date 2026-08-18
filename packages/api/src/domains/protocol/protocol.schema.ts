@@ -12,13 +12,17 @@ export const zSensorFamily = z.enum([
   "mobile",
 ]);
 
+// Phones self-register and never carry authored protocols; the family exists
+// for devices only, so protocol authoring rejects it at the contract.
+export const zProtocolFamily = zSensorFamily.exclude(["mobile"]);
+
 // Define Zod schemas for protocol models
 export const zProtocol = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
   code: z.record(z.unknown()).array(),
-  family: zSensorFamily,
+  family: zProtocolFamily,
   sortOrder: z.number().nullable(),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
@@ -58,7 +62,7 @@ export const zCreateProtocolRequestBody = z.object({
     .max(255, "Name must be at most 255 characters"),
   description: z.string().optional(),
   code: z.record(z.unknown()).array(),
-  family: zSensorFamily,
+  family: zProtocolFamily,
   // Set when this protocol is a fork (copy) of another, to record its lineage.
   forkedFrom: z.string().uuid().optional(),
   // Optional target organization to create into; defaults to the creator's
@@ -79,7 +83,7 @@ export const zUpdateProtocolRequestBody = z.object({
     .optional(),
   description: z.string().optional(),
   code: z.record(z.unknown()).array().optional(),
-  family: zSensorFamily.optional(),
+  family: zProtocolFamily.optional(),
 });
 
 // Error response
@@ -118,6 +122,7 @@ export const zProtocolMacroPathParams = z.object({
 
 // Infer types from Zod schemas
 export type SensorFamily = z.infer<typeof zSensorFamily>;
+export type ProtocolFamily = z.infer<typeof zProtocolFamily>;
 export type Protocol = z.infer<typeof zProtocol>;
 export type ProtocolDetail = z.infer<typeof zProtocolDetail>;
 export type ProtocolList = z.infer<typeof zProtocolList>;

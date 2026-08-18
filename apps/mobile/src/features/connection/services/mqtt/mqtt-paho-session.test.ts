@@ -76,6 +76,7 @@ vi.mock("react-native-get-random-values", () => ({}));
 vi.mock("~/shared/stores/environment-store", () => ({ getEnvVar: mockGetEnvVar }));
 vi.mock("~/shared/stores/device-identity-store", () => ({
   getLocalThingName: () => "mobile_test-install-uuid",
+  whenDeviceIdentityLoaded: () => Promise.resolve(),
 }));
 vi.mock("~/shared/composition/ensure-device-registered", () => ({
   ensureDeviceRegistered: () => Promise.resolve(),

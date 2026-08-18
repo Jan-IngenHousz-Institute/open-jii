@@ -57,10 +57,15 @@ describe("ensureDeviceRegistered", () => {
     expect(identity().installId).toBeDefined();
   });
 
-  it("skips silently while the device registry flag is off", async () => {
+  it("skips silently while the device registry flag is off, and backs off", async () => {
     mockEnsureMobileDevice.mockRejectedValue(new ORPCError("FORBIDDEN", { status: 403 }));
 
     await expect(ensureDeviceRegistered()).resolves.toBeUndefined();
+
+    // A resolved "no" engages the throttle; a doomed call must not fire on
+    // every foreground.
+    await ensureDeviceRegistered({ throttle: true });
+    expect(mockEnsureMobileDevice).toHaveBeenCalledTimes(1);
   });
 
   it("swallows network failures and stays retryable", async () => {

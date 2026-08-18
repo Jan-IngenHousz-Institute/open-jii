@@ -10,7 +10,7 @@ import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type {
   UpdateProtocolRequestBody,
-  SensorFamily,
+  ProtocolFamily,
 } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -53,7 +53,7 @@ interface ProtocolDetailsCardProps {
   initialName: string;
   initialDescription: string;
   initialCode: Record<string, unknown>[];
-  initialFamily: SensorFamily;
+  initialFamily: ProtocolFamily;
 }
 
 export function ProtocolDetailsCard({
@@ -70,7 +70,7 @@ export function ProtocolDetailsCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const browserSupport = useIotBrowserSupport();
 
-  const form = useForm<UpdateProtocolRequestBody & { name: string; family: SensorFamily }>({
+  const form = useForm<UpdateProtocolRequestBody & { name: string; family: ProtocolFamily }>({
     resolver: zodResolver(
       editProtocolFormSchema.pick({ name: true, description: true, code: true, family: true }),
     ),
@@ -83,7 +83,7 @@ export function ProtocolDetailsCard({
   });
 
   async function onSubmit(
-    data: UpdateProtocolRequestBody & { name: string; family: SensorFamily },
+    data: UpdateProtocolRequestBody & { name: string; family: ProtocolFamily },
   ) {
     await updateProtocol({
       id: protocolId,

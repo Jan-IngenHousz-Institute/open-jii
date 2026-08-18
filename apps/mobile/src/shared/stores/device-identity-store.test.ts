@@ -4,6 +4,7 @@ import {
   getDeviceIdentity,
   getLocalThingName,
   useDeviceIdentityStore,
+  whenDeviceIdentityLoaded,
 } from "./device-identity-store";
 
 vi.mock("~/shared/stores/environment-store", () => ({
@@ -51,5 +52,25 @@ describe("device identity store", () => {
     useDeviceIdentityStore.setState({ isLoaded: false });
 
     expect(() => getDeviceIdentity()).toThrow(/rehydration/);
+  });
+
+  it("resolves the load gate immediately once rehydrated", async () => {
+    await expect(whenDeviceIdentityLoaded()).resolves.toBeUndefined();
+  });
+
+  it("holds the load gate until rehydration finishes, without minting", async () => {
+    useDeviceIdentityStore.setState({ isLoaded: false });
+
+    let settled = false;
+    const gate = whenDeviceIdentityLoaded().then(() => {
+      settled = true;
+    });
+
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    await useDeviceIdentityStore.persist.rehydrate();
+    await gate;
+    expect(settled).toBe(true);
   });
 });
