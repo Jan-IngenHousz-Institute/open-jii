@@ -118,6 +118,11 @@ export class EnsureMobileDeviceUseCase {
       if (renamed.isSuccess() && renamed.value) {
         return success(renamed.value);
       }
+      this.logger.warn({
+        msg: "Could not fill the device name; returning the row as is",
+        operation: "ensureMobileDevice",
+        deviceId: device.id,
+      });
     }
 
     return success(device);
