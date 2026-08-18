@@ -115,12 +115,12 @@
       "successMessage": "Account verwijderd. Je persoonlijke gegevens zijn gewist.",
       "blockers": {
         "title": "Draag je werk eerst over",
-        "description": "Je bent de enige beheerder van de onderstaande items, waardoor ze zonder eigenaar achterblijven. Kies wie de beheerdersrechten overneemt en draag ze hier over.",
+        "description": "Jij bent de laatste die verantwoordelijk is voor de onderstaande items — of je hebt de enige share die ze kan beheren, of je bent de enige eigenaar van de organisatie die ze bezit. Je maakt een item vrij door hier iemand anders beheerdersrechten te geven. Dat lukt ook door in de bezittende organisatie iemand anders eigenaar te maken, als een organisatie het item bezit.",
         "loading": "Er wordt gecontroleerd wat je beheert…",
         "applyToAllLabel": "Alles aan één persoon overdragen",
         "applyToAllPlaceholder": "Zoek iemand die alles overneemt…",
         "rowPlaceholder": "Zoek een persoon…",
-        "noCandidatesHint": "Nog geen medewerkers. Zoek hierboven naar iemand of nodig iemand uit via de medewerkerspagina van het item.",
+        "noCandidatesHint": "Niemand anders heeft hier nog een share op, dus er zijn geen suggesties. Zoek hierboven naar iemand om het aan over te dragen — of maak, als een gedeelde organisatie het bezit, daar iemand anders eigenaar; dan is dit opgelost zonder iets te delen.",
         "manageLink": "Medewerkers openen",
         "transferAll": "Beheerdersrechten overdragen",
         "transferring": "Overdragen…",
@@ -140,6 +140,7 @@
       "organizationBlockers": {
         "title": "Draag je organisaties eerst over",
         "description": "Je bent de enige eigenaar van de onderstaande organisaties, waardoor er niemand overblijft die ze kan beheren. Maak iemand anders eigenaar of verwijder de organisatie en kom dan hier terug.",
+        "alsoClearsResources": "Begin hier: als een item hieronder is geblokkeerd omdat een van deze organisaties het bezit, is dat ook opgelost zodra je iemand anders eigenaar maakt.",
         "manageLink": "Leden openen"
       }
     },

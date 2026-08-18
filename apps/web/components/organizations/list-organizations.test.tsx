@@ -209,7 +209,11 @@ describe("<ListOrganizations />", () => {
       render(<ListOrganizations />);
 
       await screen.findByText("Greenhouse Lab");
-      await user.click(screen.getByRole("combobox"));
+      // Addressed by name, not just by role: without an explicit label the trigger's
+      // accessible name is whichever option is selected, so it announces "My
+      // organizations" and never says what it filters. Naming it here is what keeps
+      // that label from being dropped again.
+      await user.click(screen.getByRole("combobox", { name: "organizations.filter.label" }));
       await user.click(screen.getByRole("option", { name: "organizations.filter.all" }));
 
       await waitFor(() => {

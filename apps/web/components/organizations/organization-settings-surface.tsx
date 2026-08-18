@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
 import { useUpdateOrganization } from "@/hooks/organization/useUpdateOrganization/useUpdateOrganization";
 import { useLocale } from "@/hooks/useLocale";
@@ -152,6 +153,7 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
           {t("organizations.settings.title")}
         </h2>
         <p className="text-muted-foreground text-sm">{t("organizations.settings.description")}</p>
+        <DocsHelpLink path="/guide/organizations/deleting" className="mt-1" />
       </div>
 
       <Card className="p-5">

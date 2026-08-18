@@ -1,0 +1,49 @@
+---
+title: "Delete an organization"
+description: "Why deletion is refused while the organization still owns work, the order to empty it in, and what deletion withdraws elsewhere."
+---
+
+{/* verified: code@2a0698c44 2026-08-17 */}
+
+Only an Owner can delete an organization, from its **Settings**.
+
+## It is refused while it still owns anything
+
+Deleting an organization does not delete its work, and does not hand that work to
+anyone. So the delete is refused while the organization still owns a single experiment,
+macro, protocol, workbook or device. The refusal tells you how many of each are left.
+
+This is deliberate: published work should not disappear behind one confirmation dialog.
+
+## Emptying it, in order
+
+1. **Move what you want to keep.** Transfer each experiment, macro, protocol or workbook
+   to another organization or to your personal workspace — see
+   [Moving a resource](/guide/sharing/moving-resources).
+2. **Delete what you do not.**
+3. **Delete the devices.** They are the exception below.
+4. **Delete the organization.**
+
+<Callout type="warn">
+  **Devices cannot be moved.** Every other resource type can be transferred out, but a device has no
+  transfer route at all — so an organization holding devices can only be emptied by *deleting* those
+  devices, which also revokes their certificates. Plan for that before you start.
+</Callout>
+
+## What deletion takes with it
+
+Deleting an organization removes more than the organization row:
+
+- **Its teams go with it**, and every share those teams held is withdrawn.
+- **Shares the organization itself held are withdrawn**, including shares on resources
+  owned by *other* organizations. If this lab had Can edit on a partner lab's
+  experiment, that access disappears too.
+- **Members are not deleted.** People keep their accounts and everything they own
+  elsewhere; they simply stop being members of an organization that no longer exists.
+
+<Callout type="info">
+  Your personal workspace cannot be deleted, and does not appear anywhere in this flow. Deleting
+  your **account** is a different operation with its own rules — including that it is blocked while
+  you are an organization's last Owner. See
+  [Account, security & API keys](/guide/get-started/account-security-api-keys).
+</Callout>

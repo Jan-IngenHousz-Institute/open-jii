@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { UserAvatar } from "@/components/user-avatar";
 import { useDeleteOrganizationTeam } from "@/hooks/organization/useDeleteOrganizationTeam/useDeleteOrganizationTeam";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
@@ -221,6 +222,7 @@ export function OrganizationTeamDetail({
           <p className="text-muted-foreground mt-1.5 text-sm">
             {t("organizations.teams.memberCount", { count: team.members.length })}
           </p>
+          <DocsHelpLink path="/guide/organizations/teams" className="mt-1" />
         </div>
 
         {canManage && (

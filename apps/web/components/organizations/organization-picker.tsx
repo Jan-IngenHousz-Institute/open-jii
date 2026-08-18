@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { useMyOrganizations } from "@/hooks/organization/useMyOrganizations/useMyOrganizations";
 import { UserRound } from "lucide-react";
 
@@ -89,6 +90,7 @@ export function OrganizationPicker({
         </SelectContent>
       </Select>
       <p className="text-muted-foreground text-xs">{t("organizations.picker.hint")}</p>
+      <DocsHelpLink path="/guide/sharing/choosing-the-owning-workspace" />
     </div>
   );
 }

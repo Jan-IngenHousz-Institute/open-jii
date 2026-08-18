@@ -1,0 +1,55 @@
+---
+title: "Create an organization"
+description: "Name it, give it a profile, and choose whether it is listed in the directory."
+---
+
+{/* verified: code@2a0698c44 2026-08-17 */}
+
+Go to **Organizations** and select **New organization**. You become its first Owner.
+
+## What you are asked for
+
+- **Name** — how the organization appears everywhere: in the directory, on the
+  Collaborators tab of anything it owns, and in the workspace picker on create forms.
+- **Slug** — the short identifier in its URL. It must be unique across openJII.
+- **Profile** — type, description, website and location. All optional, all editable
+  later, and all only worth filling in if you plan to be listed publicly.
+
+## Private or public
+
+This choice controls **one thing: whether the organization is discoverable in the
+directory.** New organizations are private.
+
+| | Private | Public |
+| :--- | :--- | :--- |
+| Appears in the organization directory | No | Yes |
+| Anyone can ask to join | No | Yes |
+| People join by | Invitation only | Invitation, or a join request you approve |
+
+The choice sits on the wizard's second step, beside the profile fields, and each option
+states its own consequence:
+
+![Step 2 of the create-organization wizard, Profile and visibility, with Private selected and both options describing what they mean for who can find the organization](/img/guide/web/organization-create-visibility.png)
+
+<Callout type="warn">
+  **This is not the same setting as a resource's visibility, even though both say Private and
+  Public.** Making the organization public does not publish a single experiment, and publishing an
+  experiment does not list the organization. They are independent controls with the same words.
+
+  The important asymmetry: you can make an organization private again at any time, but publishing an
+  experiment cannot be undone.
+</Callout>
+
+## After it exists
+
+1. [Invite people](/guide/organizations/people-and-roles) and give them a role.
+2. Optionally [create teams](/guide/organizations/teams) for subgroups you will share
+   with repeatedly.
+3. Start creating work in it — every create form has a workspace picker. See
+   [Choosing the owning workspace](/guide/sharing/choosing-the-owning-workspace) for
+   what that choice commits you to.
+
+<Callout type="info">
+  Moving work you already own into a new organization is a separate task — see
+  [Moving a resource](/guide/sharing/moving-resources).
+</Callout>

@@ -12,15 +12,47 @@ import nlCommon from "@repo/i18n/locales/nl-NL/common.json";
 import nlNavigation from "@repo/i18n/locales/nl-NL/navigation.json";
 
 /**
- * Every string this surface renders has to exist in every locale directory, not
- * only the configured ones: `nl-NL` is currently switched off in the i18n config
- * but its resources are maintained, and a gap left now is a gap nobody notices
- * until it is switched back on.
+ * Locale coverage for the `organizations.*` and `sharing.*` keys — **and nothing else.**
+ *
+ * Every string those two prefixes render has to exist in every locale directory, not
+ * only the configured ones: `nl-NL` is currently switched off in the i18n config but its
+ * resources are maintained, and a gap left now is a gap nobody notices until it is
+ * switched back on.
  *
  * The keys are read out of the source rather than listed here, so a key added to a
- * component without a translation fails this test instead of silently rendering
- * its own name in the UI.
+ * component without a translation fails this test instead of silently rendering its own
+ * name in the UI.
+ *
+ * **What this file does not cover, and nothing else does either.** This is the only
+ * locale-coverage guard in the repository, and {@link GUARDED_PREFIXES} is the whole of
+ * its reach. `experiments.*`, `dangerZone.*`, `workbooks.*` and every other prefix are
+ * unguarded: a key of theirs missing from one locale, or from all three, fails nothing
+ * anywhere. Do not read a green run here as "the translations are complete" — read it as
+ * "these two prefixes are complete". Adding a key outside them means checking the three
+ * bundles by hand.
+ *
+ * Widening this to the remaining prefixes is worth doing and is deliberately not done
+ * here: those prefixes have never been checked, so a repo-wide scan would fail on a
+ * backlog that deserves its own pass rather than being backfilled under pressure.
+ *
+ * Two blind spots survive even inside the guarded prefixes:
+ *
+ * - **Interpolated keys.** The scan sees literal `t("…")` calls only, so
+ *   `` t(`organizations.roles.${role}`) `` is invisible to it. Those vocabularies are
+ *   covered by the enumerated lists below, which are hand-maintained — extend them in
+ *   the same change that adds an interpolated key, and prefer sourcing them from an
+ *   exported enum so a new member cannot ship as a raw key.
+ * - **Placeholders inside a value.** A key's existence is guarded; `{{name}}` surviving
+ *   translation is not.
  */
+
+/**
+ * The key prefixes this file guards. Declared once, because the source scan, the
+ * sanity check and the locale-parity test all derive from it — otherwise the regex's
+ * alternation and the parity test's filter drift apart and one of them silently
+ * stops covering a prefix the other still claims.
+ */
+const GUARDED_PREFIXES = ["organizations", "sharing"] as const;
 
 const componentsDirectory = dirname(fileURLToPath(import.meta.url));
 const webRoot = resolve(componentsDirectory, "..", "..");
@@ -44,18 +76,22 @@ function sourceFiles(directory: string): string[] {
 }
 
 /**
- * Literal `t("organizations.…")` keys used anywhere in the app. Keys built from a
- * template literal (a role, a type, a rejection reason) are covered by the
+ * Literal `t("…")` keys under {@link GUARDED_PREFIXES}, used anywhere in the app. Keys
+ * built from a template literal (a role, a type, a rejection reason) are covered by the
  * enumerated checks below instead — their prefixes are asserted whole.
  */
-function usedOrganizationKeys(): string[] {
+function usedScopedKeys(): string[] {
+  const pattern = new RegExp(
+    String.raw`\bt\(\s*"((?:${GUARDED_PREFIXES.join("|")})\.[\w.]+)"`,
+    "gu",
+  );
   const roots = ["components", "app", "lib"].map((segment) => resolve(webRoot, segment));
   const keys = new Set<string>();
 
   for (const root of roots) {
     for (const file of sourceFiles(root)) {
       const source = readFileSync(file, "utf8");
-      for (const [, key] of source.matchAll(/\bt\(\s*"(organizations\.[\w.]+)"/gu)) {
+      for (const [, key] of source.matchAll(pattern)) {
         keys.add(key);
       }
     }
@@ -77,7 +113,7 @@ function resolves(bundleKeys: Set<string>, key: string): boolean {
   return bundleKeys.has(key) || (bundleKeys.has(`${key}_one`) && bundleKeys.has(`${key}_other`));
 }
 
-describe("organization strings", () => {
+describe("organization and sharing strings", () => {
   const bundles = Object.fromEntries(
     localeNames.map((locale) => [
       locale,
@@ -88,13 +124,27 @@ describe("organization strings", () => {
     ]),
   ) as Record<(typeof localeNames)[number], { common: Set<string>; navigation: Set<string> }>;
 
-  it("finds the keys the surface actually uses", () => {
-    // A regex that stops matching would make every assertion below vacuous.
-    expect(usedOrganizationKeys().length).toBeGreaterThan(100);
+  /**
+   * Pinned, because every `it.each(GUARDED_PREFIXES)` below shrinks silently with it:
+   * drop a prefix from that list and those tests do not fail, there are simply fewer of
+   * them, and coverage disappears with nothing red to show it. This is the one assertion
+   * that has to be edited on purpose.
+   */
+  it("guards exactly the prefixes it claims to", () => {
+    expect([...GUARDED_PREFIXES]).toEqual(["organizations", "sharing"]);
   });
 
-  it.each(localeNames)("%s translates every organization key used in the source", (locale) => {
-    const missing = usedOrganizationKeys().filter((key) => !resolves(bundles[locale].common, key));
+  // Per prefix, not a single total: 278 `organizations.*` keys would satisfy any
+  // combined floor on their own, so a scan that matched only that prefix would leave
+  // every assertion vacuous for the other one and still look green.
+  it.each(GUARDED_PREFIXES)("finds the %s keys the source actually uses", (prefix) => {
+    const found = usedScopedKeys().filter((key) => key.startsWith(`${prefix}.`));
+
+    expect(found.length).toBeGreaterThan(50);
+  });
+
+  it.each(localeNames)("%s translates every guarded key used in the source", (locale) => {
+    const missing = usedScopedKeys().filter((key) => !resolves(bundles[locale].common, key));
 
     expect(missing).toEqual([]);
   });
@@ -141,6 +191,8 @@ describe("organization strings", () => {
     expect(missing).toEqual([]);
   });
 
+  // Kept after the scan was widened to `sharing.*`, which now finds these too. Redundant
+  // on purpose: if the scan ever stops matching, this is what still fails.
   it.each(localeNames)("%s translates the team grantee strings", (locale) => {
     const missing = [
       "sharing.granteeTypeTeam",
@@ -163,12 +215,15 @@ describe("organization strings", () => {
     expect(missing).toEqual([]);
   });
 
-  it("keeps the three locales' organization key sets identical", () => {
+  // Parity is a different question from coverage: the scan catches a key no locale has,
+  // this catches one that some locales have and others do not — including keys nothing
+  // in the source references by a literal.
+  it.each(GUARDED_PREFIXES)("keeps the three locales' %s key sets identical", (prefix) => {
     const keysFor = (locale: (typeof localeNames)[number]) =>
-      [...bundles[locale].common].filter((key) => key.startsWith("organizations.")).sort();
+      [...bundles[locale].common].filter((key) => key.startsWith(`${prefix}.`)).sort();
 
     const reference = keysFor("en-US");
-    expect(reference.length).toBeGreaterThan(100);
+    expect(reference.length).toBeGreaterThan(50);
     for (const locale of localeNames) {
       expect(keysFor(locale), `${locale} diverges from en-US`).toEqual(reference);
     }

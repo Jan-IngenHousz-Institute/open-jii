@@ -96,7 +96,7 @@ export function ExperimentMembersTrail({
         </div>
       )}
       <span className="text-muted-foreground group-hover:text-foreground text-sm transition-colors">
-        {collaboratorCount} {t("sharing.collaboratorsTab").toLowerCase()}
+        {t("sharing.collaboratorCount", { count: collaboratorCount })}
       </span>
     </Link>
   );

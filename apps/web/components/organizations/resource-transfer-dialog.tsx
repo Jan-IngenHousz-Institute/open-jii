@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { useMyOrganizations } from "@/hooks/organization/useMyOrganizations/useMyOrganizations";
 import { useTransferResourceOrganization } from "@/hooks/sharing/useTransferResourceOrganization/useTransferResourceOrganization";
 import { UserRound } from "lucide-react";
@@ -106,6 +107,7 @@ export function ResourceTransferDialog({
         <DialogHeader>
           <DialogTitle>{t("organizations.transfer.dialogTitle")}</DialogTitle>
           <DialogDescription>{t("organizations.transfer.dialogDescription")}</DialogDescription>
+          <DocsHelpLink path="/guide/sharing/moving-resources" className="mt-1" />
         </DialogHeader>
 
         <div className="space-y-3 py-2">

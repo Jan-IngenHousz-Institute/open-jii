@@ -408,6 +408,8 @@
     "orgMembersName": "Leden van {{name}}",
     "orgMembersCount_one": "{{count}} lid, via de organisatie",
     "orgMembersCount_other": "{{count}} leden, via de organisatie",
+    "collaboratorCount_one": "{{count}} medewerker",
+    "collaboratorCount_other": "{{count}} medewerkers",
     "experimentTierHint": "Met „Kan bekijken” kan iemand het experiment openen en metingen en annotaties toevoegen. „Kan bewerken” voegt instellingen, publiceren en delen toe.",
     "publicExperimentTierHint": "Iedereen kan dit openbare experiment al bekijken. „Kan bekijken” maakt het mogelijk om metingen en annotaties toe te voegen; „Kan bewerken” voegt daarbovenop instellingen, publiceren en delen toe.",
     "noCollaboratorsYet": "Nog geen medewerkers",

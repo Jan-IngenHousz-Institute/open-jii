@@ -51,7 +51,10 @@ export function ListOrganizations() {
         />
         <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-8">
           <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="md:min-w-45 w-full md:w-auto">
+            <SelectTrigger
+              aria-label={t("organizations.filter.label")}
+              className="md:min-w-45 w-full md:w-auto"
+            >
               <SelectValue placeholder={t("organizations.filter.label")} />
             </SelectTrigger>
             <SelectContent>

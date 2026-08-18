@@ -8,10 +8,22 @@ description: "Add people or organizations to your experiment, choose between Can
 Experiments are meant to be shared. Everyone you share an experiment with directly
 appears in one list, and each row carries one setting: how much they can do.
 
-The list is that set of direct shares — users and organizations someone added on
-purpose. It is not a full audit of who can open the experiment: members of the
+The list is that set of direct shares — users, teams and organizations someone added
+on purpose. It is not a full audit of who can open the experiment: members of the
 organization that owns it reach it through their organization role, and a public
-experiment is readable by anyone, in both cases with no row here.
+experiment is readable by anyone.
+
+Those people are not simply missing. Owners of the owning organization are named
+individually; its admins and members appear as counted summary rows; anyone who also
+holds a share is broken out into their own row and subtracted from those counts; and
+public readers get no row at all. A row may also carry a **Redundant grant** badge,
+meaning the share adds nothing to access the person already has.
+
+<Callout type="info">
+  [Who can access your work?](/guide/access) explains the whole model in one page — the three
+  routes in, why the strongest wins, and how to read a row. Start there if someone has access you
+  cannot account for.
+</Callout>
 
 ## The two access levels
 

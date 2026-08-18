@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { useOrganizationJoinRequests } from "@/hooks/organization/join-request/useOrganizationJoinRequests/useOrganizationJoinRequests";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
 import { useOrganizationInvitations } from "@/hooks/organization/useOrganizationInvitations/useOrganizationInvitations";
@@ -91,6 +92,7 @@ export function OrganizationMembersSurface({ organizationId }: { organizationId:
               ? t("organizations.members.description")
               : t("organizations.members.memberDescription")}
           </p>
+          <DocsHelpLink path="/guide/organizations/people-and-roles" className="mt-1" />
         </div>
 
         {/* Toggle buttons, not tabs: a `tab` role promises arrow-key navigation and a

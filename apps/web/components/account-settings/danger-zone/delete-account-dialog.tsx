@@ -169,6 +169,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
               <DeleteAccountOrganizationBlockers
                 organizations={organizationBlockers}
                 locale={locale}
+                hasResourceBlockers={hasBlockers}
               />
             )}
 

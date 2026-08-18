@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { UserAvatar } from "@/components/user-avatar";
 import { useCreateOrganizationTeam } from "@/hooks/organization/useCreateOrganizationTeam/useCreateOrganizationTeam";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
@@ -91,6 +92,7 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
         <div className="space-y-1">
           <h2 className="text-lg font-semibold tracking-tight">{t("organizations.teams.title")}</h2>
           <p className="text-muted-foreground text-sm">{t("organizations.teams.description")}</p>
+          <DocsHelpLink path="/guide/organizations/teams" className="mt-1" />
         </div>
 
         {canManage && !isCreateOpen && (

@@ -8,16 +8,24 @@ import { useTranslation } from "@repo/i18n";
 interface DeleteAccountOrganizationBlockersProps {
   organizations: DeletionBlockerOrganization[];
   locale: string;
+  hasResourceBlockers?: boolean;
 }
 
 /**
  * The organizations the user is the last owner of. Nothing here can be cleared from the
  * dialog — promoting an owner and deleting the organization both live on its own pages —
  * so each row is a link there rather than a picker.
+ *
+ * Deliberately the first thing in the dialog body. A resource is blocked when nobody
+ * else can administer it, and being its owning organization's only owner is one of the
+ * two ways that happens — so promoting a second owner here clears this section *and*
+ * every resource row that this organization owns. Presenting the two as independent work
+ * is what made people do it twice.
  */
 export function DeleteAccountOrganizationBlockers({
   organizations,
   locale,
+  hasResourceBlockers = false,
 }: DeleteAccountOrganizationBlockersProps) {
   const { t } = useTranslation("account");
 
@@ -34,6 +42,11 @@ export function DeleteAccountOrganizationBlockers({
           <p className="text-muted-foreground text-xs leading-relaxed">
             {t("dangerZone.delete.organizationBlockers.description")}
           </p>
+          {hasResourceBlockers && (
+            <p className="text-foreground text-xs font-medium leading-relaxed">
+              {t("dangerZone.delete.organizationBlockers.alsoClearsResources")}
+            </p>
+          )}
         </div>
       </div>
 

@@ -68,7 +68,7 @@ export function ResourceCollaborators({
       <div className="space-y-1">
         <h2 className="text-2xl font-semibold">{t("sharing.cardTitle")}</h2>
         <p className="text-muted-foreground text-sm">{t("sharing.cardDescription")}</p>
-        <DocsHelpLink path="/guide/sharing" className="mt-1" />
+        <DocsHelpLink path="/guide/access" className="mt-1" />
       </div>
 
       <div className="flex items-center gap-3">

@@ -27,7 +27,21 @@ describe("<ExperimentMembersTrail />", () => {
     // failure this component's total exists to avoid.
     renderTrail({ contributors: [contributor("u-1")], collaboratorCount: 4 });
 
-    expect(screen.getByText(/^4/)).toBeInTheDocument();
+    // Asserted through the label's own count option rather than as a bare "4" in the
+    // DOM: the number has to reach the pluralized string, which is the thing that was
+    // wrong when this printed a lowercased tab label beside a raw count.
+    expect(screen.getByText("sharing.collaboratorCount:4")).toBeInTheDocument();
+  });
+
+  it("sends a count of one through the same pluralized label", () => {
+    // The label used to be the Collaborators tab's own name, lowercased and printed
+    // after the number, so one collaborator read "1 collaborators" — and lowercasing a
+    // noun is wrong in any locale that capitalises them. A count-bearing key is the
+    // only shape that can be right in all three.
+    renderTrail({ contributors: [contributor("u-1")], collaboratorCount: 1 });
+
+    expect(screen.getByText("sharing.collaboratorCount:1")).toBeInTheDocument();
+    expect(screen.queryByText("sharing.collaboratorsTab")).not.toBeInTheDocument();
   });
 
   it("keys the overflow bubble off the total rather than the visible faces", () => {
@@ -41,7 +55,7 @@ describe("<ExperimentMembersTrail />", () => {
     // contributor to put a face to. Returning early on the empty list would hide it.
     renderTrail({ contributors: [], collaboratorCount: 3 });
 
-    expect(screen.getByText(/^3/)).toBeInTheDocument();
+    expect(screen.getByText("sharing.collaboratorCount:3")).toBeInTheDocument();
     expect(screen.queryByText("sharing.noCollaboratorsYet")).not.toBeInTheDocument();
     // No stack at all rather than a lone "+3", which would read as three hidden people.
     expect(screen.queryByText("+3")).not.toBeInTheDocument();

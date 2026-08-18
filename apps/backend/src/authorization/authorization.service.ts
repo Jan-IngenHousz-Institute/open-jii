@@ -54,9 +54,10 @@ export interface ResourceOwnership {
 
 /**
  * Single authorization entry point for org-scoped, per-resource access control.
- * Resolution order (first match wins): owning-org role (Better Auth access-control
- * matrix) → per-resource grants (user → team → org) → public+read. No
- * platform-admin tier.
+ * Attribution order — owning-org role (Better Auth access-control matrix) →
+ * per-resource grants (user → team → org) → public+read — decides which source a
+ * decision is credited to. Access is the strongest any source grants: a tier that
+ * does not cover the action falls through rather than denying. No platform-admin tier.
  */
 @Injectable()
 export class AuthorizationService {

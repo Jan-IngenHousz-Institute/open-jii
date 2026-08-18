@@ -122,7 +122,8 @@ const { mockRouter } = vi.hoisted(() => ({
 vi.mock("@repo/i18n", () => ({
   useTranslation: (_ns?: string) => ({
     t: (key: string, options?: Record<string, unknown>) =>
-      key === "signInMethods.passkeysCount" && typeof options?.count === "number"
+      (key === "signInMethods.passkeysCount" || key === "sharing.collaboratorCount") &&
+      typeof options?.count === "number"
         ? `${key}:${options.count}`
         : key === "workbooks.duplicateName" && typeof options?.name === "string"
           ? `Fork of ${options.name}`
