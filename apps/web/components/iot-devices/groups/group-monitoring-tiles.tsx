@@ -12,6 +12,7 @@ import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import type { MonitoringRange } from "../monitoring/monitoring-range";
+import { Tile } from "../monitoring/tile";
 import { summarizeGroupHealth } from "./group-health";
 
 interface GroupMonitoringTilesProps {
@@ -114,15 +115,6 @@ export function GroupMonitoringTiles({
           <p className="text-lg font-semibold tabular-nums">{summary.unknown}</p>
         )}
       </Tile>
-    </div>
-  );
-}
-
-function Tile({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border p-3">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <div className="mt-1.5 text-sm font-medium">{children}</div>
     </div>
   );
 }

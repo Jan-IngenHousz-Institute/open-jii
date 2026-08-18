@@ -42,6 +42,8 @@ export function GroupRosterPanel({
 }: GroupRosterPanelProps) {
   const { t } = useTranslation("iot");
   const formatLastSeen = useFormatLastSeen();
+  // No version in the window for anyone: drop the column instead of an empty one.
+  const showVersions = versionByDeviceId.size > 0;
 
   function renderMemberRow(member: DeviceGroupMemberHealth) {
     const silent = isMemberSilent(member, monitoring.pipelineUnavailable, now);
@@ -67,9 +69,11 @@ export function GroupRosterPanel({
             ? t("iot.groups.monitoring.noData")
             : formatRelativeTime(member.lastDataAt, locale)}
         </TableCell>
-        <TableCell className="text-muted-foreground font-mono text-xs">
-          {versionByDeviceId.get(member.deviceId)}
-        </TableCell>
+        {showVersions && (
+          <TableCell className="text-muted-foreground font-mono text-xs">
+            {versionByDeviceId.get(member.deviceId)}
+          </TableCell>
+        )}
         <TableCell>
           {silent && (
             <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
@@ -99,7 +103,7 @@ export function GroupRosterPanel({
             <TableHead>{t("iot.groups.monitoring.stateColumn")}</TableHead>
             <TableHead>{t("iot.groups.monitoring.lastSeenColumn")}</TableHead>
             <TableHead>{t("iot.groups.monitoring.lastDataColumn")}</TableHead>
-            <TableHead>{t("iot.groups.monitoring.versionColumn")}</TableHead>
+            {showVersions && <TableHead>{t("iot.groups.monitoring.versionColumn")}</TableHead>}
             <TableHead className="w-40" />
           </TableRow>
         </TableHeader>

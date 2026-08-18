@@ -15,6 +15,7 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 
 import type { MonitoringRange } from "./monitoring-range";
 import { SILENT_THRESHOLD_MS } from "./silent-threshold";
+import { Tile } from "./tile";
 
 interface MonitoringTilesProps {
   device: IotDeviceDetail | undefined;
@@ -130,15 +131,6 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           </div>
         )}
       </Tile>
-    </div>
-  );
-}
-
-function Tile({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border p-3">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <div className="mt-1.5 text-sm font-medium">{children}</div>
     </div>
   );
 }

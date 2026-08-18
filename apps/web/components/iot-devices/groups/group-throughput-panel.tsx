@@ -9,8 +9,9 @@ import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import { ChartTableToggle } from "../monitoring/chart-table-toggle";
 import type { PanelView } from "../monitoring/chart-table-toggle";
 import { bucketAxis } from "../monitoring/monitoring-buckets";
-import { MONITORING_MAX_SERIES, MONITORING_SERIES_COLORS } from "../monitoring/monitoring-palette";
+import { MONITORING_SERIES_COLORS } from "../monitoring/monitoring-palette";
 import type { MonitoringRange } from "../monitoring/monitoring-range";
+import { foldThroughputSeries } from "../monitoring/throughput-series";
 import { GroupThroughputTable } from "./group-throughput-table";
 
 interface GroupThroughputPanelProps {
@@ -20,58 +21,30 @@ interface GroupThroughputPanelProps {
   locale: string;
 }
 
-interface ThroughputSeries {
-  key: string;
-  name: string;
-  counts: number[];
-}
-
-interface SeriesGroup {
-  name: string;
-  keys: string[];
-}
-
-// Fixed-order series assignment: alphabetical by member name, with everything
-// past the palette folded into a single "Other" group. Mirrors the device
-// panel's per-experiment stacking, member for experiment.
+// Series identity per member; folding itself is shared with the device panel.
 function buildSeries(
   buckets: DeviceGroupThroughputBucket[],
   labelByDeviceId: Map<string, string>,
   axis: string[],
   otherLabel: string,
   unknownLabel: string,
-): ThroughputSeries[] {
-  const byMember = new Map<string, Map<string, number>>();
-  for (const bucket of buckets) {
-    if (bucket.bucketStart === null) continue;
-    const key = bucket.deviceId ?? "__unknown__";
-    const perBucket = byMember.get(key) ?? new Map<string, number>();
-    perBucket.set(bucket.bucketStart, (perBucket.get(bucket.bucketStart) ?? 0) + bucket.count);
-    byMember.set(key, perBucket);
-  }
+) {
+  const entries = buckets.flatMap((bucket) =>
+    bucket.bucketStart === null
+      ? []
+      : [
+          {
+            key: bucket.deviceId ?? "__unknown__",
+            bucketStart: bucket.bucketStart,
+            count: bucket.count,
+          },
+        ],
+  );
 
   const nameFor = (key: string) =>
     key === "__unknown__" ? unknownLabel : (labelByDeviceId.get(key) ?? unknownLabel);
 
-  const orderedKeys = [...byMember.keys()].sort((a, b) => nameFor(a).localeCompare(nameFor(b)));
-
-  const needsOtherGroup = orderedKeys.length > MONITORING_MAX_SERIES;
-  const groups: SeriesGroup[] = needsOtherGroup
-    ? [
-        ...orderedKeys
-          .slice(0, MONITORING_MAX_SERIES - 1)
-          .map((key) => ({ name: nameFor(key), keys: [key] })),
-        { name: otherLabel, keys: orderedKeys.slice(MONITORING_MAX_SERIES - 1) },
-      ]
-    : orderedKeys.map((key) => ({ name: nameFor(key), keys: [key] }));
-
-  return groups.map(({ name, keys }) => ({
-    key: keys.join("+"),
-    name,
-    counts: axis.map((bucketStart) =>
-      keys.reduce((sum, key) => sum + (byMember.get(key)?.get(bucketStart) ?? 0), 0),
-    ),
-  }));
+  return foldThroughputSeries(entries, axis, nameFor, otherLabel);
 }
 
 /**
