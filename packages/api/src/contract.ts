@@ -15,6 +15,7 @@ import { experimentUploadsContract } from "./domains/experiment/uploads/experime
 import { experimentVisualizationsContract } from "./domains/experiment/visualizations/experiment-visualizations.contract";
 import { experimentWorkbooksContract } from "./domains/experiment/workbooks/experiment-workbooks.contract";
 import { healthContract } from "./domains/health/health.contract";
+import { deviceGroupContract } from "./domains/device-group/device-group.contract";
 import { iotContract } from "./domains/iot/iot.contract";
 import { macroContract } from "./domains/macro/macro.contract";
 import { newsletterContract } from "./domains/newsletter/newsletter.contract";
@@ -50,6 +51,7 @@ export const contract = {
   },
   health: healthContract,
   iot: iotContract,
+  deviceGroups: deviceGroupContract,
   macros: macroContract,
   newsletter: newsletterContract,
   protocols: protocolContract,
