@@ -46,11 +46,10 @@ export function useQuestionsUpload() {
       workbookRunId: string;
       workbookVersionId?: string;
     }) => {
+      await whenDeviceIdentityLoaded();
       const topic = getMeasurementMqttTopic({ experimentId });
 
       const location = await getMeasurementLocation();
-
-      await whenDeviceIdentityLoaded();
 
       const payload = {
         questions,

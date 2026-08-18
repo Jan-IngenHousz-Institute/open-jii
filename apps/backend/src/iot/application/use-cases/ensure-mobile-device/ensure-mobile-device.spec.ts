@@ -101,10 +101,13 @@ describe("EnsureMobileDeviceUseCase", () => {
   it("returns the row unrenamed when the name fill fails", async () => {
     const first = await useCase.execute({ installId: body.installId }, userId);
     assertSuccess(first);
-    vi.spyOn(repo, "update").mockResolvedValue(failure(AppError.internal("db down")));
+    const spy = vi
+      .spyOn(repo, "fillNameIfMissing")
+      .mockResolvedValue(failure(AppError.internal("db down")));
 
     const result = await useCase.execute({ installId: body.installId, name: "iPhone 15" }, userId);
 
+    expect(spy).toHaveBeenCalledTimes(1);
     assertSuccess(result);
     expect(result.value.name).toBeNull();
   });
@@ -118,6 +121,19 @@ describe("EnsureMobileDeviceUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(500);
     expect(deleteThing).toHaveBeenCalledWith(THING_NAME);
+  });
+
+  it("loses the name race to a concurrent rename and returns the fresher row", async () => {
+    const first = await useCase.execute({ installId: body.installId }, userId);
+    assertSuccess(first);
+    // A rename lands between the null read and the fill: the conditional
+    // update must not apply.
+    await repo.update(first.value.id, { name: "Field phone 3" });
+
+    const result = await useCase.execute({ installId: body.installId, name: "iPhone 15" }, userId);
+
+    assertSuccess(result);
+    expect(result.value.name).toBe("Field phone 3");
   });
 
   it("returns 409 without leaking the owner when another user holds the install id", async () => {

@@ -12,8 +12,9 @@ vi.mock("~/shared/api/client", () => ({
 
 vi.mock("expo-device", () => ({ modelName: "iPhone 15" }));
 
+let currentEnv = "dev";
 vi.mock("~/shared/stores/environment-store", () => ({
-  getEnvName: () => "dev",
+  getEnvName: () => currentEnv,
 }));
 
 function identity() {
@@ -21,6 +22,7 @@ function identity() {
 }
 
 beforeEach(() => {
+  currentEnv = "dev";
   mockEnsureMobileDevice.mockReset();
   useDeviceIdentityStore.setState({ identities: {}, isLoaded: true });
 });
@@ -66,6 +68,20 @@ describe("ensureDeviceRegistered", () => {
     // every foreground.
     await ensureDeviceRegistered({ throttle: true });
     expect(mockEnsureMobileDevice).toHaveBeenCalledTimes(1);
+  });
+
+  it("scopes the throttle per environment, a dev backoff never suppresses prod", async () => {
+    mockEnsureMobileDevice.mockResolvedValue({ id: "row-1", thingName: "mobile_abc" });
+
+    await ensureDeviceRegistered();
+    expect(mockEnsureMobileDevice).toHaveBeenCalledTimes(1);
+    // Throttled within the same environment.
+    await ensureDeviceRegistered({ throttle: true });
+    expect(mockEnsureMobileDevice).toHaveBeenCalledTimes(1);
+
+    currentEnv = "prod";
+    await ensureDeviceRegistered({ throttle: true });
+    expect(mockEnsureMobileDevice).toHaveBeenCalledTimes(2);
   });
 
   it("swallows network failures and stays retryable", async () => {

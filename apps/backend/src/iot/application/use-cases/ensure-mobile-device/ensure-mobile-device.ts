@@ -111,18 +111,25 @@ export class EnsureMobileDeviceUseCase {
 
     await this.attachIdentity(device.thingName, userId);
 
-    // Fill a missing name only: an existing one may be the user's own rename
-    // and must never be overwritten by a device model.
+    // Fill a missing name only, atomically: the conditional update loses to a
+    // concurrent rename, and then the fresher row is returned instead.
     if (device.name === null && name !== undefined) {
-      const renamed = await this.deviceRepository.update(device.id, { name });
-      if (renamed.isSuccess() && renamed.value) {
-        return success(renamed.value);
+      const renamed = await this.deviceRepository.fillNameIfMissing(device.id, name);
+      if (renamed.isSuccess()) {
+        if (renamed.value) {
+          return success(renamed.value);
+        }
+        const current = await this.deviceRepository.findById(device.id);
+        if (current.isSuccess() && current.value) {
+          return success(current.value);
+        }
+      } else {
+        this.logger.warn({
+          msg: "Could not fill the device name; returning the row as is",
+          operation: "ensureMobileDevice",
+          deviceId: device.id,
+        });
       }
-      this.logger.warn({
-        msg: "Could not fill the device name; returning the row as is",
-        operation: "ensureMobileDevice",
-        deviceId: device.id,
-      });
     }
 
     return success(device);

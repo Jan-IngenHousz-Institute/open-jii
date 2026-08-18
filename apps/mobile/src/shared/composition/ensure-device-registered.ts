@@ -11,9 +11,25 @@ import { getEnvName } from "~/shared/stores/environment-store";
 
 const log = createLogger("device-identity");
 
-let inFlight: Promise<void> | null = null;
-let lastRunAt = 0;
+// Keyed per environment: a dev registration's throttle or in-flight promise
+// must not suppress the first prod attempt after an environment switch. User
+// transitions need no key: login always triggers an unthrottled ensure.
+interface EnsureState {
+  inFlight: Promise<void> | null;
+  lastRunAt: number;
+}
+const stateByEnv = new Map<string, EnsureState>();
 const MIN_RERUN_INTERVAL_MS = 5 * 60 * 1000;
+
+function ensureStateFor(envName: string): EnsureState {
+  const existing = stateByEnv.get(envName);
+  if (existing) {
+    return existing;
+  }
+  const created: EnsureState = { inFlight: null, lastRunAt: 0 };
+  stateByEnv.set(envName, created);
+  return created;
+}
 
 /**
  * Silently registers this phone as an IoT device (idempotent server ensure).
@@ -23,10 +39,11 @@ const MIN_RERUN_INTERVAL_MS = 5 * 60 * 1000;
  * locally derived thing name either way, and the next trigger retries.
  */
 export async function ensureDeviceRegistered(options?: { throttle?: boolean }): Promise<void> {
-  if (inFlight) return inFlight;
-  if (options?.throttle && Date.now() - lastRunAt < MIN_RERUN_INTERVAL_MS) return;
+  const state = ensureStateFor(getEnvName());
+  if (state.inFlight) return state.inFlight;
+  if (options?.throttle && Date.now() - state.lastRunAt < MIN_RERUN_INTERVAL_MS) return;
 
-  inFlight = (async () => {
+  state.inFlight = (async () => {
     try {
       await whenDeviceIdentityLoaded();
       const envName = getEnvName();
@@ -40,13 +57,13 @@ export async function ensureDeviceRegistered(options?: { throttle?: boolean }): 
       useDeviceIdentityStore
         .getState()
         .setRegistered(envName, { thingName: device.thingName, deviceId: device.id });
-      lastRunAt = Date.now();
+      state.lastRunAt = Date.now();
     } catch (err) {
       if (err instanceof ORPCError && err.status === 409) {
         // A shared or handed-over phone already registered by someone else:
         // keep publishing under the phone's stable thing name, never rotate.
         log.info("Phone already registered by another user; keeping local identity");
-        lastRunAt = Date.now();
+        state.lastRunAt = Date.now();
         return;
       }
 
@@ -54,7 +71,7 @@ export async function ensureDeviceRegistered(options?: { throttle?: boolean }): 
         // Feature flag off for this user: a resolved answer, so the throttle
         // applies; without it every foreground fires a doomed call.
         log.debug("Device registry disabled; skipping registration");
-        lastRunAt = Date.now();
+        state.lastRunAt = Date.now();
         return;
       }
 
@@ -62,9 +79,9 @@ export async function ensureDeviceRegistered(options?: { throttle?: boolean }): 
         err: err instanceof Error ? err.message : String(err),
       });
     } finally {
-      inFlight = null;
+      state.inFlight = null;
     }
   })();
 
-  return inFlight;
+  return state.inFlight;
 }
