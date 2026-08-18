@@ -24,8 +24,9 @@ channels:
     x-infra-name: experiment_data_ingest_v1_lean
     description: |
       Channel for ingesting experiment sensor data. This shape carries no
-      protocol attribution in the topic; the pipeline records a null protocol_id
-      for rows ingested on it.
+      protocol attribution in the topic; publishers carry it in the payload
+      instead (`protocol_id`, see the message schema), alongside the workbook
+      attribution fields.
       The path parameters represent:
       <ul>
         <li><strong>experimentId:</strong> Unique identifier of the experiment (e.g., exp123).</li>
@@ -159,6 +160,56 @@ components:
                   IANA timezone identifier resolved from GPS at measurement
                   time (e.g. "America/Chicago"). Preserved across retries so
                   the original measurement-time timezone is never lost.
+              protocol_id:
+                type: string
+                description: >
+                  Platform id of the protocol that produced this measurement,
+                  resolved by the publisher per result (a workbook run can span
+                  several protocols). Required on the lean topic shape for the
+                  row to be attributed; the sentinel value "questions" marks
+                  question-only uploads. On the legacy topic shape the topic's
+                  trailing segment takes precedence.
+              workbook_version_id:
+                type: string
+                description: >
+                  Platform id of the workbook version this measurement was
+                  produced under. Absent outside workbook runs.
+              workbook_run_id:
+                type: string
+                description: >
+                  Publisher-minted id shared by every measurement of one
+                  workbook run, correlating results across devices and
+                  protocols.
+              macros:
+                type: array
+                description: >
+                  Macros applied to this measurement. Publishers that embed a
+                  macros array (of macro ids) inside each sample object instead
+                  may omit this field; the pipeline reads either.
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: Platform macro id.
+                    name:
+                      type: string
+                    filename:
+                      type: string
+              device_version:
+                type: string
+                description: Firmware version as reported by the device.
+              device_battery:
+                type: number
+                description: >
+                  Battery reading as the device reports it; the unit is
+                  device-defined (volts on some families, percent on others).
+              latitude:
+                type: number
+                description: GPS latitude at measurement time, if available.
+              longitude:
+                type: number
+                description: GPS longitude at measurement time, if available.
         required:
           - data
       examples:
