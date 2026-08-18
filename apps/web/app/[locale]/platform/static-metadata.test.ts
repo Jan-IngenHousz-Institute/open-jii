@@ -35,6 +35,7 @@ const redirectOnlyRoutes = {
 // These helpers have focused runtime coverage in lib/platform-metadata.test.ts.
 const testedPlatformTitleBuilders = new Set([
   "buildDashboardMetadata",
+  "buildDeviceGroupMetadata",
   "buildDeviceMetadata",
   "buildExperimentMetadata",
   "buildMacroMetadata",

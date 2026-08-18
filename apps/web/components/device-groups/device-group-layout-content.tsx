@@ -40,9 +40,6 @@ export function DeviceGroupLayoutContent({
           {group.description !== null && (
             <p className="text-muted-foreground text-sm">{group.description}</p>
           )}
-          <p className="text-muted-foreground text-sm tabular-nums">
-            {t("iot.groups.memberCount", { count: group.memberCount })}
-          </p>
         </div>
       </div>
 

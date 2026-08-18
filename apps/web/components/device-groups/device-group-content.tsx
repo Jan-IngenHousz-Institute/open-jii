@@ -8,6 +8,7 @@ import {
   useRemoveDeviceGroupMember,
 } from "@/hooks/device-groups/use-device-groups";
 import { useLocale } from "@/hooks/useLocale";
+import { formatDate } from "@/util/date";
 import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
 import { Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -17,7 +18,7 @@ import type { DeviceGroupMember } from "@repo/api/domains/device-group/device-gr
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import { Card, CardContent } from "@repo/ui/components/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {
   Table,
@@ -28,6 +29,7 @@ import {
   TableRow,
 } from "@repo/ui/components/table";
 
+import { MetaField } from "../experiment-dashboards/meta-field";
 import { AddGroupMembersDialog } from "./add-group-members-dialog";
 import { DeleteDeviceGroupDialog } from "./delete-device-group-dialog";
 
@@ -55,7 +57,7 @@ export function DeviceGroupContent() {
   }
   if (isLoading || group === undefined) {
     return (
-      <div className="max-w-4xl space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full rounded-xl" />
       </div>
@@ -69,9 +71,14 @@ export function DeviceGroupContent() {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {canContribute && (
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-start gap-10">
+        <MetaField label={t("iot.groups.meta.members")} value={String(group.memberCount)} />
+        <MetaField label={t("iot.groups.meta.created")} value={formatDate(group.createdAt)} />
+      </div>
+
+      {canContribute && (
+        <div className="flex justify-end">
           <Button
             onClick={() => {
               setAddOpen(true);
@@ -79,20 +86,8 @@ export function DeviceGroupContent() {
           >
             {t("iot.groups.addDevices")}
           </Button>
-        )}
-        {group.capabilities.canManage && (
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label={t("iot.groups.delete")}
-            onClick={() => {
-              setDeleteOpen(true);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {(members ?? []).length === 0 ? (
         <Card className="shadow-none">
@@ -148,6 +143,34 @@ export function DeviceGroupContent() {
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {group.capabilities.canManage && (
+        <Card className="border-destructive/30 max-w-3xl shadow-none">
+          <CardHeader>
+            <CardTitle className="text-destructive text-base">
+              {t("iot.groups.dangerZone.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium">{t("iot.groups.dangerZone.deleteLabel")}</p>
+              <p className="text-muted-foreground text-sm">
+                {t("iot.groups.dangerZone.deleteDescription")}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10 shrink-0"
+              onClick={() => {
+                setDeleteOpen(true);
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t("iot.groups.delete")}
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       <AddGroupMembersDialog

@@ -354,11 +354,16 @@
       "addDevicesTitle": "Apparaten aan de groep toevoegen",
       "addSelected_one": "{{count}} apparaat toevoegen",
       "addSelected_other": "{{count}} apparaten toevoegen",
-      "backToDevices": "Apparaten",
+      "backToDevices": "Terug naar apparaten",
       "cancel": "Annuleren",
       "create": "Groep aanmaken",
       "createDescription": "Groepen organiseren apparaten; lidmaatschap verandert niets aan de apparaten zelf.",
       "createTitle": "Apparaatgroep aanmaken",
+      "dangerZone": {
+        "title": "Gevarenzone",
+        "deleteLabel": "Deze groep verwijderen",
+        "deleteDescription": "Verwijdert de groep permanent. De apparaten zelf blijven behouden. Dit kan niet ongedaan worden gemaakt."
+      },
       "delete": "Groep verwijderen",
       "deleteHint": "\"{{name}}\" wordt verwijderd. De apparaten zelf blijven bestaan.",
       "deleteTitle": "Deze groep verwijderen?",
@@ -370,6 +375,10 @@
       "loadError": "Apparaatgroepen konden niet worden geladen.",
       "memberCount_one": "{{count}} apparaat",
       "memberCount_other": "{{count}} apparaten",
+      "meta": {
+        "members": "Apparaten",
+        "created": "Aangemaakt"
+      },
       "nameLabel": "Naam",
       "namePlaceholder": "bijv. Kas A",
       "noAddableDevices": "Al uw apparaten zitten al in deze groep.",

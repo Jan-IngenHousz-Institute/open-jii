@@ -354,11 +354,16 @@
       "addDevicesTitle": "Geräte zur Gruppe hinzufügen",
       "addSelected_one": "{{count}} Gerät hinzufügen",
       "addSelected_other": "{{count}} Geräte hinzufügen",
-      "backToDevices": "Geräte",
+      "backToDevices": "Zurück zu Geräten",
       "cancel": "Abbrechen",
       "create": "Gruppe erstellen",
       "createDescription": "Gruppen organisieren Geräte; die Mitgliedschaft ändert nichts an den Geräten selbst.",
       "createTitle": "Gerätegruppe erstellen",
+      "dangerZone": {
+        "title": "Gefahrenzone",
+        "deleteLabel": "Diese Gruppe löschen",
+        "deleteDescription": "Entfernt die Gruppe endgültig. Die Geräte selbst sind nicht betroffen. Dies kann nicht rückgängig gemacht werden."
+      },
       "delete": "Gruppe löschen",
       "deleteHint": "\"{{name}}\" wird gelöscht. Die Geräte selbst sind nicht betroffen.",
       "deleteTitle": "Diese Gruppe löschen?",
@@ -370,6 +375,10 @@
       "loadError": "Gerätegruppen konnten nicht geladen werden.",
       "memberCount_one": "{{count}} Gerät",
       "memberCount_other": "{{count}} Geräte",
+      "meta": {
+        "members": "Geräte",
+        "created": "Erstellt"
+      },
       "nameLabel": "Name",
       "namePlaceholder": "z. B. Gewächshaus A",
       "noAddableDevices": "Alle Ihre Geräte sind bereits in dieser Gruppe.",

@@ -1,17 +1,17 @@
 import { DeviceGroupContent } from "@/components/device-groups/device-group-content";
+import { buildDeviceGroupMetadata } from "@/lib/platform-metadata";
+import { safeMetadata } from "@/lib/safe-metadata";
 import type { Metadata } from "next";
 
-import initTranslations from "@repo/i18n/server";
-
-interface DeviceGroupPageProps {
-  params: Promise<{ locale: string }>;
+interface PageProps {
+  params: Promise<{ locale: string; groupId: string }>;
 }
 
-export async function generateMetadata({ params }: DeviceGroupPageProps): Promise<Metadata> {
-  const { locale } = await params;
-  const { t } = await initTranslations({ locale, namespaces: ["iot"] });
-
-  return { title: t("iot.groups.pageTitle") };
+export function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  return safeMetadata(async () => {
+    const { locale, groupId } = await params;
+    return buildDeviceGroupMetadata({ locale, groupId });
+  });
 }
 
 export default function DeviceGroupPage() {

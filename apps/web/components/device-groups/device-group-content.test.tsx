@@ -54,6 +54,15 @@ describe("DeviceGroupContent", () => {
     expect(screen.getByText("iot.groups.remove")).toBeInTheDocument();
   });
 
+  it("shows the danger zone to managers", async () => {
+    mountGroup();
+
+    render(<DeviceGroupContent />);
+
+    expect(await screen.findByText("iot.groups.dangerZone.title")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.delete")).toBeInTheDocument();
+  });
+
   it("hides membership controls from read-only viewers", async () => {
     mountGroup({ capabilities: { ...readOnlyCapabilities } });
 
@@ -62,7 +71,7 @@ describe("DeviceGroupContent", () => {
     expect(await screen.findByText(/AA:BB:CC:DD/)).toBeInTheDocument();
     expect(screen.queryByText("iot.groups.addDevices")).not.toBeInTheDocument();
     expect(screen.queryByText("iot.groups.remove")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("iot.groups.delete")).not.toBeInTheDocument();
+    expect(screen.queryByText("iot.groups.dangerZone.title")).not.toBeInTheDocument();
   });
 
   it("removes a member", async () => {

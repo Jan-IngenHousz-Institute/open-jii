@@ -354,11 +354,16 @@
       "addDevicesTitle": "Add devices to the group",
       "addSelected_one": "Add {{count}} device",
       "addSelected_other": "Add {{count}} devices",
-      "backToDevices": "Devices",
+      "backToDevices": "Back to devices",
       "cancel": "Cancel",
       "create": "Create group",
       "createDescription": "Groups organize your devices; membership changes nothing on the devices themselves.",
       "createTitle": "Create a device group",
+      "dangerZone": {
+        "title": "Danger zone",
+        "deleteLabel": "Delete this group",
+        "deleteDescription": "Permanently removes the group. The devices themselves are not affected. This cannot be undone."
+      },
       "delete": "Delete group",
       "deleteHint": "\"{{name}}\" will be deleted. The devices themselves are not affected.",
       "deleteTitle": "Delete this group?",
@@ -370,6 +375,10 @@
       "loadError": "Could not load device groups.",
       "memberCount_one": "{{count}} device",
       "memberCount_other": "{{count}} devices",
+      "meta": {
+        "members": "Devices",
+        "created": "Created"
+      },
       "nameLabel": "Name",
       "namePlaceholder": "e.g. Greenhouse A",
       "noAddableDevices": "All of your devices are already in this group.",
