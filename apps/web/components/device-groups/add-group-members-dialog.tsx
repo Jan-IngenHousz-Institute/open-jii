@@ -38,6 +38,7 @@ export function AddGroupMembersDialog({
   onOpenChange,
 }: AddGroupMembersDialogProps) {
   const { t } = useTranslation("iot");
+  const { t: tCommon } = useTranslation("common");
   const { data: session } = useSession();
   const { data: devices } = useIotDevices();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -121,7 +122,7 @@ export function AddGroupMembersDialog({
               onOpenChange(false);
             }}
           >
-            {t("iot.groups.cancel")}
+            {tCommon("common.cancel")}
           </Button>
           <Button onClick={submit} disabled={selected.size === 0 || addMembers.isPending}>
             {t("iot.groups.addSelected", { count: selected.size })}

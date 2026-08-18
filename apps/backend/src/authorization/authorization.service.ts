@@ -18,6 +18,17 @@ import {
 import type { DatabaseInstance } from "@repo/database";
 import type { ResourceType } from "@repo/database";
 
+// Every shareable resource type is org-scoped and resolvable to its owning
+// org + visibility here; the total record makes a new type a compile error.
+const OWNERSHIP_TABLES = {
+  experiment: experiments,
+  macro: macros,
+  protocol: protocols,
+  workbook: workbooks,
+  device: iotDevices,
+  device_group: deviceGroups,
+} as const satisfies Record<ResourceType, unknown>;
+
 export interface AccessRequest {
   resourceType: ResourceType;
   resourceId: string;
@@ -207,20 +218,7 @@ export class AuthorizationService {
     resourceType: ResourceType,
     resourceId: string,
   ): Promise<ResourceOwnership | null> {
-    // Every shareable resource type is org-scoped and resolvable to its
-    // owning org + visibility here.
-    const table =
-      resourceType === "experiment"
-        ? experiments
-        : resourceType === "macro"
-          ? macros
-          : resourceType === "protocol"
-            ? protocols
-            : resourceType === "workbook"
-              ? workbooks
-              : resourceType === "device_group"
-                ? deviceGroups
-                : iotDevices;
+    const table = OWNERSHIP_TABLES[resourceType];
     const rows = await this.db
       .select({ organizationId: table.organizationId, visibility: table.visibility })
       .from(table)

@@ -355,7 +355,6 @@
       "addSelected_one": "Add {{count}} device",
       "addSelected_other": "Add {{count}} devices",
       "backToDevices": "Back to devices",
-      "cancel": "Cancel",
       "create": "Create group",
       "createDescription": "Groups organize your devices; membership changes nothing on the devices themselves.",
       "createTitle": "Create a device group",

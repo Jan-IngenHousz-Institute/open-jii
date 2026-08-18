@@ -4,16 +4,15 @@ import { ErrorDisplay } from "@/components/error-display";
 import { useDeviceGroups } from "@/hooks/device-groups/use-device-groups";
 import { useLocale } from "@/hooks/useLocale";
 import { Users } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
-import type { DeviceGroupListItem } from "@repo/api/domains/device-group/device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { CreateDeviceGroupDialog } from "./create-device-group-dialog";
+import { GroupCard } from "./group-card";
 
 export function DeviceGroupsView() {
   const { t } = useTranslation("iot");
@@ -64,22 +63,3 @@ export function DeviceGroupsView() {
   );
 }
 
-function GroupCard({ group, locale }: { group: DeviceGroupListItem; locale: string }) {
-  const { t } = useTranslation("iot");
-
-  return (
-    <Link href={`/${locale}/platform/device-groups/${group.id}`} className="block">
-      <Card className="hover:border-primary/40 h-full shadow-none transition-colors">
-        <CardContent className="space-y-1 p-4">
-          <p className="font-medium">{group.name}</p>
-          {group.description !== null && (
-            <p className="text-muted-foreground line-clamp-2 text-sm">{group.description}</p>
-          )}
-          <p className="text-muted-foreground text-xs tabular-nums">
-            {t("iot.groups.memberCount", { count: group.memberCount })}
-          </p>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}

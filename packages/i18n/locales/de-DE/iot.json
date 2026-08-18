@@ -355,7 +355,6 @@
       "addSelected_one": "{{count}} Gerät hinzufügen",
       "addSelected_other": "{{count}} Geräte hinzufügen",
       "backToDevices": "Zurück zu Geräten",
-      "cancel": "Abbrechen",
       "create": "Gruppe erstellen",
       "createDescription": "Gruppen organisieren Geräte; die Mitgliedschaft ändert nichts an den Geräten selbst.",
       "createTitle": "Gerätegruppe erstellen",

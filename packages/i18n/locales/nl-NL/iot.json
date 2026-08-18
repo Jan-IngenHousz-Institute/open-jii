@@ -355,7 +355,6 @@
       "addSelected_one": "{{count}} apparaat toevoegen",
       "addSelected_other": "{{count}} apparaten toevoegen",
       "backToDevices": "Terug naar apparaten",
-      "cancel": "Annuleren",
       "create": "Groep aanmaken",
       "createDescription": "Groepen organiseren apparaten; lidmaatschap verandert niets aan de apparaten zelf.",
       "createTitle": "Apparaatgroep aanmaken",

@@ -1,5 +1,7 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
+
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -28,6 +30,7 @@ export function DeleteDeviceGroupDialog({
   onConfirm,
 }: DeleteDeviceGroupDialogProps) {
   const { t } = useTranslation("iot");
+  const { t: tCommon } = useTranslation("common");
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -39,9 +42,13 @@ export function DeleteDeviceGroupDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{t("iot.groups.cancel")}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} disabled={isPending}>
-            {t("iot.groups.delete")}
+          <AlertDialogCancel disabled={isPending}>{tCommon("common.cancel")}</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            disabled={isPending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isPending ? <Loader2 className="size-4 animate-spin" /> : t("iot.groups.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

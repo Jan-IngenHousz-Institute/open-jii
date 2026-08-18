@@ -43,6 +43,7 @@ export function CreateDeviceGroupDialog({
   locale,
 }: CreateDeviceGroupDialogProps) {
   const { t } = useTranslation("iot");
+  const { t: tCommon } = useTranslation("common");
   const router = useRouter();
 
   const form = useForm<FormValues>({
@@ -106,7 +107,7 @@ export function CreateDeviceGroupDialog({
                   onOpenChange(false);
                 }}
               >
-                {t("iot.groups.cancel")}
+                {tCommon("common.cancel")}
               </Button>
               <Button type="submit" disabled={createGroup.isPending}>
                 {t("iot.groups.create")}
