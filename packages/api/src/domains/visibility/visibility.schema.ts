@@ -19,7 +19,7 @@ export const zVisibility = z.enum(["private", "public"]);
  * the exclusion is load-bearing: the publish use-case and repository take *this*
  * type, and a future shareable type has to state its position here.
  */
-export const zPublishableResourceType = zSharingResourceType.exclude(["device"]);
+export const zPublishableResourceType = zSharingResourceType.exclude(["device", "device_group"]);
 
 export type PublishableResourceType = z.infer<typeof zPublishableResourceType>;
 

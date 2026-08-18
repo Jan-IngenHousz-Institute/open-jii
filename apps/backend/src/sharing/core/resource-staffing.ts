@@ -8,6 +8,7 @@ import {
   eq,
   experiments,
   inArray,
+  deviceGroups,
   iotDevices,
   isNotNull,
   macros,
@@ -52,6 +53,7 @@ const STAFFED_RESOURCE_TABLES: Record<SharingResourceType, StaffedResourceTable>
   protocol: protocols,
   workbook: workbooks,
   device: iotDevices,
+  device_group: deviceGroups,
 };
 
 /**

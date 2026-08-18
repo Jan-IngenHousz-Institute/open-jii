@@ -6,6 +6,7 @@ import {
   and,
   eq,
   experiments,
+  deviceGroups,
   iotDevices,
   macros,
   organizationMembers,
@@ -206,8 +207,8 @@ export class AuthorizationService {
     resourceType: ResourceType,
     resourceId: string,
   ): Promise<ResourceOwnership | null> {
-    // Every shareable resource type (experiment/macro/protocol/workbook/device)
-    // is org-scoped and resolvable to its owning org + visibility here.
+    // Every shareable resource type is org-scoped and resolvable to its
+    // owning org + visibility here.
     const table =
       resourceType === "experiment"
         ? experiments
@@ -217,7 +218,9 @@ export class AuthorizationService {
             ? protocols
             : resourceType === "workbook"
               ? workbooks
-              : iotDevices;
+              : resourceType === "device_group"
+                ? deviceGroups
+                : iotDevices;
     const rows = await this.db
       .select({ organizationId: table.organizationId, visibility: table.visibility })
       .from(table)
