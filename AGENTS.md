@@ -51,7 +51,8 @@ unreachable endpoints deliberately. Assert on page chrome, not on that data.
 Task guides live in `.agents/skills/<name>/SKILL.md`. They are plain markdown and tool-agnostic:
 read the file when the situation matches. `.claude/skills/` holds symlinks to the same files so
 Claude Code auto-discovers them, but the files under `.agents/` are the source. The symlink layer
-assumes the team's supported macOS/Linux development environments.
+assumes the team's supported macOS/Linux development environments. The shared hooks require Bash,
+Git, and `jq`; a missing `jq` prints a warning and skips the hook.
 
 | Skill                    | Read it when                                                              |
 | ------------------------ | ------------------------------------------------------------------------- |
