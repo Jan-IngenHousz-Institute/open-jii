@@ -50,10 +50,9 @@ Getting a device attached is the `openjii-mobile-device` skill; driving it to th
 
 ### Web
 
-Bring the stack up (`pnpm db:setup`, `pnpm --filter database db:seed`, `pnpm dev:fb`) and capture
-through the browser harness in `apps/e2e` — it already handles login, so screenshots show the real
-authenticated UI rather than a login wall. `apps/e2e/scripts/record-maintenance.ts` is a worked
-example of scripted capture.
+Bring the stack up (`pnpm db:setup`, `pnpm --filter database db:seed`, `pnpm dev:fb`), obtain a
+development session with `pnpm local:login`, and capture the real authenticated UI rather than a
+login wall.
 
 Same privacy rules apply: seeded data only, no real user content.
 
@@ -73,7 +72,7 @@ fix are worth listing — someone else can pick them up.
 
 ## A note on automating this
 
-A repo-committed skill cannot force this to happen. If you want docs updates _enforced_ rather than
-remembered, that is a Claude Code hook in `.claude/settings.json` — but that file is gitignored and
-per-machine, so it binds only your checkout, not the team's. A PR checklist item or a CI check on
-user-facing paths is the portable equivalent.
+A repo-committed skill cannot force this to happen. The Stop hook in `.claude/settings.json` reminds
+Claude Code once per session when user-facing files changed without docs; it is a nudge, not
+enforcement, and other agents do not run it. A PR checklist item or a CI check on user-facing paths
+is the portable equivalent.

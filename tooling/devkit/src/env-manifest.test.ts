@@ -1,6 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { extname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import { envByKey, envManifest } from "./env-manifest.js";
@@ -50,16 +51,53 @@ async function sourceFiles(directory: string): Promise<string[]> {
 
 function envReads(source: string): Set<string> {
   const keys = new Set<string>();
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
-  for (const match of code.matchAll(/process\.env\.([A-Z][A-Z0-9_]*)/g)) keys.add(match[1]);
-  for (const match of code.matchAll(/process\.env\[["']([A-Z][A-Z0-9_]*)["']\]/g))
-    keys.add(match[1]);
-  for (const match of code.matchAll(/(?:const|let|var)\s*\{([^}]+)\}\s*=\s*process\.env/g)) {
-    for (const field of match[1].split(",")) {
-      const key = field.trim().split(/\s*:\s*/)[0];
-      if (/^[A-Z][A-Z0-9_]*$/.test(key)) keys.add(key);
-    }
+  const sourceFile = ts.createSourceFile(
+    "environment-read.tsx",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+
+  function isProcessEnv(node: ts.Node): boolean {
+    let expression = node;
+    while (ts.isParenthesizedExpression(expression)) expression = expression.expression;
+    return (
+      ts.isPropertyAccessExpression(expression) &&
+      ts.isIdentifier(expression.expression) &&
+      expression.expression.text === "process" &&
+      expression.name.text === "env"
+    );
   }
+
+  function addKey(key: string): void {
+    if (/^[A-Z][A-Z0-9_]*$/.test(key)) keys.add(key);
+  }
+
+  function visit(node: ts.Node): void {
+    if (ts.isPropertyAccessExpression(node) && isProcessEnv(node.expression)) {
+      addKey(node.name.text);
+    } else if (ts.isElementAccessExpression(node) && isProcessEnv(node.expression)) {
+      const argument = node.argumentExpression;
+      if (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument)) {
+        addKey(argument.text);
+      }
+    } else if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer &&
+      isProcessEnv(node.initializer)
+    ) {
+      for (const element of node.name.elements) {
+        const property = element.propertyName ?? element.name;
+        if (ts.isIdentifier(property) || ts.isStringLiteral(property)) addKey(property.text);
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
   return keys;
 }
 
@@ -79,6 +117,28 @@ describe("environment manifest", () => {
     expect(
       envReads("const url = `https://host/${process.env.URL_KEY}`; // process.env.NOPE"),
     ).toEqual(new Set(["URL_KEY"]));
+    expect(
+      envReads(`
+        const direct = process.env.DIRECT;
+        const bracket = process.env["BRACKET"];
+        const optional = process.env?.OPTIONAL;
+        const optionalElement = process.env?.["OPTIONAL_ELEMENT"];
+        const commented = process.env /* comment */ .COMMENTED;
+        const { DEFAULTED = "fallback", ALIASED: alias = "fallback" } = process.env;
+        // process.env.LINE_COMMENT
+        /* process.env.BLOCK_COMMENT */
+      `),
+    ).toEqual(
+      new Set([
+        "DIRECT",
+        "BRACKET",
+        "OPTIONAL",
+        "OPTIONAL_ELEMENT",
+        "COMMENTED",
+        "DEFAULTED",
+        "ALIASED",
+      ]),
+    );
 
     const files = (
       await Promise.all(sourceRoots.map((path) => sourceFiles(join(root, path))))
