@@ -154,6 +154,8 @@
         "availabilityHint": "Connectivity per bucket over the selected window, on the same time axis as the data below.",
         "availability": "Availability",
         "uptimeLabel": "Uptime",
+        "sessionsLabel": "Sessions",
+        "mobileSessionsNote": "Phones connect only while the app is open",
         "uptimeWindow": "{{from}} to {{to}}",
         "outages": "Outages",
         "sessions": "Sessions",
