@@ -38,7 +38,7 @@ async function postJson(
   return response;
 }
 
-async function loginLocal(
+export async function loginLocal(
   email: string,
   dependencies: Partial<LoginDependencies> = {},
 ): Promise<string> {
@@ -64,7 +64,7 @@ async function loginLocal(
   );
   const otp = await deps.readOtp(databaseUrl, email);
   await postJson(deps.request, `${authUrl}/sign-in/email-otp`, { email, otp }, jar);
-  const session = [...jar].find(([key]) => key.includes("session"));
+  const session = [...jar].find(([key]) => key.endsWith("session_token"));
   if (!session) throw new Error("Sign-in succeeded without returning a session cookie");
   const cookie = `${session[0]}=${session[1]}`;
   deps.write(`${cookie}\n`);

@@ -4,6 +4,11 @@
 # Adapted from mattpocock/skills git-guardrails-claude-code (MIT).
 set -uo pipefail
 
+if ! command -v jq >/dev/null 2>&1; then
+  echo "WARNING: protect-main hook skipped because jq is not installed." >&2
+  exit 0
+fi
+
 INPUT=$(cat)
 COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
 [ -z "$COMMAND" ] && exit 0
@@ -14,9 +19,9 @@ block() {
   exit 2
 }
 
-# Pushing to main from any branch, e.g. `git push origin main` or `git push origin HEAD:main`.
+# Pushing to main from any branch, including short and fully qualified refspecs.
 if printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+push' &&
-  printf '%s' "$COMMAND" | grep -qE '(^|[[:space:]:])main([[:space:]]|$)'; then
+  printf '%s' "$COMMAND" | grep -qE '(^|[[:space:]:])(refs/heads/)?main([[:space:]]|$)'; then
   block "this pushes to main."
 fi
 
