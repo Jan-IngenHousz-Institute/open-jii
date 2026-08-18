@@ -12,26 +12,33 @@ function successRow(serialNumber: string) {
   return { serialNumber, device: createIotDevice({ serialNumber }), error: null };
 }
 
+function mountBase(existing: ReturnType<typeof createIotDevice>[] = []) {
+  server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+  server.mount(contract.iot.listIotDevices, { body: existing });
+}
+
+async function pickFamily(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getAllByRole("combobox")[0]);
+  await user.click(await screen.findByRole("option", { name: "Ambyte" }));
+}
+
+const serialsInput = () => screen.getByLabelText("iot.devices.bulkDialog.serialsLabel");
+const submitButton = () => screen.getByRole("button", { name: /bulkDialog.submit/ });
+
 describe("BulkRegisterIotDevicesDialog", () => {
-  it("parses one device per line and closes on full success", async () => {
+  it("registers the pasted batch and lands on linked results", async () => {
     const user = userEvent.setup();
-    const onOpenChange = vi.fn();
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
-    server.mount(contract.iot.listIotDevices, { body: [] });
+    mountBase();
     const bulk = server.mount(contract.iot.bulkRegisterIotDevices, {
       body: { devices: [successRow("S-1"), successRow("S-2")], groupId: null, groupError: null },
     });
 
-    render(<BulkRegisterIotDevicesDialog open onOpenChange={onOpenChange} />);
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
 
-    await user.click(screen.getByRole("combobox"));
-    await user.click(await screen.findByRole("option", { name: "Ambyte" }));
+    await pickFamily(user);
     // The blank line is skipped, not an error.
-    await user.type(
-      screen.getByLabelText("iot.devices.bulkDialog.serialsLabel"),
-      "S-1, Gateway One{enter}{enter}S-2",
-    );
-    await user.click(screen.getByRole("button", { name: "iot.devices.bulkDialog.submit" }));
+    await user.type(serialsInput(), "S-1, Gateway One{enter}{enter}S-2");
+    await user.click(submitButton());
 
     await vi.waitFor(() => {
       expect(bulk.calls).toHaveLength(1);
@@ -40,7 +47,83 @@ describe("BulkRegisterIotDevicesDialog", () => {
       deviceType: "ambyte",
       devices: [{ serialNumber: "S-1", name: "Gateway One" }, { serialNumber: "S-2" }],
     });
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    // Results replace the form: a per-row record with the way onward.
+    expect(await screen.findByText("iot.devices.bulkDialog.resultSummary")).toBeInTheDocument();
+  });
+
+  it("classifies registry collisions up front and keeps them out of the submit", async () => {
+    const user = userEvent.setup();
+    mountBase([createIotDevice({ serialNumber: "S-1" })]);
+    const bulk = server.mount(contract.iot.bulkRegisterIotDevices, {
+      body: { devices: [successRow("S-2")], groupId: null, groupError: null },
+    });
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    await pickFamily(user);
+    await user.type(serialsInput(), "S-1{enter}S-2");
+
+    // Pre-flight: the collision is a visible row state, not a later 409.
+    expect(await screen.findByText("iot.devices.bulkDialog.status.registered")).toBeInTheDocument();
+    await user.click(submitButton());
+
+    await vi.waitFor(() => {
+      expect(bulk.calls).toHaveLength(1);
+    });
+    expect(bulk.calls[0].body).toMatchObject({ devices: [{ serialNumber: "S-2" }] });
+  });
+
+  it("excludes in-batch duplicates and blocks oversized batches", async () => {
+    const user = userEvent.setup();
+    mountBase();
+    const bulk = server.mount(contract.iot.bulkRegisterIotDevices, { status: 500 });
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    await pickFamily(user);
+    await user.type(serialsInput(), "S-1{enter}S-1");
+    expect(screen.getByText("iot.devices.bulkDialog.status.duplicate")).toBeInTheDocument();
+    expect(screen.getByText(/summary.duplicate/)).toBeInTheDocument();
+
+    const oversized = Array.from({ length: 101 }, (_, i) => `S-${String(i)}`).join("\n");
+    fireEvent.change(serialsInput(), { target: { value: oversized } });
+    expect(await screen.findByText("iot.devices.bulkDialog.overCap")).toBeInTheDocument();
+    expect(submitButton()).toBeDisabled();
+
+    expect(bulk.calls).toHaveLength(0);
+  });
+
+  it("summarizes the batch live and blocks an empty submit", async () => {
+    const user = userEvent.setup();
+    mountBase();
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    expect(screen.getByText("iot.devices.bulkDialog.serialsHint")).toBeInTheDocument();
+    expect(submitButton()).toBeDisabled();
+
+    await user.type(serialsInput(), "S-1{enter}S-2");
+    expect(screen.getByText(/summary.ready/)).toBeInTheDocument();
+    expect(submitButton()).toBeEnabled();
+
+    await user.type(serialsInput(), "{enter}!!");
+    expect(screen.getByText(/summary.invalid/)).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.bulkDialog.status.invalid")).toBeInTheDocument();
+  });
+
+  it("keeps an invalid-only paste from ever submitting", async () => {
+    const user = userEvent.setup();
+    mountBase();
+    const bulk = server.mount(contract.iot.bulkRegisterIotDevices, { status: 500 });
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    await pickFamily(user);
+    await user.type(serialsInput(), "not a serial!!");
+
+    expect(screen.getByText("iot.devices.bulkDialog.status.invalid")).toBeInTheDocument();
+    expect(submitButton()).toBeDisabled();
+    expect(bulk.calls).toHaveLength(0);
   });
 
   it("sends the chosen group and shows per-serial failures", async () => {
@@ -61,131 +144,69 @@ describe("BulkRegisterIotDevicesDialog", () => {
 
     render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
 
-    await user.click(screen.getAllByRole("combobox")[0]);
-    await user.click(await screen.findByRole("option", { name: "Ambyte" }));
-    await user.type(screen.getByLabelText("iot.devices.bulkDialog.serialsLabel"), "S-1{enter}S-2");
+    await pickFamily(user);
+    await user.type(serialsInput(), "S-1{enter}S-2");
     await user.click(screen.getByText("iot.devices.bulkDialog.groupExisting"));
     await user.click(screen.getAllByRole("combobox")[1]);
     await user.click(await screen.findByRole("option", { name: "Greenhouse A" }));
-    await user.click(screen.getByRole("button", { name: "iot.devices.bulkDialog.submit" }));
+    await user.click(submitButton());
 
     await vi.waitFor(() => {
       expect(bulk.calls).toHaveLength(1);
     });
     expect(bulk.calls[0].body).toMatchObject({ group: { groupId: group.id } });
-    // Partial failure keeps the dialog open on the results view.
+    // Partial failure lands on results with the error inline and the group linked.
     expect(await screen.findByText("already registered")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.bulkDialog.viewGroup")).toBeInTheDocument();
+  });
+
+  it("requires a group choice to match the selected mode", async () => {
+    const user = userEvent.setup();
+    mountBase();
+    const bulk = server.mount(contract.iot.bulkRegisterIotDevices, { status: 500 });
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    await pickFamily(user);
+    await user.type(serialsInput(), "S-1");
+
+    await user.click(screen.getByText("iot.devices.bulkDialog.groupExisting"));
+    await user.click(submitButton());
+    expect(await screen.findByText("Pick a group")).toBeInTheDocument();
+
+    await user.click(screen.getByText("iot.devices.bulkDialog.groupNew"));
+    await user.click(submitButton());
+    expect(await screen.findByText("Name the new group")).toBeInTheDocument();
+
+    expect(bulk.calls).toHaveLength(0);
+  });
+
+  it("keeps the form up and toasts when the request itself fails", async () => {
+    const user = userEvent.setup();
+    mountBase();
+    const bulk = server.mount(contract.iot.bulkRegisterIotDevices, { status: 500 });
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    await pickFamily(user);
+    await user.type(serialsInput(), "S-1");
+    await user.click(submitButton());
+
+    await vi.waitFor(() => {
+      expect(bulk.calls).toHaveLength(1);
+    });
+    expect(submitButton()).toBeInTheDocument();
   });
 
   it("resets and closes when the dialog is dismissed", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+    mountBase();
 
     render(<BulkRegisterIotDevicesDialog open onOpenChange={onOpenChange} />);
 
     await user.keyboard("{Escape}");
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
-  });
-
-  it("keeps the form up and toasts when the request itself fails", async () => {
-    const user = userEvent.setup();
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
-    const bulk = server.mount(contract.iot.bulkRegisterIotDevices, { status: 500 });
-
-    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
-
-    await user.click(screen.getByRole("combobox"));
-    await user.click(await screen.findByRole("option", { name: "Ambyte" }));
-    await user.type(screen.getByLabelText("iot.devices.bulkDialog.serialsLabel"), "S-1");
-    await user.click(screen.getByRole("button", { name: "iot.devices.bulkDialog.submit" }));
-
-    await vi.waitFor(() => {
-      expect(bulk.calls).toHaveLength(1);
-    });
-    expect(
-      screen.getByRole("button", { name: "iot.devices.bulkDialog.submit" }),
-    ).toBeInTheDocument();
-  });
-
-  it("rejects duplicate serials and oversized batches client-side", async () => {
-    const user = userEvent.setup();
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
-    const bulk = server.mount(contract.iot.bulkRegisterIotDevices, { status: 500 });
-
-    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
-
-    await user.click(screen.getByRole("combobox"));
-    await user.click(await screen.findByRole("option", { name: "Ambyte" }));
-    const serials = screen.getByLabelText("iot.devices.bulkDialog.serialsLabel");
-
-    await user.type(serials, "S-1{enter}S-1");
-    await user.click(screen.getByRole("button", { name: "iot.devices.bulkDialog.submit" }));
-    expect(await screen.findByText(/must be unique/)).toBeInTheDocument();
-
-    const oversized = Array.from({ length: 101 }, (_, i) => `S-${String(i)}`).join("\n");
-    fireEvent.change(serials, { target: { value: oversized } });
-    await user.click(screen.getByRole("button", { name: "iot.devices.bulkDialog.submit" }));
-    expect(await screen.findByText(/At most 100 devices/)).toBeInTheDocument();
-
-    expect(bulk.calls).toHaveLength(0);
-  });
-
-  it("requires a group choice to match the selected mode", async () => {
-    const user = userEvent.setup();
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
-    const bulk = server.mount(contract.iot.bulkRegisterIotDevices, { status: 500 });
-
-    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
-
-    await user.click(screen.getByRole("combobox"));
-    await user.click(await screen.findByRole("option", { name: "Ambyte" }));
-    await user.type(screen.getByLabelText("iot.devices.bulkDialog.serialsLabel"), "S-1");
-
-    await user.click(screen.getByText("iot.devices.bulkDialog.groupExisting"));
-    await user.click(screen.getByRole("button", { name: "iot.devices.bulkDialog.submit" }));
-    expect(await screen.findByText("Pick a group")).toBeInTheDocument();
-
-    await user.click(screen.getByText("iot.devices.bulkDialog.groupNew"));
-    await user.click(screen.getByRole("button", { name: "iot.devices.bulkDialog.submit" }));
-    expect(await screen.findByText("Name the new group")).toBeInTheDocument();
-
-    expect(bulk.calls).toHaveLength(0);
-  });
-
-  it("counts recognized devices live and blocks an empty submit", async () => {
-    const user = userEvent.setup();
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
-
-    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
-
-    // Nothing typed: hint shown, submit disabled.
-    expect(screen.getByText("iot.devices.bulkDialog.serialsHint")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /bulkDialog.submit/ })).toBeDisabled();
-
-    await user.type(screen.getByLabelText("iot.devices.bulkDialog.serialsLabel"), "S-1{enter}S-2");
-    expect(screen.getByText("iot.devices.bulkDialog.recognized")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /bulkDialog.submit/ })).toBeEnabled();
-
-    await user.type(screen.getByLabelText("iot.devices.bulkDialog.serialsLabel"), "{enter}!!");
-    expect(screen.getByText("iot.devices.bulkDialog.invalidLine")).toBeInTheDocument();
-  });
-
-  it("keeps an invalid serial line from ever submitting", async () => {
-    const user = userEvent.setup();
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
-    const bulk = server.mount(contract.iot.bulkRegisterIotDevices, { status: 500 });
-
-    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
-
-    await user.click(screen.getByRole("combobox"));
-    await user.click(await screen.findByRole("option", { name: "Ambyte" }));
-    await user.type(screen.getByLabelText("iot.devices.bulkDialog.serialsLabel"), "not a serial!!");
-
-    // The bad line is flagged live and the submit never becomes clickable.
-    expect(screen.getByText("iot.devices.bulkDialog.invalidLine")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /bulkDialog.submit/ })).toBeDisabled();
-    expect(bulk.calls).toHaveLength(0);
   });
 });
