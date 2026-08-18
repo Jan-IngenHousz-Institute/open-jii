@@ -393,6 +393,7 @@ dev = [
     { name = "pyspark" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pyyaml" },
     { name = "responses" },
     { name = "ruff" },
 ]
@@ -414,6 +415,7 @@ dev = [
     { name = "pyspark", specifier = "==4.0.1" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "responses", specifier = ">=0.25" },
     { name = "ruff", specifier = ">=0.7" },
 ]
