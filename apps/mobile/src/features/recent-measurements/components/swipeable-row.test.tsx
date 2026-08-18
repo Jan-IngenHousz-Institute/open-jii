@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react-native";
 import React from "react";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SwipeableRow } from "./swipeable-row";
@@ -55,6 +55,39 @@ vi.mock("react-native-gesture-handler", () => {
     },
   };
   return { __esModule: true, GestureDetector, Gesture: { Pan: () => builder } };
+});
+
+// Overrides the global setup mock so the spring target (the resolved snap) is
+// observable. withSpring stays an identity stub: assigning its return settles
+// the shared value synchronously.
+const { springSpy } = vi.hoisted(() => ({ springSpy: vi.fn() }));
+vi.mock("react-native-reanimated", () => {
+  const Animated = {
+    View: React.forwardRef<unknown, { children?: React.ReactNode; style?: unknown }>(
+      ({ children, style: _style, ...rest }, ref) =>
+        React.createElement(View, { ...rest, ref } as any, children),
+    ),
+  };
+  return {
+    __esModule: true,
+    default: Animated,
+    useAnimatedStyle: (fn: () => unknown) => fn(),
+    useSharedValue: <T,>(initial: T) => ({ value: initial }),
+    cancelAnimation: () => undefined,
+    withSpring: (v: unknown) => {
+      springSpy(v);
+      return v;
+    },
+    withTiming: (v: unknown) => v,
+    withDelay: (_delay: number, v: unknown) => v,
+    withSequence: (...steps: unknown[]) => steps[0],
+    Easing: {
+      inOut: (e: unknown) => e,
+      in: (e: unknown) => e,
+      out: (e: unknown) => e,
+      cubic: (t: number) => t,
+    },
+  };
 });
 
 function renderRow(props: Partial<React.ComponentProps<typeof SwipeableRow>> = {}) {
@@ -127,30 +160,37 @@ describe("SwipeableRow", () => {
     expect(screen.getByText("row body")).toBeTruthy();
   });
 
-  it("renders the tinted variants used under an expanded run", () => {
-    renderRow({ indented: true, onDelete: vi.fn() });
-    expect(screen.getByText("row body")).toBeTruthy();
-
-    renderRow({ expanded: true, onDelete: vi.fn() });
-    expect(screen.getAllByText("row body").length).toBeGreaterThan(0);
+  it("tints the action layer to match the row being swiped", () => {
+    const cases = [
+      { props: {}, tint: "bg-card" },
+      { props: { indented: true }, tint: "bg-jii-mint-light" },
+      { props: { expanded: true }, tint: "bg-jii-mint" },
+    ] as const;
+    for (const { props, tint } of cases) {
+      const { unmount } = renderRow({ onDelete: vi.fn(), ...props });
+      expect(screen.getByTestId("swipe-actions").props.className).toContain(tint);
+      unmount();
+    }
   });
 
-  it("drives a drag through the pan handlers without error", () => {
+  it("clamps the drag to the measured action width and snaps on release", () => {
     renderRow({ onSync: vi.fn(), onDelete: vi.fn() });
 
     // The action layer measures itself before a swipe can be clamped to it.
-    const actionLayer = screen.getByLabelText("Delete").parent;
-    if (actionLayer) {
-      fireEvent(actionLayer, "layout", { nativeEvent: { layout: { width: 104 } } });
-    }
+    fireEvent(screen.getByTestId("swipe-actions"), "layout", {
+      nativeEvent: { layout: { width: 104 } },
+    });
 
-    expect(panHandlers.onStart).toBeDefined();
     panHandlers.onStart?.();
     panHandlers.onUpdate?.({ translationX: -60 });
-    panHandlers.onUpdate?.({ translationX: 40 });
-    panHandlers.onEnd?.({ velocityX: -800 });
-    panHandlers.onEnd?.({ velocityX: 800 });
+    // Past the halfway point of a 104-wide layer, a slow release opens.
+    panHandlers.onEnd?.({ velocityX: 0 });
+    expect(springSpy).toHaveBeenLastCalledWith(-104);
 
-    expect(screen.getByText("row body")).toBeTruthy();
+    panHandlers.onStart?.();
+    // A rightward drag past fully closed clamps at 0; the flick snaps shut.
+    panHandlers.onUpdate?.({ translationX: 200 });
+    panHandlers.onEnd?.({ velocityX: 800 });
+    expect(springSpy).toHaveBeenLastCalledWith(0);
   });
 });

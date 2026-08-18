@@ -403,6 +403,36 @@ describe("useRecentMeasurementsActions", () => {
       expect(mockShowAlert).not.toHaveBeenCalled();
     });
 
+    it("re-resolves membership when the confirmation runs, not before it", async () => {
+      // A member settles or is added while the alert is open: the action acts
+      // on the lookup at execution time, not the pre-alert snapshot.
+      mockGetMeasurementIdsByRunId
+        .mockResolvedValueOnce(["r1"])
+        .mockResolvedValueOnce(["r1", "r2"]);
+      const { result } = renderHook(() => useRecentMeasurementsActions("all"));
+
+      await act(async () => {
+        await result.current.confirmSyncRun("run-1", "Run Exp");
+      });
+      expect(mockShowAlert.mock.calls[0][1]).toContain("1");
+      const [confirmBtn] = mockShowAlert.mock.calls[0][2];
+      await act(() => confirmBtn.onPress());
+
+      expect(mockUploadMany).toHaveBeenCalledWith(["r1", "r2"]);
+    });
+
+    it("invalidates instead of no-oping when the run has no unsynced members", async () => {
+      mockGetMeasurementIdsByRunId.mockResolvedValue([]);
+      const { result } = renderHook(() => useRecentMeasurementsActions("all"));
+
+      await act(async () => {
+        await result.current.confirmSyncRun("run-1", "Run Exp");
+      });
+
+      expect(mockShowAlert).not.toHaveBeenCalled();
+      expect(mockInvalidate).toHaveBeenCalled();
+    });
+
     it("surfaces a membership lookup failure instead of prompting", async () => {
       mockGetMeasurementIdsByRunId.mockRejectedValue(new Error("db locked"));
       const { result } = renderHook(() => useRecentMeasurementsActions("all"));

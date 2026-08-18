@@ -57,11 +57,15 @@ export function CommentModal({
   }, [visible, initialText]);
 
   const handleSave = () => {
-    // onSave may be async (persisting to the DB). A rejection means the save
-    // failed — the handler already surfaced that (toast) and kept its state —
-    // so swallow it here: the fire-and-forget call must not become an
-    // unhandled rejection, and the modal stays open for a retry.
-    Promise.resolve(onSave(textRef.current)).catch(() => undefined);
+    // onSave may be async (persisting to the DB). A rejection — or a
+    // synchronous throw — means the save failed; the handler already surfaced
+    // that (toast) and kept its state, so swallow it here: the fire-and-forget
+    // call must not become an unhandled rejection or escape handleSave, and
+    // the modal stays open for a retry. Deferred via .then so a synchronous
+    // throw lands in the same catch path.
+    void Promise.resolve()
+      .then(() => onSave(textRef.current))
+      .catch(() => undefined);
   };
 
   return (

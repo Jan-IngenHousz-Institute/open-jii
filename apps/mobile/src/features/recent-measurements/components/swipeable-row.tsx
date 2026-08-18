@@ -143,6 +143,7 @@ export const SwipeableRow = memo(function SwipeableRow({
     <View className="overflow-hidden">
       {/* Hidden actions (revealed when swiping left) */}
       <Animated.View
+        testID="swipe-actions"
         onLayout={(e) => {
           const width = e.nativeEvent.layout.width;
           if (width > 0) {

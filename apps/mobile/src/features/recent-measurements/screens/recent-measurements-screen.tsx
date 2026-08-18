@@ -190,6 +190,11 @@ export function RecentMeasurementsScreen() {
     return map;
   }, [data]);
 
+  // Read through a ref so the run callbacks keep a stable identity: they feed
+  // renderItem, and a new identity re-renders every visible row on each toggle.
+  const runsByKeyRef = useRef(runsByKey);
+  runsByKeyRef.current = runsByKey;
+
   const onRowPress = useCallback(
     (id: string) => {
       void openModal("questions", id);
@@ -218,19 +223,19 @@ export function RecentMeasurementsScreen() {
   );
   const onRunDelete = useCallback(
     (runKey: string) => {
-      const entry = runsByKey.get(runKey);
+      const entry = runsByKeyRef.current.get(runKey);
       // Run actions resolve membership from storage by run id; the entry only
       // supplies the id and the experiment name for the confirmation copy.
       if (entry?.runId) void confirmDeleteRun(entry.runId, entry.items[0].experimentName);
     },
-    [runsByKey, confirmDeleteRun],
+    [confirmDeleteRun],
   );
   const onRunSync = useCallback(
     (runKey: string) => {
-      const entry = runsByKey.get(runKey);
+      const entry = runsByKeyRef.current.get(runKey);
       if (entry?.runId) void confirmSyncRun(entry.runId, entry.items[0].experimentName);
     },
-    [runsByKey, confirmSyncRun],
+    [confirmSyncRun],
   );
 
   const renderItem = useCallback(

@@ -27,4 +27,7 @@ export const answersTextStyle = cva("mb-1.5 text-base", {
       false: "font-normal italic",
     },
   },
+  // A caller with optional questions passes state: undefined; without a
+  // default CVA applies neither variant and the empty text loses its italic.
+  defaultVariants: { state: false },
 });

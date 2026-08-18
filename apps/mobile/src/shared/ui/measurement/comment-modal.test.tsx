@@ -109,12 +109,15 @@ describe("CommentModal", () => {
     expect(screen.getByText(/Measurement done:/)).toBeTruthy();
   });
 
-  it("calls onSave with the edited comment", () => {
+  it("calls onSave with the edited comment", async () => {
     const onSave = vi.fn();
     render(<CommentModal {...defaultProps} onSave={onSave} />);
 
     fireEvent.changeText(screen.getByPlaceholderText("Enter your comment here..."), "Updated note");
     fireEvent.press(screen.getByText("Save comment"));
+    // handleSave defers onSave through a microtask so a synchronous throw is
+    // caught too; flush it before asserting.
+    await act(() => Promise.resolve());
 
     expect(onSave).toHaveBeenCalledWith("Updated note");
   });
@@ -132,7 +135,7 @@ describe("CommentModal", () => {
     expect(inputAfterEdit.props.defaultValue).toBe("Existing note");
   });
 
-  it("saves the latest text after correcting an existing comment", () => {
+  it("saves the latest text after correcting an existing comment", async () => {
     const onSave = vi.fn();
     render(<CommentModal {...defaultProps} initialText="" onSave={onSave} />);
 
@@ -140,11 +143,12 @@ describe("CommentModal", () => {
     fireEvent.changeText(input, "50% of the plot covered by another plot");
     fireEvent.changeText(input, "25% of the plot covered by another plot");
     fireEvent.press(screen.getByText("Save comment"));
+    await act(() => Promise.resolve());
 
     expect(onSave).toHaveBeenCalledWith("25% of the plot covered by another plot");
   });
 
-  it("discards an unsaved draft when reopened with the same initial text", () => {
+  it("discards an unsaved draft when reopened with the same initial text", async () => {
     const onSave = vi.fn();
     const { rerender } = render(
       <CommentModal {...defaultProps} initialText="Original" onSave={onSave} visible />,
@@ -157,6 +161,7 @@ describe("CommentModal", () => {
     rerender(<CommentModal {...defaultProps} initialText="Original" onSave={onSave} visible />);
 
     fireEvent.press(screen.getByText("Save comment"));
+    await act(() => Promise.resolve());
 
     expect(onSave).toHaveBeenCalledWith("Original");
   });
