@@ -20,6 +20,7 @@ import mailchimpConfig from "./common/config/mailchimp.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
 import { createOrpcErrorLoggingInterceptor } from "./common/utils/orpc-error-logging";
+import { DeviceGroupModule } from "./device-groups/device-group.module";
 import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
 import { IotModule } from "./iot/iot.module";
@@ -66,6 +67,7 @@ const orpcLogger = new Logger("ORPC");
     DatabaseModule,
     ExperimentModule,
     IotModule,
+    DeviceGroupModule,
     MacroModule,
     NewsletterModule,
     ProtocolModule,

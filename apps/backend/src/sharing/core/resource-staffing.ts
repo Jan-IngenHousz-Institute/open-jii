@@ -36,7 +36,8 @@ type StaffedResourceTable =
   | typeof macros
   | typeof protocols
   | typeof workbooks
-  | typeof iotDevices;
+  | typeof iotDevices
+  | typeof deviceGroups;
 
 /**
  * Where each staffed type keeps its id and owning organization — the single

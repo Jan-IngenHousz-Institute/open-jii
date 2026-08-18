@@ -18725,7 +18725,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -18832,7 +18833,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
@@ -18963,7 +18965,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -19105,7 +19108,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
@@ -19238,7 +19242,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -19377,7 +19382,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
@@ -19508,7 +19514,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -19569,7 +19576,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -19696,7 +19704,8 @@
                             "macro",
                             "protocol",
                             "workbook",
-                            "device"
+                            "device",
+                            "device_group"
                           ],
                           "type": "string",
                           "description": "Type of resource to transfer admin on"
@@ -19748,7 +19757,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
@@ -20185,7 +20195,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
