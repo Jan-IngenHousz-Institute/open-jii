@@ -98,6 +98,28 @@ describe("EnsureMobileDeviceUseCase", () => {
     expect(renamedAgain.value.name).toBe("iPhone 15");
   });
 
+  it("returns the row unrenamed when the name fill fails", async () => {
+    const first = await useCase.execute({ installId: body.installId }, userId);
+    assertSuccess(first);
+    vi.spyOn(repo, "update").mockResolvedValue(failure(AppError.internal("db down")));
+
+    const result = await useCase.execute({ installId: body.installId, name: "iPhone 15" }, userId);
+
+    assertSuccess(result);
+    expect(result.value.name).toBeNull();
+  });
+
+  it("rolls the Thing back when the insert returns no row at all", async () => {
+    const deleteThing = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+    vi.spyOn(repo, "create").mockResolvedValue(success([]));
+
+    const result = await useCase.execute(body, userId);
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(500);
+    expect(deleteThing).toHaveBeenCalledWith(THING_NAME);
+  });
+
   it("returns 409 without leaking the owner when another user holds the install id", async () => {
     await useCase.execute(body, userId);
     const otherUser = await testApp.createTestUser({ name: "Other" });

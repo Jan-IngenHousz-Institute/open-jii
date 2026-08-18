@@ -138,6 +138,54 @@ describe("AwsAdapter", () => {
     });
   });
 
+  describe("getCognitoIdentityId", () => {
+    it("resolves the identity id through the developer-identity path", async () => {
+      vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(
+        success({ identityId: "eu-central-1:identity-id-123", token: "mock-openid-token" }),
+      );
+
+      const result = await awsAdapter.getCognitoIdentityId("user-1");
+
+      assertSuccess(result);
+      expect(result.value).toBe("eu-central-1:identity-id-123");
+    });
+
+    it("propagates a token failure", async () => {
+      vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(
+        failure(AppError.internal("Token failed", ErrorCodes.AWS_COGNITO_TOKEN_FAILED)),
+      );
+
+      const result = await awsAdapter.getCognitoIdentityId("user-1");
+
+      assertFailure(result);
+    });
+  });
+
+  describe("thing principals", () => {
+    it("passes list, attach and detach through to the IoT service", async () => {
+      const list = vi
+        .spyOn(awsIotService, "listThingPrincipals")
+        .mockResolvedValue(success(["arn:principal"]));
+      const attach = vi
+        .spyOn(awsIotService, "attachThingPrincipal")
+        .mockResolvedValue(success(undefined));
+      const detach = vi
+        .spyOn(awsIotService, "detachThingPrincipal")
+        .mockResolvedValue(success(undefined));
+
+      const listed = await awsAdapter.listThingPrincipals("thing-a");
+      assertSuccess(listed);
+      expect(listed.value).toEqual(["arn:principal"]);
+      expect(list).toHaveBeenCalledWith("thing-a");
+
+      assertSuccess(await awsAdapter.attachThingPrincipal("thing-a", "arn:principal"));
+      expect(attach).toHaveBeenCalledWith("thing-a", "arn:principal");
+
+      assertSuccess(await awsAdapter.detachThingPrincipal("thing-a", "arn:principal"));
+      expect(detach).toHaveBeenCalledWith("thing-a", "arn:principal");
+    });
+  });
+
   describe("getIotCredentials", () => {
     it("should return IoT credentials when both cognito steps succeed", async () => {
       const userId = "test-user-123";

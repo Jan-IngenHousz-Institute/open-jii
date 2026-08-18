@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -52,6 +53,16 @@ describe("device identity store", () => {
     useDeviceIdentityStore.setState({ isLoaded: false });
 
     expect(() => getDeviceIdentity()).toThrow(/rehydration/);
+  });
+
+  it("opens the gate even when rehydration fails, starting empty", async () => {
+    useDeviceIdentityStore.setState({ isLoaded: false });
+    vi.spyOn(AsyncStorage, "getItem").mockRejectedValueOnce(new Error("storage unreadable"));
+
+    await useDeviceIdentityStore.persist.rehydrate();
+
+    // Refusing to load would brick publishing; unreadable storage is empty.
+    expect(useDeviceIdentityStore.getState().isLoaded).toBe(true);
   });
 
   it("resolves the load gate immediately once rehydrated", async () => {
