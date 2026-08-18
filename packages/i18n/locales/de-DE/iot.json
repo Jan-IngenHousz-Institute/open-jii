@@ -87,7 +87,6 @@
       },
       "comingSoon": {
         "title": "Demnächst verfügbar",
-        "groups": "Organisieren Sie Geräte in Gruppen, die Sie gemeinsam verwalten, bereitstellen und einrichten können.",
         "monitoring": "Verfolgen Sie Gerätekonnektivität, letzte Aktivität und den Zustand der Flotte auf einen Blick.",
         "lineage": "Verfolgen Sie die Identität dieses Geräts bis zu seinen erfassten Messungen.",
         "onboarding": "Onboarden Sie jedes Gerät über seine Detailseite (Tab „Einrichtung“). Bulk-Onboarding aus dieser Ansicht folgt in Kürze."

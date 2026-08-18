@@ -97,6 +97,12 @@ const bulkRegisterFormSchema = z
         path: ["serials"],
         message: "Serial numbers must be unique within the batch",
       });
+    } else if (devices.length > 100) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["serials"],
+        message: "At most 100 devices per batch",
+      });
     }
 
     if (values.groupMode === "existing" && !values.groupId) {

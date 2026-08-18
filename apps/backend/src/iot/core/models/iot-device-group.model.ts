@@ -16,8 +16,8 @@ export const updateIotDeviceGroupSchema = createIotDeviceGroupSchema.partial();
 
 export const selectIotDeviceGroupSchema = createSelectSchema(deviceGroups);
 
-export type CreateIotIotDeviceGroupDto = z.infer<typeof createIotDeviceGroupSchema>;
-export type UpdateIotIotDeviceGroupDto = z.infer<typeof updateIotDeviceGroupSchema>;
+export type CreateIotDeviceGroupDto = z.infer<typeof createIotDeviceGroupSchema>;
+export type UpdateIotDeviceGroupDto = z.infer<typeof updateIotDeviceGroupSchema>;
 export type IotDeviceGroupDto = z.infer<typeof selectIotDeviceGroupSchema>;
 
 /** Group row plus its member count, the list and detail projection. */

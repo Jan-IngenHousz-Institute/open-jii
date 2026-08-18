@@ -19,11 +19,11 @@ import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
-  CreateIotIotDeviceGroupDto,
+  CreateIotDeviceGroupDto,
   IotDeviceGroupDto,
   IotDeviceGroupMemberDto,
   IotDeviceGroupWithCountDto,
-  UpdateIotIotDeviceGroupDto,
+  UpdateIotDeviceGroupDto,
 } from "../models/iot-device-group.model";
 
 @Injectable()
@@ -38,7 +38,7 @@ export class IotDeviceGroupRepository {
   }
 
   async create(
-    dto: CreateIotIotDeviceGroupDto,
+    dto: CreateIotDeviceGroupDto,
     userId: string,
     targetOrganizationId?: string | null,
   ): Promise<Result<IotDeviceGroupDto[]>> {
@@ -114,7 +114,7 @@ export class IotDeviceGroupRepository {
 
   async update(
     groupId: string,
-    patch: UpdateIotIotDeviceGroupDto,
+    patch: UpdateIotDeviceGroupDto,
   ): Promise<Result<IotDeviceGroupDto | null>> {
     return tryCatch(async () => {
       const results = await this.database
