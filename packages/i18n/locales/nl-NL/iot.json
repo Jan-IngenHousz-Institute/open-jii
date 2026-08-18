@@ -376,7 +376,8 @@
       "noMembers": "Nog geen apparaten in deze groep.",
       "remove": "Verwijderen",
       "sectionHint": "Organiseer apparaten in groepen die u samen kunt monitoren en onboarden.",
-      "statusColumn": "Status"
+      "statusColumn": "Status",
+      "pageTitle": "Apparaatgroep"
     }
   }
 }

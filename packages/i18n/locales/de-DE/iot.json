@@ -376,7 +376,8 @@
       "noMembers": "Noch keine Geräte in dieser Gruppe.",
       "remove": "Entfernen",
       "sectionHint": "Geräte in Gruppen organisieren, gemeinsam überwachen und onboarden.",
-      "statusColumn": "Status"
+      "statusColumn": "Status",
+      "pageTitle": "Gerätegruppe"
     }
   }
 }

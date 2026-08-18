@@ -376,7 +376,8 @@
       "noMembers": "No devices in this group yet.",
       "remove": "Remove",
       "sectionHint": "Organize devices into groups you can monitor and onboard together.",
-      "statusColumn": "Status"
+      "statusColumn": "Status",
+      "pageTitle": "Device group"
     }
   }
 }
