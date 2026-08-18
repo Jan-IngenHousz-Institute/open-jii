@@ -34,9 +34,7 @@ export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
     return (
       <CommentModal
         visible
-        initialText={getCommentFromMeasurementResult(
-          m.data.measurementResult as Record<string, unknown>,
-        )}
+        initialText={getCommentFromMeasurementResult(m.data.measurementResult)}
         experimentName={m.data.metadata.experimentName}
         questions={parseQuestions(m.data.measurementResult)}
         timestamp={m.data.metadata.timestamp}

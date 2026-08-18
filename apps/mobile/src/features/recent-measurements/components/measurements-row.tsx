@@ -10,6 +10,8 @@ interface Props {
   onDelete: (id: string) => void;
   onSync: (id: string) => void;
   peekToken?: number;
+  /** Nested under an expanded workbook-run row. */
+  indented?: boolean;
 }
 
 export const MeasurementsRow = memo(function MeasurementsRow({
@@ -19,6 +21,7 @@ export const MeasurementsRow = memo(function MeasurementsRow({
   onDelete,
   onSync,
   peekToken,
+  indented,
 }: Props) {
   const canFlag = isUnsynced(item.status);
   return (
@@ -34,6 +37,7 @@ export const MeasurementsRow = memo(function MeasurementsRow({
       onSync={canFlag ? onSync : undefined}
       hasComment={item.hasComment}
       peekToken={peekToken}
+      indented={indented}
     />
   );
 });

@@ -13,6 +13,7 @@ const migrationFiles = [
   "0002_dashing_lenny_balinger.sql",
   "0003_drop_uploading_status.sql",
   "0004_add_day_key.sql",
+  "0005_add_workbook_run_id.sql",
 ];
 const migrationSqls = migrationFiles.map((f) =>
   readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"),
@@ -210,6 +211,37 @@ describe("measurements-storage", () => {
       };
       expect(row.has_comment).toBe(0);
     });
+
+    it("lifts workbook_run_id out of the payload so the list can group a run", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.saveMeasurement(
+        {
+          topic: "t/t",
+          measurementResult: { workbook_run_id: "run-abc", questions: [] },
+          metadata: {
+            experimentName: "Exp",
+            protocolName: "proto-1",
+            timestamp: "2026-03-02T10:00:00.000Z",
+          },
+        },
+        "pending",
+      );
+
+      const row = sqlite.prepare("SELECT workbook_run_id FROM measurements").get() as {
+        workbook_run_id: string;
+      };
+      expect(row.workbook_run_id).toBe("run-abc");
+    });
+
+    it("writes an empty workbook_run_id (never NULL) when the payload has none", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.saveMeasurement(mockMeasurement, "pending");
+
+      const row = sqlite.prepare("SELECT workbook_run_id FROM measurements").get() as {
+        workbook_run_id: string;
+      };
+      expect(row.workbook_run_id).toBe("");
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -291,12 +323,13 @@ describe("measurements-storage", () => {
       timestamp: string,
       questionsText: string | null = null,
       hasComment = 0,
+      workbookRunId: string | null = "",
     ) {
       sqlite
         .prepare(
           `INSERT INTO measurements
-           (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, workbook_run_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           id,
@@ -309,6 +342,7 @@ describe("measurements-storage", () => {
           Date.now(),
           questionsText,
           hasComment,
+          workbookRunId,
         );
     }
 
@@ -356,6 +390,19 @@ describe("measurements-storage", () => {
       expect(row.questions).toEqual([]);
     });
 
+    it('surfaces workbook_run_id, and "" for legacy rows still pending backfill', async () => {
+      insertListRow("grouped", "failed", "2026-01-01T11:00:00Z", null, 0, "run-abc");
+      insertListRow("legacy", "failed", "2026-01-01T10:00:00Z", null, 0, null);
+
+      const mod = await import("~/shared/db/measurements-storage");
+      const rows = await mod.getMeasurementsList(["failed"], { limit: 50, offset: 0 });
+
+      expect(rows.map((r) => [r.id, r.workbookRunId])).toEqual([
+        ["grouped", "run-abc"],
+        ["legacy", ""],
+      ]);
+    });
+
     it("falls back to [] for a single malformed questions_text row without failing the rest", async () => {
       insertListRow("bad", "failed", "2026-01-01T11:00:00Z", "not-json", 0);
       insertListRow(
@@ -375,10 +422,7 @@ describe("measurements-storage", () => {
       expect(byId.get("good")).toEqual([
         { question_label: "x", question_text: "x", question_answer: "y" },
       ]);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("questions_text malformed for bad"),
-        expect.any(Error),
-      );
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("questions_text malformed"));
 
       consoleSpy.mockRestore();
     });
@@ -394,8 +438,7 @@ describe("measurements-storage", () => {
       expect(rows.find((r) => r.id === "obj")?.questions).toEqual([]);
       expect(rows.find((r) => r.id === "nul")?.questions).toEqual([]);
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("questions_text not an array for obj"),
-        "object",
+        expect.stringContaining("questions_text not an array"),
       );
 
       consoleSpy.mockRestore();
@@ -591,6 +634,17 @@ describe("measurements-storage", () => {
       expect(row.topic).toBe("updated/topic");
       expect(row.status).toBe("successful");
     });
+
+    it("rejects when the update fails, so comment edits don't look saved", async () => {
+      insertRow("u1", "failed");
+      const mod = await import("~/shared/db/measurements-storage");
+      // A closed handle is the cheapest way to make the statement throw.
+      sqlite.close();
+      const logSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      await expect(mod.updateMeasurement("u1", mockMeasurement)).rejects.toThrow();
+      logSpy.mockRestore();
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -759,6 +813,16 @@ describe("measurements-storage", () => {
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("successful");
     });
+
+    it("rejects when the update fails, so the outbox can leave the row pending", async () => {
+      insertRow("m1", "pending");
+      const mod = await import("~/shared/db/measurements-storage");
+      sqlite.close();
+      const logSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      await expect(mod.markAsSuccessful("m1")).rejects.toThrow();
+      logSpy.mockRestore();
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -788,6 +852,113 @@ describe("measurements-storage", () => {
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
       expect(rows[0].id).toBe("keep");
+    });
+
+    it("rejects when the delete fails, so the caller can report it", async () => {
+      insertRow("gone", "failed");
+      const mod = await import("~/shared/db/measurements-storage");
+      sqlite.close();
+
+      await expect(mod.removeMeasurement("gone")).rejects.toThrow();
+    });
+  });
+
+  describe("removeMeasurements", () => {
+    it("removes every key of a workbook run in one statement", async () => {
+      insertRow("r1", "pending");
+      insertRow("r2", "failed");
+      insertRow("other", "successful");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.removeMeasurements(["r1", "r2"]);
+
+      const rows = sqlite.prepare("SELECT id FROM measurements").all() as { id: string }[];
+      expect(rows.map((r) => r.id)).toEqual(["other"]);
+    });
+
+    it("is a no-op for an empty key list", async () => {
+      insertRow("keep", "pending");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.removeMeasurements([]);
+
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM measurements").get()).toEqual({ n: 1 });
+    });
+
+    it("rejects when the delete fails, so the caller can report it", async () => {
+      insertRow("r1", "pending");
+      const mod = await import("~/shared/db/measurements-storage");
+      const logSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+      // A closed handle is the cheapest way to make the statement throw.
+      sqlite.close();
+
+      await expect(mod.removeMeasurements(["r1"])).rejects.toThrow();
+      logSpy.mockRestore();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // getMeasurementIdsByRunId
+  // ---------------------------------------------------------------------------
+
+  describe("getMeasurementIdsByRunId", () => {
+    function insertRunRow(id: string, status: "pending" | "failed" | "successful", runId: string) {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements
+           (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key, workbook_run_id)
+           VALUES (?, ?, 'test/topic', ?, 'Test Experiment', 'protocol-1', '2026-03-02T10:00:00.000Z', 0, '[]', 0, '2026-03-02', ?)`,
+        )
+        .run(id, status, compressForStorage({ value: 42 }), runId);
+    }
+
+    it("returns every member id of the run, across all statuses", async () => {
+      insertRunRow("r1", "pending", "run-1");
+      insertRunRow("r2", "failed", "run-1");
+      insertRunRow("r3", "successful", "run-1");
+      insertRunRow("other", "pending", "run-2");
+      insertRow("loose", "pending");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      const ids = await mod.getMeasurementIdsByRunId("run-1");
+
+      expect(ids.sort()).toEqual(["r1", "r2", "r3"]);
+    });
+
+    it("narrows to the requested statuses (upload only wants unsynced)", async () => {
+      insertRunRow("r1", "pending", "run-1");
+      insertRunRow("r2", "failed", "run-1");
+      insertRunRow("r3", "successful", "run-1");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      const ids = await mod.getMeasurementIdsByRunId("run-1", ["pending", "failed"]);
+
+      expect(ids.sort()).toEqual(["r1", "r2"]);
+    });
+
+    it("returns an empty list for an unknown run", async () => {
+      insertRunRow("r1", "pending", "run-1");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      expect(await mod.getMeasurementIdsByRunId("nope")).toEqual([]);
+    });
+
+    it("returns an empty list for the empty run id, the no-run sentinel", async () => {
+      // "" marks every non-run measurement; querying with it must not match them.
+      insertRunRow("r1", "pending", "run-1");
+      insertRunRow("loose", "pending", "");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      expect(await mod.getMeasurementIdsByRunId("")).toEqual([]);
+    });
+
+    it("rejects when the query fails, so the caller doesn't act on nothing", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      sqlite.prepare("DROP TABLE measurements").run();
+      const logSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      await expect(mod.getMeasurementIdsByRunId("run-1")).rejects.toThrow();
+      logSpy.mockRestore();
     });
   });
 
@@ -820,6 +991,16 @@ describe("measurements-storage", () => {
       const rows = sqlite.prepare("SELECT * FROM measurements").all() as any[];
       expect(rows).toHaveLength(1);
       expect(rows[0].id).toBe("f1");
+    });
+
+    it("rejects when the delete fails, so the caller can report it", async () => {
+      insertRow("s1", "successful");
+      const mod = await import("~/shared/db/measurements-storage");
+      sqlite.close();
+      const logSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      await expect(mod.clearMeasurements("successful")).rejects.toThrow();
+      logSpy.mockRestore();
     });
   });
 
@@ -920,6 +1101,16 @@ describe("measurements-storage", () => {
       const rows = sqlite.prepare("SELECT id, status FROM measurements ORDER BY id").all() as any[];
       expect(rows.find((r) => r.id === "target")?.status).toBe("failed");
       expect(rows.find((r) => r.id === "other")?.status).toBe("pending");
+    });
+
+    it("rejects when the update fails, so the outbox can leave the row pending", async () => {
+      insertRow("m1", "pending");
+      const mod = await import("~/shared/db/measurements-storage");
+      sqlite.close();
+      const logSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      await expect(mod.markAsFailed("m1")).rejects.toThrow();
+      logSpy.mockRestore();
     });
   });
 

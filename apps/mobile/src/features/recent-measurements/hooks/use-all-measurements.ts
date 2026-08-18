@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { countMeasurementsByStatus, getMeasurementsList } from "~/shared/db/measurements-storage";
 import type { MeasurementCounts } from "~/shared/db/measurements-storage";
 
@@ -44,9 +44,11 @@ export function useAllMeasurements(filter: MeasurementFilter = "all") {
   // (FlatList, memoized child rows) don't re-render every parent render.
   const measurements = useMemo(() => listQuery.data?.pages.flat() ?? [], [listQuery.data?.pages]);
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.root });
-  };
+  // Stable identity: row-action callbacks hang off this, and a new closure
+  // per render would break the memo on every visible row.
+  const invalidate = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.root });
+  }, [queryClient]);
 
   return {
     measurements,
