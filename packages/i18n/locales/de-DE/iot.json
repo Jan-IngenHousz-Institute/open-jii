@@ -87,7 +87,6 @@
       },
       "comingSoon": {
         "title": "Demnächst verfügbar",
-        "groups": "Organisieren Sie Geräte in Gruppen, die Sie gemeinsam verwalten, bereitstellen und einrichten können.",
         "monitoring": "Verfolgen Sie Gerätekonnektivität, letzte Aktivität und den Zustand der Flotte auf einen Blick.",
         "lineage": "Verfolgen Sie die Identität dieses Geräts bis zu seinen erfassten Messungen.",
         "onboarding": "Onboarden Sie jedes Gerät über seine Detailseite (Tab „Einrichtung“). Bulk-Onboarding aus dieser Ansicht folgt in Kürze."
@@ -219,6 +218,23 @@
         "description": "Versuchen Sie einen anderen Suchbegriff oder Statusfilter.",
         "clear": "Filter zurücksetzen"
       },
+      "bulkDialog": {
+        "open": "Sammelregistrierung",
+        "title": "Geräte gesammelt registrieren",
+        "description": "Registrieren Sie einen Stapel Geräte eines Typs, optional direkt in eine Gruppe.",
+        "serialsLabel": "Seriennummern",
+        "serialsPlaceholder": "Ein Gerät pro Zeile: Seriennummer, oder Seriennummer, Name",
+        "groupLabel": "Gruppe",
+        "groupNone": "Keine Gruppe",
+        "groupExisting": "Bestehende Gruppe",
+        "groupNew": "Neue Gruppe",
+        "groupSelectPlaceholder": "Gruppe auswählen",
+        "groupNamePlaceholder": "z. B. Gewächshaus B",
+        "submit": "Geräte registrieren",
+        "successToast": "{{count}} Geräte registriert",
+        "groupError": "Gruppe: {{error}}",
+        "done": "Fertig"
+      },
       "dialog": {
         "title": "Gerät registrieren",
         "description": "Registrieren Sie ein Hardware-Gerät. In diesem Schritt wird kein Zertifikat ausgestellt.",
@@ -349,6 +365,50 @@
       "detachSuccess": "Gerät vom Experiment entfernt",
       "detachError": "Gerät konnte nicht entfernt werden",
       "loadError": "Die Geräte konnten nicht geladen werden. Bitte erneut versuchen."
+    },
+    "groups": {
+      "addDevices": "Geräte hinzufügen",
+      "addDevicesHint": "Ihre registrierten Geräte, die noch keine Mitglieder sind.",
+      "addDevicesTitle": "Geräte zur Gruppe hinzufügen",
+      "addSelected_one": "{{count}} Gerät hinzufügen",
+      "addSelected_other": "{{count}} Geräte hinzufügen",
+      "backToDevices": "Zurück zu Geräten",
+      "create": "Gruppe erstellen",
+      "createDescription": "Gruppen organisieren Geräte; die Mitgliedschaft ändert nichts an den Geräten selbst.",
+      "createTitle": "Gerätegruppe erstellen",
+      "dangerZone": {
+        "title": "Gefahrenzone",
+        "deleteLabel": "Diese Gruppe löschen",
+        "deleteDescription": "Entfernt die Gruppe endgültig. Die Geräte selbst sind nicht betroffen. Dies kann nicht rückgängig gemacht werden."
+      },
+      "delete": "Gruppe löschen",
+      "deleteHint": "\"{{name}}\" wird gelöscht. Die Geräte selbst sind nicht betroffen.",
+      "deleteTitle": "Diese Gruppe löschen?",
+      "descriptionLabel": "Beschreibung",
+      "deviceColumn": "Gerät",
+      "emptyHint": "Erstellen Sie eine Gruppe, um Geräte zu organisieren.",
+      "emptyTitle": "Noch keine Gruppen",
+      "familyColumn": "Familie",
+      "loadError": "Gerätegruppen konnten nicht geladen werden.",
+      "memberCount_one": "{{count}} Gerät",
+      "memberCount_other": "{{count}} Geräte",
+      "meta": {
+        "members": "Geräte",
+        "created": "Erstellt"
+      },
+      "nameLabel": "Name",
+      "namePlaceholder": "z. B. Gewächshaus A",
+      "noAddableDevices": "Alle Ihre Geräte sind bereits in dieser Gruppe.",
+      "noMembers": "Noch keine Geräte in dieser Gruppe.",
+      "remove": "Entfernen",
+      "sectionHint": "Geräte in Gruppen organisieren, gemeinsam überwachen und onboarden.",
+      "statusColumn": "Status",
+      "pageTitle": "Gerätegruppe",
+      "comingSoon": {
+        "credentials": "Zertifikate für alle Geräte dieser Gruppe gemeinsam ausstellen, rotieren und widerrufen.",
+        "monitoring": "Gruppenstatus auf einen Blick: wie viele Geräte online, still oder abwesend sind.",
+        "onboarding": "Die gesamte Gruppe auf Experimente onboarden und alle Konfigurationen gemeinsam herunterladen."
+      }
     }
   }
 }

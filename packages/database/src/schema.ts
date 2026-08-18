@@ -692,6 +692,7 @@ export const resourceTypeEnum = pgEnum("resource_type", [
   "protocol",
   "workbook",
   "device",
+  "device_group",
 ]);
 export const granteeTypeEnum = pgEnum("grantee_type", ["user", "organization", "team"]);
 
@@ -807,5 +808,49 @@ export const experimentDevices = pgTable(
   (t) => [
     primaryKey({ columns: [t.experimentId, t.deviceId] }),
     index("experiment_devices_device_idx").on(t.deviceId),
+  ],
+);
+
+// Device groups: user-defined organization of devices. Platform-native only:
+// no AWS thing-group mirroring, the thing-group quota stays reserved for the
+// parked broker-enforcement design.
+export const deviceGroups = pgTable(
+  "device_groups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "cascade",
+    }),
+    visibility: visibilityEnum("visibility").default("private").notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    index("device_groups_created_by_idx").on(t.createdBy),
+    index("device_groups_organization_id_idx").on(t.organizationId),
+  ],
+);
+
+export const deviceGroupMembers = pgTable(
+  "device_group_members",
+  {
+    groupId: uuid("group_id")
+      .references(() => deviceGroups.id, { onDelete: "cascade" })
+      .notNull(),
+    deviceId: uuid("device_id")
+      .references(() => iotDevices.id, { onDelete: "cascade" })
+      .notNull(),
+    addedBy: uuid("added_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    primaryKey({ columns: [t.groupId, t.deviceId] }),
+    index("device_group_members_device_idx").on(t.deviceId),
   ],
 );

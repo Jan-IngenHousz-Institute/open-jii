@@ -104,6 +104,40 @@ export const zRegisterIotDeviceBody = z.object({
 
 export const zRegisterIotDeviceResponse = zIotDevice;
 
+// Bulk registration: one hardware batch (single family), many serials. Grouping
+// is optional and either joins an existing group or creates one around the batch.
+export const zBulkRegisterIotDevicesBody = z.object({
+  devices: z
+    .array(zRegisterIotDeviceBody.pick({ serialNumber: true, name: true }))
+    .min(1)
+    .max(100)
+    .refine(
+      (devices) => new Set(devices.map((device) => device.serialNumber)).size === devices.length,
+      { message: "Serial numbers must be unique within the batch" },
+    ),
+  deviceType: zRegisterableDeviceType,
+  organizationId: z.string().uuid().optional(),
+  group: z
+    .union([
+      z.object({ groupId: z.string().uuid() }),
+      z.object({ name: z.string().trim().min(1).max(255) }),
+    ])
+    .optional(),
+});
+
+/** Per-serial outcome; the batch itself succeeds even when single rows fail. */
+export const zBulkRegisteredIotDevice = z.object({
+  serialNumber: z.string(),
+  device: zIotDevice.nullable(),
+  error: z.string().nullable(),
+});
+
+export const zBulkRegisterIotDevicesResult = z.object({
+  devices: z.array(zBulkRegisteredIotDevice),
+  groupId: z.string().uuid().nullable(),
+  groupError: z.string().nullable(),
+});
+
 // Silent per-phone self-registration: the app calls this on login with its
 // persisted install UUID; the route is an idempotent ensure, not a create.
 export const zEnsureMobileDeviceBody = z.object({
@@ -378,6 +412,9 @@ export type IotDeviceActivity = z.infer<typeof zIotDeviceActivity>;
 export type IotDeviceDetail = z.infer<typeof zIotDeviceDetail>;
 export type IotDeviceList = z.infer<typeof zIotDeviceList>;
 export type RegisterIotDeviceBody = z.infer<typeof zRegisterIotDeviceBody>;
+export type BulkRegisterIotDevicesBody = z.infer<typeof zBulkRegisterIotDevicesBody>;
+export type BulkRegisteredIotDevice = z.infer<typeof zBulkRegisteredIotDevice>;
+export type BulkRegisterIotDevicesResult = z.infer<typeof zBulkRegisterIotDevicesResult>;
 export type EnsureMobileDeviceBody = z.infer<typeof zEnsureMobileDeviceBody>;
 export type IotDevicePathParam = z.infer<typeof zIotDevicePathParam>;
 export type IssueIotCredentialsResponse = z.infer<typeof zIssueIotCredentialsResponse>;

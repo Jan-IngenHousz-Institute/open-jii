@@ -7,6 +7,7 @@ export const RESOURCE_ROUTE_SEGMENTS: Record<SharingResourceType, string> = {
   protocol: "protocols",
   workbook: "workbooks",
   device: "devices",
+  device_group: "devices/groups",
 };
 
 /** The resource's own detail route — the Overview of its tab strip. */

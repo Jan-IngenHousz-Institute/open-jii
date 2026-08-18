@@ -11,6 +11,11 @@
  */
 import type { ResourceCapabilities } from "@repo/api/domains/authorization/capabilities.schema";
 import type {
+  DeviceGroupDetail,
+  DeviceGroupListItem,
+  DeviceGroupMember,
+} from "@repo/api/domains/device-group/device-group.schema";
+import type {
   ExperimentDashboardLayout,
   ExperimentDashboardWidget,
   ExperimentDashboard,
@@ -896,4 +901,49 @@ export function resetFactories() {
   dashboardSeq = 0;
   dashboardWidgetSeq = 0;
   grantSeq = 0;
+  deviceGroupSeq = 0;
+}
+
+let deviceGroupSeq = 0;
+
+export function createDeviceGroup(
+  overrides: Partial<DeviceGroupListItem> = {},
+): DeviceGroupListItem {
+  deviceGroupSeq++;
+  return {
+    id: crypto.randomUUID(),
+    name: `Group ${String(deviceGroupSeq)}`,
+    description: null,
+    organizationId: crypto.randomUUID(),
+    visibility: "private",
+    createdBy: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    memberCount: 0,
+    ...overrides,
+  };
+}
+
+export function createDeviceGroupDetail(
+  overrides: Partial<DeviceGroupDetail> = {},
+): DeviceGroupDetail {
+  return {
+    ...createDeviceGroup(),
+    capabilities: createCapabilities(),
+    ...overrides,
+  };
+}
+
+export function createDeviceGroupMember(
+  overrides: Partial<DeviceGroupMember> = {},
+): DeviceGroupMember {
+  return {
+    deviceId: crypto.randomUUID(),
+    name: null,
+    serialNumber: "AA:BB:CC:DD",
+    deviceType: "ambyte",
+    status: "active",
+    addedAt: new Date().toISOString(),
+    ...overrides,
+  };
 }

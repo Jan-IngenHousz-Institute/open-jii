@@ -13,6 +13,7 @@ import { resolveResourceCapabilities } from "../../authorization/resource-capabi
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { BulkRegisterIotDevicesUseCase } from "../application/use-cases/bulk-register-iot-devices/bulk-register-iot-devices";
 import { DeleteIotDeviceUseCase } from "../application/use-cases/delete-iot-device/delete-iot-device";
 import { EnsureMobileDeviceUseCase } from "../application/use-cases/ensure-mobile-device/ensure-mobile-device";
 import { GetDeviceMonitoringUseCase } from "../application/use-cases/get-device-monitoring/get-device-monitoring";
@@ -34,6 +35,7 @@ export class IotDeviceController {
     @Inject(ANALYTICS_PORT)
     private readonly analyticsPort: AnalyticsPort,
     private readonly registerIotDeviceUseCase: RegisterIotDeviceUseCase,
+    private readonly bulkRegisterIotDevicesUseCase: BulkRegisterIotDevicesUseCase,
     private readonly ensureMobileDeviceUseCase: EnsureMobileDeviceUseCase,
     private readonly listIotDevicesUseCase: ListIotDevicesUseCase,
     private readonly getIotDeviceUseCase: GetIotDeviceUseCase,
@@ -93,6 +95,29 @@ export class IotDeviceController {
       }
 
       return throwOrpcFailure(result, this.logger, "registerIotDevice");
+    });
+  }
+
+  @CanCreateInOrg()
+  @Implement(iotContract.bulkRegisterIotDevices)
+  bulkRegisterIotDevices(@Session() session: UserSession) {
+    return implement(iotContract.bulkRegisterIotDevices).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("bulkRegisterIotDevices");
+
+      const result = await this.bulkRegisterIotDevicesUseCase.execute(input, session.user.id);
+
+      if (result.isSuccess()) {
+        const { devices, ...rest } = result.value;
+        return {
+          ...rest,
+          devices: devices.map((row) => ({
+            ...row,
+            device: row.device === null ? null : formatDates(row.device),
+          })),
+        };
+      }
+
+      return throwOrpcFailure(result, this.logger, "bulkRegisterIotDevices");
     });
   }
 

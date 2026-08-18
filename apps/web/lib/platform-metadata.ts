@@ -102,6 +102,15 @@ const fetchDeviceSummary = cache(async (deviceId: string) => {
   }
 });
 
+const fetchDeviceGroupSummary = cache(async (groupId: string) => {
+  try {
+    const client = await createServerOrpcClient();
+    return await client.deviceGroups.getDeviceGroup({ groupId });
+  } catch {
+    return null;
+  }
+});
+
 // --- experiment overview + sections -----------------------------------------
 
 /** Localized experiment section labels, mapped to `t()` keys. */
@@ -360,6 +369,43 @@ export async function buildDeviceMetadata({
   // own label so an inaccessible device never surfaces as a bare marketing title
   // and never leaks a name.
   const lead = identity ?? (section === "overview" ? t("iot:iot.protocolRunner.device") : null);
+
+  return { title: joinTitleParts([sectionLabel, lead]) };
+}
+
+// --- device groups ----------------------------------------------------------
+
+/** Group tab labels reuse the device strip's copy (the strips are twins). */
+type DeviceGroupSection =
+  | "overview"
+  | "collaborators"
+  | "credentials"
+  | "monitoring"
+  | "onboarding";
+
+const DEVICE_GROUP_SECTION_KEY: Record<Exclude<DeviceGroupSection, "overview">, string> = {
+  collaborators: "iot:iot.devices.detailTabs.collaborators",
+  credentials: "iot:iot.devices.detailTabs.credentials",
+  monitoring: "iot:iot.devices.detailTabs.monitoring",
+  onboarding: "iot:iot.devices.detailTabs.onboarding",
+};
+
+/** Title for a device-group overview or section route; see {@link buildDeviceMetadata}. */
+export async function buildDeviceGroupMetadata({
+  locale,
+  groupId,
+  section = "overview",
+}: {
+  locale: string;
+  groupId: string;
+  section?: DeviceGroupSection;
+}): Promise<Metadata> {
+  const { t } = await initTranslations({ locale, namespaces: ["iot"] });
+  const group = await fetchDeviceGroupSummary(groupId);
+
+  const sectionLabel = section === "overview" ? null : t(DEVICE_GROUP_SECTION_KEY[section]);
+  const lead =
+    nonEmpty(group?.name) ?? (section === "overview" ? t("iot:iot.groups.pageTitle") : null);
 
   return { title: joinTitleParts([sectionLabel, lead]) };
 }

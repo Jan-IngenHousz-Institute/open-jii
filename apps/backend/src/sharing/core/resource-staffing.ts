@@ -8,6 +8,7 @@ import {
   eq,
   experiments,
   inArray,
+  deviceGroups,
   iotDevices,
   isNotNull,
   macros,
@@ -35,7 +36,8 @@ type StaffedResourceTable =
   | typeof macros
   | typeof protocols
   | typeof workbooks
-  | typeof iotDevices;
+  | typeof iotDevices
+  | typeof deviceGroups;
 
 /**
  * Where each staffed type keeps its id and owning organization — the single
@@ -52,6 +54,7 @@ const STAFFED_RESOURCE_TABLES: Record<SharingResourceType, StaffedResourceTable>
   protocol: protocols,
   workbook: workbooks,
   device: iotDevices,
+  device_group: deviceGroups,
 };
 
 /**
