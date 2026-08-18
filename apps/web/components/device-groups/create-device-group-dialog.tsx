@@ -4,7 +4,7 @@ import { useCreateDeviceGroup } from "@/hooks/device-groups/use-device-groups";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import type { z } from "zod";
 
 import { zCreateDeviceGroupBody } from "@repo/api/domains/device-group/device-group.schema";
 import { useTranslation } from "@repo/i18n";
@@ -59,7 +59,8 @@ export function CreateDeviceGroupDialog({
   });
 
   function onSubmit(values: FormValues) {
-    createGroup.mutate({ name: values.name, description: values.description || undefined });
+    const description = values.description === "" ? undefined : values.description;
+    createGroup.mutate({ name: values.name, description });
   }
 
   return (

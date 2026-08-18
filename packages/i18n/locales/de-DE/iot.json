@@ -377,7 +377,12 @@
       "remove": "Entfernen",
       "sectionHint": "Geräte in Gruppen organisieren, gemeinsam überwachen und onboarden.",
       "statusColumn": "Status",
-      "pageTitle": "Gerätegruppe"
+      "pageTitle": "Gerätegruppe",
+      "comingSoon": {
+        "credentials": "Zertifikate für alle Geräte dieser Gruppe gemeinsam ausstellen, rotieren und widerrufen.",
+        "monitoring": "Gruppenstatus auf einen Blick: wie viele Geräte online, still oder abwesend sind.",
+        "onboarding": "Die gesamte Gruppe auf Experimente onboarden und alle Konfigurationen gemeinsam herunterladen."
+      }
     }
   }
 }

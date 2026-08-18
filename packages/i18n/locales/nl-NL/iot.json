@@ -377,7 +377,12 @@
       "remove": "Verwijderen",
       "sectionHint": "Organiseer apparaten in groepen die u samen kunt monitoren en onboarden.",
       "statusColumn": "Status",
-      "pageTitle": "Apparaatgroep"
+      "pageTitle": "Apparaatgroep",
+      "comingSoon": {
+        "credentials": "Certificaten voor alle apparaten in deze groep tegelijk uitgeven, roteren en intrekken.",
+        "monitoring": "Groepsstatus in één oogopslag: hoeveel apparaten online, stil of afwezig zijn.",
+        "onboarding": "De hele groep op experimenten onboarden en alle configuraties samen downloaden."
+      }
     }
   }
 }

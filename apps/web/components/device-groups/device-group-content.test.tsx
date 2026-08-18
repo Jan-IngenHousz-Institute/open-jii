@@ -40,7 +40,6 @@ describe("DeviceGroupContent", () => {
 
     render(<DeviceGroupContent />);
 
-    expect(await screen.findByText("Greenhouse A")).toBeInTheDocument();
     // Unnamed devices lead with their identifier, like everywhere else.
     expect(await screen.findByText(/E8:F6:0A/)).toBeInTheDocument();
     expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
@@ -60,7 +59,7 @@ describe("DeviceGroupContent", () => {
 
     render(<DeviceGroupContent />);
 
-    expect(await screen.findByText("Greenhouse A")).toBeInTheDocument();
+    expect(await screen.findByText(/AA:BB:CC:DD/)).toBeInTheDocument();
     expect(screen.queryByText("iot.groups.addDevices")).not.toBeInTheDocument();
     expect(screen.queryByText("iot.groups.remove")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("iot.groups.delete")).not.toBeInTheDocument();

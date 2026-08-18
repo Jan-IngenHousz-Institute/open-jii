@@ -377,7 +377,12 @@
       "remove": "Remove",
       "sectionHint": "Organize devices into groups you can monitor and onboard together.",
       "statusColumn": "Status",
-      "pageTitle": "Device group"
+      "pageTitle": "Device group",
+      "comingSoon": {
+        "credentials": "Rotate, issue, and revoke credentials for every device in this group at once.",
+        "monitoring": "Group health at a glance: how many devices are online, silent, or missing.",
+        "onboarding": "Onboard the whole group onto experiments and download all configs together."
+      }
     }
   }
 }

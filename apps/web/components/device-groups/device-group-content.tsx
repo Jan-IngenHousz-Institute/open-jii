@@ -9,8 +9,7 @@ import {
 } from "@/hooks/device-groups/use-device-groups";
 import { useLocale } from "@/hooks/useLocale";
 import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
-import { ArrowLeft, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -71,49 +70,28 @@ export function DeviceGroupContent() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <div>
-        <Link
-          href={`/${locale}/platform/devices`}
-          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {t("iot.groups.backToDevices")}
-        </Link>
-      </div>
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-medium">{group.name}</h2>
-          {group.description !== null && (
-            <p className="text-muted-foreground text-sm">{group.description}</p>
-          )}
-          <p className="text-muted-foreground mt-1 text-xs tabular-nums">
-            {t("iot.groups.memberCount", { count: group.memberCount })}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {canContribute && (
-            <Button
-              onClick={() => {
-                setAddOpen(true);
-              }}
-            >
-              {t("iot.groups.addDevices")}
-            </Button>
-          )}
-          {group.capabilities.canManage && (
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label={t("iot.groups.delete")}
-              onClick={() => {
-                setDeleteOpen(true);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {canContribute && (
+          <Button
+            onClick={() => {
+              setAddOpen(true);
+            }}
+          >
+            {t("iot.groups.addDevices")}
+          </Button>
+        )}
+        {group.capabilities.canManage && (
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label={t("iot.groups.delete")}
+            onClick={() => {
+              setDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {(members ?? []).length === 0 ? (
