@@ -80,7 +80,7 @@ def clean_data():
                     r"CASE WHEN size(split(parsed_data.topic, '/')) = 8 "
                     r"THEN element_at(split(parsed_data.topic, '/'), 8) ELSE NULL END"
                 ),
-                F.col("payload_protocol_id"),
+                F.col("parsed_data.protocol_id"),
             )
         )
         # Present on new workbook-flow uploads. Historical, imported, and
