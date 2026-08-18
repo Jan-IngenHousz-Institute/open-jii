@@ -1,4 +1,4 @@
-import { compactTimestamp, parseDatabricksTimestamp } from "../../../../common/utils/datetime";
+import { compactTimestamp, parseDatabricksTimestamp } from "../../common/utils/datetime";
 
 const MAX_SEGMENT_LENGTH = 60;
 
@@ -28,6 +28,7 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/** Extension from the basename only, so a dot in a parent directory cannot leak in. */
 function extensionOf(filePath: string): string {
   const fileName = filePath.split("/").pop() ?? "";
   const match = /\.([a-z0-9]{1,10})$/i.exec(fileName);
