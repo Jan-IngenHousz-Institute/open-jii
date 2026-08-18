@@ -10,7 +10,6 @@ verify them against the code.
 | `apps/web`           | Platform UI. Auth-gated; talks to the backend through the shared contracts.                                                  | `apps/web/README.md`, `apps/web/TESTING.md`                         |
 | `apps/backend`       | The API on `:3020`. Boots through a long `getOrThrow` config list.                                                           | `apps/backend/README.md`, `apps/backend/.env.example`               |
 | `apps/mobile`        | Field companion. Android is the only published platform — USB serial and Bluetooth Classic rule out iOS for data collection. | `apps/mobile/CONTEXT.md` (domain glossary), `apps/mobile/README.md` |
-| `apps/e2e`           | Browser tests driving the real running stack.                                                                                | `apps/e2e/README.md`                                                |
 | `apps/data`          | Databricks pipelines and notebooks. Separate Python toolchain, outside the pnpm dev loop.                                    | `apps/data/README.md`                                               |
 | `apps/macro-sandbox` | Sandboxed runtimes that execute user-authored macros.                                                                        | `apps/macro-sandbox/README.md`                                      |
 | `apps/docs`          | The public documentation site.                                                                                               | `apps/docs/README.md`                                               |
@@ -51,20 +50,15 @@ unreachable endpoints deliberately. Assert on page chrome, not on that data.
 
 Task guides live in `.agents/skills/<name>/SKILL.md`. They are plain markdown and tool-agnostic:
 read the file when the situation matches. `.claude/skills/` holds symlinks to the same files so
-Claude Code auto-discovers them, but the files under `.agents/` are the source.
+Claude Code auto-discovers them, but the files under `.agents/` are the source. The symlink layer
+assumes the team's supported macOS/Linux development environments.
 
-| Skill                       | Read it when                                                               |
-| --------------------------- | -------------------------------------------------------------------------- |
-| `openjii-local-stack`       | Preparing a local checkout, seeding, or getting a dev session cookie.      |
-| `openjii-web-e2e`           | Writing or running browser tests against the platform UI.                  |
-| `openjii-mobile-device`     | Getting a dev build onto a real Android phone, over cable or Wi-Fi.        |
-| `openjii-mobile-control`    | Driving a connected phone to verify or reproduce mobile behaviour.         |
-| `openjii-docs-update`       | A change alters what a user sees or does, so docs and screenshots follow.  |
-| `diagnosing-bugs`           | Chasing a hard bug or a performance regression.                            |
-| `resolving-merge-conflicts` | A merge or rebase is mid-conflict.                                         |
-| `writing-for-agents`        | Writing or editing a skill, this file, or anything else an agent consumes. |
-
-The last three are vendored from an external repo. See `.agents/skills/ATTRIBUTION.md`.
+| Skill                    | Read it when                                                              |
+| ------------------------ | ------------------------------------------------------------------------- |
+| `openjii-local-stack`    | Preparing a local checkout, seeding, or getting a dev session cookie.     |
+| `openjii-mobile-device`  | Getting a dev build onto a real Android phone, over cable or Wi-Fi.       |
+| `openjii-mobile-control` | Driving a connected phone to verify or reproduce mobile behaviour.        |
+| `openjii-docs-update`    | A change alters what a user sees or does, so docs and screenshots follow. |
 
 ## Working on mobile
 
@@ -78,21 +72,24 @@ If a change alters what a user sees or does, `apps/docs/content` changes in the 
 screenshot showing the affected screen is re-captured rather than reused. The
 `openjii-docs-update` skill covers where things live and the privacy rules on captures.
 
-A `Stop` hook in `.claude/settings.json` prints a reminder when `apps/web` or `apps/mobile` change
-without `apps/docs/content`. It is a nudge, not a gate, and it only reaches Claude Code. Per-machine
-overrides belong in `.claude/settings.local.json`, which stays untracked.
+A `Stop` hook in `.claude/settings.json` gives Claude Code one reminder per session when `apps/web`
+or `apps/mobile` change without `apps/docs/content`. It is a nudge, not a gate, and it only reaches
+Claude Code. Per-machine overrides belong in `.claude/settings.local.json`, which stays untracked.
 
 ## main is protected
 
-A `PreToolUse` hook blocks destructive git while you are on `main`, and blocks pushing to `main`
-from anywhere. Work on a branch and open a PR. On your own branches nothing is restricted:
-force-push, reset and clean as you like.
+A `PreToolUse` hook is a local seatbelt alongside the authoritative remote branch protection: it
+blocks destructive git while you are on `main`, and blocks pushing to `main` from anywhere. Work
+on a branch and open a PR. On your own branches nothing is restricted: force-push, reset and clean
+as you like.
 
 ## Conventions
 
 - Define API changes contracts-first in `packages/api`, then implement both sides against them.
-- `@repo/api` is consumed from build output, so rebuild workspace packages after contract or schema
-  changes. `@repo/ui` is consumed from source and needs no rebuild.
+- `@repo/api` and `@repo/analytics` are consumed from build output, so rebuild workspace packages
+  after changing them. Analytics types point at `src/` while runtime code points at `dist/`, so the
+  IDE can look current while the running code is stale. `@repo/ui` is consumed from source and needs
+  no rebuild.
 - No barrel files. Import from the owning module's explicit path.
 - Conventional commit subjects; keep each commit focused.
 - Comments are rare here. Explain constraints the code cannot express, nothing else.

@@ -1,14 +1,7 @@
-# Vendored skills
+# Third-party code
 
-These skills are copied from [mattpocock/skills](https://github.com/mattpocock/skills) and are
-used under the MIT licence. They are vendored rather than installed so the repo stays the single
-source, and they are kept close to upstream: prefer pulling a fresh copy over editing in place.
-
-- `diagnosing-bugs`
-- `resolving-merge-conflicts`
-- `writing-for-agents` (with `SKILL-MECHANICS.md`)
-
-Everything else under `.agents/skills` is openJII's own.
+`.claude/hooks/protect-main.sh` is adapted from the `git-guardrails-claude-code` skill in
+[mattpocock/skills](https://github.com/mattpocock/skills) and is used under the MIT licence.
 
 ```
 MIT License
