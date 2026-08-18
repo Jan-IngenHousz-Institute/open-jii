@@ -12,7 +12,7 @@ import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import type {
   UpdateProtocolRequestBody,
   JsonValue,
-  SensorFamily,
+  ProtocolFamily,
 } from "@repo/api/domains/protocol/protocol.schema";
 import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
@@ -56,7 +56,7 @@ interface ProtocolDetailsCardProps {
   initialName: string;
   initialDescription: string;
   initialCode: JsonValue;
-  initialFamily: SensorFamily;
+  initialFamily: ProtocolFamily;
 }
 
 // react-hook-form's utility types (DeepPartial, FieldErrors) cannot recurse
@@ -64,7 +64,7 @@ interface ProtocolDetailsCardProps {
 // resolver schema still validates it on submit.
 type ProtocolDetailsFormValues = Omit<UpdateProtocolRequestBody, "code"> & {
   name: string;
-  family: SensorFamily;
+  family: ProtocolFamily;
   code?: unknown;
 };
 

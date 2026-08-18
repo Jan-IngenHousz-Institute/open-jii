@@ -1,6 +1,7 @@
 import { onlineManager, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useSession } from "~/features/auth/hooks/use-session";
+import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
 import { useAppState } from "~/shared/ui/hooks/use-app-state";
 
@@ -20,6 +21,7 @@ export function useOfflineDataSync(): void {
       onlineManager.subscribe(() => {
         if (onlineManager.isOnline() && userIdRef.current) {
           void prefetchOfflineData(queryClient, userIdRef.current, { throttle: true });
+          void ensureDeviceRegistered({ throttle: true });
         }
       }),
     [queryClient],
@@ -28,6 +30,7 @@ export function useOfflineDataSync(): void {
   useAppState((next) => {
     if (next === "active" && onlineManager.isOnline() && userIdRef.current) {
       void prefetchOfflineData(queryClient, userIdRef.current, { throttle: true });
+      void ensureDeviceRegistered({ throttle: true });
     }
   });
 }

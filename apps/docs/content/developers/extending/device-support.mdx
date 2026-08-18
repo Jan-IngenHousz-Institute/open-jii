@@ -54,6 +54,9 @@ Two things intentionally do **not** change per family:
 | `minipar`   | MiniPAR   | serial                        | no          | yes, protocol JSON sent directly                | `MiniParDriver`       |
 | `ambyte`    | Ambyte    | serial                        | no          | generic compatibility path for protocol testing | `GenericDeviceDriver` |
 | `generic`   | none      | serial, BLE                   | yes         | `SET_CONFIG` / `RUN` / `GET_DATA` sequence      | `GenericDeviceDriver` |
+| `mobile`    | none      | none                          | no          | n/a, the phone runs the app itself              | none                  |
+
+The `mobile` family is special: phones register themselves silently when someone signs into the mobile app (one Thing per install, Cognito-authenticated, no certificate lifecycle), so it never appears in the manual registration dialog, has no credentials or onboarding surface, and cannot be selected as a protocol family.
 
 ## Adding a new family
 

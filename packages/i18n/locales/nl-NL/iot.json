@@ -154,6 +154,8 @@
         "availabilityHint": "Connectiviteit per interval in de gekozen periode, op dezelfde tijdas als de data eronder.",
         "availability": "Beschikbaarheid",
         "uptimeLabel": "Beschikbaarheid",
+        "sessionsLabel": "Sessies",
+        "mobileSessionsNote": "Telefoons maken alleen verbinding wanneer de app geopend is",
         "uptimeWindow": "{{from}} tot {{to}}",
         "outages": "Storingen",
         "sessions": "Sessies",

@@ -22,6 +22,8 @@ const DEVICE_TABS = [
 
 interface IotDeviceDetailTabsProps {
   deviceId: string;
+  /** Phones have no certificate lifecycle and no config to deliver. */
+  isMobileFamily: boolean;
   /** Hides a Collaborators route that would immediately redirect without share/leave access. */
   canShare: boolean;
   /** `capabilities.canLeave`: the caller holds a direct grant they could give up. */
@@ -37,6 +39,7 @@ interface IotDeviceDetailTabsProps {
  */
 export function IotDeviceDetailTabs({
   deviceId,
+  isMobileFamily,
   canShare,
   canLeave,
   canManage,
@@ -49,7 +52,8 @@ export function IotDeviceDetailTabs({
   const basePath = `/${locale}/platform/devices/${deviceId}`;
   const tabs = DEVICE_TABS.filter((tab) => {
     if (tab.value === "collaborators") return canShare || canLeave;
-    if (tab.value === "credentials") return canManage;
+    if (tab.value === "credentials") return canManage && !isMobileFamily;
+    if (tab.value === "onboarding") return !isMobileFamily;
     return true;
   });
   // Match all routes first so a filtered-out tab does not highlight Overview.

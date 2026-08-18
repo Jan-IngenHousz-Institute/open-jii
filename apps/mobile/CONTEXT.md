@@ -22,7 +22,7 @@ There is no `uploading` status — in-flight state lives in the Outbox's in-memo
 
 ### Topic
 
-The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMeasurementMqttTopic({ experimentId, protocolId })`. The `protocolId` value `"questions"` is a sentinel for question-only uploads (no device sample).
+The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMeasurementMqttTopic({ experimentId })` on the lean 7-segment ingest shape: the shared `@repo/api` prefix transform plus `mobile/{appVersion}/{thingName}`, where the thing name is this phone's registered device identity (also the MQTT client id). Protocol attribution rides in the payload as `protocol_id`; the value `"questions"` is a sentinel for question-only uploads (no device sample). Topics are frozen per row at save time, so rows queued by older builds keep their legacy 8-segment topics and drain through the transitional channel.
 
 ### Workbook run
 
