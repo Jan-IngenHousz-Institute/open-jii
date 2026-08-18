@@ -746,6 +746,9 @@ locals {
         "iot:ListTagsForResource",
         # Endpoint (data source)
         "iot:DescribeEndpoint",
+        # Fleet indexing (account-level singleton; update + read for refresh)
+        "iot:UpdateIndexingConfiguration",
+        "iot:GetIndexingConfiguration",
         # Topic rule listing (Terraform provider reads)
         "iot:ListTopicRules",
       ]

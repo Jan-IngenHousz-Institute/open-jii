@@ -137,7 +137,9 @@ resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
           "iot:ListThingPrincipals",
           "iot:UpdateCertificate",
           # Resolves the MQTT broker host handed to a device during onboarding.
-          "iot:DescribeEndpoint"
+          "iot:DescribeEndpoint",
+          # Fleet-indexing connectivity lookups for device list/detail pages.
+          "iot:SearchIndex"
         ]
         Resource = "*"
       }

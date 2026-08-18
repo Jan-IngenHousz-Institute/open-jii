@@ -31,6 +31,8 @@ export function useQuestionsUpload() {
       questions,
       commentText,
       flagType,
+      workbookRunId,
+      workbookVersionId,
     }: {
       timestamp: string;
       timezone: string;
@@ -40,6 +42,8 @@ export function useQuestionsUpload() {
       questions: AnswerData[];
       commentText?: string;
       flagType?: ExperimentAnnotationFlagType | null;
+      workbookRunId: string;
+      workbookVersionId?: string;
     }) => {
       const topic = getMeasurementMqttTopic({ experimentId });
 
@@ -53,6 +57,8 @@ export function useQuestionsUpload() {
         timezone,
         user_id: userId,
         protocol_id: QUESTIONS_PROTOCOL_ID,
+        workbook_run_id: workbookRunId,
+        ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
         annotations: buildAnnotations(commentText, flagType),
         ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
       };

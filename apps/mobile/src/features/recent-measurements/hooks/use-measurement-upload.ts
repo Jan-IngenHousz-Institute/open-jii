@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
-import { v4 as uuidv4 } from "uuid";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
@@ -57,6 +56,8 @@ interface SharedUploadArgs {
   questions: AnswerData[];
   commentText?: string;
   workbookVersionId?: string;
+  /** Stable UUID for the complete workbook attempt, across sequential nodes. */
+  workbookRunId: string;
 }
 
 export function useMeasurementUpload() {
@@ -80,6 +81,7 @@ export function useMeasurementUpload() {
       questions,
       commentText,
       workbookVersionId,
+      workbookRunId,
     }: SharedUploadArgs & {
       results: {
         rawMeasurement: any;
@@ -105,12 +107,6 @@ export function useMeasurementUpload() {
       if (results.length === 0) {
         throw new Error("No measurements to upload");
       }
-
-      // Measurements taken together ARE one run: every multi-device round is
-      // stamped with one shared workbook_run_id. Each row is still its own
-      // MQTT message in the ordinary envelope (see CONTEXT.md: Workbook run),
-      // published on ITS protocol's topic when the round was heterogeneous.
-      const workbookRunId = results.length > 1 ? uuidv4() : undefined;
 
       // One fix per round: all devices measured at the same physical spot.
       const location = await getMeasurementLocation();

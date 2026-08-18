@@ -1,5 +1,9 @@
 import { MessageSquare, ChevronDown, Trash2, Download, Flag } from "lucide-react";
 import React from "react";
+import {
+  parseAnnotations,
+  groupAnnotations,
+} from "~/components/data-table/cells/annotations/data-table-annotations-cell";
 
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { useTranslation } from "@repo/i18n";
@@ -11,11 +15,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
-
-import {
-  parseAnnotations,
-  groupAnnotations,
-} from "../table-cells/annotations/experiment-data-table-annotations-cell";
 
 interface BulkActionsBarProps {
   rowIds: string[];

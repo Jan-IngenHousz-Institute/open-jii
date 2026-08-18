@@ -45,7 +45,24 @@ export const zIotDevice = z.object({
   updatedAt: z.string().datetime(),
 });
 
-export const zIotDeviceList = z.array(zIotDevice);
+/**
+ * Broker connectivity from AWS Fleet Indexing. `lastSeenAt` is the timestamp of
+ * the last connectivity state change (null when the thing was never indexed as
+ * connected). The whole object is null when the index is unavailable or still
+ * building; consumers render that as "unknown", never as an error.
+ */
+export const zDeviceConnectivity = z.object({
+  connected: z.boolean(),
+  lastSeenAt: z.string().datetime().nullable(),
+});
+
+// Only the list and detail routes carry connectivity; register/revoke keep the
+// plain shape so their handlers never depend on the fleet index.
+export const zIotDeviceWithConnectivity = zIotDevice.extend({
+  connectivity: zDeviceConnectivity.nullable(),
+});
+
+export const zIotDeviceList = z.array(zIotDeviceWithConnectivity);
 
 /**
  * A single device plus the caller's effective capabilities on it. Only the detail
@@ -56,7 +73,7 @@ export const zIotDeviceList = z.array(zIotDevice);
  * is what the credentials surface and the danger zone hang on, since on a device
  * "manage" means issuing, rotating and revoking real AWS certificates.
  */
-export const zIotDeviceDetail = zIotDevice.extend({
+export const zIotDeviceDetail = zIotDeviceWithConnectivity.extend({
   capabilities: zResourceCapabilities,
 });
 
@@ -209,6 +226,123 @@ export const zDeviceExperiment = zExperiment
 
 export const zDeviceExperimentList = z.array(zDeviceExperiment);
 
+/**
+ * Pipeline-computed last data arrival; lags by cadence. A null `lastDataAt`
+ * means never landed only while `pipelineUnavailable` is false; a failed
+ * lookup means unknown, and no device-health warning may fire on it.
+ */
+export const zIotDeviceActivity = z.object({
+  lastDataAt: z.string().datetime().nullable(),
+  pipelineUnavailable: z.boolean(),
+});
+
+// --- Device monitoring ---
+
+export const zMonitoringBucket = z.enum(["hour", "day"]);
+
+// The monitoring dashboard's range input: one query window plus its bucket.
+export const zMonitoringRangeQuery = z
+  .object({
+    deviceId: z.string().uuid(),
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+    bucket: zMonitoringBucket,
+  })
+  .refine((range) => new Date(range.from).getTime() < new Date(range.to).getTime(), {
+    message: "from must be before to",
+    path: ["from"],
+  })
+  // The UI presets top out at 30 days; an unbounded span would let one request
+  // scan and return an arbitrarily large slice of the warehouse.
+  .refine(
+    (range) => new Date(range.to).getTime() - new Date(range.from).getTime() <= 31 * 86_400_000,
+    { message: "range must not exceed 31 days", path: ["to"] },
+  );
+
+export const zDeviceLifecycleEvent = z.object({
+  eventType: z.enum(["connected", "disconnected"]),
+  eventTimestamp: z.string().datetime(),
+  disconnectReason: z.string().nullable(),
+  sessionIdentifier: z.string().nullable(),
+});
+
+/**
+ * A connectivity session derived from paired lifecycle events, clamped to the
+ * queried range. `openStart` marks a session already running at range start;
+ * a null `end` marks one still running at range end.
+ */
+export const zDeviceSession = z.object({
+  start: z.string().datetime(),
+  end: z.string().datetime().nullable(),
+  openStart: z.boolean(),
+  durationSeconds: z.number(),
+  disconnectReason: z.string().nullable(),
+});
+
+export const zDeviceThroughputBucket = z.object({
+  bucketStart: z.string().datetime(),
+  experimentId: z.string().uuid().nullable(),
+  count: z.number().int(),
+});
+
+export const zDeviceBatteryPoint = z.object({
+  bucketStart: z.string().datetime(),
+  averageBattery: z.number().nullable(),
+});
+
+// Payload profile of a range. Protocol attribution only exists on legacy-topic rows.
+export const zDevicePayloadStats = z.object({
+  totalMeasurements: z.number().int(),
+  withGps: z.number().int(),
+  withBattery: z.number().int(),
+  workbookRuns: z.number().int(),
+  firmwareMix: z.array(z.object({ version: z.string().nullable(), count: z.number().int() })),
+  protocolMix: z.array(z.object({ protocolId: z.string().nullable(), count: z.number().int() })),
+  workbookMix: z.array(
+    z.object({ workbookVersionId: z.string().nullable(), count: z.number().int() }),
+  ),
+  // Per macro run: a measurement can run several, so counts exceed totals.
+  macroMix: z.array(z.object({ macroId: z.string().nullable(), count: z.number().int() })),
+});
+
+// One firmware run: ordered, and a version can reappear, so rollbacks are visible.
+export const zDeviceFirmwareVersion = z.object({
+  version: z.string().nullable(),
+  firstSeen: z.string().datetime(),
+  lastSeen: z.string().datetime(),
+  count: z.number().int(),
+});
+
+/** One stored measurement, for the row-level table behind the aggregates. */
+export const zDeviceMeasurement = z.object({
+  timestamp: z.string().datetime(),
+  experimentId: z.string().nullable(),
+  protocolId: z.string().nullable(),
+  workbookVersionId: z.string().nullable(),
+  deviceVersion: z.string().nullable(),
+  battery: z.number().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+  /** The reading itself, as stored JSON; its shape is device-defined. */
+  sample: z.string().nullable(),
+});
+
+// The monitoring dashboard's one-range response; queries run in parallel server-side.
+export const zDeviceMonitoring = z.object({
+  bucket: zMonitoringBucket,
+  events: z.array(zDeviceLifecycleEvent),
+  sessions: z.array(zDeviceSession),
+  uptimePercent: z.number().nullable(),
+  // True when the range held more events than the query cap; sessions and
+  // uptime then cover only the returned window.
+  truncated: z.boolean(),
+  throughput: z.array(zDeviceThroughputBucket),
+  battery: z.array(zDeviceBatteryPoint),
+  payload: zDevicePayloadStats,
+  firmwareHistory: z.array(zDeviceFirmwareVersion),
+  recentMeasurements: z.array(zDeviceMeasurement),
+});
+
 // --- Inferred types ---
 export type OnboardDeviceBody = z.infer<typeof zOnboardDeviceBody>;
 export type DeviceProcedure = z.infer<typeof zDeviceProcedure>;
@@ -222,6 +356,18 @@ export type IotUploadUrlRequest = z.infer<typeof zIotUploadUrlRequest>;
 export type IotUploadUrl = z.infer<typeof zIotUploadUrl>;
 export type IotDeviceStatus = z.infer<typeof zIotDeviceStatus>;
 export type IotDevice = z.infer<typeof zIotDevice>;
+export type DeviceConnectivity = z.infer<typeof zDeviceConnectivity>;
+export type MonitoringBucket = z.infer<typeof zMonitoringBucket>;
+export type DeviceLifecycleEvent = z.infer<typeof zDeviceLifecycleEvent>;
+export type DeviceSession = z.infer<typeof zDeviceSession>;
+export type DeviceThroughputBucket = z.infer<typeof zDeviceThroughputBucket>;
+export type DeviceBatteryPoint = z.infer<typeof zDeviceBatteryPoint>;
+export type DevicePayloadStats = z.infer<typeof zDevicePayloadStats>;
+export type DeviceFirmwareVersion = z.infer<typeof zDeviceFirmwareVersion>;
+export type DeviceMeasurement = z.infer<typeof zDeviceMeasurement>;
+export type DeviceMonitoring = z.infer<typeof zDeviceMonitoring>;
+export type IotDeviceWithConnectivity = z.infer<typeof zIotDeviceWithConnectivity>;
+export type IotDeviceActivity = z.infer<typeof zIotDeviceActivity>;
 export type IotDeviceDetail = z.infer<typeof zIotDeviceDetail>;
 export type IotDeviceList = z.infer<typeof zIotDeviceList>;
 export type RegisterIotDeviceBody = z.infer<typeof zRegisterIotDeviceBody>;

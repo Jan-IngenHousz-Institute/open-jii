@@ -49,6 +49,9 @@ MONITORING_SLACK_CHANNEL: str = _required("MONITORING_SLACK_CHANNEL")
 # S3 prefix holding large IoT payloads (>128 KB) uploaded via pre-signed URL.
 LARGE_IOT_S3_PATH: str = _required("LARGE_IOT_S3_PATH")
 
+# S3 prefix holding archived AWS IoT presence lifecycle events.
+DEVICE_LIFECYCLE_EVENTS_S3_PATH: str = _required("DEVICE_LIFECYCLE_EVENTS_S3_PATH")
+
 # Path to the legacy-macro-id-to-UUID map JSON in the centrum data-legacy volume.
 # Some early data was published before macros had UUIDs; the silver layer
 # rewrites those legacy ids into UUIDs via this map so downstream tables stay

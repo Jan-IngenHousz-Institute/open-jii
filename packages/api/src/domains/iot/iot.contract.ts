@@ -3,12 +3,15 @@ import { z } from "zod";
 
 import {
   zDeviceExperimentList,
+  zDeviceMonitoring,
   zDeviceOnboardingConfig,
   zDeviceRegistryWebhookPayload,
   zDeviceRegistryWebhookResponse,
   zIotCredentials,
   zIotDevice,
+  zIotDeviceActivity,
   zIotDeviceDetail,
+  zMonitoringRangeQuery,
   zIotDeviceList,
   zIotDevicePathParam,
   zIotUploadUrl,
@@ -54,6 +57,23 @@ export const iotContract = {
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}", successStatus: 200 })
     .input(zIotDevicePathParam)
     .output(zIotDeviceDetail),
+  // Pipeline-computed last data arrival; served apart from the device detail so
+  // list/detail never wait on the SQL warehouse.
+  getIotDeviceActivity: oc
+    .route({ method: "GET", path: "/api/v1/devices/{deviceId}/activity", successStatus: 200 })
+    .input(zIotDevicePathParam)
+    .output(zIotDeviceActivity),
+  // Monitoring dashboard data (warehouse-backed, range-scoped): one call per
+  // range change. Unlike the tile endpoints this fails loudly; the dashboard
+  // owns the error state.
+  getDeviceMonitoring: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/devices/{deviceId}/monitoring",
+      successStatus: 200,
+    })
+    .input(zMonitoringRangeQuery)
+    .output(zDeviceMonitoring),
   deleteIotDevice: oc
     .route({ method: "DELETE", path: "/api/v1/devices/{deviceId}", successStatus: 204 })
     .input(zIotDevicePathParam)

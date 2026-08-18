@@ -185,8 +185,8 @@ export const zExperimentFlowEdge = z.object({
  * not collide with these, since both questions_data and custom_metadata get
  * flattened to top-level alongside the system columns.
  *
- * Keep in sync with the gold-table column set in
- * apps/data/src/pipelines/centrum_pipeline.py.
+ * Keep in sync with the Gold table definitions under
+ * apps/data/src/pipelines/centrum/gold/.
  */
 export const RESERVED_EXPERIMENT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // experiment_raw_data top-level columns
@@ -212,6 +212,8 @@ export const RESERVED_EXPERIMENT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   "macro_id",
   "macro_name",
   "macro_filename",
+  "workbook_version_id",
+  "workbook_run_id",
   "macro_output",
   "macro_error",
   // pipeline-internal

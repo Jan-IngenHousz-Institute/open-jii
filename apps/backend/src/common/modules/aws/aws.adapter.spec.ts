@@ -490,4 +490,30 @@ describe("AwsAdapter", () => {
       expect(result.error.code).toBe(ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED);
     });
   });
+
+  describe("searchThingsConnectivity", () => {
+    it("delegates to AwsIotService and returns the connectivity map", async () => {
+      const connectivity = new Map([
+        ["AMBYTE_A", { thingName: "AMBYTE_A", connected: true, lastSeenAt: null }],
+      ]);
+      vi.spyOn(awsIotService, "searchThingsConnectivity").mockResolvedValue(success(connectivity));
+
+      const result = await awsAdapter.searchThingsConnectivity(["AMBYTE_A"]);
+
+      assertSuccess(result);
+      expect(result.value).toBe(connectivity);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(awsIotService.searchThingsConnectivity).toHaveBeenCalledWith(["AMBYTE_A"]);
+    });
+
+    it("propagates failure from AwsIotService", async () => {
+      const error = AppError.internal("index down", ErrorCodes.AWS_IOT_SEARCH_INDEX_FAILED);
+      vi.spyOn(awsIotService, "searchThingsConnectivity").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.searchThingsConnectivity(["AMBYTE_A"]);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_SEARCH_INDEX_FAILED);
+    });
+  });
 });

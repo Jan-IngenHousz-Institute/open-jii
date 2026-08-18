@@ -38,3 +38,8 @@ METADATA_SOURCE_TABLE = "experiment_metadata_source"
 # Backend's macro batch endpoint requires UUID macro_ids; non-UUIDs trigger
 # request-wide 400s. Gate at gold so bad rows never reach the UDF.
 MACRO_ID_UUID_PATTERN = r"(?i)\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z"
+
+# Device connectivity (AWS IoT presence lifecycle events)
+RAW_DEVICE_LIFECYCLE_EVENTS_TABLE = "raw_device_lifecycle_events"
+CLEAN_DEVICE_LIFECYCLE_EVENTS_TABLE = "clean_device_lifecycle_events"
+DEVICE_LAST_ACTIVITY_TABLE = "device_last_activity"

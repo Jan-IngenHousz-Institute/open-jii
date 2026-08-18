@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { daysUntil, formatRelativeTime, formatShortDate } from "./date";
+import {
+  daysUntil,
+  formatDateTime,
+  formatRelativeTime,
+  formatShortDate,
+  formatTimestamp,
+} from "./date";
 
 const NOW = new Date("2026-07-19T12:00:00.000Z").getTime();
 
@@ -23,6 +29,22 @@ describe("formatRelativeTime", () => {
 describe("formatShortDate", () => {
   it("formats an ISO string as a short date", () => {
     expect(formatShortDate("2026-07-01T00:00:00.000Z", "en-US")).toMatch(/Ju[nl] \d{1,2}, 2026/);
+  });
+});
+
+describe("formatDateTime", () => {
+  it("carries a day, a month and a time of day", () => {
+    expect(formatDateTime("2026-07-01T09:30:00.000Z", "en-US")).toMatch(/Jul \d{1,2}, \d{2}:\d{2}/);
+  });
+
+  it("renders month names in the viewer's locale", () => {
+    expect(formatDateTime("2026-07-01T09:30:00.000Z", "de-DE")).toContain("Juli");
+  });
+});
+
+describe("formatTimestamp", () => {
+  it("resolves to the second, for log and record tables", () => {
+    expect(formatTimestamp("2026-07-01T09:30:45.000Z", "en-US")).toMatch(/\d{2}:\d{2}:\d{2}/);
   });
 });
 

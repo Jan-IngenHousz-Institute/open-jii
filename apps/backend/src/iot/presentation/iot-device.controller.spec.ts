@@ -8,6 +8,7 @@ import type { IotDevice, IotDeviceDetail, IotDeviceList } from "@repo/api/domain
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
+import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
@@ -23,6 +24,7 @@ describe("IotDeviceController", () => {
   const testApp = TestHarness.App;
   let userId: string;
   let awsAdapter: AwsAdapter;
+  let databricksAdapter: DatabricksAdapter;
   let analyticsAdapter: MockAnalyticsAdapter;
 
   const registerBody = { serialNumber: "AA:BB:CC:DD:EE:FF", name: "Sensor", deviceType: "ambyte" };
@@ -35,6 +37,7 @@ describe("IotDeviceController", () => {
     await testApp.beforeEach();
     userId = await testApp.createTestUser({ name: "Owner" });
     awsAdapter = testApp.module.get(AwsAdapter);
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
     analyticsAdapter = testApp.module.get(AnalyticsAdapter);
     analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
     vi.spyOn(awsAdapter, "createThing").mockResolvedValue(success(RETURNED_THING));
@@ -44,6 +47,7 @@ describe("IotDeviceController", () => {
       success("eu-central-1:identity-1"),
     );
     vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
   });
 
   afterEach(() => {
@@ -305,6 +309,157 @@ describe("IotDeviceController", () => {
       const path = testApp.resolveOrpcPath(contract.iot.deleteIotDevice, { deviceId: device.id });
 
       await testApp.delete(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("getIotDeviceActivity", () => {
+    it("returns the pipeline-computed last data arrival (200)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceLastActivity").mockResolvedValue(
+        success({ lastDataAt: "2026-08-13T09:00:00.000Z" }),
+      );
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDeviceActivity, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<{ lastDataAt: string | null }> = await testApp
+        .get(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual({
+        lastDataAt: "2026-08-13T09:00:00.000Z",
+        pipelineUnavailable: false,
+      });
+    });
+
+    it("degrades to a null lastDataAt when the warehouse is unavailable (200)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceLastActivity").mockResolvedValue(
+        failure(AppError.internal("warehouse down")),
+      );
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDeviceActivity, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<{ lastDataAt: string | null }> = await testApp
+        .get(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual({ lastDataAt: null, pipelineUnavailable: true });
+    });
+
+    it("returns 403 for another user's private device", async () => {
+      const otherUser = await testApp.createTestUser({});
+      const device = await testApp.createIotDevice({ createdBy: otherUser });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDeviceActivity, {
+        deviceId: device.id,
+      });
+
+      await testApp.get(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("getDeviceMonitoring", () => {
+    const RANGE = {
+      from: "2026-08-13T00:00:00.000Z",
+      to: "2026-08-13T12:00:00.000Z",
+      bucket: "hour",
+    };
+
+    const mockWarehouse = () => {
+      vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(
+        success([
+          {
+            eventType: "connected",
+            eventTimestamp: "2026-08-13T01:00:00.000Z",
+            disconnectReason: null,
+            sessionIdentifier: "s-1",
+          },
+          {
+            eventType: "disconnected",
+            eventTimestamp: "2026-08-13T03:00:00.000Z",
+            disconnectReason: "CONNECTION_LOST",
+            sessionIdentifier: "s-1",
+          },
+        ]),
+      );
+      vi.spyOn(databricksAdapter, "getDeviceThroughput").mockResolvedValue(
+        success([{ bucketStart: "2026-08-13T01:00:00.000Z", experimentId: null, count: 12 }]),
+      );
+      vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceFirmwareHistory").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceRecentMeasurements").mockResolvedValue(success([]));
+    };
+
+    it("returns the full dashboard payload for one range (200)", async () => {
+      mockWarehouse();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getDeviceMonitoring, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<{
+        bucket: string;
+        sessions: unknown[];
+        uptimePercent: number | null;
+        truncated: boolean;
+      }> = await testApp.get(path).withAuth(userId).query(RANGE).expect(StatusCodes.OK);
+
+      expect(response.body.bucket).toBe("hour");
+      expect(response.body.sessions).toHaveLength(1);
+      expect(response.body.uptimePercent).not.toBeNull();
+      expect(response.body.truncated).toBe(false);
+    });
+
+    it("fails loudly when the warehouse is down, the dashboard owns the error state (500)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(
+        failure(AppError.internal("warehouse down")),
+      );
+      vi.spyOn(databricksAdapter, "getDeviceThroughput").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceFirmwareHistory").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceRecentMeasurements").mockResolvedValue(success([]));
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getDeviceMonitoring, {
+        deviceId: device.id,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(userId)
+        .query(RANGE)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+
+    it("rejects a reversed range at the contract (400)", async () => {
+      mockWarehouse();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getDeviceMonitoring, {
+        deviceId: device.id,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(userId)
+        .query({ ...RANGE, from: RANGE.to, to: RANGE.from })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 403 for another user's private device", async () => {
+      mockWarehouse();
+      const otherUser = await testApp.createTestUser({});
+      const device = await testApp.createIotDevice({ createdBy: otherUser });
+      const path = testApp.resolveOrpcPath(contract.iot.getDeviceMonitoring, {
+        deviceId: device.id,
+      });
+
+      await testApp.get(path).withAuth(userId).query(RANGE).expect(StatusCodes.FORBIDDEN);
     });
   });
 

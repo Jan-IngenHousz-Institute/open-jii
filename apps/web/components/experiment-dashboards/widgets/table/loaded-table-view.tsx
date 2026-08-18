@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  ExperimentDataRows,
-  ExperimentTableHeader,
+  DataTableRows,
+  DataTableHeader,
   formatValue,
   LoadingRows,
-} from "@/components/experiment-data/experiment-data-utils";
+} from "@/components/data-table/data-table-utils";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
@@ -113,7 +113,7 @@ export function LoadedTableView({
           {isInitialHeaderLoad ? (
             <SkeletonTableHeader columnCount={SKELETON_FALLBACK_COLUMN_COUNT} />
           ) : (
-            <ExperimentTableHeader
+            <DataTableHeader
               headerGroups={table.getHeaderGroups()}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
@@ -124,7 +124,7 @@ export function LoadedTableView({
             {isLoading ? (
               <LoadingRows rowCount={pageSize} columnCount={skeletonColumnCount} />
             ) : (
-              <ExperimentDataRows rows={table.getRowModel().rows} columnCount={columns.length} />
+              <DataTableRows rows={table.getRowModel().rows} columnCount={columns.length} />
             )}
           </TableBody>
         </table>

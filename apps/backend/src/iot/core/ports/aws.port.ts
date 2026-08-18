@@ -4,6 +4,7 @@ import type {
   CreatedThing,
   CertificateResult,
   CertificateStatus,
+  ThingConnectivity,
 } from "../../../common/modules/aws/services/iot/iot.types";
 import type { IotUploadUrl } from "../../../common/modules/aws/services/s3/s3.types";
 import type { Result } from "../../../common/utils/fp-utils";
@@ -15,6 +16,7 @@ export type {
   CreatedThing,
   CertificateResult,
   CertificateStatus,
+  ThingConnectivity,
 };
 
 /**
@@ -38,4 +40,5 @@ export interface AwsPort {
   setCertificateStatus(certificateId: string, status: CertificateStatus): Promise<Result<void>>;
   getIotDataEndpoint(): Promise<Result<string>>;
   getCognitoIdentityId(userId: string): Promise<Result<string>>;
+  searchThingsConnectivity(thingNames: string[]): Promise<Result<Map<string, ThingConnectivity>>>;
 }

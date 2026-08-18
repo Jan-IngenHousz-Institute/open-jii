@@ -17,6 +17,19 @@ def test_upload_constants_exported() -> None:
         assert name in centrum.__all__
 
 
+def test_connectivity_constants_exported() -> None:
+    assert centrum.RAW_DEVICE_LIFECYCLE_EVENTS_TABLE == "raw_device_lifecycle_events"
+    assert centrum.CLEAN_DEVICE_LIFECYCLE_EVENTS_TABLE == "clean_device_lifecycle_events"
+    assert centrum.DEVICE_LAST_ACTIVITY_TABLE == "device_last_activity"
+    for name in (
+        "RAW_DEVICE_LIFECYCLE_EVENTS_TABLE",
+        "CLEAN_DEVICE_LIFECYCLE_EVENTS_TABLE",
+        "DEVICE_LAST_ACTIVITY_TABLE",
+        "device_lifecycle_event_schema",
+    ):
+        assert name in centrum.__all__
+
+
 def test_ambyte_constants_removed() -> None:
     for name in ("RAW_AMBYTE_TABLE", "ENRICHED_RAW_AMBYTE_DATA_VIEW"):
         assert not hasattr(centrum, name)

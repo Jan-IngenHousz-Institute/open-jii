@@ -21,6 +21,7 @@ const baseArgs = {
   timestamp: "2026-01-01T10:00:00Z",
   timezone: "Europe/Amsterdam",
   questions: QUESTIONS,
+  workbookRunId: "run-1",
   commentText: undefined as string | undefined,
 };
 
@@ -48,6 +49,7 @@ describe("buildUploadPayload payload construction", () => {
       timezone: "Europe/Amsterdam",
       user_id: "user-1",
       protocol_id: "protocol-9",
+      workbook_run_id: "run-1",
       device_id: "d-1",
       sample: 'compressed:[{"v":1,"macros":["macro_one.js"]},{"v":2,"macros":["macro_one.js"]}]',
       _sample_encoding: "gzip+base64",
@@ -237,7 +239,7 @@ describe("input purity", () => {
 });
 
 describe("workbook run correlation", () => {
-  it("stamps workbook_run_id when given, alongside sample compression", () => {
+  it("stamps the required workbook_run_id alongside sample compression", () => {
     const payload = buildUploadPayload({
       ...baseArgs,
       rawMeasurement: { device_id: "MSPx-0001", sample: [{ data_raw: [1, 2] }] },
@@ -247,15 +249,6 @@ describe("workbook run correlation", () => {
     expect(payload.workbook_run_id).toBe("run-1");
     expect(payload._sample_encoding).toBe("gzip+base64");
     expect(typeof payload.sample).toBe("string");
-  });
-
-  it("omits workbook_run_id when not linked to a round", () => {
-    const payload = buildUploadPayload({
-      ...baseArgs,
-      rawMeasurement: { device_id: "MSPx-0001" },
-    });
-
-    expect(payload).not.toHaveProperty("workbook_run_id");
   });
 
   it("falls back to the local device id only when the firmware did not supply one", () => {

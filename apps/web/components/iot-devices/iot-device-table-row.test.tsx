@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
+import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { Table, TableBody } from "@repo/ui/components/table";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { IotDeviceTableRow } from "./iot-device-table-row";
 
-function renderRow(device: IotDevice) {
+function renderRow(device: IotDeviceWithConnectivity) {
   return render(
     <Table>
       <TableBody>
@@ -27,6 +27,23 @@ describe("IotDeviceTableRow", () => {
 
     expect(screen.getByRole("link", { name: "Greenhouse 1" })).toBeInTheDocument();
     expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
+  });
+
+  it("shows since-when in the last-seen cell for an online device", () => {
+    renderRow(
+      createIotDevice({
+        name: "Greenhouse 1",
+        connectivity: { connected: true, lastSeenAt: "2026-08-13T08:00:00.000Z" },
+      }),
+    );
+
+    expect(screen.getByText("iot.devices.connectivity.onlineSince")).toBeInTheDocument();
+  });
+
+  it("shows the unknown last-seen fallback when the fleet index is unavailable", () => {
+    renderRow(createIotDevice({ name: "Greenhouse 1", connectivity: null }));
+
+    expect(screen.getByText("iot.devices.connectivity.unknown")).toBeInTheDocument();
   });
 
   it("badges a private device, the way the other resource lists do", () => {
@@ -70,6 +87,19 @@ describe("IotDeviceTableRow", () => {
     expect(screen.getByRole("link", { name: "Field gateway" })).toBeInTheDocument();
     expect(screen.getByText("iot.deviceIdentity.role.gateway")).toBeInTheDocument();
     expect(screen.queryByText("iot.deviceIdentity.role.measurementDevice")).not.toBeInTheDocument();
+  });
+
+  it("navigates to the device when the row itself is clicked", async () => {
+    const router = vi.mocked(useRouter)();
+    const user = userEvent.setup();
+    const device = createIotDevice({ name: "Field gateway", serialNumber: "SN-CLICK" });
+    renderRow(device);
+
+    await user.click(screen.getByText("SN-CLICK"));
+
+    expect(router.push).toHaveBeenCalledWith(
+      expect.stringContaining(`/platform/devices/${device.id}`),
+    );
   });
 
   it("keeps link clicks from also triggering row navigation", async () => {
