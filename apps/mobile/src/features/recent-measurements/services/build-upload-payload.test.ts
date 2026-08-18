@@ -108,13 +108,25 @@ describe("buildUploadPayload payload construction", () => {
       ...baseArgs,
       rawMeasurement: { sample: [{ phi2: 0.8 }] },
       workbookVersionId: "version-1",
+      workbookId: "workbook-1",
       macroContext,
     });
 
     expect(payload).toMatchObject({
       workbook_version_id: "version-1",
+      workbook_id: "workbook-1",
       macro_context: JSON.stringify(macroContext),
     });
+  });
+
+  it("omits workbook_id when the producing workbook is unknown", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { sample: [{ phi2: 0.8 }] },
+      workbookVersionId: "version-1",
+    });
+
+    expect("workbook_id" in payload).toBe(false);
   });
 
   it("null sample survives untouched: no injection, no compression, no marker", () => {

@@ -20,6 +20,12 @@ export interface MacroPreviewSource {
   experimentId: string;
   workbookVersionId: string;
   macroId: string;
+  /**
+   * The workbook that produced the measurement, recorded at capture time.
+   * Present only on payloads saved after this field existed; legacy payloads
+   * fall back to the experiment's current workbook linkage.
+   */
+  workbookId?: string;
   /** Payload with the sample envelope restored, as handed to the macro. */
   rawMeasurement: Record<string, unknown>;
   /** The exact device-scoped ctx recorded at capture time. */
@@ -54,12 +60,15 @@ export function resolveMacroPreviewSource(
   const decoded = decodeStoredSample(payload);
   if (!decoded) return { ok: false, blocker: "decode-failed" };
 
+  const workbookId = payload.workbook_id;
+
   return {
     ok: true,
     source: {
       experimentId,
       workbookVersionId,
       macroId,
+      ...(typeof workbookId === "string" && workbookId !== "" ? { workbookId } : {}),
       rawMeasurement: stripUploadEnvelope(decoded),
       ctx: parseMacroContext(payload.macro_context),
     },
@@ -78,6 +87,7 @@ const UPLOAD_ENVELOPE_KEYS: ReadonlySet<string> = new Set([
   "annotations",
   "workbook_run_id",
   "workbook_version_id",
+  "workbook_id",
   "macro_context",
 ]);
 

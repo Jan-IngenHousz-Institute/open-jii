@@ -48,12 +48,18 @@ export function useMeasurementMacroPreview(measurement: StoredMeasurement): Macr
   const resolved = useMemo(() => resolveMacroPreviewSource(measurement), [measurement]);
   const source = resolved.ok ? resolved.source : undefined;
 
-  const { workbookId, isLoading: isRefLoading } = useExperimentWorkbookRef(source?.experimentId);
+  // The payload recorded at capture time names its producing workbook; only
+  // legacy payloads without it need the experiment's current linkage, which
+  // detach/re-attach can have changed (or removed) since.
+  const { workbookId: linkedWorkbookId, isLoading: isRefLoading } = useExperimentWorkbookRef(
+    source?.workbookId ? undefined : source?.experimentId,
+  );
+  const workbookId = source?.workbookId ?? linkedWorkbookId;
   const {
     data: version,
     isLoading: isVersionLoading,
     error: versionError,
-  } = useWorkbookVersionQuery(source ? workbookId : undefined, source?.workbookVersionId);
+  } = useWorkbookVersionQuery(workbookId, source?.workbookVersionId);
 
   const macro = useMemo(
     () => (source ? findMacroSnapshot(version, source.macroId) : undefined),

@@ -77,6 +77,25 @@ describe("resolveMacroPreviewSource", () => {
     expect(result.source.rawMeasurement.user_id).toBe("u1");
   });
 
+  it("recovers the producing workbook id and strips it from the replay input", () => {
+    const result = resolveMacroPreviewSource(
+      measurement({ ...fullPayload, workbook_id: "workbook-1" }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.source.workbookId).toBe("workbook-1");
+    expect(result.source.rawMeasurement.workbook_id).toBeUndefined();
+  });
+
+  it("leaves workbookId unset for payloads that predate the field", () => {
+    const result = resolveMacroPreviewSource(measurement(fullPayload));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.source.workbookId).toBeUndefined();
+  });
+
   it("reports no-macro for a questions-only save", () => {
     const result = resolveMacroPreviewSource(
       measurement({ macros: null, workbook_version_id: "version-1" }),

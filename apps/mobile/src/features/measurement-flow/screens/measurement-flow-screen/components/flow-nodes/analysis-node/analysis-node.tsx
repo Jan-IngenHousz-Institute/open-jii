@@ -59,6 +59,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     producerCellId,
     cellOutputs,
     workbookVersionId,
+    workbookId,
     workbookRunId,
     setCellOutput,
   } = useMeasurementFlowStore();
@@ -251,6 +252,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         filename: macro.filename,
       },
       workbookVersionId,
+      workbookId,
       workbookRunId,
       questions,
       commentText: measurementComment.trim() || undefined,

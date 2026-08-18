@@ -182,4 +182,28 @@ describe("useMeasurementMacroPreview", () => {
     const calls = useQueryMock.mock.calls as [{ __kind: string; enabled?: boolean }][];
     expect(calls.every(([opts]) => opts.enabled === false)).toBe(true);
   });
+
+  it("re-runs against the payload's producing workbook, skipping the experiment lookup", () => {
+    // Detach/re-attach can change an experiment's current workbookId; the
+    // capture-time workbook_id in the payload is the authoritative one.
+    const withRef: StoredMeasurement = {
+      ...stored,
+      data: {
+        ...stored.data,
+        measurementResult: { ...payload, workbook_id: "wb-stored" },
+      },
+    };
+
+    const { result } = renderHook(() => useMeasurementMacroPreview(withRef));
+
+    expect(result.current.status).toBe("ready");
+    const calls = useQueryMock.mock.calls as [
+      { __kind: string; enabled?: boolean; input?: { id: string } },
+    ][];
+    const listOpts = calls.find(([o]) => o.__kind === "list")?.[0];
+    const versionOpts = calls.find(([o]) => o.__kind === "version")?.[0];
+    // The experiment list is never consulted when the payload names its workbook.
+    expect(listOpts?.enabled).toBe(false);
+    expect(versionOpts?.input?.id).toBe("wb-stored");
+  });
 });

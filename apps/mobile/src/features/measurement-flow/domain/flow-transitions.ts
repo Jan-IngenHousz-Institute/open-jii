@@ -43,6 +43,10 @@ export interface FlowState {
   // Immutable workbook version whose protocol/macro snapshots this run uses.
   // Uploaded with measurements so cloud macro execution resolves the same code.
   workbookVersionId?: string;
+  // The workbook that version belongs to. Uploaded alongside so a stored
+  // measurement can re-run its macro against the producing workbook even if
+  // the experiment is later detached or re-attached elsewhere.
+  workbookId?: string;
   // One stable UUID for the complete workbook attempt. Every measurement in
   // the attempt carries it, including sequential single-device nodes.
   workbookRunId?: string;
@@ -82,6 +86,7 @@ export const initialFlowState: FlowState = {
   experimentId: undefined,
   experimentLabel: undefined,
   workbookVersionId: undefined,
+  workbookId: undefined,
   workbookRunId: undefined,
   currentStep: 0,
   flowNodes: [],
@@ -193,6 +198,7 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
       experimentId: undefined,
       experimentLabel: undefined,
       workbookVersionId: undefined,
+      workbookId: undefined,
       workbookRunId: undefined,
       currentStep: 0,
       flowNodes: [],
