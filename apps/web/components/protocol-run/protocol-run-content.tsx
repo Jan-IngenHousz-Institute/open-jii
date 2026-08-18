@@ -18,6 +18,15 @@ interface ProtocolRunContentProps {
   protocolId: string;
 }
 
+// The on-device runner only understands MultispeQ-style arrays of protocol
+// sets; an array holding scalars or nested arrays is not runnable either.
+function isRunnableCode(value: unknown): value is Record<string, unknown>[] {
+  return (
+    Array.isArray(value) &&
+    value.every((item) => typeof item === "object" && item !== null && !Array.isArray(item))
+  );
+}
+
 export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
   const { data: protocolData, isLoading } = useProtocol(protocolId);
   const { t } = useTranslation();
@@ -35,7 +44,7 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
       try {
         await updateProtocol({
           id: protocolId,
-          code: code as Record<string, unknown>[],
+          code,
         });
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
@@ -48,7 +57,9 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
   const autosave = useAutosave<ProtocolCode>({
     value: editedCode,
     toKey: (code) => JSON.stringify(code),
-    isValid: (value) => Array.isArray(value),
+    // See protocol-overview-content: any parsed document saves; undefined is
+    // raw, unparseable mid-keystroke text.
+    isValid: (value) => value !== undefined,
     save,
     enabled: isEditing,
   });
@@ -83,7 +94,11 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
   }
 
   const rawCode = isEditing ? editedCode : protocol.code;
-  const protocolCode = Array.isArray(rawCode) ? rawCode : protocol.code;
+  // While the editor holds raw text, or the stored code is a non-runnable
+  // document from another device family, fall back to the last stored code
+  // if it is runnable.
+  const fallbackCode = isRunnableCode(rawCode) ? rawCode : protocol.code;
+  const protocolCode = isRunnableCode(fallbackCode) ? fallbackCode : [];
 
   const codePanel = (
     <ProtocolCodePanel

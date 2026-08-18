@@ -5,12 +5,36 @@ import { zVisibility } from "../visibility/visibility.schema";
 
 export const zSensorFamily = z.enum(["multispeq", "ambyte", "minipar", "generic", "ambit"]);
 
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+/**
+ * Any valid JSON value. A protocol's code shape is device-defined: MultispeQ
+ * protocols are always arrays of protocol sets, but other families define
+ * their own shape, so `code` accepts any JSON document.
+ */
+export const zJsonValue: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(zJsonValue),
+    z.record(zJsonValue),
+  ]),
+);
+
 // Define Zod schemas for protocol models
 export const zProtocol = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
-  code: z.record(z.unknown()).array(),
+  code: zJsonValue,
   family: zSensorFamily,
   sortOrder: z.number().nullable(),
   createdBy: z.string().uuid(),
@@ -21,7 +45,10 @@ export const zProtocol = z.object({
   organizationId: z.string().uuid().nullable(),
   visibility: z.enum(["private", "public"]),
 });
-export const zProtocolList = z.array(zProtocol);
+// List rows intentionally skip recursive code validation. A protocol document
+// can be large, and oRPC validates every output synchronously; detail and
+// mutation responses keep the precise zJsonValue boundary through zProtocol.
+export const zProtocolList = z.array(zProtocol.extend({ code: z.unknown() }));
 
 /**
  * A single protocol plus the caller's effective capabilities on it. Detail route
@@ -50,7 +77,7 @@ export const zCreateProtocolRequestBody = z.object({
     .min(1, "Name is required")
     .max(255, "Name must be at most 255 characters"),
   description: z.string().optional(),
-  code: z.record(z.unknown()).array(),
+  code: zJsonValue,
   family: zSensorFamily,
   // Set when this protocol is a fork (copy) of another, to record its lineage.
   forkedFrom: z.string().uuid().optional(),
@@ -71,7 +98,7 @@ export const zUpdateProtocolRequestBody = z.object({
     .max(255, "Name must be at most 255 characters")
     .optional(),
   description: z.string().optional(),
-  code: z.record(z.unknown()).array().optional(),
+  code: zJsonValue.optional(),
   family: zSensorFamily.optional(),
 });
 
@@ -114,6 +141,7 @@ export type SensorFamily = z.infer<typeof zSensorFamily>;
 export type Protocol = z.infer<typeof zProtocol>;
 export type ProtocolDetail = z.infer<typeof zProtocolDetail>;
 export type ProtocolList = z.infer<typeof zProtocolList>;
+export type ProtocolListItem = ProtocolList[number];
 export type ProtocolFilterQuery = z.infer<typeof zProtocolFilterQuery>;
 export type ProtocolFilter = ProtocolFilterQuery["search"];
 export type ProtocolIdPathParam = z.infer<typeof zProtocolIdPathParam>;

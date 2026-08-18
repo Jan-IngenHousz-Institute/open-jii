@@ -3,11 +3,12 @@
 import type { ComponentType } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { CreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { zCreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
+
+import type { NewProtocolFormValues } from "../new-protocol-form-values";
 
 // Validation schema for step 1 — details only (no code)
 export const detailsSchema = zCreateProtocolRequestBody.pick({
@@ -18,10 +19,10 @@ export const detailsSchema = zCreateProtocolRequestBody.pick({
 });
 
 interface DetailsCardProps {
-  form: UseFormReturn<CreateProtocolRequestBody>;
+  form: UseFormReturn<NewProtocolFormValues>;
 }
 
-interface DetailsStepProps extends WizardStepProps<CreateProtocolRequestBody> {
+interface DetailsStepProps extends WizardStepProps<NewProtocolFormValues> {
   cards: ComponentType<DetailsCardProps>[];
 }
 

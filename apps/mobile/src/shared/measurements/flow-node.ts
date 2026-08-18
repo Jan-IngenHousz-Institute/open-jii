@@ -47,7 +47,7 @@ export interface QuestionContent {
 // Hydrated onto the node from the workbook version (snapshot code + cell name)
 // so scan + upload read offline off the node. See hydrate-flow-nodes.
 export interface ResolvedProtocol {
-  code: Record<string, unknown>[];
+  code: unknown;
   name?: string;
   family?: unknown;
 }

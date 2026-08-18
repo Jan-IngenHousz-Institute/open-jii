@@ -33,14 +33,14 @@ describe("ListProtocolsUseCase", () => {
     const protocol1 = {
       name: "Protocol 1",
       description: "Description 1",
-      code: JSON.stringify({ steps: [{ name: "Step 1", action: "test" }] }),
+      code: [{ steps: [{ name: "Step 1", action: "test" }] }],
       family: "multispeq" as const,
     };
 
     const protocol2 = {
       name: "Protocol 2",
       description: "Description 2",
-      code: JSON.stringify({ steps: [{ name: "Step 2", action: "test" }] }),
+      code: [{ steps: [{ name: "Step 2", action: "test" }] }],
       family: "multispeq" as const,
     };
 
@@ -68,14 +68,14 @@ describe("ListProtocolsUseCase", () => {
     const protocol1 = {
       name: `${uniquePrefix} Protocol 1`,
       description: "Description 1",
-      code: JSON.stringify({ steps: [{ name: "Step 1", action: "test" }] }),
+      code: [{ steps: [{ name: "Step 1", action: "test" }] }],
       family: "multispeq" as const,
     };
 
     const protocol2 = {
       name: "Different Protocol 2",
       description: "Description 2",
-      code: JSON.stringify({ steps: [{ name: "Step 2", action: "test" }] }),
+      code: [{ steps: [{ name: "Step 2", action: "test" }] }],
       family: "multispeq" as const,
     };
 

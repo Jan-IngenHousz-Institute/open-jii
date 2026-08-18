@@ -269,6 +269,17 @@ describe("IotProtocolRunner", () => {
       });
     });
 
+    it("normalizes a non-array protocol document to empty runner input", async () => {
+      mockExecuteProtocol.mockResolvedValueOnce({});
+
+      const user = userEvent.setup();
+      render(<IotProtocolRunner {...defaultProps} protocolCode={{ source: "text" }} />);
+
+      await user.click(screen.getByRole("button", { name: /iot\.protocolRunner\.runProtocol/i }));
+
+      await waitFor(() => expect(mockExecuteProtocol).toHaveBeenCalledWith([]));
+    });
+
     it("shows running state while executing protocol", async () => {
       mockExecuteProtocol.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({ data: "test" }), 100)),

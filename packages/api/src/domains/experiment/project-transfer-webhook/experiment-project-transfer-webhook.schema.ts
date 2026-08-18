@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { zMacroLanguage } from "../../macro/macro.schema";
-import { zSensorFamily } from "../../protocol/protocol.schema";
+import { zJsonValue, zSensorFamily } from "../../protocol/protocol.schema";
 import { zExperimentQuestionKind } from "../experiment.schema";
 import { zExperimentLocationInput } from "../locations/experiment-locations.schema";
 
@@ -23,7 +23,7 @@ export const zExperimentProjectTransferWebhookPayload = z.object({
     .object({
       name: z.string().min(1).max(255),
       description: z.string().optional(),
-      code: z.record(z.unknown()).array(),
+      code: zJsonValue,
       family: zSensorFamily.default("multispeq"),
       createdBy: z.string().uuid().describe("User ID of protocol creator"),
     })

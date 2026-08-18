@@ -5,7 +5,7 @@ import { SearchX, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React, { useCallback } from "react";
 
-import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import {
@@ -35,7 +35,7 @@ const protocolItemVariants = cva(
 
 // Props for the ProtocolList component
 interface ProtocolListProps {
-  protocols: Protocol[];
+  protocols: ProtocolListItem[];
   onAddProtocol: (protocolId: string) => Promise<void> | void;
   isAddingProtocol: boolean;
   setOpen: (open: boolean) => void;
@@ -196,7 +196,7 @@ function SearchField({ searchValue, onSearchChange, isAddingProtocol }: SearchFi
 }
 
 export interface ProtocolSearchPopoverProps {
-  availableProtocols: Protocol[];
+  availableProtocols: ProtocolListItem[];
   searchValue: string;
   onSearchChange: (value: string) => void;
   onAddProtocol: (protocolId: string) => Promise<void> | void;
