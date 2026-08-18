@@ -85,10 +85,20 @@ describe("ProtocolCodeEditor seeding", () => {
     expect(editorText()).toBe(typed);
   });
 
-  it("leaves a string value untouched instead of reformatting it", async () => {
-    const raw = '[{"label":"as typed"}]';
-    render(<ProtocolCodeEditor value={raw} onChange={vi.fn()} label="Protocol Code" />);
+  it("seeds a stored string document as quoted JSON", async () => {
+    const storedString = '[{"label":"stored string"}]';
+    render(<ProtocolCodeEditor value={storedString} onChange={vi.fn()} label="Protocol Code" />);
 
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(editorText()).toBe(JSON.stringify(storedString));
+  });
+
+  it("keeps raw user text untouched while editing", async () => {
+    render(<ProtocolCodeEditor value="stored" onChange={vi.fn()} label="Protocol Code" />);
+
+    const raw = '[{"label":"as typed"}]';
+    fireEvent.change(screen.getByTestId("code-editor-textarea"), { target: { value: raw } });
     await vi.advanceTimersByTimeAsync(500);
 
     expect(editorText()).toBe(raw);

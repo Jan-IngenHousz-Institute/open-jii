@@ -45,7 +45,10 @@ export const zProtocol = z.object({
   organizationId: z.string().uuid().nullable(),
   visibility: z.enum(["private", "public"]),
 });
-export const zProtocolList = z.array(zProtocol);
+// List rows intentionally skip recursive code validation. A protocol document
+// can be large, and oRPC validates every output synchronously; detail and
+// mutation responses keep the precise zJsonValue boundary through zProtocol.
+export const zProtocolList = z.array(zProtocol.extend({ code: z.unknown() }));
 
 /**
  * A single protocol plus the caller's effective capabilities on it. Detail route

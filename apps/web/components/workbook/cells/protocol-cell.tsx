@@ -149,10 +149,10 @@ export function ProtocolCellComponent({
 
   const isValidCode = useCallback((code: string) => {
     try {
-      // Any JSON document is saveable; a bare string would be stored looking
-      // double-encoded (OJD-1711). Execution keeps its own array check.
-      const parsed: unknown = JSON.parse(code);
-      return typeof parsed !== "string";
+      // Any successfully parsed JSON document is saveable. Execution keeps its
+      // own array-of-records check.
+      JSON.parse(code);
+      return true;
     } catch {
       return false;
     }

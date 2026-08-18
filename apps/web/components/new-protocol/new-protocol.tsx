@@ -10,7 +10,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
-import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
+import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -159,7 +159,7 @@ export function NewProtocolForm() {
     createProtocol({
       name: data.name,
       description: data.description,
-      code: data.code as JsonValue,
+      code: zJsonValue.parse(data.code),
       family: data.family,
       visibility: data.visibility,
     });

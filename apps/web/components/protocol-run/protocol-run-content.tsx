@@ -58,8 +58,8 @@ export function ProtocolRunContent({ protocolId }: ProtocolRunContentProps) {
     value: editedCode,
     toKey: (code) => JSON.stringify(code),
     // See protocol-overview-content: any parsed document saves; undefined is
-    // mid-keystroke text, and a bare string would look double-encoded.
-    isValid: (value) => value !== undefined && typeof value !== "string",
+    // raw, unparseable mid-keystroke text.
+    isValid: (value) => value !== undefined,
     save,
     enabled: isEditing,
   });

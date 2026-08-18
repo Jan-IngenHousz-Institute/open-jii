@@ -38,8 +38,11 @@ vi.mock("../workbook-code-editor", () => ({
           <button data-testid="simulate-object" onClick={() => onChange('{"x":1}')}>
             object
           </button>
-          <button data-testid="simulate-string" onClick={() => onChange('"just a string"')}>
-            string
+          <button
+            data-testid="simulate-string-document"
+            onClick={() => onChange('"just a string"')}
+          >
+            string document
           </button>
           <button data-testid="simulate-same" onClick={() => onChange(value)}>
             same
@@ -287,9 +290,7 @@ describe("ProtocolCellComponent", () => {
     expect(updateSpy.body).toEqual({ code: { x: 1 } });
   });
 
-  it("does not persist when the parsed JSON is a bare string", async () => {
-    // A string document would be stored looking double-encoded (OJD-1711).
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+  it("persists a string document", async () => {
     server.mount(contract.protocols.getProtocol, {
       body: createProtocolDetail({ id: "p1", code: [{ measurement: "light" }] }),
     });
@@ -297,17 +298,16 @@ describe("ProtocolCellComponent", () => {
       body: createProtocol({ id: "p1" }),
     });
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     render(
       <ProtocolCellComponent cell={makeProtocolCell()} onUpdate={vi.fn()} onDelete={vi.fn()} />,
     );
 
-    await waitFor(() => expect(screen.getByTestId("simulate-string")).toBeInTheDocument());
-    await user.click(screen.getByTestId("simulate-string"));
-    await vi.advanceTimersByTimeAsync(1500);
+    await waitFor(() => expect(screen.getByTestId("simulate-string-document")).toBeInTheDocument());
+    await user.click(screen.getByTestId("simulate-string-document"));
 
-    expect(updateSpy.called).toBe(false);
-    vi.useRealTimers();
+    await waitFor(() => expect(updateSpy.called).toBe(true), { timeout: 3000 });
+    expect(updateSpy.body).toEqual({ code: "just a string" });
   });
 
   it("skips persistence when the new code matches the saved snapshot", async () => {

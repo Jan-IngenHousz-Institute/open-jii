@@ -14,6 +14,7 @@ import type {
   JsonValue,
   SensorFamily,
 } from "@repo/api/domains/protocol/protocol.schema";
+import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -99,15 +100,12 @@ export function ProtocolDetailsCard({
     await updateProtocol({
       id: protocolId,
       ...data,
-      code: data.code as JsonValue,
+      code: zJsonValue.parse(data.code),
     });
     toast({ description: t("protocols.protocolUpdated") });
   }
 
-  // The on-device runner only understands MultispeQ-style arrays; a non-array
-  // document (raw text mid-keystroke, or another family's shape) can't run.
   const watchedCode = form.watch("code");
-  const runnerCode = (Array.isArray(watchedCode) ? watchedCode : []) as Record<string, unknown>[];
 
   return (
     <Form {...form}>
@@ -262,7 +260,7 @@ export function ProtocolDetailsCard({
               <div className="flex flex-1 flex-col overflow-y-auto p-2.5 sm:p-4">
                 {browserSupport.any ? (
                   <IotProtocolRunner
-                    protocolCode={runnerCode}
+                    protocolCode={watchedCode}
                     sensorFamily={form.watch("family")}
                     layout="vertical"
                   />

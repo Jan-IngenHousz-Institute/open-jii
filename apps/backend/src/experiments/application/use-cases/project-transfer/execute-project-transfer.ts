@@ -58,7 +58,7 @@ export class ExecuteProjectTransferUseCase {
     // 1. Create or reuse Protocol (if provided)
     let protocolId: string | null = null;
     if (data.protocol) {
-      // Names are globally unique, so reuse avoids a collision, but only reuse one
+      // Names are globally unique, so reuse avoids a collision — but only reuse one
       // the importer can read, or the import would snapshot a stranger's private
       // code. Otherwise fall through to create, which fails closed on the clash.
       const existingProtocol = await this.protocolRepository.findByName(data.protocol.name);
@@ -122,7 +122,7 @@ export class ExecuteProjectTransferUseCase {
     let macroFilename: string | null = null;
     let macroName: string | null = null;
     if (data.macro) {
-      // Same reasoning as protocols above: never adopt a stranger's private macro.
+      // Same reasoning as protocols above — never adopt a stranger's private macro.
       const existingMacro = await this.macroRepository.findByName(data.macro.name);
       const reusableMacro =
         existingMacro.isSuccess() && existingMacro.value

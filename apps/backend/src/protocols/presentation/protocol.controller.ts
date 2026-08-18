@@ -6,6 +6,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-validator";
 import { protocolContract } from "@repo/api/domains/protocol/protocol.contract";
+import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
@@ -36,34 +37,23 @@ export function parseProtocolCode(code: unknown, logger: Logger): JsonValue {
     return [{}];
   }
 
-  // Legacy rows hold the document as a JSON-encoded string (double-encoding,
-  // OJD-1711); decode those. Anything else is already a valid JSON value.
-  if (typeof code === "string") {
-    try {
-      return JSON.parse(code) as JsonValue;
-    } catch (error) {
-      logger.error({
-        msg: "Failed to parse protocol code",
-        errorCode: ErrorCodes.BAD_REQUEST,
-        operation: "parseProtocolCode",
-        error,
-      });
-      return [{}];
-    }
+  const parsed = zJsonValue.safeParse(code);
+  if (!parsed.success) {
+    logger.error({
+      msg: "Failed to parse protocol code",
+      errorCode: ErrorCodes.BAD_REQUEST,
+      operation: "parseProtocolCode",
+      error: parsed.error,
+    });
+    return [{}];
   }
 
-  return code as JsonValue;
+  return parsed.data;
 }
 
 function validateJsonStructure(code: unknown, logger: Logger) {
   if (code === null || code === undefined) {
     return failure(AppError.badRequest("Protocol code is required"));
-  }
-
-  // A string here is a serialized document; storing it would reintroduce the
-  // double-encoding this path was fixed for (OJD-1711).
-  if (typeof code === "string") {
-    return failure(AppError.badRequest("Protocol code must be a JSON document, not a string"));
   }
 
   try {
@@ -136,12 +126,9 @@ export class ProtocolController {
       );
 
       if (result.isSuccess()) {
-        const protocols = result.value.map((protocol) => ({
-          ...protocol,
-          code: parseProtocolCode(protocol.code, this.logger),
-        }));
-
-        return formatDatesList(protocols);
+        // The list contract deliberately treats code as unknown so large protocol
+        // documents are not recursively validated on the synchronous request path.
+        return formatDatesList(result.value);
       }
 
       return throwOrpcFailure(result, this.logger);

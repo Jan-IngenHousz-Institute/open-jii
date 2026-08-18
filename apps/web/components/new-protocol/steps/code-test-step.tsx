@@ -29,7 +29,7 @@ interface CodeTestStepProps extends WizardStepProps<NewProtocolFormValues> {
     borderless: boolean;
   }>;
   IotProtocolRunner: ComponentType<{
-    protocolCode: Record<string, unknown>[];
+    protocolCode: unknown;
     sensorFamily: SensorFamily;
     layout: "horizontal" | "vertical";
   }>;
@@ -49,10 +49,7 @@ export function CodeTestStep({
 }: CodeTestStepProps) {
   const { t } = useTranslation();
 
-  // The on-device runner only understands MultispeQ-style arrays; a non-array
-  // document (raw text mid-keystroke, or another family's shape) can't run.
   const watchedCode = form.watch("code");
-  const runnerCode = (Array.isArray(watchedCode) ? watchedCode : []) as Record<string, unknown>[];
 
   const codeEditorContent = (
     <FormField
@@ -82,7 +79,7 @@ export function CodeTestStep({
         codePanel={codeEditorContent}
         testerPanel={
           <IotProtocolRunner
-            protocolCode={runnerCode}
+            protocolCode={watchedCode}
             sensorFamily={form.watch("family")}
             layout="vertical"
           />

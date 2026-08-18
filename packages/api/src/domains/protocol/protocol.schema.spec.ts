@@ -140,6 +140,25 @@ describe("Protocol Schema", () => {
       };
       expect(zProtocolList.parse([p1, p2])).toEqual([p1, p2]);
     });
+
+    it("zProtocolList does not recursively validate code documents", () => {
+      const p = {
+        id: uuidA,
+        name: "List Row",
+        organizationId: null,
+        visibility: "public",
+        description: null,
+        code: undefined,
+        family: "multispeq",
+        sortOrder: 1,
+        createdBy: uuidB,
+        createdAt: iso,
+        updatedAt: iso2,
+      };
+
+      expect(zProtocolList.parse([p])).toEqual([p]);
+      expect(() => zProtocol.parse(p)).toThrow();
+    });
   });
 
   describe("zProtocolFilterQuery", () => {
@@ -213,9 +232,8 @@ describe("Protocol Schema", () => {
     });
 
     it("accepts a string code at schema level", () => {
-      // zJsonValue includes strings, so this parses — but the backend write
-      // path (validateJsonStructure in the protocol controller) rejects
-      // strings so new rows can't be stored double-encoded (OJD-1711).
+      // Strings are valid protocol code documents end-to-end. The jsonb shape
+      // regression is guarded separately by jsonb_typeof integration tests.
       const str = { name: "X", code: '[{"step":1}]', family: "multispeq" };
       expect(zCreateProtocolRequestBody.parse(str)).toEqual(str);
     });

@@ -46,10 +46,9 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
   const autosave = useAutosave<ProtocolCode>({
     value: editedCode,
     toKey: (code) => JSON.stringify(code),
-    // Any parsed JSON document is saveable; undefined means the editor is
-    // mid-keystroke with unparsable text, and a bare string would be stored
-    // looking double-encoded (OJD-1711).
-    isValid: (value) => value !== undefined && typeof value !== "string",
+    // Any parsed JSON document is saveable, including strings; undefined means
+    // the editor is mid-keystroke with unparsable text.
+    isValid: (value) => value !== undefined,
     save,
     enabled: isEditing,
   });

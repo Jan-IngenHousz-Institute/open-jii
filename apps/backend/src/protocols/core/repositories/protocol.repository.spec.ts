@@ -975,10 +975,10 @@ describe("ProtocolController — create with visibility", () => {
 
   const createPath = () => testApp.resolveOrpcPath(contract.protocols.createProtocol);
 
-  // `code` is a jsonb column. Serializing before handing it to Drizzle, which
-  // serializes jsonb itself, stored a jsonb *string* holding the document. The
-  // API hid it because the read path parses either shape, so nothing but the
-  // stored type catches a regression here. See OJD-1711.
+  // Load-bearing regression guard: protocolCodeSchema = zJsonValue still accepts
+  // strings, so `code: JSON.stringify(doc)` typechecks. That is exactly how the
+  // original double-encoding bug happened in execute-project-transfer.spec.ts.
+  // Only the stored jsonb type reliably catches that regression. See OJD-1711.
   const storedCodeType = async (id: string) => {
     const [row] = await testApp.database
       .select({ kind: sql<string>`jsonb_typeof(${protocolsTable.code})` })
@@ -1036,32 +1036,37 @@ describe("ProtocolController — create with visibility", () => {
     expect(row.pulses).toBe(3);
   });
 
-  it("still returns an array for a legacy double-encoded row", async () => {
-    // Rows written before the fix, and any the backfill could not decode, must
-    // keep reading correctly through the API.
-    const created: SuperTestResponse<{ id: string }> = await testApp
+  it.each([
+    { label: "JSON-looking", stringCode: "[1,2]" },
+    { label: "quoted-JSON", stringCode: '"quoted protocol"' },
+    { label: "plain", stringCode: "plain protocol source" },
+  ])("round-trips a $label string code byte-identically", async ({ label, stringCode }) => {
+    const created: SuperTestResponse<{ id: string; code: unknown }> = await testApp
       .post(createPath())
       .withAuth(testUserId)
       .send({
-        name: `Legacy encoding ${faker.string.uuid()}`,
+        name: `${label} string code ${faker.string.uuid()}`,
         description: "x",
-        code: [{ label: "legacy" }],
+        code: stringCode,
         family: "multispeq",
       })
       .expect(StatusCodes.CREATED);
 
-    await testApp.database
-      .update(protocolsTable)
-      .set({ code: sql`to_jsonb(${JSON.stringify([{ label: "legacy" }])}::text)` })
-      .where(eq(protocolsTable.id, created.body.id));
+    expect(created.body.code).toBe(stringCode);
     expect(await storedCodeType(created.body.id)).toBe("string");
+
+    // The protocol-only custom jsonb column trusts postgres-js's single parse,
+    // so Drizzle cannot reinterpret JSON-looking string documents.
+    const found = await repository.findOne(created.body.id);
+    assertSuccess(found);
+    expect(found.value?.code).toBe(stringCode);
 
     const response: SuperTestResponse<{ code: unknown }> = await testApp
       .get(testApp.resolveOrpcPath(contract.protocols.getProtocol, { id: created.body.id }))
       .withAuth(testUserId)
       .expect(StatusCodes.OK);
 
-    expect(response.body.code).toEqual([{ label: "legacy" }]);
+    expect(response.body.code).toBe(stringCode);
   });
 
   it("round-trips a numeric zero code through the API", async () => {
@@ -1108,32 +1113,6 @@ describe("ProtocolController — create with visibility", () => {
       .expect(StatusCodes.OK);
 
     expect(response.body.code).toBe(false);
-  });
-
-  it("stores a string code verbatim at the repository layer", async () => {
-    // The API write path rejects strings, so create directly. The repository
-    // writes jsonb as-is — the row keeps a stored jsonb string — but reads
-    // decode it: drizzle's jsonb mapper JSON.parses string driver values
-    // (PgJsonb.mapFromDriverValue), so a legacy double-encoded row comes back
-    // as a document before the controller's parseProtocolCode ever runs.
-    const stringCode = JSON.stringify([{ step: 1 }]);
-    const createResult = await repository.create(
-      {
-        name: `String code ${faker.string.uuid()}`,
-        description: "x",
-        code: stringCode,
-        family: "multispeq",
-      },
-      testUserId,
-    );
-    assertSuccess(createResult);
-    const id = createResult.value[0].id;
-
-    expect(await storedCodeType(id)).toBe("string");
-
-    const found = await repository.findOne(id);
-    assertSuccess(found);
-    expect(found.value?.code).toEqual([{ step: 1 }]);
   });
 
   it("persists visibility=private when requested", async () => {
