@@ -94,8 +94,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     jobParams.UPLOAD_TABLE_NAME = input.uploadTableName;
     if (input.sourceKind === "ambyte") {
       jobParams.EXPERIMENT_NAME = input.experimentName;
-      // Year prefix tracks the calendar year of upload — used to partition the
-      // ambyte volume layout. Sourced from the system clock so it never goes stale.
+      // Year prefix tracks the calendar year of upload, partitioning the ambyte
+      // volume layout. Sourced from the system clock so it never goes stale.
       jobParams.YEAR_PREFIX = new Date().getUTCFullYear().toString();
     }
 
@@ -135,7 +135,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   async streamExport(
     exportId: string,
     experimentId: string,
-  ): Promise<Result<{ stream: Readable; filePath: string; tableName: string }>> {
+  ): Promise<
+    Result<{ stream: Readable; filePath: string; tableName: string; completedAt: string | null }>
+  > {
     this.logger.log({
       msg: "Streaming export by ID",
       operation: "streamExport",
@@ -174,8 +176,10 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     const filePathIndex = schemaData.columns.findIndex((col) => col.name === "file_path");
     const tableNameIndex = schemaData.columns.findIndex((col) => col.name === "table_name");
+    const completedAtIndex = schemaData.columns.findIndex((col) => col.name === "completed_at");
     const filePath = schemaData.rows[0][filePathIndex];
     const tableName = schemaData.rows[0][tableNameIndex];
+    const completedAt = completedAtIndex >= 0 ? schemaData.rows[0][completedAtIndex] : null;
 
     if (!filePath) {
       this.logger.error({
@@ -205,6 +209,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       stream: downloadResult.value,
       filePath,
       tableName,
+      completedAt: completedAt ?? null,
     });
   }
 

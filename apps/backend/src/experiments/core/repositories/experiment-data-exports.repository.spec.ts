@@ -536,7 +536,12 @@ describe("ExperimentDataExportsRepository", () => {
       const mockFilePath = "/path/to/exported/file.csv";
 
       vi.spyOn(databricksPort, "streamExport").mockResolvedValue(
-        success({ stream: mockStream, filePath: mockFilePath, tableName: "raw_data" }),
+        success({
+          stream: mockStream,
+          filePath: mockFilePath,
+          tableName: "raw_data",
+          completedAt: "2026-01-02T03:04:05Z",
+        }),
       );
 
       const result = await repository.downloadExport({ experimentId, exportId });
@@ -545,6 +550,7 @@ describe("ExperimentDataExportsRepository", () => {
       assertSuccess(result);
       expect(result.value.filePath).toBe(mockFilePath);
       expect(result.value.tableName).toBe("raw_data");
+      expect(result.value.completedAt).toBe("2026-01-02T03:04:05Z");
       expect(result.value.stream).toBe(mockStream);
 
       expect(databricksPort.streamExport).toHaveBeenCalledWith(exportId, experimentId);
