@@ -12,6 +12,7 @@ import { getCommentFromMeasurementResult } from "~/shared/measurements/measureme
 import { createLogger } from "~/shared/observability/logger";
 
 import { db } from "./client";
+import type { MeasurementStatus } from "./measurement-status";
 import { measurements } from "./schema";
 
 const log = createLogger("measurements");
@@ -23,19 +24,12 @@ const LEGACY_PREFIXES = [
 
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-export type MeasurementStatus = "pending" | "failed" | "successful";
-
-// A measurement the cloud hasn't acknowledged yet: still editable
-// (comments/flags) and eligible for (re-)upload.
-export const UNSYNCED_STATUSES: readonly MeasurementStatus[] = ["pending", "failed"];
-
-export function isUnsynced(status: MeasurementStatus): boolean {
-  return UNSYNCED_STATUSES.includes(status);
-}
+export type { MeasurementStatus } from "./measurement-status";
+export { UNSYNCED_STATUSES, isUnsynced } from "./measurement-status";
 
 export interface Measurement {
   topic: string;
-  measurementResult: object;
+  measurementResult: Record<string, unknown>;
   metadata: { experimentName: string; protocolName: string; timestamp: string };
 }
 
@@ -74,6 +68,7 @@ async function migrateLegacyEntries(): Promise<void> {
             questionsText: derived.questionsText,
             hasComment: derived.hasComment,
             dayKey: derived.dayKey,
+            workbookRunId: derived.workbookRunId,
             ...createdAt,
           })
           .onConflictDoNothing()
@@ -126,6 +121,7 @@ export async function saveMeasurement(
       questionsText: derived.questionsText,
       hasComment: derived.hasComment,
       dayKey: derived.dayKey,
+      workbookRunId: derived.workbookRunId,
     })
     .run();
   return id;
@@ -134,53 +130,64 @@ export async function saveMeasurement(
 // Computed at save/update time so the list query never decompresses
 // measurement_result. Keep this in sync with the schema columns.
 function deriveListColumns(
-  measurementResult: object,
+  measurementResult: Record<string, unknown>,
   timestamp: string,
 ): {
   questionsText: string;
   hasComment: boolean;
   dayKey: string;
+  workbookRunId: string;
 } {
   return {
     questionsText: JSON.stringify(parseQuestions(measurementResult)),
-    hasComment: !!getCommentFromMeasurementResult(measurementResult as Record<string, unknown>),
+    hasComment: !!getCommentFromMeasurementResult(measurementResult),
     dayKey: computeDayKey(timestamp),
+    workbookRunId: extractWorkbookRunId(measurementResult),
   };
 }
 
-// Local calendar date "YYYY-MM-DD" for `timestamp`, resolved in the device's
-// timezone, so the Recent list buckets by day without parsing the timestamp
-// per row at render time. Defaults to today when the timestamp is unparseable.
-// Uses the device tz (Intl) rather than the synced tz so the DB layer stays
-// free of the time-sync service's native deps; for day-bucketing the two are
-// equivalent in practice. See OJD-1470.
+// The workbook attempt a payload belongs to; "" when it carries none (payloads
+// written before run ids existed, dev seeds). Never null, so the legacy
+// backfill can't keep rescanning the same row on every launch.
+export function extractWorkbookRunId(measurementResult: Record<string, unknown>): string {
+  const runId = measurementResult.workbook_run_id;
+  return typeof runId === "string" ? runId : "";
+}
+
+// Resolved once at module load: `resolvedOptions()` hits the native Intl
+// backend on every call, and a timezone change mid-session is picked up on
+// the next app start anyway.
+const DEVICE_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+// Local calendar date "YYYY-MM-DD" for `timestamp` (device tz via Intl, which
+// keeps the DB layer free of the time-sync service's native deps), so the
+// Recent list buckets by day without parsing timestamps at render time.
+// Defaults to today when the timestamp is unparseable. See OJD-1470.
 export function computeDayKey(timestamp: string): string {
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   try {
-    const dt = DateTime.fromISO(timestamp, { zone: "utc" }).setZone(zone);
+    const dt = DateTime.fromISO(timestamp, { zone: "utc" }).setZone(DEVICE_ZONE);
     if (dt.isValid) return dt.toFormat("yyyy-MM-dd");
   } catch {
     // fall through to today
   }
-  return DateTime.now().setZone(zone).toFormat("yyyy-MM-dd");
+  return DateTime.now().setZone(DEVICE_ZONE).toFormat("yyyy-MM-dd");
 }
 
-// `questions_text` is plain JSON written by `deriveListColumns`. A malformed
-// row (legacy data, manual edit, partial migration) shouldn't break the whole
-// list — fall back to an empty array for just that row. We also reject
-// non-array shapes so a stray `null`, `{}`, or string can't masquerade as
-// `AnswerData[]` and crash downstream.
+// `questions_text` is plain JSON written by `deriveListColumns`. A malformed or
+// non-array value (legacy data, manual edit, partial migration) falls back to
+// an empty array for that row alone, so it can't masquerade as `AnswerData[]`
+// downstream or break the whole list.
 function safeParseQuestionsText(text: string | null, id: string): AnswerData[] {
   if (!text) return [];
   try {
     const parsed: unknown = JSON.parse(text);
     if (!Array.isArray(parsed)) {
-      console.warn(`[measurements] questions_text not an array for ${id}:`, typeof parsed);
+      log.warn("questions_text not an array", { id, type: typeof parsed });
       return [];
     }
     return parsed as AnswerData[];
   } catch (err) {
-    console.warn(`[measurements] questions_text malformed for ${id}:`, err);
+    log.warn("questions_text malformed", { id, err: (err as Error)?.message });
     return [];
   }
 }
@@ -241,7 +248,7 @@ export async function countRecentMeasurementsByExperiment(
 }
 
 /**
- * Row shape returned by `getMeasurementsList` — exactly what the list UI
+ * Row shape returned by `getMeasurementsList`: exactly what the list UI
  * needs to render a row, with no compressed blob. `questions` is already
  * parsed from the `questions_text` plain-text column populated at save time.
  * `hasComment` powers the row badge without touching `measurement_result`.
@@ -255,6 +262,8 @@ export interface MeasurementListRow {
   questions: AnswerData[];
   hasComment: boolean;
   dayKey: string;
+  /** Workbook attempt this row belongs to; "" when it has none. */
+  workbookRunId: string;
 }
 
 /**
@@ -280,6 +289,7 @@ export async function getMeasurementsList(
         questionsText: measurements.questionsText,
         hasComment: measurements.hasComment,
         dayKey: measurements.dayKey,
+        workbookRunId: measurements.workbookRunId,
       })
       .from(measurements)
       .where(inArray(measurements.status, status))
@@ -301,10 +311,46 @@ export async function getMeasurementsList(
       questions: safeParseQuestionsText(r.questionsText, r.id),
       hasComment: !!r.hasComment,
       dayKey: r.dayKey ?? "",
+      // NULL means "legacy row, not backfilled yet"; both it and "" mean the
+      // row groups on its own.
+      workbookRunId: r.workbookRunId ?? "",
     }));
   } catch (error) {
     log.error("Failed to fetch measurements list", { err: (error as Error)?.message });
     return [];
+  }
+}
+
+/**
+ * Every measurement id belonging to one workbook run, straight from storage —
+ * independent of which page, status filter, or day split the list currently
+ * renders. Run-level actions (delete/upload) resolve membership here so they
+ * act on the whole run, not the visible slice. Pass `statuses` to narrow the
+ * set (e.g. UNSYNCED_STATUSES for upload). Rethrows so the caller's
+ * confirmation can report a lookup failure instead of acting on nothing.
+ */
+export async function getMeasurementIdsByRunId(
+  runId: string,
+  statuses?: readonly MeasurementStatus[],
+): Promise<string[]> {
+  // "" is the sentinel for "no run" (backfill and new saves both write it), so
+  // querying with it would match every non-run measurement. Callers guard on a
+  // truthy runId; this keeps a forgetful future caller safe too.
+  if (!runId) return [];
+  await ensureMigrated();
+  try {
+    const where =
+      statuses && statuses.length > 0
+        ? and(eq(measurements.workbookRunId, runId), inArray(measurements.status, [...statuses]))
+        : eq(measurements.workbookRunId, runId);
+    const rows = db.select({ id: measurements.id }).from(measurements).where(where).all();
+    return rows.map((r) => r.id);
+  } catch (error) {
+    log.error("Failed to fetch measurement ids for run", {
+      runId,
+      err: (error as Error)?.message,
+    });
+    throw error;
   }
 }
 
@@ -398,11 +444,15 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
         questionsText: derived.questionsText,
         hasComment: derived.hasComment,
         dayKey: derived.dayKey,
+        workbookRunId: derived.workbookRunId,
       })
       .where(eq(measurements.id, key))
       .run();
   } catch (error) {
     log.error("Failed to update measurement", { key, err: (error as Error)?.message });
+    // Rethrown so comment/flag edits can keep the modal open and report the
+    // failure instead of looking saved.
+    throw error;
   }
 }
 
@@ -415,6 +465,7 @@ export async function markAsFailed(key: string): Promise<void> {
       .run();
   } catch (error) {
     log.error("Failed to mark measurement as failed", { key, err: (error as Error)?.message });
+    throw error;
   }
 }
 
@@ -429,6 +480,7 @@ export async function markAsSuccessful(key: string): Promise<void> {
       .run();
   } catch (error) {
     log.error("Failed to mark measurement as successful", { key, err: (error as Error)?.message });
+    throw error;
   }
 }
 
@@ -438,6 +490,27 @@ export async function removeMeasurement(key: string): Promise<void> {
     db.delete(measurements).where(eq(measurements.id, key)).run();
   } catch (error) {
     log.error("Failed to remove measurement", { key, err: (error as Error)?.message });
+    throw error;
+  }
+}
+
+// One statement for a whole workbook run, so the list settles in a single
+// invalidation instead of one per row.
+export async function removeMeasurements(keys: readonly string[]): Promise<void> {
+  await ensureMigrated();
+  if (keys.length === 0) return;
+  try {
+    db.delete(measurements)
+      .where(inArray(measurements.id, [...keys]))
+      .run();
+  } catch (error) {
+    log.error("Failed to remove measurements", {
+      count: keys.length,
+      err: (error as Error)?.message,
+    });
+    // Rethrown so the caller's confirmation can report the failure instead of
+    // reporting success over rows that are still there.
+    throw error;
   }
 }
 
@@ -447,6 +520,9 @@ export async function clearMeasurements(status: MeasurementStatus): Promise<void
     db.delete(measurements).where(eq(measurements.status, status)).run();
   } catch (error) {
     log.error("Failed to clear measurements", { status, err: (error as Error)?.message });
+    // Rethrown so the confirmation can report the failure instead of
+    // reporting success over rows that are still there.
+    throw error;
   }
 }
 

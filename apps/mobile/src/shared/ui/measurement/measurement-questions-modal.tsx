@@ -35,7 +35,7 @@ export function MeasurementQuestionsModal({
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const { sheetRef, renderBackdrop } = useBottomSheetController({ visible });
 
-  const measurementResult = measurement.data.measurementResult as Record<string, unknown>;
+  const measurementResult = measurement.data.measurementResult;
   const questions = parseQuestions(measurement.data.measurementResult);
   const experimentName = measurement.data.metadata.experimentName;
   const protocolName = measurement.data.metadata.protocolName;
