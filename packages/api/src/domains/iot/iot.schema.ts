@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zCommandFormat, zExperiment } from "../experiment/experiment.schema";
-import { zSensorFamily } from "../protocol/protocol.schema";
+import { zProtocolFamily, zSensorFamily } from "../protocol/protocol.schema";
 
 // --- Iot Credentials ---
 export const zIotCredentials = z.object({
@@ -27,6 +27,11 @@ export const zIotDeviceStatus = z.enum(["pending", "active", "rotating", "revoke
 
 // A device's class shares the canonical sensor-family taxonomy and maps to the ingest topic sensorType.
 export const zDeviceType = zSensorFamily;
+
+// Families that register through the web flow and carry onboarding configs.
+// Phones self-register through the ensure route and are rejected here at the
+// contract, not in a use case.
+export const zRegisterableDeviceType = zDeviceType.exclude(["mobile"]);
 
 export const zIotDevice = z.object({
   id: z.string().uuid(),
@@ -89,7 +94,9 @@ export const zRegisterIotDeviceBody = z.object({
     })
     .describe("Physical device identifier, e.g. MAC address"),
   name: z.string().min(1).max(255).optional(),
-  deviceType: zDeviceType.describe("IotDevice class, maps to the ingest topic sensorType"),
+  deviceType: zRegisterableDeviceType.describe(
+    "IotDevice class, maps to the ingest topic sensorType",
+  ),
   // Optional target organization to register the device into; defaults to the
   // creator's personal org. The caller must be a member of the given organization.
   organizationId: z.string().uuid().optional(),
@@ -163,7 +170,7 @@ export const zDeviceProcedureProtocol = z.object({
   type: z.literal("protocol"),
   protocolId: z.string().uuid(),
   name: z.string().optional(),
-  family: zSensorFamily.optional(),
+  family: zProtocolFamily.optional(),
   code: z.unknown().describe("The protocol's executable code, snapshotted at workbook publish"),
 });
 
@@ -214,7 +221,7 @@ export const zDeviceOnboardingExperiment = z.object({
 
 export const zDeviceOnboardingConfig = z.object({
   thingName: z.string(),
-  deviceType: zDeviceType,
+  deviceType: zRegisterableDeviceType,
   endpoint: z.string().describe("MQTT broker host (AWS IoT ATS data endpoint)"),
   experiments: z.array(zDeviceOnboardingExperiment),
 });

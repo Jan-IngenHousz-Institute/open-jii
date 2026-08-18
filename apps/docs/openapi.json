@@ -12477,8 +12477,7 @@
                           "ambyte",
                           "minipar",
                           "generic",
-                          "ambit",
-                          "mobile"
+                          "ambit"
                         ],
                         "type": "string"
                       },
@@ -13240,8 +13239,7 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit",
-                      "mobile"
+                      "ambit"
                     ],
                     "type": "string",
                     "description": "IotDevice class, maps to the ingest topic sensorType"
@@ -14480,8 +14478,7 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit",
-                        "mobile"
+                        "ambit"
                       ],
                       "type": "string"
                     },
@@ -14540,8 +14537,7 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit",
-                                        "mobile"
+                                        "ambit"
                                       ],
                                       "type": "string"
                                     },
@@ -16099,8 +16095,7 @@
                           "ambyte",
                           "minipar",
                           "generic",
-                          "ambit",
-                          "mobile"
+                          "ambit"
                         ],
                         "type": "string"
                       },
@@ -16209,8 +16204,7 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit",
-                      "mobile"
+                      "ambit"
                     ],
                     "type": "string"
                   },
@@ -16277,8 +16271,7 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit",
-                        "mobile"
+                        "ambit"
                       ],
                       "type": "string"
                     },
@@ -16409,8 +16402,7 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit",
-                        "mobile"
+                        "ambit"
                       ],
                       "type": "string"
                     },
@@ -16557,8 +16549,7 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit",
-                      "mobile"
+                      "ambit"
                     ],
                     "type": "string"
                   }
@@ -16605,8 +16596,7 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit",
-                        "mobile"
+                        "ambit"
                       ],
                       "type": "string"
                     },
@@ -22666,8 +22656,7 @@
                                   "ambyte",
                                   "minipar",
                                   "generic",
-                                  "ambit",
-                                  "mobile"
+                                  "ambit"
                                 ],
                                 "type": "string"
                               }

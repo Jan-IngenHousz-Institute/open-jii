@@ -31,15 +31,6 @@ export class RegisterIotDeviceUseCase {
       serialNumber: body.serialNumber,
     });
 
-    if (body.deviceType === "mobile") {
-      return failure(
-        AppError.badRequest(
-          "Mobile devices register themselves through the app",
-          ErrorCodes.IOT_DEVICE_REGISTER_FAILED,
-        ),
-      );
-    }
-
     const existing = await this.deviceRepository.findBySerialNumber(body.serialNumber);
     if (existing.isFailure()) {
       return failure(existing.error);
