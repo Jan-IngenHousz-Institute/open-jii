@@ -117,6 +117,25 @@ describe("useMeasurementMacroPreview", () => {
     expect(result.current).toEqual({ status: "unavailable", blocker: "offline" });
   });
 
+  it("reads a paused retry as offline, not as a missing version", () => {
+    // offlineFirst pauses the retry when the network is unreachable: no data,
+    // no error, not loading — only isPaused says why.
+    results.version = { data: undefined, isLoading: false, error: null, isPaused: true };
+
+    const { result } = renderHook(() => useMeasurementMacroPreview(stored));
+
+    expect(result.current).toEqual({ status: "unavailable", blocker: "offline" });
+  });
+
+  it("reads a 404 as the version being gone, not as offline", () => {
+    const notFound = Object.assign(new Error("not found"), { status: 404 });
+    results.version = { data: undefined, isLoading: false, error: notFound };
+
+    const { result } = renderHook(() => useMeasurementMacroPreview(stored));
+
+    expect(result.current).toEqual({ status: "unavailable", blocker: "version-unavailable" });
+  });
+
   it("reports version-unavailable when the read succeeds but returns nothing", () => {
     results.version = { data: undefined, isLoading: false, error: null };
 

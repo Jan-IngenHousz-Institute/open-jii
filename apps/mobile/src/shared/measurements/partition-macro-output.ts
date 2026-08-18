@@ -45,7 +45,7 @@ export function partitionMacroOutput(outputs: MacroOutput[] | undefined): Partit
         continue;
       }
       if (Array.isArray(value)) {
-        if (value.every((v) => typeof v === "number" && !Number.isNaN(v))) {
+        if (value.every((v) => typeof v === "number" && Number.isFinite(v))) {
           charts.push({ kind: "chart", name, values: value as number[] });
           continue;
         }

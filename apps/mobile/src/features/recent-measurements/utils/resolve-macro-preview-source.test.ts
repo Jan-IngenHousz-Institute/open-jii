@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { gzipToBase64 } from "~/shared/compression/gzip-base64";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 
 import { resolveMacroPreviewSource } from "./resolve-macro-preview-source";
@@ -52,6 +53,9 @@ describe("resolveMacroPreviewSource", () => {
     const result = resolveMacroPreviewSource(
       measurement({
         ...fullPayload,
+        // protocol_id is written post-spread at upload time, so it is never
+        // the value the macro saw at capture.
+        protocol_id: "platform-proto",
         sample: [
           { phi2: 0.8, macros: ["macro-1.js"] },
           { phi2: 0.2, macros: ["macro-1.js"] },
@@ -62,6 +66,34 @@ describe("resolveMacroPreviewSource", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.source.rawMeasurement.sample).toEqual([{ phi2: 0.8 }, { phi2: 0.2 }]);
+    expect(result.source.rawMeasurement.protocol_id).toBeUndefined();
+  });
+
+  it("replays without an experiment id when the payload names its workbook", () => {
+    // The topic parse is only the legacy fallback's input; a payload with
+    // workbook_id replays even when its topic no longer parses.
+    const result = resolveMacroPreviewSource(
+      measurement({ ...fullPayload, workbook_id: "wb-1" }, "some/other/topic"),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.source.workbookId).toBe("wb-1");
+    expect(result.source.experimentId).toBeUndefined();
+  });
+
+  it("round-trips a bare-string sample, which compressSample gzips verbatim", () => {
+    const result = resolveMacroPreviewSource(
+      measurement({
+        ...fullPayload,
+        sample: gzipToBase64("not json, just text"),
+        _sample_encoding: "gzip+base64",
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.source.rawMeasurement.sample).toBe("not json, just text");
   });
 
   it("keeps capture-time keys that coincide with envelope additions it cannot prove", () => {

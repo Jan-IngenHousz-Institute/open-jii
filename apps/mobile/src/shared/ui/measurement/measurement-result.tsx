@@ -54,7 +54,12 @@ export function MeasurementResult({
       ?.map((output) => output.messages)
       .filter((msg): msg is MacroMessageGroup => msg !== undefined) ?? [];
 
-  const rawJson = useMemo(() => JSON.stringify(rawMeasurement, null, 2), [rawMeasurement]);
+  // Stringified lazily: pretty-printing the (potentially ~150 KB) payload on
+  // every mount costs the sheet's open animation, and the Raw tab is rare.
+  const rawJson = useMemo(
+    () => (activeTab === "raw" ? JSON.stringify(rawMeasurement, null, 2) : null),
+    [activeTab, rawMeasurement],
+  );
 
   const renderRawContent = () => (
     <Text className={clsx("font-mono text-sm leading-5", classes.text)}>{rawJson}</Text>

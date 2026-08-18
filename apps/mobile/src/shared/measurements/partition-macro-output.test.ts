@@ -58,6 +58,14 @@ describe("partitionMacroOutput", () => {
     expect(result.others).toEqual([]);
   });
 
+  it("routes non-finite numbers to the gap path, not the strict path", () => {
+    // A macro dividing by zero yields Infinity; charting it verbatim would
+    // break the axis math (NaN tick range) — it becomes a null break instead.
+    const result = partitionMacroOutput([{ trace: [1, Infinity, 3] }]);
+
+    expect(result.charts).toEqual([{ kind: "chart", name: "trace", values: [1, null, 3] }]);
+  });
+
   it("treats a mixed array as structured, not as a chart", () => {
     const result = partitionMacroOutput([{ mixed: [1, "two", 3] }]);
 

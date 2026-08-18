@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { applyMacro } from "~/features/measurement-flow/utils/process-scan/process-scan";
 import type { MacroInput } from "~/features/measurement-flow/utils/process-scan/process-scan";
 import type { MacroOutput } from "~/shared/measurements/macro-output";
@@ -44,6 +44,16 @@ export function useMacroOutputs({
   enabled = true,
   onProcessed,
 }: UseMacroOutputsArgs) {
+  // ctx enters the key as a stable serialization so a changed upstream output
+  // recomputes, while an identical rebuild does not. Memoized: stringifying a
+  // workbook-sized ctx on every render defeats the cacheKey's purpose. With a
+  // cacheKey, the key already pins the ctx (measurement + version + macro), so
+  // the serialization drops out entirely.
+  const ctxKey = useMemo(
+    () => (cacheKey ? undefined : ctx ? JSON.stringify(ctx) : undefined),
+    [cacheKey, ctx],
+  );
+
   const {
     data: outputs,
     isLoading,
@@ -52,16 +62,16 @@ export function useMacroOutputs({
     // applyMacro is a pure local computation; "always" keeps it from being
     // paused by the onlineManager while offline.
     networkMode: "always",
+    // A throw is deterministic (bad code, bad input); a retry just re-runs the
+    // same 150 KB payload through the macro for the same error.
+    retry: false,
     gcTime: MACRO_OUTPUTS_GC_TIME,
     enabled: enabled && !!macro && rawMeasurement !== undefined,
-    // ctx enters the key as a stable serialization so a changed upstream
-    // output recomputes, while an identical rebuild does not. With a cacheKey
-    // the (large) payload object stays out of the key entirely.
     queryKey: [
       "measurement-result",
       cacheKey ?? rawMeasurement,
       macro,
-      ctx ? JSON.stringify(ctx) : undefined,
+      ctxKey,
       inputError?.name,
       inputError?.message,
     ],

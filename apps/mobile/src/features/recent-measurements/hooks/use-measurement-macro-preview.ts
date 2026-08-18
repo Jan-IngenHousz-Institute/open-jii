@@ -59,7 +59,11 @@ export function useMeasurementMacroPreview(measurement: StoredMeasurement): Macr
     data: version,
     isLoading: isVersionLoading,
     error: versionError,
-  } = useWorkbookVersionQuery(workbookId, source?.workbookVersionId);
+    // offlineFirst pauses the retry when the device is offline, so a paused
+    // query is the reliable "no network" signal — an error after exhausted
+    // online retries is not.
+    isPaused,
+  } = useWorkbookVersionQuery(workbookId, source?.workbookVersionId, { suppressToast: true });
 
   const macro = useMemo(
     () => (source ? findMacroSnapshot(version, source.macroId) : undefined),
@@ -71,8 +75,17 @@ export function useMeasurementMacroPreview(measurement: StoredMeasurement): Macr
   // No workbook id: the experiment is gone from the member list (unshared or
   // deleted), so its workbook is out of reach. Not a connectivity problem.
   if (!workbookId) return { status: "unavailable", blocker: "experiment-unavailable" };
-  // The version read itself failed: this is the genuinely offline case.
-  if (versionError) return { status: "unavailable", blocker: "offline" };
+  // Retry paused on an unreachable network: the genuinely offline case.
+  if (isPaused) return { status: "unavailable", blocker: "offline" };
+  if (versionError) {
+    // A 404 means the pinned version is gone for good; anything else (5xx,
+    // timeout while nominally online) is a reachability problem.
+    const status = (versionError as { status?: number }).status;
+    return {
+      status: "unavailable",
+      blocker: status === 404 ? "version-unavailable" : "offline",
+    };
+  }
   // The read succeeded but returned nothing: the pinned version is gone.
   if (!version) return { status: "unavailable", blocker: "version-unavailable" };
   if (!macro) return { status: "unavailable", blocker: "macro-not-found" };
@@ -95,7 +108,9 @@ export function useMeasurementMacroPreview(measurement: StoredMeasurement): Macr
 // is guaranteed whenever a snapshot exists; a missing cell means the version
 // genuinely doesn't carry this macro. Reporting not-found beats guessing a
 // language: applyMacro reads "" as JavaScript, which would silently run a
-// stored Python macro as JS.
+// stored Python macro as JS. (Two cells referencing the same macro with
+// different languages would be ambiguous here — the payload records the macro
+// entity id, not the producing cell id, so there is nothing better available.)
 function findMacroSnapshot(
   version: WorkbookVersion | undefined,
   macroId: string,

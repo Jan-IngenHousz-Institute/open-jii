@@ -17,7 +17,8 @@ export type MacroPreviewBlocker =
   | "decode-failed";
 
 export interface MacroPreviewSource {
-  experimentId: string;
+  /** Undefined only when the topic is unparseable AND workbookId is present. */
+  experimentId?: string;
   workbookVersionId: string;
   macroId: string;
   /**
@@ -54,13 +55,17 @@ export function resolveMacroPreviewSource(
     return { ok: false, blocker: "no-workbook-version" };
   }
 
+  const workbookId = payload.workbook_id;
+  const hasWorkbookId = typeof workbookId === "string" && workbookId !== "";
+
+  // The experiment id only feeds the workbook-ref fallback for legacy
+  // payloads; a payload that names its producing workbook replays without it,
+  // even if its topic is unparseable by the current app version.
   const { experimentId } = parseMeasurementTopic(measurement.data.topic);
-  if (!experimentId) return { ok: false, blocker: "unknown-experiment" };
+  if (!experimentId && !hasWorkbookId) return { ok: false, blocker: "unknown-experiment" };
 
   const decoded = decodeStoredSample(payload);
   if (!decoded) return { ok: false, blocker: "decode-failed" };
-
-  const workbookId = payload.workbook_id;
 
   return {
     ok: true,
@@ -68,7 +73,7 @@ export function resolveMacroPreviewSource(
       experimentId,
       workbookVersionId,
       macroId,
-      ...(typeof workbookId === "string" && workbookId !== "" ? { workbookId } : {}),
+      ...(hasWorkbookId ? { workbookId } : {}),
       rawMeasurement: stripUploadEnvelope(decoded),
       ctx: parseMacroContext(payload.macro_context),
     },
@@ -89,6 +94,10 @@ const UPLOAD_ENVELOPE_KEYS: ReadonlySet<string> = new Set([
   "workbook_version_id",
   "workbook_id",
   "macro_context",
+  // Written after the raw-measurement spread precisely so a device-native value
+  // can't clobber platform attribution — so it is provably never the value the
+  // macro saw at capture time.
+  "protocol_id",
 ]);
 
 function stripUploadEnvelope(payload: Record<string, unknown>): Record<string, unknown> {

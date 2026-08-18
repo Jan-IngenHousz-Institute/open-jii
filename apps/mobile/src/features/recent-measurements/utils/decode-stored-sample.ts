@@ -29,7 +29,16 @@ export function decodeStoredSample(
   }
   try {
     const { _sample_encoding, ...rest } = payload;
-    return { ...rest, sample: JSON.parse(base64ToGunzip(payload.sample)) };
+    const text = base64ToGunzip(payload.sample);
+    // compressSample gzips a string sample verbatim, so a bare non-JSON string
+    // round-trips as itself rather than throwing here.
+    let sample: unknown;
+    try {
+      sample = JSON.parse(text);
+    } catch {
+      sample = text;
+    }
+    return { ...rest, sample };
   } catch (error) {
     log.warn("sample decode failed", { err: (error as Error)?.message });
     return undefined;
