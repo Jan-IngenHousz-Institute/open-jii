@@ -161,6 +161,12 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const stats = getJsonStats();
 
   useEffect(() => {
+    // Not seeded yet (debounce window after mount): nothing to report — an
+    // "invalid" verdict here would flash red on every open before text exists.
+    if (debouncedEditorCode === undefined) return;
+
+    // Seeded but empty: the user cleared the editor. Report no value and
+    // invalid, so a cleared editor can never silently persist "".
     if (!debouncedEditorCode) {
       onChangeRef.current(undefined);
       setIsValidJson(false);
