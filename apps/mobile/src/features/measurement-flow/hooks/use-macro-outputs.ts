@@ -35,6 +35,17 @@ const MACRO_OUTPUTS_GC_TIME = 5 * 60 * 1000;
  * flow and by re-running a stored measurement, so both paths execute macros
  * exactly the same way.
  */
+// JSON.stringify maps NaN/Infinity to null and drops undefined properties, so
+// distinct ctxs could collide on one cache key and reuse a wrong macro result.
+// The replacer keeps both distinguishable.
+function stringifyLossless(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) => {
+    if (typeof v === "number" && !Number.isFinite(v)) return { $nonfinite: String(v) };
+    if (v === undefined) return { $undefined: true };
+    return v;
+  });
+}
+
 export function useMacroOutputs({
   rawMeasurement,
   macro,
@@ -50,7 +61,7 @@ export function useMacroOutputs({
   // cacheKey, the key already pins the ctx (measurement + version + macro), so
   // the serialization drops out entirely.
   const ctxKey = useMemo(
-    () => (cacheKey ? undefined : ctx ? JSON.stringify(ctx) : undefined),
+    () => (cacheKey ? undefined : ctx ? stringifyLossless(ctx) : undefined),
     [cacheKey, ctx],
   );
 

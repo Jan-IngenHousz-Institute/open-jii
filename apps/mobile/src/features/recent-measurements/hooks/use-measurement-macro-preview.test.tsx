@@ -109,6 +109,14 @@ describe("useMeasurementMacroPreview", () => {
     expect(result.current).toEqual({ status: "unavailable", blocker: "experiment-unavailable" });
   });
 
+  it("reads a failed experiment-list read as offline, not as a missing experiment", () => {
+    results.list = { data: undefined, isLoading: false, error: new Error("network down") };
+
+    const { result } = renderHook(() => useMeasurementMacroPreview(stored));
+
+    expect(result.current).toEqual({ status: "unavailable", blocker: "offline" });
+  });
+
   it("keeps offline for the genuinely failed version read", () => {
     results.version = { data: undefined, isLoading: false, error: new Error("network down") };
 

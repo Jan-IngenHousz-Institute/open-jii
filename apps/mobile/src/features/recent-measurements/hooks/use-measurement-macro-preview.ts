@@ -51,9 +51,12 @@ export function useMeasurementMacroPreview(measurement: StoredMeasurement): Macr
   // The payload recorded at capture time names its producing workbook; only
   // legacy payloads without it need the experiment's current linkage, which
   // detach/re-attach can have changed (or removed) since.
-  const { workbookId: linkedWorkbookId, isLoading: isRefLoading } = useExperimentWorkbookRef(
-    source?.workbookId ? undefined : source?.experimentId,
-  );
+  const {
+    workbookId: linkedWorkbookId,
+    isLoading: isRefLoading,
+    error: refError,
+    isPaused: isRefPaused,
+  } = useExperimentWorkbookRef(source?.workbookId ? undefined : source?.experimentId);
   const workbookId = source?.workbookId ?? linkedWorkbookId;
   const {
     data: version,
@@ -72,9 +75,14 @@ export function useMeasurementMacroPreview(measurement: StoredMeasurement): Macr
 
   if (!resolved.ok) return { status: "unavailable", blocker: resolved.blocker };
   if (!source || isRefLoading || isVersionLoading) return { status: "loading" };
-  // No workbook id: the experiment is gone from the member list (unshared or
-  // deleted), so its workbook is out of reach. Not a connectivity problem.
-  if (!workbookId) return { status: "unavailable", blocker: "experiment-unavailable" };
+  if (!workbookId) {
+    // A failed/paused list read is a reachability problem, not a missing
+    // experiment — report it as such instead of experiment-unavailable.
+    if (isRefPaused || refError) return { status: "unavailable", blocker: "offline" };
+    // No workbook id: the experiment is gone from the member list (unshared or
+    // deleted), so its workbook is out of reach. Not a connectivity problem.
+    return { status: "unavailable", blocker: "experiment-unavailable" };
+  }
   // Retry paused on an unreachable network: the genuinely offline case.
   if (isPaused) return { status: "unavailable", blocker: "offline" };
   if (versionError) {

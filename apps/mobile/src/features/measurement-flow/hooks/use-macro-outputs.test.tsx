@@ -127,4 +127,28 @@ describe("useMacroOutputs", () => {
 
     await waitFor(() => expect(applyMacro).toHaveBeenCalledTimes(1));
   });
+
+  it("distinguishes ctxs that plain JSON.stringify would collide", async () => {
+    // NaN vs null, and { a: undefined } vs {}: lossy serialization would serve
+    // one macro's cached result for a different ctx.
+    applyMacro.mockResolvedValue([{ ok: 1 }]);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    const render = (ctx: Record<string, unknown>) =>
+      renderHook(() => useMacroOutputs({ rawMeasurement: { phi2: 0.8 }, macro, ctx }), {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        ),
+      });
+
+    render({ a: Number.NaN });
+    await waitFor(() => expect(applyMacro).toHaveBeenCalledTimes(1));
+    render({ a: null });
+    await waitFor(() => expect(applyMacro).toHaveBeenCalledTimes(2));
+    render({ a: undefined });
+    await waitFor(() => expect(applyMacro).toHaveBeenCalledTimes(3));
+    render({});
+    await waitFor(() => expect(applyMacro).toHaveBeenCalledTimes(4));
+  });
 });

@@ -70,6 +70,15 @@ describe("parseMeasurementTopic", () => {
     expect(parseMeasurementTopic("openjii/data_ingest/v1/exp-7/mobile/2.4.1/thing-1")).toEqual({});
   });
 
+  it("rejects other shapes on the shared prefix, even with an id at segment 3", () => {
+    // Another device family's topic, or a truncated/extended one: not ours.
+    expect(parseMeasurementTopic("experiment/data_ingest/v1/exp-7/ambyte/1.0/dev-9")).toEqual({});
+    expect(parseMeasurementTopic("experiment/data_ingest/v1/exp-7/other-channel")).toEqual({});
+    expect(
+      parseMeasurementTopic("experiment/data_ingest/v1/exp-7/multispeq/v2.0/client-1/proto-3"),
+    ).toEqual({});
+  });
+
   it("returns undefined rather than an empty id for an empty segment", () => {
     expect(parseMeasurementTopic("experiment/data_ingest/v1//mobile/2.4.1/thing-1")).toEqual({
       experimentId: undefined,

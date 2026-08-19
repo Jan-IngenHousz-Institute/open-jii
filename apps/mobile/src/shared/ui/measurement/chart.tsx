@@ -52,8 +52,11 @@ export function Chart({ name, values }: ChartProps) {
   const { brand, border, onSurface } = useThemeColors();
   const { t } = useTranslation("measurementFlow");
 
-  const numbers = values?.filter((v): v is number => v !== null) ?? [];
-  if (!values || numbers.length === 0) {
+  // Non-finite numbers (a macro dividing by zero) are gaps, not coordinates:
+  // they would poison the axis bounds (NaN tick range, no labels).
+  const safeValues = values?.map((v) => (typeof v === "number" && Number.isFinite(v) ? v : null));
+  const numbers = safeValues?.filter((v): v is number => v !== null) ?? [];
+  if (!safeValues || numbers.length === 0) {
     return (
       <View className="border-border my-5 rounded-2xl border px-5 py-5">
         <Text className="text-foreground mb-5 text-center text-xl font-bold">{name}</Text>
@@ -74,7 +77,7 @@ export function Chart({ name, values }: ChartProps) {
   const plotH = CHART_HEIGHT - PADDING.top - PADDING.bottom;
 
   const toX = (i: number) =>
-    PADDING.left + (values.length === 1 ? plotW / 2 : (i / (values.length - 1)) * plotW);
+    PADDING.left + (safeValues.length === 1 ? plotW / 2 : (i / (safeValues.length - 1)) * plotW);
   const toY = (v: number) =>
     PADDING.top + (yMax === yMin ? plotH / 2 : (1 - (v - yMin) / (yMax - yMin)) * plotH);
 
@@ -82,7 +85,7 @@ export function Chart({ name, values }: ChartProps) {
   // to zero. A run of one renders as a dot.
   const segments: { x: number; y: number }[][] = [];
   let current: { x: number; y: number }[] = [];
-  values.forEach((v, i) => {
+  safeValues.forEach((v, i) => {
     if (v === null) {
       if (current.length > 0) segments.push(current);
       current = [];
@@ -92,7 +95,7 @@ export function Chart({ name, values }: ChartProps) {
   });
   if (current.length > 0) segments.push(current);
 
-  const xLabelIndices = [0, Math.floor(values.length / 2), values.length - 1].filter(
+  const xLabelIndices = [0, Math.floor(safeValues.length / 2), safeValues.length - 1].filter(
     (v, i, a) => a.indexOf(v) === i,
   );
 
@@ -127,7 +130,7 @@ export function Chart({ name, values }: ChartProps) {
             );
           })}
 
-          {values.length > 1 &&
+          {safeValues.length > 1 &&
             xLabelIndices.map((i) => (
               <SvgText
                 key={`x-${i}`}

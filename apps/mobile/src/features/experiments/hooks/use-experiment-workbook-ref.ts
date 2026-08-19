@@ -9,8 +9,12 @@ import { orpc } from "~/shared/api/orpc";
 export function useExperimentWorkbookRef(experimentId: string | undefined): {
   workbookId: string | undefined;
   isLoading: boolean;
+  /** Set when the list read failed (e.g. offline with nothing cached). */
+  error: unknown;
+  /** offlineFirst paused the retry: the reliable "no network" signal. */
+  isPaused: boolean;
 } {
-  const { data, isLoading } = useQuery(
+  const { data, isLoading, error, isPaused } = useQuery(
     orpc.experiments.listExperiments.queryOptions({
       input: { filter: "member" },
       enabled: !!experimentId,
@@ -22,5 +26,7 @@ export function useExperimentWorkbookRef(experimentId: string | undefined): {
   return {
     workbookId: experiment?.workbookId ?? undefined,
     isLoading,
+    error,
+    isPaused,
   };
 }

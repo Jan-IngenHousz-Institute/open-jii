@@ -29,15 +29,19 @@ export function getMeasurementMqttTopic({ experimentId }: { experimentId: string
 /**
  * Recovers the experiment id a stored topic was built from. A stored
  * measurement carries no experiment id of its own, so this is how a saved row
- * finds the experiment (and workbook) it belongs to. Both the current lean
- * format and the legacy templated format put the experiment id at segment 3
- * of the same `experiment/data_ingest/v1/…` prefix:
- *   current: experiment/data_ingest/v1/<experimentId>/<sensorType>/<version>/<sensorId>
+ * finds the experiment (and workbook) it belongs to. Both topic shapes this
+ * app has ever published carry the experiment id at segment 3 of the same
+ * `experiment/data_ingest/v1/…` prefix:
+ *   current: experiment/data_ingest/v1/<experimentId>/mobile/<version>/<sensorId>
  *   legacy:  experiment/data_ingest/v1/<experimentId>/multispeq/v1.0/<clientId>/<protocolId>
- * Anything else is not a measurement topic this app wrote.
+ * The trailing literals are validated too, so another device family's topic on
+ * the same prefix can't yield a bogus experiment id.
  */
 export function parseMeasurementTopic(topic: string): { experimentId?: string } {
   const parts = topic.split("/");
   if (parts[0] !== "experiment" || parts[1] !== "data_ingest" || parts[2] !== "v1") return {};
+  const isCurrent = parts.length === 7 && parts[4] === SENSOR_TYPE;
+  const isLegacy = parts.length === 8 && parts[4] === "multispeq" && parts[5] === "v1.0";
+  if (!isCurrent && !isLegacy) return {};
   return { experimentId: parts[3] || undefined };
 }
