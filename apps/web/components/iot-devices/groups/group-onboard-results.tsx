@@ -13,6 +13,8 @@ interface GroupOnboardResultsProps {
   groupName: string;
   rows: DeviceGroupOnboardRow[];
   labelByDeviceId: Map<string, string>;
+  /** Names of the experiments this batch bound; empty for a re-issue. */
+  boundExperimentNames: string[];
   /** Plan answers, applied identically to every delivered config. */
   answers: Record<string, DeviceAnswer>;
   /** Required plan questions still unanswered block delivery, never onboarding. */
@@ -37,6 +39,7 @@ export function GroupOnboardResults({
   groupName,
   rows,
   labelByDeviceId,
+  boundExperimentNames,
   answers,
   deliveryBlocked,
 }: GroupOnboardResultsProps) {
@@ -77,6 +80,9 @@ export function GroupOnboardResults({
 
   function renderRow(row: DeviceGroupOnboardRow) {
     const label = labelByDeviceId.get(row.deviceId) ?? row.deviceId;
+    const servedExperiments = (row.config?.experiments ?? []).map(
+      (experiment) => experiment.experimentName,
+    );
 
     return (
       <li key={row.deviceId} className="flex items-center gap-2 py-1.5 text-sm">
@@ -85,7 +91,18 @@ export function GroupOnboardResults({
         ) : (
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
         )}
-        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate">{label}</p>
+          {row.config !== null && (
+            <p className="text-muted-foreground truncate text-xs">
+              {servedExperiments.length === 0
+                ? t("iot.groups.onboarding.servesNothing")
+                : t("iot.groups.onboarding.serves", {
+                    experiments: servedExperiments.join(", "),
+                  })}
+            </p>
+          )}
+        </div>
         {row.error !== null && <span className="text-muted-foreground text-xs">{row.error}</span>}
         {row.config !== null && (
           <Button
@@ -106,6 +123,14 @@ export function GroupOnboardResults({
 
   return (
     <div className="space-y-3">
+      <p className="text-muted-foreground text-sm">
+        {boundExperimentNames.length === 0
+          ? t("iot.groups.onboarding.reissuedNote")
+          : t("iot.groups.onboarding.boundNote", {
+              experiments: boundExperimentNames.join(", "),
+            })}
+      </p>
+
       <ul className="divide-y rounded-lg border px-3">{rows.map(renderRow)}</ul>
 
       {succeeded.length > 0 && (

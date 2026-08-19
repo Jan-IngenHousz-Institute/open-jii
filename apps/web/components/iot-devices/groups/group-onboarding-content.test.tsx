@@ -15,12 +15,18 @@ import { GroupOnboardingContent } from "./group-onboarding-content";
 
 const GROUP_ID = "11111111-1111-4111-8111-111111111111";
 
-function deviceConfig(thingName: string) {
+function deviceConfig(thingName: string, experimentNames: string[] = []) {
   return {
     thingName,
     deviceType: "ambyte",
     endpoint: "data.iot.example.amazonaws.com",
-    experiments: [],
+    experiments: experimentNames.map((experimentName, index) => ({
+      experimentId: `33333333-3333-4333-8333-33333333333${String(index)}`,
+      experimentName,
+      topicPrefix: "experiment/data_ingest/v1/x/ambyte",
+      workbookVersion: null,
+      procedures: [],
+    })),
   };
 }
 
@@ -66,7 +72,11 @@ describe("GroupOnboardingContent", () => {
     const onboard = server.mount(contract.deviceGroups.onboardDeviceGroup, {
       body: {
         devices: [
-          { deviceId: gateway.deviceId, config: deviceConfig("ambyte_GW-1"), error: null },
+          {
+            deviceId: gateway.deviceId,
+            config: deviceConfig("ambyte_GW-1", ["Field trial", "Soil study"]),
+            error: null,
+          },
           { deviceId: broken.deviceId, config: null, error: "no live credentials" },
         ],
       },
@@ -85,8 +95,11 @@ describe("GroupOnboardingContent", () => {
       includeWorkbook: true,
     });
 
-    // Per-device outcomes: the failure inline, the zip only counting successes.
+    // Per-device outcomes: the failure inline, the zip only counting successes,
+    // and each success naming everything the device now serves.
     expect(await screen.findByText("no live credentials")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.onboarding.boundNote")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.onboarding.serves")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /iot.groups.onboarding.downloadAll/ }),
     ).toBeInTheDocument();

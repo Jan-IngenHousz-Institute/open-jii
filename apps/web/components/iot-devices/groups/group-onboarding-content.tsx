@@ -103,6 +103,11 @@ export function GroupOnboardingContent() {
         onSuccess: (data) => {
           setRows(data.devices);
           setAnswers({});
+          setBoundExperimentNames(
+            experiments
+              .filter((experiment) => experimentIds.includes(experiment.id))
+              .map((experiment) => experiment.name),
+          );
           toast({ title: t("iot.groups.onboarding.onboardSuccess") });
         },
         onError: () => {
@@ -128,6 +133,10 @@ export function GroupOnboardingContent() {
         .map((question) => ({ experimentName: experiment.experimentName, question })),
     );
   }, [rows]);
+
+  // What the last batch actually bound, for the results narrative; captured at
+  // submit so later selection changes don't rewrite history.
+  const [boundExperimentNames, setBoundExperimentNames] = useState<string[]>([]);
 
   const hasUnansweredRequired = questions.some(
     (entry) => entry.question.required && !(answers[entry.question.id] ?? entry.question.answer),
@@ -263,6 +272,7 @@ export function GroupOnboardingContent() {
               groupName={group?.name ?? "group"}
               rows={rows}
               labelByDeviceId={labels}
+              boundExperimentNames={boundExperimentNames}
               answers={answers}
               deliveryBlocked={hasUnansweredRequired}
             />
