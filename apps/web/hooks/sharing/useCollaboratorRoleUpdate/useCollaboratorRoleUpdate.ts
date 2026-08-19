@@ -26,7 +26,10 @@ export const useCollaboratorRoleUpdate = () => {
         // Use the server response; owner rows have no grant id.
         const retiered = data.find((row) => row.kind === "grant" && row.id === variables.grantId);
         const retieredSelf =
-          !!userId && retiered?.granteeType === "user" && retiered.granteeId === userId;
+          !!userId &&
+          retiered?.kind === "grant" &&
+          retiered.granteeType === "user" &&
+          retiered.granteeId === userId;
         if (!retieredSelf) return;
 
         await Promise.all(

@@ -51,7 +51,7 @@ function grantFor(name: string, overrides: Partial<ResourceGrantDto> = {}): Reso
   return createResourceGrant({
     resourceType: "experiment",
     resourceId: "exp-1",
-    grantee: { type: "user", displayName: name, email: null, avatarUrl: null },
+    grantee: { type: "user", displayName: name, email: null, avatarUrl: null, memberCount: null },
     ...overrides,
   });
 }
@@ -78,10 +78,16 @@ describe("<CollaboratorsList />", () => {
     expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
   });
 
-  describe("owner rows", () => {
+  describe("org-derived rows", () => {
     function ownerFor(name: string): ResourceOwnerDto {
       return createResourceOwner({
-        grantee: { type: "user", displayName: name, email: null, avatarUrl: null },
+        grantee: {
+          type: "user",
+          displayName: name,
+          email: null,
+          avatarUrl: null,
+          memberCount: null,
+        },
       });
     }
 
@@ -89,11 +95,75 @@ describe("<CollaboratorsList />", () => {
       renderList([ownerFor("Ada Owner")]);
 
       const row = rowFor("Ada Owner");
-      expect(within(row).getByText("sharing.ownerBadge")).toBeInTheDocument();
+      expect(within(row).getByText("sharing.orgOwnerBadge")).toBeInTheDocument();
       // An owner holds full control through the organization, so there is no tier
       // to move them between and no grant to take away.
       expect(within(row).queryByRole("combobox")).not.toBeInTheDocument();
       expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+    });
+
+    it("calls an owner's leftover grant redundant, and offers only to remove it", () => {
+      renderList([
+        createResourceOwner({
+          granteeId: "u-owner",
+          grantee: {
+            type: "user",
+            displayName: "Ada Owner",
+            email: "ada@example.com",
+            avatarUrl: null,
+            memberCount: null,
+          },
+          inertGrant: { id: "g-stale", role: "viewer" },
+        }),
+      ]);
+
+      const row = rowFor("Ada Owner");
+      expect(within(row).getByText("sharing.orgOwnerBadge")).toBeInTheDocument();
+      expect(within(row).getByText("sharing.redundantGrantBadge")).toBeInTheDocument();
+      // Worth tidying, but no tier would change anything — and the control names
+      // what it removes rather than implying it touches the org role.
+      expect(within(row).queryByRole("combobox")).not.toBeInTheDocument();
+      expect(
+        within(row).getByRole("button", { name: "sharing.removeRedundantGrantForLabel" }),
+      ).toBeVisible();
+    });
+
+    it("collapses admins whose access is only their role into one counted row", () => {
+      renderList([
+        {
+          kind: "orgAdmins",
+          organizationId: "11111111-1111-4111-8111-111111111111",
+          organizationName: "Greenhouse Lab",
+          adminCount: 3,
+        },
+      ]);
+
+      expect(screen.getByText("sharing.orgAdminsName")).toBeInTheDocument();
+      expect(screen.getByText("sharing.orgAdminsCount")).toBeInTheDocument();
+      // Named with the platform's word for the tier, the same one the picker uses.
+      expect(screen.getByText("sharing.roleCanEdit")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    });
+
+    it("collapses the rest of the organization into one row rather than one each", () => {
+      renderList([
+        {
+          kind: "orgMembers",
+          organizationId: "11111111-1111-4111-8111-111111111111",
+          organizationName: "Greenhouse Lab",
+          memberCount: 200,
+        },
+      ]);
+
+      // The row that stops a 200-member organization rendering 200 collaborators.
+      expect(screen.getByText("sharing.orgMembersName")).toBeInTheDocument();
+      expect(screen.getByText("sharing.orgMembersCount")).toBeInTheDocument();
+      // "Can view" from the access matrix, not from `organizations.base_permission`,
+      // which nothing in the access path reads.
+      expect(screen.getByText("sharing.roleCanView")).toBeInTheDocument();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
     });
 
     it("sorts owners above grants, including above the signed-in user's own row", () => {
@@ -116,6 +186,133 @@ describe("<CollaboratorsList />", () => {
 
       // Leaving what you own is an organization matter, not a resource one.
       expect(screen.queryByRole("button", { name: "sharing.leaveAction" })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("people whose access has two sources", () => {
+    /** A grant row for someone who is also in the owning organization. */
+    function memberGrant(
+      name: string,
+      role: "admin" | "member",
+      granted: "admin" | "viewer",
+      // The row reads the grant's own type, not the list's — a grant knows what it
+      // is a grant on.
+      resourceType: "experiment" | "protocol" = "experiment",
+    ) {
+      return createResourceGrant({
+        id: `g-${name}`,
+        granteeId: `u-${name}`,
+        role: granted,
+        resourceType,
+        owningOrganization: {
+          id: "11111111-1111-4111-8111-111111111111",
+          name: "Greenhouse Lab",
+          role,
+        },
+        grantee: {
+          type: "user",
+          displayName: name,
+          email: `${name}@example.com`,
+          avatarUrl: null,
+          memberCount: null,
+        },
+      });
+    }
+
+    it('badges a member\'s "Can view" on an experiment as redundant, but keeps the tier', () => {
+      // Membership contributes on an experiment, so this grant adds nothing — while
+      // "Can edit" still would, which is why the control has to stay.
+      renderList([memberGrant("Mira Member", "member", "viewer")]);
+
+      const row = rowFor("Mira Member");
+      expect(within(row).getByText("sharing.redundantGrantBadge")).toBeInTheDocument();
+      expect(within(row).getByRole("combobox")).toBeInTheDocument();
+    });
+
+    it("keeps the tier control on an inert grant a higher tier could still raise", () => {
+      // A protocol, where "Can view" is read-only — exactly what org membership
+      // already gives. The grant does nothing, but "Can edit" would raise them, and
+      // asking only "is the current tier inert?" strands them with no way to get it.
+      renderList([memberGrant("Mira Member", "member", "viewer", "protocol")], {
+        resourceType: "protocol",
+      });
+
+      const row = rowFor("Mira Member");
+      expect(within(row).getByText("sharing.redundantGrantBadge")).toBeInTheDocument();
+      expect(within(row).getByRole("combobox")).toBeInTheDocument();
+    });
+
+    it("drops the tier control only when no tier could raise the person", () => {
+      // An org admin holds everything any tier confers, on any type.
+      renderList([memberGrant("Bo Admin", "admin", "viewer", "protocol")], {
+        resourceType: "protocol",
+      });
+
+      expect(within(rowFor("Bo Admin")).queryByRole("combobox")).not.toBeInTheDocument();
+    });
+
+    it("states an admin's effective access, not the lower tier their grant names", () => {
+      renderList([memberGrant("Bo Admin", "admin", "viewer")]);
+
+      const row = rowFor("Bo Admin");
+      // The grant says "Can view"; their org role means they can edit regardless,
+      // so the tier control would only ever write something nothing reflects.
+      expect(within(row).getByText("sharing.roleCanEdit")).toBeInTheDocument();
+      expect(within(row).getByText("sharing.redundantGrantBadge")).toBeInTheDocument();
+      expect(within(row).getByText("sharing.orgAdminBadge")).toBeInTheDocument();
+      expect(within(row).queryByRole("combobox")).not.toBeInTheDocument();
+      expect(
+        within(row).getByRole("button", { name: "sharing.removeRedundantGrantForLabel" }),
+      ).toBeVisible();
+    });
+
+    it("keeps the tier control on a member's grant, which does raise them", () => {
+      renderList([memberGrant("Rex Raised", "member", "admin")]);
+
+      const row = rowFor("Rex Raised");
+      expect(within(row).getByRole("combobox")).toBeInTheDocument();
+      // Still names the second source, so the row is not read as the whole story.
+      expect(within(row).getByText("sharing.orgMemberBadge")).toBeInTheDocument();
+      expect(within(row).queryByText("sharing.redundantGrantBadge")).not.toBeInTheDocument();
+    });
+
+    it("tells the confirmation what the person keeps, instead of what they might", async () => {
+      const user = userEvent.setup();
+      renderList([memberGrant("Rex Raised", "member", "admin")]);
+
+      await user.click(
+        within(rowFor("Rex Raised")).getByRole("button", { name: "sharing.revokeForLabel" }),
+      );
+
+      // "May still" is the right hedge for what nothing here can compute; their
+      // organization role is not one of those things.
+      expect(screen.getByText("sharing.revokeKeepsAccess")).toBeInTheDocument();
+      expect(screen.queryByText("sharing.revokeOtherAccessWarning")).not.toBeInTheDocument();
+    });
+
+    it("keeps the hedged warning for an outside collaborator, whose other access is unknown", async () => {
+      const user = userEvent.setup();
+      renderList([grantFor("Otto Outside", { isOutsideCollaborator: true })]);
+
+      await user.click(
+        within(rowFor("Otto Outside")).getByRole("button", { name: "sharing.revokeForLabel" }),
+      );
+
+      expect(screen.getByText("sharing.revokeOtherAccessWarning")).toBeInTheDocument();
+    });
+
+    it("tells someone leaving that their organization role survives it", async () => {
+      const user = userEvent.setup();
+      mockSession({ id: "u-Rex Raised" });
+      renderList([memberGrant("Rex Raised", "member", "admin")]);
+
+      await user.click(
+        within(rowFor("Rex Raised")).getByRole("button", { name: "sharing.leaveAction" }),
+      );
+
+      // Without this, giving up your own grant reads as locking yourself out.
+      expect(screen.getByText("sharing.leaveKeepsAccess")).toBeInTheDocument();
+      expect(screen.queryByText("sharing.leaveOtherAccessWarning")).not.toBeInTheDocument();
     });
   });
 
@@ -158,7 +355,13 @@ describe("<CollaboratorsList />", () => {
       createResourceGrant({
         granteeType: "organization",
         isOutsideCollaborator: true,
-        grantee: { type: "organization", displayName: "Partner Lab", email: null, avatarUrl: null },
+        grantee: {
+          type: "organization",
+          displayName: "Partner Lab",
+          email: null,
+          avatarUrl: null,
+          memberCount: null,
+        },
       }),
     ]);
 

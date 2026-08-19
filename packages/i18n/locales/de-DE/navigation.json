@@ -40,7 +40,11 @@
     "otherDevice1": "Anderes Gerät 1",
     "hardware": "Hardware",
     "macros": "Makros",
-    "workbooks": "Arbeitsmappen"
+    "workbooks": "Arbeitsmappen",
+    "organizations": "Organisationen",
+    "newOrganization": "Neue Organisation",
+    "myOrganizations": "Meine Organisationen",
+    "organizationDirectory": "Verzeichnis"
   },
   "breadcrumbs": {
     "home": "Startseite",

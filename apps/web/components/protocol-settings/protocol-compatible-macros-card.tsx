@@ -3,6 +3,7 @@
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
+import { getMacroLanguageBadgeColor, getMacroLanguageLabel } from "@/util/macro-language";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, FileCode2, X } from "lucide-react";
 import Link from "next/link";
@@ -24,32 +25,6 @@ import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacr
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useRemoveCompatibleMacro } from "../../hooks/protocol/useRemoveCompatibleMacro/useRemoveCompatibleMacro";
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
-
-const getLanguageDisplay = (language: string) => {
-  switch (language) {
-    case "python":
-      return "Python";
-    case "r":
-      return "R";
-    case "javascript":
-      return "JavaScript";
-    default:
-      return language;
-  }
-};
-
-const getLanguageColor = (language: string) => {
-  switch (language) {
-    case "python":
-      return "bg-badge-published";
-    case "r":
-      return "bg-badge-stale";
-    case "javascript":
-      return "bg-badge";
-    default:
-      return "bg-badge-archived";
-  }
-};
 
 interface ProtocolCompatibleMacrosCardProps {
   protocolId: string;
@@ -149,8 +124,8 @@ export function ProtocolCompatibleMacrosCard({
                       <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
                     </Link>
                   </div>
-                  <Badge className={getLanguageColor(entry.macro.language)}>
-                    {getLanguageDisplay(entry.macro.language)}
+                  <Badge className={getMacroLanguageBadgeColor(entry.macro.language)}>
+                    {getMacroLanguageLabel(entry.macro.language)}
                   </Badge>
                 </div>
                 <Button

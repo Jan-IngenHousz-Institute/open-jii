@@ -236,14 +236,27 @@ export function WizardForm<T extends FieldValues>({
   // Current step index
   const [currentStepIndex, setCurrentStepIndex] = React.useState(initialStep);
 
-  // Create combined validation schema for the entire form
+  /**
+   * One schema over every step's fields, so the whole form is validated on submit
+   * rather than only the step in view.
+   *
+   * `passthrough` is load-bearing, not a default: the resolver's parsed output is
+   * what react-hook-form hands to `onSubmit`, and a plain object schema strips keys
+   * it does not declare. A form value set by a control whose field no step schema
+   * happens to list — a picker on a card, say — would then be dropped silently
+   * between the click and the request, contradicting the `(data: T) => …` signature
+   * this component advertises. Validation is unaffected: passthrough adds no
+   * permissiveness to the fields that *are* declared.
+   */
   const combinedSchema = React.useMemo(() => {
-    return z.object(
-      steps.reduce<Record<string, z.ZodTypeAny>>((acc, step) => {
-        const schemaShape = step.validationSchema.shape;
-        return { ...acc, ...schemaShape };
-      }, {}),
-    );
+    return z
+      .object(
+        steps.reduce<Record<string, z.ZodTypeAny>>((acc, step) => {
+          const schemaShape = step.validationSchema.shape;
+          return { ...acc, ...schemaShape };
+        }, {}),
+      )
+      .passthrough();
   }, [steps]);
 
   // Initialize the form with the combined schema

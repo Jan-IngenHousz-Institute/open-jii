@@ -29,7 +29,32 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toEqual([]);
+    expect(result.value).toEqual({ resources: [], organizations: [] });
+  });
+
+  // Organizations sit beside the resources rather than among them: they are cleared
+  // by promoting another owner or deleting the organization, not by the dialog's
+  // per-resource admin hand-off, so they carry no transfer candidates.
+  it("lists a shared organization the user solely owns, with no resources of its own", async () => {
+    const org = await testApp.createOrganization("Lone Lab", { slug: "lone-lab" });
+    await testApp.addOrganizationMember(org, testUserId, "owner");
+
+    const result = await useCase.execute(testUserId);
+
+    assertSuccess(result);
+    expect(result.value).toEqual({
+      resources: [],
+      organizations: [{ id: org, name: "Lone Lab", slug: "lone-lab" }],
+    });
+  });
+
+  it("leaves the organization list empty for the user's personal workspace", async () => {
+    await testApp.personalOrganizationId(testUserId);
+
+    const result = await useCase.execute(testUserId);
+
+    assertSuccess(result);
+    expect(result.value.organizations).toEqual([]);
   });
 
   it("returns an experiment where the user is the only admin", async () => {
@@ -41,8 +66,8 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toHaveLength(1);
-    expect(result.value[0]).toMatchObject({
+    expect(result.value.resources).toHaveLength(1);
+    expect(result.value.resources[0]).toMatchObject({
       resourceType: "experiment",
       id: experiment.id,
       name: experiment.name,
@@ -72,7 +97,7 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toEqual([
+    expect(result.value.resources).toEqual([
       {
         resourceType,
         id: resource.id,
@@ -95,7 +120,7 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toEqual([]);
+    expect(result.value.resources).toEqual([]);
   });
 
   it("offers a macro's other collaborators as transfer candidates", async () => {
@@ -115,8 +140,8 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toHaveLength(1);
-    expect(result.value[0].candidates.map((c) => c.userId)).toEqual([viewerId]);
+    expect(result.value.resources).toHaveLength(1);
+    expect(result.value.resources[0].candidates.map((c) => c.userId)).toEqual([viewerId]);
   });
 
   it("includes archived experiments as blockers", async () => {
@@ -129,8 +154,8 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toHaveLength(1);
-    expect(result.value[0]).toMatchObject({ id: experiment.id, status: "archived" });
+    expect(result.value.resources).toHaveLength(1);
+    expect(result.value.resources[0]).toMatchObject({ id: experiment.id, status: "archived" });
   });
 
   it("does not block when another admin exists", async () => {
@@ -144,7 +169,7 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toEqual([]);
+    expect(result.value.resources).toEqual([]);
   });
 
   // Keys off the clause about *other people's* grants. A deactivated caller's own
@@ -163,8 +188,8 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toHaveLength(1);
-    expect(result.value[0]).toMatchObject({ id: experiment.id });
+    expect(result.value.resources).toHaveLength(1);
+    expect(result.value.resources[0]).toMatchObject({ id: experiment.id });
   });
 
   it("still blocks when the only other admin's account is closed", async () => {
@@ -181,8 +206,8 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toHaveLength(1);
-    expect(result.value[0]).toMatchObject({ id: experiment.id });
+    expect(result.value.resources).toHaveLength(1);
+    expect(result.value.resources[0]).toMatchObject({ id: experiment.id });
   });
 
   it("lists the experiment's other members as candidates, excluding the user", async () => {
@@ -196,8 +221,8 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toHaveLength(1);
-    const candidateIds = result.value[0].candidates.map((c) => c.userId);
+    expect(result.value.resources).toHaveLength(1);
+    const candidateIds = result.value.resources[0].candidates.map((c) => c.userId);
     expect(candidateIds).toEqual([memberId]);
     expect(candidateIds).not.toContain(testUserId);
   });
@@ -218,8 +243,8 @@ describe("GetDeletionBlockersUseCase", () => {
     const result = await useCase.execute(testUserId);
 
     assertSuccess(result);
-    expect(result.value).toHaveLength(1);
-    const candidateIds = result.value[0].candidates.map((c) => c.userId);
+    expect(result.value.resources).toHaveLength(1);
+    const candidateIds = result.value.resources[0].candidates.map((c) => c.userId);
     expect(candidateIds).toEqual([activeMemberId]);
     expect(candidateIds).not.toContain(deactivatedMemberId);
   });

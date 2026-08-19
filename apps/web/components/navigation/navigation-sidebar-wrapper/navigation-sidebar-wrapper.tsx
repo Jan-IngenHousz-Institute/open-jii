@@ -85,6 +85,18 @@ export async function NavigationSidebarWrapper({
         })),
       },
     ],
+    navOrganizations: [
+      {
+        title: tNavigation(mainNavigation.organizations.titleKey),
+        url: mainNavigation.organizations.url(locale),
+        icon: mainNavigation.organizations.icon,
+        isActive: true,
+        items: mainNavigation.organizations.items.map((item) => ({
+          title: tNavigation(item.titleKey, { ns: item.namespace }),
+          url: item.url(locale),
+        })),
+      },
+    ],
     navLibrary: [
       {
         title: tNavigation(mainNavigation.library.titleKey),
@@ -111,6 +123,7 @@ export async function NavigationSidebarWrapper({
     experimentsTitle: tNavigation(mainNavigation.experiments.titleKey),
     libraryTitle: tNavigation(mainNavigation.library.titleKey),
     workbooksTitle: tNavigation(mainNavigation.workbooks.titleKey),
+    organizationsTitle: tNavigation(mainNavigation.organizations.titleKey),
   };
 
   return (

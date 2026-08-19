@@ -11,8 +11,10 @@ import {
   deviceGroups,
   iotDevices,
   isNotNull,
+  isNotPersonalOrgSql,
   macros,
   organizationMembers,
+  organizations,
   profiles,
   protocols,
   resourceGrants,
@@ -24,6 +26,7 @@ import {
 import type { AnyColumn, DbOrTx, SQL, Transaction } from "@repo/database";
 
 import { AppError } from "../../common/utils/fp-utils";
+import type { ResourceRef } from "./models/sharing.model";
 
 /** Whether a grant role staffs a resource (confers full control). */
 function isStaffingRole(role: string): boolean {
@@ -89,6 +92,14 @@ const ORG_OWNER_ROLE = "owner";
  * per-resource grant on top of either raises nothing.
  */
 const ORG_FULL_CONTROL_ROLES = ["owner", "admin"] as const;
+
+/**
+ * The read-only org role. Named because the members summary has to *require* it
+ * rather than negate full control: `orgRoleCan` ignores a token it does not
+ * recognise, so a stale or custom role confers nothing, and counting it as a plain
+ * member would credit somebody with access they do not have.
+ */
+const ORG_MEMBER_ROLE = "member";
 
 /** Refusal when a closed account's in-flight request tries to create something. */
 const CLOSED_ACCOUNT_CREATE_MESSAGE =
@@ -232,7 +243,7 @@ export async function lockStaffedResource(
  * needs none; creating into an org you are merely a `member` of does, since
  * `member` is read-only.
  */
-async function orgRoleConfersFullControl(
+export async function orgRoleConfersFullControl(
   tx: DbOrTx,
   organizationId: string | null,
   userId: string,
@@ -337,23 +348,90 @@ export async function seedCreatorControl(
 }
 
 /**
- * The living owners of an organization — the single definition of who is answerable
- * for what it owns, shared by the staffing invariant, both deletion prongs, the
- * Owner rows and join-request notifications.
+ * Members of an organization holding one of `roles` whose account is still open.
  *
  * The profile join is LEFT deliberately: personal orgs are provisioned at sign-up,
  * before the profile row exists, so an inner join would declare every
- * pre-onboarding owner dead. A NULL `organizationId` matches nothing, i.e. a husk.
+ * pre-onboarding member dead. A NULL `organizationId` matches nothing.
  */
-export function livingOrgOwnerIdsSql(organizationId: SQL): SQL {
+function livingOrgMemberIdsSql(organizationId: SQL, roles: readonly string[]): SQL {
   return sql`
     SELECT ${organizationMembers.userId} AS "user_id"
     FROM ${organizationMembers}
     LEFT JOIN ${profiles} ON ${profiles.userId} = ${organizationMembers.userId}
     WHERE ${organizationMembers.organizationId} = ${organizationId}
-      AND ${orgRoleIncludes(organizationMembers.role, [ORG_OWNER_ROLE])}
+      AND ${orgRoleIncludes(organizationMembers.role, roles)}
       AND ${profiles.deletedAt} IS NULL
   `;
+}
+
+/**
+ * The living owners of an organization — the single definition of who is answerable
+ * for what it owns, shared by the staffing invariant, both deletion prongs, the
+ * Owner rows and join-request notifications. No living owner means a husk: an
+ * organization nobody can be held answerable for. A NULL `organizationId` is one.
+ *
+ * Owner and not admin, deliberately: an admin has full access, but ownership is what
+ * another member cannot take away, so answerability hangs on it.
+ */
+export function livingOrgOwnerIdsSql(organizationId: SQL): SQL {
+  return livingOrgMemberIdsSql(organizationId, [ORG_OWNER_ROLE]);
+}
+
+/**
+ * Living members who administer the organization without owning it — the admins the
+ * collaborators surface summarizes, and the holders whose direct grants are inert.
+ *
+ * The owner exclusion is what keeps the two org-derived groups disjoint: a
+ * comma-joined `member,owner` reads as `owner` to `can()`, so it belongs to the
+ * owners listed individually and must not be counted again here.
+ */
+export function livingOrgAdminIdsSql(organizationId: SQL): SQL {
+  return sql`
+    SELECT ${organizationMembers.userId} AS "user_id"
+    FROM ${organizationMembers}
+    LEFT JOIN ${profiles} ON ${profiles.userId} = ${organizationMembers.userId}
+    WHERE ${organizationMembers.organizationId} = ${organizationId}
+      AND ${orgRoleIncludes(organizationMembers.role, ["admin"])}
+      AND NOT ${orgRoleIncludes(organizationMembers.role, [ORG_OWNER_ROLE])}
+      AND ${profiles.deletedAt} IS NULL
+  `;
+}
+
+/** Living members whose role is read-only — recognised as `member`, and nothing more. */
+export function livingOrgPlainMemberIdsSql(organizationId: SQL): SQL {
+  return sql`
+    SELECT ${organizationMembers.userId} AS "user_id"
+    FROM ${organizationMembers}
+    LEFT JOIN ${profiles} ON ${profiles.userId} = ${organizationMembers.userId}
+    WHERE ${organizationMembers.organizationId} = ${organizationId}
+      AND ${orgRoleIncludes(organizationMembers.role, [ORG_MEMBER_ROLE])}
+      AND NOT ${orgRoleIncludes(organizationMembers.role, ORG_FULL_CONTROL_ROLES)}
+      AND ${profiles.deletedAt} IS NULL
+  `;
+}
+
+/**
+ * Whether anybody inside the organization can still act on what it owns — its living
+ * owners **and** admins.
+ *
+ * A deliberately different question from {@link livingOrgOwnerIdsSql}, and the only
+ * place the wider set is right. Answerability is about who cannot be displaced, so it
+ * counts owners alone; this asks whether the organization is operable at all, and an
+ * admin makes it so. Reading the narrower one here would treat an organization that
+ * merely lost its owner as abandoned, and hand its resources to any outside
+ * collaborator who could already edit them.
+ */
+export async function orgHasLivingFullControlMember(
+  tx: DbOrTx,
+  organizationId: string | null,
+): Promise<boolean> {
+  if (!organizationId) return false;
+
+  const rows = await tx.execute<{ user_id: string }>(
+    livingOrgMemberIdsSql(sql`${organizationId}::uuid`, ORG_FULL_CONTROL_ROLES),
+  );
+  return rows.length > 0;
 }
 
 /** The owning organization of a resource, as a scalar subquery. */
@@ -397,9 +475,7 @@ export type StaffingTarget =
   | { by: "grant"; grantId: string }
   | { by: "grantee"; granteeType: SharingGranteeType; granteeId: string };
 
-export interface StaffingGuardedWrite {
-  resourceType: SharingResourceType;
-  resourceId: string;
+export interface StaffingGuardedWrite extends ResourceRef {
   target: StaffingTarget;
   /** The role the grant will carry afterwards; `null` for a revoke. */
   nextRole: string | null;
@@ -582,6 +658,91 @@ function blockingResourcesQuery(userId: string) {
   `;
 }
 
+/** One row of the sole-owner organization queries below. */
+export type BlockingOrganizationRow = Record<string, unknown> & {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+/**
+ * `organizations.id`, written out rather than interpolated: whether drizzle
+ * table-qualifies a column depends on the surrounding query's shape, and an
+ * unqualified `"id"` binds to the correlated subquery's own table instead.
+ */
+const ORGANIZATION_ID = sql`${sql.identifier("organizations")}.${sql.identifier("id")}`;
+
+/**
+ * Organizations whose only living owner is `userId` — the ones this deletion would
+ * leave with nobody answerable for them.
+ *
+ * Personal organizations are excluded and must be: everyone permanently solely owns
+ * their own, so counting them would block every account deletion on the platform.
+ * Fires whether or not the organization owns anything, and on owners only — one left
+ * with admins alone could never grant the owner role again.
+ */
+function blockingOrganizationsQuery(userId: string) {
+  return sql`
+    SELECT ${ORGANIZATION_ID} AS "id",
+           ${sql.identifier("organizations")}.${sql.identifier("name")} AS "name",
+           ${sql.identifier("organizations")}.${sql.identifier("slug")} AS "slug"
+    FROM ${organizations}
+    WHERE ${isNotPersonalOrgSql()}
+      AND (SELECT count(*) FROM (${livingOrgOwnerIdsSql(ORGANIZATION_ID)}) o) = 1
+      AND EXISTS (
+            SELECT 1 FROM (${livingOrgOwnerIdsSql(ORGANIZATION_ID)}) o
+            WHERE o."user_id" = ${userId}
+          )
+    ORDER BY ${sql.identifier("organizations")}.${sql.identifier("name")}, ${ORGANIZATION_ID}
+  `;
+}
+
+/**
+ * The predicate without locks: the pre-flight read behind the dialog's list. Raceable,
+ * so the deletion itself uses {@link lockAndFindBlockingOrganizations}.
+ */
+export async function findBlockingOrganizations(
+  tx: DbOrTx,
+  userId: string,
+): Promise<BlockingOrganizationRow[]> {
+  return tx.execute<BlockingOrganizationRow>(blockingOrganizationsQuery(userId));
+}
+
+/**
+ * Claim the owner rows of every organization `userId` owns — the anchor both deletion
+ * blockers and resource creation serialize on. Fixed order, because two deletions with
+ * overlapping sets would otherwise take them in opposite orders and deadlock.
+ */
+async function lockOwnedOrganizations(tx: Transaction, userId: string): Promise<void> {
+  const ownedOrgs = await tx
+    .selectDistinct({ organizationId: organizationMembers.organizationId })
+    .from(organizationMembers)
+    .where(
+      and(
+        eq(organizationMembers.userId, userId),
+        orgRoleIsOwnerSql(sql`${organizationMembers.role}`),
+      ),
+    )
+    .orderBy(organizationMembers.organizationId);
+
+  for (const { organizationId } of ownedOrgs) {
+    await lockOrgOwnerships(tx, organizationId);
+  }
+}
+
+/**
+ * Locks those rows, then answers. Must run in a transaction. Without the lock two
+ * co-owners deleting at once would each see the other living and both commit, leaving
+ * the organization with no owner at all.
+ */
+export async function lockAndFindBlockingOrganizations(
+  tx: Transaction,
+  userId: string,
+): Promise<BlockingOrganizationRow[]> {
+  await lockOwnedOrganizations(tx, userId);
+  return tx.execute<BlockingOrganizationRow>(blockingOrganizationsQuery(userId));
+}
+
 /**
  * Everything the sole-admin question has to lock before it decides: the resources
  * either prong could name. Locking these serializes the decision against a
@@ -642,20 +803,7 @@ export async function lockAndFindBlockingResources(
   // 1. Owner-membership rows of every org this user owns, in a fixed order. Grant
   //    rows cannot anchor this — a resource owned outright has none. Creation takes
   //    the same lock, which orders this against an in-flight create.
-  const ownedOrgs = await tx
-    .selectDistinct({ organizationId: organizationMembers.organizationId })
-    .from(organizationMembers)
-    .where(
-      and(
-        eq(organizationMembers.userId, userId),
-        orgRoleIsOwnerSql(sql`${organizationMembers.role}`),
-      ),
-    )
-    .orderBy(organizationMembers.organizationId);
-
-  for (const { organizationId } of ownedOrgs) {
-    await lockOrgOwnerships(tx, organizationId);
-  }
+  await lockOwnedOrganizations(tx, userId);
 
   // A grant-write caller claims its concrete resource here, preserving the global
   // organization → resource → grants order. Account deletion has no resource

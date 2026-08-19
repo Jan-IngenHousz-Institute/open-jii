@@ -72,3 +72,18 @@ export interface SoleAdminResource {
 export interface DeletionBlocker extends SoleAdminResource {
   candidates: UserProfileMetadata[];
 }
+
+// A shared organization whose only living owner is this user, blocking deletion whether
+// or not it owns anything. Never a personal organization.
+export interface SoleOwnedOrganization {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+// The two shapes the delete dialog resolves differently: resources are handed to another
+// admin, an organization needs a second owner promoted or the organization deleted.
+export interface DeletionBlockers {
+  resources: DeletionBlocker[];
+  organizations: SoleOwnedOrganization[];
+}

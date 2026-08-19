@@ -10,6 +10,10 @@
       "types": "./src/access.ts",
       "default": "./dist/access.js"
     },
+    "./organization": {
+      "types": "./src/organization/plugin.ts",
+      "default": "./dist/organization/plugin.js"
+    },
     "./client": {
       "types": "./src/clients/client.web.ts",
       "default": "./dist/clients/client.web.js"

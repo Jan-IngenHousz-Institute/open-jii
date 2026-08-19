@@ -25,5 +25,21 @@ export const zExperimentContributor = z.object({
 
 export const zExperimentContributorList = z.array(zExperimentContributor);
 
+/**
+ * The credited faces plus the authoritative headcount, which are deliberately not the
+ * same set. `contributors` is grant holders only, pseudonymised where the experiment
+ * says so; `collaboratorCount` is every row the collaborators surface would show —
+ * organization-derived access included — so the overview and the organization's
+ * resource cards state one number rather than two under the same word.
+ *
+ * A count discloses nothing an identity would: it stays on this `read`-gated route
+ * while naming who holds what remains `can(share)`.
+ */
+export const zExperimentContributors = z.object({
+  contributors: zExperimentContributorList,
+  collaboratorCount: z.number().int(),
+});
+
 export type ExperimentContributor = z.infer<typeof zExperimentContributor>;
 export type ExperimentContributorList = z.infer<typeof zExperimentContributorList>;
+export type ExperimentContributors = z.infer<typeof zExperimentContributors>;

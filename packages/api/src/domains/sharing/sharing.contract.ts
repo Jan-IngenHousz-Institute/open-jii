@@ -6,8 +6,10 @@ import {
   zCollaboratorsPathParams,
   zCreateCollaboratorBody,
   zGranteeOrganizationList,
+  zGranteeUserList,
   zResourceGrantList,
   zSearchGranteeOrganizationsQuery,
+  zSearchGranteeUsersQuery,
   zUpdateCollaboratorBody,
 } from "./sharing.schema";
 
@@ -77,14 +79,35 @@ export const sharingContract = {
    * Organization lookup for the grantee picker. Lives in the sharing domain rather
    * than a general `organizations` one because it exists solely to feed that picker
    * and is scoped accordingly — organizations the caller is a member of, personal
-   * workspaces excluded. A full organizations domain should absorb it later.
+   * workspaces excluded.
+   *
+   * Its own path, not `/organizations/search`: the organizations domain owns
+   * `/organizations/{id}`, and a literal segment inside somebody else's collection
+   * resolves by controller registration order, which nothing here can guarantee.
    */
   searchGranteeOrganizations: oc
     .route({
       method: "GET",
-      path: "/api/v1/organizations/search",
+      path: "/api/v1/grantee-organizations",
       successStatus: 200,
     })
     .input(zSearchGranteeOrganizationsQuery)
     .output(zGranteeOrganizationList),
+  /**
+   * The picker's user source, resource-scoped so every candidate can say what
+   * access they already hold instead of being filtered out of the results.
+   *
+   * Deliberately not a parameter on the global user search: that route also feeds
+   * the member and invitation pickers, and teaching it to answer "what is this
+   * user's role in that organization" would disclose membership from somewhere
+   * nothing scopes to a resource. Here `can(share)` already gates the answer.
+   */
+  searchGranteeUsers: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/{resourceType}/{id}/grantee-users",
+      successStatus: 200,
+    })
+    .input(zSearchGranteeUsersQuery)
+    .output(zGranteeUserList),
 };

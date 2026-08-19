@@ -5,6 +5,7 @@ import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkboo
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { OrganizationPicker } from "~/components/organizations/organization-picker";
 import { WorkbookList } from "~/components/workbook-list";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
@@ -36,6 +37,8 @@ export function ListWorkbooks() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newVisibility, setNewVisibility] = useState<"public" | "private">("public");
+  // Undefined is the default target: the creator's personal workspace.
+  const [newOrganizationId, setNewOrganizationId] = useState<string | undefined>(undefined);
   const { mutate: createWorkbook, isPending: isCreating } = useWorkbookCreate({
     onSuccess: (data) => {
       router.push(`/${locale}/platform/workbooks/${data.id}`);
@@ -46,7 +49,7 @@ export function ListWorkbooks() {
     if (isCreating) return;
     const name = newName.trim();
     if (!name) return;
-    createWorkbook({ name, visibility: newVisibility });
+    createWorkbook({ name, visibility: newVisibility, organizationId: newOrganizationId });
   };
 
   return (
@@ -94,6 +97,7 @@ export function ListWorkbooks() {
           if (!open) {
             setNewName("");
             setNewVisibility("public");
+            setNewOrganizationId(undefined);
           }
         }}
       >
@@ -132,6 +136,12 @@ export function ListWorkbooks() {
               </SelectContent>
             </Select>
           </div>
+          <OrganizationPicker
+            id="new-workbook-organization"
+            value={newOrganizationId}
+            onChange={setNewOrganizationId}
+            disabled={isCreating}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={isCreating}>
               {t("workbooks.cancel")}

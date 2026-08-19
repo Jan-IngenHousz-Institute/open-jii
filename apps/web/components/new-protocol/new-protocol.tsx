@@ -165,6 +165,7 @@ export function NewProtocolForm() {
       code,
       family: data.family,
       visibility: data.visibility,
+      organizationId: data.organizationId,
     });
   }
 

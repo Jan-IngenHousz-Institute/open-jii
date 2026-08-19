@@ -21,6 +21,7 @@ import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
+import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -70,6 +71,7 @@ export class ProtocolRepository {
     filter?: "my",
     userId?: string,
     limit?: number,
+    organizationId?: string,
   ): Promise<Result<ProtocolDto[]>> {
     return tryCatch(async () => {
       let query = this.database
@@ -107,6 +109,12 @@ export class ProtocolRepository {
       });
       if (scope) {
         conditions.push(scope);
+      }
+
+      // Narrow to one owning organization (the org profile's resources showcase).
+      // Applied on top of the access scope, never instead of it.
+      if (organizationId) {
+        conditions.push(eq(protocols.organizationId, organizationId));
       }
 
       if (filter === "my" && userId) {
@@ -159,6 +167,7 @@ export class ProtocolRepository {
           protocols: protocolColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
+          organizationName: owningOrganizationNameSql("protocols"),
         })
         .from(protocols)
         .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
@@ -174,6 +183,7 @@ export class ProtocolRepository {
       const lastName = result[0].lastName;
       augmentedResult.createdByName =
         firstName && lastName ? `${firstName} ${lastName}` : undefined;
+      augmentedResult.organizationName = result[0].organizationName;
       return augmentedResult;
     });
   }

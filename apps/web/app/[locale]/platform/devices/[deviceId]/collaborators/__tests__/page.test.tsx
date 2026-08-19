@@ -50,7 +50,13 @@ describe("DeviceCollaboratorsPage", () => {
         createResourceGrant({
           resourceType: "device",
           resourceId: DEVICE_ID,
-          grantee: { type: "user", displayName: "Lin Zhao", email: "lin@uni.edu", avatarUrl: null },
+          grantee: {
+            type: "user",
+            displayName: "Lin Zhao",
+            email: "lin@uni.edu",
+            avatarUrl: null,
+            memberCount: null,
+          },
         }),
       ],
     });

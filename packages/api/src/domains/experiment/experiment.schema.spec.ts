@@ -149,6 +149,7 @@ describe("Experiment Schema", () => {
           canManage: false,
           canShare: false,
           canLeave: false,
+          canTransfer: false,
         },
       };
       expect(zExperimentAccess.parse(access)).toEqual(access);

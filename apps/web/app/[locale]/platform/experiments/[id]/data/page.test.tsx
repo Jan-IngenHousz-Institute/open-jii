@@ -89,6 +89,7 @@ describe("ExperimentDataPage", () => {
       canManage: true,
       canShare: true,
       canLeave: false,
+      canTransfer: false,
     },
   });
 
@@ -344,6 +345,7 @@ describe("ExperimentDataPage", () => {
           canManage: false,
           canShare: false,
           canLeave: false,
+          canTransfer: false,
         },
       }),
     });
@@ -369,6 +371,7 @@ describe("ExperimentDataPage", () => {
           canManage: false,
           canShare: false,
           canLeave: false,
+          canTransfer: false,
         },
       }),
     });

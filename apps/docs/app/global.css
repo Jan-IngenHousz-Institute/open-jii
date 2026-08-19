@@ -31,6 +31,12 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Tailwind v4 preflight dropped the v3 `button { cursor: pointer }` rule. */
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+  cursor: pointer;
+}
+
 h1,
 h2,
 h3,

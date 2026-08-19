@@ -1,3 +1,4 @@
+import { Mermaid } from "@/components/mermaid";
 import { PlatformCta } from "@/components/platform-cta";
 import { PlatformLink } from "@/components/platform-link";
 import { StarterWorkbookLink } from "@/components/starter-workbook-link";
@@ -7,6 +8,7 @@ import type { MDXComponents } from "mdx/types";
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
     ...defaultMdxComponents,
+    Mermaid,
     PlatformCta,
     PlatformLink,
     StarterWorkbookLink,

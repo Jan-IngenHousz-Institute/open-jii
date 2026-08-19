@@ -266,7 +266,7 @@ describe("ProtocolController - read and update endpoints", () => {
     ])("requires $action access to $name", async ({ action, request }) => {
       const canSpy = vi
         .spyOn(testApp.module.get(AuthorizationService), "can")
-        .mockResolvedValue({ allow: false, reason: "forbidden" });
+        .mockResolvedValue({ allow: false, reason: "forbidden", organizationId: null });
       const protocolId = faker.string.uuid();
 
       await request(protocolId, testUserId).expect(StatusCodes.FORBIDDEN);
