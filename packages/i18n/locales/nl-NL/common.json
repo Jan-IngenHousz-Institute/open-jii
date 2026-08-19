@@ -770,7 +770,9 @@
         "workbook_one": "werkmap",
         "workbook_other": "werkmappen",
         "device_one": "apparaat",
-        "device_other": "apparaten"
+        "device_other": "apparaten",
+        "device_group_one": "apparaatgroep",
+        "device_group_other": "apparaatgroepen"
       },
       "confirmTitle": "Organisatie verwijderen?",
       "confirmDescription": "{{name}} wordt verwijderd, samen met haar leden, uitnodigingen en teams.",

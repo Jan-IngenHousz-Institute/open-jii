@@ -15,7 +15,7 @@ import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserP
 
 import type { CreateMacroRequestBody } from "@repo/api/domains/macro/macro.schema";
 import { zCreateMacroRequestBody } from "@repo/api/domains/macro/macro.schema";
-import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -53,7 +53,7 @@ export function NewMacroForm() {
   );
 
   // Selected protocols (local state before macro creation)
-  const [selectedProtocols, setSelectedProtocols] = useState<Protocol[]>([]);
+  const [selectedProtocols, setSelectedProtocols] = useState<ProtocolListItem[]>([]);
 
   // Protocol search
   const [protocolSearch, setProtocolSearch] = useState("");
@@ -136,7 +136,7 @@ export function NewMacroForm() {
     [selectedProtocols],
   );
 
-  const availableProtocols: Protocol[] = useMemo(
+  const availableProtocols: ProtocolListItem[] = useMemo(
     () => (protocolList ?? []).filter((p) => !selectedProtocolIds.has(p.id)),
     [protocolList, selectedProtocolIds],
   );

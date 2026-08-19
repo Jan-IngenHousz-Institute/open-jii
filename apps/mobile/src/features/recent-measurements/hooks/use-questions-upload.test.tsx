@@ -17,6 +17,9 @@ vi.mock("~/features/recent-measurements/hooks/use-measurements", () => ({
 vi.mock("~/shared/composition/upload", () => ({
   getOutbox: () => ({ enqueue }),
 }));
+vi.mock("~/shared/stores/device-identity-store", () => ({
+  whenDeviceIdentityLoaded: () => Promise.resolve(),
+}));
 vi.mock("~/shared/measurements/measurement-topic", () => ({
   QUESTIONS_PROTOCOL_ID: "questions",
   getMeasurementMqttTopic: ({ experimentId, protocolId }: Record<string, string>) =>

@@ -1,5 +1,6 @@
 "use client";
 
+import { BulkRegisterIotDevicesDialog } from "@/components/iot-devices/bulk-register-iot-devices-dialog";
 import {
   DevicesRegisterProvider,
   useDevicesRegister,
@@ -9,6 +10,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { Plus } from "lucide-react";
 import { notFound, usePathname } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
+import { useState } from "react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { useTranslation } from "@repo/i18n";
@@ -32,6 +34,7 @@ function DevicesLayoutInner({ children }: { children: React.ReactNode }) {
   const locale = useLocale();
   const { t } = useTranslation("iot");
   const { openRegister } = useDevicesRegister();
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const base = `/${locale}/platform/devices`;
   // Any deeper segment (/devices/<deviceId>) is an individual device detail,
@@ -53,13 +56,25 @@ function DevicesLayoutInner({ children }: { children: React.ReactNode }) {
           <h1 className="text-4xl font-bold text-gray-900">{t("iot.devices.title")}</h1>
           <p className="text-muted-foreground">{t("iot.devices.description")}</p>
         </div>
-        <Button onClick={openRegister}>
-          <Plus className="h-4 w-4" />
-          {t("iot.devices.register")}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setBulkOpen(true);
+            }}
+          >
+            {t("iot.devices.bulkDialog.open")}
+          </Button>
+          <Button onClick={openRegister}>
+            <Plus className="h-4 w-4" />
+            {t("iot.devices.register")}
+          </Button>
+        </div>
       </div>
 
       {children}
+
+      <BulkRegisterIotDevicesDialog open={bulkOpen} onOpenChange={setBulkOpen} />
     </PageContainer>
   );
 }

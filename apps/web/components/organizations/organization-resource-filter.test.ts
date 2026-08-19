@@ -1,7 +1,7 @@
 import { createOrganizationResource } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
-import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import type { OrganizationResourceType } from "@repo/api/domains/organization/organization.schema";
 
 import {
   DEFAULT_RESOURCE_FILTER,
@@ -11,7 +11,7 @@ import {
 
 function resource(
   name: string,
-  extra: { type?: SharingResourceType; updatedAt?: string; description?: string | null } = {},
+  extra: { type?: OrganizationResourceType; updatedAt?: string; description?: string | null } = {},
 ) {
   return createOrganizationResource({
     name,

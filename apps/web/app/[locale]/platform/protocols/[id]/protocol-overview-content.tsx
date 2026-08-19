@@ -33,7 +33,7 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
       try {
         await updateProtocol({
           id,
-          code: code as Record<string, unknown>[],
+          code,
         });
       } catch (err) {
         toast({ description: parseApiError(err)?.message, variant: "destructive" });
@@ -46,7 +46,9 @@ export default function ProtocolOverviewPage({ params }: ProtocolOverviewPagePro
   const autosave = useAutosave<ProtocolCode>({
     value: editedCode,
     toKey: (code) => JSON.stringify(code),
-    isValid: (value) => Array.isArray(value),
+    // Any parsed JSON document is saveable, including strings; undefined means
+    // the editor is mid-keystroke with unparsable text.
+    isValid: (value) => value !== undefined,
     save,
     enabled: isEditing,
   });

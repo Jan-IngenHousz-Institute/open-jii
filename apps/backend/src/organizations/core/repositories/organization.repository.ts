@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   exists,
+  deviceGroups,
   experiments,
   getTableName,
   ilike,
@@ -67,6 +68,7 @@ const OWNED_RESOURCE_TABLES = {
   protocol: protocols,
   workbook: workbooks,
   device: iotDevices,
+  device_group: deviceGroups,
 } as const satisfies Record<
   ResourceType,
   { id: AnyColumn; organizationId: AnyColumn; visibility: AnyColumn }
@@ -87,7 +89,22 @@ const RESOURCE_NAME_SQL: Record<ResourceType, SQL> = {
   protocol: sql`${protocols.name}`,
   workbook: sql`${workbooks.name}`,
   device: sql`COALESCE(${iotDevices.name}, ${iotDevices.thingName})`,
+  device_group: sql`${deviceGroups.name}`,
 };
+
+/**
+ * The types the organization showcase lists and counts. Narrower than
+ * {@link OWNED_RESOURCE_TABLES} on purpose: a device group is owned and grantable, so it
+ * blocks a delete and can be named in a grant, but nothing lists one yet — counting it
+ * would put a total on screen with no rows behind it.
+ */
+const SHOWN_RESOURCE_TYPES = [
+  "experiment",
+  "protocol",
+  "macro",
+  "workbook",
+  "device",
+] as const satisfies readonly ResourceType[];
 
 /**
  * Every resource a grant can name, with the name to show for it —
@@ -166,10 +183,10 @@ function accessibleResourceCountSql(params: {
  */
 function resourceCountSql(database: DatabaseInstance, userId: string | undefined): SQL<number> {
   return sql<number>`(${sql.join(
-    Object.keys(OWNED_RESOURCE_TABLES).map((resourceType) =>
+    SHOWN_RESOURCE_TYPES.map((resourceType) =>
       accessibleResourceCountSql({
         database,
-        resourceType: resourceType as ResourceType,
+        resourceType: resourceType,
         organizationIdSql: qualified("organizations", "id"),
         userId,
       }),
@@ -463,11 +480,11 @@ export class OrganizationRepository {
     userId: string,
   ): Promise<Result<OrganizationResourceTotalsDto>> {
     return tryCatch(async () => {
-      const counts = Object.keys(OWNED_RESOURCE_TABLES).map(
+      const counts = SHOWN_RESOURCE_TYPES.map(
         (resourceType) =>
           sql`${accessibleResourceCountSql({
             database: this.database,
-            resourceType: resourceType as ResourceType,
+            resourceType: resourceType,
             organizationIdSql: sql`${organizationId}::uuid`,
             userId,
           })} AS ${sql.identifier(resourceType)}`,

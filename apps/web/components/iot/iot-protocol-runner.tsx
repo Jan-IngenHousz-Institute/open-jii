@@ -19,7 +19,7 @@ import { DeviceStatusCard } from "./iot-device-status-card";
 import { ProtocolResultsDisplay } from "./iot-protocol-results-display";
 
 interface IotProtocolRunnerProps {
-  protocolCode: Record<string, unknown>[];
+  protocolCode: unknown;
   sensorFamily: SensorFamily;
   layout?: "horizontal" | "vertical";
 }
@@ -30,6 +30,13 @@ interface TestResult {
   error?: string;
   executionTime: number;
   timestamp: Date;
+}
+
+function isRunnableCode(code: unknown): code is Record<string, unknown>[] {
+  return (
+    Array.isArray(code) &&
+    code.every((item) => typeof item === "object" && item !== null && !Array.isArray(item))
+  );
 }
 
 export function IotProtocolRunner({
@@ -43,6 +50,7 @@ export function IotProtocolRunner({
   const isRunningRef = useRef(false);
   const [connectionType, setConnectionType] = useState<"bluetooth" | "serial">("bluetooth");
   const browserSupport = useIotBrowserSupport(sensorFamily);
+  const runnableProtocolCode = isRunnableCode(protocolCode) ? protocolCode : [];
 
   // A Bluetooth Classic-only device is BLE-incapable, so Web Bluetooth cannot
   // reach it and the user must be directed to USB/serial. This is derived from
@@ -53,7 +61,7 @@ export function IotProtocolRunner({
   // Protocols with a physical open/close clamp gate (par_led_start_on_*) pause
   // with the device silent until the user acts; warn so they know to follow the
   // device's prompts rather than assuming it hung. See OJD-1643.
-  const requiresInteraction = protocolRequiresInteraction(protocolCode);
+  const requiresInteraction = protocolRequiresInteraction(runnableProtocolCode);
 
   useAutoConnectionType(browserSupport, setConnectionType);
 
@@ -80,7 +88,7 @@ export function IotProtocolRunner({
     const startTime = Date.now();
 
     try {
-      const result = await executeProtocol(protocolCode);
+      const result = await executeProtocol(runnableProtocolCode);
       const executionTime = Date.now() - startTime;
 
       setTestResult({

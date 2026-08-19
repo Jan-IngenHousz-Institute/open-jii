@@ -31,6 +31,13 @@ interface ResolvedTarget {
   protocolName?: string;
 }
 
+function isRunnableProtocolCode(code: unknown): code is Record<string, unknown>[] {
+  return (
+    Array.isArray(code) &&
+    code.every((item) => typeof item === "object" && item !== null && !Array.isArray(item))
+  );
+}
+
 // Resolves a dispatch target's payload from its hydrated flow node (protocol
 // snapshot code or inline command), the same mechanism the current node uses.
 // Errors fail only that device's round entry, never the whole round.
@@ -45,7 +52,7 @@ function resolveTargetPayload(node: FlowNode | undefined): ResolvedTarget | Erro
     }
   }
   const code = content.protocol?.code;
-  if (!content.protocolId || !code || code.length === 0) {
+  if (!content.protocolId || !isRunnableProtocolCode(code) || code.length === 0) {
     return new Error("Protocol code is unavailable for this dispatch target");
   }
   return { command: code, protocolId: content.protocolId, protocolName: content.protocol?.name };
@@ -58,6 +65,10 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
   const { t } = useTranslation("measurementFlow");
   // Resolved once at flow-load (hydrateFlowNodes): snapshot code + cell name.
   const protocol = content.protocol;
+  const runnableProtocol =
+    protocol && isRunnableProtocolCode(protocol.code)
+      ? { ...protocol, code: protocol.code }
+      : undefined;
   const {
     executeScanAll,
     executeScanAssignments,
@@ -194,7 +205,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
           toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
           return;
         }
-        if (!protocol) {
+        if (!runnableProtocol) {
           toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
           return;
         }
@@ -225,8 +236,8 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
         let round: MultiScanRound;
         if (activePlan) {
           round = await runDispatchRound(activePlan, pendingDevices);
-        } else if (protocol) {
-          round = await executeScanAll(protocol, pendingDevices);
+        } else if (runnableProtocol) {
+          round = await executeScanAll(runnableProtocol, pendingDevices);
         } else {
           return; // unreachable: guarded above
         }

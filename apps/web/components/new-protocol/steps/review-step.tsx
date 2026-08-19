@@ -6,7 +6,6 @@ import { getSensorFamilyLabel } from "@/util/sensor-family";
 import * as z from "zod";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
-import type { CreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
@@ -15,6 +14,7 @@ import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
 import { useOwningOrganizationLabel } from "../../organizations/use-owning-organization-label";
+import type { NewProtocolFormValues } from "../new-protocol-form-values";
 import { codeSchema } from "./code-test-step";
 import { detailsSchema } from "./details-step";
 
@@ -24,7 +24,7 @@ export const reviewSchema = z.object({
   ...codeSchema.shape,
 });
 
-interface ReviewStepProps extends WizardStepProps<CreateProtocolRequestBody> {
+interface ReviewStepProps extends WizardStepProps<NewProtocolFormValues> {
   selectedMacros: Macro[];
 }
 

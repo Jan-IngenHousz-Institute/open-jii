@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  zBulkRegisterIotDevicesBody,
   zIotCredentials,
   zIotDevice,
   zIotDeviceActivity,
@@ -129,6 +130,50 @@ describe("Iot Schema", () => {
 
     it("rejects an empty name when provided", () => {
       expect(zRegisterIotDeviceBody.safeParse({ ...validBody, name: "" }).success).toBe(false);
+    });
+  });
+
+  describe("zBulkRegisterIotDevicesBody", () => {
+    const base = { devices: [{ serialNumber: "S-1" }], deviceType: "ambyte" };
+
+    it("accepts a plain batch and each group flavor", () => {
+      expect(zBulkRegisterIotDevicesBody.safeParse(base).success).toBe(true);
+      expect(
+        zBulkRegisterIotDevicesBody.safeParse({
+          ...base,
+          group: { groupId: "11111111-1111-4111-8111-111111111111" },
+        }).success,
+      ).toBe(true);
+      expect(
+        zBulkRegisterIotDevicesBody.safeParse({ ...base, group: { name: "Fresh batch" } }).success,
+      ).toBe(true);
+    });
+
+    it("rejects duplicate serials within the batch", () => {
+      expect(
+        zBulkRegisterIotDevicesBody.safeParse({
+          ...base,
+          devices: [{ serialNumber: "S-1" }, { serialNumber: "S-1" }],
+        }).success,
+      ).toBe(false);
+    });
+
+    it("bounds the batch to 1..100 devices", () => {
+      expect(zBulkRegisterIotDevicesBody.safeParse({ ...base, devices: [] }).success).toBe(false);
+      const many = Array.from({ length: 101 }, (_, i) => ({ serialNumber: `S-${String(i)}` }));
+      expect(zBulkRegisterIotDevicesBody.safeParse({ ...base, devices: many }).success).toBe(false);
+    });
+
+    it("rejects the mobile family like the single register", () => {
+      expect(zBulkRegisterIotDevicesBody.safeParse({ ...base, deviceType: "mobile" }).success).toBe(
+        false,
+      );
+    });
+
+    it("rejects a blank new-group name", () => {
+      expect(
+        zBulkRegisterIotDevicesBody.safeParse({ ...base, group: { name: "   " } }).success,
+      ).toBe(false);
     });
   });
 
@@ -386,6 +431,18 @@ describe("Iot Schema", () => {
         addedAt: "yesterday",
       };
       expect(zDeviceExperiment.safeParse(binding).success).toBe(false);
+    });
+  });
+
+  describe("zRegisterIotDeviceBody deviceType", () => {
+    it("rejects the mobile family at the contract: phones self-register via ensure", () => {
+      const body = { serialNumber: "AA:BB", deviceType: "mobile" };
+      expect(zRegisterIotDeviceBody.safeParse(body).success).toBe(false);
+    });
+
+    it("accepts an instrument family", () => {
+      const body = { serialNumber: "AA:BB", deviceType: "ambyte" };
+      expect(zRegisterIotDeviceBody.safeParse(body).success).toBe(true);
     });
   });
 

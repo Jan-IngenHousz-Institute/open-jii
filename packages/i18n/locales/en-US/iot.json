@@ -87,7 +87,6 @@
       },
       "comingSoon": {
         "title": "Coming soon",
-        "groups": "Organize devices into groups you can manage, provision, and onboard together.",
         "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
         "lineage": "Trace this device's identity through to its ingested measurements.",
         "onboarding": "Onboard each device from its detail page (Onboarding tab). Bulk onboarding from this view is coming soon."
@@ -154,6 +153,8 @@
         "availabilityHint": "Connectivity per bucket over the selected window, on the same time axis as the data below.",
         "availability": "Availability",
         "uptimeLabel": "Uptime",
+        "sessionsLabel": "Sessions",
+        "mobileSessionsNote": "Phones connect only while the app is open",
         "uptimeWindow": "{{from}} to {{to}}",
         "outages": "Outages",
         "sessions": "Sessions",
@@ -216,6 +217,23 @@
         "title": "No devices match your filters",
         "description": "Try a different search term or status filter.",
         "clear": "Clear filters"
+      },
+      "bulkDialog": {
+        "open": "Bulk register",
+        "title": "Bulk register devices",
+        "description": "Register a batch of devices of one type, optionally straight into a group.",
+        "serialsLabel": "Serial numbers",
+        "serialsPlaceholder": "One device per line: serial, or serial, name",
+        "groupLabel": "Group",
+        "groupNone": "No group",
+        "groupExisting": "Existing group",
+        "groupNew": "New group",
+        "groupSelectPlaceholder": "Pick a group",
+        "groupNamePlaceholder": "e.g. Greenhouse B",
+        "submit": "Register devices",
+        "successToast": "{{count}} devices registered",
+        "groupError": "Group: {{error}}",
+        "done": "Done"
       },
       "dialog": {
         "title": "Register device",
@@ -347,6 +365,50 @@
       "detachSuccess": "Device detached from the experiment",
       "detachError": "Could not detach the device",
       "loadError": "Could not load the devices. Try again."
+    },
+    "groups": {
+      "addDevices": "Add devices",
+      "addDevicesHint": "Your registered devices that are not yet members.",
+      "addDevicesTitle": "Add devices to the group",
+      "addSelected_one": "Add {{count}} device",
+      "addSelected_other": "Add {{count}} devices",
+      "backToDevices": "Back to devices",
+      "create": "Create group",
+      "createDescription": "Groups organize your devices; membership changes nothing on the devices themselves.",
+      "createTitle": "Create a device group",
+      "dangerZone": {
+        "title": "Danger zone",
+        "deleteLabel": "Delete this group",
+        "deleteDescription": "Permanently removes the group. The devices themselves are not affected. This cannot be undone."
+      },
+      "delete": "Delete group",
+      "deleteHint": "\"{{name}}\" will be deleted. The devices themselves are not affected.",
+      "deleteTitle": "Delete this group?",
+      "descriptionLabel": "Description",
+      "deviceColumn": "Device",
+      "emptyHint": "Create a group to organize your devices.",
+      "emptyTitle": "No groups yet",
+      "familyColumn": "Family",
+      "loadError": "Could not load device groups.",
+      "memberCount_one": "{{count}} device",
+      "memberCount_other": "{{count}} devices",
+      "meta": {
+        "members": "Devices",
+        "created": "Created"
+      },
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Greenhouse A",
+      "noAddableDevices": "All of your devices are already in this group.",
+      "noMembers": "No devices in this group yet.",
+      "remove": "Remove",
+      "sectionHint": "Organize devices into groups you can monitor and onboard together.",
+      "statusColumn": "Status",
+      "pageTitle": "Device group",
+      "comingSoon": {
+        "credentials": "Rotate, issue, and revoke credentials for every device in this group at once.",
+        "monitoring": "Group health at a glance: how many devices are online, silent, or missing.",
+        "onboarding": "Onboard the whole group onto experiments and download all configs together."
+      }
     }
   }
 }

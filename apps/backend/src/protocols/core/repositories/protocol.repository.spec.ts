@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
-import { and, protocols as protocolsTable, eq, resourceGrants } from "@repo/database";
+import { and, protocols as protocolsTable, eq, resourceGrants, sql } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -88,7 +88,7 @@ describe("ProtocolRepository", () => {
       const protocol2 = {
         name: "Protocol 2",
         description: "Description 2",
-        code: JSON.stringify({ steps: [{ name: "Step 2", action: "test" }] }),
+        code: [{ steps: [{ name: "Step 2", action: "test" }] }],
         family: "multispeq" as const,
       };
 
@@ -300,7 +300,7 @@ describe("ProtocolRepository", () => {
       const protocol2 = {
         name: "Different Protocol 2",
         description: "Description 2",
-        code: JSON.stringify({ steps: [{ name: "Step 2", action: "test" }] }),
+        code: [{ steps: [{ name: "Step 2", action: "test" }] }],
         family: "multispeq" as const,
       };
 
@@ -951,6 +951,7 @@ describe("ProtocolRepository — list access scoping", () => {
 describe("ProtocolController — create with visibility", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
+  let repository: ProtocolRepository;
 
   beforeAll(async () => {
     // Mock analytics so protocol code validation runs in warning mode (its
@@ -961,6 +962,7 @@ describe("ProtocolController — create with visibility", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({ name: "Creator" });
+    repository = testApp.module.get(ProtocolRepository);
   });
 
   afterEach(() => {
@@ -972,6 +974,146 @@ describe("ProtocolController — create with visibility", () => {
   });
 
   const createPath = () => testApp.resolveOrpcPath(contract.protocols.createProtocol);
+
+  // Load-bearing regression guard: protocolCodeSchema = zJsonValue still accepts
+  // strings, so `code: JSON.stringify(doc)` typechecks. That is exactly how the
+  // original double-encoding bug happened in execute-project-transfer.spec.ts.
+  // Only the stored jsonb type reliably catches that regression. See OJD-1711.
+  const storedCodeType = async (id: string) => {
+    const [row] = await testApp.database
+      .select({ kind: sql<string>`jsonb_typeof(${protocolsTable.code})` })
+      .from(protocolsTable)
+      .where(eq(protocolsTable.id, id));
+    return row.kind;
+  };
+
+  it("stores created code as a jsonb array, not a double-encoded string", async () => {
+    const response: SuperTestResponse<{ id: string }> = await testApp
+      .post(createPath())
+      .withAuth(testUserId)
+      .send({
+        name: `Stored shape on create ${faker.string.uuid()}`,
+        description: "x",
+        code: [{ label: "PAM", pulses: [10, 20] }],
+        family: "multispeq",
+      })
+      .expect(StatusCodes.CREATED);
+
+    expect(await storedCodeType(response.body.id)).toBe("array");
+  });
+
+  it("stores updated code as a jsonb array, and keeps it queryable from SQL", async () => {
+    const created: SuperTestResponse<{ id: string }> = await testApp
+      .post(createPath())
+      .withAuth(testUserId)
+      .send({
+        name: `Stored shape on update ${faker.string.uuid()}`,
+        description: "x",
+        code: [{ label: "before" }],
+        family: "multispeq",
+      })
+      .expect(StatusCodes.CREATED);
+
+    await testApp
+      .patch(testApp.resolveOrpcPath(contract.protocols.updateProtocol, { id: created.body.id }))
+      .withAuth(testUserId)
+      .send({ code: [{ label: "after", pulses: [1, 2, 3] }] })
+      .expect(StatusCodes.OK);
+
+    expect(await storedCodeType(created.body.id)).toBe("array");
+
+    // The point of storing an array: jsonb operators reach into it. Against a
+    // double-encoded row both of these come back null.
+    const [row] = await testApp.database
+      .select({
+        label: sql<string | null>`${protocolsTable.code} -> 0 ->> 'label'`,
+        pulses: sql<number | null>`jsonb_array_length(${protocolsTable.code} -> 0 -> 'pulses')`,
+      })
+      .from(protocolsTable)
+      .where(eq(protocolsTable.id, created.body.id));
+
+    expect(row.label).toBe("after");
+    expect(row.pulses).toBe(3);
+  });
+
+  it.each([
+    { label: "JSON-looking", stringCode: "[1,2]" },
+    { label: "quoted-JSON", stringCode: '"quoted protocol"' },
+    { label: "plain", stringCode: "plain protocol source" },
+  ])("round-trips a $label string code byte-identically", async ({ label, stringCode }) => {
+    const created: SuperTestResponse<{ id: string; code: unknown }> = await testApp
+      .post(createPath())
+      .withAuth(testUserId)
+      .send({
+        name: `${label} string code ${faker.string.uuid()}`,
+        description: "x",
+        code: stringCode,
+        family: "multispeq",
+      })
+      .expect(StatusCodes.CREATED);
+
+    expect(created.body.code).toBe(stringCode);
+    expect(await storedCodeType(created.body.id)).toBe("string");
+
+    // The protocol-only custom jsonb column trusts postgres-js's single parse,
+    // so Drizzle cannot reinterpret JSON-looking string documents.
+    const found = await repository.findOne(created.body.id);
+    assertSuccess(found);
+    expect(found.value?.code).toBe(stringCode);
+
+    const response: SuperTestResponse<{ code: unknown }> = await testApp
+      .get(testApp.resolveOrpcPath(contract.protocols.getProtocol, { id: created.body.id }))
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(response.body.code).toBe(stringCode);
+  });
+
+  it("round-trips a numeric zero code through the API", async () => {
+    // 0 is falsy but a valid JSON document under the widened contract
+    // (OJD-1711): absence guards must not turn it into the fallback.
+    const created: SuperTestResponse<{ id: string }> = await testApp
+      .post(createPath())
+      .withAuth(testUserId)
+      .send({
+        name: `Zero code ${faker.string.uuid()}`,
+        description: "x",
+        code: 0,
+        family: "multispeq",
+      })
+      .expect(StatusCodes.CREATED);
+
+    expect(await storedCodeType(created.body.id)).toBe("number");
+
+    const response: SuperTestResponse<{ code: unknown }> = await testApp
+      .get(testApp.resolveOrpcPath(contract.protocols.getProtocol, { id: created.body.id }))
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(response.body.code).toBe(0);
+  });
+
+  it("round-trips a boolean false code through the API", async () => {
+    const created: SuperTestResponse<{ id: string }> = await testApp
+      .post(createPath())
+      .withAuth(testUserId)
+      .send({
+        name: `False code ${faker.string.uuid()}`,
+        description: "x",
+        code: false,
+        family: "multispeq",
+      })
+      .expect(StatusCodes.CREATED);
+
+    expect(await storedCodeType(created.body.id)).toBe("boolean");
+
+    const response: SuperTestResponse<{ code: unknown }> = await testApp
+      .get(testApp.resolveOrpcPath(contract.protocols.getProtocol, { id: created.body.id }))
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(response.body.code).toBe(false);
+  });
 
   it("persists visibility=private when requested", async () => {
     const response: SuperTestResponse<{ id: string; visibility: string }> = await testApp

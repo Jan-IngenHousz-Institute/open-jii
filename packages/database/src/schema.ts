@@ -40,6 +40,22 @@ const tsvector = customType<{ data: string }>({
   },
 });
 
+// postgres-js already parses jsonb values. Drizzle's built-in jsonb column
+// parses string driver values a second time, which corrupts valid string
+// documents such as "[1,2]" into arrays. Keep the normal write serialization,
+// but trust this repository's sole driver on reads.
+const postgresJsJsonb = customType<{ data: unknown; driverData: unknown }>({
+  dataType() {
+    return "jsonb";
+  },
+  toDriver(value) {
+    return JSON.stringify(value);
+  },
+  fromDriver(value) {
+    return value;
+  },
+});
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
@@ -179,6 +195,7 @@ export const sensorFamilyEnum = pgEnum("sensor_family", [
   "minipar",
   "generic",
   "ambit",
+  "mobile",
 ]);
 
 // Profiles Table
@@ -504,7 +521,7 @@ export const protocols = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     name: varchar("name", { length: 255 }).notNull().unique(),
     description: text("description"),
-    code: jsonb("code").notNull(),
+    code: postgresJsJsonb("code").notNull(),
     family: sensorFamilyEnum("family").notNull(),
     sortOrder: integer("sort_order"),
     createdBy: uuid("created_by")
@@ -730,6 +747,7 @@ export const resourceTypeEnum = pgEnum("resource_type", [
   "protocol",
   "workbook",
   "device",
+  "device_group",
 ]);
 export const granteeTypeEnum = pgEnum("grantee_type", ["user", "organization", "team"]);
 
@@ -845,5 +863,51 @@ export const experimentDevices = pgTable(
   (t) => [
     primaryKey({ columns: [t.experimentId, t.deviceId] }),
     index("experiment_devices_device_idx").on(t.deviceId),
+  ],
+);
+
+// Device groups: user-defined organization of devices. Platform-native only:
+// no AWS thing-group mirroring, the thing-group quota stays reserved for the
+// parked broker-enforcement design.
+export const deviceGroups = pgTable(
+  "device_groups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    // RESTRICT like every other org-owned resource: deleting an organization is
+    // refused while it still owns work, rather than taking the group with it.
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "restrict",
+    }),
+    visibility: visibilityEnum("visibility").default("private").notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    index("device_groups_created_by_idx").on(t.createdBy),
+    index("device_groups_organization_id_idx").on(t.organizationId),
+  ],
+);
+
+export const deviceGroupMembers = pgTable(
+  "device_group_members",
+  {
+    groupId: uuid("group_id")
+      .references(() => deviceGroups.id, { onDelete: "cascade" })
+      .notNull(),
+    deviceId: uuid("device_id")
+      .references(() => iotDevices.id, { onDelete: "cascade" })
+      .notNull(),
+    addedBy: uuid("added_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    primaryKey({ columns: [t.groupId, t.deviceId] }),
+    index("device_group_members_device_idx").on(t.deviceId),
   ],
 );

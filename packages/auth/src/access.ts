@@ -26,7 +26,14 @@ import {
  * rather than restating the list — a type nobody granted anything on is a silent
  * read-only hole, and a hand-copied list in the spec would not catch it.
  */
-export const RESOURCE_TYPES = ["experiment", "protocol", "macro", "workbook", "device"] as const;
+export const RESOURCE_TYPES = [
+  "experiment",
+  "protocol",
+  "macro",
+  "workbook",
+  "device",
+  "device_group",
+] as const;
 
 export type ResourceType = (typeof RESOURCE_TYPES)[number];
 
@@ -61,6 +68,7 @@ const statement = {
   macro: RESOURCE_ACTIONS,
   workbook: RESOURCE_ACTIONS,
   device: RESOURCE_ACTIONS,
+  device_group: RESOURCE_ACTIONS,
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -94,6 +102,7 @@ export const roles = {
     macro: RESOURCE_ACTIONS,
     workbook: RESOURCE_ACTIONS,
     device: RESOURCE_ACTIONS,
+    device_group: RESOURCE_ACTIONS,
   }),
   admin: ac.newRole({
     ...adminAc.statements,
@@ -103,6 +112,7 @@ export const roles = {
     macro: RESOURCE_ACTIONS,
     workbook: RESOURCE_ACTIONS,
     device: RESOURCE_ACTIONS,
+    device_group: RESOURCE_ACTIONS,
   }),
   member: ac.newRole({
     ...memberAc.statements,
@@ -111,6 +121,7 @@ export const roles = {
     macro: READ_ONLY,
     workbook: READ_ONLY,
     device: READ_ONLY,
+    device_group: READ_ONLY,
   }),
 } as const;
 
@@ -145,6 +156,7 @@ const grantRoles = {
     macro: READ_ONLY,
     workbook: READ_ONLY,
     device: READ_ONLY,
+    device_group: READ_ONLY,
   }),
 } as const;
 

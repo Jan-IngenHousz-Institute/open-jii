@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 /**
- * Every value of the `resource_grants.resource_type` enum. Devices are shareable but
- * never publishable — see `zPublishableResourceType`, this set minus devices.
+ * Every value of the `resource_grants.resource_type` enum. Devices and device
+ * groups are shareable but never publishable, see `zPublishableResourceType`.
  */
 export const zSharingResourceType = z.enum([
   "experiment",
@@ -10,6 +10,7 @@ export const zSharingResourceType = z.enum([
   "protocol",
   "workbook",
   "device",
+  "device_group",
 ]);
 
 /**

@@ -11,6 +11,7 @@ import request from "supertest";
 import type { Response } from "supertest";
 import type { App } from "supertest/types";
 
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { auth } from "@repo/auth/server";
 import type { DatabaseInstance } from "@repo/database";
 import {
@@ -18,6 +19,7 @@ import {
   experimentLocations,
   experiments,
   invitations,
+  deviceGroups,
   iotDevices,
   users,
   sessions,
@@ -215,9 +217,11 @@ export class TestHarness {
     // Macros reference users, so delete macros before users
     await this.database.delete(macros).execute();
     await this.database.delete(profiles).execute();
-    // IoT devices reference organizations with a RESTRICT FK (AWS-safety, no
-    // cascade), so they must be deleted before organizations.
+    // Every org-owned resource reaches organizations through a RESTRICT FK — nothing an
+    // organization owns is destroyed with it — so all of them go first. Workbooks and
+    // experiments are already gone above; devices and device groups are not.
     await this.database.delete(iotDevices).execute();
+    await this.database.delete(deviceGroups).execute();
     await this.database.delete(organizations).execute();
     // Sessions/accounts reference users, delete before users
     await this.database.delete(sessions).execute();
@@ -438,11 +442,7 @@ export class TestHarness {
    * admin: the `create*` helpers deliberately do not call it, because a creator
    * grant is a state no create path produces.
    */
-  public addResourceAdmin(
-    resourceType: "experiment" | "protocol" | "macro" | "workbook" | "device",
-    resourceId: string,
-    userId: string,
-  ) {
+  public addResourceAdmin(resourceType: SharingResourceType, resourceId: string, userId: string) {
     return this.addResourceGrant({
       resourceType,
       resourceId,
@@ -557,7 +557,7 @@ export class TestHarness {
 
   /** Seed a resource grant. */
   public async addResourceGrant(data: {
-    resourceType: "experiment" | "protocol" | "macro" | "workbook" | "device";
+    resourceType: SharingResourceType;
     resourceId: string;
     granteeType: "user" | "team" | "organization";
     granteeId: string;

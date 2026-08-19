@@ -20,7 +20,7 @@ export type TransportType = "bluetooth-classic" | "ble" | "usb" | "web-bluetooth
 export type TransportCategory = "bluetooth" | "serial";
 
 /** Supported device types */
-export type DeviceType = "multispeq" | "ambit" | "minipar" | "ambyte" | "generic";
+export type DeviceType = "multispeq" | "ambit" | "minipar" | "ambyte" | "generic" | "mobile";
 
 /** Transport support declaration for a device type */
 export interface DeviceTransportSupport {
@@ -85,6 +85,14 @@ export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport
     supportsBLE: true,
     supportsBluetoothClassic: false,
     supportsStoredConfig: true,
+  },
+  // Phones run the app themselves; there is no local transport to speak over
+  // and no stored config, the app pulls everything from the backend directly.
+  mobile: {
+    supportedTransports: [],
+    supportsBLE: false,
+    supportsBluetoothClassic: false,
+    supportsStoredConfig: false,
   },
 };
 

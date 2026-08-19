@@ -3,7 +3,12 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import type { IotDevice, IotDeviceDetail, IotDeviceList } from "@repo/api/domains/iot/iot.schema";
+import type {
+  BulkRegisterIotDevicesResult,
+  IotDevice,
+  IotDeviceDetail,
+  IotDeviceList,
+} from "@repo/api/domains/iot/iot.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
@@ -42,6 +47,11 @@ describe("IotDeviceController", () => {
     analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
     vi.spyOn(awsAdapter, "createThing").mockResolvedValue(success(RETURNED_THING));
     vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
+    vi.spyOn(awsAdapter, "getCognitoIdentityId").mockResolvedValue(
+      success("eu-central-1:identity-1"),
+    );
+    vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
   });
 
@@ -67,6 +77,16 @@ describe("IotDeviceController", () => {
         .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withAuth(userId)
         .send(registerBody)
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.bulkRegisterIotDevices))
+        .withAuth(userId)
+        .send({ devices: [{ serialNumber: "S-1" }], deviceType: "ambyte" })
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "9f2c1a2e-1111-4111-8111-111111111111" })
         .expect(StatusCodes.FORBIDDEN);
 
       const getPath = testApp.resolveOrpcPath(contract.iot.getIotDevice, {
@@ -127,6 +147,179 @@ describe("IotDeviceController", () => {
         .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withAuth(userId)
         .send(registerBody)
+        .expect(StatusCodes.CONFLICT);
+    });
+  });
+
+  describe("bulkRegisterIotDevices", () => {
+    const bulkPath = () => testApp.resolveOrpcPath(contract.iot.bulkRegisterIotDevices);
+
+    beforeEach(() => {
+      // The batch persists several rows, so each Thing must keep its own name.
+      vi.spyOn(awsAdapter, "createThing").mockImplementation((input) =>
+        Promise.resolve(
+          success({
+            thingName: input.thingName,
+            thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${input.thingName}`,
+          }),
+        ),
+      );
+    });
+
+    async function bulkRegister(
+      body: object,
+    ): Promise<SuperTestResponse<BulkRegisterIotDevicesResult>> {
+      return testApp.post(bulkPath()).withAuth(userId).send(body).expect(StatusCodes.OK);
+    }
+
+    it("registers every serial and reports per-device results", async () => {
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }, { serialNumber: "S-2", name: "Second" }],
+        deviceType: "ambyte",
+      });
+
+      expect(response.body.devices).toHaveLength(2);
+      for (const row of response.body.devices) {
+        expect(row.error).toBeNull();
+        expect(row.device?.thingName).toBe(`ambyte_${row.serialNumber}`);
+      }
+      expect(response.body.groupId).toBeNull();
+      expect(response.body.groupError).toBeNull();
+    });
+
+    it("continues past a duplicate serial and reports it inline", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
+        .withAuth(userId)
+        .send({ serialNumber: "S-1", deviceType: "ambyte" })
+        .expect(StatusCodes.CREATED);
+
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }, { serialNumber: "S-2" }],
+        deviceType: "ambyte",
+      });
+
+      const [first, second] = response.body.devices;
+      expect(first.device).toBeNull();
+      expect(first.error).toContain("already registered");
+      expect(second.device).not.toBeNull();
+      expect(second.error).toBeNull();
+    });
+
+    it("creates a group around the batch when asked", async () => {
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }, { serialNumber: "S-2" }],
+        deviceType: "ambyte",
+        group: { name: "Fresh batch" },
+      });
+
+      const groupId = response.body.groupId;
+      expect(groupId).not.toBeNull();
+      expect(response.body.groupError).toBeNull();
+
+      const members: SuperTestResponse<{ deviceId: string }[]> = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.deviceGroups.listDeviceGroupMembers, {
+            groupId: groupId ?? "",
+          }),
+        )
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+      expect(members.body).toHaveLength(2);
+    });
+
+    it("adds the batch to an existing group", async () => {
+      const group: SuperTestResponse<{ id: string }> = await testApp
+        .post(testApp.resolveOrpcPath(contract.deviceGroups.createDeviceGroup))
+        .withAuth(userId)
+        .send({ name: "Existing" })
+        .expect(StatusCodes.CREATED);
+
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-9" }],
+        deviceType: "ambyte",
+        group: { groupId: group.body.id },
+      });
+
+      expect(response.body.groupId).toBe(group.body.id);
+      expect(response.body.groupError).toBeNull();
+    });
+
+    it("reports group trouble without failing the registrations", async () => {
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }],
+        deviceType: "ambyte",
+        group: { groupId: faker.string.uuid() },
+      });
+
+      expect(response.body.devices[0].device).not.toBeNull();
+      expect(response.body.groupId).toBeNull();
+      expect(response.body.groupError).toBe("Device group not found");
+    });
+
+    it("rejects duplicate serials within one batch (400)", async () => {
+      await testApp
+        .post(bulkPath())
+        .withAuth(userId)
+        .send({
+          devices: [{ serialNumber: "S-1" }, { serialNumber: "S-1" }],
+          deviceType: "ambyte",
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("rejects the mobile family like the single register (400)", async () => {
+      await testApp
+        .post(bulkPath())
+        .withAuth(userId)
+        .send({ devices: [{ serialNumber: "S-1" }], deviceType: "mobile" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
+  describe("ensureMobileDevice", () => {
+    const ensureBody = { installId: "9f2c1a2e-1111-4111-8111-111111111111", name: "iPhone 15" };
+
+    it("creates on first call and returns the same active device on the second (200)", async () => {
+      const first: SuperTestResponse<IotDevice> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send(ensureBody)
+        .expect(StatusCodes.OK);
+
+      expect(first.body.deviceType).toBe("mobile");
+      expect(first.body.status).toBe("active");
+      expect(first.body.serialNumber).toBe(ensureBody.installId);
+
+      const second: SuperTestResponse<IotDevice> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send(ensureBody)
+        .expect(StatusCodes.OK);
+
+      expect(second.body.id).toBe(first.body.id);
+    });
+
+    it("rejects a non-uuid install id (400)", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "not-a-uuid" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 409 when another user holds the install id", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send(ensureBody)
+        .expect(StatusCodes.OK);
+
+      const otherUser = await testApp.createTestUser({ name: "Other" });
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(otherUser)
+        .send(ensureBody)
         .expect(StatusCodes.CONFLICT);
     });
   });

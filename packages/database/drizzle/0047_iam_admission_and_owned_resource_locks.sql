@@ -10,6 +10,18 @@ CREATE TABLE "organization_join_requests" (
 	"updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL
 );
 --> statement-breakpoint
+-- RESTRICT, replacing the CASCADE these were created with: deleting an organization is
+-- refused while it still owns work, and the count that produces that friendly refusal
+-- runs before Better Auth's delete transaction opens — so a resource transferred in
+-- after the count was destroyed along with the organization. The constraint is what
+-- closes that window. `iot_devices` has been RESTRICT since 0039.
+--
+-- `device_groups` joins the rule for a different reason, since a group holds no work of
+-- its own: its grants are polymorphic and carry no foreign key, so they are cleaned only
+-- by the group's own delete path. Cascading a group away with its organization would
+-- leave that access behind, naming a group that no longer exists.
+ALTER TABLE "device_groups" DROP CONSTRAINT "device_groups_organization_id_organizations_id_fk";
+--> statement-breakpoint
 ALTER TABLE "experiments" DROP CONSTRAINT "experiments_organization_id_organizations_id_fk";
 --> statement-breakpoint
 ALTER TABLE "macros" DROP CONSTRAINT "macros_organization_id_organizations_id_fk";
@@ -30,11 +42,7 @@ ALTER TABLE "organization_join_requests" ADD CONSTRAINT "organization_join_reque
 ALTER TABLE "organization_join_requests" ADD CONSTRAINT "organization_join_requests_decided_by_users_id_fk" FOREIGN KEY ("decided_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "organization_join_requests_pending_uniq" ON "organization_join_requests" USING btree ("organization_id","user_id") WHERE "organization_join_requests"."status" = 'pending';--> statement-breakpoint
 CREATE INDEX "organization_join_requests_organization_idx" ON "organization_join_requests" USING btree ("organization_id");--> statement-breakpoint
--- RESTRICT, replacing the CASCADE these four were created with: deleting an
--- organization is refused while it still owns work, and the count that produces that
--- friendly refusal runs before Better Auth's delete transaction opens — so a resource
--- transferred in after the count was destroyed along with the organization. The
--- constraint is what closes that window. `iot_devices` has been RESTRICT since 0039.
+ALTER TABLE "device_groups" ADD CONSTRAINT "device_groups_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "experiments" ADD CONSTRAINT "experiments_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "macros" ADD CONSTRAINT "macros_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "protocols" ADD CONSTRAINT "protocols_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint

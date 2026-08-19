@@ -142,12 +142,12 @@ describe("zExperimentProjectTransferWebhookPayload", () => {
     expect(() => zExperimentProjectTransferWebhookPayload.parse(payload)).toThrow();
   });
 
-  it("should reject empty protocol code array", () => {
+  it("accepts an empty protocol code array", () => {
     const payload = {
       ...validPayload,
       protocol: { ...validPayload.protocol, code: [] },
     };
-    // z.record(z.unknown()).array() allows empty arrays by default,
+    // zJsonValue allows empty arrays by default,
     // so this should still parse (no .min(1) on the array)
     const result = zExperimentProjectTransferWebhookPayload.safeParse(payload);
     // Empty code array is technically valid per schema

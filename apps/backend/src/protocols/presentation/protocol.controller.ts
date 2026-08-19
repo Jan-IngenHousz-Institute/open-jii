@@ -6,6 +6,8 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-validator";
 import { protocolContract } from "@repo/api/domains/protocol/protocol.contract";
+import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
+import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
@@ -28,39 +30,33 @@ import { CreateProtocolDto } from "../core/models/protocol.model";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
 
-export function parseProtocolCode(code: unknown, logger: Logger): Record<string, unknown>[] {
-  if (!code) {
+export function parseProtocolCode(code: unknown, logger: Logger): JsonValue {
+  // Only an absent value falls back: 0, false, and "" are valid JSON
+  // documents under the widened contract and must pass through.
+  if (code === null || code === undefined) {
     return [{}];
   }
 
-  if (typeof code === "object" && Array.isArray(code)) {
-    return code as Record<string, unknown>[];
+  // oRPC walks this value again through zProtocol on output. The duplicate
+  // validation is deliberate: this boundary turns corrupt stored data into a
+  // safe fallback instead of allowing output validation to surface a 500.
+  const parsed = zJsonValue.safeParse(code);
+  if (!parsed.success) {
+    logger.error({
+      msg: "Failed to parse protocol code",
+      errorCode: ErrorCodes.BAD_REQUEST,
+      operation: "parseProtocolCode",
+      error: parsed.error,
+    });
+    return [{}];
   }
 
-  if (typeof code === "string") {
-    try {
-      return JSON.parse(code) as Record<string, unknown>[];
-    } catch (error) {
-      logger.error({
-        msg: "Failed to parse protocol code",
-        errorCode: ErrorCodes.BAD_REQUEST,
-        operation: "parseProtocolCode",
-        error,
-      });
-      return [{}];
-    }
-  }
-
-  return [{}];
+  return parsed.data;
 }
 
 function validateJsonStructure(code: unknown, logger: Logger) {
-  if (!code) {
+  if (code === null || code === undefined) {
     return failure(AppError.badRequest("Protocol code is required"));
-  }
-
-  if (!Array.isArray(code)) {
-    return failure(AppError.badRequest("Protocol code must be an array"));
   }
 
   try {
@@ -133,12 +129,9 @@ export class ProtocolController {
       );
 
       if (result.isSuccess()) {
-        const protocols = result.value.map((protocol) => ({
-          ...protocol,
-          code: parseProtocolCode(protocol.code, this.logger),
-        }));
-
-        return formatDatesList(protocols);
+        // The list contract deliberately treats code as unknown so large protocol
+        // documents are not recursively validated on the synchronous request path.
+        return formatDatesList(result.value);
       }
 
       return throwOrpcFailure(result, this.logger);
@@ -187,7 +180,10 @@ export class ProtocolController {
       const createDto: CreateProtocolDto = {
         name: input.name,
         description: input.description,
-        code: JSON.stringify(input.code),
+        // Not stringified: `code` is a jsonb column and Drizzle serializes it.
+        // Doing it here too stored the document double-encoded, as a jsonb
+        // string rather than an array. See OJD-1711.
+        code: input.code,
         family: input.family,
         forkedFrom: input.forkedFrom,
         // Visibility at create (defaults to public via the column default when omitted).
@@ -240,7 +236,8 @@ export class ProtocolController {
       const updateDto = {
         name: body.name,
         description: body.description,
-        code: body.code ? JSON.stringify(body.code) : undefined,
+        // See the note in createProtocol: jsonb serializes this, we must not.
+        code: body.code,
         family: body.family,
       };
 

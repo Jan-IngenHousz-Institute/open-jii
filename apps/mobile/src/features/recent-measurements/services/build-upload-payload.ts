@@ -12,6 +12,8 @@ export interface MacroInfo {
 export interface BuildUploadPayloadArgs {
   rawMeasurement: any;
   userId: string;
+  /** Real protocol uuid, or the "questions" sentinel for question-only rows. */
+  protocolId: string;
   macro: MacroInfo | null;
   timestamp: string;
   timezone: string;
@@ -33,6 +35,7 @@ export interface BuildUploadPayloadArgs {
 export function buildUploadPayload({
   rawMeasurement,
   userId,
+  protocolId,
   macro,
   timestamp,
   timezone,
@@ -62,6 +65,10 @@ export function buildUploadPayload({
     timezone,
     user_id: userId,
     ...rawMeasurement,
+    // After the spread: device-native output can carry its own protocol_id
+    // (device-defined, not a platform id) and must not clobber the platform
+    // attribution, including the "questions" sentinel.
+    protocol_id: protocolId,
     ...(hasInjectableSample ? { sample: injectedSample } : {}),
     annotations: buildAnnotations(commentText),
     // The firmware-provided device_id wins; the local USB/BT id is a weak

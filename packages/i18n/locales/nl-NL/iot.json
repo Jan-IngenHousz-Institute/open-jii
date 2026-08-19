@@ -87,7 +87,6 @@
       },
       "comingSoon": {
         "title": "Binnenkort beschikbaar",
-        "groups": "Organiseer apparaten in groepen die u samen kunt beheren, provisioneren en onboarden.",
         "monitoring": "Volg apparaatconnectiviteit, laatst gezien en de gezondheid van de vloot in één oogopslag.",
         "lineage": "Traceer de identiteit van dit apparaat tot aan zijn opgenomen metingen.",
         "onboarding": "Onboard elk apparaat via zijn detailpagina (tabblad Onboarding). Bulk-onboarding vanuit dit overzicht volgt binnenkort."
@@ -154,6 +153,8 @@
         "availabilityHint": "Connectiviteit per interval in de gekozen periode, op dezelfde tijdas als de data eronder.",
         "availability": "Beschikbaarheid",
         "uptimeLabel": "Beschikbaarheid",
+        "sessionsLabel": "Sessies",
+        "mobileSessionsNote": "Telefoons maken alleen verbinding wanneer de app geopend is",
         "uptimeWindow": "{{from}} tot {{to}}",
         "outages": "Storingen",
         "sessions": "Sessies",
@@ -216,6 +217,23 @@
         "title": "Geen apparaten komen overeen met uw filters",
         "description": "Probeer een andere zoekterm of statusfilter.",
         "clear": "Filters wissen"
+      },
+      "bulkDialog": {
+        "open": "Bulkregistratie",
+        "title": "Apparaten in bulk registreren",
+        "description": "Registreer een batch apparaten van één type, optioneel direct in een groep.",
+        "serialsLabel": "Serienummers",
+        "serialsPlaceholder": "Eén apparaat per regel: serienummer, of serienummer, naam",
+        "groupLabel": "Groep",
+        "groupNone": "Geen groep",
+        "groupExisting": "Bestaande groep",
+        "groupNew": "Nieuwe groep",
+        "groupSelectPlaceholder": "Kies een groep",
+        "groupNamePlaceholder": "bijv. Kas B",
+        "submit": "Apparaten registreren",
+        "successToast": "{{count}} apparaten geregistreerd",
+        "groupError": "Groep: {{error}}",
+        "done": "Klaar"
       },
       "dialog": {
         "title": "Apparaat registreren",
@@ -347,6 +365,50 @@
       "detachSuccess": "Apparaat ontkoppeld van het experiment",
       "detachError": "Kon het apparaat niet ontkoppelen",
       "loadError": "Kon de apparaten niet laden. Probeer het opnieuw."
+    },
+    "groups": {
+      "addDevices": "Apparaten toevoegen",
+      "addDevicesHint": "Uw geregistreerde apparaten die nog geen lid zijn.",
+      "addDevicesTitle": "Apparaten aan de groep toevoegen",
+      "addSelected_one": "{{count}} apparaat toevoegen",
+      "addSelected_other": "{{count}} apparaten toevoegen",
+      "backToDevices": "Terug naar apparaten",
+      "create": "Groep aanmaken",
+      "createDescription": "Groepen organiseren apparaten; lidmaatschap verandert niets aan de apparaten zelf.",
+      "createTitle": "Apparaatgroep aanmaken",
+      "dangerZone": {
+        "title": "Gevarenzone",
+        "deleteLabel": "Deze groep verwijderen",
+        "deleteDescription": "Verwijdert de groep permanent. De apparaten zelf blijven behouden. Dit kan niet ongedaan worden gemaakt."
+      },
+      "delete": "Groep verwijderen",
+      "deleteHint": "\"{{name}}\" wordt verwijderd. De apparaten zelf blijven bestaan.",
+      "deleteTitle": "Deze groep verwijderen?",
+      "descriptionLabel": "Beschrijving",
+      "deviceColumn": "Apparaat",
+      "emptyHint": "Maak een groep aan om apparaten te organiseren.",
+      "emptyTitle": "Nog geen groepen",
+      "familyColumn": "Familie",
+      "loadError": "Apparaatgroepen konden niet worden geladen.",
+      "memberCount_one": "{{count}} apparaat",
+      "memberCount_other": "{{count}} apparaten",
+      "meta": {
+        "members": "Apparaten",
+        "created": "Aangemaakt"
+      },
+      "nameLabel": "Naam",
+      "namePlaceholder": "bijv. Kas A",
+      "noAddableDevices": "Al uw apparaten zitten al in deze groep.",
+      "noMembers": "Nog geen apparaten in deze groep.",
+      "remove": "Verwijderen",
+      "sectionHint": "Organiseer apparaten in groepen die u samen kunt monitoren en onboarden.",
+      "statusColumn": "Status",
+      "pageTitle": "Apparaatgroep",
+      "comingSoon": {
+        "credentials": "Certificaten voor alle apparaten in deze groep tegelijk uitgeven, roteren en intrekken.",
+        "monitoring": "Groepsstatus in één oogopslag: hoeveel apparaten online, stil of afwezig zijn.",
+        "onboarding": "De hele groep op experimenten onboarden en alle configuraties samen downloaden."
+      }
     }
   }
 }

@@ -124,3 +124,54 @@ describe("MonitoringTiles", () => {
     expect(screen.getByText("iot.devices.monitoring.sessionCount")).toBeInTheDocument();
   });
 });
+
+describe("MonitoringTiles for the mobile family", () => {
+  function mobileDevice() {
+    return createIotDeviceDetail({
+      deviceType: "mobile",
+      connectivity: { connected: true, lastSeenAt: "2026-08-13T08:00:00.000Z" },
+    });
+  }
+
+  it("never flags a phone as silent, silence is its normal life", () => {
+    render(
+      <MonitoringTiles
+        device={mobileDevice()}
+        activity={{ pipelineUnavailable: false, lastDataAt: "2026-08-13T00:00:00.000Z" }}
+        monitoring={monitoring()}
+        range={RANGE}
+      />,
+    );
+
+    expect(screen.queryByText("iot.devices.monitoring.connectedButSilent")).not.toBeInTheDocument();
+  });
+
+  it("frames the last tile as a session count, not an uptime verdict", () => {
+    const session = (start: string, end: string) => ({
+      start,
+      end,
+      openStart: false,
+      durationSeconds: 600,
+      disconnectReason: null,
+    });
+
+    render(
+      <MonitoringTiles
+        device={mobileDevice()}
+        activity={{ pipelineUnavailable: false, lastDataAt: "2026-08-13T00:00:00.000Z" }}
+        monitoring={monitoring({
+          sessions: [
+            session("2026-08-13T08:00:00.000Z", "2026-08-13T08:10:00.000Z"),
+            session("2026-08-13T09:00:00.000Z", "2026-08-13T09:10:00.000Z"),
+          ],
+        })}
+        range={RANGE}
+      />,
+    );
+
+    expect(screen.getByText("iot.devices.monitoring.sessionsLabel")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.mobileSessionsNote")).toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.monitoring.uptimeLabel")).not.toBeInTheDocument();
+  });
+});

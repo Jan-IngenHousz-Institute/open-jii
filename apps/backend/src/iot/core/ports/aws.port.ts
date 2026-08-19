@@ -33,10 +33,12 @@ export interface AwsPort {
   createThing(input: CreateThingInput): Promise<Result<CreatedThing>>;
   deleteThing(thingName: string): Promise<Result<void>>;
   createDeviceCertificate(): Promise<Result<CertificateResult>>;
-  attachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>>;
-  detachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>>;
+  attachThingPrincipal(thingName: string, principal: string): Promise<Result<void>>;
+  detachThingPrincipal(thingName: string, principal: string): Promise<Result<void>>;
+  listThingPrincipals(thingName: string): Promise<Result<string[]>>;
   attachDevicePolicies(certificateArn: string): Promise<Result<void>>;
   setCertificateStatus(certificateId: string, status: CertificateStatus): Promise<Result<void>>;
   getIotDataEndpoint(): Promise<Result<string>>;
+  getCognitoIdentityId(userId: string): Promise<Result<string>>;
   searchThingsConnectivity(thingNames: string[]): Promise<Result<Map<string, ThingConnectivity>>>;
 }

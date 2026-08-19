@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { MacroProtocolEntry } from "@repo/api/domains/macro/macro.schema";
-import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -62,7 +62,7 @@ export function MacroCompatibleProtocolsCard({
   );
 
   // Filter out already-linked protocols from the search dropdown
-  const availableProtocols: Protocol[] = useMemo(
+  const availableProtocols: ProtocolListItem[] = useMemo(
     () => (protocolList ?? []).filter((p) => !compatibleProtocolIds.has(p.id)),
     [protocolList, compatibleProtocolIds],
   );

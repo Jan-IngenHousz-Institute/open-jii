@@ -85,6 +85,13 @@ export const DEVICE_PROFILES: Readonly<Record<SensorFamily, DeviceProfile>> = Ob
     productName: null,
     roles: [],
   }),
+  // Phones self-register via the app; no trademarked product name, so unnamed
+  // rows lead with their stable identifier like generic devices do.
+  mobile: freezeProfile({
+    productId: "mobile",
+    productName: null,
+    roles: ["gateway"],
+  }),
 });
 
 /**

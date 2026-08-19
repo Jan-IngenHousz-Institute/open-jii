@@ -29,6 +29,7 @@ import type { DatabaseInstance } from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
+import { IotDeviceGroupRepository } from "../../../iot/core/repositories/iot-device-group.repository";
 import { CACHE_PORT } from "../../../macros/core/ports/cache.port";
 import { MacroRepository } from "../../../macros/core/repositories/macro.repository";
 import {
@@ -44,15 +45,22 @@ describe("UserRepository", () => {
   let repository: UserRepository;
   let testUserId: string;
 
-  /** A macro/protocol/workbook/device authored by `creatorId`, owned by their personal org. */
-  const createAuthoredResource = (
-    resourceType: "macro" | "protocol" | "workbook" | "device",
+  /** A resource authored by `creatorId`, owned by their personal org. */
+  const createAuthoredResource = async (
+    resourceType: "macro" | "protocol" | "workbook" | "device" | "device_group",
     creatorId: string,
   ) => {
     const name = `${resourceType} ${faker.string.uuid()}`;
     if (resourceType === "macro") return testApp.createMacro({ name, createdBy: creatorId });
     if (resourceType === "protocol") return testApp.createProtocol({ name, createdBy: creatorId });
     if (resourceType === "device") return testApp.createIotDevice({ name, createdBy: creatorId });
+    if (resourceType === "device_group") {
+      const created = await testApp.module
+        .get(IotDeviceGroupRepository)
+        .create({ name, description: null }, creatorId);
+      assertSuccess(created);
+      return created.value[0];
+    }
     return testApp.createWorkbook({ name, createdBy: creatorId });
   };
 
@@ -691,7 +699,7 @@ describe("UserRepository", () => {
 
     // The blocker covers every shareable type: each is owned by an organization, so
     // each can be left with nobody answerable for it.
-    it.each(["macro", "protocol", "workbook", "device"] as const)(
+    it.each(["macro", "protocol", "workbook", "device", "device_group"] as const)(
       "blocks on a sole-admin %s, and stops blocking once a second admin exists",
       async (resourceType) => {
         const creatorId = await testApp.createTestUser({ email: `${resourceType}@example.com` });

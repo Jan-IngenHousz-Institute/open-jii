@@ -18,14 +18,11 @@ vi.mock("~/shared/composition/upload", () => ({
   getOutbox: () => ({ enqueueMany }),
 }));
 // Keeps the environment store out; the template shape is all that matters.
+vi.mock("~/shared/stores/device-identity-store", () => ({
+  whenDeviceIdentityLoaded: () => Promise.resolve(),
+}));
 vi.mock("~/shared/measurements/measurement-topic", () => ({
-  getMeasurementMqttTopic: ({
-    experimentId,
-    protocolId,
-  }: {
-    experimentId: string;
-    protocolId: string;
-  }) => `topic/${experimentId}/${protocolId}`,
+  getMeasurementMqttTopic: ({ experimentId }: { experimentId: string }) => `topic/${experimentId}`,
 }));
 vi.mock("~/features/recent-measurements/services/export-measurements", () => ({
   exportSingleMeasurementToFile: vi.fn(),
@@ -56,6 +53,7 @@ type SavedCall = [
     topic: string;
     measurementResult: {
       workbook_run_id?: string;
+      protocol_id?: string;
       workbook_version_id?: string;
       macro_context?: string;
     };
@@ -105,10 +103,12 @@ describe("useMeasurementUpload", () => {
     });
 
     const calls = saveMeasurement.mock.calls as SavedCall[];
-    expect(calls.map(([m]) => m.topic)).toEqual([
-      "topic/exp-1/proto-a",
-      "topic/exp-1/proto-b",
-      "topic/exp-1/proto-shared",
+    // One lean topic per experiment; per-result attribution rides the payload.
+    expect(calls.map(([m]) => m.topic)).toEqual(["topic/exp-1", "topic/exp-1", "topic/exp-1"]);
+    expect(calls.map(([m]) => m.measurementResult.protocol_id)).toEqual([
+      "proto-a",
+      "proto-b",
+      "proto-shared",
     ]);
     expect(calls.map(([m]) => m.metadata.protocolName)).toEqual(["Proto A", "Proto B", "Shared"]);
 
@@ -133,7 +133,8 @@ describe("useMeasurementUpload", () => {
     });
 
     const [measurement] = saveMeasurement.mock.calls[0] as SavedCall;
-    expect(measurement.topic).toBe("topic/exp-1/proto-shared");
+    expect(measurement.topic).toBe("topic/exp-1");
+    expect(measurement.measurementResult).toMatchObject({ protocol_id: "proto-shared" });
     expect(measurement.measurementResult.workbook_run_id).toBe("run-attempt-1");
   });
 });

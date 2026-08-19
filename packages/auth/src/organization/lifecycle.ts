@@ -4,6 +4,7 @@ import {
   and,
   db,
   eq,
+  deviceGroups,
   experiments,
   iotDevices,
   isPersonalOrgSlug,
@@ -19,11 +20,14 @@ import type { ResourceType, SQL } from "@repo/database";
 /**
  * The resource tables an organization can own, with the noun each is counted in.
  * Deleting an organization is refused while any of them still points at it —
- * nothing here ever cascades: a device owns a live AWS Thing and certificate that
- * only its own delete path can tear down, and published work should not disappear
- * behind one confirm dialog.
+ * nothing here ever cascades, though the reason differs by table. Published work
+ * should not disappear behind one confirm dialog; a device owns a live AWS Thing and
+ * certificate that only its own delete path can tear down; and a device group, which
+ * holds no work at all, carries grants that no foreign key reaches, cleaned only by
+ * the group's own delete. What every row here shares is that dropping it by SQL
+ * leaves something behind.
  *
- * A total `Record` over the grant enum, not a list: a sixth org-owning resource
+ * A total `Record` over the grant enum, not a list: a newly org-owning resource
  * type has to appear here or this file stops compiling. Missed from a plain array
  * its rows would go uncounted, and the delete would fail on the constraint with
  * Postgres's own wording instead of the refusal naming what is in the way.
@@ -34,6 +38,7 @@ const OWNED_RESOURCE_TABLES = {
   protocol: { table: protocols, singular: "protocol", plural: "protocols" },
   workbook: { table: workbooks, singular: "workbook", plural: "workbooks" },
   device: { table: iotDevices, singular: "device", plural: "devices" },
+  device_group: { table: deviceGroups, singular: "device group", plural: "device groups" },
 } as const satisfies Record<ResourceType, { table: unknown; singular: string; plural: string }>;
 
 /** Personal workspaces exist for as long as their owner's account does. */
@@ -58,7 +63,7 @@ export function assertOrganizationIsDeletable(slug: string | null): void {
  * hands the hook no adapter or transaction handle — so a `FOR UPDATE` taken here
  * commits and releases before the delete begins.
  *
- * What closes it is the constraint rather than the count: all five tables are
+ * What closes it is the constraint rather than the count: all six tables are
  * `ON DELETE RESTRICT`, so a resource that arrives inside the window fails the
  * delete instead of being destroyed with the organization. This count is what turns
  * the common case into a readable refusal naming what is in the way;

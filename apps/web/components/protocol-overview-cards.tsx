@@ -5,7 +5,11 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 
-import type { Protocol, ProtocolMacroEntry } from "@repo/api/domains/protocol/protocol.schema";
+import type {
+  ProtocolList,
+  ProtocolListItem,
+  ProtocolMacroEntry,
+} from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
@@ -54,7 +58,7 @@ function ProtocolCard({
   locale,
   t,
 }: {
-  protocol: Protocol;
+  protocol: ProtocolListItem;
   locale: string;
   t: (key: string) => string;
 }) {
@@ -96,7 +100,7 @@ function ProtocolCard({
   );
 }
 
-export function ProtocolOverviewCards({ protocols }: { protocols: Protocol[] | undefined }) {
+export function ProtocolOverviewCards({ protocols }: { protocols: ProtocolList | undefined }) {
   const { t } = useTranslation("common");
   const locale = useLocale();
 

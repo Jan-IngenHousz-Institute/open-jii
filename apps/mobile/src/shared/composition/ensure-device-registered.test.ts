@@ -1,0 +1,96 @@
+import { ORPCError } from "@orpc/client";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useDeviceIdentityStore } from "~/shared/stores/device-identity-store";
+
+import { ensureDeviceRegistered } from "./ensure-device-registered";
+
+const mockEnsureMobileDevice = vi.fn();
+
+vi.mock("~/shared/api/client", () => ({
+  getApiClient: () => ({ iot: { ensureMobileDevice: mockEnsureMobileDevice } }),
+}));
+
+vi.mock("expo-device", () => ({ modelName: "iPhone 15" }));
+
+let currentEnv = "dev";
+vi.mock("~/shared/stores/environment-store", () => ({
+  getEnvName: () => currentEnv,
+}));
+
+function identity() {
+  return useDeviceIdentityStore.getState().identities.dev;
+}
+
+beforeEach(() => {
+  currentEnv = "dev";
+  mockEnsureMobileDevice.mockReset();
+  useDeviceIdentityStore.setState({ identities: {}, isLoaded: true });
+});
+
+describe("ensureDeviceRegistered", () => {
+  it("registers with the minted install id and persists the server identity", async () => {
+    mockEnsureMobileDevice.mockResolvedValue({ id: "row-1", thingName: "mobile_abc" });
+
+    await ensureDeviceRegistered();
+
+    expect(mockEnsureMobileDevice).toHaveBeenCalledWith({
+      installId: identity().installId,
+      name: "iPhone 15",
+    });
+    expect(identity().thingName).toBe("mobile_abc");
+    expect(identity().deviceId).toBe("row-1");
+  });
+
+  it("shares one in-flight run between concurrent triggers", async () => {
+    mockEnsureMobileDevice.mockResolvedValue({ id: "row-1", thingName: "mobile_abc" });
+
+    await Promise.all([ensureDeviceRegistered(), ensureDeviceRegistered()]);
+
+    expect(mockEnsureMobileDevice).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats an ownership conflict as registered and keeps the local identity", async () => {
+    mockEnsureMobileDevice.mockRejectedValue(new ORPCError("CONFLICT", { status: 409 }));
+
+    await ensureDeviceRegistered();
+
+    // The shared phone keeps its stable, locally derived thing name.
+    expect(identity().thingName).toBeUndefined();
+    expect(identity().installId).toBeDefined();
+  });
+
+  it("skips silently while the device registry flag is off, and backs off", async () => {
+    mockEnsureMobileDevice.mockRejectedValue(new ORPCError("FORBIDDEN", { status: 403 }));
+
+    await expect(ensureDeviceRegistered()).resolves.toBeUndefined();
+
+    // A resolved "no" engages the throttle; a doomed call must not fire on
+    // every foreground.
+    await ensureDeviceRegistered({ throttle: true });
+    expect(mockEnsureMobileDevice).toHaveBeenCalledTimes(1);
+  });
+
+  it("scopes the throttle per environment, a dev backoff never suppresses prod", async () => {
+    mockEnsureMobileDevice.mockResolvedValue({ id: "row-1", thingName: "mobile_abc" });
+
+    await ensureDeviceRegistered();
+    expect(mockEnsureMobileDevice).toHaveBeenCalledTimes(1);
+    // Throttled within the same environment.
+    await ensureDeviceRegistered({ throttle: true });
+    expect(mockEnsureMobileDevice).toHaveBeenCalledTimes(1);
+
+    currentEnv = "prod";
+    await ensureDeviceRegistered({ throttle: true });
+    expect(mockEnsureMobileDevice).toHaveBeenCalledTimes(2);
+  });
+
+  it("swallows network failures and stays retryable", async () => {
+    mockEnsureMobileDevice.mockRejectedValue(new Error("offline"));
+
+    await ensureDeviceRegistered();
+    mockEnsureMobileDevice.mockResolvedValue({ id: "row-1", thingName: "mobile_abc" });
+    await ensureDeviceRegistered();
+
+    expect(identity().thingName).toBe("mobile_abc");
+  });
+});

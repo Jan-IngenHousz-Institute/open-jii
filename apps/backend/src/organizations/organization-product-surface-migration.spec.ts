@@ -16,7 +16,7 @@ import { TestHarness } from "../test/test-harness";
 
 /**
  * These statements mirror the data migration hand-written in
- * `packages/database/drizzle/0044_opposite_toxin.sql`, the second release of
+ * `packages/database/drizzle/0047_iam_admission_and_owned_resource_locks.sql`, the second release of
  * the grant-role rename: release 1 started reading `viewer` and stopped writing
  * `member` to `resource_grants` — though not to `invitations.role`, which a straggler
  * can still write and whose reader maps anything non-`admin` to `viewer`. This rewrites
@@ -69,7 +69,7 @@ async function runDataMigration(db: DatabaseInstance): Promise<void> {
   }
 }
 
-describe("organization product surface migration data ops (0044)", () => {
+describe("organization product surface migration data ops (0047)", () => {
   const testApp = TestHarness.App;
 
   beforeAll(async () => {
@@ -325,8 +325,8 @@ describe("organization product surface migration data ops (0044)", () => {
   });
 });
 
-/** The end state 0044 leaves behind, in the database rather than in the model. */
-describe("organization product surface migration end state (0044)", () => {
+/** The end state 0047 leaves behind, in the database rather than in the model. */
+describe("organization product surface migration end state (0047)", () => {
   const testApp = TestHarness.App;
 
   beforeAll(async () => {

@@ -11,7 +11,8 @@ import { parseApiError } from "~/util/apiError";
 import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "~/util/sensor-family";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { ProtocolDetail, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
+import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -65,7 +66,9 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
     await updateProtocol(
       {
         id: protocolId,
-        family: newFamily as SensorFamily,
+        // Parsed, not cast: the select lists selectable families only, the
+        // contract confirms it.
+        family: zProtocolFamily.parse(newFamily),
       },
       {
         onSuccess: () => {

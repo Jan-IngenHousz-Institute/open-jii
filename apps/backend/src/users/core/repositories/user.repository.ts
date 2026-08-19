@@ -10,6 +10,7 @@ import {
   and,
   ilike,
   inArray,
+  deviceGroups,
   iotDevices,
   macros,
   profiles,
@@ -233,7 +234,12 @@ export class UserRepository {
       idsByType.set(key.resource_type, [...(idsByType.get(key.resource_type) ?? []), key.id]);
     }
 
-    const tables = { macro: macros, protocol: protocols, workbook: workbooks } as const;
+    const tables = {
+      macro: macros,
+      protocol: protocols,
+      workbook: workbooks,
+      device_group: deviceGroups,
+    } as const;
     const hydrated = await Promise.all(
       [...idsByType].map(async ([resourceType, ids]): Promise<SoleAdminResource[]> => {
         if (resourceType === "experiment") {

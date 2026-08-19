@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildDashboardMetadata,
+  buildDeviceGroupMetadata,
   buildDeviceMetadata,
   buildExperimentMetadata,
   buildMacroMetadata,
@@ -24,6 +25,7 @@ const remote = vi.hoisted(() => ({
   getIotDevice: vi.fn(),
   getOrganization: vi.fn(),
   listOrganizationTeams: vi.fn(),
+  getDeviceGroup: vi.fn(),
 }));
 
 // The global test setup stubs initTranslations to an identity `t`; these title
@@ -45,6 +47,7 @@ vi.mock("./server-orpc", () => ({
       getOrganization: remote.getOrganization,
       listOrganizationTeams: remote.listOrganizationTeams,
     },
+    deviceGroups: { getDeviceGroup: remote.getDeviceGroup },
   })),
 }));
 
@@ -275,6 +278,56 @@ describe("device titles", () => {
     const { title } = await buildDeviceMetadata({
       locale: EN,
       deviceId: "dev-1",
+      section: "collaborators",
+    });
+    expect(title).toBe("Collaborators");
+  });
+});
+
+describe("device group titles", () => {
+  it("uses the group name for the overview", async () => {
+    remote.getDeviceGroup.mockResolvedValue({ id: "g-1", name: "Greenhouse A" });
+    expect((await buildDeviceGroupMetadata({ locale: EN, groupId: "g-1" })).title).toBe(
+      "Greenhouse A",
+    );
+  });
+
+  it("falls back to the generic localized noun when the group is inaccessible", async () => {
+    remote.getDeviceGroup.mockRejectedValue(new Error("404"));
+    expect((await buildDeviceGroupMetadata({ locale: EN, groupId: "g-1" })).title).toBe(
+      "Device group",
+    );
+  });
+
+  it("composes each tab label from the device strip's copy, before the group", async () => {
+    remote.getDeviceGroup.mockResolvedValue({ id: "g-1", name: "Greenhouse A" });
+    const titles = await Promise.all(
+      (["collaborators", "credentials", "monitoring", "onboarding"] as const).map(
+        async (section) =>
+          (await buildDeviceGroupMetadata({ locale: EN, groupId: "g-1", section })).title,
+      ),
+    );
+
+    expect(titles).toEqual([
+      "Collaborators · Greenhouse A",
+      "Credentials · Greenhouse A",
+      "Monitoring · Greenhouse A",
+      "Onboarding · Greenhouse A",
+    ]);
+  });
+
+  it("localizes a group tab label for de-DE", async () => {
+    remote.getDeviceGroup.mockResolvedValue({ id: "g-1", name: "Greenhouse A" });
+    expect(
+      (await buildDeviceGroupMetadata({ locale: DE, groupId: "g-1", section: "monitoring" })).title,
+    ).toBe("Überwachung · Greenhouse A");
+  });
+
+  it("surfaces only the tab label when the group is inaccessible", async () => {
+    remote.getDeviceGroup.mockRejectedValue(new Error("403"));
+    const { title } = await buildDeviceGroupMetadata({
+      locale: EN,
+      groupId: "g-1",
       section: "collaborators",
     });
     expect(title).toBe("Collaborators");

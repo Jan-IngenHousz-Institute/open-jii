@@ -770,7 +770,9 @@
         "workbook_one": "workbook",
         "workbook_other": "workbooks",
         "device_one": "device",
-        "device_other": "devices"
+        "device_other": "devices",
+        "device_group_one": "device group",
+        "device_group_other": "device groups"
       },
       "confirmTitle": "Delete organization?",
       "confirmDescription": "{{name}} will be deleted, along with its members, invitations and teams.",

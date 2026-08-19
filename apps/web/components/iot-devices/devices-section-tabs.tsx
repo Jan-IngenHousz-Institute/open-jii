@@ -1,5 +1,7 @@
 "use client";
 
+import { DeviceGroupsView } from "@/components/iot-devices/groups/device-groups-view";
+
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
@@ -27,7 +29,7 @@ export function DevicesSectionTabs() {
         <IotDevicesTableView />
       </NavTabsContent>
       <NavTabsContent value="groups">
-        <ComingSoonPanel description={t("iot.devices.comingSoon.groups")} />
+        <DeviceGroupsView />
       </NavTabsContent>
       <NavTabsContent value="onboarding">
         <ComingSoonPanel description={t("iot.devices.comingSoon.onboarding")} />

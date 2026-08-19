@@ -55,6 +55,21 @@ describe("hydrateFlowNodes", () => {
     });
   });
 
+  it("preserves a non-array protocol document for execution-time narrowing", () => {
+    const stringSnapshots: EntitySnapshots = {
+      protocols: { p1: { code: "device-defined source", family: "generic" } },
+      macros: {},
+    };
+
+    const [measurement] = hydrateFlowNodes(nodes, cells, stringSnapshots);
+
+    expect(measurement.content.protocol).toEqual({
+      code: "device-defined source",
+      family: "generic",
+      name: "My Protocol",
+    });
+  });
+
   it("builds macro {id, name, derived filename, language, code} for analysis nodes", () => {
     const macroNode = hydrateFlowNodes(nodes, cells, snapshots)[1];
     expect(macroNode.content.macro).toEqual({

@@ -7,6 +7,8 @@ import {
   eq,
   inArray,
   iotDevices,
+  isNull,
+  or,
   ensurePersonalOrganization,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
@@ -73,11 +75,24 @@ export class IotDeviceRepository {
         visibilityColumn: iotDevices.visibility,
         userId,
       });
+      // Mobile self-registration stores no organization (`ensure-mobile-device` passes
+      // null), so the access predicate cannot reach a self-registered phone at all: no
+      // organization to be a member of, private by default, and nobody grants themselves
+      // their own device. Hence the creator arm — narrowed to devices that have no
+      // organization, because `created_by` is deliberately not an access source here:
+      // once a device belongs to an organization, leaving that organization ends the
+      // creator's access to it like anyone else's.
+      const visible = or(
+        and(isNull(iotDevices.organizationId), eq(iotDevices.createdBy, userId)),
+        scope,
+      );
       const organizationId = options?.organizationId;
       return this.database
         .select()
         .from(iotDevices)
-        .where(organizationId ? and(eq(iotDevices.organizationId, organizationId), scope) : scope)
+        .where(
+          organizationId ? and(eq(iotDevices.organizationId, organizationId), visible) : visible,
+        )
         .orderBy(desc(iotDevices.createdAt));
     });
   }
@@ -118,6 +133,21 @@ export class IotDeviceRepository {
         .from(iotDevices)
         .where(inArray(iotDevices.thingName, thingNames));
       return results;
+    });
+  }
+
+  /**
+   * Set the name only while it is still NULL, atomically: a concurrent rename
+   * between read and write must win over a device-model fill.
+   */
+  async fillNameIfMissing(deviceId: string, name: string): Promise<Result<IotDeviceDto | null>> {
+    return tryCatch(async () => {
+      const results = await this.database
+        .update(iotDevices)
+        .set({ name })
+        .where(and(eq(iotDevices.id, deviceId), isNull(iotDevices.name)))
+        .returning();
+      return results.length === 0 ? null : results[0];
     });
   }
 

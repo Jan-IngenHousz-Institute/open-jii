@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zCommandFormat, zExperiment } from "../experiment/experiment.schema";
-import { zSensorFamily } from "../protocol/protocol.schema";
+import { zProtocolFamily, zSensorFamily } from "../protocol/protocol.schema";
 
 // --- Iot Credentials ---
 export const zIotCredentials = z.object({
@@ -27,6 +27,11 @@ export const zIotDeviceStatus = z.enum(["pending", "active", "rotating", "revoke
 
 // A device's class shares the canonical sensor-family taxonomy and maps to the ingest topic sensorType.
 export const zDeviceType = zSensorFamily;
+
+// Families that register through the web flow and carry onboarding configs.
+// Phones self-register through the ensure route and are rejected here at the
+// contract, not in a use case.
+export const zRegisterableDeviceType = zDeviceType.exclude(["mobile"]);
 
 export const zIotDevice = z.object({
   id: z.string().uuid(),
@@ -89,13 +94,56 @@ export const zRegisterIotDeviceBody = z.object({
     })
     .describe("Physical device identifier, e.g. MAC address"),
   name: z.string().min(1).max(255).optional(),
-  deviceType: zDeviceType.describe("IotDevice class, maps to the ingest topic sensorType"),
+  deviceType: zRegisterableDeviceType.describe(
+    "IotDevice class, maps to the ingest topic sensorType",
+  ),
   // Optional target organization to register the device into; defaults to the
   // creator's personal org. The caller must be a member of the given organization.
   organizationId: z.string().uuid().optional(),
 });
 
 export const zRegisterIotDeviceResponse = zIotDevice;
+
+// Bulk registration: one hardware batch (single family), many serials. Grouping
+// is optional and either joins an existing group or creates one around the batch.
+export const zBulkRegisterIotDevicesBody = z.object({
+  devices: z
+    .array(zRegisterIotDeviceBody.pick({ serialNumber: true, name: true }))
+    .min(1)
+    .max(100)
+    .refine(
+      (devices) => new Set(devices.map((device) => device.serialNumber)).size === devices.length,
+      { message: "Serial numbers must be unique within the batch" },
+    ),
+  deviceType: zRegisterableDeviceType,
+  organizationId: z.string().uuid().optional(),
+  group: z
+    .union([
+      z.object({ groupId: z.string().uuid() }),
+      z.object({ name: z.string().trim().min(1).max(255) }),
+    ])
+    .optional(),
+});
+
+/** Per-serial outcome; the batch itself succeeds even when single rows fail. */
+export const zBulkRegisteredIotDevice = z.object({
+  serialNumber: z.string(),
+  device: zIotDevice.nullable(),
+  error: z.string().nullable(),
+});
+
+export const zBulkRegisterIotDevicesResult = z.object({
+  devices: z.array(zBulkRegisteredIotDevice),
+  groupId: z.string().uuid().nullable(),
+  groupError: z.string().nullable(),
+});
+
+// Silent per-phone self-registration: the app calls this on login with its
+// persisted install UUID; the route is an idempotent ensure, not a create.
+export const zEnsureMobileDeviceBody = z.object({
+  installId: z.string().uuid().describe("Persisted per-install identifier; doubles as the serial"),
+  name: z.string().min(1).max(255).optional().describe("Device model, e.g. iPhone 15"),
+});
 
 // --- Device registry webhook (Databricks lineage: thing_name -> registry) ---
 export const zDeviceRegistryWebhookPayload = z.object({
@@ -156,7 +204,7 @@ export const zDeviceProcedureProtocol = z.object({
   type: z.literal("protocol"),
   protocolId: z.string().uuid(),
   name: z.string().optional(),
-  family: zSensorFamily.optional(),
+  family: zProtocolFamily.optional(),
   code: z.unknown().describe("The protocol's executable code, snapshotted at workbook publish"),
 });
 
@@ -207,7 +255,7 @@ export const zDeviceOnboardingExperiment = z.object({
 
 export const zDeviceOnboardingConfig = z.object({
   thingName: z.string(),
-  deviceType: zDeviceType,
+  deviceType: zRegisterableDeviceType,
   endpoint: z.string().describe("MQTT broker host (AWS IoT ATS data endpoint)"),
   experiments: z.array(zDeviceOnboardingExperiment),
 });
@@ -364,5 +412,9 @@ export type IotDeviceActivity = z.infer<typeof zIotDeviceActivity>;
 export type IotDeviceDetail = z.infer<typeof zIotDeviceDetail>;
 export type IotDeviceList = z.infer<typeof zIotDeviceList>;
 export type RegisterIotDeviceBody = z.infer<typeof zRegisterIotDeviceBody>;
+export type BulkRegisterIotDevicesBody = z.infer<typeof zBulkRegisterIotDevicesBody>;
+export type BulkRegisteredIotDevice = z.infer<typeof zBulkRegisteredIotDevice>;
+export type BulkRegisterIotDevicesResult = z.infer<typeof zBulkRegisterIotDevicesResult>;
+export type EnsureMobileDeviceBody = z.infer<typeof zEnsureMobileDeviceBody>;
 export type IotDevicePathParam = z.infer<typeof zIotDevicePathParam>;
 export type IssueIotCredentialsResponse = z.infer<typeof zIssueIotCredentialsResponse>;

@@ -9,7 +9,6 @@ import { useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
-import type { CreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -32,9 +31,10 @@ import {
 
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 import { OrganizationPicker } from "../organizations/organization-picker";
+import type { NewProtocolFormValues } from "./new-protocol-form-values";
 
 interface NewProtocolDetailsCardProps {
-  form: UseFormReturn<CreateProtocolRequestBody>;
+  form: UseFormReturn<NewProtocolFormValues>;
   selectedMacros: Macro[];
   onAddMacro: (macro: Macro) => void;
   onRemoveMacro: (macroId: string) => void;

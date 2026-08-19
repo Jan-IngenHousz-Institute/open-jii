@@ -179,6 +179,20 @@ describe("OnboardDeviceUseCase", () => {
     expect(revokedResult.error.statusCode).toBe(400);
   });
 
+  it("rejects a mobile device even though it is active, phones are never onboarded", async () => {
+    const phone = await testApp.createIotDevice({
+      createdBy: userId,
+      deviceType: "mobile",
+      status: "active",
+    });
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+
+    const result = await useCase.execute(phone.id, [experiment.id], userId);
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(400);
+  });
+
   it("returns not found for an unknown device", async () => {
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
 

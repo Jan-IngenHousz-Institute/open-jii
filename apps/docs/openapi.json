@@ -3728,7 +3728,8 @@
                               "ambyte",
                               "minipar",
                               "generic",
-                              "ambit"
+                              "ambit",
+                              "mobile"
                             ],
                             "type": "string"
                           },
@@ -12539,11 +12540,194 @@
                         "type": "string"
                       },
                       "code": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "additionalProperties": {}
-                        }
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "null"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "type": "null"
+                                      },
+                                      {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {},
+                                            {
+                                              "not": {}
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                      }
+                                    ]
+                                  }
+                                },
+                                {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "type": "null"
+                                      },
+                                      {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {},
+                                            {
+                                              "not": {}
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "null"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "type": "null"
+                                      },
+                                      {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {},
+                                            {
+                                              "not": {}
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                      }
+                                    ]
+                                  }
+                                },
+                                {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      },
+                                      {
+                                        "type": "null"
+                                      },
+                                      {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {},
+                                            {
+                                              "not": {}
+                                            }
+                                          ]
+                                        }
+                                      },
+                                      {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
                       },
                       "family": {
                         "default": "multispeq",
@@ -12928,7 +13112,8 @@
                               "ambyte",
                               "minipar",
                               "generic",
-                              "ambit"
+                              "ambit",
+                              "mobile"
                             ],
                             "type": "string"
                           },
@@ -12963,6 +13148,160 @@
                   "required": [
                     "devices",
                     "success"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/mobile": {
+      "post": {
+        "operationId": "iot.ensureMobileDevice",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "installId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Persisted per-install identifier; doubles as the serial"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "Device model, e.g. iPhone 15"
+                  }
+                },
+                "required": [
+                  "installId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "thingName": {
+                      "type": "string"
+                    },
+                    "thingArn": {
+                      "type": "string"
+                    },
+                    "serialNumber": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "deviceType": {
+                      "enum": [
+                        "multispeq",
+                        "ambyte",
+                        "minipar",
+                        "generic",
+                        "ambit",
+                        "mobile"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "active",
+                        "rotating",
+                        "revoked"
+                      ],
+                      "type": "string"
+                    },
+                    "certificateId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "certificateArn": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "thingName",
+                    "thingArn",
+                    "serialNumber",
+                    "name",
+                    "deviceType",
+                    "status",
+                    "certificateId",
+                    "certificateArn",
+                    "createdBy",
+                    "organizationId",
+                    "visibility",
+                    "createdAt",
+                    "updatedAt"
                   ]
                 }
               }
@@ -13013,7 +13352,8 @@
                           "ambyte",
                           "minipar",
                           "generic",
-                          "ambit"
+                          "ambit",
+                          "mobile"
                         ],
                         "type": "string"
                       },
@@ -13213,7 +13553,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "mobile"
                       ],
                       "type": "string"
                     },
@@ -13300,6 +13641,282 @@
         }
       }
     },
+    "/api/v1/devices/bulk": {
+      "post": {
+        "operationId": "iot.bulkRegisterIotDevices",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "devices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "serialNumber": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255,
+                          "pattern": "^[a-zA-Z0-9_.,@/:#=[\\]-]+$",
+                          "description": "Physical device identifier, e.g. MAC address"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        }
+                      },
+                      "required": [
+                        "serialNumber"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 100
+                  },
+                  "deviceType": {
+                    "enum": [
+                      "multispeq",
+                      "ambyte",
+                      "minipar",
+                      "generic",
+                      "ambit"
+                    ],
+                    "type": "string"
+                  },
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "group": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "groupId": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        },
+                        "required": [
+                          "groupId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 255
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "devices",
+                  "deviceType"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "devices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "serialNumber": {
+                            "type": "string"
+                          },
+                          "device": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "thingName": {
+                                    "type": "string"
+                                  },
+                                  "thingArn": {
+                                    "type": "string"
+                                  },
+                                  "serialNumber": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "deviceType": {
+                                    "enum": [
+                                      "multispeq",
+                                      "ambyte",
+                                      "minipar",
+                                      "generic",
+                                      "ambit",
+                                      "mobile"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "enum": [
+                                      "pending",
+                                      "active",
+                                      "rotating",
+                                      "revoked"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "certificateId": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "certificateArn": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "createdBy": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "organizationId": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "visibility": {
+                                    "enum": [
+                                      "private",
+                                      "public"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  },
+                                  "updatedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "thingName",
+                                  "thingArn",
+                                  "serialNumber",
+                                  "name",
+                                  "deviceType",
+                                  "status",
+                                  "certificateId",
+                                  "certificateArn",
+                                  "createdBy",
+                                  "organizationId",
+                                  "visibility",
+                                  "createdAt",
+                                  "updatedAt"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "serialNumber",
+                          "device",
+                          "error"
+                        ]
+                      }
+                    },
+                    "groupId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "groupError": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "devices",
+                    "groupId",
+                    "groupError"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices/{deviceId}": {
       "get": {
         "operationId": "iot.getIotDevice",
@@ -13352,7 +13969,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "mobile"
                       ],
                       "type": "string"
                     },
@@ -14199,7 +14817,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "mobile"
                       ],
                       "type": "string"
                     },
@@ -14640,6 +15259,686 @@
                       "addedAt"
                     ]
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/device-groups": {
+      "get": {
+        "operationId": "deviceGroups.listDeviceGroups",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "visibility": {
+                        "enum": [
+                          "private",
+                          "public"
+                        ],
+                        "type": "string"
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "memberCount": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "description",
+                      "organizationId",
+                      "visibility",
+                      "createdBy",
+                      "createdAt",
+                      "updatedAt",
+                      "memberCount"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "deviceGroups.createDeviceGroup",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "organizationId",
+                    "visibility",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/device-groups/{groupId}": {
+      "get": {
+        "operationId": "deviceGroups.getDeviceGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "memberCount": {
+                      "type": "integer"
+                    },
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "canContribute": {
+                          "type": "boolean"
+                        },
+                        "canUpdate": {
+                          "type": "boolean"
+                        },
+                        "canManage": {
+                          "type": "boolean"
+                        },
+                        "canShare": {
+                          "type": "boolean"
+                        },
+                        "canLeave": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canContribute",
+                        "canUpdate",
+                        "canManage",
+                        "canShare",
+                        "canLeave"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "organizationId",
+                    "visibility",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt",
+                    "memberCount",
+                    "capabilities"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "deviceGroups.updateDeviceGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "organizationId",
+                    "visibility",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deviceGroups.deleteDeviceGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/device-groups/{groupId}/devices": {
+      "get": {
+        "operationId": "deviceGroups.listDeviceGroupMembers",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "deviceId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "serialNumber": {
+                        "type": "string"
+                      },
+                      "deviceType": {
+                        "enum": [
+                          "multispeq",
+                          "ambyte",
+                          "minipar",
+                          "generic",
+                          "ambit",
+                          "mobile"
+                        ],
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "pending",
+                          "active",
+                          "rotating",
+                          "revoked"
+                        ],
+                        "type": "string"
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "deviceId",
+                      "name",
+                      "serialNumber",
+                      "deviceType",
+                      "status",
+                      "addedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "deviceGroups.addDeviceGroupMembers",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "deviceIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "deviceIds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "deviceId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "serialNumber": {
+                        "type": "string"
+                      },
+                      "deviceType": {
+                        "enum": [
+                          "multispeq",
+                          "ambyte",
+                          "minipar",
+                          "generic",
+                          "ambit",
+                          "mobile"
+                        ],
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "pending",
+                          "active",
+                          "rotating",
+                          "revoked"
+                        ],
+                        "type": "string"
+                      },
+                      "addedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "deviceId",
+                      "name",
+                      "serialNumber",
+                      "deviceType",
+                      "status",
+                      "addedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/device-groups/{groupId}/devices/{deviceId}": {
+      "delete": {
+        "operationId": "deviceGroups.removeDeviceGroupMember",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
                 }
               }
             }
@@ -17689,13 +18988,7 @@
                           }
                         ]
                       },
-                      "code": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "additionalProperties": {}
-                        }
-                      },
+                      "code": {},
                       "family": {
                         "enum": [
                           "multispeq",
@@ -17775,7 +19068,6 @@
                       "id",
                       "name",
                       "description",
-                      "code",
                       "family",
                       "sortOrder",
                       "createdBy",
@@ -17809,11 +19101,194 @@
                     "type": "string"
                   },
                   "code": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "additionalProperties": {}
-                    }
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {},
+                                        {
+                                          "not": {}
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {},
+                                        {
+                                          "not": {}
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {},
+                                        {
+                                          "not": {}
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {},
+                                        {
+                                          "not": {}
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
                   },
                   "family": {
                     "enum": [
@@ -17876,11 +19351,194 @@
                       ]
                     },
                     "code": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "additionalProperties": {}
-                      }
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
                     },
                     "family": {
                       "enum": [
@@ -18017,11 +19675,194 @@
                       ]
                     },
                     "code": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "additionalProperties": {}
-                      }
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
                     },
                     "family": {
                       "enum": [
@@ -18178,11 +20019,194 @@
                     "type": "string"
                   },
                   "code": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "additionalProperties": {}
-                    }
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {},
+                                        {
+                                          "not": {}
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {},
+                                        {
+                                          "not": {}
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {},
+                                        {
+                                          "not": {}
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "null"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {},
+                                        {
+                                          "not": {}
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
                   },
                   "family": {
                     "enum": [
@@ -18225,11 +20249,194 @@
                       ]
                     },
                     "code": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "additionalProperties": {}
-                      }
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    },
+                                    {
+                                      "type": "null"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {}
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
                     },
                     "family": {
                       "enum": [
@@ -18767,7 +20974,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -18967,7 +21175,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
@@ -19143,7 +21352,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -19379,7 +21589,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
@@ -19557,7 +21768,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -19789,7 +22001,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
@@ -19965,7 +22178,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -20026,7 +22240,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -20294,7 +22509,8 @@
                             "macro",
                             "protocol",
                             "workbook",
-                            "device"
+                            "device",
+                            "device_group"
                           ],
                           "type": "string",
                           "description": "Type of resource to transfer admin on"
@@ -20346,7 +22562,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
@@ -20870,7 +23087,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
@@ -21990,7 +24208,8 @@
                                       "ambyte",
                                       "minipar",
                                       "generic",
-                                      "ambit"
+                                      "ambit",
+                                      "mobile"
                                     ],
                                     "type": "string"
                                   },
@@ -22504,7 +24723,8 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit"
+                                        "ambit",
+                                        "mobile"
                                       ],
                                       "type": "string"
                                     },
@@ -23090,7 +25310,8 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit"
+                                        "ambit",
+                                        "mobile"
                                       ],
                                       "type": "string"
                                     },
@@ -23696,7 +25917,8 @@
                                       "ambyte",
                                       "minipar",
                                       "generic",
-                                      "ambit"
+                                      "ambit",
+                                      "mobile"
                                     ],
                                     "type": "string"
                                   },
@@ -24192,7 +26414,8 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit"
+                                        "ambit",
+                                        "mobile"
                                       ],
                                       "type": "string"
                                     },
@@ -24942,7 +27165,8 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit"
+                                        "ambit",
+                                        "mobile"
                                       ],
                                       "type": "string"
                                     },

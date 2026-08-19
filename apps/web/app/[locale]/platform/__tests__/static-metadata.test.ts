@@ -7,26 +7,26 @@ import { describe, expect, it, vi } from "vitest";
 import { locales } from "@repo/i18n/config";
 import deCommon from "@repo/i18n/locales/de-DE/common.json";
 
-import { generateMetadata as generateAcceptInvitationMetadata } from "./accept-invitation/[id]/page";
-import { generateMetadata as generateApiKeysMetadata } from "./account/api-keys/page";
-import { generateMetadata as generateAccountMetadata } from "./account/page";
-import { generateMetadata as generateSecurityMetadata } from "./account/security/page";
-import { generateMetadata as generateDevicesMetadata } from "./devices/page";
-import { generateMetadata as generateExperimentsArchiveMetadata } from "./experiments-archive/page";
-import { generateMetadata as generateNewExperimentMetadata } from "./experiments/new/page";
-import { generateMetadata as generateExperimentsMetadata } from "./experiments/page";
-import { generateMetadata as generateNewMacroMetadata } from "./macros/new/page";
-import { generateMetadata as generateMacrosMetadata } from "./macros/page";
-import { generateMetadata as generateNewOrganizationMetadata } from "./organizations/new/page";
-import { generateMetadata as generateOrganizationsMetadata } from "./organizations/page";
-import { generateMetadata as generatePlatformMetadata } from "./page";
-import { generateMetadata as generateNewProtocolMetadata } from "./protocols/new/page";
-import { generateMetadata as generateProtocolsMetadata } from "./protocols/page";
-import { generateMetadata as generateTransferHistoryMetadata } from "./transfer-request/history/page";
-import { generateMetadata as generateTransferRequestMetadata } from "./transfer-request/page";
-import { generateMetadata as generateWorkbooksMetadata } from "./workbooks/page";
+import { generateMetadata as generateAcceptInvitationMetadata } from "../accept-invitation/[id]/page";
+import { generateMetadata as generateApiKeysMetadata } from "../account/api-keys/page";
+import { generateMetadata as generateAccountMetadata } from "../account/page";
+import { generateMetadata as generateSecurityMetadata } from "../account/security/page";
+import { generateMetadata as generateDevicesMetadata } from "../devices/page";
+import { generateMetadata as generateExperimentsArchiveMetadata } from "../experiments-archive/page";
+import { generateMetadata as generateNewExperimentMetadata } from "../experiments/new/page";
+import { generateMetadata as generateExperimentsMetadata } from "../experiments/page";
+import { generateMetadata as generateNewMacroMetadata } from "../macros/new/page";
+import { generateMetadata as generateMacrosMetadata } from "../macros/page";
+import { generateMetadata as generateNewOrganizationMetadata } from "../organizations/new/page";
+import { generateMetadata as generateOrganizationsMetadata } from "../organizations/page";
+import { generateMetadata as generatePlatformMetadata } from "../page";
+import { generateMetadata as generateNewProtocolMetadata } from "../protocols/new/page";
+import { generateMetadata as generateProtocolsMetadata } from "../protocols/page";
+import { generateMetadata as generateTransferHistoryMetadata } from "../transfer-request/history/page";
+import { generateMetadata as generateTransferRequestMetadata } from "../transfer-request/page";
+import { generateMetadata as generateWorkbooksMetadata } from "../workbooks/page";
 
-const platformDirectory = dirname(fileURLToPath(import.meta.url));
+const platformDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT_MARKETING_TITLE = "openJII - Open-science platform";
 
 const redirectOnlyRoutes = {
@@ -38,6 +38,7 @@ const redirectOnlyRoutes = {
 // These helpers have focused runtime coverage in lib/platform-metadata.test.ts.
 const testedPlatformTitleBuilders = new Set([
   "buildDashboardMetadata",
+  "buildDeviceGroupMetadata",
   "buildDeviceMetadata",
   "buildExperimentMetadata",
   "buildOrganizationMetadata",
@@ -161,8 +162,8 @@ function ownsTitleMetadata(source: string): boolean {
 describe("platform metadata ownership inventory", () => {
   const pageRoutes = findPageRoutes(platformDirectory).sort();
 
-  it("covers all 53 current page routes", () => {
-    expect(pageRoutes).toHaveLength(53);
+  it("covers all 58 current page routes", () => {
+    expect(pageRoutes).toHaveLength(58);
   });
 
   it.each(pageRoutes)("gives %s title ownership or a documented redirect exception", (route) => {

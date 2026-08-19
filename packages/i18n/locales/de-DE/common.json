@@ -770,7 +770,9 @@
         "workbook_one": "Arbeitsmappe",
         "workbook_other": "Arbeitsmappen",
         "device_one": "Gerät",
-        "device_other": "Geräte"
+        "device_other": "Geräte",
+        "device_group_one": "Gerätegruppe",
+        "device_group_other": "Gerätegruppen"
       },
       "confirmTitle": "Organisation löschen?",
       "confirmDescription": "{{name}} wird mit allen Mitgliedern, Einladungen und Teams gelöscht.",

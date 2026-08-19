@@ -1,13 +1,10 @@
-import { cva } from "class-variance-authority";
-import {
-  CloudAlert,
-  CloudCheck,
-  MessageCircleMore,
-  Trash2,
-  UploadCloud,
-} from "lucide-react-native";
+import { MessageCircleMore, Trash2, UploadCloud } from "lucide-react-native";
 import React, { memo } from "react";
 import { Pressable, Text, TouchableOpacity, View } from "react-native";
+import {
+  answersTextStyle,
+  STATUS_ICON,
+} from "~/features/recent-measurements/components/measurement-row-visuals";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useIsProcessing } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
@@ -15,28 +12,6 @@ import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array
 import { formatTimeAgo } from "~/shared/time/format-time-ago";
 import { cn } from "~/shared/ui/cn";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
-
-interface SemanticColors {
-  success: string;
-  info: string;
-  error: string;
-}
-
-const STATUS_ICON: Record<MeasurementStatus, (c: { semantic: SemanticColors }) => React.ReactNode> =
-  {
-    successful: (c) => <CloudCheck size={16} color={c.semantic.success} />,
-    pending: (c) => <UploadCloud size={16} color={c.semantic.info} />,
-    failed: (c) => <CloudAlert size={16} color={c.semantic.error} />,
-  };
-
-const answersTextStyle = cva("mb-1.5 text-base", {
-  variants: {
-    state: {
-      true: "font-medium",
-      false: "font-normal italic",
-    },
-  },
-});
 
 interface MeasurementItemProps {
   id: string;
@@ -51,6 +26,8 @@ interface MeasurementItemProps {
   hideActions?: boolean;
   /** When true, shows a comment indicator icon */
   hasComment?: boolean;
+  /** When true, indents the row: it sits under an expanded workbook-run row */
+  indented?: boolean;
 }
 
 export const MeasurementItem = memo(function MeasurementItem({
@@ -64,6 +41,7 @@ export const MeasurementItem = memo(function MeasurementItem({
   onDelete,
   hideActions = false,
   hasComment = false,
+  indented = false,
 }: MeasurementItemProps) {
   const { colors } = useTheme();
   const { t } = useTranslation(["common", "recentMeasurements"]);
@@ -73,7 +51,16 @@ export const MeasurementItem = memo(function MeasurementItem({
   const answersText = hasAnswers ? questions.map((q) => q.question_answer).join(" | ") : null;
 
   return (
-    <Pressable className="border-divider bg-card border-t px-4 py-3" onPress={() => onPress?.(id)}>
+    <Pressable
+      className={cn(
+        "border-divider border-t py-3 pr-4",
+        // Nested rows carry a lighter shade of the open run's tint, so the
+        // whole run reads as one block.
+        indented ? "bg-jii-mint-light border-l-2 pl-8" : "bg-card pl-4",
+      )}
+      onPress={() => onPress?.(id)}
+      accessibilityRole="button"
+    >
       {/* Top: answers */}
       <Text
         className={cn(

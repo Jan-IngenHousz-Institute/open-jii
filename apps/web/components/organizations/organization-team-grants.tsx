@@ -2,7 +2,7 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import type { LucideIcon } from "lucide-react";
-import { BookOpen, Code, FileSliders, Leaf, RadioReceiver } from "lucide-react";
+import { BookOpen, Boxes, Code, FileSliders, Leaf, RadioReceiver } from "lucide-react";
 import Link from "next/link";
 
 import type { OrganizationTeamGrant } from "@repo/api/domains/organization/organization.schema";
@@ -15,9 +15,9 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { RESOURCE_SEGMENT } from "./organization-resource-meta";
 
 /**
- * The mark each type already wears in the sidebar and the command palette. Total, so a
- * sixth owned type has to be given one rather than inheriting another's. Local: one
- * consumer.
+ * The mark each grantable type already wears in the sidebar and the command palette.
+ * Total, so a newly grantable type has to be given one rather than inheriting
+ * another's. Local: one consumer.
  */
 const RESOURCE_ICON: Record<SharingResourceType, LucideIcon> = {
   experiment: Leaf,
@@ -25,6 +25,7 @@ const RESOURCE_ICON: Record<SharingResourceType, LucideIcon> = {
   macro: Code,
   workbook: BookOpen,
   device: RadioReceiver,
+  device_group: Boxes,
 };
 
 /**

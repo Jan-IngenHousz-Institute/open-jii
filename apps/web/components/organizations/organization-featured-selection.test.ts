@@ -1,13 +1,13 @@
 import { createOrganizationResource } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
-import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import type { OrganizationResourceType } from "@repo/api/domains/organization/organization.schema";
 
 import { pickFeaturedResources } from "./organization-featured-selection";
 
 /** A resource of `type` with a known collaborator count, named so it is identifiable. */
 function resource(
-  type: SharingResourceType,
+  type: OrganizationResourceType,
   collaboratorCount: number,
   extra: { id?: string; updatedAt?: string } = {},
 ) {

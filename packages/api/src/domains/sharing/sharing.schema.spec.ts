@@ -15,6 +15,7 @@ describe("zSharingResourceType", () => {
   it("covers every resource type that can hold a grant, devices included", () => {
     expect([...zSharingResourceType.options].sort()).toEqual([
       "device",
+      "device_group",
       "experiment",
       "macro",
       "protocol",

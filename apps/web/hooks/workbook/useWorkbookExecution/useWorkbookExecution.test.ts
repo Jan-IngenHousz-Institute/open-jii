@@ -405,6 +405,50 @@ describe("useWorkbookExecution", () => {
       expect(getProtocolSpy.called).toBe(false);
     });
 
+    it("runs an emptied live editor as-is instead of reviving the stale saved code", async () => {
+      const proto = createProtocolCell();
+
+      const getProtocolSpy = server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({
+          id: proto.payload.protocolId,
+          code: [{ _protocol_set_: [{ label: "old" }] }],
+        }),
+      });
+      setMockConnected(true);
+      mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
+
+      registerProtocolCodeSource(proto.payload.protocolId, () => []);
+
+      const { result } = renderExecution([proto]);
+
+      await act(() => result.current.runCell(proto.id));
+
+      expect(mockExecuteProtocol).toHaveBeenCalledWith([]);
+      expect(getProtocolSpy.called).toBe(false);
+    });
+
+    it("falls back to the saved protocol when the live code is not runnable records", async () => {
+      const proto = createProtocolCell();
+      const savedCode = [{ _protocol_set_: [{ label: "saved" }] }];
+
+      server.mount(contract.protocols.getProtocol, {
+        body: createProtocol({ id: proto.payload.protocolId, code: savedCode }),
+      });
+      setMockConnected(true);
+      mockExecuteProtocol.mockResolvedValue({ measurement: 1 });
+
+      registerProtocolCodeSource(
+        proto.payload.protocolId,
+        () => ["not", "records"] as unknown as Record<string, unknown>[],
+      );
+
+      const { result } = renderExecution([proto]);
+
+      await act(() => result.current.runCell(proto.id));
+
+      expect(mockExecuteProtocol).toHaveBeenCalledWith(savedCode);
+    });
+
     it("falls back to fetching the saved protocol when no editor is mounted", async () => {
       const proto = createProtocolCell();
       const savedCode = [{ _protocol_set_: [{ label: "saved" }] }];

@@ -184,11 +184,25 @@ export const zOrganizationResource = z.discriminatedUnion("type", [
 ]);
 
 /**
- * How many of each owned type the caller may read, alongside the rows. Scoped exactly
+ * The owned types this surface shows. Narrower than {@link zSharingResourceType} on
+ * purpose: device groups are org-owned and shareable too, but nothing here lists or
+ * counts them yet, and a total that always read zero would claim otherwise. Adding
+ * them means giving them rows, a label and a badge first.
+ */
+export const zOrganizationResourceType = z.enum([
+  "experiment",
+  "protocol",
+  "macro",
+  "workbook",
+  "device",
+]);
+
+/**
+ * How many of each shown type the caller may read, alongside the rows. Scoped exactly
  * as the rows are, so a group header cannot promise more than "view all" would show.
  *
- * Total over {@link zSharingResourceType} — the same five {@link zOrganizationResource}
- * carries, so every total has rows behind it and a newly owned type cannot be added
+ * Total over {@link zOrganizationResourceType} — the same five {@link zOrganizationResource}
+ * carries, so every total has rows behind it and a newly *shown* type cannot be added
  * without being counted.
  */
 export const zOrganizationResourceTotals = z.object({
@@ -197,7 +211,7 @@ export const zOrganizationResourceTotals = z.object({
   macro: z.number().int(),
   workbook: z.number().int(),
   device: z.number().int(),
-}) satisfies z.ZodType<Record<z.infer<typeof zSharingResourceType>, number>>;
+}) satisfies z.ZodType<Record<z.infer<typeof zOrganizationResourceType>, number>>;
 
 export const zOrganizationResources = z.object({
   resources: z.array(zOrganizationResource),
@@ -295,6 +309,7 @@ export type MyOrganizationList = z.infer<typeof zMyOrganizationList>;
 export type OrganizationMember = z.infer<typeof zOrganizationMember>;
 export type OrganizationMembers = z.infer<typeof zOrganizationMembers>;
 export type OrganizationResource = z.infer<typeof zOrganizationResource>;
+export type OrganizationResourceType = z.infer<typeof zOrganizationResourceType>;
 export type OrganizationResourceTotals = z.infer<typeof zOrganizationResourceTotals>;
 export type OrganizationResources = z.infer<typeof zOrganizationResources>;
 export type OrganizationDeletionBlocker = z.infer<typeof zOrganizationDeletionBlocker>;

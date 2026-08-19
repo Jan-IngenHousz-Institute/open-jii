@@ -17,6 +17,7 @@ const EXPECTED_DEVICE_TYPE: Record<SensorFamily, DeviceType> = {
   minipar: "minipar",
   generic: "generic",
   ambyte: "ambyte",
+  mobile: "mobile",
 };
 
 describe("sensorFamilyToDeviceType", () => {

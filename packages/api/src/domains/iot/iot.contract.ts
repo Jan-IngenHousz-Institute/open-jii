@@ -15,9 +15,12 @@ import {
   zIotDeviceList,
   zIotDevicePathParam,
   zIotUploadUrl,
+  zEnsureMobileDeviceBody,
   zIotUploadUrlRequest,
   zIssueIotCredentialsResponse,
   zOnboardDeviceBody,
+  zBulkRegisterIotDevicesBody,
+  zBulkRegisterIotDevicesResult,
   zRegisterIotDeviceBody,
   zRegisterIotDeviceResponse,
 } from "./iot.schema";
@@ -38,6 +41,13 @@ export const iotContract = {
     .output(zDeviceRegistryWebhookResponse),
 
   // IotDevice registry (owner-scoped)
+  // Idempotent per-phone self-registration; 200 whether the row was created
+  // or already existed. The path is static, so it cannot collide with the
+  // {deviceId} param routes.
+  ensureMobileDevice: oc
+    .route({ method: "POST", path: "/api/v1/devices/mobile", successStatus: 200 })
+    .input(zEnsureMobileDeviceBody)
+    .output(zIotDevice),
   listIotDevices: oc
     .route({ method: "GET", path: "/api/v1/devices", successStatus: 200 })
     .output(zIotDeviceList),
@@ -45,6 +55,10 @@ export const iotContract = {
     .route({ method: "POST", path: "/api/v1/devices", successStatus: 201 })
     .input(zRegisterIotDeviceBody)
     .output(zRegisterIotDeviceResponse),
+  bulkRegisterIotDevices: oc
+    .route({ method: "POST", path: "/api/v1/devices/bulk", successStatus: 200 })
+    .input(zBulkRegisterIotDevicesBody)
+    .output(zBulkRegisterIotDevicesResult),
   getIotDevice: oc
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}", successStatus: 200 })
     .input(zIotDevicePathParam)
