@@ -89,6 +89,25 @@ blocks destructive git while you are on `main`, and blocks pushing to `main` fro
 on a branch and open a PR. On your own branches nothing is restricted: force-push, reset and clean
 as you like.
 
+## Agent skills
+
+Configuration the vendored `mattpocock/skills` guides read. These files answer "where do issues
+live" and "what should I read before exploring", so those skills do not have to guess.
+
+### Issue tracker
+
+Issues live in Linear (team `OJD`); GitHub Issues is a synced mirror. See
+`docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical role names, used verbatim as Linear labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` plus `docs/adr/`. Neither exists yet, and `/domain-modeling`
+creates them when a term or decision actually needs recording. See `docs/agents/domain.md`.
+
 ## Conventions
 
 - Define API changes contracts-first in `packages/api`, then implement both sides against them.
