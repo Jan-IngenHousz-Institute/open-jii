@@ -185,6 +185,33 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
     expect(result.value.members[0].lastDataAt).toBeNull();
   });
 
+  it("marks the pipeline unavailable when any grouped scan fails", async () => {
+    const { groupId } = await seedGroupWithDevice();
+    vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
+    vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
+    vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(
+      failure(AppError.internal("throughput down")),
+    );
+    vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockResolvedValue(
+      failure(AppError.internal("experiments down")),
+    );
+    vi.spyOn(databricksAdapter, "getDevicesFirmware").mockResolvedValue(
+      failure(AppError.internal("firmware down")),
+    );
+    vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(
+      failure(AppError.internal("events down")),
+    );
+
+    const result = await useCase.execute(groupId, WINDOW);
+
+    assertSuccess(result);
+    expect(result.value.pipelineUnavailable).toBe(true);
+    expect(result.value.throughput).toEqual([]);
+    expect(result.value.dataByExperiment).toEqual([]);
+    expect(result.value.firmware).toEqual([]);
+    expect(result.value.events).toEqual([]);
+  });
+
   it("propagates a repository failure", async () => {
     vi.spyOn(groupRepository, "listMemberThings").mockResolvedValue(
       failure(AppError.internal("boom")),

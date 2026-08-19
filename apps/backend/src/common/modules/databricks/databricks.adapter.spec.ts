@@ -2370,4 +2370,195 @@ describe("DatabricksAdapter", () => {
       expect(result.value[0].status).toBe("failed");
     });
   });
+
+  describe("grouped device scans", () => {
+    interface CapturedStatement {
+      statement?: string;
+    }
+
+    const mockGroupSql = (
+      columns: string[],
+      dataArray: (string | null)[][],
+      captured: CapturedStatement,
+    ) => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`, (body: CapturedStatement) => {
+          captured.statement = body.statement;
+          return true;
+        })
+        .reply(200, {
+          statement_id: "stmt-group",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: columns.length,
+              columns: columns.map((name, position) => ({
+                name,
+                type_name: "string",
+                type_text: "string",
+                position,
+              })),
+            },
+            total_row_count: dataArray.length,
+            truncated: false,
+          },
+          result: {
+            data_array: dataArray,
+            chunk_index: 0,
+            row_count: dataArray.length,
+            row_offset: 0,
+          },
+        });
+    };
+
+    const THINGS = ["AMBYTE_A", "AMBYTE_B"];
+    const FROM = "2026-08-17T00:00:00.000Z";
+    const TO = "2026-08-18T00:00:00.000Z";
+
+    it("maps batched last activity by thing name", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["client_id", "last_data_at"],
+        [
+          ["AMBYTE_A", "2026-08-17T10:00:00.000Z"],
+          ["AMBYTE_B", null],
+        ],
+        captured,
+      );
+
+      const result = await databricksAdapter.getDevicesLastActivity(THINGS);
+
+      assertSuccess(result);
+      expect(result.value.get("AMBYTE_A")).toBe("2026-08-17T10:00:00.000Z");
+      expect(result.value.get("AMBYTE_B")).toBeNull();
+      // One grouped scan over the member set, never a query per device.
+      expect(captured.statement).toContain("IN ('AMBYTE_A', 'AMBYTE_B')");
+    });
+
+    it("maps grouped throughput rows and applies the row ceiling", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["timestamp_hour", "client_id", "measurement_count"],
+        [["2026-08-17T10:00:00.000Z", "AMBYTE_A", "4"]],
+        captured,
+      );
+
+      const result = await databricksAdapter.getDevicesThroughput(THINGS, FROM, TO, "hour", 50);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-08-17T10:00:00.000Z", clientId: "AMBYTE_A", count: 4 },
+      ]);
+      expect(captured.statement).toContain("LIMIT 50");
+    });
+
+    it("maps grouped experiment attribution rows", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["timestamp_hour", "experiment_id", "measurement_count"],
+        [
+          ["2026-08-17T10:00:00.000Z", "exp-1", "7"],
+          ["2026-08-17T11:00:00.000Z", null, "2"],
+        ],
+        captured,
+      );
+
+      const result = await databricksAdapter.getDevicesDataByExperiment(
+        THINGS,
+        FROM,
+        TO,
+        "hour",
+        50,
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-08-17T10:00:00.000Z", experimentId: "exp-1", count: 7 },
+        { bucketStart: "2026-08-17T11:00:00.000Z", experimentId: null, count: 2 },
+      ]);
+      expect(captured.statement).toContain("LIMIT 50");
+    });
+
+    it("maps firmware sightings per thing and version", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["client_id", "device_version", "last_seen"],
+        [["AMBYTE_A", "1.1.0", "2026-08-17T11:00:00.000Z"]],
+        captured,
+      );
+
+      const result = await databricksAdapter.getDevicesFirmware(THINGS, FROM, TO, 50);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { clientId: "AMBYTE_A", version: "1.1.0", lastSeen: "2026-08-17T11:00:00.000Z" },
+      ]);
+    });
+
+    it("maps lifecycle events newest-first with the group-wide cap", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["client_id", "event_type", "event_timestamp", "disconnect_reason"],
+        [["AMBYTE_A", "disconnected", "2026-08-17T12:00:00.000Z", "CONNECTION_LOST"]],
+        captured,
+      );
+
+      const result = await databricksAdapter.getDevicesLifecycleEvents(THINGS, FROM, TO, 200);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          clientId: "AMBYTE_A",
+          eventType: "disconnected",
+          eventTimestamp: "2026-08-17T12:00:00.000Z",
+          disconnectReason: "CONNECTION_LOST",
+        },
+      ]);
+      expect(captured.statement).toContain("LIMIT 200");
+      expect(captured.statement).toContain("DESC");
+    });
+
+    it("answers an empty member set without touching the warehouse", async () => {
+      // No nock mounts: any HTTP call would throw.
+      const activity = await databricksAdapter.getDevicesLastActivity([]);
+      const throughput = await databricksAdapter.getDevicesThroughput([], FROM, TO, "hour", 1);
+      const experiments = await databricksAdapter.getDevicesDataByExperiment(
+        [],
+        FROM,
+        TO,
+        "hour",
+        1,
+      );
+      const firmware = await databricksAdapter.getDevicesFirmware([], FROM, TO, 1);
+      const events = await databricksAdapter.getDevicesLifecycleEvents([], FROM, TO, 1);
+
+      assertSuccess(activity);
+      expect(activity.value.size).toBe(0);
+      for (const result of [throughput, experiments, firmware, events]) {
+        assertSuccess(result);
+        expect(result.value).toEqual([]);
+      }
+    });
+
+    it("propagates a SQL failure from a grouped scan", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(500, { message: "warehouse down" });
+
+      const result = await databricksAdapter.getDevicesThroughput(THINGS, FROM, TO, "hour", 50);
+
+      assertFailure(result);
+    });
+  });
 });
