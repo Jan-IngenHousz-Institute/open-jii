@@ -16,8 +16,8 @@ import type { DatabaseInstance } from "@repo/database";
  * That shield is now the whole of this class. It also used to carry an auto-accept
  * that claimed an invitee's pending organization invitations on every sign-in, which
  * meant somebody joined an organization by logging in rather than by agreeing to.
- * Accepting an invitation is a deliberate act on `/platform/accept-invitation/[id]`,
- * and Better Auth's own accept endpoint is the only thing that admits anybody.
+ * Accepting an invitation is a deliberate act on `/platform/account/invitations`, and
+ * Better Auth's own accept endpoint is the only thing that admits anybody.
  */
 @Hook()
 @Injectable()

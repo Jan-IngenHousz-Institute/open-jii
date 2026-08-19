@@ -3,7 +3,7 @@
 import { unwrapAuthResult } from "@/hooks/organization/auth-organization-result";
 import {
   invalidateFamilies,
-  organizationInvitationQueryKey,
+  myOrganizationInvitationsQueryKey,
   organizationMembershipFamilies,
 } from "@/hooks/organization/organization-cache";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,9 +31,11 @@ export const useRespondToOrganizationInvitation = () => {
       }
       return unwrapAuthResult(await authClient.organization.rejectInvitation(body));
     },
-    onSettled: async (_data, _error, variables) => {
+    onSettled: async () => {
+      // The answered invitation leaves the recipient's own list, which is what the
+      // header bell and the account tab both render.
       await queryClient.invalidateQueries({
-        queryKey: organizationInvitationQueryKey(userId, variables.invitationId),
+        queryKey: myOrganizationInvitationsQueryKey(userId),
       });
       await invalidateFamilies(queryClient, organizationMembershipFamilies());
     },

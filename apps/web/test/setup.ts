@@ -252,6 +252,7 @@ vi.mock("@repo/auth/client", () => ({
       inviteMember: vi.fn().mockResolvedValue({ data: null, error: null }),
       cancelInvitation: vi.fn().mockResolvedValue({ data: null, error: null }),
       listInvitations: vi.fn().mockResolvedValue({ data: [], error: null }),
+      listUserInvitations: vi.fn().mockResolvedValue({ data: [], error: null }),
       listMembers: vi.fn().mockResolvedValue({ data: { members: [], total: 0 }, error: null }),
       getInvitation: vi.fn().mockResolvedValue({ data: null, error: null }),
       acceptInvitation: vi.fn().mockResolvedValue({ data: null, error: null }),

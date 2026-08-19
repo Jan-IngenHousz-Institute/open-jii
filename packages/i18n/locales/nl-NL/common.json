@@ -808,22 +808,23 @@
       "personalCaption": "Alleen jij. Er komen geen organisatieleden mee."
     },
     "acceptInvitation": {
-      "pageTitle": "Uitnodiging",
-      "title": "Lid worden van {{name}}",
-      "description": "{{inviter}} heeft je uitgenodigd om lid te worden van {{name}}.",
       "roleLabel": "Je wordt lid als",
       "acceptAction": "Uitnodiging aanvaarden",
       "declineAction": "Afwijzen",
       "working": "Bezig…",
       "accepted": "Je bent lid geworden van {{name}}",
       "declined": "Uitnodiging afgewezen",
-      "failed": "Deze uitnodiging kon niet worden beantwoord.",
-      "unavailableTitle": "Deze uitnodiging staat niet meer open",
-      "unavailableHint": "Als je bent ingelogd met het uitgenodigde adres, is ze al voor je aanvaard. Ze kan ook zijn ingetrokken of verlopen.",
-      "goToOrganizations": "Naar mijn organisaties",
-      "wrongAccountTitle": "Deze uitnodiging is voor een ander account",
-      "wrongAccountHint": "Ze is naar een ander e-mailadres gestuurd dan waarmee je bent ingelogd. Log in met het uitgenodigde adres om ze te aanvaarden.",
-      "switchAccount": "Inloggen met een ander account"
+      "failed": "Deze uitnodiging kon niet worden beantwoord."
+    },
+    "myInvitations": {
+      "title": "Uitnodigingen",
+      "description": "Uitnodigingen voor organisaties die op je account wachten.",
+      "empty": "Er wachten geen uitnodigingen op je.",
+      "emptyHint": "Uitnodigingen worden gekoppeld aan het e-mailadres waarmee je inlogt, dus een uitnodiging naar een ander adres verschijnt hier niet. Vraag om ze opnieuw naar dit adres te sturen.",
+      "loadError": "Je uitnodigingen konden niet worden geladen.",
+      "retry": "Opnieuw proberen",
+      "acceptNamed": "Uitnodiging voor {{name}} aanvaarden",
+      "declineNamed": "Uitnodiging voor {{name}} afwijzen"
     },
     "about": {
       "title": "Over",

@@ -40,18 +40,6 @@ export function unwrapAuthResult<T>(envelope: AuthClientEnvelope<T>): T {
   return envelope.data;
 }
 
-/**
- * Whether a refusal is Better Auth telling the caller the invitation is not theirs.
- *
- * The distinction matters on the accept-invitation page: a retired, withdrawn or
- * expired invitation answers 400, while a still-live invitation opened by somebody
- * signed into the wrong account answers 403. Collapsing the two would tell the
- * genuine recipient their live invitation no longer exists.
- */
-export function isWrongRecipientError(error: unknown): boolean {
-  return error instanceof AuthClientError && error.status === 403;
-}
-
 /** The refusal message to show, or `undefined` when only a fallback will do. */
 export function authErrorMessage(error: unknown): string | undefined {
   if (error instanceof AuthClientError && error.message.length > 0) return error.message;

@@ -808,22 +808,23 @@
       "personalCaption": "Nur du. Keine Organisationsmitglieder kommen mit."
     },
     "acceptInvitation": {
-      "pageTitle": "Einladung",
-      "title": "{{name}} beitreten",
-      "description": "{{inviter}} hat Sie eingeladen, {{name}} beizutreten.",
       "roleLabel": "Sie treten bei als",
       "acceptAction": "Einladung annehmen",
       "declineAction": "Ablehnen",
       "working": "Wird ausgeführt…",
       "accepted": "Sie sind {{name}} beigetreten",
       "declined": "Einladung abgelehnt",
-      "failed": "Diese Einladung konnte nicht beantwortet werden.",
-      "unavailableTitle": "Diese Einladung ist nicht mehr offen",
-      "unavailableHint": "Wenn Sie sich mit der eingeladenen Adresse angemeldet haben, wurde sie bereits für Sie angenommen. Sie kann auch zurückgezogen oder abgelaufen sein.",
-      "goToOrganizations": "Zu meinen Organisationen",
-      "wrongAccountTitle": "Diese Einladung gilt für ein anderes Konto",
-      "wrongAccountHint": "Sie wurde an eine andere E-Mail-Adresse gesendet als die, mit der Sie angemeldet sind. Melden Sie sich mit der eingeladenen Adresse an, um sie anzunehmen.",
-      "switchAccount": "Mit einem anderen Konto anmelden"
+      "failed": "Diese Einladung konnte nicht beantwortet werden."
+    },
+    "myInvitations": {
+      "title": "Einladungen",
+      "description": "Einladungen zu Organisationen, die auf Ihr Konto warten.",
+      "empty": "Es warten keine Einladungen auf Sie.",
+      "emptyHint": "Einladungen werden über die E-Mail-Adresse zugeordnet, mit der Sie sich anmelden. Eine an eine andere Adresse gesendete Einladung erscheint hier nicht — bitten Sie darum, sie erneut an diese Adresse zu senden.",
+      "loadError": "Ihre Einladungen konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "acceptNamed": "Einladung zu {{name}} annehmen",
+      "declineNamed": "Einladung zu {{name}} ablehnen"
     },
     "about": {
       "title": "Über uns",

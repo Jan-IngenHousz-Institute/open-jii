@@ -149,7 +149,8 @@
   "tabs": {
     "general": "Allgemein",
     "security": "Sicherheit",
-    "apiKeys": "API-Schlüssel"
+    "apiKeys": "API-Schlüssel",
+    "invitations": "Einladungen"
   },
   "apiKeys": {
     "title": "API-Schlüssel",
@@ -188,6 +189,9 @@
     "expiresUntil": "Bis {{date}}",
     "expiresInDays": "Läuft in {{count}} Tagen ab",
     "expired": "Abgelaufen"
+  },
+  "invitations": {
+    "title": "Einladungen"
   },
   "passkeys": {
     "title": "Passkeys",

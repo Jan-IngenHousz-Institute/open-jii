@@ -145,5 +145,11 @@
       }
     },
     "cancel": "Annuleren"
+  },
+  "tabs": {
+    "invitations": "Uitnodigingen"
+  },
+  "invitations": {
+    "title": "Uitnodigingen"
   }
 }

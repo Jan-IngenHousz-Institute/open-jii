@@ -97,12 +97,16 @@ export const openJiiOrganization = () => {
         },
       },
     },
-    async sendInvitationEmail({ id, email, role, organization, inviter }) {
+    async sendInvitationEmail({ email, role, organization, inviter }) {
       const emailServer = process.env.AUTH_EMAIL_SERVER;
       const emailFrom = process.env.AUTH_EMAIL_FROM;
       if (!emailServer || !emailFrom) return;
 
-      const { href: inviteUrl } = new URL(`/platform/accept-invitation/${id}`, clientUrl);
+      // The account tab that lists every invitation waiting for the address the
+      // recipient signs in with — not a per-invitation route. The id would add
+      // nothing: whoever follows this link sees this invitation among their own, and
+      // an id belonging to somebody else's address could only ever be refused.
+      const { href: inviteUrl } = new URL("/platform/account/invitations", clientUrl);
 
       await sendOrganizationInvitationEmail({
         to: email,

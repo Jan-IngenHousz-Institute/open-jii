@@ -7,8 +7,8 @@ import { describe, expect, it, vi } from "vitest";
 import { locales } from "@repo/i18n/config";
 import deCommon from "@repo/i18n/locales/de-DE/common.json";
 
-import { generateMetadata as generateAcceptInvitationMetadata } from "../accept-invitation/[id]/page";
 import { generateMetadata as generateApiKeysMetadata } from "../account/api-keys/page";
+import { generateMetadata as generateInvitationsMetadata } from "../account/invitations/page";
 import { generateMetadata as generateAccountMetadata } from "../account/page";
 import { generateMetadata as generateSecurityMetadata } from "../account/security/page";
 import { generateMetadata as generateDevicesMetadata } from "../devices/page";
@@ -226,6 +226,7 @@ const { translations } = vi.hoisted(() => ({
   translations: {
     "en-US": {
       "account:apiKeys.title": "API keys",
+      "account:invitations.title": "Invitations",
       "account:security.title": "Security",
       "account:tabs.general": "General",
       "common:experiments.archiveTitle": "Experiments Archive",
@@ -239,13 +240,13 @@ const { translations } = vi.hoisted(() => ({
       "iot:iot.devices.title": "Devices",
       "macro:macros.newMacro": "New Macro",
       "macro:macros.title": "Macros",
-      "common:organizations.acceptInvitation.pageTitle": "Invitation",
       "common:organizations.createAction": "Create organization",
       "common:organizations.title": "Organizations",
       "workbook:workbooks.title": "Workbooks",
     },
     "de-DE": {
       "account:apiKeys.title": "API-Schlüssel",
+      "account:invitations.title": "Einladungen",
       "account:security.title": "Sicherheit",
       "account:tabs.general": "Allgemein",
       "common:experiments.archiveTitle": "Experiment-Archiv",
@@ -259,7 +260,6 @@ const { translations } = vi.hoisted(() => ({
       "iot:iot.devices.title": "Geräte",
       "macro:macros.newMacro": "Neues Makro",
       "macro:macros.title": "Makros",
-      "common:organizations.acceptInvitation.pageTitle": "Einladung",
       "common:organizations.createAction": "Organisation erstellen",
       "common:organizations.title": "Organisationen",
       "workbook:workbooks.title": "Arbeitsmappen",
@@ -288,6 +288,7 @@ const routes = [
   ["account", generateAccountMetadata],
   ["security", generateSecurityMetadata],
   ["apiKeys", generateApiKeysMetadata],
+  ["invitations", generateInvitationsMetadata],
   ["devices", generateDevicesMetadata],
   ["experiments", generateExperimentsMetadata],
   ["newExperiment", generateNewExperimentMetadata],
@@ -301,7 +302,6 @@ const routes = [
   ["transferHistory", generateTransferHistoryMetadata],
   ["organizations", generateOrganizationsMetadata],
   ["newOrganization", generateNewOrganizationMetadata],
-  ["acceptInvitation", generateAcceptInvitationMetadata],
 ] as const;
 
 const expectedTitles: Record<
@@ -313,6 +313,7 @@ const expectedTitles: Record<
     account: "General",
     security: "Security",
     apiKeys: "API keys",
+    invitations: "Invitations",
     devices: "Devices",
     experiments: "Experiments",
     newExperiment: "New Experiment",
@@ -326,13 +327,13 @@ const expectedTitles: Record<
     transferHistory: "Your Transfer Requests",
     organizations: "Organizations",
     newOrganization: "Create organization",
-    acceptInvitation: "Invitation",
   },
   "de-DE": {
     dashboard: "Dashboard",
     account: "Allgemein",
     security: "Sicherheit",
     apiKeys: "API-Schlüssel",
+    invitations: "Einladungen",
     devices: "Geräte",
     experiments: "Experimente",
     newExperiment: "Neues Experiment",
@@ -346,7 +347,6 @@ const expectedTitles: Record<
     transferHistory: "Ihre Transferanfragen",
     organizations: "Organisationen",
     newOrganization: "Organisation erstellen",
-    acceptInvitation: "Einladung",
   },
 };
 

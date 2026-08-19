@@ -808,22 +808,23 @@
       "personalCaption": "Only you. No organization members come with it."
     },
     "acceptInvitation": {
-      "pageTitle": "Invitation",
-      "title": "Join {{name}}",
-      "description": "{{inviter}} invited you to join {{name}}.",
       "roleLabel": "You would join as",
       "acceptAction": "Accept invitation",
       "declineAction": "Decline",
       "working": "Working…",
       "accepted": "You joined {{name}}",
       "declined": "Invitation declined",
-      "failed": "Could not answer this invitation.",
-      "unavailableTitle": "This invitation is no longer open",
-      "unavailableHint": "If you signed in with the invited address, it was accepted for you already. It may also have been withdrawn or expired.",
-      "goToOrganizations": "Go to my organizations",
-      "wrongAccountTitle": "This invitation is for another account",
-      "wrongAccountHint": "It was sent to a different email address than the one you are signed in with. Sign in with the invited address to accept it.",
-      "switchAccount": "Sign in with another account"
+      "failed": "Could not answer this invitation."
+    },
+    "myInvitations": {
+      "title": "Invitations",
+      "description": "Invitations to join an organization, waiting for your account.",
+      "empty": "No invitations are waiting for you.",
+      "emptyHint": "Invitations are matched on the email address you sign in with, so one sent to a different address will not appear here. Ask for it to be re-sent to this address.",
+      "loadError": "Could not load your invitations.",
+      "retry": "Try again",
+      "acceptNamed": "Accept invitation to {{name}}",
+      "declineNamed": "Decline invitation to {{name}}"
     },
     "about": {
       "title": "About",

@@ -40,12 +40,3 @@ export function organizationTeamPath(
 export function organizationSettingsPath(locale: string, organizationId: string): string {
   return `${organizationPath(locale, organizationId)}/settings`;
 }
-
-/**
- * Where an invitation email lands. Unprefixed by locale on purpose: the mail is
- * composed without a locale in scope, and the proxy redirects to the negotiated
- * one — the same shape as every other transactional link.
- */
-export function acceptInvitationPath(invitationId: string): string {
-  return `/platform/accept-invitation/${invitationId}`;
-}

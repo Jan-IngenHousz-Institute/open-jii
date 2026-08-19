@@ -28,12 +28,19 @@ export function organizationInvitationsQueryKey(
   return withPrincipal([...ORGANIZATION_AUTH_QUERY_KEY, "invitations", organizationId], userId);
 }
 
-/** A single invitation, as the accept-invitation page reads it. */
-export function organizationInvitationQueryKey(
-  userId: string | undefined,
-  invitationId: string,
-): QueryKey {
-  return withPrincipal([...ORGANIZATION_AUTH_QUERY_KEY, "invitation", invitationId], userId);
+/**
+ * The caller's own pending invitations, across every organization. Session-scoped
+ * server-side — Better Auth answers for the signed-in address and refuses to take
+ * another — so the principal segment is the only thing keeping the next user on
+ * this browser from reading them as their own.
+ */
+export function myOrganizationInvitationsQueryKey(userId: string | undefined): QueryKey {
+  return withPrincipal(myOrganizationInvitationsFamily(), userId);
+}
+
+/** Every principal's copy of that list, as a prefix. */
+export function myOrganizationInvitationsFamily(): QueryKey {
+  return [...ORGANIZATION_AUTH_QUERY_KEY, "my-invitations"];
 }
 
 /**

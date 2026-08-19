@@ -55,7 +55,7 @@ deleting one does not invalidate other sessions or sign-in methods.
 
 **Signing in accepts nothing.** A pending _organization_ invitation survives every
 sign-in and sign-up untouched: it is claimed only when the recipient opens
-`/platform/accept-invitation/[id]` and accepts, through Better Auth's own
+`/platform/account/invitations` and accepts, through Better Auth's own
 `accept-invitation` endpoint. A membership reaches everything the organization
 owns, and an `admin` or `owner` role makes its holder answerable for other
 people's work, so joining is a decision rather than a side effect of logging in.
@@ -287,7 +287,7 @@ the tests alike — carries the gates with it.
 personal-workspace shield for it is a Nest `@BeforeHook("/organization/leave")`
 naming the endpoint verbatim. That shield is the whole of the organization module's
 Nest hook: **organization invitations never auto-accept.** Whatever role one carries,
-it is claimed on `/platform/accept-invitation/[id]` through Better Auth's own
+it is claimed on `/platform/account/invitations` through Better Auth's own
 `accept-invitation` endpoint, because a membership reaches everything the
 organization owns and joining is the recipient's decision to make.
 
