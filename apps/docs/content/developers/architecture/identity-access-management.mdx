@@ -176,7 +176,7 @@ The file exports two role matrices:
 On an experiment the two middle tiers now **agree**, and that is the point:
 being handed the lowest grant tier must not beat belonging to the organization
 that owns the experiment. They still disagree nowhere else — `viewer` and
-`member` are both read-only on the other four types — which is why the matrices
+`member` are both read-only on every other type — which is why the matrices
 stay separate rather than collapsing into one. A public experiment's
 passer-by still gets read alone; that comes from the visibility branch in
 `can()`, not from either matrix.
@@ -393,11 +393,15 @@ there. Lock order is user → organization → resource → grants everywhere.
 
 ### Organization deletion is blocked, never cascaded
 
-An organization cannot be deleted while it owns any resource of the five types,
-and deletion never cascades — where GitHub cascade-deletes an organization's
+An organization cannot be deleted while it owns any resource of the six owned
+types, and deletion never cascades — where GitHub cascade-deletes an organization's
 repositories. Devices own live AWS Things and certificates that only their own
 delete path can tear down, and a platform whose visibility transitions are
-monotonic should not vaporize public resources behind one confirmation dialog.
+monotonic should not vaporize public resources behind one confirmation dialog. A
+device group holds no work at all, but its grants are polymorphic and cleaned only
+by the group's own delete path, so cascading one away would leave access behind
+naming a group that no longer exists. What the six share is that dropping a row by
+SQL leaves something behind.
 The way out is to transfer or delete each resource.
 
 ## Implementation map

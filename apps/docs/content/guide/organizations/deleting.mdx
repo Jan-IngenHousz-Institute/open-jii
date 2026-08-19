@@ -11,7 +11,8 @@ Only an Owner can delete an organization, from its **Settings**.
 
 Deleting an organization does not delete its work, and does not hand that work to
 anyone. So the delete is refused while the organization still owns a single experiment,
-macro, protocol, workbook or device. The refusal tells you how many of each are left.
+macro, protocol, workbook, device or device group. The refusal tells you how many of each
+are left.
 
 This is deliberate: published work should not disappear behind one confirmation dialog.
 
@@ -21,13 +22,15 @@ This is deliberate: published work should not disappear behind one confirmation 
    to another organization or to your personal workspace — see
    [Moving a resource](/guide/sharing/moving-resources).
 2. **Delete what you do not.**
-3. **Delete the devices.** They are the exception below.
+3. **Delete the devices and device groups.** They are the exception below.
 4. **Delete the organization.**
 
 <Callout type="warn">
-  **Devices cannot be moved.** Every other resource type can be transferred out, but a device has no
-  transfer route at all — so an organization holding devices can only be emptied by *deleting* those
-  devices, which also revokes their certificates. Plan for that before you start.
+  **Devices and device groups cannot be moved.** Every other resource type can be transferred out,
+  but neither of these has a transfer route — so an organization holding them can only be emptied by
+  *deleting* them. Deleting a device also revokes its certificate; deleting a group leaves its
+  devices alone, and only undoes the grouping and whatever it was shared with. Plan for that before
+  you start.
 </Callout>
 
 ## What deletion takes with it

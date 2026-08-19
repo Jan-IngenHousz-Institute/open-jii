@@ -15540,6 +15540,9 @@
                         },
                         "canLeave": {
                           "type": "boolean"
+                        },
+                        "canTransfer": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -15547,7 +15550,8 @@
                         "canUpdate",
                         "canManage",
                         "canShare",
-                        "canLeave"
+                        "canLeave",
+                        "canTransfer"
                       ]
                     }
                   },
@@ -17806,7 +17810,8 @@
                                   "ambyte",
                                   "minipar",
                                   "generic",
-                                  "ambit"
+                                  "ambit",
+                                  "mobile"
                                 ],
                                 "type": "string"
                               }
@@ -17970,7 +17975,8 @@
                                   "ambyte",
                                   "minipar",
                                   "generic",
-                                  "ambit"
+                                  "ambit",
+                                  "mobile"
                                 ],
                                 "type": "string"
                               }
@@ -18150,7 +18156,8 @@
                               "macro",
                               "protocol",
                               "workbook",
-                              "device"
+                              "device",
+                              "device_group"
                             ],
                             "type": "string"
                           },
@@ -18321,7 +18328,8 @@
                           "macro",
                           "protocol",
                           "workbook",
-                          "device"
+                          "device",
+                          "device_group"
                         ],
                         "type": "string"
                       },
@@ -18371,7 +18379,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
@@ -22361,7 +22370,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device"
+                "device",
+                "device_group"
               ],
               "type": "string"
             }
