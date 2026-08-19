@@ -1,9 +1,7 @@
-import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
 import { authClient, useSession } from "@repo/auth/client";
 import deCommon from "@repo/i18n/locales/de-DE/common.json";
 import enCommon from "@repo/i18n/locales/en-US/common.json";
@@ -73,13 +71,6 @@ function values(overrides: Partial<NewOrganizationFormValues> = {}): NewOrganiza
   };
 }
 
-function mountAddMember(status?: number) {
-  return server.mount(contract.organizations.addOrganizationMember, {
-    ...(status === undefined ? {} : { status }),
-    body: status === undefined ? { userId: ALICE_ID, role: "member" } : { message: "nope" },
-  });
-}
-
 beforeEach(() => {
   vi.mocked(useSession).mockReturnValue({
     data: { user: { id: "current-user-id" } },
@@ -146,32 +137,37 @@ describe("<NewOrganizationForm /> submit", () => {
     expect(create().mock.calls[0]?.[0]).toMatchObject({ visibility: "public" });
   });
 
-  it("adds a registered person and invites an address, then navigates", async () => {
-    const addSpy = mountAddMember();
+  it("invites everybody collected, account or not, then navigates", async () => {
     submitValues.current = values({
       people: [
-        { kind: "user", userId: ALICE_ID, displayName: "Alice Tester", role: "admin" },
+        {
+          kind: "user",
+          userId: ALICE_ID,
+          displayName: "Alice Tester",
+          email: "alice@uni.edu",
+          role: "admin",
+        },
         { kind: "email", email: "newcomer@example.org", role: "owner" },
       ],
     });
 
     await submit();
 
-    // The real outgoing request, not merely "the mutation ran": everybody collected
-    // joins as a member, and the organization is the one that was just created.
+    // Nobody is added: an account already on the platform is invited at its own address
+    // like anybody else, because nobody joins an organization they did not ask to join.
+    // Each carries the role picked for them, not a default the wizard substitutes.
     await waitFor(() => {
-      expect(addSpy.callCount).toBe(1);
+      expect(inviteMember()).toHaveBeenCalledTimes(2);
     });
-    // The role picked per person, not a default the wizard quietly substitutes.
-    expect(addSpy.body).toEqual({ userId: ALICE_ID, role: "admin" });
-    expect(addSpy.params.id).toBe("org-1");
-
-    await waitFor(() => {
-      expect(inviteMember()).toHaveBeenCalledWith({
-        organizationId: "org-1",
-        email: "newcomer@example.org",
-        role: "owner",
-      });
+    expect(inviteMember()).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      email: "alice@uni.edu",
+      role: "admin",
+    });
+    expect(inviteMember()).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      email: "newcomer@example.org",
+      role: "owner",
     });
 
     await waitFor(() => {
@@ -182,15 +178,20 @@ describe("<NewOrganizationForm /> submit", () => {
     expect(toast).toHaveBeenCalledWith({ description: "organizations.create.created" });
   });
 
-  it("names whoever could not be added, and still goes to the organization", async () => {
-    mountAddMember(500);
+  it("names whoever could not be invited, and still goes to the organization", async () => {
     inviteMember().mockResolvedValue({
       data: null,
       error: { message: "Invitation refused", code: "FORBIDDEN", status: 403 },
     });
     submitValues.current = values({
       people: [
-        { kind: "user", userId: ALICE_ID, displayName: "Alice Tester", role: "member" },
+        {
+          kind: "user",
+          userId: ALICE_ID,
+          displayName: "Alice Tester",
+          email: "alice@uni.edu",
+          role: "member",
+        },
         { kind: "email", email: "newcomer@example.org", role: "member" },
       ],
     });
@@ -218,9 +219,16 @@ describe("<NewOrganizationForm /> submit", () => {
       data: null,
       error: { message: "Organization slug is taken", code: "SLUG_IS_TAKEN", status: 400 },
     });
-    const addSpy = mountAddMember();
     submitValues.current = values({
-      people: [{ kind: "user", userId: ALICE_ID, displayName: "Alice Tester", role: "member" }],
+      people: [
+        {
+          kind: "user",
+          userId: ALICE_ID,
+          displayName: "Alice Tester",
+          email: "alice@uni.edu",
+          role: "member",
+        },
+      ],
     });
 
     await submit();
@@ -231,8 +239,8 @@ describe("<NewOrganizationForm /> submit", () => {
         variant: "destructive",
       });
     });
-    // Nobody is added to an organization that was never created, and nowhere to go.
-    expect(addSpy.called).toBe(false);
+    // Nobody is invited to an organization that was never created, and nowhere to go.
+    expect(inviteMember()).not.toHaveBeenCalled();
     expect(vi.mocked(useRouter)().push).not.toHaveBeenCalled();
   });
 });

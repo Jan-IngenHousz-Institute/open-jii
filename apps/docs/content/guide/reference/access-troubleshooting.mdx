@@ -3,7 +3,7 @@ title: "Access troubleshooting"
 description: "Start from what you are seeing — someone has access they shouldn't, someone lost access they should have, or an invite went nowhere."
 ---
 
-{/* verified: code@2a0698c44 2026-08-17 */}
+{/* verified: code@ff85dba80 2026-08-18 */}
 
 Each symptom below says what you see, why it happens, and what to change. If you would
 rather learn the model than chase a symptom, read
@@ -125,8 +125,10 @@ access.
 
 **Why** — one of three things:
 
-- They have not signed in yet. The invitation waits, and is accepted automatically the
-  next time anyone signs in with that email address — including through ORCID or GitHub.
+- They have not accepted it yet. An invitation is never accepted for them — whatever the
+  role, and however they sign in — so it sits on **Invited** until they open the link and
+  select **Accept**. Signing up from the invitation email does not accept it either; the
+  invitation is still there afterwards.
 - The address is wrong. Invitations match on the email address, not the person, so an
   address they never use will never resolve.
 - It expired. Expired invitations have to be sent again.

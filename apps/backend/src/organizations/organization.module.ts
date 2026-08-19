@@ -8,8 +8,6 @@ import { MacroModule } from "../macros/macro.module";
 import { ProtocolModule } from "../protocols/protocol.module";
 import { SharingModule } from "../sharing/sharing.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
-import { AcceptPendingOrganizationInvitationsUseCase } from "./application/use-cases/accept-pending-organization-invitations/accept-pending-organization-invitations";
-import { AddOrganizationMemberUseCase } from "./application/use-cases/add-organization-member/add-organization-member";
 import { GetOrganizationDeletionBlockersUseCase } from "./application/use-cases/get-organization-deletion-blockers/get-organization-deletion-blockers";
 import { GetOrganizationUseCase } from "./application/use-cases/get-organization/get-organization";
 import { CancelMyOrganizationJoinRequestUseCase } from "./application/use-cases/join-requests/cancel-my-organization-join-request";
@@ -24,7 +22,6 @@ import { ListOrganizationTeamGrantsUseCase } from "./application/use-cases/list-
 import { ListOrganizationTeamsUseCase } from "./application/use-cases/list-organization-teams/list-organization-teams";
 import { ListOrganizationsUseCase } from "./application/use-cases/list-organizations/list-organizations";
 import { ORGANIZATION_EMAIL_PORT } from "./core/ports/email.port";
-import { OrganizationInvitationRepository } from "./core/repositories/organization-invitation.repository";
 import { OrganizationJoinRequestRepository } from "./core/repositories/organization-join-request.repository";
 import { OrganizationRepository } from "./core/repositories/organization.repository";
 import { OrganizationAuthHook } from "./presentation/hooks/organization-auth.hook";
@@ -56,7 +53,6 @@ import { OrganizationController } from "./presentation/organization.controller";
   providers: [
     OrganizationRepository,
     OrganizationJoinRequestRepository,
-    OrganizationInvitationRepository,
     {
       provide: ORGANIZATION_EMAIL_PORT,
       useExisting: EmailAdapter,
@@ -67,7 +63,6 @@ import { OrganizationController } from "./presentation/organization.controller";
     GetOrganizationDeletionBlockersUseCase,
     ListOrganizationResourcesUseCase,
     ListOrganizationMembersUseCase,
-    AddOrganizationMemberUseCase,
     ListOrganizationTeamsUseCase,
     ListOrganizationTeamGrantsUseCase,
     ListGranteeTeamsUseCase,
@@ -75,7 +70,6 @@ import { OrganizationController } from "./presentation/organization.controller";
     ListOrganizationJoinRequestsUseCase,
     CancelMyOrganizationJoinRequestUseCase,
     DecideOrganizationJoinRequestUseCase,
-    AcceptPendingOrganizationInvitationsUseCase,
     OrganizationAuthHook,
   ],
 })

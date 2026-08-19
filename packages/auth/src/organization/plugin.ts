@@ -2,6 +2,8 @@ import type { BetterAuthPlugin } from "better-auth";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { organization as organizationPlugin } from "better-auth/plugins";
 
+import { ORGANIZATION_MEMBERSHIP_LIMIT } from "@repo/database";
+
 import { ac, roles } from "../access";
 import { sendOrganizationInvitationEmail } from "../email/invitationEmail";
 import {
@@ -18,15 +20,33 @@ import {
 import {
   assertOrganizationIsDeletable,
   assertOrganizationOwnsNoResources,
+  rethrowAsOrganizationInUse,
   tearDownOrganizationGrants,
   tearDownTeamGrants,
 } from "./lifecycle";
+
+// Re-exported so the raced-delete refusal is reachable on its own.
+export { rethrowAsOrganizationInUse } from "./lifecycle";
 
 const clientUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 
 /** The read paths this plugin re-authorizes. Matched by exact equality. */
 const LIST_INVITATIONS_PATH = "/organization/list-invitations";
 const GET_FULL_ORGANIZATION_PATH = "/organization/get-full-organization";
+
+/**
+ * Wrap one plugin endpoint, keeping the `path` and `options` properties Better Auth's
+ * router reads off the handler. The only seam that sees a thrown non-`APIError`: those
+ * propagate past both dispatch and the `after` hooks, leaving a 500.
+ */
+function wrapEndpoint<Endpoint extends object>(
+  endpoint: Endpoint,
+  wrapper: (ctx: unknown, run: () => Promise<unknown>) => Promise<unknown>,
+): Endpoint {
+  const call = endpoint as unknown as (ctx: unknown) => Promise<unknown>;
+  const wrapped = (ctx: unknown) => wrapper(ctx, () => call(ctx));
+  return Object.assign(wrapped, endpoint);
+}
 
 /**
  * The organization plugin as openJII configures it: the permission matrix, the
@@ -50,7 +70,7 @@ export const openJiiOrganization = () => {
     teams: { enabled: true, defaultTeam: { enabled: false }, allowRemovingAllTeams: true },
     // Better Auth's own defaults, set here so they are a decision rather than an
     // inherited number, and so the limits are visible next to the surface they cap.
-    membershipLimit: 100,
+    membershipLimit: ORGANIZATION_MEMBERSHIP_LIMIT,
     invitationLimit: 100,
     invitationExpiresIn: 60 * 60 * 48,
     // Set explicitly: left unset, Better Auth infers it from
@@ -175,6 +195,20 @@ export const openJiiOrganization = () => {
 
   return {
     ...plugin,
+    endpoints: {
+      ...plugin.endpoints,
+      // A resource transferred in after the pre-delete count hits the `RESTRICT`
+      // constraint; this turns Postgres's wording into an answer callers can act on.
+      deleteOrganization: wrapEndpoint(plugin.endpoints.deleteOrganization, async (ctx, run) => {
+        try {
+          return await run();
+        } catch (error) {
+          const body = (ctx as { body?: { organizationId?: string } }).body;
+          if (!body?.organizationId) throw error;
+          return await rethrowAsOrganizationInUse(body.organizationId, error);
+        }
+      }),
+    },
     hooks: {
       ...declaredHooks,
       before: [
@@ -189,10 +223,9 @@ export const openJiiOrganization = () => {
               throw new APIError("UNAUTHORIZED", { message: "Not authenticated" });
             }
 
-            // Better Auth resolves the target the same way: the query parameter, then
-            // the session's active organization. With no active organization in this
-            // product that second branch is normally empty, and Better Auth itself
-            // refuses the call — so there is nothing here to authorize.
+            // Must match Better Auth's `||`: under `??` an empty `?organizationId=`
+            // survives, this gate bails out below, and Better Auth resolves the active
+            // organization under its own members-only check.
             //
             // Both are read through explicit narrowings: the hook context is generic
             // over every endpoint, and `activeOrganizationId` is an additional field
@@ -201,7 +234,9 @@ export const openJiiOrganization = () => {
             const activeOrganizationId = (
               session.session as { activeOrganizationId?: string | null }
             ).activeOrganizationId;
-            const organizationId = query?.organizationId ?? activeOrganizationId ?? null;
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- `||` matches Better Auth; `??` would keep the empty string and skip this gate.
+            const organizationId = query?.organizationId || activeOrganizationId || null;
+            // Nothing named on either side: Better Auth refuses the call itself.
             if (!organizationId) return;
 
             await assertCanListInvitations(organizationId, session.user.id);
@@ -221,12 +256,14 @@ export const openJiiOrganization = () => {
             const activeOrganizationId = (
               session.session as { activeOrganizationId?: string | null }
             ).activeOrganizationId;
-            // Better Auth's own precedence, mirrored: a slug outranks an id, so
-            // authorizing the id would leave the slug it actually reads unchecked.
+            // Better Auth's precedence, mirrored down to the `||`: a non-empty slug
+            // outranks the id, which outranks the active organization. Empty strings
+            // have to fall through here exactly as they do there, or the gate is skipped.
             const isSlug = Boolean(query?.organizationSlug);
             const target = isSlug
               ? query?.organizationSlug
-              : (query?.organizationId ?? activeOrganizationId);
+              : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- as above: Better Auth reads this with `||`.
+                query?.organizationId || activeOrganizationId;
             // Nothing named at all: Better Auth answers `null` without reading a row.
             if (!target) return;
 

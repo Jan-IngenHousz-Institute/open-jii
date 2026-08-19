@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { APIError } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
 
-import { openJiiOrganization } from "@repo/auth/organization";
+import { openJiiOrganization, rethrowAsOrganizationInUse } from "@repo/auth/organization";
 import {
   and,
   db,
@@ -13,6 +13,7 @@ import {
   organizationMembers,
   organizations,
   resourceGrants,
+  sql,
   teams,
 } from "@repo/database";
 import * as schema from "@repo/database/schema";
@@ -515,6 +516,96 @@ describe("organization plugin configuration and protection hooks", () => {
       ).rejects.toThrow(/still owns 3 resources \(2 macros, 1 device\)/);
     });
 
+    /**
+     * The count runs before Better Auth opens its delete transaction, so a resource
+     * transferred in afterwards is not in it. `ON DELETE RESTRICT` is what saves that
+     * resource — the delete fails on the constraint instead of taking it along — but
+     * on its own that surfaces as Postgres's own wording and a 500.
+     *
+     * The window is made deterministic with a trigger, because it opens inside a
+     * transaction this process has no handle on. It fires between the count and the
+     * `DELETE`, which is exactly where a transfer lands — with one difference from a
+     * real transfer: the row it writes dies with the aborted transaction, so the
+     * re-count behind the refusal finds nothing left to name. The test below covers
+     * the wording a committed transfer gets.
+     */
+    it("answers a resource that lands after the count with the same refusal", async () => {
+      const owner = await signIn("owner");
+      const org = await createOrganization(owner);
+
+      // `sql.raw`: a bind parameter inside the dollar-quoted body is a parameter of
+      // the CREATE FUNCTION statement, which Postgres cannot type.
+      await testApp.database.execute(
+        sql.raw(`
+          CREATE FUNCTION race_a_resource_in() RETURNS trigger AS $fn$
+          BEGIN
+            INSERT INTO experiments ("name", "created_by", "organization_id")
+            SELECT 'Transferred In', '${owner.userId}'::uuid, OLD."id";
+            RETURN OLD;
+          END $fn$ LANGUAGE plpgsql;
+        `),
+      );
+      try {
+        await testApp.database.execute(sql`
+          CREATE TRIGGER race_a_resource_in BEFORE DELETE ON organizations
+          FOR EACH ROW EXECUTE FUNCTION race_a_resource_in()
+        `);
+
+        const refusal = await refusalOf(
+          auth.api.deleteOrganization({
+            body: { organizationId: org.id },
+            headers: owner.headers,
+          }),
+        );
+
+        // Something the caller can act on, in the same class as the pre-flight's own
+        // refusal — not a 500 carrying `update or delete on table "organizations"
+        // violates foreign key constraint`.
+        expect(refusal.status).toBe("BAD_REQUEST");
+        expect(refusal.body?.message).toMatch(/still owns resources\. Transfer or delete them/);
+        expect(
+          await testApp.database
+            .select({ id: organizations.id })
+            .from(organizations)
+            .where(eq(organizations.id, org.id)),
+        ).toHaveLength(1);
+      } finally {
+        await testApp.database.execute(
+          sql`DROP TRIGGER IF EXISTS race_a_resource_in ON organizations`,
+        );
+        await testApp.database.execute(sql`DROP FUNCTION IF EXISTS race_a_resource_in()`);
+      }
+    });
+
+    /**
+     * A transfer that commits inside the window is still there when the translation
+     * re-counts, so the raced refusal reads exactly like the pre-flight's. Driven
+     * directly because there is no way to commit from another transaction while Better
+     * Auth's delete holds the row.
+     */
+    it("names what is in the way when the raced-in resource is still there", async () => {
+      const owner = await signIn("owner");
+      const org = await createOrganization(owner);
+      await testApp.createMacro({ name: "M", createdBy: owner.userId, organizationId: org.id });
+
+      const refusal = await rethrowAsOrganizationInUse(org.id, {
+        code: "23503",
+        message: 'violates foreign key constraint "macros_organization_id_organizations_id_fk"',
+      }).catch((error: APIError) => error);
+
+      expect(refusal.message).toMatch(/still owns 1 resource \(1 macro\)/);
+    });
+
+    it("leaves an error that is not a constraint failure alone", async () => {
+      const owner = await signIn("owner");
+      const org = await createOrganization(owner);
+      const unrelated = new Error("connection terminated");
+
+      // Only `foreign_key_violation` means "something still points at this row".
+      // Anything else is a fault, and dressing it up as a refusal would hide it.
+      await expect(rethrowAsOrganizationInUse(org.id, unrelated)).rejects.toBe(unrelated);
+    });
+
     it("refuses to delete a personal workspace", async () => {
       const user = await signIn("solo");
       const organizationId = await ensurePersonalOrganization(testApp.database, {
@@ -726,6 +817,29 @@ describe("organization plugin configuration and protection hooks", () => {
           expect.objectContaining({ id: context.invitation.id, email: "invitee@example.com" }),
         ]);
       });
+
+      /**
+       * Better Auth resolves the target with `||`, so an *empty* `?organizationId=`
+       * is not a target at all — it falls through to the session's active
+       * organization, which `/organization/set-active` lets any member of that
+       * organization set. A gate coalescing on nullishness instead would keep the
+       * `""`, treat the call as naming nothing, and hand the fallback straight to
+       * Better Auth's own members-only check.
+       */
+      it("refuses a plain member an empty organizationId behind their active organization", async () => {
+        const { member, org } = await orgWithPlainMember();
+        const active = await auth.api.setActiveOrganization({
+          body: { organizationId: org.id },
+          headers: member.headers,
+        });
+        // Asserted, not assumed: with no active organization the endpoint refuses on
+        // Better Auth's own missing-id branch and the test would pass for free.
+        expect(active).toMatchObject({ id: org.id });
+
+        await expect(
+          auth.api.listInvitations({ query: { organizationId: "" }, headers: member.headers }),
+        ).rejects.toThrow(/owners and admins can see its pending invitations/i);
+      });
     });
 
     it("expires an invitation 48 hours out", async () => {
@@ -786,6 +900,22 @@ describe("organization plugin configuration and protection hooks", () => {
       ).rejects.toThrow(NOT_ALLOWED_TO_INVITE_WITH_ROLE);
 
       expect(await invitationsOf(org.id)).toEqual([]);
+    });
+
+    /**
+     * The other half of that bound, and the half nothing else pins any more: joining an
+     * organization is always an invitation now, so "an admin may hand out member and
+     * admin, only an owner may hand out owner" rests entirely on this endpoint.
+     */
+    it.each(["member", "admin"] as const)("lets an admin invite somebody as %s", async (role) => {
+      const { admin, org } = await orgWithAdmin();
+
+      const invitation = await auth.api.createInvitation({
+        body: { email: `recruit-${role}@example.com`, role, organizationId: org.id },
+        headers: admin.headers,
+      });
+
+      expect(invitation).toMatchObject({ role, status: "pending" });
     });
 
     /**
@@ -1006,6 +1136,41 @@ describe("organization plugin configuration and protection hooks", () => {
 
       expect(fabricated).toEqual(existing);
       expect(existing.body?.message).toMatch(NOT_A_MEMBER);
+    });
+
+    /**
+     * The same empty-string fallback `list-invitations` has. `/organization/set-active`
+     * lets a member point their session at an organization; removing them afterwards
+     * does not clear it (Better Auth only clears the active organization when the
+     * caller removes *themselves*), so an empty `?organizationId=` still resolves to
+     * it. A gate that read `""` as "nothing named at all" would step aside and let
+     * Better Auth answer — and Better Auth tells a non-member and a missing
+     * organization apart, which is the existence oracle this gate exists to close.
+     */
+    it("refuses a removed member an empty organizationId exactly as an id that does not exist", async () => {
+      const { owner, member, org } = await orgWithPlainMember();
+      const active = await auth.api.setActiveOrganization({
+        body: { organizationId: org.id },
+        headers: member.headers,
+      });
+      expect(active).toMatchObject({ id: org.id });
+      await auth.api.removeMember({
+        body: { memberIdOrEmail: member.email, organizationId: org.id },
+        headers: owner.headers,
+      });
+
+      const throughTheFallback = await refusalOf(
+        auth.api.getFullOrganization({ query: { organizationId: "" }, headers: member.headers }),
+      );
+      const fabricated = await refusalOf(
+        auth.api.getFullOrganization({
+          query: { organizationId: crypto.randomUUID() },
+          headers: member.headers,
+        }),
+      );
+
+      expect(throughTheFallback).toEqual(fabricated);
+      expect(throughTheFallback.body?.message).toMatch(NOT_A_MEMBER);
     });
   });
 

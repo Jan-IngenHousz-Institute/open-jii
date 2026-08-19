@@ -2,13 +2,11 @@ import { AFTER_HOOK_KEY } from "@thallesp/nestjs-better-auth";
 import { callbackOAuth } from "better-auth/api";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 
-import { OrganizationAuthHook } from "../../../organizations/presentation/hooks/organization-auth.hook";
 import { UserAuthHook } from "./user-auth.hook";
 
 /**
- * Both auto-accept hooks — resource invitations here, organization invitations in
- * the organizations module — are pinned to Better Auth's exact route strings, and
- * the Nest adapter matches them by equality. A hook whose path no longer matches
+ * The resource-invitation auto-accept is pinned to Better Auth's exact route strings,
+ * and the Nest adapter matches them by equality. A hook whose path no longer matches
  * simply never fires, silently, and the handler tests cannot see that because they
  * call the methods directly.
  *
@@ -16,11 +14,14 @@ import { UserAuthHook } from "./user-auth.hook";
  * will compare, and the route Better Auth actually declares. An upgrade that
  * renames either parameter fails here instead of quietly disabling auto-accept for
  * every ORCID and GitHub sign-up.
+ *
+ * Only this hook is covered. Organization invitations used to ride the same routes and
+ * no longer auto-accept at all — joining an organization is a deliberate accept — so
+ * `OrganizationAuthHook` has no after-hooks left to pin.
  */
 describe("auth hook route literals", () => {
   const hooks: Record<string, Record<string, unknown>> = {
     UserAuthHook: UserAuthHook.prototype as unknown as Record<string, unknown>,
-    OrganizationAuthHook: OrganizationAuthHook.prototype as unknown as Record<string, unknown>,
   };
 
   function hookPath(hook: string, method: string): unknown {
@@ -46,20 +47,5 @@ describe("auth hook route literals", () => {
       expect(hookPath(hook, "handleSocialSignIn")).toBe("/sign-in/social");
       expect(hookPath(hook, "handleOtpVerify")).toBe("/email-otp/verify-email");
     });
-  });
-
-  it("covers the same paths in both hooks, so neither kind of invitation is missed", () => {
-    const methods = [
-      "handleEmailSignIn",
-      "handleEmailOtpSignIn",
-      "handleSocialSignIn",
-      "handleOAuthCallback",
-      "handleGenericOAuthCallback",
-      "handleOtpVerify",
-    ];
-
-    expect(methods.map((method) => hookPath("OrganizationAuthHook", method))).toEqual(
-      methods.map((method) => hookPath("UserAuthHook", method)),
-    );
   });
 });

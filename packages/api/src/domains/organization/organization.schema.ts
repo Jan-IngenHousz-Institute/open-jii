@@ -134,19 +134,6 @@ export const zOrganizationMembers = z.object({
   members: z.array(zOrganizationMember),
 });
 
-/**
- * Adding somebody who already has an account. An invitation exists to reach an
- * address with no account behind it, so a registered user needs none: there is a
- * user id to attach the membership to, and the person doing the adding already
- * holds the authority to do it.
- *
- * `role` is bounded by the caller's own: only an owner may hand out `owner`.
- */
-export const zAddOrganizationMemberBody = z.object({
-  userId: z.string().uuid().describe("ID of the registered user to admit"),
-  role: zOrganizationRole.default("member"),
-});
-
 /** What every showcase row carries, whatever its type. */
 const zOrganizationResourceBase = z.object({
   id: z.string().uuid(),
@@ -307,7 +294,6 @@ export type MyOrganization = z.infer<typeof zMyOrganization>;
 export type MyOrganizationList = z.infer<typeof zMyOrganizationList>;
 export type OrganizationMember = z.infer<typeof zOrganizationMember>;
 export type OrganizationMembers = z.infer<typeof zOrganizationMembers>;
-export type AddOrganizationMemberBody = z.infer<typeof zAddOrganizationMemberBody>;
 export type OrganizationResource = z.infer<typeof zOrganizationResource>;
 export type OrganizationResourceTotals = z.infer<typeof zOrganizationResourceTotals>;
 export type OrganizationResources = z.infer<typeof zOrganizationResources>;

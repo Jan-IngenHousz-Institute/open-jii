@@ -7,7 +7,6 @@ import { organizationContract } from "@repo/api/domains/organization/organizatio
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
-import { AddOrganizationMemberUseCase } from "../application/use-cases/add-organization-member/add-organization-member";
 import { GetOrganizationDeletionBlockersUseCase } from "../application/use-cases/get-organization-deletion-blockers/get-organization-deletion-blockers";
 import { GetOrganizationUseCase } from "../application/use-cases/get-organization/get-organization";
 import { ListGranteeTeamsUseCase } from "../application/use-cases/list-grantee-teams/list-grantee-teams";
@@ -28,7 +27,6 @@ export class OrganizationController {
     private readonly getOrganizationUseCase: GetOrganizationUseCase,
     private readonly listOrganizationResourcesUseCase: ListOrganizationResourcesUseCase,
     private readonly listOrganizationMembersUseCase: ListOrganizationMembersUseCase,
-    private readonly addOrganizationMemberUseCase: AddOrganizationMemberUseCase,
     private readonly listOrganizationTeamsUseCase: ListOrganizationTeamsUseCase,
     private readonly listOrganizationTeamGrantsUseCase: ListOrganizationTeamGrantsUseCase,
     private readonly listGranteeTeamsUseCase: ListGranteeTeamsUseCase,
@@ -117,24 +115,6 @@ export class OrganizationController {
 
       if (result.isSuccess()) {
         return { members: formatDatesList(result.value.members) };
-      }
-
-      return throwOrpcFailure(result, this.logger);
-    });
-  }
-
-  @Implement(organizationContract.addOrganizationMember)
-  addOrganizationMember(@Session() session: UserSession) {
-    return implement(organizationContract.addOrganizationMember).handler(async ({ input }) => {
-      const result = await this.addOrganizationMemberUseCase.execute(
-        input.id,
-        input.userId,
-        input.role,
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        return formatDates(result.value);
       }
 
       return throwOrpcFailure(result, this.logger);

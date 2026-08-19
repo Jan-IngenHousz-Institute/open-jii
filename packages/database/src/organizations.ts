@@ -6,6 +6,13 @@ import { organizationMembers, organizations } from "./schema";
 /** The reserved slug namespace personal organizations live in. */
 export const PERSONAL_ORG_SLUG_PREFIX = "personal-";
 
+/**
+ * Max members per organization. Shared by Better Auth's `membershipLimit` and the
+ * admission primitive guarding direct membership writes, so the two cannot drift.
+ * Personal workspaces are exempt — nothing can be added to one.
+ */
+export const ORGANIZATION_MEMBERSHIP_LIMIT = 100;
+
 /** Deterministic, collision-free slug for a user's personal organization. */
 export function personalOrgSlug(userId: string): string {
   return `${PERSONAL_ORG_SLUG_PREFIX}${userId}`;

@@ -4,10 +4,21 @@ import { renderWithForm, screen, userEvent, waitFor, within } from "@/test/test-
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { authClient, useSession } from "@repo/auth/client";
 
 import { NewOrganizationPeopleCard } from "./new-organization-people-card";
 import type { NewOrganizationFormValues } from "./steps/form-step";
 import { NO_TYPE } from "./steps/form-step";
+
+const invite = () => vi.mocked(authClient.organization.inviteMember);
+
+/** Point the globally-mocked `useSession` at whoever is creating the organization. */
+function mockSession(user: { id: string } | null) {
+  vi.mocked(useSession).mockReturnValue({
+    data: user ? { user } : null,
+    isPending: false,
+  } as ReturnType<typeof useSession>);
+}
 
 vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: <T,>(value: T): [T, boolean] => [value, true],
@@ -44,11 +55,17 @@ async function chooseRole(user: ReturnType<typeof userEvent.setup>, role: string
 }
 
 describe("<NewOrganizationPeopleCard />", () => {
-  it("collects a registered person with the chosen role instead of adding them", async () => {
+  it("collects a registered person with the chosen role rather than inviting them yet", async () => {
     const user = userEvent.setup();
-    const addSpy = server.mount(contract.organizations.addOrganizationMember, { body: {} });
     server.mount(contract.users.searchUsers, {
-      body: [createUserProfile({ userId: "u-1", firstName: "Lin", lastName: "Zhao" })],
+      body: [
+        createUserProfile({
+          userId: "u-1",
+          firstName: "Lin",
+          lastName: "Zhao",
+          email: "lin@uni.edu",
+        }),
+      ],
     });
 
     const { form } = renderPeopleCard();
@@ -58,11 +75,13 @@ describe("<NewOrganizationPeopleCard />", () => {
     await chooseRole(user, "admin");
     await user.click(screen.getByRole("button", { name: "common.add" }));
 
+    // The address is collected with them: every person here is invited on submit, and
+    // an invitation needs somewhere to go.
     expect(form.getValues("people")).toEqual([
-      { kind: "user", userId: "u-1", displayName: "Lin Zhao", role: "admin" },
+      { kind: "user", userId: "u-1", displayName: "Lin Zhao", email: "lin@uni.edu", role: "admin" },
     ]);
-    // Nothing exists to add them to yet: the wizard spends these on submit.
-    expect(addSpy.called).toBe(false);
+    // No organization exists to invite them to yet: the wizard spends these on submit.
+    expect(invite()).not.toHaveBeenCalled();
     expect(rowRoleSelects()[0]).toHaveTextContent("organizations.roles.admin");
   });
 
@@ -71,7 +90,13 @@ describe("<NewOrganizationPeopleCard />", () => {
     server.mount(contract.users.searchUsers, { body: [] });
 
     const { form } = renderPeopleCard([
-      { kind: "user", userId: "u-1", displayName: "Lin Zhao", role: "member" },
+      {
+        kind: "user",
+        userId: "u-1",
+        displayName: "Lin Zhao",
+        email: "lin@uni.edu",
+        role: "member",
+      },
       { kind: "email", email: "newcomer@example.org", role: "member" },
     ]);
 
@@ -81,7 +106,13 @@ describe("<NewOrganizationPeopleCard />", () => {
     await user.click(screen.getByRole("option", { name: "organizations.roles.owner" }));
 
     expect(form.getValues("people")).toEqual([
-      { kind: "user", userId: "u-1", displayName: "Lin Zhao", role: "owner" },
+      {
+        kind: "user",
+        userId: "u-1",
+        displayName: "Lin Zhao",
+        email: "lin@uni.edu",
+        role: "owner",
+      },
       { kind: "email", email: "newcomer@example.org", role: "member" },
     ]);
 
@@ -90,7 +121,13 @@ describe("<NewOrganizationPeopleCard />", () => {
     await user.click(screen.getByRole("option", { name: "organizations.roles.admin" }));
 
     expect(form.getValues("people")).toEqual([
-      { kind: "user", userId: "u-1", displayName: "Lin Zhao", role: "owner" },
+      {
+        kind: "user",
+        userId: "u-1",
+        displayName: "Lin Zhao",
+        email: "lin@uni.edu",
+        role: "owner",
+      },
       { kind: "email", email: "newcomer@example.org", role: "admin" },
     ]);
   });
@@ -157,7 +194,15 @@ describe("<NewOrganizationPeopleCard />", () => {
       ],
     });
 
-    renderPeopleCard([{ kind: "user", userId: "u-1", displayName: "Lin Zhao", role: "member" }]);
+    renderPeopleCard([
+      {
+        kind: "user",
+        userId: "u-1",
+        displayName: "Lin Zhao",
+        email: "lin@uni.edu",
+        role: "member",
+      },
+    ]);
 
     await user.type(search(), "lin");
     // Filtered out of the results, the same as the sharing picker.
@@ -177,12 +222,47 @@ describe("<NewOrganizationPeopleCard />", () => {
     expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
   });
 
+  it("drops whoever is creating the organization from the results", async () => {
+    const user = userEvent.setup();
+    mockSession({ id: "u-me" });
+    server.mount(contract.users.searchUsers, {
+      body: [
+        createUserProfile({
+          userId: "u-me",
+          firstName: "Ada",
+          lastName: "Byron",
+          email: "ada@uni.edu",
+        }),
+        createUserProfile({
+          userId: "u-2",
+          firstName: "Ada",
+          lastName: "Sun",
+          email: "ada.sun@uni.edu",
+        }),
+      ],
+    });
+
+    renderPeopleCard();
+    await user.type(search(), "ada");
+
+    // Somebody else answering to the same search still does, so this is the creator
+    // being excluded rather than the search failing.
+    await waitFor(() => expect(screen.getByText("Ada Sun")).toBeInTheDocument());
+    expect(screen.queryByText("Ada Byron")).not.toBeInTheDocument();
+  });
+
   it("drops somebody again before the organization is created", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, { body: [] });
 
     const { form } = renderPeopleCard([
-      { kind: "user", userId: "u-1", displayName: "Lin Zhao", role: "admin" },
+      {
+        kind: "user",
+        userId: "u-1",
+        displayName: "Lin Zhao",
+        email: "lin@uni.edu",
+        role: "admin",
+      },
       { kind: "email", email: "newcomer@example.org", role: "member" },
     ]);
 
@@ -222,7 +302,13 @@ describe("<NewOrganizationPeopleCard />", () => {
     server.mount(contract.users.searchUsers, { body: [] });
 
     renderPeopleCard([
-      { kind: "user", userId: "u-1", displayName: "Lin Zhao", role: "member" },
+      {
+        kind: "user",
+        userId: "u-1",
+        displayName: "Lin Zhao",
+        email: "lin@uni.edu",
+        role: "member",
+      },
       { kind: "email", email: "newcomer@example.org", role: "member" },
     ]);
 

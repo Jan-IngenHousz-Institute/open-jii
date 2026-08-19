@@ -1,18 +1,23 @@
-import { and, eq, organizationInvitations, organizationMembers, teamMembers } from "@repo/database";
+import { eq, organizationInvitations } from "@repo/database";
 
-import { AppError, failure } from "../common/utils/fp-utils";
 import { TestHarness } from "../test/test-harness";
-import { AcceptPendingOrganizationInvitationsUseCase } from "./application/use-cases/accept-pending-organization-invitations/accept-pending-organization-invitations";
-import { OrganizationInvitationRepository } from "./core/repositories/organization-invitation.repository";
+import { OrganizationJoinRequestRepository } from "./core/repositories/organization-join-request.repository";
 
 /**
- * Sign-in auto-accept for Better Auth organization invitations: the direct
- * transaction the organization auth hook runs on every sign-in.
+ * What an admission does to the invitations already out for the same person.
+ *
+ * A pending invitation is a standing offer to admit somebody. Once they are in by
+ * another route, the offers that add nothing have been answered and should stop being
+ * claimable — they would otherwise hold slots against `invitationLimit` and sit on the
+ * Invited tab beside the member they already made.
+ *
+ * Driven through join-request approval, which is the only admission openJII writes
+ * itself: accepting an invitation is Better Auth's own endpoint, and the requester here
+ * asked to join, so nothing is waiting on their consent.
  */
-describe("organization invitation auto-acceptance", () => {
+describe("invitations an admission has answered", () => {
   const testApp = TestHarness.App;
-  let useCase: AcceptPendingOrganizationInvitationsUseCase;
-  let repository: OrganizationInvitationRepository;
+  let joinRequests: OrganizationJoinRequestRepository;
   let inviterId: string;
   let inviteeId: string;
   let organizationId: string;
@@ -25,8 +30,7 @@ describe("organization invitation auto-acceptance", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    useCase = testApp.module.get(AcceptPendingOrganizationInvitationsUseCase);
-    repository = testApp.module.get(OrganizationInvitationRepository);
+    joinRequests = testApp.module.get(OrganizationJoinRequestRepository);
     inviterId = await testApp.createTestUser({ email: "inviter@example.com" });
     inviteeId = await testApp.createTestUser({ email: INVITEE_EMAIL });
     organizationId = await testApp.createOrganization("Photosynthesis Lab");
@@ -41,108 +45,20 @@ describe("organization invitation auto-acceptance", () => {
     await testApp.teardown();
   });
 
-  function membershipRows(userId: string) {
-    return testApp.database
-      .select({ role: organizationMembers.role })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.organizationId, organizationId),
-          eq(organizationMembers.userId, userId),
-        ),
-      );
+  /** Approve a fresh join request from the invitee — the admission under test. */
+  async function approveJoinRequest() {
+    const request = await testApp.addOrganizationJoinRequest(organizationId, inviteeId);
+    return joinRequests.approve(request.id, inviteeId, organizationId, inviterId);
   }
 
-  function invitationStatus(invitationId: string) {
-    return testApp.database
+  const statusOf = (invitationId: string) =>
+    testApp.database
       .select({ status: organizationInvitations.status })
       .from(organizationInvitations)
-      .where(eq(organizationInvitations.id, invitationId));
-  }
+      .where(eq(organizationInvitations.id, invitationId))
+      .then((rows) => rows[0]?.status);
 
-  it("admits the invitee with the invited role and closes the invitation", async () => {
-    const invitation = await testApp.addOrganizationInvitation({
-      organizationId,
-      email: INVITEE_EMAIL,
-      inviterId,
-      role: "admin",
-    });
-
-    const result = await useCase.execute(inviteeId, INVITEE_EMAIL);
-
-    expect(result.isSuccess() && result.value).toBe(1);
-    expect(await membershipRows(inviteeId)).toEqual([{ role: "admin" }]);
-    expect(await invitationStatus(invitation.id)).toEqual([{ status: "accepted" }]);
-  });
-
-  it("treats a role-less invitation as a plain member", async () => {
-    await testApp.addOrganizationInvitation({
-      organizationId,
-      email: INVITEE_EMAIL,
-      inviterId,
-      role: null,
-    });
-
-    await useCase.execute(inviteeId, INVITEE_EMAIL);
-
-    expect(await membershipRows(inviteeId)).toEqual([{ role: "member" }]);
-  });
-
-  it("places the invitee on the team the invitation names", async () => {
-    const teamId = await testApp.createTeam(organizationId, "Field crew");
-    await testApp.addOrganizationInvitation({
-      organizationId,
-      email: INVITEE_EMAIL,
-      inviterId,
-      teamId,
-    });
-
-    await useCase.execute(inviteeId, INVITEE_EMAIL);
-
-    const teamRows = await testApp.database
-      .select({ userId: teamMembers.userId })
-      .from(teamMembers)
-      .where(eq(teamMembers.teamId, teamId));
-    expect(teamRows).toEqual([{ userId: inviteeId }]);
-  });
-
-  it("refuses an expired invitation, leaving it untouched", async () => {
-    const invitation = await testApp.addOrganizationInvitation({
-      organizationId,
-      email: INVITEE_EMAIL,
-      inviterId,
-      expiresAt: new Date(Date.now() - 60 * 1000),
-    });
-
-    const result = await useCase.execute(inviteeId, INVITEE_EMAIL);
-
-    expect(result.isSuccess() && result.value).toBe(0);
-    expect(await membershipRows(inviteeId)).toEqual([]);
-    expect(await invitationStatus(invitation.id)).toEqual([{ status: "pending" }]);
-  });
-
-  it("refuses an invitation that expires between the lookup and the claim", async () => {
-    const invitation = await testApp.addOrganizationInvitation({
-      organizationId,
-      email: INVITEE_EMAIL,
-      inviterId,
-    });
-    // The lookup filter would have excluded this row; calling the claim directly is
-    // the same position the use-case is in when a live invitation lapses mid-run.
-    await testApp.database
-      .update(organizationInvitations)
-      .set({ expiresAt: new Date(Date.now() - 60 * 1000) })
-      .where(eq(organizationInvitations.id, invitation.id));
-
-    const result = await repository.accept(invitation.id, inviteeId);
-
-    expect(result.isSuccess() && result.value).toBe("not-pending");
-    expect(await membershipRows(inviteeId)).toEqual([]);
-    expect(await invitationStatus(invitation.id)).toEqual([{ status: "pending" }]);
-  });
-
-  it("is idempotent for somebody who is already a member, keeping their role", async () => {
-    await testApp.addOrganizationMember(organizationId, inviteeId, "owner");
+  it("closes the matching invitation when the person is admitted another way", async () => {
     const invitation = await testApp.addOrganizationInvitation({
       organizationId,
       email: INVITEE_EMAIL,
@@ -150,57 +66,69 @@ describe("organization invitation auto-acceptance", () => {
       role: "member",
     });
 
-    await useCase.execute(inviteeId, INVITEE_EMAIL);
+    const approved = await approveJoinRequest();
 
-    expect(await membershipRows(inviteeId)).toEqual([{ role: "owner" }]);
-    expect(await invitationStatus(invitation.id)).toEqual([{ status: "accepted" }]);
+    expect(approved.isSuccess() && approved.value.outcome).toBe("approved");
+    expect(await statusOf(invitation.id)).toBe("accepted");
   });
 
-  it("ignores an invitation that is no longer pending", async () => {
-    await testApp.addOrganizationInvitation({
+  it("closes it when they were already a member", async () => {
+    await testApp.addOrganizationMember(organizationId, inviteeId, "member");
+    const invitation = await testApp.addOrganizationInvitation({
       organizationId,
       email: INVITEE_EMAIL,
       inviterId,
-      status: "canceled",
+      role: "member",
     });
 
-    const result = await useCase.execute(inviteeId, INVITEE_EMAIL);
+    const approved = await approveJoinRequest();
 
-    expect(result.isSuccess() && result.value).toBe(0);
-    expect(await membershipRows(inviteeId)).toEqual([]);
+    // Nothing was admitted, but the offer is just as answered: they are in the
+    // organization it names.
+    expect(approved.isSuccess() && approved.value.outcome).toBe("approved");
+    expect(await statusOf(invitation.id)).toBe("accepted");
   });
 
-  it("heals: a failed acceptance is retried on the next sign-in", async () => {
-    await testApp.addOrganizationInvitation({
+  it("leaves an invitation offering more than they were given", async () => {
+    const invitation = await testApp.addOrganizationInvitation({
       organizationId,
       email: INVITEE_EMAIL,
       inviterId,
+      role: "owner",
     });
 
-    const accept = vi
-      .spyOn(repository, "accept")
-      .mockResolvedValueOnce(failure(AppError.internal("transient")));
+    await approveJoinRequest();
 
-    const firstSignIn = await useCase.execute(inviteeId, INVITEE_EMAIL);
-    expect(firstSignIn.isSuccess() && firstSignIn.value).toBe(0);
-    expect(await membershipRows(inviteeId)).toEqual([]);
-
-    accept.mockRestore();
-
-    const secondSignIn = await useCase.execute(inviteeId, INVITEE_EMAIL);
-    expect(secondSignIn.isSuccess() && secondSignIn.value).toBe(1);
-    expect(await membershipRows(inviteeId)).toEqual([{ role: "member" }]);
+    // Being admitted as a member is not an answer to an offer of ownership, and the
+    // accept page is where that promotion is deliberately claimed.
+    expect(await statusOf(invitation.id)).toBe("pending");
   });
 
-  it("matches the invited address case-insensitively", async () => {
-    await testApp.addOrganizationInvitation({
-      organizationId,
+  it("leaves another organization's invitation alone", async () => {
+    const otherOrganizationId = await testApp.createOrganization("Chlorophyll Lab");
+    await testApp.addOrganizationMember(otherOrganizationId, inviterId, "owner");
+    const elsewhere = await testApp.addOrganizationInvitation({
+      organizationId: otherOrganizationId,
       email: INVITEE_EMAIL,
       inviterId,
+      role: "member",
     });
 
-    await useCase.execute(inviteeId, "Invitee@Example.com");
+    await approveJoinRequest();
 
-    expect(await membershipRows(inviteeId)).toEqual([{ role: "member" }]);
+    expect(await statusOf(elsewhere.id)).toBe("pending");
+  });
+
+  it("leaves an invitation for somebody else alone", async () => {
+    const someoneElse = await testApp.addOrganizationInvitation({
+      organizationId,
+      email: `other-${crypto.randomUUID()}@example.com`,
+      inviterId,
+      role: "member",
+    });
+
+    await approveJoinRequest();
+
+    expect(await statusOf(someoneElse.id)).toBe("pending");
   });
 });

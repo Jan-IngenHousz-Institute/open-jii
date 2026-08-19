@@ -22,6 +22,7 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { admitMember } from "../admit-member";
 import type {
   OrganizationJoinRequestDto,
   OrganizationJoinRequestStatus,
@@ -36,7 +37,8 @@ export type CreateJoinRequestOutcome =
 
 export type ApproveOrganizationJoinRequestOutcome =
   | { outcome: "approved"; request: OrganizationJoinRequestDto }
-  | { outcome: "not-pending" };
+  | { outcome: "not-pending" }
+  | { outcome: "organization-full" };
 
 const joinRequestSelectFields = {
   id: organizationJoinRequests.id,
@@ -161,10 +163,15 @@ export class OrganizationJoinRequestRepository {
   }
 
   /**
-   * Claim a pending request and admit the requester in one transaction. The member
-   * insert is conflict-tolerant, so approving a request for somebody who joined
-   * meanwhile still resolves the request instead of failing on the unique index —
-   * and never overwrites the role they already hold.
+   * Claim a pending request and admit the requester in one transaction, through
+   * {@link admitMember}: approving a request for somebody who joined meanwhile still
+   * resolves the request instead of failing on the unique index — and never overwrites
+   * the role they already hold — and an organization at its membership cap refuses
+   * instead of being walked past it.
+   *
+   * The claim still comes first, so a request somebody else already decided admits
+   * nobody. A cap refusal then puts it back: an approval the cap turned away is one the
+   * reviewer can take again once a seat frees up, not a decision already recorded.
    */
   async approve(
     requestId: string,
@@ -186,19 +193,30 @@ export class OrganizationJoinRequestRepository {
           .returning({ id: organizationJoinRequests.id });
 
         if (updated.length === 0) {
-          return false;
+          return "not-pending" as const;
         }
 
-        await tx
-          .insert(organizationMembers)
-          .values({ organizationId, userId: requesterUserId, role: JOIN_APPROVAL_ORG_ROLE })
-          .onConflictDoNothing();
+        const admission = await admitMember(tx, {
+          organizationId,
+          userId: requesterUserId,
+          role: JOIN_APPROVAL_ORG_ROLE,
+        });
 
-        return true;
+        if (admission === "organization-full") {
+          // Undone in the same transaction rather than rolled back, so the refusal is
+          // an answer the caller gets instead of a failure it has to interpret.
+          await tx
+            .update(organizationJoinRequests)
+            .set({ status: "pending", decidedBy: null, decidedAt: null })
+            .where(eq(organizationJoinRequests.id, requestId));
+          return "organization-full" as const;
+        }
+
+        return "approved" as const;
       });
 
-      if (!claimed) {
-        return { outcome: "not-pending" };
+      if (claimed !== "approved") {
+        return { outcome: claimed };
       }
 
       const rows = await this.selectRequests()

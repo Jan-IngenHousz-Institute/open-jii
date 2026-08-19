@@ -1,5 +1,5 @@
 {
-  "id": "54a0acdb-1bb5-4684-ac72-e52fea11a610",
+  "id": "09023ab0-058b-4c40-8368-8fe962bed35a",
   "prevId": "c449c845-e14c-44e8-90ec-75a0fbcd26ee",
   "version": "7",
   "dialect": "postgresql",
@@ -1214,7 +1214,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
@@ -1746,7 +1746,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
@@ -2738,7 +2738,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
@@ -3683,7 +3683,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },

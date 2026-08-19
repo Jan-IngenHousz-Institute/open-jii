@@ -54,54 +54,51 @@ describe("<OrganizationInviteDialog />", () => {
   it("refuses to submit until somebody is picked", () => {
     renderDialog();
 
-    expect(screen.getByRole("button", { name: "organizations.invite.addSubmit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "organizations.invite.submit" })).toBeDisabled();
   });
 
-  it("adds a registered pick outright, with no invitation", async () => {
-    const user = userEvent.setup();
-    mountUserSearch();
-    const addSpy = server.mount(contract.organizations.addOrganizationMember, {
-      body: {
-        userId: "22222222-2222-4222-8222-222222222222",
-        firstName: "Lin",
-        lastName: "Zhao",
-        email: "lin@uni.edu",
-        avatarUrl: null,
-        role: "admin",
-        joinedAt: new Date().toISOString(),
-      },
-    });
-    const { onOpenChange } = renderDialog();
+  /**
+   * The wire, per role. Nobody joins an organization they did not ask to join, so a
+   * registered pick is invited at their own address exactly like a typed one — `member`
+   * included, which is the row that used to be an instant add.
+   */
+  it.each(["member", "admin", "owner"])(
+    "invites a registered pick at %s rather than adding them",
+    async (role) => {
+      const user = userEvent.setup();
+      mountUserSearch();
+      const { onOpenChange } = renderDialog({ invitableRoles: ["owner", "admin", "member"] });
 
-    await user.type(search(), "lin");
-    await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
-    await user.click(screen.getByText("Lin Zhao"));
+      await user.type(search(), "lin");
+      await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
+      await user.click(screen.getByText("Lin Zhao"));
 
-    await user.click(screen.getByRole("combobox", { name: /roleLabel/u }));
-    await user.click(screen.getByRole("option", { name: "organizations.roles.admin" }));
+      if (role !== "member") {
+        await user.click(screen.getByRole("combobox", { name: /roleLabel/u }));
+        await user.click(screen.getByRole("option", { name: `organizations.roles.${role}` }));
+      }
 
-    await user.click(screen.getByRole("button", { name: "organizations.invite.addSubmit" }));
+      // Said before the click, not discovered after it.
+      expect(screen.getByText("organizations.invite.mustAccept")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "organizations.invite.submit" }));
 
-    // The wire body, not the hook call: a field lost between the pick and the
-    // request would otherwise pass unnoticed.
-    await waitFor(() => expect(addSpy.called).toBe(true));
-    expect(addSpy.body).toEqual({
-      userId: "22222222-2222-4222-8222-222222222222",
-      role: "admin",
-    });
-    expect(addSpy.params).toMatchObject({ id: "11111111-1111-4111-8111-111111111111" });
-    // No invitation is created for somebody who is already a member by now.
-    expect(invite()).not.toHaveBeenCalled();
-    expect(toast).toHaveBeenCalledWith(
-      expect.objectContaining({ description: "organizations.invite.added" }),
-    );
-    expect(onOpenChange).toHaveBeenCalledWith(false);
-  });
+      await waitFor(() => {
+        expect(invite()).toHaveBeenCalledWith({
+          organizationId: "11111111-1111-4111-8111-111111111111",
+          email: "lin@uni.edu",
+          role,
+        });
+      });
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({ description: "organizations.invite.sent" }),
+      );
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    },
+  );
 
   it("sends an invitation for an address no account matches", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, { body: [] });
-    const addSpy = server.mount(contract.organizations.addOrganizationMember, { body: null });
     const { onOpenChange } = renderDialog();
 
     await user.type(search(), "stranger@uni.edu");
@@ -120,7 +117,6 @@ describe("<OrganizationInviteDialog />", () => {
         role: "member",
       });
     });
-    expect(addSpy.called).toBe(false);
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -143,19 +139,19 @@ describe("<OrganizationInviteDialog />", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps the dialog and the pick when the add is refused", async () => {
+  it("keeps the dialog and the pick when the invitation is refused", async () => {
     const user = userEvent.setup();
     mountUserSearch();
-    server.mount(contract.organizations.addOrganizationMember, {
-      status: 409,
-      body: { message: "This person is already a member of this organization" },
+    invite().mockResolvedValue({
+      data: null,
+      error: { message: "This person is already a member of this organization" },
     });
     const { onOpenChange } = renderDialog();
 
     await user.type(search(), "lin");
     await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
     await user.click(screen.getByText("Lin Zhao"));
-    await user.click(screen.getByRole("button", { name: "organizations.invite.addSubmit" }));
+    await user.click(screen.getByRole("button", { name: "organizations.invite.submit" }));
 
     await waitFor(() => {
       // The server's own wording: the reason is the actionable part, and the

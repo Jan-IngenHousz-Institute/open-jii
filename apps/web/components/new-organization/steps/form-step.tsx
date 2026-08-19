@@ -28,14 +28,15 @@ export const NO_TYPE = "none";
 
 /**
  * Somebody the organization will start with: the picker's own outcome plus the role
- * they arrive on. Unapplied — it becomes a membership or an invitation only once the
- * organization exists.
+ * they arrive on. Unapplied — the invitation that carries it is sent only once the
+ * organization exists, and they join when they accept it.
  */
 export type PendingOrganizationPerson = OrganizationInviteSelection & { role: OrganizationRole };
 
 /**
- * A collected person in one line: the role they arrive on, and — for an address with no
- * account behind it — that they arrive by invitation rather than outright.
+ * A collected person in one line: the role they arrive on, and — for an address the user
+ * search did not resolve — that nobody holds it yet. Everybody here is invited, so the
+ * marker distinguishes "no account behind this address" rather than how they arrive.
  *
  * Review's reading of a person. The People step renders the same role through the same
  * `organizationRoleLabelKey`, but as the roster's editable select rather than as text,
@@ -140,6 +141,10 @@ export const peopleSchema = z.object({
         kind: z.literal("user"),
         userId: z.string(),
         displayName: z.string(),
+        // Carried through validation, not only into it: `z.object` strips what it does
+        // not name, and every person collected here is invited at this address once the
+        // organization exists — whether or not they already have an account.
+        email: z.string(),
         role: zOrganizationRole,
       }),
       z.object({

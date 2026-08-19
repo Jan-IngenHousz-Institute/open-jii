@@ -19,13 +19,14 @@ import type { ResourceType, SQL } from "@repo/database";
 /**
  * The resource tables an organization can own, with the noun each is counted in.
  * Deleting an organization is refused while any of them still points at it —
- * nothing here ever cascades, because a device owns a live AWS Thing and
- * certificate that only its own delete path can tear down.
+ * nothing here ever cascades: a device owns a live AWS Thing and certificate that
+ * only its own delete path can tear down, and published work should not disappear
+ * behind one confirm dialog.
  *
  * A total `Record` over the grant enum, not a list: a sixth org-owning resource
  * type has to appear here or this file stops compiling. Missed from a plain array
- * it would slip past the block silently and then be cascade-deleted with the
- * organization, which is the one outcome this rule exists to prevent.
+ * its rows would go uncounted, and the delete would fail on the constraint with
+ * Postgres's own wording instead of the refusal naming what is in the way.
  */
 const OWNED_RESOURCE_TABLES = {
   experiment: { table: experiments, singular: "experiment", plural: "experiments" },
@@ -52,17 +53,16 @@ export function assertOrganizationIsDeletable(slug: string | null): void {
  * way out is to transfer each resource to another organization or delete it.
  *
  * The count races anything that gives the organization a resource after it runs and
- * before the row goes. A device lands on `RESTRICT` and fails the delete; the other
- * four cascade, so they are destroyed with the organization. For a create that is
- * tolerable — the resource was born in an organization on its way out. For a
- * **transfer in** it is not: a resource that existed elsewhere is lost.
+ * before the row goes, and no lock taken here closes that: Better Auth calls this
+ * hook *before* `adapter.deleteOrganization`, which opens its own transaction, and
+ * hands the hook no adapter or transaction handle — so a `FOR UPDATE` taken here
+ * commits and releases before the delete begins.
  *
- * Known and open, because there is no lock that closes it from here. Better Auth
- * calls this hook *before* `adapter.deleteOrganization`, which opens its own
- * transaction, and hands the hook no adapter or transaction handle — so a
- * `FOR UPDATE` taken here commits and releases before the delete begins, and cannot
- * order the count against a writer. Closing it needs the count to run inside Better
- * Auth's delete transaction, which the plugin does not expose.
+ * What closes it is the constraint rather than the count: all five tables are
+ * `ON DELETE RESTRICT`, so a resource that arrives inside the window fails the
+ * delete instead of being destroyed with the organization. This count is what turns
+ * the common case into a readable refusal naming what is in the way;
+ * {@link rethrowAsOrganizationInUse} gives the raced one the same answer.
  */
 export async function assertOrganizationOwnsNoResources(organizationId: string): Promise<void> {
   const counts = await db.execute<{ resource: string; total: number }>(
@@ -97,6 +97,46 @@ export async function assertOrganizationOwnsNoResources(organizationId: string):
     message: `This organization still owns ${total} resource${
       total === 1 ? "" : "s"
     } (${breakdown}). Transfer or delete them first.`,
+  });
+}
+
+/** Postgres `foreign_key_violation`. */
+const FOREIGN_KEY_VIOLATION = "23503";
+
+/**
+ * Whether a thrown error is Postgres refusing to delete a row something still
+ * references. Walked down the `cause` chain because both drizzle and Better Auth's
+ * adapter re-wrap the driver error, so the code is rarely on the error itself.
+ */
+function isForeignKeyViolation(error: unknown): boolean {
+  for (let current: unknown = error; typeof current === "object" && current !== null; ) {
+    const { code, cause } = current as { code?: unknown; cause?: unknown };
+    if (String(code) === FOREIGN_KEY_VIOLATION) return true;
+    current = cause;
+  }
+  return false;
+}
+
+/**
+ * Re-raise a delete that lost the race as the refusal it would have got had the
+ * count seen the resource: the constraint is the thing that actually protects the
+ * work (see {@link assertOrganizationOwnsNoResources}), but on its own it surfaces as
+ * a 500 with Postgres's own wording.
+ *
+ * The count runs again rather than being paraphrased, so the message names what is in
+ * the way exactly as the pre-flight would have. If it comes back empty — the resource
+ * moved on again after the failed delete — the caller simply retries and succeeds, so
+ * the generic refusal is enough.
+ */
+export async function rethrowAsOrganizationInUse(
+  organizationId: string,
+  error: unknown,
+): Promise<never> {
+  if (!isForeignKeyViolation(error)) throw error;
+
+  await assertOrganizationOwnsNoResources(organizationId);
+  throw new APIError("BAD_REQUEST", {
+    message: "This organization still owns resources. Transfer or delete them first.",
   });
 }
 

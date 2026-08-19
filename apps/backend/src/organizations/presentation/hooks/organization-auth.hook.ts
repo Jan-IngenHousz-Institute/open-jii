@@ -1,12 +1,10 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
-import { AfterHook, BeforeHook, Hook } from "@thallesp/nestjs-better-auth";
+import { Inject, Injectable } from "@nestjs/common";
+import { BeforeHook, Hook } from "@thallesp/nestjs-better-auth";
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
 import { APIError } from "better-auth/api";
 
 import { eq, isPersonalOrgSlug, organizations } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
-
-import { AcceptPendingOrganizationInvitationsUseCase } from "../../application/use-cases/accept-pending-organization-invitations/accept-pending-organization-invitations";
 
 /**
  * Better Auth's organization hooks cover create/update/delete, members,
@@ -15,19 +13,16 @@ import { AcceptPendingOrganizationInvitationsUseCase } from "../../application/u
  * path is matched by exact equality (the adapter has no wildcards), so this
  * decorator names the endpoint verbatim.
  *
- * The same exact-path mechanism carries the sign-in auto-accept for organization
- * invitations: Better Auth alone only accepts an invitation when the invitee
- * follows the link, but signing up with an invited address has to admit them too.
+ * That shield is now the whole of this class. It also used to carry an auto-accept
+ * that claimed an invitee's pending organization invitations on every sign-in, which
+ * meant somebody joined an organization by logging in rather than by agreeing to.
+ * Accepting an invitation is a deliberate act on `/platform/accept-invitation/[id]`,
+ * and Better Auth's own accept endpoint is the only thing that admits anybody.
  */
 @Hook()
 @Injectable()
 export class OrganizationAuthHook {
-  private readonly logger = new Logger(OrganizationAuthHook.name);
-
-  constructor(
-    @Inject("DATABASE") private readonly database: DatabaseInstance,
-    private readonly acceptInvitationsUseCase: AcceptPendingOrganizationInvitationsUseCase,
-  ) {}
+  constructor(@Inject("DATABASE") private readonly database: DatabaseInstance) {}
 
   @BeforeHook("/organization/leave")
   async refuseLeavingPersonalWorkspace(ctx: AuthHookContext) {
@@ -43,68 +38,6 @@ export class OrganizationAuthHook {
     if (isPersonalOrgSlug(rows[0]?.slug)) {
       throw new APIError("BAD_REQUEST", {
         message: "You cannot leave your personal workspace.",
-      });
-    }
-  }
-
-  @AfterHook("/sign-in/email")
-  async handleEmailSignIn(ctx: AuthHookContext) {
-    await this.acceptInvitations(ctx);
-  }
-
-  @AfterHook("/sign-in/email-otp")
-  async handleEmailOtpSignIn(ctx: AuthHookContext) {
-    await this.acceptInvitations(ctx);
-  }
-
-  @AfterHook("/sign-in/social")
-  async handleSocialSignIn(ctx: AuthHookContext) {
-    await this.acceptInvitations(ctx);
-  }
-
-  /**
-   * `/sign-in/social` only hands out the provider's redirect URL — the session is
-   * created when the provider redirects back, so these two callback paths are the
-   * only place an OAuth sign-up can be caught. The parameter names are Better
-   * Auth's own, because the adapter compares the whole route string.
-   */
-  @AfterHook("/callback/:id")
-  async handleOAuthCallback(ctx: AuthHookContext) {
-    await this.acceptInvitations(ctx);
-  }
-
-  @AfterHook("/oauth2/callback/:providerId")
-  async handleGenericOAuthCallback(ctx: AuthHookContext) {
-    await this.acceptInvitations(ctx);
-  }
-
-  @AfterHook("/email-otp/verify-email")
-  async handleOtpVerify(ctx: AuthHookContext) {
-    await this.acceptInvitations(ctx);
-  }
-
-  private async acceptInvitations(ctx: AuthHookContext) {
-    try {
-      const user = ctx.context.newSession?.user;
-      if (!user?.id || !user.email) return;
-
-      const result = await this.acceptInvitationsUseCase.execute(user.id, user.email);
-
-      if (result.isSuccess() && result.value > 0) {
-        this.logger.log({
-          msg: `Auto-accepted ${result.value} pending organization invitation(s)`,
-          operation: "organization-invitation-auth-hook",
-          userId: user.id,
-          email: user.email,
-          acceptedCount: result.value,
-        });
-      }
-    } catch (error) {
-      // Never let invitation processing block or fail the auth flow.
-      this.logger.warn({
-        msg: "Failed to process pending organization invitations after auth",
-        operation: "organization-invitation-auth-hook",
-        error,
       });
     }
   }

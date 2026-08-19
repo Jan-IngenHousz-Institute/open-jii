@@ -1,4 +1,5 @@
 import {
+  and,
   ensurePersonalOrganization,
   eq,
   experiments,
@@ -15,7 +16,7 @@ import { TestHarness } from "../test/test-harness";
 
 /**
  * These statements mirror the data migration hand-written in
- * `packages/database/drizzle/0042_iam_org_product_surface.sql`, the second release of
+ * `packages/database/drizzle/0044_opposite_toxin.sql`, the second release of
  * the grant-role rename: release 1 started reading `viewer` and stopped writing
  * `member` to `resource_grants` — though not to `invitations.role`, which a straggler
  * can still write and whose reader maps anything non-`admin` to `viewer`. This rewrites
@@ -25,7 +26,8 @@ import { TestHarness } from "../test/test-harness";
  * The vocabulary is the trap: only `resource_grants.role` and `invitations.role`
  * carry a *grant* role. `organization_members.role` and `organization_invitations.role`
  * carry Better Auth *organization* roles, where `member` is the current, correct
- * name — the specs below assert those two are untouched.
+ * name — the specs below assert the rename leaves those two alone, and that the
+ * canonicalization below rewrites them for an unrelated reason.
  */
 const RENAME_GRANT_ROLE_SQL = sql`
   UPDATE "resource_grants" SET "role" = 'viewer' WHERE "role" = 'member';
@@ -35,12 +37,39 @@ const RENAME_INVITATION_ROLE_SQL = sql`
   UPDATE "invitations" SET "role" = 'viewer' WHERE "role" = 'member';
 `;
 
+/**
+ * Collapse the organization-role columns onto one canonical spelling each, in
+ * `normalizeOrgRole`'s precedence. Before the plugin's role guard landed, Better
+ * Auth's own endpoints stored what they were handed — `"member, owner"`, `" owner "` —
+ * and its last-owner guards exact-match `'owner'`, so a comma-joined owner is
+ * invisible to them.
+ *
+ * Only non-canonical rows are matched: that is what makes a re-run a no-op, and what
+ * leaves a NULL invitation role — Better Auth's own "no role named", already read as
+ * `member` — untouched, since `NULL NOT IN (…)` never matches.
+ */
+const CANONICALIZE_ORG_ROLE_SQL = (
+  ["organization_members", "organization_invitations"] as const
+).flatMap((table) => [
+  sql`UPDATE ${sql.identifier(table)} SET "role" = 'owner'
+        WHERE "role" NOT IN ('owner', 'admin', 'member')
+          AND "role" ~ '(^|,)[[:space:]]*owner[[:space:]]*($|,)'`,
+  sql`UPDATE ${sql.identifier(table)} SET "role" = 'admin'
+        WHERE "role" NOT IN ('owner', 'admin', 'member')
+          AND "role" ~ '(^|,)[[:space:]]*admin[[:space:]]*($|,)'`,
+  sql`UPDATE ${sql.identifier(table)} SET "role" = 'member'
+        WHERE "role" NOT IN ('owner', 'admin', 'member')`,
+]);
+
 async function runDataMigration(db: DatabaseInstance): Promise<void> {
   await db.execute(RENAME_GRANT_ROLE_SQL);
   await db.execute(RENAME_INVITATION_ROLE_SQL);
+  for (const statement of CANONICALIZE_ORG_ROLE_SQL) {
+    await db.execute(statement);
+  }
 }
 
-describe("organization product surface migration data ops (0042)", () => {
+describe("organization product surface migration data ops (0044)", () => {
   const testApp = TestHarness.App;
 
   beforeAll(async () => {
@@ -93,9 +122,9 @@ describe("organization product surface migration data ops (0042)", () => {
     return { owner, subject, experiment };
   }
 
-  const storedRoles = (table: "resource_grants" | "invitations") =>
+  const storedRoles = (table: "resource_grants" | "invitations" | "organization_members") =>
     testApp.database
-      .execute<{ role: string }>(sql`SELECT "role" FROM ${sql.identifier(table)}`)
+      .execute<{ role: string }>(sql`SELECT "role" FROM ${sql.identifier(table)} ORDER BY "role"`)
       .then((rows) => rows.map((r) => r.role));
 
   it("rewrites the retired grant spelling in both tables", async () => {
@@ -158,27 +187,146 @@ describe("organization product surface migration data ops (0042)", () => {
     expect(invitationRoles.map((r) => r.role)).toEqual(["member"]);
   });
 
+  /**
+   * The stored value each legacy shape has to collapse to, and the canonical values
+   * that must come through byte-identical. `curator` stands for anything the column
+   * has ever been handed that names no role at all — the `else member` arm.
+   */
+  const CANONICALIZED: [stored: string, expected: string][] = [
+    ["member, owner", "owner"],
+    [" owner ", "owner"],
+    ["admin,member", "admin"],
+    ["curator", "member"],
+    ["owner", "owner"],
+    ["admin", "admin"],
+    ["member", "member"],
+  ];
+
+  it.each(CANONICALIZED)("collapses the member role %j to %j", async (stored, expected) => {
+    const subject = await testApp.createTestUser({ name: "Subject" });
+    const organizationId = await testApp.createOrganization();
+    // Inserted directly: the plugin's role guard refuses every shape but the three
+    // canonical ones, so no write path can express what the older rows carry.
+    await testApp.database
+      .insert(organizationMembers)
+      .values({ organizationId, userId: subject, role: stored });
+
+    await runDataMigration(testApp.database);
+
+    const [row] = await testApp.database
+      .select({ role: organizationMembers.role })
+      .from(organizationMembers)
+      .where(eq(organizationMembers.userId, subject));
+    expect(row.role).toBe(expected);
+  });
+
+  it.each(CANONICALIZED)("collapses the invitation role %j to %j", async (stored, expected) => {
+    const owner = await testApp.createTestUser({ name: "Owner" });
+    const organizationId = await testApp.createOrganization();
+    const [invitation] = await testApp.database
+      .insert(organizationInvitations)
+      .values({
+        organizationId,
+        email: `invitee-${crypto.randomUUID()}@example.com`,
+        role: stored,
+        inviterId: owner,
+        expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      })
+      .returning({ id: organizationInvitations.id });
+
+    await runDataMigration(testApp.database);
+
+    const [row] = await testApp.database
+      .select({ role: organizationInvitations.role })
+      .from(organizationInvitations)
+      .where(eq(organizationInvitations.id, invitation.id));
+    expect(row.role).toBe(expected);
+  });
+
+  it("makes a comma-joined owner visible to an exact-match owner count", async () => {
+    const smuggler = await testApp.createTestUser({ name: "Smuggler" });
+    const organizationId = await testApp.createOrganization();
+    await testApp.database
+      .insert(organizationMembers)
+      .values({ organizationId, userId: smuggler, role: "member, owner" });
+
+    // Better Auth's own last-owner guards compare the stored string to `'owner'`, so
+    // before the sweep this organization looks like it has no owner at all — and
+    // nothing stops its only one from leaving.
+    const ownerCount = () =>
+      testApp.database
+        .select({ role: organizationMembers.role })
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, organizationId),
+            eq(organizationMembers.role, "owner"),
+          ),
+        )
+        .then((rows) => rows.length);
+    expect(await ownerCount()).toBe(0);
+
+    await runDataMigration(testApp.database);
+
+    expect(await ownerCount()).toBe(1);
+  });
+
+  it("leaves an invitation with no role named as it is", async () => {
+    const owner = await testApp.createTestUser({ name: "Owner" });
+    const organizationId = await testApp.createOrganization();
+    const [invitation] = await testApp.database
+      .insert(organizationInvitations)
+      .values({
+        organizationId,
+        email: `invitee-${crypto.randomUUID()}@example.com`,
+        role: null,
+        inviterId: owner,
+        expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      })
+      .returning({ id: organizationInvitations.id });
+
+    await runDataMigration(testApp.database);
+
+    // What Better Auth writes when an invitation names no role. Every reader already
+    // treats it as `member`, so there is nothing here to canonicalize — and a
+    // migration that wrote one in would be inventing a decision nobody made.
+    const [row] = await testApp.database
+      .select({ role: organizationInvitations.role })
+      .from(organizationInvitations)
+      .where(eq(organizationInvitations.id, invitation.id));
+    expect(row.role).toBeNull();
+  });
+
   it("re-applies cleanly onto its own output", async () => {
     await seedRetiredSpelling();
+    const smuggler = await testApp.createTestUser({ name: "Smuggler" });
+    const canonicalizedOrg = await testApp.createOrganization();
+    await testApp.database
+      .insert(organizationMembers)
+      .values({ organizationId: canonicalizedOrg, userId: smuggler, role: "member, owner" });
 
     await runDataMigration(testApp.database);
     const afterFirst = {
       grants: await storedRoles("resource_grants"),
       invitations: await storedRoles("invitations"),
+      orgRoles: await storedRoles("organization_members"),
     };
     await runDataMigration(testApp.database);
 
     // Set-based and predicated on the value being rewritten, so a run interrupted
-    // half-way can simply be run again.
+    // half-way can simply be run again. The canonicalization matches only
+    // non-canonical rows, which is what keeps a second pass from re-tiering the
+    // `member` its own first pass wrote.
     expect({
       grants: await storedRoles("resource_grants"),
       invitations: await storedRoles("invitations"),
+      orgRoles: await storedRoles("organization_members"),
     }).toEqual(afterFirst);
   });
 });
 
-/** The end state 0042 leaves behind, in the database rather than in the model. */
-describe("organization product surface migration end state (0042)", () => {
+/** The end state 0044 leaves behind, in the database rather than in the model. */
+describe("organization product surface migration end state (0044)", () => {
   const testApp = TestHarness.App;
 
   beforeAll(async () => {

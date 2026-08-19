@@ -344,8 +344,11 @@ export const experiments = pgTable(
       .notNull(),
     // Owning organization (nullable during transition; backfilled to the creator's
     // personal org). Experiments already carry visibility above.
+    // RESTRICT, like every other org-owned resource: deleting an organization is
+    // refused while it still owns work, and the constraint is what holds when a
+    // transfer lands after the delete path counted.
     organizationId: uuid("organization_id").references(() => organizations.id, {
-      onDelete: "cascade",
+      onDelete: "restrict",
     }),
     ...timestamps,
     // Weighted full-text search vector: name (A) + description (B). See migration for the
@@ -513,7 +516,7 @@ export const protocols = pgTable(
       onDelete: "set null",
     }),
     organizationId: uuid("organization_id").references(() => organizations.id, {
-      onDelete: "cascade",
+      onDelete: "restrict",
     }),
     visibility: visibilityEnum("visibility").default("public").notNull(),
     ...timestamps,
@@ -549,7 +552,7 @@ export const macros = pgTable(
       onDelete: "set null",
     }),
     organizationId: uuid("organization_id").references(() => organizations.id, {
-      onDelete: "cascade",
+      onDelete: "restrict",
     }),
     visibility: visibilityEnum("visibility").default("public").notNull(),
     ...timestamps,
@@ -679,7 +682,7 @@ export const workbooks = pgTable(
       onDelete: "set null",
     }),
     organizationId: uuid("organization_id").references(() => organizations.id, {
-      onDelete: "cascade",
+      onDelete: "restrict",
     }),
     visibility: visibilityEnum("visibility").default("public").notNull(),
     ...timestamps,

@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { ORGANIZATION_FULL_MESSAGE } from "../../../core/admit-member";
 import type { OrganizationJoinRequestDto } from "../../../core/models/organization-join-request.model";
 import { canManageMembership, canViewOrganization } from "../../../core/organization-access";
 import { ORGANIZATION_EMAIL_PORT } from "../../../core/ports/email.port";
@@ -101,6 +102,11 @@ export class DecideOrganizationJoinRequestUseCase {
     }
     if (approveResult.value.outcome === "not-pending") {
       return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
+    }
+    // The request is still pending — the approval was undone — so the reviewer can take
+    // the same decision again once the organization has room.
+    if (approveResult.value.outcome === "organization-full") {
+      return failure(AppError.conflict(ORGANIZATION_FULL_MESSAGE, ErrorCodes.CONFLICT));
     }
 
     const approved = approveResult.value.request;

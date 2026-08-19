@@ -50,10 +50,13 @@ describe("<OrganizationMemberPicker />", () => {
 
     await user.click(screen.getByText("Lin Zhao"));
 
+    // The address rides along with the pick, because a picked account is invited at it
+    // rather than added — so the invitation has somewhere to go.
     expect(onSelectionChange).toHaveBeenCalledWith({
       kind: "user",
       userId: "u-1",
       displayName: "Lin Zhao",
+      email: "lin@uni.edu",
     });
   });
 
@@ -185,7 +188,7 @@ describe("<OrganizationMemberPicker />", () => {
     });
   });
 
-  it("offers the account rather than an invitation for a registered address", async () => {
+  it("offers the account rather than the bare address for a registered one", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, {
       body: [
@@ -202,8 +205,8 @@ describe("<OrganizationMemberPicker />", () => {
 
     await user.type(search(), "lin@uni.edu");
 
-    // An invitation to an existing account would sit pending for no reason: that
-    // account can be admitted right now.
+    // Both routes end in an invitation, but the named account is the better one: it
+    // carries who was picked, and the roster can show them by name once they accept.
     await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
     expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
   });
@@ -237,6 +240,74 @@ describe("<OrganizationMemberPicker />", () => {
     expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
   });
 
+  /**
+   * A registered account can now be waiting on an invitation too — that is what an
+   * elevated pick creates. So the pending state has to win over "this person has an
+   * account", or the actor would pick them again and get a duplicate-invite refusal
+   * instead of being told there is already one out.
+   */
+  it("reports a registered account that already has a pending invitation as invited", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.users.searchUsers, {
+      body: [
+        createUserProfile({
+          userId: "u-1",
+          firstName: "Lin",
+          lastName: "Zhao",
+          email: "lin@uni.edu",
+        }),
+      ],
+    });
+
+    renderPicker({ pendingInvitationEmails: ["lin@uni.edu"] });
+
+    await user.type(search(), "lin@uni.edu");
+
+    await waitFor(() =>
+      expect(screen.getByText("organizations.invite.alreadyInvited")).toBeInTheDocument(),
+    );
+    // Not offered as a pick either, so there is no way to reach the duplicate.
+    expect(screen.queryByText("Lin Zhao")).not.toBeInTheDocument();
+    expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Every pick becomes an invitation, so a result with no address is a pick that could
+   * not be acted on. Dropping it here is what lets the selection type promise an
+   * address, which is what removes the dead "nowhere to send it" branch from both
+   * callers. `users.email` is `NOT NULL` and this endpoint only returns activated
+   * accounts, so this is a type boundary rather than a case seen in practice.
+   */
+  it("drops a result with no address, since an invitation could not reach it", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.users.searchUsers, {
+      body: [
+        createUserProfile({ userId: "u-1", firstName: "No", lastName: "Address", email: null }),
+        createUserProfile({
+          userId: "u-2",
+          firstName: "Has",
+          lastName: "Address",
+          email: "has@uni.edu",
+        }),
+      ],
+    });
+
+    const { onSelectionChange } = renderPicker();
+
+    await user.type(search(), "address");
+
+    await waitFor(() => expect(screen.getByText("Has Address")).toBeInTheDocument());
+    expect(screen.queryByText("No Address")).not.toBeInTheDocument();
+
+    await user.click(screen.getByText("Has Address"));
+    expect(onSelectionChange).toHaveBeenCalledWith({
+      kind: "user",
+      userId: "u-2",
+      displayName: "Has Address",
+      email: "has@uni.edu",
+    });
+  });
+
   it("treats a failed search as unknown rather than as an address nobody holds", async () => {
     const user = userEvent.setup();
     const userSpy = server.mount(contract.users.searchUsers, { status: 500 });
@@ -246,7 +317,7 @@ describe("<OrganizationMemberPicker />", () => {
     await user.type(search(), "lin@uni.edu");
 
     // An account may well answer to this address — the search just could not say so.
-    // Offering the invitation would sideline somebody who could be added outright.
+    // Offering the bare address would sideline the account it belongs to.
     await waitFor(() =>
       expect(screen.getByText("organizations.invite.searchFailed")).toBeInTheDocument(),
     );
@@ -265,6 +336,7 @@ describe("<OrganizationMemberPicker />", () => {
       kind: "user",
       userId: "u-1",
       displayName: "Lin Zhao",
+      email: "lin@uni.edu",
     };
 
     const { onSelectionChange } = renderPicker({ selection });

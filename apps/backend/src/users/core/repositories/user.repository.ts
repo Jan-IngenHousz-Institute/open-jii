@@ -22,8 +22,13 @@ import {
   // authenticators table removed - Better Auth uses accounts table
   experiments,
   experimentMembers,
+  notExists,
+  organizationInvitations,
+  organizationJoinRequests,
+  organizationMembers,
   organizations,
   sql,
+  teamMembers,
   isNull,
   syncPersonalOrganizationName,
   personalOrgSlug,
@@ -364,6 +369,8 @@ export class UserRepository {
         await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
         await deleteGranteeGrants(tx, id, "user");
 
+        await this.sweepOrganizationAssociations(tx, id);
+
         // 3. Scrub PII and mark deleted. An upsert, not an update: `deleted_at` is
         //    the only closed-account marker, and an UPDATE does nothing for someone
         //    who never onboarded — leaving them a living owner forever.
@@ -400,14 +407,70 @@ export class UserRepository {
           .where(eq(users.id, id));
 
         // 5. Scrub the personal org name (embeds the real name as
-        //    "<First Last>'s workspace"). Org + membership are kept: soft-delete
-        //    keeps the user row, and the org retains ownership of what it owns.
+        //    "<First Last>'s workspace"). The personal org and its membership are the
+        //    two the sweep above keeps: soft-delete keeps the user row, and the org
+        //    retains ownership of what it owns, which needs an owner to stay reachable.
         await tx
           .update(organizations)
           .set({ name: personalOrgName("Deleted User") })
           .where(eq(organizations.slug, personalOrgSlug(id)));
       });
     });
+  }
+
+  /**
+   * Drop every organization association except the personal workspace's, which survives
+   * the soft-delete and must keep its owner. A membership left standing is not dormant:
+   * Better Auth counts owner rows straight out of the table and never reads
+   * `profiles.deleted_at`. Safe because {@link assertDeletionUnblocked} has established
+   * that every other organization this user owns keeps a living owner.
+   */
+  private async sweepOrganizationAssociations(tx: Transaction, id: string): Promise<void> {
+    await tx.delete(organizationMembers).where(
+      and(
+        eq(organizationMembers.userId, id),
+        notExists(
+          tx
+            .select({ ownIt: sql`1` })
+            .from(organizations)
+            .where(
+              and(
+                eq(organizations.id, organizationMembers.organizationId),
+                eq(organizations.slug, personalOrgSlug(id)),
+              ),
+            ),
+        ),
+      ),
+    );
+
+    // No carve-out for the personal workspace: team creation is refused there, so it
+    // has none — asserted in the deletion spec rather than assumed here.
+    await tx.delete(teamMembers).where(eq(teamMembers.userId, id));
+
+    // Pending only, on both. A decided request or invitation is history and reads
+    // correctly against a closed account; a pending one is a claim on a mailbox that
+    // no longer exists, since step 4 below rewrites the address to
+    // `deleted-<id>@example.com`. Left alone it would sit in the inviter's Invited
+    // list forever and hold a slot against `invitationLimit`.
+    await tx
+      .delete(organizationJoinRequests)
+      .where(
+        and(
+          eq(organizationJoinRequests.userId, id),
+          eq(organizationJoinRequests.status, "pending"),
+        ),
+      );
+
+    await tx.delete(organizationInvitations).where(
+      and(
+        eq(organizationInvitations.status, "pending"),
+        // Compared case-insensitively: Better Auth stores an invitation's address as
+        // the inviter typed it, and the auto-accept lookup lower-cases to match.
+        sql`lower(${organizationInvitations.email}) = (
+          SELECT lower(${users.email}) FROM ${users} WHERE ${users.id} = ${id}
+        )`,
+      ),
+    );
   }
 
   async createOrUpdateUserProfile(

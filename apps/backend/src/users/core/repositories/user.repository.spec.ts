@@ -9,6 +9,8 @@ import {
   passkeys,
   sessions,
   experimentMembers,
+  organizationInvitations,
+  organizationJoinRequests,
   organizations,
   organizationMembers,
   personalOrgSlug,
@@ -20,6 +22,8 @@ import {
   inArray,
   resourceGrants,
   sql,
+  teamMembers,
+  teams,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -1045,6 +1049,189 @@ describe("UserRepository", () => {
       expect(await grantsForUser(doomed)).toHaveLength(0);
       // Other users' grants are untouched.
       expect(await grantsForUser(survivor)).toHaveLength(1);
+    });
+
+    /**
+     * Every organization association goes, the way every grant does. A membership left
+     * behind is not dormant: Better Auth's own guards count owner rows out of the
+     * table and know nothing of `profiles.deleted_at`, so a closed account keeps
+     * voting as a living owner, renders on the roster as "Deleted User", and holds a
+     * seat against the membership limit.
+     */
+    describe("organization associations", () => {
+      /** A shared organization the doomed user co-owns, so the sole-owner block passes. */
+      async function sharedOrganization(doomed: string) {
+        const coOwner = await testApp.createTestUser({ name: "Co Owner" });
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationMember(organizationId, coOwner, "owner");
+        await testApp.addOrganizationMember(organizationId, doomed, "owner");
+        return { organizationId, coOwner };
+      }
+
+      const membersOf = (organizationId: string) =>
+        testApp.database
+          .select({ userId: organizationMembers.userId })
+          .from(organizationMembers)
+          .where(eq(organizationMembers.organizationId, organizationId));
+
+      it("removes the deleted user from every shared organization's roster", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const { organizationId, coOwner } = await sharedOrganization(doomed);
+
+        assertSuccess(await repository.delete(doomed));
+
+        // The co-owner's own membership is untouched — this sweeps one account's
+        // associations, not the organization.
+        expect(await membersOf(organizationId)).toEqual([{ userId: coOwner }]);
+      });
+
+      it("leaves no owner row Better Auth would count as living", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const { organizationId, coOwner } = await sharedOrganization(doomed);
+
+        assertSuccess(await repository.delete(doomed));
+
+        // The count Better Auth's last-owner guards actually run: raw rows spelling
+        // `owner`, with no reference to the profile that marks an account closed. A
+        // ghost here lets the remaining real owner leave and empty the organization.
+        const owners = await testApp.database
+          .select({ userId: organizationMembers.userId })
+          .from(organizationMembers)
+          .where(
+            and(
+              eq(organizationMembers.organizationId, organizationId),
+              eq(organizationMembers.role, "owner"),
+            ),
+          );
+        expect(owners).toEqual([{ userId: coOwner }]);
+      });
+
+      it("keeps the personal-workspace membership, which has no second owner to fall back on", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const personalId = await testApp.personalOrganizationId(doomed);
+
+        assertSuccess(await repository.delete(doomed));
+
+        // The personal organization survives the soft-delete by design and still owns
+        // whatever it owned, so stripping its only owner would strand all of it.
+        expect(await membersOf(personalId)).toEqual([{ userId: doomed }]);
+      });
+
+      it("gives up every team membership", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const survivor = await testApp.createTestUser({ name: "Survivor" });
+        const { organizationId } = await sharedOrganization(doomed);
+        const teamId = await testApp.createTeam(organizationId);
+        await testApp.addTeamMember(teamId, doomed);
+        await testApp.addTeamMember(teamId, survivor);
+
+        assertSuccess(await repository.delete(doomed));
+
+        expect(
+          await testApp.database
+            .select({ userId: teamMembers.userId })
+            .from(teamMembers)
+            .where(eq(teamMembers.teamId, teamId)),
+        ).toEqual([{ userId: survivor }]);
+      });
+
+      it("has no personal-workspace team to carve out", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const personalId = await testApp.personalOrganizationId(doomed);
+
+        // Asserted rather than assumed, because the team sweep above has no personal
+        // carve-out: the plugin refuses team creation in a personal workspace and
+        // Better Auth's `defaultTeam` is off, so there is never one to lose.
+        expect(
+          await testApp.database
+            .select({ id: teams.id })
+            .from(teams)
+            .where(eq(teams.organizationId, personalId)),
+        ).toEqual([]);
+      });
+
+      it("withdraws a pending join request and keeps the decided ones", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const pendingOrg = await testApp.createOrganization();
+        const rejectedOrg = await testApp.createOrganization();
+        await testApp.addOrganizationJoinRequest(pendingOrg, doomed);
+        await testApp.addOrganizationJoinRequest(rejectedOrg, doomed, { status: "rejected" });
+
+        assertSuccess(await repository.delete(doomed));
+
+        // A decided request is history and reads correctly against a closed account;
+        // a pending one is a queue item nobody can act on any more.
+        expect(
+          await testApp.database
+            .select({ organizationId: organizationJoinRequests.organizationId })
+            .from(organizationJoinRequests)
+            .where(eq(organizationJoinRequests.userId, doomed)),
+        ).toEqual([{ organizationId: rejectedOrg }]);
+      });
+
+      it("cancels a pending invitation to the address it is about to scrub", async () => {
+        const inviter = await testApp.createTestUser({ name: "Inviter" });
+        const doomedEmail = `doomed-${crypto.randomUUID()}@example.com`;
+        const doomed = await testApp.createTestUser({ name: "Doomed", email: doomedEmail });
+        const organizationId = await testApp.createOrganization();
+        const other = `someone-${crypto.randomUUID()}@example.com`;
+        await testApp.addOrganizationInvitation({
+          organizationId,
+          email: doomedEmail,
+          inviterId: inviter,
+        });
+        await testApp.addOrganizationInvitation({
+          organizationId,
+          email: other,
+          inviterId: inviter,
+        });
+
+        assertSuccess(await repository.delete(doomed));
+
+        // The address becomes `deleted-<id>@example.com` two steps later, so a
+        // surviving invitation is a slot held against `invitationLimit` for a mailbox
+        // that can never claim it. Everyone else's invitations stay.
+        expect(
+          await testApp.database
+            .select({ email: organizationInvitations.email })
+            .from(organizationInvitations)
+            .where(eq(organizationInvitations.organizationId, organizationId)),
+        ).toEqual([{ email: other }]);
+      });
+
+      it("keeps an invitation the user already decided on", async () => {
+        const inviter = await testApp.createTestUser({ name: "Inviter" });
+        const doomedEmail = `doomed-${crypto.randomUUID()}@example.com`;
+        const doomed = await testApp.createTestUser({ name: "Doomed", email: doomedEmail });
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationInvitation({
+          organizationId,
+          email: doomedEmail,
+          inviterId: inviter,
+          status: "accepted",
+        });
+
+        assertSuccess(await repository.delete(doomed));
+
+        expect(
+          await testApp.database
+            .select({ status: organizationInvitations.status })
+            .from(organizationInvitations)
+            .where(eq(organizationInvitations.organizationId, organizationId)),
+        ).toEqual([{ status: "accepted" }]);
+      });
+
+      it("still refuses the deletion outright when the user is an organization's only owner", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationMember(organizationId, doomed, "owner");
+
+        // The sweep is only safe because this refusal comes first: it is what
+        // guarantees every organization it strips a membership from keeps another
+        // living owner.
+        assertFailure(await repository.delete(doomed));
+        expect(await membersOf(organizationId)).toEqual([{ userId: doomed }]);
+      });
     });
 
     it("leaves the deleted user without access through can()", async () => {

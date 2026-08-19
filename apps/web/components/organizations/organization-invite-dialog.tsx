@@ -1,10 +1,8 @@
 "use client";
 
-import { useAddOrganizationMember } from "@/hooks/organization/useAddOrganizationMember/useAddOrganizationMember";
 import { useInviteOrganizationMember } from "@/hooks/organization/useInviteOrganizationMember/useInviteOrganizationMember";
 import { useState } from "react";
 import { authErrorMessage } from "~/hooks/organization/auth-organization-result";
-import { parseApiError } from "~/util/apiError";
 
 import type { OrganizationRole } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
@@ -49,13 +47,18 @@ interface OrganizationInviteDialogProps {
 }
 
 /**
- * Search first, invite second — the same two outcomes the sharing dialog offers.
+ * Search for somebody, choose the role they would arrive on, invite them.
  *
- * Somebody with an account is added outright: there is a user to attach the
- * membership to, and waiting for them to accept an invitation to an organization
- * whose owner already decided they belong in it is ceremony. An address no account
- * answers to still gets Better Auth's email invitation, which is what that machinery
- * is for — and signing up with the invited address still joins them automatically.
+ * One outcome, whoever the target is and whatever the role: **nobody joins an
+ * organization they did not ask to join.** Somebody with an account is invited at their
+ * own address rather than added, so the membership begins when they hold it — a
+ * membership carries read access to everything the organization owns, and an admin or
+ * owner role carries answerability for other people's work that an unasked-for
+ * assignment cannot confer. An address no account answers to is the same invitation.
+ *
+ * Two things stay instant, and neither contradicts that: approving a join request,
+ * where the person asked, and changing an existing member's role, where they already
+ * accepted joining once.
  */
 export function OrganizationInviteDialog({
   organizationId,
@@ -71,10 +74,7 @@ export function OrganizationInviteDialog({
   const [selection, setSelection] = useState<OrganizationInviteSelection | null>(null);
   const [role, setRole] = useState<OrganizationRole>("member");
 
-  const { mutateAsync: invite, isPending: isInviting } = useInviteOrganizationMember();
-  const { mutateAsync: addMember, isPending: isAdding } = useAddOrganizationMember();
-
-  const isPending = isInviting || isAdding;
+  const { mutateAsync: invite, isPending } = useInviteOrganizationMember();
 
   const reset = () => {
     setSelection(null);
@@ -93,22 +93,13 @@ export function OrganizationInviteDialog({
     if (!selection) return;
 
     try {
-      if (selection.kind === "user") {
-        await addMember({ id: organizationId, userId: selection.userId, role });
-        toast({ description: t("organizations.invite.added", { name: selection.displayName }) });
-      } else {
-        await invite({ organizationId, email: selection.email, role });
-        toast({ description: t("organizations.invite.sent", { email: selection.email }) });
-      }
+      await invite({ organizationId, email: selection.email, role });
+      toast({ description: t("organizations.invite.sent", { email: selection.email }) });
     } catch (err) {
       // Keep the dialog — and the picked person — so a refusal can be read and
-      // retried without searching again. The two paths fail through different
-      // clients, so each is unwrapped by its own reader.
+      // retried without searching again.
       toast({
-        description:
-          selection.kind === "user"
-            ? (parseApiError(err)?.message ?? t("organizations.invite.addFailed"))
-            : (authErrorMessage(err) ?? t("organizations.invite.failed")),
+        description: authErrorMessage(err) ?? t("organizations.invite.failed"),
         variant: "destructive",
       });
       return;
@@ -117,8 +108,6 @@ export function OrganizationInviteDialog({
     reset();
     onOpenChange(false);
   };
-
-  const isEmailInvite = selection?.kind === "email";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -157,6 +146,17 @@ export function OrganizationInviteDialog({
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-xs">{t(`organizations.roleHints.${role}`)}</p>
+            {/* What the button is about to do, before it is pressed. Said for a picked
+                account rather than for a typed address, where "an invitation is sent" is
+                already the obvious reading of the affordance. */}
+            {selection?.kind === "user" && (
+              <p className="text-muted-foreground text-xs">
+                {t("organizations.invite.mustAccept", {
+                  name: selection.displayName,
+                  role: t(organizationRoleLabelKey(role)),
+                })}
+              </p>
+            )}
           </div>
         </div>
 
@@ -164,16 +164,8 @@ export function OrganizationInviteDialog({
           <Button variant="ghost" onClick={() => handleOpenChange(false)} disabled={isPending}>
             {t("common.cancel")}
           </Button>
-          {/* Two outcomes, two labels: an invitation is sent and waited on, a
-              registered person is simply added. */}
           <Button onClick={() => void submit()} disabled={isPending || !selection}>
-            {isPending
-              ? isEmailInvite
-                ? t("organizations.invite.sending")
-                : t("organizations.invite.adding")
-              : isEmailInvite
-                ? t("organizations.invite.submit")
-                : t("organizations.invite.addSubmit")}
+            {isPending ? t("organizations.invite.sending") : t("organizations.invite.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

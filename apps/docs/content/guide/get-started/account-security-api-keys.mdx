@@ -3,7 +3,7 @@ title: "Account security & API keys"
 description: "Use remembered sign-in methods, passkeys, and personal API keys to access openJII securely."
 ---
 
-{/* verified: code@2a0698c44 2026-08-17 */}
+{/* verified: code@ff85dba80 2026-08-18 */}
 
 Your account page (**Profile menu → Account**) is organised into three tabs:
 **General**, **Security**, and **API keys**.
@@ -115,6 +115,12 @@ out browser sessions or revoke other keys.
 
 Deleting your account revokes its passkeys and API keys, removes linked OAuth
 credentials, and ends all browser sessions before the account is anonymized.
+
+It also gives up every organization association: you leave every shared organization
+and team, any join request still waiting is withdrawn, and any invitation still waiting
+for your address is cancelled. Your personal workspace is the one you keep, because it
+still holds whatever it owns. Nothing you own moves — it stays where it is, and whoever
+else can administer it keeps their access.
 
 Deletion is refused while removing you would strand other people. Two things block
 it: being the **last Owner** of a shared organization, and being the **last person who

@@ -22,6 +22,7 @@ vi.mock("@/hooks/useDebounce", () => ({
 }));
 
 const create = () => vi.mocked(authClient.organization.create);
+const invite = () => vi.mocked(authClient.organization.inviteMember);
 const checkSlug = () => vi.mocked(authClient.organization.checkSlug);
 
 beforeEach(() => {
@@ -138,9 +139,15 @@ describe("the create-organization wizard", () => {
 
   it("sends the role a collected person was changed to, not the one they were added on", async () => {
     const user = userEvent.setup();
-    const addSpy = server.mount(contract.organizations.addOrganizationMember, { body: {} });
     server.mount(contract.users.searchUsers, {
-      body: [createUserProfile({ userId: "u-1", firstName: "Lin", lastName: "Zhao" })],
+      body: [
+        createUserProfile({
+          userId: "u-1",
+          firstName: "Lin",
+          lastName: "Zhao",
+          email: "lin@uni.edu",
+        }),
+      ],
     });
     render(<NewOrganizationForm />);
 
@@ -165,10 +172,13 @@ describe("the create-organization wizard", () => {
     await user.click(screen.getByRole("button", { name: "organizations.createAction" }));
 
     await waitFor(() => {
-      expect(addSpy.callCount).toBe(1);
+      expect(invite()).toHaveBeenCalledTimes(1);
     });
-    expect(addSpy.body).toEqual({ userId: "u-1", role: "admin" });
-    expect(addSpy.params.id).toBe("org-1");
+    expect(invite()).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      email: "lin@uni.edu",
+      role: "admin",
+    });
   });
 
   it("refuses a name longer than the column will hold", async () => {

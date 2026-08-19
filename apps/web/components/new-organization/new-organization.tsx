@@ -1,6 +1,5 @@
 "use client";
 
-import { useAddOrganizationMember } from "@/hooks/organization/useAddOrganizationMember/useAddOrganizationMember";
 import { useCreateOrganization } from "@/hooks/organization/useCreateOrganization/useCreateOrganization";
 import { useInviteOrganizationMember } from "@/hooks/organization/useInviteOrganizationMember/useInviteOrganizationMember";
 import { useLocale } from "@/hooks/useLocale";
@@ -43,7 +42,6 @@ export function NewOrganizationForm() {
   const locale = useLocale();
 
   const { mutateAsync: createOrganization, isPending } = useCreateOrganization();
-  const { mutateAsync: addMember } = useAddOrganizationMember();
   const { mutateAsync: invite } = useInviteOrganizationMember();
   const [isApplyingPeople, setIsApplyingPeople] = useState(false);
   const [hasFormData, setHasFormData] = useState(false);
@@ -121,23 +119,26 @@ export function NewOrganizationForm() {
   );
 
   /**
-   * Create the organization, then apply the people best-effort — and go to the
+   * Create the organization, then invite the people best-effort — and go to the
    * organization either way.
    *
    * `authClient.organization.create()` accepts organization fields only: Better Auth
    * owns the row, the slug uniqueness check and the creator's owner membership, and has
-   * no notion of members to create alongside them. An experiment can carry its
+   * no notion of anybody else to enrol alongside them. An experiment can carry its
    * collaborators in the create body because that endpoint is ours and transactional;
    * organizations have no equivalent, so every person collected here is a separate write
    * that cannot happen until the organization exists.
    *
    * That makes the create the commit, not the form. Once it succeeds the organization
-   * exists and is owned, so an add that fails afterwards is an add that failed — not a
-   * creation that failed. Deleting the organization to make the submit atomic would
-   * destroy the part that worked, and holding the user in the wizard would strand them
-   * in front of a form whose primary action has already happened. So the destination is
-   * the same either way, and whoever did not make it is named so they can be added again
-   * from the organization's Members tab.
+   * exists and is owned, so an invitation that fails afterwards is an invitation that
+   * failed — not a creation that failed. Deleting the organization to make the submit
+   * atomic would destroy the part that worked, and holding the user in the wizard would
+   * strand them in front of a form whose primary action has already happened. So the
+   * destination is the same either way, and whoever was not reached is named so they can
+   * be invited again from the organization's Members tab.
+   *
+   * Nobody is on the roster when this returns, however well it goes: the wizard collects
+   * people to invite, and each of them joins when they accept.
    */
   const onSubmit = async (values: NewOrganizationFormValues) => {
     let organizationId: string | undefined;
@@ -173,11 +174,10 @@ export function NewOrganizationForm() {
     const failed: string[] = [];
     for (const person of values.people) {
       try {
-        if (person.kind === "user") {
-          await addMember({ id: organizationId, userId: person.userId, role: person.role });
-        } else {
-          await invite({ organizationId, email: person.email, role: person.role });
-        }
+        // Always an invitation, account or not: nobody joins an organization they did
+        // not ask to join, and nobody in this wizard has been asked yet. Both collected
+        // shapes carry the address to send it to.
+        await invite({ organizationId, email: person.email, role: person.role });
       } catch {
         // The refusal itself is not surfaced: the two paths fail through different
         // clients with different messages, and what a retry needs is who to retry.

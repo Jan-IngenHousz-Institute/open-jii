@@ -21,17 +21,20 @@ import { asOrganizationRole, organizationRoleLabelKey } from "./organization-lab
 import { organizationPath, organizationsPath } from "./organization-routes";
 
 /**
- * Where an invitation email lands. The route sits inside the platform, so a
- * signed-out recipient is sent to sign in first and comes back here — by which
- * point the invitation is usually already accepted, because signing in with an
- * invited address accepts every pending invitation for it. That is the documented
- * behaviour, not a race, and it is why the unavailable state is a normal outcome
- * here rather than an error.
+ * Where an invitation email lands, and the only door into an organization. The route
+ * sits inside the platform, so a signed-out recipient signs in — or signs up — and comes
+ * back here with the invitation still pending, whatever role it carries: nothing accepts
+ * one on their behalf, because a membership reaches everything the organization owns and
+ * an `admin` or `owner` role makes them answerable for other people's work.
  *
- * Better Auth serves only *pending* invitations, so an accepted, declined, withdrawn
- * or expired one is indistinguishable from here — a single state covers all four. It
- * cannot name the organization either, which is why that state offers the
- * organization list rather than a link the page has no way to build.
+ * That makes the accept below the whole transaction, and it makes the unavailable state
+ * genuinely exceptional — it means the invitation was already accepted, declined,
+ * withdrawn or expired, not that arriving here normally consumes it.
+ *
+ * Better Auth serves only *pending* invitations, so those four are indistinguishable
+ * from here and a single state covers them all. It cannot name the organization either,
+ * which is why that state offers the organization list rather than a link the page has
+ * no way to build.
  *
  * An invitation opened by the wrong account is a different matter and gets its own
  * state: Better Auth answers 403 there rather than 400, the invitation is still live,

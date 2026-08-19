@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { OrganizationRole } from "@repo/api/domains/organization/organization.schema";
+import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -39,8 +40,9 @@ interface NewOrganizationPeopleCardProps {
  * are held on the form and spent on submit.
  *
  * The picker is the organization's own, unchanged — it never wrote anything itself, it
- * reports a selection. Its exclusion lists carry the people already collected here, so
- * nobody can be added twice.
+ * reports a selection. Its exclusion lists carry the people already collected here plus
+ * whoever is creating the organization, so nobody can be collected twice and nobody can
+ * be invited to an organization they already own.
  *
  * Three regions, each owning the text about it: the composer for adding somebody, the
  * list of who has been collected, and the aside about teams. Prose that belongs to a
@@ -49,6 +51,7 @@ interface NewOrganizationPeopleCardProps {
  */
 export function NewOrganizationPeopleCard({ form }: NewOrganizationPeopleCardProps) {
   const { t } = useTranslation();
+  const { data: session } = useSession();
 
   const people = form.watch("people");
   const [selection, setSelection] = useState<OrganizationInviteSelection | null>(null);
@@ -79,9 +82,13 @@ export function NewOrganizationPeopleCard({ form }: NewOrganizationPeopleCardPro
           <OrganizationMemberPicker
             selection={selection}
             onSelectionChange={setSelection}
-            memberUserIds={people.flatMap((person) =>
-              person.kind === "user" ? [person.userId] : [],
-            )}
+            // Whoever is creating the organization is excluded alongside the people
+            // already collected: they are its owner the moment it exists, so offering
+            // them would send an invitation to their own organization.
+            memberUserIds={[
+              ...people.flatMap((person) => (person.kind === "user" ? [person.userId] : [])),
+              ...(session ? [session.user.id] : []),
+            ]}
             memberEmails={[]}
             pendingInvitationEmails={people.flatMap((person) =>
               person.kind === "email" ? [person.email] : [],

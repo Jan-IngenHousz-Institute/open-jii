@@ -56,10 +56,16 @@ describe("<ReviewStep />", () => {
     expect(screen.getByText("organizations.types.university")).toBeInTheDocument();
   });
 
-  it("lists the people to be added, the role each gets and how they arrive", () => {
+  it("lists the people to be invited, the role each gets and how they arrive", () => {
     renderReview({
       people: [
-        { kind: "user", userId: "u-1", displayName: "Lin Zhao", role: "admin" },
+        {
+          kind: "user",
+          userId: "u-1",
+          displayName: "Lin Zhao",
+          email: "lin@uni.edu",
+          role: "admin",
+        },
         { kind: "email", email: "newcomer@example.org", role: "member" },
       ],
     });

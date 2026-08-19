@@ -1,11 +1,9 @@
 import { oc } from "@orpc/contract";
 
 import {
-  zAddOrganizationMemberBody,
   zGranteeTeamList,
   zGranteeTeamsPathParams,
   zMyOrganizationList,
-  zOrganizationMember,
   zOrganizationDeletionBlockers,
   zOrganizationDirectory,
   zOrganizationDirectoryQuery,
@@ -18,10 +16,15 @@ import {
 } from "./organization.schema";
 
 /**
- * Reads over the Better Auth organization models, plus the one write on them that
- * has no Better Auth path: admitting a registered user outright. Everything with a
- * state machine behind it — invitations above all — still goes through
- * `authClient.organization.*`, because the plugin owns that machine.
+ * Reads over the Better Auth organization models. Reads only: nobody is put on a
+ * roster from here.
+ *
+ * Joining an organization is always an invitation the recipient holds, whether or not
+ * they already have an account — nobody joins an organization they did not ask to
+ * join — so every membership write goes through `authClient.organization.*`, where the
+ * plugin owns that state machine and bounds an invitation's role by the inviter's own
+ * (only an owner may offer ownership). The one exception is approving a join request,
+ * which the join-requests contract owns: there the person asked.
  *
  * Personal workspaces are excluded from all of it except `listMyOrganizations`,
  * which needs them as the default target of the resource create pickers.
@@ -82,19 +85,6 @@ export const organizationContract = {
     })
     .input(zOrganizationIdPathParam)
     .output(zOrganizationDeletionBlockers),
-  /**
-   * Admit a registered user straight onto the roster — the invite dialog's search
-   * result, which is a person with an account rather than an address to reach.
-   *
-   * Owners and admins, bounded by their own role: an admin may admit members and
-   * admins, only an owner may admit an owner. Somebody already on the roster is a
-   * conflict, not a silent no-op — the dialog offered them as addable and needs to
-   * be told it was wrong.
-   */
-  addOrganizationMember: oc
-    .route({ method: "POST", path: "/api/v1/organizations/{id}/members", successStatus: 201 })
-    .input(zOrganizationIdPathParam.merge(zAddOrganizationMemberBody))
-    .output(zOrganizationMember),
   /** Teams with their members, for the teams surface. Members only. */
   listOrganizationTeams: oc
     .route({ method: "GET", path: "/api/v1/organizations/{id}/teams", successStatus: 200 })

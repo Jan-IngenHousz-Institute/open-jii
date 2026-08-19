@@ -15,7 +15,11 @@ import { Popover, PopoverAnchor, PopoverContent } from "@repo/ui/components/popo
 const emailSchema = z.string().email();
 
 export type OrganizationInviteSelection =
-  | { kind: "user"; userId: string; displayName: string }
+  // Both shapes carry an address because both end in an invitation sent to one: a
+  // picked account is invited at its own, never added. Non-nullable by construction —
+  // the results below drop anyone the search returned without one, so a selection that
+  // cannot be invited is not offered in the first place.
+  | { kind: "user"; userId: string; displayName: string; email: string }
   | { kind: "email"; email: string };
 
 interface OrganizationMemberPickerProps {
@@ -41,7 +45,7 @@ interface OrganizationMemberPickerProps {
 interface UserResultRow {
   userId: string;
   displayName: string;
-  email: string | null;
+  email: string;
   firstName: string;
   lastName: string;
   avatarUrl: string | null;
@@ -53,8 +57,8 @@ interface UserResultRow {
  *
  * Deliberately the same shape as the sharing picker rather than a shared component —
  * that one selects between users, teams and organizations against a resource, this
- * one has exactly one source and a second outcome (an invitation) that sharing's
- * hosts do not all have.
+ * one has exactly one source and one outcome — an invitation — where sharing grants
+ * access outright.
  *
  * Whoever is already on the roster or already invited is dropped from the results
  * rather than listed unpickably, the same as the sharing picker: a row that cannot be
@@ -83,16 +87,31 @@ export function OrganizationMemberPicker({
     const members = new Set(memberUserIds);
     const invited = new Set(pendingInvitationEmails.map((email) => email.toLowerCase()));
 
-    return (users ?? [])
-      .filter((user) => !members.has(user.userId) && !invited.has((user.email ?? "").toLowerCase()))
-      .map((user) => ({
-        userId: user.userId,
-        displayName: `${user.firstName} ${user.lastName}`.trim() || (user.email ?? user.userId),
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatarUrl: user.avatarUrl ?? null,
-      }));
+    return (
+      (users ?? [])
+        .filter(
+          (user) => !members.has(user.userId) && !invited.has((user.email ?? "").toLowerCase()),
+        )
+        // An address is what an invitation needs, and every pick now becomes one. The
+        // search DTO types `email` as nullable because it is shared with reads that
+        // anonymize a deactivated profile's address away; this endpoint only returns
+        // activated, undeleted accounts, and `users.email` is `NOT NULL`, so this drops
+        // nothing in practice — it is what lets the selection type promise an address.
+        .flatMap<UserResultRow>((user) =>
+          user.email === null
+            ? []
+            : [
+                {
+                  userId: user.userId,
+                  displayName: `${user.firstName} ${user.lastName}`.trim() || user.email,
+                  email: user.email,
+                  firstName: user.firstName,
+                  lastName: user.lastName,
+                  avatarUrl: user.avatarUrl ?? null,
+                },
+              ],
+        )
+    );
   }, [users, memberUserIds, pendingInvitationEmails]);
 
   const isLoading = isFetching || (!isDebounced && !!search);
@@ -103,10 +122,10 @@ export function OrganizationMemberPicker({
     addresses.some((address) => address.toLowerCase() === typedEmail.toLowerCase());
   const isMemberAddress = isEmailTerm && matchesEmail(memberEmails);
   const isInvitedAddress = isEmailTerm && matchesEmail(pendingInvitationEmails);
-  // Only an address no account answers to is worth an invitation; a registered one is
-  // the row above, which adds them outright. Read from the unfiltered answer on
-  // purpose: an address belonging to somebody the results dropped is then explained
-  // rather than reported as no match.
+  // A typed address only needs the fallback row when no account answers to it: a
+  // registered one is the row above, which invites that account by name. Read from the
+  // unfiltered answer on purpose: an address belonging to somebody the results dropped
+  // is then explained rather than reported as no match.
   const isRegisteredAddress =
     isEmailTerm &&
     (users ?? []).some((user) => (user.email ?? "").toLowerCase() === typedEmail.toLowerCase());
@@ -190,6 +209,7 @@ export function OrganizationMemberPicker({
               kind: "user",
               userId: result.userId,
               displayName: result.displayName,
+              email: result.email,
             });
             setSearch("");
             setOpen(false);
