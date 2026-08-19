@@ -38,13 +38,7 @@ export function parseBulkBatch(text: string, registeredSerials: Set<string>): Bu
     const serialNumber = (separatorAt === -1 ? line : line.slice(0, separatorAt)).trim();
     const name = separatorAt === -1 ? undefined : line.slice(separatorAt + 1).trim();
 
-    const status: BulkRowStatus = !zSerialNumber.safeParse(serialNumber).success
-      ? "invalid"
-      : seen.has(serialNumber)
-        ? "duplicate"
-        : registeredSerials.has(serialNumber)
-          ? "registered"
-          : "ready";
+    const status = classifyRow(serialNumber, seen, registeredSerials);
     if (status !== "invalid") {
       seen.add(serialNumber);
     }
@@ -73,6 +67,23 @@ export function parseBulkBatch(text: string, registeredSerials: Set<string>): Bu
           : { serialNumber: row.serialNumber },
       ),
   };
+}
+
+function classifyRow(
+  serialNumber: string,
+  seen: Set<string>,
+  registeredSerials: Set<string>,
+): BulkRowStatus {
+  if (!zSerialNumber.safeParse(serialNumber).success) {
+    return "invalid";
+  }
+  if (seen.has(serialNumber)) {
+    return "duplicate";
+  }
+  if (registeredSerials.has(serialNumber)) {
+    return "registered";
+  }
+  return "ready";
 }
 
 function firstSeparator(line: string): number {
