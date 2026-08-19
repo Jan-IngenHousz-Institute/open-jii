@@ -422,7 +422,7 @@
         "lastSeenColumn": "Zuletzt gesehen",
         "lastDataColumn": "Letzte Daten",
         "noData": "Noch keine Daten",
-        "pipelineUnavailable": "Die Datenpipeline ist nicht erreichbar, Stille kann nicht beurteilt werden."
+        "pipelineUnavailable": "Die Monitoring-Daten konnten nicht vollständig geladen werden, Stille wird nicht beurteilt."
       },
       "nameLabel": "Name",
       "namePlaceholder": "z. B. Gewächshaus A",

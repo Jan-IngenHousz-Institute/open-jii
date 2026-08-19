@@ -2499,6 +2499,9 @@ describe("DatabricksAdapter", () => {
       expect(result.value).toEqual([
         { clientId: "AMBYTE_A", version: "1.1.0", lastSeen: "2026-08-17T11:00:00.000Z" },
       ]);
+      // Newest-first ordering: a hit ceiling can only shed stale sightings.
+      expect(captured.statement).toContain("ORDER BY `last_seen` DESC");
+      expect(captured.statement).toContain("LIMIT 50");
     });
 
     it("maps lifecycle events newest-first with the group-wide cap", async () => {

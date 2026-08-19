@@ -212,6 +212,46 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
     expect(result.value.events).toEqual([]);
   });
 
+  it("degrades instead of truncating when a heuristic ceiling overflows", async () => {
+    const { groupId, device } = await seedGroupWithDevice();
+    vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
+    vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
+    vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
+    // The adapter is asked for limit + 1 rows; echoing the request size back
+    // means the ceiling overflowed and the family must not pretend completeness.
+    vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockImplementation(
+      (_t, _f, _to, _b, limit) =>
+        Promise.resolve(
+          success(
+            Array.from({ length: limit }, (_, index) => ({
+              bucketStart: "2026-08-17T10:00:00.000Z",
+              experimentId: `exp-${String(index)}`,
+              count: 1,
+            })),
+          ),
+        ),
+    );
+    vi.spyOn(databricksAdapter, "getDevicesFirmware").mockImplementation((_t, _f, _to, limit) =>
+      Promise.resolve(
+        success(
+          Array.from({ length: limit }, (_, index) => ({
+            clientId: device.thingName,
+            version: `1.0.${String(index)}`,
+            lastSeen: "2026-08-17T10:00:00.000Z",
+          })),
+        ),
+      ),
+    );
+
+    const result = await useCase.execute(groupId, WINDOW);
+
+    assertSuccess(result);
+    expect(result.value.pipelineUnavailable).toBe(true);
+    expect(result.value.dataByExperiment).toEqual([]);
+    expect(result.value.firmware).toEqual([]);
+  });
+
   it("propagates a repository failure", async () => {
     vi.spyOn(groupRepository, "listMemberThings").mockResolvedValue(
       failure(AppError.internal("boom")),

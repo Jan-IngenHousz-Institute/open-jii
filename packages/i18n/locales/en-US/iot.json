@@ -422,7 +422,7 @@
         "lastSeenColumn": "Last seen",
         "lastDataColumn": "Last data",
         "noData": "No data yet",
-        "pipelineUnavailable": "The data pipeline is unreachable, so silence cannot be judged."
+        "pipelineUnavailable": "Monitoring data could not be fully loaded, so silence is not judged."
       },
       "nameLabel": "Name",
       "namePlaceholder": "e.g. Greenhouse A",

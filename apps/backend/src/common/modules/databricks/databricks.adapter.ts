@@ -502,6 +502,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         groupBy: [{ column: "client_id" }, { column: "device_version" }],
         functions: [{ column: "timestamp", function: "max", alias: "last_seen" }],
       },
+      // Newest sightings first, so a hit ceiling can only shed stale rows.
+      orderBy: "last_seen",
+      orderDirection: "DESC",
       limit,
     });
     if (result.isFailure()) {

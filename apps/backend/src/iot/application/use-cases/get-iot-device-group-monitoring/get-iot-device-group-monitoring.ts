@@ -49,6 +49,9 @@ const EVENT_LIMIT = 200;
 /** A member rarely runs many versions in one window; a ceiling, not a target. */
 const FIRMWARE_VERSIONS_PER_MEMBER = 25;
 
+/** Distinct experiments a group plausibly feeds per bucket; member-independent. */
+const EXPERIMENTS_PER_BUCKET = 25;
+
 const BUCKET_MS = { hour: 3_600_000, day: 86_400_000 } as const;
 
 /** Bucket count of the window, for sizing the grouped scans' row ceilings. */
@@ -103,14 +106,17 @@ export class GetIotDeviceGroupMonitoringUseCase {
     // One grouped scan per fact family, all in flight together: the dashboard's
     // latency is the slowest scan, not the sum.
     // Row ceilings derived from the window and roster keep one dashboard load
-    // from returning an unbounded result set; legitimate data never hits them.
-    const scanLimit = bucketsInWindow(window) * thingNames.length;
+    // from returning an unbounded result set. Throughput's ceiling is exact
+    // (one row per bucket and member); the experiment and firmware ceilings
+    // are generous heuristics, so those lookups detect overflow and degrade
+    // rather than ever report a truncated result as complete.
+    const buckets = bucketsInWindow(window);
     const [connectivity, activity, throughput, dataByExperiment, firmware, events] =
       await Promise.all([
         this.lookupConnectivity(thingNames),
         this.lookupActivity(thingNames),
-        this.lookupThroughput(thingNames, window, scanLimit),
-        this.lookupDataByExperiment(thingNames, window, scanLimit),
+        this.lookupThroughput(thingNames, window, buckets * thingNames.length),
+        this.lookupDataByExperiment(thingNames, window, buckets * EXPERIMENTS_PER_BUCKET),
         this.lookupFirmware(thingNames, window, FIRMWARE_VERSIONS_PER_MEMBER * thingNames.length),
         this.lookupEvents(thingNames, window),
       ]);
@@ -200,15 +206,24 @@ export class GetIotDeviceGroupMonitoringUseCase {
     window: MonitoringWindow,
     limit: number,
   ): Promise<GroupExperimentRow[] | null> {
+    // One row past the ceiling: receiving it means the result is incomplete.
     const result = await this.databricksPort.getDevicesDataByExperiment(
       thingNames,
       window.from,
       window.to,
       window.bucket,
-      limit,
+      limit + 1,
     );
     if (result.isFailure()) {
       this.warn("Warehouse data-by-experiment lookup failed", result);
+      return null;
+    }
+    if (result.value.length > limit) {
+      this.logger.warn({
+        msg: "Data-by-experiment result exceeded its ceiling; degrading instead of truncating",
+        operation: "getIotDeviceGroupMonitoring",
+        limit,
+      });
       return null;
     }
     return result.value;
@@ -219,14 +234,24 @@ export class GetIotDeviceGroupMonitoringUseCase {
     window: MonitoringWindow,
     limit: number,
   ): Promise<GroupFirmwareRow[] | null> {
+    // One row past the ceiling: receiving it means the result is incomplete,
+    // and a truncated set could misstate a member's current version.
     const result = await this.databricksPort.getDevicesFirmware(
       thingNames,
       window.from,
       window.to,
-      limit,
+      limit + 1,
     );
     if (result.isFailure()) {
       this.warn("Warehouse firmware lookup failed", result);
+      return null;
+    }
+    if (result.value.length > limit) {
+      this.logger.warn({
+        msg: "Firmware result exceeded its ceiling; degrading instead of truncating",
+        operation: "getIotDeviceGroupMonitoring",
+        limit,
+      });
       return null;
     }
     return result.value;

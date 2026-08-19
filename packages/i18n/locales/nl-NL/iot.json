@@ -422,7 +422,7 @@
         "lastSeenColumn": "Laatst gezien",
         "lastDataColumn": "Laatste data",
         "noData": "Nog geen data",
-        "pipelineUnavailable": "De datapipeline is onbereikbaar, dus stilte kan niet worden beoordeeld."
+        "pipelineUnavailable": "De monitoringdata kon niet volledig worden geladen, dus stilte wordt niet beoordeeld."
       },
       "nameLabel": "Naam",
       "namePlaceholder": "bijv. Kas A",
