@@ -7,15 +7,18 @@ import { Background, BackgroundVariant, Controls, ReactFlow } from "@xyflow/reac
 import "@xyflow/react/dist/style.css";
 import { useMemo } from "react";
 
-import type {
-  DeviceLineageModel,
-  LineageEdgeModel,
-  LineageNodeModel,
-} from "./build-device-lineage";
+import type { DeviceLineageModel, LineageEdgeModel } from "./build-device-lineage";
 import { layoutLineage } from "./layout-lineage";
 import { LineageNode } from "./lineage-node";
 
 const NODE_TYPES: NodeTypes = { lineage: LineageNode };
+
+/** Edge states whose count is a measurement volume worth labelling. */
+const COUNTED_STATES: readonly LineageEdgeModel["state"][] = [
+  "input",
+  "processing",
+  "unattributed",
+];
 
 const EDGE_STYLE: Record<LineageEdgeModel["state"], React.CSSProperties> = {
   identity: { stroke: "#CDD5DB", strokeWidth: 1.5 },
@@ -30,14 +33,16 @@ const EDGE_STYLE: Record<LineageEdgeModel["state"], React.CSSProperties> = {
 interface DeviceLineageFlowProps {
   model: DeviceLineageModel;
   selectedNodeId: string | null;
-  onSelect: (model: LineageNodeModel | null) => void;
+  /** Ids, not node models: the caller re-reads the current model, so a
+   * background refetch cannot leave the inspect panel on a stale snapshot. */
+  onSelect: (nodeId: string | null) => void;
 }
 
 /** Read-only lineage canvas: layout and selection only, no editing surface. */
 export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLineageFlowProps) {
   const locale = useLocale();
 
-  // Layout is selection-independent, so clicking a node never re-runs dagre.
+  // Layout is selection-independent, so clicking a node never re-lays out.
   const { layoutNodes, edges } = useMemo(() => {
     const flowNodes: Node[] = model.nodes.map((node) => ({
       id: node.id,
@@ -66,8 +71,7 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
   );
 
   const handleNodeClick = (_event: React.MouseEvent, node: Node) => {
-    const selected = model.nodes.find((candidate) => candidate.id === node.id) ?? null;
-    onSelect(selected);
+    onSelect(node.id);
   };
 
   const handlePaneClick = () => {
@@ -103,7 +107,7 @@ function edgeLabel(edge: LineageEdgeModel, locale: string): string | undefined {
       ? String(edge.count)
       : `${String(edge.count)} · ${formatRelativeTime(edge.lastBucketAt, locale)}`;
   }
-  if (edge.count !== null && ["input", "processing", "unattributed"].includes(edge.state)) {
+  if (edge.count !== null && COUNTED_STATES.includes(edge.state)) {
     return String(edge.count);
   }
   return undefined;

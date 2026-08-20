@@ -11,6 +11,7 @@ import { useTranslation } from "@repo/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 
 import type { LineageNodeModel } from "./build-device-lineage";
+import { lineageNodeTitle } from "./lineage-title";
 
 const RECENT_LIMIT = 5;
 
@@ -45,25 +46,6 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
         </CardContent>
       </Card>
     );
-  }
-
-  function panelTitle(selected: LineageNodeModel): string {
-    if (selected.kind === "device") {
-      return selected.label;
-    }
-    if (selected.kind === "broker") {
-      return t("iot.devices.lineage.brokerTitle");
-    }
-    if (selected.kind === "warehouse") {
-      return t("iot.devices.lineage.warehouseTitle");
-    }
-    if (selected.kind === "unattributed") {
-      return t("iot.devices.lineage.unattributedTitle");
-    }
-    if (selected.kind === "attribution-other") {
-      return t("iot.devices.lineage.otherTitle", { count: selected.folded });
-    }
-    return selected.entity.label;
   }
 
   function renderDetails(selected: LineageNodeModel) {
@@ -239,7 +221,7 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
   return (
     <Card className="shadow-none">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">{panelTitle(selected)}</CardTitle>
+        <CardTitle className="text-base">{lineageNodeTitle(selected, t)}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">{renderDetails(selected)}</CardContent>
     </Card>

@@ -126,4 +126,8 @@ describe("layoutLineage", () => {
     expect(device?.position.y).toBeGreaterThan(experiments[0].position.y);
     expect(device?.position.y).toBeLessThan(experiments[1].position.y);
   });
+
+  it("returns an empty graph untouched", () => {
+    expect(layoutLineage([])).toEqual([]);
+  });
 });

@@ -1,6 +1,5 @@
 "use client";
 
-import type { LineageNodeModel } from "@/components/iot-devices/lineage/build-device-lineage";
 import { buildDeviceLineage } from "@/components/iot-devices/lineage/build-device-lineage";
 import { DeviceLineageFlow } from "@/components/iot-devices/lineage/device-lineage-flow";
 import { LineageInspectPanel } from "@/components/iot-devices/lineage/lineage-inspect-panel";
@@ -49,7 +48,7 @@ export default function DeviceLineagePage() {
     range: resolveMonitoringPreset(DEFAULT_PRESET),
     preset: DEFAULT_PRESET,
   }));
-  const [selected, setSelected] = useState<LineageNodeModel | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data: device, isError: isDeviceError, refetch: refetchDevice } = useIotDevice(deviceId);
   const { data: activity } = useIotDeviceActivity(deviceId);
@@ -97,7 +96,7 @@ export default function DeviceLineagePage() {
 
   const handleRangeChange = (range: MonitoringRange, preset: MonitoringPresetId | null) => {
     setSelection({ range, preset });
-    setSelected(null);
+    setSelectedId(null);
   };
 
   const model = useMemo(() => {
@@ -139,6 +138,11 @@ export default function DeviceLineagePage() {
     t,
   ]);
 
+  // Derived, never stored: a refetch rebuilds the model, and the panel must
+  // show the fresh node rather than the snapshot taken at click time. A node
+  // that disappears from the new model deselects itself.
+  const selected = model?.nodes.find((node) => node.id === selectedId) ?? null;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -173,7 +177,7 @@ export default function DeviceLineagePage() {
             <DeviceLineageFlow
               model={model}
               selectedNodeId={selected?.id ?? null}
-              onSelect={setSelected}
+              onSelect={setSelectedId}
             />
             <LineageLegend />
           </div>

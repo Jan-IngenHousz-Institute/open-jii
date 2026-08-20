@@ -23,6 +23,7 @@ import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { LineageNodeModel } from "./build-device-lineage";
+import { lineageNodeTitle } from "./lineage-title";
 
 const KIND_STYLE: Record<LineageNodeModel["kind"], { accent: string; icon: LucideIcon }> = {
   device: { accent: "#2D3142", icon: Cpu },
@@ -57,8 +58,8 @@ export interface LineageNodeData extends Record<string, unknown> {
 }
 
 /**
- * One lineage stage in the flow-editor's visual language (white card, left
- * accent bar, icon + title). Clicking selects the node for the inspect panel;
+ * One lineage stage in the flow-editor's visual language: surface card, left
+ * accent bar, icon + title. Clicking selects the node for the inspect panel;
  * links deliberately live there, not in the node.
  */
 export function LineageNode(props: NodeProps) {
@@ -69,25 +70,7 @@ export function LineageNode(props: NodeProps) {
   const Icon = style.icon;
 
   const { hasInput, hasOutput } = nodeHandles(model);
-
-  function title(): string {
-    if (model.kind === "device") {
-      return model.label;
-    }
-    if (model.kind === "broker") {
-      return t("iot.devices.lineage.brokerTitle");
-    }
-    if (model.kind === "warehouse") {
-      return t("iot.devices.lineage.warehouseTitle");
-    }
-    if (model.kind === "unattributed") {
-      return t("iot.devices.lineage.unattributedTitle");
-    }
-    if (model.kind === "attribution-other") {
-      return t("iot.devices.lineage.otherTitle", { count: model.folded });
-    }
-    return model.entity.label;
-  }
+  const title = lineageNodeTitle(model, t);
 
   function renderFacts() {
     if (model.kind === "device") {
@@ -165,15 +148,7 @@ export function LineageNode(props: NodeProps) {
       );
     }
 
-    if (model.kind === "unattributed") {
-      return (
-        <p className="text-muted-foreground text-xs">
-          {t("iot.devices.lineage.measurementsInRange", { count: model.count })}
-        </p>
-      );
-    }
-
-    if (model.kind === "attribution-other") {
+    if (model.kind === "unattributed" || model.kind === "attribution-other") {
       return (
         <p className="text-muted-foreground text-xs">
           {t("iot.devices.lineage.measurementsInRange", { count: model.count })}
@@ -209,8 +184,8 @@ export function LineageNode(props: NodeProps) {
           <span style={{ color: style.accent }}>
             <Icon size={16} strokeWidth={2} aria-hidden />
           </span>
-          <span className="truncate text-sm font-medium" title={title()}>
-            {title()}
+          <span className="truncate text-sm font-medium" title={title}>
+            {title}
           </span>
         </div>
         {renderFacts()}

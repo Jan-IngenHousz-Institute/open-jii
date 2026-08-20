@@ -361,14 +361,14 @@ function appendAttributionKind(
     input.privateLabel,
   );
 
-  for (const entry of shown) {
-    const entity = resolved.get(entry.id);
-    if (entity === undefined) {
-      continue;
-    }
-    const nodeId = `${input.kind}:${entry.id}`;
-    nodes.push({ id: nodeId, kind: input.kind, entity, count: entry.count });
-    edges.push(input.edgeFor(nodeId, entry.count));
+  // Driven by the resolved entities: `resolveEntities` returns one per id it
+  // was given, so pairing back by id needs no absent-entity branch.
+  const shownCounts = new Map(shown.map((entry) => [entry.id, entry.count]));
+  for (const [id, entity] of resolved) {
+    const nodeId = `${input.kind}:${id}`;
+    const count = shownCounts.get(id) ?? 0;
+    nodes.push({ id: nodeId, kind: input.kind, entity, count });
+    edges.push(input.edgeFor(nodeId, count));
   }
 
   if (folded.length > 0) {

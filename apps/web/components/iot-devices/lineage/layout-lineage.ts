@@ -34,6 +34,12 @@ function columnFor(model: LineageNodeModel): number {
 
 /** Deterministic column layout, each column vertically centred on the canvas. */
 export function layoutLineage(nodes: Node[]): Node[] {
+  // Matches the sibling flow layout: an empty graph has nothing to place, and
+  // the column maths below would divide by an empty set.
+  if (nodes.length === 0) {
+    return nodes;
+  }
+
   const columns = new Map<number, Node[]>();
   for (const node of nodes) {
     const column = columnFor((node.data as { model: LineageNodeModel }).model);

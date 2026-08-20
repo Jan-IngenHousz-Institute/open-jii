@@ -197,6 +197,30 @@ describe("DeviceLineageContent", () => {
     });
   });
 
+  it("keeps the inspect panel on the refreshed node after a background refetch", async () => {
+    mountAll();
+
+    render(<DeviceLineageContent />);
+
+    fireEvent.click(await screen.findByText("Soil Health"));
+    expect(await screen.findByText("12")).toBeInTheDocument();
+
+    // A focus refetch rebuilds the model; the panel must follow the fresh node
+    // rather than the snapshot taken when it was clicked.
+    server.mount(contract.iot.getDeviceMonitoring, {
+      body: {
+        ...monitoring,
+        throughput: [
+          { bucketStart: "2026-08-13T00:00:00.000Z", experimentId: BOUND_EXPERIMENT, count: 99 },
+        ],
+      },
+    });
+    fireEvent(window, new Event("visibilitychange"));
+
+    expect(await screen.findByText("99")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.lineage.bindingLabel")).toBeInTheDocument();
+  });
+
   it("recovers the graph through the retry affordance after a warehouse failure", async () => {
     mountAll();
     server.mount(contract.iot.getDeviceMonitoring, { status: 500 });
