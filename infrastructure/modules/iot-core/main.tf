@@ -208,6 +208,10 @@ resource "aws_iam_policy" "iot_s3_policy" {
       Resource = "${var.s3_archive_bucket_arn}/device-lifecycle-events/*"
     }]
   })
+
+  # Narrow only after the ingest rules stop writing raw-iot/*, so in-flight
+  # archive writes are never denied while the old S3 action is still live.
+  depends_on = [aws_iot_topic_rule.iot_rules]
 }
 
 resource "aws_iam_role_policy_attachment" "iot_s3_attach" {
