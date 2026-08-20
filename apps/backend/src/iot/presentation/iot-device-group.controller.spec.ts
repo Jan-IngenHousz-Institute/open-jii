@@ -13,10 +13,11 @@ import type {
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
-import { success } from "../../common/utils/fp-utils";
+import { AppError, failure, success } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { GetIotDeviceGroupMonitoringUseCase } from "../application/use-cases/get-iot-device-group-monitoring/get-iot-device-group-monitoring";
 
 const MONITORING_RANGE = {
   from: "2026-08-17T00:00:00.000Z",
@@ -324,6 +325,22 @@ describe("IotDeviceGroupController", () => {
         .withAuth(userId)
         .query({ from: "2026-01-01T00:00:00.000Z", to: "2026-02-01T00:00:00.000Z", bucket: "day" })
         .expect(StatusCodes.OK);
+    });
+
+    it("maps a use-case failure through the error contract (500)", async () => {
+      const group = await createGroup();
+      const useCase = testApp.module.get(GetIotDeviceGroupMonitoringUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(failure(AppError.internal("boom")));
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .query(MONITORING_RANGE)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
 
     it("rejects a window wider than 31 days (400)", async () => {

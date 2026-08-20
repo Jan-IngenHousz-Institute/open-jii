@@ -2549,7 +2549,21 @@ describe("DatabricksAdapter", () => {
       }
     });
 
-    it("propagates a SQL failure from a grouped scan", async () => {
+    const scans: [string, () => Promise<{ isFailure: () => boolean }>][] = [
+      ["last activity", () => databricksAdapter.getDevicesLastActivity(THINGS)],
+      ["throughput", () => databricksAdapter.getDevicesThroughput(THINGS, FROM, TO, "hour", 50)],
+      [
+        "data by experiment",
+        () => databricksAdapter.getDevicesDataByExperiment(THINGS, FROM, TO, "hour", 50),
+      ],
+      ["firmware", () => databricksAdapter.getDevicesFirmware(THINGS, FROM, TO, 50)],
+      [
+        "lifecycle events",
+        () => databricksAdapter.getDevicesLifecycleEvents(THINGS, FROM, TO, 200),
+      ],
+    ];
+
+    it.each(scans)("propagates a SQL failure from the %s scan", async (_name, scan) => {
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
         expires_in: MOCK_EXPIRES_IN,
@@ -2559,9 +2573,9 @@ describe("DatabricksAdapter", () => {
         .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
         .reply(500, { message: "warehouse down" });
 
-      const result = await databricksAdapter.getDevicesThroughput(THINGS, FROM, TO, "hour", 50);
+      const result = await scan();
 
-      assertFailure(result);
+      expect(result.isFailure()).toBe(true);
     });
   });
 });

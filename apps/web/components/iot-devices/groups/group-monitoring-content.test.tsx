@@ -166,13 +166,35 @@ describe("GroupMonitoringContent", () => {
     expect(await screen.findByText("iot.groups.noMembers")).toBeInTheDocument();
   });
 
-  it("offers a retry when the request fails", async () => {
+  it("offers a retry that refetches after a failure", async () => {
+    const user = userEvent.setup();
     server.mount(contract.experiments.listExperiments, { body: [] });
-    server.mount(contract.deviceGroups.getDeviceGroupMonitoring, { status: 500 });
+    const monitoring = server.mount(contract.deviceGroups.getDeviceGroupMonitoring, {
+      status: 500,
+    });
 
     render(<GroupMonitoringContent />);
 
     expect(await screen.findByText("iot.devices.monitoring.loadError")).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.monitoring.retry")).toBeInTheDocument();
+    await user.click(screen.getByText("iot.devices.monitoring.retry"));
+
+    await vi.waitFor(() => {
+      expect(monitoring.callCount).toBeGreaterThan(1);
+    });
+  });
+
+  it("reloads the window when a range preset is picked", async () => {
+    const user = userEvent.setup();
+    mountMonitoring({ members: [] });
+
+    render(<GroupMonitoringContent />);
+
+    await screen.findByText("iot.groups.noMembers");
+    await user.click(screen.getByText("iot.devices.monitoring.range.last7d"));
+
+    // A new window means a new request with a day-grain bucket.
+    await vi.waitFor(() => {
+      expect(screen.getByText("iot.groups.noMembers")).toBeInTheDocument();
+    });
   });
 });

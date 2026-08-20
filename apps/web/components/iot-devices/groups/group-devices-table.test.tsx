@@ -1,5 +1,5 @@
 import { createDeviceGroupMemberHealth } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -120,5 +120,26 @@ describe("GroupDevicesTable", () => {
     );
 
     expect(screen.getByText("iot.groups.monitoring.filter.noMatches")).toBeInTheDocument();
+  });
+
+  it("opens the device's dashboard from anywhere on the row", async () => {
+    const user = userEvent.setup();
+    const member = createDeviceGroupMemberHealth({ name: "Gateway", connectivity: online });
+    const { router } = render(
+      <GroupDevicesTable
+        monitoring={monitoringWith([member])}
+        members={[member]}
+        labelByDeviceId={new Map([[member.deviceId, "Gateway"]])}
+        versionByDeviceId={new Map()}
+        locale="en-US"
+        now={NOW}
+      />,
+    );
+
+    await user.click(screen.getByText("iot.devices.connectivity.connected"));
+
+    expect(router.push).toHaveBeenCalledWith(
+      `/en-US/platform/devices/${member.deviceId}/monitoring`,
+    );
   });
 });
