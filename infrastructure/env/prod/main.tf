@@ -143,6 +143,10 @@ module "large_iot_s3" {
 module "iot_firehose" {
   source = "../../modules/firehose"
 
+  # The deploy role gains logs:CreateLogStream in the same apply that first
+  # creates the log stream; order after iam_oidc so the grant exists first.
+  depends_on = [module.iam_oidc]
+
   delivery_stream_name   = "open-jii-${var.environment}-iot-raw-archive"
   destination_bucket_arn = module.iot_raw_archive_s3.bucket_arn
   s3_prefix              = "raw-iot/!{timestamp:yyyy/MM/dd}/"
