@@ -5,7 +5,7 @@ import { ComingSoonPanel } from "@/components/iot-devices/coming-soon-panel";
 import { useTranslation } from "@repo/i18n";
 
 interface GroupComingSoonProps {
-  section: "credentials" | "monitoring";
+  section: "credentials";
 }
 
 export function GroupComingSoon({ section }: GroupComingSoonProps) {

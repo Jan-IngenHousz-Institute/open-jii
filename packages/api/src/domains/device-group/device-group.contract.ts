@@ -9,6 +9,8 @@ import {
   zDeviceGroupList,
   zDeviceGroupMemberList,
   zDeviceGroupOnboardResult,
+  zDeviceGroupMonitoring,
+  zDeviceGroupMonitoringQuery,
   zDeviceGroupPathParam,
   zOnboardDeviceGroupBody,
   zRemoveDeviceGroupMemberParams,
@@ -43,6 +45,14 @@ export const deviceGroupContract = {
     })
     .input(zOnboardDeviceGroupBody)
     .output(zDeviceGroupOnboardResult),
+  getDeviceGroupMonitoring: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/device-groups/{groupId}/monitoring",
+      successStatus: 200,
+    })
+    .input(zDeviceGroupMonitoringQuery)
+    .output(zDeviceGroupMonitoring),
   listDeviceGroupMembers: oc
     .route({ method: "GET", path: "/api/v1/device-groups/{groupId}/devices", successStatus: 200 })
     .input(zDeviceGroupPathParam)

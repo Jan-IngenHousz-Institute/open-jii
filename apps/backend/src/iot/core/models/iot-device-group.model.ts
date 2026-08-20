@@ -25,6 +25,15 @@ export type IotDeviceGroupWithCountDto = IotDeviceGroupDto & { memberCount: numb
 
 type MemberDevice = typeof iotDevices.$inferSelect;
 
+/** Monitoring projection: member identity plus the AWS/warehouse join key. */
+export interface IotDeviceGroupMemberThingDto {
+  deviceId: string;
+  name: string | null;
+  serialNumber: string;
+  deviceType: MemberDevice["deviceType"];
+  thingName: string;
+}
+
 /** Shallow roster row: display fields only, drill-through stays device-gated. */
 export interface IotDeviceGroupMemberDto {
   deviceId: string;

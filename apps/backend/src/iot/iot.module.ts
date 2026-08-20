@@ -23,6 +23,7 @@ import { GetDeviceSessionsUseCase } from "./application/use-cases/get-device-ses
 import { GetDeviceThroughputUseCase } from "./application/use-cases/get-device-throughput/get-device-throughput";
 import { GetIotCredentialsUseCase } from "./application/use-cases/get-iot-credentials/get-iot-credentials";
 import { GetIotDeviceActivityUseCase } from "./application/use-cases/get-iot-device-activity/get-iot-device-activity";
+import { GetIotDeviceGroupMonitoringUseCase } from "./application/use-cases/get-iot-device-group-monitoring/get-iot-device-group-monitoring";
 import { GetIotDeviceGroupUseCase } from "./application/use-cases/get-iot-device-group/get-iot-device-group";
 import { GetIotDeviceUseCase } from "./application/use-cases/get-iot-device/get-iot-device";
 import { GetIotUploadUrlUseCase } from "./application/use-cases/get-upload-url/get-upload-url";
@@ -90,6 +91,7 @@ import { IotController } from "./presentation/iot.controller";
     CreateIotDeviceGroupUseCase,
     ListIotDeviceGroupsUseCase,
     GetIotDeviceGroupUseCase,
+    GetIotDeviceGroupMonitoringUseCase,
     UpdateIotDeviceGroupUseCase,
     DeleteIotDeviceGroupUseCase,
     ListIotDeviceGroupMembersUseCase,

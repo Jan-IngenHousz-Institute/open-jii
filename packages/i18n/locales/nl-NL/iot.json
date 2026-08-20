@@ -421,6 +421,34 @@
         "members": "Apparaten",
         "created": "Aangemaakt"
       },
+      "monitoring": {
+        "filter": {
+          "searchPlaceholder": "Apparaten zoeken",
+          "all": "Alle",
+          "offline": "Offline",
+          "silent": "Stil",
+          "noMatches": "Geen apparaten komen overeen met het huidige filter."
+        },
+        "versionColumn": "Firmware",
+        "firmwareTitle": "Firmware",
+        "firmwareHint": "In het venster gerapporteerde versies, per apparaat.",
+        "noFirmware": "Geen firmwareversies gerapporteerd in dit bereik.",
+        "mixedFirmware": "{{count}} versies in het veld",
+        "experimentsHint": "Waar de data van de groep in het venster is beland.",
+        "experimentsGroupWide": "Hele groep; dit paneel volgt het apparaatfilter niet.",
+        "description": "Vlootstatus in één oogopslag, samengevoegd uit alle apparaten.",
+        "unknownMember": "Onbekend apparaat",
+        "silentCount_one": "{{count}} verbonden maar stil",
+        "silentCount_other": "{{count}} verbonden maar stil",
+        "onlineLabel": "Online",
+        "onlineValue": "{{online}} van {{total}}",
+        "unknownLabel": "Onbekend",
+        "stateColumn": "Status",
+        "lastSeenColumn": "Laatst gezien",
+        "lastDataColumn": "Laatste data",
+        "noData": "Nog geen data",
+        "pipelineUnavailable": "De monitoringdata kon niet volledig worden geladen, dus stilte wordt niet beoordeeld."
+      },
       "nameLabel": "Naam",
       "namePlaceholder": "bijv. Kas A",
       "noAddableDevices": "Al uw apparaten zitten al in deze groep.",
@@ -453,8 +481,7 @@
       },
       "pageTitle": "Apparaatgroep",
       "comingSoon": {
-        "credentials": "Certificaten voor alle apparaten in deze groep tegelijk uitgeven, roteren en intrekken.",
-        "monitoring": "Groepsstatus in één oogopslag: hoeveel apparaten online, stil of afwezig zijn."
+        "credentials": "Certificaten voor alle apparaten in deze groep tegelijk uitgeven, roteren en intrekken."
       }
     }
   }

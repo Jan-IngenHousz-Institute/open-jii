@@ -13,9 +13,10 @@ import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import { ChartTableToggle } from "./chart-table-toggle";
 import type { PanelView } from "./chart-table-toggle";
 import { bucketAxis } from "./monitoring-buckets";
-import { MONITORING_MAX_SERIES, MONITORING_SERIES_COLORS } from "./monitoring-palette";
+import { MONITORING_SERIES_COLORS } from "./monitoring-palette";
 import { RecentMeasurements } from "./recent-measurements";
 import type { EntityAccess } from "./resolve-entity-label";
+import { foldThroughputSeries } from "./throughput-series";
 
 interface ThroughputPanelProps {
   monitoring: DeviceMonitoring;
@@ -27,58 +28,26 @@ interface ThroughputPanelProps {
   to: string;
 }
 
-interface ThroughputSeries {
-  key: string;
-  name: string;
-  counts: number[];
-}
-
-interface SeriesGroup {
-  name: string;
-  keys: string[];
-}
-
-// Fixed-order series assignment: alphabetical by display name, with
-// everything past the palette folded into a single "Other" group.
+// Series identity per experiment; folding itself is shared with the group panel.
 function buildSeries(
   buckets: DeviceThroughputBucket[],
   boundExperiments: DeviceExperiment[],
   axis: string[],
   otherLabel: string,
   unknownLabel: string,
-): ThroughputSeries[] {
-  const byExperiment = new Map<string, Map<string, number>>();
-  for (const bucket of buckets) {
-    const key = bucket.experimentId ?? "__unknown__";
-    const perBucket = byExperiment.get(key) ?? new Map<string, number>();
-    perBucket.set(bucket.bucketStart, (perBucket.get(bucket.bucketStart) ?? 0) + bucket.count);
-    byExperiment.set(key, perBucket);
-  }
+) {
+  const entries = buckets.map((bucket) => ({
+    key: bucket.experimentId ?? "__unknown__",
+    bucketStart: bucket.bucketStart,
+    count: bucket.count,
+  }));
 
   const nameFor = (key: string) =>
     key === "__unknown__"
       ? unknownLabel
       : (boundExperiments.find((experiment) => experiment.id === key)?.name ?? key);
 
-  const orderedKeys = [...byExperiment.keys()].sort((a, b) => nameFor(a).localeCompare(nameFor(b)));
-
-  const needsOtherGroup = orderedKeys.length > MONITORING_MAX_SERIES;
-  const groups: SeriesGroup[] = needsOtherGroup
-    ? [
-        ...orderedKeys
-          .slice(0, MONITORING_MAX_SERIES - 1)
-          .map((key) => ({ name: nameFor(key), keys: [key] })),
-        { name: otherLabel, keys: orderedKeys.slice(MONITORING_MAX_SERIES - 1) },
-      ]
-    : orderedKeys.map((key) => ({ name: nameFor(key), keys: [key] }));
-
-  return groups.map(({ name, keys }) => ({
-    key: keys.join("+"),
-    name,
-    counts: axis.map((bucketStart) =>
-      keys.reduce((sum, key) => sum + (byExperiment.get(key)?.get(bucketStart) ?? 0), 0),
-    ),
-  }));
+  return foldThroughputSeries(entries, axis, nameFor, otherLabel);
 }
 
 /**

@@ -12,11 +12,19 @@ import type {
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
+import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { GetIotDeviceGroupMonitoringUseCase } from "../application/use-cases/get-iot-device-group-monitoring/get-iot-device-group-monitoring";
 import { OnboardIotDeviceGroupUseCase } from "../application/use-cases/onboard-iot-device-group/onboard-iot-device-group";
+
+const MONITORING_RANGE = {
+  from: "2026-08-17T00:00:00.000Z",
+  to: "2026-08-18T00:00:00.000Z",
+  bucket: "hour",
+};
 
 describe("IotDeviceGroupController", () => {
   const testApp = TestHarness.App;
@@ -90,6 +98,15 @@ describe("IotDeviceGroupController", () => {
         )
         .withAuth(userId)
         .send({ experimentIds: [] })
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .query(MONITORING_RANGE)
         .expect(StatusCodes.FORBIDDEN);
       await testApp
         .post(membersPath)
@@ -313,6 +330,123 @@ describe("IotDeviceGroupController", () => {
         .withAuth(userId)
         .send({ experimentIds: [] })
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+  });
+
+  describe("getDeviceGroupMonitoring", () => {
+    it("returns per-member health facts (200)", async () => {
+      const group = await createGroup();
+      const device = await testApp.createIotDevice({ createdBy: userId, name: "Gateway" });
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.addDeviceGroupMembers, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ deviceIds: [device.id] })
+        .expect(StatusCodes.OK);
+      const awsAdapter = testApp.module.get(AwsAdapter);
+      const databricksAdapter = testApp.module.get(DatabricksAdapter);
+      vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(
+        success(
+          new Map([
+            [device.thingName, { thingName: device.thingName, connected: true, lastSeenAt: null }],
+          ]),
+        ),
+      );
+      vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(
+        success(new Map([[device.thingName, "2026-08-18T10:00:00.000Z"]])),
+      );
+      vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(
+        success([
+          { bucketStart: "2026-08-17T10:00:00.000Z", clientId: device.thingName, count: 3 },
+        ]),
+      );
+      vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicesFirmware").mockResolvedValue(success([]));
+
+      const response: SuperTestResponse<{
+        members: { deviceId: string; connectivity: { connected: boolean } | null }[];
+        throughput: { deviceId: string | null; count: number }[];
+        pipelineUnavailable: boolean;
+      }> = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .query(MONITORING_RANGE)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.pipelineUnavailable).toBe(false);
+      expect(response.body.members).toHaveLength(1);
+      expect(response.body.members[0].deviceId).toBe(device.id);
+      expect(response.body.members[0].connectivity?.connected).toBe(true);
+      expect(response.body.throughput).toEqual([
+        { bucketStart: "2026-08-17T10:00:00.000Z", deviceId: device.id, count: 3 },
+      ]);
+    });
+
+    it("accepts a window of exactly 31 days (200)", async () => {
+      const group = await createGroup();
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .query({ from: "2026-01-01T00:00:00.000Z", to: "2026-02-01T00:00:00.000Z", bucket: "day" })
+        .expect(StatusCodes.OK);
+    });
+
+    it("maps a use-case failure through the error contract (500)", async () => {
+      const group = await createGroup();
+      const useCase = testApp.module.get(GetIotDeviceGroupMonitoringUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(failure(AppError.internal("boom")));
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .query(MONITORING_RANGE)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+
+    it("rejects a window wider than 31 days (400)", async () => {
+      const group = await createGroup();
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .query({ from: "2026-01-01T00:00:00.000Z", to: "2026-03-01T00:00:00.000Z", bucket: "day" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 403 for another user's private group", async () => {
+      const group = await createGroup();
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(stranger)
+        .query(MONITORING_RANGE)
+        .expect(StatusCodes.FORBIDDEN);
     });
   });
 

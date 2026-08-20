@@ -14,10 +14,8 @@ import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import type { MonitoringRange } from "./monitoring-range";
-
-// Beyond this silence, a connected device's tile turns amber: online but not
-// delivering. A fixed threshold until cadence inference exists.
-const SILENT_THRESHOLD_MS = 3_600_000;
+import { SILENT_THRESHOLD_MS } from "./silent-threshold";
+import { Tile } from "./tile";
 
 interface MonitoringTilesProps {
   device: IotDeviceDetail | undefined;
@@ -99,9 +97,14 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           <Skeleton className="h-4 w-16" />
         ) : (
           <div className="space-y-1">
-            <p className="text-lg font-semibold tabular-nums">{total}</p>
+            <p className="text-lg font-semibold tabular-nums">{total.toLocaleString(locale)}</p>
             <p className="text-muted-foreground text-xs font-normal tabular-nums">
-              {t("iot.devices.monitoring.perHour", { rate: perHour.toFixed(1) })}
+              {t("iot.devices.monitoring.perHour", {
+                rate: perHour.toLocaleString(locale, {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                }),
+              })}
             </p>
           </div>
         )}
@@ -133,15 +136,6 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
           </div>
         )}
       </Tile>
-    </div>
-  );
-}
-
-function Tile({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border p-3">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <div className="mt-1.5 text-sm font-medium">{children}</div>
     </div>
   );
 }
