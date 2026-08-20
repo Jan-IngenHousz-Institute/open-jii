@@ -124,6 +124,29 @@ describe("WorkbookDraftEditor server reconciliation", () => {
     expect(hasCell("added-elsewhere")).toBe(false);
   });
 
+  it("still adopts after a save the server has already moved past", async () => {
+    // The editor saves B, then a third party's C arrives before B echoes back.
+    // Local (B) legitimately differs from the last copy seen (A), so a
+    // "local === last seen" test would refuse C, and every copy after it.
+    const { rerender } = render(
+      <WorkbookDraftEditor id="wb-1" initialCells={base} canEdit name="wb" />,
+    );
+
+    screen.getByRole("button", { name: "local edit" }).click();
+    await waitFor(() => expect(hasCell("local-edit")).toBe(true));
+    await vi.advanceTimersByTimeAsync(3000);
+    await waitFor(() => expect(updateWorkbook).toHaveBeenCalled());
+
+    const fromServer = [
+      createProtocolCell({ id: "cell-1" }),
+      createMarkdownCell({ id: "third-party" }),
+    ] as WorkbookCell[];
+    rerender(<WorkbookDraftEditor id="wb-1" initialCells={fromServer} canEdit name="wb" />);
+
+    await waitFor(() => expect(hasCell("third-party")).toBe(true));
+    expect(hasCell("local-edit")).toBe(false);
+  });
+
   it("keeps a local edit batched into the same commit as a server update", () => {
     const { rerender } = render(
       <WorkbookDraftEditor id="wb-1" initialCells={base} canEdit name="wb" />,
