@@ -929,6 +929,21 @@ locals {
       resource = "*"
     }
 
+    firehose = {
+      actions = [
+        "firehose:CreateDeliveryStream",
+        "firehose:DeleteDeliveryStream",
+        "firehose:DescribeDeliveryStream",
+        "firehose:UpdateDestination",
+        "firehose:StartDeliveryStreamEncryption",
+        "firehose:StopDeliveryStreamEncryption",
+        "firehose:TagDeliveryStream",
+        "firehose:UntagDeliveryStream",
+        "firehose:ListTagsForDeliveryStream",
+      ]
+      resource = "*"
+    }
+
     grafana = {
       actions = [
         "grafana:CreateWorkspace",
