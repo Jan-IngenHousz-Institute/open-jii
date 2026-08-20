@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DeviceGroupMonitoring } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupMonitoring } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import { GroupMonitoringContent } from "./group-monitoring-content";
 
@@ -19,12 +19,12 @@ const GROUP_ID = "11111111-1111-4111-8111-111111111111";
 
 const STALE = "2026-08-18T00:00:00.000Z";
 
-type MonitoringBody = Pick<DeviceGroupMonitoring, "members"> &
-  Partial<Omit<DeviceGroupMonitoring, "members">>;
+type MonitoringBody = Pick<IotDeviceGroupMonitoring, "members"> &
+  Partial<Omit<IotDeviceGroupMonitoring, "members">>;
 
 function mountMonitoring(body: MonitoringBody) {
   server.mount(contract.experiments.listExperiments, { body: [] });
-  server.mount(contract.deviceGroups.getDeviceGroupMonitoring, {
+  server.mount(contract.iot.getIotDeviceGroupMonitoring, {
     body: {
       throughput: [],
       dataByExperiment: [],
@@ -169,7 +169,7 @@ describe("GroupMonitoringContent", () => {
   it("offers a retry that refetches after a failure", async () => {
     const user = userEvent.setup();
     server.mount(contract.experiments.listExperiments, { body: [] });
-    const monitoring = server.mount(contract.deviceGroups.getDeviceGroupMonitoring, {
+    const monitoring = server.mount(contract.iot.getIotDeviceGroupMonitoring, {
       status: 500,
     });
 

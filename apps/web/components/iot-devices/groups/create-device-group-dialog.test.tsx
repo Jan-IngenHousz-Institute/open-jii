@@ -1,4 +1,4 @@
-import { createDeviceGroup } from "@/test/factories";
+import { createIotDeviceGroup } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
@@ -19,7 +19,7 @@ describe("CreateDeviceGroupDialog", () => {
   it("closes on cancel without creating", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
-    const create = server.mount(contract.deviceGroups.createDeviceGroup, { status: 500 });
+    const create = server.mount(contract.iot.createIotDeviceGroup, { status: 500 });
 
     render(<CreateDeviceGroupDialog open onOpenChange={onOpenChange} locale="en-US" />);
 
@@ -31,9 +31,9 @@ describe("CreateDeviceGroupDialog", () => {
 
   it("creates the group and routes to its detail page", async () => {
     const user = userEvent.setup();
-    const group = createDeviceGroup({ name: "Greenhouse A" });
-    const create = server.mount(contract.deviceGroups.createDeviceGroup, { body: group });
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [group] });
+    const group = createIotDeviceGroup({ name: "Greenhouse A" });
+    const create = server.mount(contract.iot.createIotDeviceGroup, { body: group });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [group] });
 
     render(<CreateDeviceGroupDialog open onOpenChange={vi.fn()} locale="en-US" />);
 

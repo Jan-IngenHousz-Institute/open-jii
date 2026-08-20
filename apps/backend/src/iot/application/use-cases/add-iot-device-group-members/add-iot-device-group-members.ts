@@ -2,8 +2,9 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
-import { IotDeviceGroupMemberDto } from "../../../core/models/iot-device-group.model";
+import { IotDeviceGroupMemberConnectivityDto } from "../../../core/models/iot-device-group.model";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
+import { ListIotDeviceGroupMembersUseCase } from "../list-iot-device-group-members/list-iot-device-group-members";
 
 /**
  * Grouping is operational custody, so every device added must be one the
@@ -16,6 +17,7 @@ export class AddIotDeviceGroupMembersUseCase {
 
   constructor(
     private readonly groupRepository: IotDeviceGroupRepository,
+    private readonly listMembers: ListIotDeviceGroupMembersUseCase,
     private readonly authorizationService: AuthorizationService,
   ) {}
 
@@ -23,10 +25,10 @@ export class AddIotDeviceGroupMembersUseCase {
     groupId: string,
     deviceIds: string[],
     userId: string,
-  ): Promise<Result<IotDeviceGroupMemberDto[]>> {
+  ): Promise<Result<IotDeviceGroupMemberConnectivityDto[]>> {
     this.logger.log({
       msg: "Adding device group members",
-      operation: "addDeviceGroupMembers",
+      operation: "addIotDeviceGroupMembers",
       groupId,
       userId,
       count: deviceIds.length,
@@ -56,6 +58,8 @@ export class AddIotDeviceGroupMembersUseCase {
       return failure(added.error);
     }
 
-    return this.groupRepository.listMembers(groupId);
+    // The response is the refreshed roster, so it goes through the same
+    // connectivity enrichment as the list endpoint.
+    return this.listMembers.execute(groupId);
   }
 }

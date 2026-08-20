@@ -11,7 +11,7 @@ const DEVICE_ID = "22222222-2222-4222-8222-222222222222";
 
 describe("useRemoveIotDeviceGroupMember", () => {
   it("removes the member by group and device id", async () => {
-    const spy = server.mount(contract.deviceGroups.removeDeviceGroupMember, { status: 204 });
+    const spy = server.mount(contract.iot.removeIotDeviceGroupMember, { status: 204 });
 
     const { result } = renderHook(() => useRemoveIotDeviceGroupMember());
 
@@ -27,7 +27,7 @@ describe("useRemoveIotDeviceGroupMember", () => {
   });
 
   it("surfaces an error response", async () => {
-    server.mount(contract.deviceGroups.removeDeviceGroupMember, { status: 403 });
+    server.mount(contract.iot.removeIotDeviceGroupMember, { status: 403 });
 
     const { result } = renderHook(() => useRemoveIotDeviceGroupMember());
 

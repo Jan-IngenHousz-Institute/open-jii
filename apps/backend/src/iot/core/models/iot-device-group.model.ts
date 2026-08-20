@@ -4,6 +4,8 @@ import type { z } from "zod";
 import type { iotDevices } from "@repo/database";
 import { deviceGroups } from "@repo/database";
 
+import type { CertificateResult } from "../ports/aws.port";
+
 export const createIotDeviceGroupSchema = createInsertSchema(deviceGroups).omit({
   id: true,
   createdAt: true,
@@ -42,4 +44,35 @@ export interface IotDeviceGroupMemberDto {
   deviceType: MemberDevice["deviceType"];
   status: MemberDevice["status"];
   addedAt: Date;
+}
+
+/** Repo roster row: member plus the fleet-index key, stripped before the contract. */
+export interface IotDeviceGroupMemberRecordDto extends IotDeviceGroupMemberDto {
+  thingName: string;
+}
+
+/** Roster row enriched with connectivity; null means the fleet index was unavailable. */
+export interface IotDeviceGroupMemberConnectivityDto extends IotDeviceGroupMemberDto {
+  connected: boolean | null;
+}
+
+/** Per-device batch outcome; the batch itself succeeds even when rows fail. */
+export interface IotDeviceGroupCredentialRowDto {
+  deviceId: string;
+  thingName: string | null;
+  credentials: CertificateResult | null;
+  error: string | null;
+}
+
+export interface IotDeviceGroupCredentialsDto {
+  devices: IotDeviceGroupCredentialRowDto[];
+}
+
+export interface IotDeviceGroupRevokeRowDto {
+  deviceId: string;
+  error: string | null;
+}
+
+export interface IotDeviceGroupRevokeDto {
+  devices: IotDeviceGroupRevokeRowDto[];
 }

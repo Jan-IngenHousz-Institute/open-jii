@@ -1,4 +1,4 @@
-import type { DisplayRole } from "@repo/api/domains/device/device-profile";
+import type { DisplayRole } from "@repo/api/domains/iot/device-profile";
 import type {
   DevicePresentation,
   DevicePresentationInput,

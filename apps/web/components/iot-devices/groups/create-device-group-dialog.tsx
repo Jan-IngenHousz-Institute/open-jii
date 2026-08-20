@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 
-import { zCreateDeviceGroupBody } from "@repo/api/domains/device-group/device-group.schema";
+import { zCreateIotDeviceGroupBody } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -28,7 +28,7 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 
-const formSchema = zCreateDeviceGroupBody.pick({ name: true, description: true });
+const formSchema = zCreateIotDeviceGroupBody.pick({ name: true, description: true });
 type FormValues = z.infer<typeof formSchema>;
 
 interface CreateDeviceGroupDialogProps {

@@ -12,7 +12,7 @@ const DEVICE_ID = "22222222-2222-4222-8222-222222222222";
 
 describe("useAddIotDeviceGroupMembers", () => {
   it("sends the batch to the group's roster route", async () => {
-    const spy = server.mount(contract.deviceGroups.addDeviceGroupMembers, {
+    const spy = server.mount(contract.iot.addIotDeviceGroupMembers, {
       body: [createDeviceGroupMember({ deviceId: DEVICE_ID })],
     });
 
@@ -29,7 +29,7 @@ describe("useAddIotDeviceGroupMembers", () => {
   });
 
   it("surfaces an error response", async () => {
-    server.mount(contract.deviceGroups.addDeviceGroupMembers, { status: 403 });
+    server.mount(contract.iot.addIotDeviceGroupMembers, { status: 403 });
 
     const { result } = renderHook(() => useAddIotDeviceGroupMembers());
 

@@ -4,14 +4,14 @@ import { useLocale } from "@/hooks/useLocale";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-import type { DeviceGroupDetail } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupDetail } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { DeviceGroupDetailTabs } from "./device-group-detail-tabs";
 
 interface DeviceGroupLayoutContentProps {
   groupId: string;
-  group: DeviceGroupDetail;
+  group: IotDeviceGroupDetail;
   children: React.ReactNode;
 }
 

@@ -11,12 +11,6 @@
  */
 import type { ResourceCapabilities } from "@repo/api/domains/authorization/capabilities.schema";
 import type {
-  DeviceGroupDetail,
-  DeviceGroupListItem,
-  DeviceGroupMember,
-  DeviceGroupMemberHealth,
-} from "@repo/api/domains/device-group/device-group.schema";
-import type {
   ExperimentDashboardLayout,
   ExperimentDashboardWidget,
   ExperimentDashboard,
@@ -43,6 +37,12 @@ import type {
 } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import type {
+  IotDeviceGroupDetail,
+  IotDeviceGroupListItem,
+  IotDeviceGroupMember,
+  IotDeviceGroupMemberHealth,
+} from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import type { IotDeviceDetail, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import type { Macro, MacroDetail } from "@repo/api/domains/macro/macro.schema";
 import type { OrganizationJoinRequest } from "@repo/api/domains/organization/join-requests/organization-join-requests.schema";
@@ -1117,9 +1117,9 @@ export function resetFactories() {
 
 let deviceGroupSeq = 0;
 
-export function createDeviceGroup(
-  overrides: Partial<DeviceGroupListItem> = {},
-): DeviceGroupListItem {
+export function createIotDeviceGroup(
+  overrides: Partial<IotDeviceGroupListItem> = {},
+): IotDeviceGroupListItem {
   deviceGroupSeq++;
   return {
     id: crypto.randomUUID(),
@@ -1136,18 +1136,18 @@ export function createDeviceGroup(
 }
 
 export function createDeviceGroupDetail(
-  overrides: Partial<DeviceGroupDetail> = {},
-): DeviceGroupDetail {
+  overrides: Partial<IotDeviceGroupDetail> = {},
+): IotDeviceGroupDetail {
   return {
-    ...createDeviceGroup(),
+    ...createIotDeviceGroup(),
     capabilities: createCapabilities(),
     ...overrides,
   };
 }
 
 export function createDeviceGroupMemberHealth(
-  overrides: Partial<DeviceGroupMemberHealth> = {},
-): DeviceGroupMemberHealth {
+  overrides: Partial<IotDeviceGroupMemberHealth> = {},
+): IotDeviceGroupMemberHealth {
   return {
     deviceId: crypto.randomUUID(),
     name: null,
@@ -1160,14 +1160,15 @@ export function createDeviceGroupMemberHealth(
 }
 
 export function createDeviceGroupMember(
-  overrides: Partial<DeviceGroupMember> = {},
-): DeviceGroupMember {
+  overrides: Partial<IotDeviceGroupMember> = {},
+): IotDeviceGroupMember {
   return {
     deviceId: crypto.randomUUID(),
     name: null,
     serialNumber: "AA:BB:CC:DD",
     deviceType: "ambyte",
     status: "active",
+    connected: null,
     addedAt: new Date().toISOString(),
     ...overrides,
   };

@@ -7,9 +7,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import type {
-  DeviceGroupMemberHealth,
-  DeviceGroupMonitoring,
-} from "@repo/api/domains/device-group/device-group.schema";
+  IotDeviceGroupMemberHealth,
+  IotDeviceGroupMonitoring,
+} from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Table,
@@ -30,9 +30,9 @@ import {
 import { isMemberSilent } from "./group-health";
 
 interface GroupDevicesTableProps {
-  monitoring: DeviceGroupMonitoring;
+  monitoring: IotDeviceGroupMonitoring;
   /** The filtered subset to render; facts still come from `monitoring`. */
-  members: DeviceGroupMemberHealth[];
+  members: IotDeviceGroupMemberHealth[];
   labelByDeviceId: Map<string, string>;
   versionByDeviceId: Map<string, string>;
   locale: string;
@@ -66,7 +66,7 @@ export function GroupDevicesTable({
     );
   }
 
-  function renderDeviceRow(member: DeviceGroupMemberHealth) {
+  function renderDeviceRow(member: IotDeviceGroupMemberHealth) {
     const silent = isMemberSilent(member, monitoring.pipelineUnavailable, now);
     const monitoringHref = `/${locale}/platform/devices/${member.deviceId}/monitoring`;
 

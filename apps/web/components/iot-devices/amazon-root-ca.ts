@@ -40,3 +40,9 @@ BqWTrBqYaGFy+uGh0PsceGCmQ5nFuMQCIQCcAu/xlJyzlvnrxir4tiz+OpAUFteM
 YyRIHN8wfdVoOw==
 -----END CERTIFICATE-----
 `;
+
+/** Both CAs as bundle files, so every credential delivery ships the same pair. */
+export const ROOT_CA_FILES = [
+  { filename: "AmazonRootCA1.pem", content: AMAZON_ROOT_CA_1_PEM },
+  { filename: "AmazonRootCA3.pem", content: AMAZON_ROOT_CA_3_PEM },
+];

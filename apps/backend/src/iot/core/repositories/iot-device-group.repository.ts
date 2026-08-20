@@ -21,7 +21,7 @@ import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/r
 import {
   CreateIotDeviceGroupDto,
   IotDeviceGroupDto,
-  IotDeviceGroupMemberDto,
+  IotDeviceGroupMemberRecordDto,
   IotDeviceGroupMemberThingDto,
   IotDeviceGroupWithCountDto,
   UpdateIotDeviceGroupDto,
@@ -141,7 +141,7 @@ export class IotDeviceGroupRepository {
     );
   }
 
-  async listMembers(groupId: string): Promise<Result<IotDeviceGroupMemberDto[]>> {
+  async listMembers(groupId: string): Promise<Result<IotDeviceGroupMemberRecordDto[]>> {
     return tryCatch(async () => {
       return this.database
         .select({
@@ -150,6 +150,7 @@ export class IotDeviceGroupRepository {
           serialNumber: iotDevices.serialNumber,
           deviceType: iotDevices.deviceType,
           status: iotDevices.status,
+          thingName: iotDevices.thingName,
           addedAt: deviceGroupMembers.createdAt,
         })
         .from(deviceGroupMembers)
