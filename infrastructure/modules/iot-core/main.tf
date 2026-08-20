@@ -205,7 +205,7 @@ resource "aws_iam_policy" "iot_s3_policy" {
     Statement = [{
       Effect   = "Allow",
       Action   = ["s3:PutObject"],
-      Resource = "${var.s3_archive_bucket_arn}/*"
+      Resource = "${var.s3_archive_bucket_arn}/device-lifecycle-events/*"
     }]
   })
 }
@@ -213,6 +213,38 @@ resource "aws_iam_policy" "iot_s3_policy" {
 resource "aws_iam_role_policy_attachment" "iot_s3_attach" {
   role       = aws_iam_role.iot_s3_role.name
   policy_arn = aws_iam_policy.iot_s3_policy.arn
+}
+
+# --------------------------------------------------
+# IAM Role and Policy for Firehose raw archive
+# --------------------------------------------------
+resource "aws_iam_role" "iot_firehose_role" {
+  name = var.iot_firehose_role_name
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "iot.amazonaws.com" },
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_policy" "iot_firehose_policy" {
+  name = var.iot_firehose_policy_name
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect   = "Allow",
+      Action   = ["firehose:PutRecord", "firehose:PutRecordBatch"],
+      Resource = var.firehose_delivery_stream_arn
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "iot_firehose_attach" {
+  role       = aws_iam_role.iot_firehose_role.name
+  policy_arn = aws_iam_policy.iot_firehose_policy.arn
 }
 
 # IAM policy that allows the ECS backend task role to generate pre-signed
@@ -266,10 +298,12 @@ resource "aws_iot_topic_rule" "iot_rules" {
     partition_key = "$${newuuid()}"
   }
 
-  s3 {
-    role_arn    = aws_iam_role.iot_s3_role.arn
-    bucket_name = var.s3_archive_bucket_name
-    key         = "raw-iot/$${parse_time(\"yyyy/MM/dd\", timestamp())}/$${newuuid()}.json"
+  # Raw archive goes through Firehose so messages are buffered into large
+  # objects instead of one S3 PUT per message.
+  firehose {
+    role_arn             = aws_iam_role.iot_firehose_role.arn
+    delivery_stream_name = var.firehose_delivery_stream_name
+    separator            = "\n"
   }
 }
 
