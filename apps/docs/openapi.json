@@ -18989,6 +18989,58 @@
                               "type",
                               "deviceType"
                             ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "device_group"
+                              },
+                              "memberCount": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "memberCount"
+                            ]
                           }
                         ]
                       }
@@ -19010,6 +19062,9 @@
                         },
                         "device": {
                           "type": "integer"
+                        },
+                        "device_group": {
+                          "type": "integer"
                         }
                       },
                       "required": [
@@ -19017,7 +19072,8 @@
                         "protocol",
                         "macro",
                         "workbook",
-                        "device"
+                        "device",
+                        "device_group"
                       ]
                     }
                   },
