@@ -1,4 +1,4 @@
-import { createDeviceGroup } from "@/test/factories";
+import { createIotDeviceGroup } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
@@ -6,7 +6,7 @@ import { GroupCard } from "./group-card";
 
 describe("GroupCard", () => {
   it("renders name, description, and member count", () => {
-    const group = createDeviceGroup({
+    const group = createIotDeviceGroup({
       name: "Greenhouse A",
       description: "North wing sensors",
       memberCount: 3,
@@ -20,7 +20,7 @@ describe("GroupCard", () => {
   });
 
   it("omits the description paragraph when there is none", () => {
-    const group = createDeviceGroup({ name: "Field campaign", description: null });
+    const group = createIotDeviceGroup({ name: "Field campaign", description: null });
 
     render(<GroupCard group={group} locale="en-US" />);
 
@@ -29,7 +29,7 @@ describe("GroupCard", () => {
   });
 
   it("links to the group detail route", () => {
-    const group = createDeviceGroup();
+    const group = createIotDeviceGroup();
 
     render(<GroupCard group={group} locale="en-US" />);
 

@@ -1,4 +1,4 @@
-import { createDeviceGroup, createIotDevice } from "@/test/factories";
+import { createIotDeviceGroup, createIotDevice } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { fireEvent, render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
@@ -13,7 +13,7 @@ function successRow(serialNumber: string) {
 }
 
 function mountBase(existing: ReturnType<typeof createIotDevice>[] = []) {
-  server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+  server.mount(contract.iot.listIotDeviceGroups, { body: [] });
   server.mount(contract.iot.listIotDevices, { body: existing });
 }
 
@@ -166,8 +166,8 @@ describe("BulkRegisterIotDevicesDialog", () => {
 
   it("sends the chosen group and shows per-serial failures", async () => {
     const user = userEvent.setup();
-    const group = createDeviceGroup({ name: "Greenhouse A" });
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [group] });
+    const group = createIotDeviceGroup({ name: "Greenhouse A" });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [group] });
     server.mount(contract.iot.listIotDevices, { body: [] });
     const bulk = server.mount(contract.iot.bulkRegisterIotDevices, {
       body: {

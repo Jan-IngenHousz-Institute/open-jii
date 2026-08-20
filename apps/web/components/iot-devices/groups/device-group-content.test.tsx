@@ -25,10 +25,10 @@ vi.mock("@repo/auth/client", () => ({
 }));
 
 function mountGroup(overrides = {}, members = [createDeviceGroupMember()]) {
-  server.mount(contract.deviceGroups.getDeviceGroup, {
+  server.mount(contract.iot.getIotDeviceGroup, {
     body: createDeviceGroupDetail({ id: GROUP_ID, name: "Greenhouse A", ...overrides }),
   });
-  server.mount(contract.deviceGroups.listDeviceGroupMembers, { body: members });
+  server.mount(contract.iot.listIotDeviceGroupMembers, { body: members });
   server.mount(contract.iot.listIotDevices, { body: [] });
 }
 
@@ -77,7 +77,7 @@ describe("DeviceGroupContent", () => {
   it("deletes the group from the danger zone", async () => {
     const user = userEvent.setup();
     mountGroup();
-    const remove = server.mount(contract.deviceGroups.deleteDeviceGroup, { status: 204 });
+    const remove = server.mount(contract.iot.deleteIotDeviceGroup, { status: 204 });
 
     render(<DeviceGroupContent />);
 
@@ -93,7 +93,7 @@ describe("DeviceGroupContent", () => {
   it("removes a member", async () => {
     const user = userEvent.setup();
     mountGroup();
-    const remove = server.mount(contract.deviceGroups.removeDeviceGroupMember, { status: 204 });
+    const remove = server.mount(contract.iot.removeIotDeviceGroupMember, { status: 204 });
 
     render(<DeviceGroupContent />);
 
@@ -114,8 +114,8 @@ describe("DeviceGroupContent", () => {
   });
 
   it("surfaces a load error", async () => {
-    server.mount(contract.deviceGroups.getDeviceGroup, { status: 500 });
-    server.mount(contract.deviceGroups.listDeviceGroupMembers, { body: [] });
+    server.mount(contract.iot.getIotDeviceGroup, { status: 500 });
+    server.mount(contract.iot.listIotDeviceGroupMembers, { body: [] });
 
     render(<DeviceGroupContent />);
 

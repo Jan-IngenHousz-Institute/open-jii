@@ -18,10 +18,7 @@ const RESOURCE_CACHE_FAMILIES: Record<SharingResourceType, () => QueryKey[]> = {
   protocol: () => [orpc.protocols.getProtocol.key(), orpc.protocols.listProtocols.key()],
   workbook: () => [orpc.workbooks.getWorkbook.key(), orpc.workbooks.listWorkbooks.key()],
   device: () => [orpc.iot.getIotDevice.key(), orpc.iot.listIotDevices.key()],
-  device_group: () => [
-    orpc.deviceGroups.getDeviceGroup.key(),
-    orpc.deviceGroups.listDeviceGroups.key(),
-  ],
+  device_group: () => [orpc.iot.getIotDeviceGroup.key(), orpc.iot.listIotDeviceGroups.key()],
 };
 
 export function allResourceCacheFamilies(): QueryKey[] {
@@ -65,8 +62,8 @@ export function resourceCacheKeys(
       ];
     case "device_group":
       return [
-        orpc.deviceGroups.getDeviceGroup.queryKey({ input: { groupId: resourceId } }),
-        orpc.deviceGroups.listDeviceGroups.key(),
+        orpc.iot.getIotDeviceGroup.queryKey({ input: { groupId: resourceId } }),
+        orpc.iot.listIotDeviceGroups.key(),
       ];
   }
 }

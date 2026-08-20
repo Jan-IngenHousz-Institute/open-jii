@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
  */
 export const useIotDeviceGroupMonitoring = (groupId: string, range: MonitoringRange) => {
   return useQuery(
-    orpc.deviceGroups.getDeviceGroupMonitoring.queryOptions({
+    orpc.iot.getIotDeviceGroupMonitoring.queryOptions({
       input: { groupId, from: range.from, to: range.to, bucket: range.bucket },
     }),
   );

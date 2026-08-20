@@ -1,4 +1,4 @@
-import { DEVICE_PROFILES } from "@repo/api/domains/device/device-profile";
+import { DEVICE_PROFILES } from "@repo/api/domains/iot/device-profile";
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 

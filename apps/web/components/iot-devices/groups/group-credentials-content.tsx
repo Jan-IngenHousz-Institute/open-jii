@@ -1,0 +1,347 @@
+"use client";
+
+import { CredentialConfirmDialog } from "@/components/iot-devices/credential-confirm-dialog";
+import { ConnectivityDot } from "@/components/iot-devices/device-connectivity";
+import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
+import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
+import { useIssueIotDeviceGroupCredentials } from "@/hooks/iot/useIssueIotDeviceGroupCredentials/useIssueIotDeviceGroupCredentials";
+import { useRevokeIotDeviceGroupCredentials } from "@/hooks/iot/useRevokeIotDeviceGroupCredentials/useRevokeIotDeviceGroupCredentials";
+import { useRotateIotDeviceGroupCredentials } from "@/hooks/iot/useRotateIotDeviceGroupCredentials/useRotateIotDeviceGroupCredentials";
+import { useLocale } from "@/hooks/useLocale";
+import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { KeyRound, Loader2, RefreshCw, ShieldOff } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+import type { IotDeviceGroupMember } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
+import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui/components/card";
+import { Checkbox } from "@repo/ui/components/checkbox";
+import { Label } from "@repo/ui/components/label";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
+import { toast } from "@repo/ui/hooks/use-toast";
+
+import { GroupCredentialResults } from "./group-credential-results";
+import type { GroupCredentialBatch } from "./group-credential-results";
+
+type CredentialAction = "issue" | "rotate" | "revoke";
+
+const ELIGIBLE_STATUSES: Record<CredentialAction, readonly IotDeviceGroupMember["status"][]> = {
+  issue: ["pending", "revoked"],
+  rotate: ["active"],
+  revoke: ["active", "rotating"],
+};
+
+/** Phones authenticate through the user's session; certificates never apply. */
+function isEligible(member: IotDeviceGroupMember, action: CredentialAction): boolean {
+  return member.deviceType !== "mobile" && ELIGIBLE_STATUSES[action].includes(member.status);
+}
+
+export function GroupCredentialsContent() {
+  const { t } = useTranslation("iot");
+  const params = useParams<{ groupId: string }>();
+  const groupId = params.groupId;
+  const router = useRouter();
+  const locale = useLocale();
+
+  const { data: group } = useIotDeviceGroup(groupId);
+  const { data: membersData, isLoading: isLoadingMembers } = useIotDeviceGroupMembers(groupId);
+  const members = membersData ?? [];
+
+  const [action, setAction] = useState<CredentialAction>("issue");
+  const [deselectedIds, setDeselectedIds] = useState<Set<string>>(new Set());
+  const [confirming, setConfirming] = useState(false);
+  // Held in state, not read from the mutation: a failed retry resets mutation
+  // data, and issued keys must stay available for delivery.
+  const [batch, setBatch] = useState<GroupCredentialBatch | null>(null);
+
+  const issueCredentials = useIssueIotDeviceGroupCredentials();
+  const rotateCredentials = useRotateIotDeviceGroupCredentials();
+  const revokeCredentials = useRevokeIotDeviceGroupCredentials();
+  const isPending =
+    issueCredentials.isPending || rotateCredentials.isPending || revokeCredentials.isPending;
+
+  // Manage-gated like the device credentials route: the tab strip hides the
+  // tab, this covers direct visits.
+  const overviewPath = `/${locale}/platform/devices/groups/${groupId}`;
+  const hasNoSurface = !!group && !group.capabilities.canManage;
+
+  useEffect(() => {
+    // `replace`, not `push`: this route is not somewhere to come back to.
+    if (hasNoSurface) router.replace(overviewPath);
+  }, [hasNoSurface, overviewPath, router]);
+
+  const eligible = members.filter((member) => isEligible(member, action));
+  const selected = eligible.filter((member) => !deselectedIds.has(member.deviceId));
+  const selectedIds = selected.map((member) => member.deviceId);
+  const selectedOnlineCount = selected.filter((member) => member.connected === true).length;
+  const isDisruptive = action === "rotate" || action === "revoke";
+
+  function labelFor(member: IotDeviceGroupMember): string {
+    return resolveDevicePrimaryLabel(
+      presentDevice({ name: member.name, family: member.deviceType, id: member.serialNumber }),
+      t,
+    );
+  }
+  const labels = new Map(members.map((member) => [member.deviceId, labelFor(member)]));
+
+  const handleActionChange = (value: string) => {
+    if (value === "issue" || value === "rotate" || value === "revoke") {
+      setAction(value);
+      setDeselectedIds(new Set());
+    }
+  };
+
+  const handleDeviceToggle = (deviceId: string, checked: boolean) => {
+    setDeselectedIds((previous) => {
+      const next = new Set(previous);
+      if (checked) {
+        next.delete(deviceId);
+      } else {
+        next.add(deviceId);
+      }
+      return next;
+    });
+  };
+
+  const runBatch = () => {
+    const input = { groupId, deviceIds: selectedIds };
+    const onError = () => {
+      toast({ title: t("iot.groups.credentials.actionError"), variant: "destructive" });
+    };
+    const closeConfirm = () => {
+      setConfirming(false);
+    };
+
+    if (action === "issue") {
+      issueCredentials.mutate(input, {
+        onSuccess: (data) => {
+          setBatch({ action: "issue", rows: data.devices });
+          toast({ title: t("iot.groups.credentials.issueSuccess") });
+        },
+        onError,
+      });
+      return;
+    }
+
+    if (action === "rotate") {
+      rotateCredentials.mutate(input, {
+        onSuccess: (data) => {
+          setBatch({ action: "rotate", rows: data.devices });
+          toast({ title: t("iot.groups.credentials.rotateSuccess") });
+        },
+        onError,
+        onSettled: closeConfirm,
+      });
+      return;
+    }
+
+    revokeCredentials.mutate(input, {
+      onSuccess: (data) => {
+        setBatch({ action: "revoke", rows: data.devices });
+        toast({ title: t("iot.groups.credentials.revokeSuccess") });
+      },
+      onError,
+      onSettled: closeConfirm,
+    });
+  };
+
+  const handleSubmit = () => {
+    if (isDisruptive) {
+      setConfirming(true);
+      return;
+    }
+    runBatch();
+  };
+
+  function submitLabel(): string {
+    if (action === "issue") {
+      return t("iot.groups.credentials.submitIssue", { count: selectedIds.length });
+    }
+    if (action === "rotate") {
+      return t("iot.groups.credentials.submitRotate", { count: selectedIds.length });
+    }
+    return t("iot.groups.credentials.submitRevoke", { count: selectedIds.length });
+  }
+
+  function ineligibleReason(member: IotDeviceGroupMember): string {
+    if (member.deviceType === "mobile") {
+      return t("iot.groups.credentials.mobileIneligible");
+    }
+    if (action === "issue") {
+      return t("iot.groups.credentials.hasCredentialsIneligible");
+    }
+    if (member.status === "rotating") {
+      return t("iot.groups.credentials.rotatingIneligible");
+    }
+    return t("iot.groups.credentials.noCertificateIneligible");
+  }
+
+  function renderMemberRow(member: IotDeviceGroupMember) {
+    const eligibleMember = isEligible(member, action);
+
+    return (
+      <li key={member.deviceId}>
+        <Label className="hover:bg-muted/30 flex cursor-pointer items-center gap-3 px-3 py-2.5 font-normal">
+          <Checkbox
+            checked={eligibleMember && !deselectedIds.has(member.deviceId)}
+            disabled={!eligibleMember}
+            onCheckedChange={(checked) => {
+              handleDeviceToggle(member.deviceId, checked === true);
+            }}
+          />
+          <span className="min-w-0 flex-1 truncate text-sm">{labelFor(member)}</span>
+          {eligibleMember ? (
+            <ConnectivityDot
+              connectivity={
+                member.connected === null ? null : { connected: member.connected, lastSeenAt: null }
+              }
+            />
+          ) : (
+            <Badge variant="outline" className="text-muted-foreground font-normal">
+              {ineligibleReason(member)}
+            </Badge>
+          )}
+        </Label>
+      </li>
+    );
+  }
+
+  if (!group || hasNoSurface) {
+    return null;
+  }
+
+  if (isLoadingMembers) {
+    return (
+      <div className="max-w-3xl space-y-4">
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl space-y-6">
+      <Card className="shadow-none">
+        <CardHeader>
+          <CardTitle className="text-base">{t("iot.groups.credentials.title")}</CardTitle>
+          <CardDescription>{t("iot.groups.credentials.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <ToggleGroup
+            type="single"
+            size="sm"
+            value={action}
+            onValueChange={handleActionChange}
+            className="bg-muted w-fit rounded-md p-0.5"
+          >
+            <ToggleGroupItem value="issue">
+              {t("iot.groups.credentials.actionIssue")}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="rotate">
+              {t("iot.groups.credentials.actionRotate")}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="revoke">
+              {t("iot.groups.credentials.actionRevoke")}
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <p className="text-muted-foreground text-xs">
+            {t(`iot.groups.credentials.${action}Hint`)}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-none">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            {t("iot.groups.credentials.devicesTitle")}
+            <Badge variant="secondary">
+              {t("iot.groups.credentials.devicesSelected", {
+                selected: selectedIds.length,
+                total: members.length,
+              })}
+            </Badge>
+          </CardTitle>
+          <CardDescription>{t("iot.groups.credentials.devicesDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {members.length === 0 ? (
+            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+              {t("iot.groups.noMembers")}
+            </p>
+          ) : (
+            <ul className="divide-y rounded-lg border">{members.map(renderMemberRow)}</ul>
+          )}
+
+          <div className="flex justify-end">
+            <Button
+              className="w-fit"
+              variant={action === "revoke" ? "destructive" : "default"}
+              onClick={handleSubmit}
+              disabled={selectedIds.length === 0 || isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <>
+                  {action === "issue" && <KeyRound className="mr-2 h-4 w-4" aria-hidden />}
+                  {action === "rotate" && <RefreshCw className="mr-2 h-4 w-4" aria-hidden />}
+                  {action === "revoke" && <ShieldOff className="mr-2 h-4 w-4" aria-hidden />}
+                </>
+              )}
+              {submitLabel()}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {batch !== null && (
+        <Card className="shadow-none">
+          <CardHeader>
+            <CardTitle className="text-base">{t("iot.groups.credentials.resultsTitle")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <GroupCredentialResults groupName={group.name} batch={batch} labelByDeviceId={labels} />
+          </CardContent>
+        </Card>
+      )}
+
+      <CredentialConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={
+          action === "revoke"
+            ? t("iot.groups.credentials.revokeConfirmTitle")
+            : t("iot.groups.credentials.rotateConfirmTitle")
+        }
+        description={
+          action === "revoke"
+            ? t("iot.groups.credentials.revokeConfirm")
+            : t("iot.groups.credentials.rotateConfirm")
+        }
+        warning={
+          selectedOnlineCount > 0
+            ? t("iot.groups.credentials.onlineWarning", { count: selectedOnlineCount })
+            : undefined
+        }
+        actionLabel={
+          action === "revoke"
+            ? t("iot.groups.credentials.actionRevoke")
+            : t("iot.groups.credentials.actionRotate")
+        }
+        destructive={action === "revoke"}
+        pending={isPending}
+        onConfirm={runBatch}
+      />
+    </div>
+  );
+}

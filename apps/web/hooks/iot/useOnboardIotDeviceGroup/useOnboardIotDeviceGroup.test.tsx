@@ -11,7 +11,7 @@ const DEVICE_ID = "22222222-2222-4222-8222-222222222222";
 
 describe("useOnboardIotDeviceGroup", () => {
   it("posts the batch and returns per-device outcomes", async () => {
-    const spy = server.mount(contract.deviceGroups.onboardDeviceGroup, {
+    const spy = server.mount(contract.iot.onboardIotDeviceGroup, {
       body: { devices: [{ deviceId: DEVICE_ID, config: null, error: "boom" }] },
     });
 
@@ -33,7 +33,7 @@ describe("useOnboardIotDeviceGroup", () => {
   });
 
   it("surfaces a failure", async () => {
-    server.mount(contract.deviceGroups.onboardDeviceGroup, { status: 500 });
+    server.mount(contract.iot.onboardIotDeviceGroup, { status: 500 });
 
     const { result } = renderHook(() => useOnboardIotDeviceGroup());
 

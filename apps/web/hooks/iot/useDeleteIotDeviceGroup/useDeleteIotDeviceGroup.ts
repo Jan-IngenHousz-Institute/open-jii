@@ -9,9 +9,9 @@ export const useDeleteIotDeviceGroup = (props: DeleteIotDeviceGroupProps = {}) =
   const queryClient = useQueryClient();
 
   return useMutation(
-    orpc.deviceGroups.deleteDeviceGroup.mutationOptions({
+    orpc.iot.deleteIotDeviceGroup.mutationOptions({
       onSettled: async () => {
-        await queryClient.invalidateQueries({ queryKey: orpc.deviceGroups.listDeviceGroups.key() });
+        await queryClient.invalidateQueries({ queryKey: orpc.iot.listIotDeviceGroups.key() });
       },
       onSuccess: () => {
         props.onSuccess?.();

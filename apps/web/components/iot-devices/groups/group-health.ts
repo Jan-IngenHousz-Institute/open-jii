@@ -1,4 +1,4 @@
-import type { DeviceGroupMemberHealth } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupMemberHealth } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import { SILENT_THRESHOLD_MS } from "../monitoring/silent-threshold";
 
@@ -14,7 +14,7 @@ export interface GroupHealthSummary {
  * exempt: they connect only while the app is open, so silence is their normal.
  */
 export function isMemberSilent(
-  member: DeviceGroupMemberHealth,
+  member: IotDeviceGroupMemberHealth,
   pipelineUnavailable: boolean,
   now: number,
 ): boolean {
@@ -31,7 +31,7 @@ export function isMemberSilent(
 
 export type MemberStatus = "online" | "offline" | "unknown";
 
-export function memberStatus(member: DeviceGroupMemberHealth): MemberStatus {
+export function memberStatus(member: IotDeviceGroupMemberHealth): MemberStatus {
   if (member.connectivity === null) return "unknown";
   return member.connectivity.connected ? "online" : "offline";
 }
@@ -48,12 +48,12 @@ export interface MemberFilter {
  * on top of "online", so it filters as its own chip rather than a fourth state.
  */
 export function filterGroupMembers(
-  members: DeviceGroupMemberHealth[],
+  members: IotDeviceGroupMemberHealth[],
   filter: MemberFilter,
   pipelineUnavailable: boolean,
   now: number,
-  labelFor: (member: DeviceGroupMemberHealth) => string,
-): DeviceGroupMemberHealth[] {
+  labelFor: (member: IotDeviceGroupMemberHealth) => string,
+): IotDeviceGroupMemberHealth[] {
   const needle = filter.search.trim().toLowerCase();
 
   return members.filter((member) => {
@@ -69,7 +69,7 @@ export function filterGroupMembers(
 }
 
 export function summarizeGroupHealth(
-  members: DeviceGroupMemberHealth[],
+  members: IotDeviceGroupMemberHealth[],
   pipelineUnavailable: boolean,
   now: number,
 ): GroupHealthSummary {

@@ -219,7 +219,7 @@ describe("IotDeviceController", () => {
 
       const members: SuperTestResponse<{ deviceId: string }[]> = await testApp
         .get(
-          testApp.resolveOrpcPath(contract.deviceGroups.listDeviceGroupMembers, {
+          testApp.resolveOrpcPath(contract.iot.listIotDeviceGroupMembers, {
             groupId: groupId ?? "",
           }),
         )
@@ -230,7 +230,7 @@ describe("IotDeviceController", () => {
 
     it("adds the batch to an existing group", async () => {
       const group: SuperTestResponse<{ id: string }> = await testApp
-        .post(testApp.resolveOrpcPath(contract.deviceGroups.createDeviceGroup))
+        .post(testApp.resolveOrpcPath(contract.iot.createIotDeviceGroup))
         .withAuth(userId)
         .send({ name: "Existing" })
         .expect(StatusCodes.CREATED);

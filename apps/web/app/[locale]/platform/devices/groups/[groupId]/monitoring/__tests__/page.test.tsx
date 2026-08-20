@@ -29,7 +29,7 @@ describe("DeviceGroupMonitoringPage", () => {
   it("renders the live group health surface", async () => {
     vi.mocked(useParams).mockReturnValue({ groupId: GROUP_ID });
     server.mount(contract.experiments.listExperiments, { body: [] });
-    server.mount(contract.deviceGroups.getDeviceGroupMonitoring, {
+    server.mount(contract.iot.getIotDeviceGroupMonitoring, {
       body: {
         members: [],
         throughput: [],

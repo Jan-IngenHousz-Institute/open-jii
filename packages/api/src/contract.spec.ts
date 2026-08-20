@@ -49,7 +49,6 @@ const procedures = collectProcedures();
 describe("orpc contract surface", () => {
   it("exposes procedures across every domain", () => {
     expect(Object.keys(contract).sort()).toEqual([
-      "deviceGroups",
       "experiments",
       "health",
       "iot",

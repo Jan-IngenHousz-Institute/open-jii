@@ -28,8 +28,8 @@ describe("generateMetadata", () => {
 describe("DeviceGroupOnboardingPage", () => {
   it("renders the live group onboarding surface", async () => {
     vi.mocked(useParams).mockReturnValue({ groupId: GROUP_ID });
-    server.mount(contract.deviceGroups.getDeviceGroup, { status: 404 });
-    server.mount(contract.deviceGroups.listDeviceGroupMembers, { body: [] });
+    server.mount(contract.iot.getIotDeviceGroup, { status: 404 });
+    server.mount(contract.iot.listIotDeviceGroupMembers, { body: [] });
     server.mount(contract.experiments.listExperiments, { body: [] });
 
     render(<DeviceGroupOnboardingPage />);

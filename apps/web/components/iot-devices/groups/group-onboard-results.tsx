@@ -3,7 +3,7 @@
 import { downloadText, downloadZip } from "@/components/iot-devices/iot-credential-file";
 import { AlertTriangle, Check, Download } from "lucide-react";
 
-import type { DeviceGroupOnboardRow } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupOnboardRow } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import type { DeviceAnswer, DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
 import { applyPlanAnswers } from "@repo/api/transforms/workbook-device-plan";
 import { useTranslation } from "@repo/i18n";
@@ -11,7 +11,7 @@ import { Button } from "@repo/ui/components/button";
 
 interface GroupOnboardResultsProps {
   groupName: string;
-  rows: DeviceGroupOnboardRow[];
+  rows: IotDeviceGroupOnboardRow[];
   labelByDeviceId: Map<string, string>;
   /** Names of the experiments this batch bound; empty for a re-issue. */
   boundExperimentNames: string[];
@@ -78,7 +78,7 @@ export function GroupOnboardResults({
     downloadZip(zipFileName(groupName), files);
   }
 
-  function renderRow(row: DeviceGroupOnboardRow) {
+  function renderRow(row: IotDeviceGroupOnboardRow) {
     const label = labelByDeviceId.get(row.deviceId) ?? row.deviceId;
     const servedExperiments = (row.config?.experiments ?? []).map(
       (experiment) => experiment.experimentName,

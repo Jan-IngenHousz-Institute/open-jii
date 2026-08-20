@@ -5,6 +5,7 @@ import { strToU8, zipSync } from "fflate";
 import { Check, Copy, Download } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import type { IssueIotCredentialsResponse } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
@@ -27,6 +28,22 @@ export function downloadZip(filename: string, files: { filename: string; content
     entries[file.filename] = strToU8(file.content);
   }
   triggerDownload(new Blob([zipSync(entries)], { type: "application/zip" }), filename);
+}
+
+/** The device's own files of a credential bundle; root CAs ride alongside. */
+export function deviceCredentialFiles(
+  thingName: string,
+  credentials: IssueIotCredentialsResponse,
+): { filename: string; content: string }[] {
+  return [
+    { filename: `${thingName}.cert.pem`, content: credentials.certificatePem },
+    { filename: `${thingName}.public.key`, content: credentials.publicKey },
+    { filename: `${thingName}.private.key`, content: credentials.privateKey },
+  ];
+}
+
+export function credentialBundleZipName(thingName: string): string {
+  return `${thingName}-credentials.zip`;
 }
 
 interface IotCredentialFileProps {

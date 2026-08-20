@@ -1,4 +1,4 @@
-import { createDeviceGroup } from "@/test/factories";
+import { createIotDeviceGroup } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
@@ -11,7 +11,7 @@ import { DeviceGroupsView } from "./device-groups-view";
 describe("DeviceGroupsView", () => {
   it("opens the create dialog from the section header", async () => {
     const user = userEvent.setup();
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [] });
 
     render(<DeviceGroupsView />);
 
@@ -20,7 +20,7 @@ describe("DeviceGroupsView", () => {
   });
 
   it("surfaces a load error", async () => {
-    server.mount(contract.deviceGroups.listDeviceGroups, { status: 500 });
+    server.mount(contract.iot.listIotDeviceGroups, { status: 500 });
 
     render(<DeviceGroupsView />);
 
@@ -28,10 +28,10 @@ describe("DeviceGroupsView", () => {
   });
 
   it("lists groups with their member counts", async () => {
-    server.mount(contract.deviceGroups.listDeviceGroups, {
+    server.mount(contract.iot.listIotDeviceGroups, {
       body: [
-        createDeviceGroup({ name: "Greenhouse A", memberCount: 3 }),
-        createDeviceGroup({ name: "Field campaign", memberCount: 0 }),
+        createIotDeviceGroup({ name: "Greenhouse A", memberCount: 3 }),
+        createIotDeviceGroup({ name: "Field campaign", memberCount: 0 }),
       ],
     });
 
@@ -43,7 +43,7 @@ describe("DeviceGroupsView", () => {
   });
 
   it("shows the empty state when no groups exist", async () => {
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [] });
 
     render(<DeviceGroupsView />);
 

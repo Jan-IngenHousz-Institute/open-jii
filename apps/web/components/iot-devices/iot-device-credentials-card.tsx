@@ -6,29 +6,25 @@ import { useRotateIotCredentials } from "@/hooks/iot/useRotateIotCredentials/use
 import { KeyRound, Loader2, RefreshCw, ShieldOff } from "lucide-react";
 import { useState } from "react";
 
-import type { IotDevice, IssueIotCredentialsResponse } from "@repo/api/domains/iot/iot.schema";
+import type {
+  IotDeviceWithConnectivity,
+  IssueIotCredentialsResponse,
+} from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@repo/ui/components/alert-dialog";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { CredentialConfirmDialog } from "./credential-confirm-dialog";
 import { IotCredentialsDialog } from "./iot-credentials-dialog";
 
-export function IotDeviceCredentialsCard({ device }: { device: IotDevice }) {
+export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConnectivity }) {
   const { t } = useTranslation("iot");
-  const { t: tCommon } = useTranslation("common");
   const [issued, setIssued] = useState<IssueIotCredentialsResponse | null>(null);
+  const [confirmingRotate, setConfirmingRotate] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+
+  const isConnected = device.connectivity?.connected === true;
 
   const showCredentials = (credentials: IssueIotCredentialsResponse) => setIssued(credentials);
 
@@ -36,7 +32,10 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDevice }) {
     onSuccess: showCredentials,
   });
   const { mutate: rotate, isPending: isRotating } = useRotateIotCredentials({
-    onSuccess: showCredentials,
+    onSuccess: (credentials) => {
+      showCredentials(credentials);
+      setConfirmingRotate(false);
+    },
   });
   const { mutate: revoke, isPending: isRevoking } = useRevokeIotCredentials({
     onSuccess: () => {
@@ -98,12 +97,8 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDevice }) {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={handleRotate} disabled={isRotating}>
-                {isRotating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                )}
+              <Button variant="outline" onClick={() => setConfirmingRotate(true)}>
+                <RefreshCw className="mr-2 h-4 w-4" />
                 {t("iot.devices.credentials.rotate")}
               </Button>
               <Button
@@ -133,33 +128,28 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDevice }) {
         }}
       />
 
-      <AlertDialog open={confirmingRevoke} onOpenChange={setConfirmingRevoke}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("iot.devices.credentials.revokeTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("iot.devices.credentials.revokeConfirm")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRevoking}>{tCommon("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isRevoking}
-              onClick={(e) => {
-                e.preventDefault();
-                handleRevoke();
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isRevoking ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                t("iot.devices.credentials.revoke")
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CredentialConfirmDialog
+        open={confirmingRotate}
+        onOpenChange={setConfirmingRotate}
+        title={t("iot.devices.credentials.rotateTitle")}
+        description={t("iot.devices.credentials.rotateConfirm")}
+        warning={isConnected ? t("iot.devices.credentials.disconnectWarning") : undefined}
+        actionLabel={t("iot.devices.credentials.rotate")}
+        pending={isRotating}
+        onConfirm={handleRotate}
+      />
+
+      <CredentialConfirmDialog
+        open={confirmingRevoke}
+        onOpenChange={setConfirmingRevoke}
+        title={t("iot.devices.credentials.revokeTitle")}
+        description={t("iot.devices.credentials.revokeConfirm")}
+        warning={isConnected ? t("iot.devices.credentials.disconnectWarning") : undefined}
+        actionLabel={t("iot.devices.credentials.revoke")}
+        destructive
+        pending={isRevoking}
+        onConfirm={handleRevoke}
+      />
     </Card>
   );
 }

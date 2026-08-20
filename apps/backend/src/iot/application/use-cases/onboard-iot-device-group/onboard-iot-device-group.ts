@@ -52,7 +52,7 @@ export class OnboardIotDeviceGroupUseCase {
   ): Promise<Result<IotDeviceGroupOnboardDto>> {
     this.logger.log({
       msg: "Onboarding device group",
-      operation: "onboardDeviceGroup",
+      operation: "onboardIotDeviceGroup",
       groupId,
       userId,
       experimentCount: body.experimentIds.length,

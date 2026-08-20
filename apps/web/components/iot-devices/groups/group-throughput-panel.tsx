@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { DeviceGroupThroughputBucket } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupThroughputBucket } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
 
@@ -15,7 +15,7 @@ import { foldThroughputSeries } from "../monitoring/throughput-series";
 import { GroupThroughputTable } from "./group-throughput-table";
 
 interface GroupThroughputPanelProps {
-  throughput: DeviceGroupThroughputBucket[];
+  throughput: IotDeviceGroupThroughputBucket[];
   labelByDeviceId: Map<string, string>;
   range: MonitoringRange;
   locale: string;
@@ -23,7 +23,7 @@ interface GroupThroughputPanelProps {
 
 // Series identity per member; folding itself is shared with the device panel.
 function buildSeries(
-  buckets: DeviceGroupThroughputBucket[],
+  buckets: IotDeviceGroupThroughputBucket[],
   labelByDeviceId: Map<string, string>,
   axis: string[],
   otherLabel: string,

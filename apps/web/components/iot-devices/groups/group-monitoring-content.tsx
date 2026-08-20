@@ -17,7 +17,7 @@ import { AlertTriangle } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import type { DeviceGroupMemberHealth } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupMemberHealth } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
@@ -77,7 +77,7 @@ export function GroupMonitoringContent() {
 
   const now = Date.now();
 
-  function labelFor(member: DeviceGroupMemberHealth): string {
+  function labelFor(member: IotDeviceGroupMemberHealth): string {
     return resolveDevicePrimaryLabel(
       presentDevice({ name: member.name, family: member.deviceType, id: member.serialNumber }),
       t,
