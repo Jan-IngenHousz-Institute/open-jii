@@ -10,7 +10,7 @@ const GROUP_ID = "11111111-1111-4111-8111-111111111111";
 
 describe("useDeleteIotDeviceGroup", () => {
   it("deletes the group and calls onSuccess", async () => {
-    const spy = server.mount(contract.deviceGroups.deleteDeviceGroup, { status: 204 });
+    const spy = server.mount(contract.iot.deleteIotDeviceGroup, { status: 204 });
 
     const onSuccess = vi.fn();
     const { result } = renderHook(() => useDeleteIotDeviceGroup({ onSuccess }));
@@ -27,7 +27,7 @@ describe("useDeleteIotDeviceGroup", () => {
   });
 
   it("surfaces an error response", async () => {
-    server.mount(contract.deviceGroups.deleteDeviceGroup, { status: 403 });
+    server.mount(contract.iot.deleteIotDeviceGroup, { status: 403 });
 
     const { result } = renderHook(() => useDeleteIotDeviceGroup());
 

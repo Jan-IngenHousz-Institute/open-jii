@@ -14,9 +14,9 @@ import { useParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
 import type {
-  DeviceGroupMember,
-  DeviceGroupOnboardRow,
-} from "@repo/api/domains/device-group/device-group.schema";
+  IotDeviceGroupMember,
+  IotDeviceGroupOnboardRow,
+} from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import type { DeviceAnswer } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
@@ -40,7 +40,7 @@ import { GroupOnboardResults } from "./group-onboard-results";
 const MAX_BATCH = 100;
 
 /** Phones pick their experiment in the app; a config would never be consumed. */
-function isEligible(member: DeviceGroupMember): boolean {
+function isEligible(member: IotDeviceGroupMember): boolean {
   return member.deviceType !== "mobile" && member.status === "active";
 }
 
@@ -63,7 +63,7 @@ export function GroupOnboardingContent() {
   const [includeWorkbook, setIncludeWorkbook] = useState(true);
   // Held in state, not read from the mutation: a failed retry resets mutation
   // data, and the issued configs must stay available for delivery.
-  const [rows, setRows] = useState<DeviceGroupOnboardRow[] | null>(null);
+  const [rows, setRows] = useState<IotDeviceGroupOnboardRow[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, DeviceAnswer>>({});
 
   const onboardGroup = useOnboardIotDeviceGroup();
@@ -76,7 +76,7 @@ export function GroupOnboardingContent() {
   // ask for a smaller one instead of letting the submit die on a generic 400.
   const isOverCap = selectedIds.length > MAX_BATCH;
 
-  function labelFor(member: DeviceGroupMember): string {
+  function labelFor(member: IotDeviceGroupMember): string {
     return resolveDevicePrimaryLabel(
       presentDevice({ name: member.name, family: member.deviceType, id: member.serialNumber }),
       t,
@@ -155,7 +155,7 @@ export function GroupOnboardingContent() {
     (entry) => entry.question.required && !(answers[entry.question.id] ?? entry.question.answer),
   );
 
-  function renderMemberRow(member: DeviceGroupMember) {
+  function renderMemberRow(member: IotDeviceGroupMember) {
     const eligibleMember = isEligible(member);
     const ineligibleReason =
       member.deviceType === "mobile"

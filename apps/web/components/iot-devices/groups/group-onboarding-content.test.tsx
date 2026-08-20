@@ -35,10 +35,10 @@ function deviceConfig(
 }
 
 function mountGroup(members: ReturnType<typeof createDeviceGroupMember>[]) {
-  server.mount(contract.deviceGroups.getDeviceGroup, {
+  server.mount(contract.iot.getIotDeviceGroup, {
     body: createDeviceGroupDetail({ id: GROUP_ID, name: "Greenhouse A" }),
   });
-  server.mount(contract.deviceGroups.listDeviceGroupMembers, { body: members });
+  server.mount(contract.iot.listIotDeviceGroupMembers, { body: members });
   server.mount(contract.experiments.listExperiments, {
     body: [createExperiment({ name: "Field trial" })],
   });
@@ -73,7 +73,7 @@ describe("GroupOnboardingContent", () => {
     const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
     const broken = createDeviceGroupMember({ name: "Broken", status: "active" });
     mountGroup([gateway, broken]);
-    const onboard = server.mount(contract.deviceGroups.onboardDeviceGroup, {
+    const onboard = server.mount(contract.iot.onboardIotDeviceGroup, {
       body: {
         devices: [
           {
@@ -114,7 +114,7 @@ describe("GroupOnboardingContent", () => {
     const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
     const spare = createDeviceGroupMember({ name: "Spare", status: "active" });
     mountGroup([gateway, spare]);
-    const onboard = server.mount(contract.deviceGroups.onboardDeviceGroup, {
+    const onboard = server.mount(contract.iot.onboardIotDeviceGroup, {
       body: { devices: [{ deviceId: gateway.deviceId, config: null, error: null }] },
     });
 
@@ -133,7 +133,7 @@ describe("GroupOnboardingContent", () => {
     const user = userEvent.setup();
     const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
     mountGroup([gateway]);
-    server.mount(contract.deviceGroups.onboardDeviceGroup, {
+    server.mount(contract.iot.onboardIotDeviceGroup, {
       body: {
         devices: [
           {
@@ -174,7 +174,7 @@ describe("GroupOnboardingContent", () => {
     const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
     const spare = createDeviceGroupMember({ name: "Spare", status: "active" });
     mountGroup([gateway, spare]);
-    server.mount(contract.deviceGroups.onboardDeviceGroup, {
+    server.mount(contract.iot.onboardIotDeviceGroup, {
       body: {
         devices: [
           {
@@ -264,7 +264,7 @@ describe("GroupOnboardingContent", () => {
     const user = userEvent.setup();
     const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
     mountGroup([gateway]);
-    const onboard = server.mount(contract.deviceGroups.onboardDeviceGroup, {
+    const onboard = server.mount(contract.iot.onboardIotDeviceGroup, {
       body: { devices: [] },
     });
 

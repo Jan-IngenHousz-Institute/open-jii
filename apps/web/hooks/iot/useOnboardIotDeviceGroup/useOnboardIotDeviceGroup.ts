@@ -10,7 +10,7 @@ export const useOnboardIotDeviceGroup = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    orpc.deviceGroups.onboardDeviceGroup.mutationOptions({
+    orpc.iot.onboardIotDeviceGroup.mutationOptions({
       onSettled: async (data, error, variables) => {
         await Promise.all([
           // Bindings changed for an unknown subset of devices: invalidate the family.

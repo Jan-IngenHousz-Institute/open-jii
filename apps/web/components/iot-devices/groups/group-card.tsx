@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 
-import type { DeviceGroupListItem } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupListItem } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardContent } from "@repo/ui/components/card";
 
 interface GroupCardProps {
-  group: DeviceGroupListItem;
+  group: IotDeviceGroupListItem;
   locale: string;
 }
 

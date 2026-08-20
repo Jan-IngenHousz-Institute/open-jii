@@ -17,7 +17,7 @@ const RANGE = {
 describe("useIotDeviceGroupMonitoring", () => {
   it("queries the group window and returns its health facts", async () => {
     const member = createDeviceGroupMemberHealth({ name: "Gateway" });
-    const spy = server.mount(contract.deviceGroups.getDeviceGroupMonitoring, {
+    const spy = server.mount(contract.iot.getIotDeviceGroupMonitoring, {
       body: { members: [member], throughput: [], events: [], pipelineUnavailable: false },
     });
 
@@ -30,7 +30,7 @@ describe("useIotDeviceGroupMonitoring", () => {
   });
 
   it("surfaces a failure", async () => {
-    server.mount(contract.deviceGroups.getDeviceGroupMonitoring, { status: 500 });
+    server.mount(contract.iot.getIotDeviceGroupMonitoring, { status: 500 });
 
     const { result } = renderHook(() => useIotDeviceGroupMonitoring(GROUP_ID, RANGE));
 

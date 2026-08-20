@@ -1,5 +1,10 @@
+import { createDeviceGroupDetail } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
+import { useParams } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api/contract";
 
 import DeviceGroupCredentialsPage, { generateMetadata } from "../page";
 
@@ -22,9 +27,16 @@ describe("generateMetadata", () => {
 });
 
 describe("DeviceGroupCredentialsPage", () => {
-  it("renders the credentials placeholder", () => {
+  it("renders the live credential lifecycle surface", async () => {
+    vi.mocked(useParams).mockReturnValue({ groupId: GROUP_ID });
+    server.mount(contract.iot.getIotDeviceGroup, {
+      body: createDeviceGroupDetail({ id: GROUP_ID }),
+    });
+    server.mount(contract.iot.listIotDeviceGroupMembers, { body: [] });
+
     render(<DeviceGroupCredentialsPage />);
 
-    expect(screen.getByText("iot.groups.comingSoon.credentials")).toBeInTheDocument();
+    expect(await screen.findByText("iot.groups.credentials.title")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.noMembers")).toBeInTheDocument();
   });
 });

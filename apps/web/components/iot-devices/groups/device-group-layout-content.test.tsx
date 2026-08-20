@@ -2,11 +2,11 @@ import { createDeviceGroupDetail } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import type { DeviceGroupDetail } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupDetail } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import { DeviceGroupLayoutContent } from "./device-group-layout-content";
 
-function renderLayout(group: DeviceGroupDetail) {
+function renderLayout(group: IotDeviceGroupDetail) {
   render(
     <DeviceGroupLayoutContent groupId="g-1" group={group}>
       <p>tab body</p>

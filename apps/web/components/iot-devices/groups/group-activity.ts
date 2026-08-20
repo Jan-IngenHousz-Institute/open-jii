@@ -1,9 +1,9 @@
 import type { ActivityEntry } from "@/components/iot-devices/monitoring/device-activity";
 
 import type {
-  DeviceGroupLifecycleEvent,
-  DeviceGroupMemberHealth,
-} from "@repo/api/domains/device-group/device-group.schema";
+  IotDeviceGroupLifecycleEvent,
+  IotDeviceGroupMemberHealth,
+} from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 /**
  * Group lifecycle events as device-labeled log entries, newest first. Only the
@@ -11,7 +11,7 @@ import type {
  * would be a schema drift and is dropped rather than mislabeled.
  */
 export function buildGroupActivity(
-  events: DeviceGroupLifecycleEvent[],
+  events: IotDeviceGroupLifecycleEvent[],
   labelByDeviceId: Map<string, string>,
   unknownDeviceLabel: string,
 ): ActivityEntry[] {
@@ -36,8 +36,8 @@ export function buildGroupActivity(
 
 /** Display labels keyed by device id, for throughput series and the event log. */
 export function memberLabels(
-  members: DeviceGroupMemberHealth[],
-  resolveLabel: (member: DeviceGroupMemberHealth) => string,
+  members: IotDeviceGroupMemberHealth[],
+  resolveLabel: (member: IotDeviceGroupMemberHealth) => string,
 ): Map<string, string> {
   return new Map(members.map((member) => [member.deviceId, resolveLabel(member)]));
 }

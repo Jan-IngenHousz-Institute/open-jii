@@ -136,6 +136,7 @@ describe("OnboardIotDeviceGroupUseCase", () => {
           serialNumber: `S-${String(index)}`,
           deviceType: "ambyte" as const,
           status: "active" as const,
+          thingName: `ambyte_${String(index)}`,
           addedAt: new Date(),
         })),
       ),

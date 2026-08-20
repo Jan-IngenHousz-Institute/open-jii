@@ -1,7 +1,7 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { DeviceGroupOnboardRow } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupOnboardRow } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import { GroupOnboardResults } from "./group-onboard-results";
 
@@ -22,7 +22,7 @@ function config(thingName: string, experimentNames: string[] = []) {
   };
 }
 
-function row(overrides: Partial<DeviceGroupOnboardRow>): DeviceGroupOnboardRow {
+function row(overrides: Partial<IotDeviceGroupOnboardRow>): IotDeviceGroupOnboardRow {
   return {
     deviceId: "11111111-1111-4111-8111-111111111111",
     config: null,
@@ -31,7 +31,7 @@ function row(overrides: Partial<DeviceGroupOnboardRow>): DeviceGroupOnboardRow {
   };
 }
 
-function renderResults(rows: DeviceGroupOnboardRow[], boundExperimentNames: string[] = []) {
+function renderResults(rows: IotDeviceGroupOnboardRow[], boundExperimentNames: string[] = []) {
   return render(
     <GroupOnboardResults
       groupName="Field / trial"

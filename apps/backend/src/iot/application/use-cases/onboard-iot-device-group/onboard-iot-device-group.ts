@@ -52,7 +52,7 @@ export class OnboardIotDeviceGroupUseCase {
   ): Promise<Result<IotDeviceGroupOnboardDto>> {
     this.logger.log({
       msg: "Onboarding device group",
-      operation: "onboardDeviceGroup",
+      operation: "onboardIotDeviceGroup",
       groupId,
       userId,
       experimentCount: body.experimentIds.length,
@@ -126,7 +126,7 @@ export class OnboardIotDeviceGroupUseCase {
     if (result.error.statusCode >= 500) {
       this.logger.error({
         msg: "Device onboarding failed",
-        operation: "onboardDeviceGroup",
+        operation: "onboardIotDeviceGroup",
         deviceId,
         errorCode: result.error.code,
         error: result.error.message,
