@@ -18,6 +18,7 @@ import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.a
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { GetIotDeviceGroupMonitoringUseCase } from "../application/use-cases/get-iot-device-group-monitoring/get-iot-device-group-monitoring";
+import { OnboardIotDeviceGroupUseCase } from "../application/use-cases/onboard-iot-device-group/onboard-iot-device-group";
 
 const MONITORING_RANGE = {
   from: "2026-08-17T00:00:00.000Z",
@@ -89,6 +90,15 @@ describe("IotDeviceGroupController", () => {
         groupId: group.id,
       });
       await testApp.get(membersPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.onboardDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.FORBIDDEN);
       await testApp
         .get(
           testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
@@ -253,6 +263,73 @@ describe("IotDeviceGroupController", () => {
         .get(testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroup, { groupId: group.id }))
         .withAuth(userId)
         .expect(StatusCodes.NOT_FOUND);
+    });
+  });
+
+  describe("onboardDeviceGroup", () => {
+    it("returns a per-device outcome list (200)", async () => {
+      const group = await createGroup();
+      const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.addDeviceGroupMembers, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ deviceIds: [device.id] })
+        .expect(StatusCodes.OK);
+      const awsAdapter = testApp.module.get(AwsAdapter);
+      vi.spyOn(awsAdapter, "getIotDataEndpoint").mockResolvedValue(
+        success("data.iot.example.amazonaws.com"),
+      );
+
+      const response: SuperTestResponse<{
+        devices: { deviceId: string; config: { thingName: string } | null; error: string | null }[];
+      }> = await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.onboardDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.devices).toHaveLength(1);
+      expect(response.body.devices[0].deviceId).toBe(device.id);
+      expect(response.body.devices[0].config?.thingName).toBe(device.thingName);
+    });
+
+    it("returns 403 for a viewer without contribute access", async () => {
+      const group = await createGroup();
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.onboardDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(stranger)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("maps a use-case failure through the error contract (500)", async () => {
+      const group = await createGroup();
+      const useCase = testApp.module.get(OnboardIotDeviceGroupUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(failure(AppError.internal("boom")));
+
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.onboardDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
   });
 

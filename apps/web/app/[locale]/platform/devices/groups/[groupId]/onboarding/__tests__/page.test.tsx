@@ -1,5 +1,9 @@
+import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
+import { useParams } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api/contract";
 
 import DeviceGroupOnboardingPage, { generateMetadata } from "../page";
 
@@ -22,9 +26,15 @@ describe("generateMetadata", () => {
 });
 
 describe("DeviceGroupOnboardingPage", () => {
-  it("renders the onboarding placeholder", () => {
+  it("renders the live group onboarding surface", async () => {
+    vi.mocked(useParams).mockReturnValue({ groupId: GROUP_ID });
+    server.mount(contract.deviceGroups.getDeviceGroup, { status: 404 });
+    server.mount(contract.deviceGroups.listDeviceGroupMembers, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
+
     render(<DeviceGroupOnboardingPage />);
 
-    expect(screen.getByText("iot.groups.comingSoon.onboarding")).toBeInTheDocument();
+    expect(await screen.findByText("iot.groups.onboarding.title")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.noMembers")).toBeInTheDocument();
   });
 });

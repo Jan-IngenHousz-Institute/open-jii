@@ -10,10 +10,4 @@ describe("GroupComingSoon", () => {
     expect(screen.getByText("iot.devices.comingSoon.title")).toBeInTheDocument();
     expect(screen.getByText("iot.groups.comingSoon.credentials")).toBeInTheDocument();
   });
-
-  it("keys the description off the given section", () => {
-    render(<GroupComingSoon section="onboarding" />);
-
-    expect(screen.getByText("iot.groups.comingSoon.onboarding")).toBeInTheDocument();
-  });
 });
