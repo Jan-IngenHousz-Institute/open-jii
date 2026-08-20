@@ -15,7 +15,11 @@ import { GroupOnboardingContent } from "./group-onboarding-content";
 
 const GROUP_ID = "11111111-1111-4111-8111-111111111111";
 
-function deviceConfig(thingName: string, experimentNames: string[] = []) {
+function deviceConfig(
+  thingName: string,
+  experimentNames: string[] = [],
+  procedures: object[] = [],
+) {
   return {
     thingName,
     deviceType: "ambyte",
@@ -25,7 +29,7 @@ function deviceConfig(thingName: string, experimentNames: string[] = []) {
       experimentName,
       topicPrefix: "experiment/data_ingest/v1/x/ambyte",
       workbookVersion: null,
-      procedures: [],
+      procedures,
     })),
   };
 }
@@ -117,6 +121,67 @@ describe("GroupOnboardingContent", () => {
     render(<GroupOnboardingContent />);
 
     await user.click(await screen.findByText("Spare"));
+    await user.click(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ }));
+
+    await vi.waitFor(() => {
+      expect(onboard.calls).toHaveLength(1);
+    });
+    expect(onboard.calls[0].body).toMatchObject({ deviceIds: [gateway.deviceId] });
+  });
+
+  it("collects plan answers once and gates delivery on required ones", async () => {
+    const user = userEvent.setup();
+    const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
+    mountGroup([gateway]);
+    server.mount(contract.deviceGroups.onboardDeviceGroup, {
+      body: {
+        devices: [
+          {
+            deviceId: gateway.deviceId,
+            config: deviceConfig(
+              "ambyte_GW-1",
+              ["Field trial"],
+              [
+                {
+                  type: "question",
+                  id: "q-1",
+                  label: "Plot number",
+                  required: true,
+                  answer: null,
+                },
+              ],
+            ),
+            error: null,
+          },
+        ],
+      },
+    });
+
+    render(<GroupOnboardingContent />);
+
+    await user.click(await screen.findByText("Field trial"));
+    await user.click(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ }));
+
+    // A required unanswered question blocks delivery, never the onboarding.
+    expect(await screen.findByText("iot.onboarding.questionsTitle")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /iot.groups.onboarding.downloadAll/ }),
+    ).toBeDisabled();
+  });
+
+  it("supports reselecting a previously deselected device", async () => {
+    const user = userEvent.setup();
+    const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
+    mountGroup([gateway]);
+    const onboard = server.mount(contract.deviceGroups.onboardDeviceGroup, {
+      body: { devices: [] },
+    });
+
+    render(<GroupOnboardingContent />);
+
+    // Off, then back on: the selection round-trips.
+    await user.click(await screen.findByText("Gateway"));
+    await user.click(screen.getByText("Gateway"));
     await user.click(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ }));
 
     await vi.waitFor(() => {

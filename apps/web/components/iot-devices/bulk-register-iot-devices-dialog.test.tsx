@@ -209,4 +209,31 @@ describe("BulkRegisterIotDevicesDialog", () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("imports a dropped file into the batch", async () => {
+    mountBase();
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    const file = new File(["S-1\nS-2, North gate"], "serials.csv", { type: "text/csv" });
+    fireEvent.drop(serialsInput(), { dataTransfer: { files: [file] } });
+
+    // FileReader resolves async; the batch classifies once the text lands.
+    expect(await screen.findByText(/summary.ready/)).toBeInTheDocument();
+    expect(screen.getByText("North gate")).toBeInTheDocument();
+  });
+
+  it("imports a picked file through the import button", async () => {
+    const user = userEvent.setup();
+    mountBase();
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    const file = new File(["S-9"], "serials.txt", { type: "text/plain" });
+    await user.upload(screen.getByLabelText("iot.devices.bulkDialog.importFile"), file);
+
+    expect(await screen.findByText(/summary.ready/)).toBeInTheDocument();
+    // Textarea content and preview cell both carry the serial.
+    expect(screen.getAllByText("S-9")).toHaveLength(2);
+  });
 });

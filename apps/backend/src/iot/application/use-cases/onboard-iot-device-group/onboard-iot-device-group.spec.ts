@@ -1,7 +1,13 @@
 import { faker } from "@faker-js/faker";
 
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
-import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
+import {
+  AppError,
+  assertFailure,
+  assertSuccess,
+  failure,
+  success,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { CreateIotDeviceGroupUseCase } from "../create-iot-device-group/create-iot-device-group";
@@ -110,6 +116,18 @@ describe("OnboardIotDeviceGroupUseCase", () => {
 
     assertFailure(result);
     expect(result.error.message).toContain("explicit selection");
+  });
+
+  it("propagates a repository failure", async () => {
+    vi.spyOn(groupRepository, "listMembers").mockResolvedValue(failure(AppError.internal("boom")));
+
+    const result = await useCase.execute(
+      faker.string.uuid(),
+      { experimentIds: [], includeWorkbook: true },
+      userId,
+    );
+
+    expect(result.isFailure()).toBe(true);
   });
 
   it("reports a non-member selection as a row error", async () => {

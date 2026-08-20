@@ -12,10 +12,11 @@ import type {
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
-import { success } from "../../common/utils/fp-utils";
+import { AppError, failure, success } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { OnboardIotDeviceGroupUseCase } from "../application/use-cases/onboard-iot-device-group/onboard-iot-device-group";
 
 describe("IotDeviceGroupController", () => {
   const testApp = TestHarness.App;
@@ -296,6 +297,22 @@ describe("IotDeviceGroupController", () => {
         .withAuth(stranger)
         .send({ experimentIds: [] })
         .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("maps a use-case failure through the error contract (500)", async () => {
+      const group = await createGroup();
+      const useCase = testApp.module.get(OnboardIotDeviceGroupUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(failure(AppError.internal("boom")));
+
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.deviceGroups.onboardDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
   });
 
