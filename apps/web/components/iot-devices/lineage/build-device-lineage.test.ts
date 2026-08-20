@@ -71,15 +71,31 @@ describe("buildDeviceLineage", () => {
     expect(broker?.kind === "broker" && broker.thingName).toBe("ambyte_GW-1");
   });
 
-  it("reports the latest non-null firmware version on the device node", () => {
+  it("reports the firmware version with the newest lastSeen, not array order", () => {
     const model = buildDeviceLineage(
       buildInput({
         monitoring: {
           ...EMPTY_MONITORING,
           firmwareHistory: [
-            { version: "1.0.0", firstSeen: "a", lastSeen: "b", count: 3 },
-            { version: "1.1.0", firstSeen: "c", lastSeen: "d", count: 2 },
-            { version: null, firstSeen: "e", lastSeen: "f", count: 1 },
+            {
+              version: "1.1.0",
+              firstSeen: "2026-08-06T00:00:00.000Z",
+              lastSeen: "2026-08-09T00:00:00.000Z",
+              count: 2,
+            },
+            {
+              version: "1.0.0",
+              firstSeen: "2026-08-01T00:00:00.000Z",
+              lastSeen: "2026-08-05T00:00:00.000Z",
+              count: 3,
+            },
+            // A null report never wins, even as the newest entry.
+            {
+              version: null,
+              firstSeen: "2026-08-10T00:00:00.000Z",
+              lastSeen: "2026-08-11T00:00:00.000Z",
+              count: 1,
+            },
           ],
         },
       }),
@@ -152,12 +168,17 @@ describe("buildDeviceLineage", () => {
     const model = buildDeviceLineage(
       buildInput({
         visibleProtocols: [{ id: protocolMix[0].protocolId, name: "PAR burst" }],
+        visibleWorkbooks: [{ id: "cccccccc-1111-4111-8111-111111111111", name: "Field workbook" }],
+        visibleMacros: [{ id: "bbbbbbbb-1111-4111-8111-111111111111", name: "SPAD macro" }],
         monitoring: {
           ...EMPTY_MONITORING,
           payload: {
             ...EMPTY_MONITORING.payload,
             protocolMix: [...protocolMix, { protocolId: null, count: 99 }],
-            workbookMix: [{ workbookVersionId: null, count: 3 }],
+            workbookMix: [
+              { workbookVersionId: null, count: 3 },
+              { workbookVersionId: "cccccccc-1111-4111-8111-111111111111", count: 4 },
+            ],
             macroMix: [{ macroId: "bbbbbbbb-1111-4111-8111-111111111111", count: 2 }],
           },
         },
@@ -172,8 +193,10 @@ describe("buildDeviceLineage", () => {
     expect(other?.kind === "attribution-other" && other.folded).toBe(2);
     expect(other?.kind === "attribution-other" && other.count).toBe(7 + 6);
 
-    // A mix of only null ids contributes nothing.
-    expect(model.nodes.some((node) => node.kind === "workbook")).toBe(false);
-    expect(model.nodes.filter((node) => node.kind === "macro")).toHaveLength(1);
+    // Null buckets contribute nothing; resolvable ids link to their pages.
+    const workbook = model.nodes.find((node) => node.kind === "workbook");
+    expect(workbook?.kind === "workbook" && workbook.entity.href).toContain("/workbooks/");
+    const macro = model.nodes.find((node) => node.kind === "macro");
+    expect(macro?.kind === "macro" && macro.entity.href).toContain("/macros/");
   });
 });

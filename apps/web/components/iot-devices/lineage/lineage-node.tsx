@@ -181,7 +181,7 @@ export function LineageNode(props: NodeProps) {
     <div
       data-testid="lineage-node"
       className={cn(
-        "relative w-[260px] overflow-hidden rounded-[12px] border bg-white shadow-sm transition-shadow",
+        "bg-card relative w-[260px] overflow-hidden rounded-[12px] border shadow-sm transition-shadow",
         props.selected ? "ring-jii-dark-green border-[#005e5e] ring-2" : "border-[#E2E8F0]",
       )}
     >

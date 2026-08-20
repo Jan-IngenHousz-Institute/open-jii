@@ -159,15 +159,19 @@ export function buildDeviceLineage(input: BuildDeviceLineageInput): DeviceLineag
   return { nodes, edges };
 }
 
-/** Last reported version in the window; versions can reappear, so latest wins. */
+/** Newest non-null report wins by `lastSeen`, not array order; versions can
+ * reappear on rollback, so recency is the only truthful tiebreak. */
 function currentFirmwareVersion(monitoring: DeviceMonitoring): string | null {
-  for (let i = monitoring.firmwareHistory.length - 1; i >= 0; i--) {
-    const entry = monitoring.firmwareHistory[i];
-    if (entry.version !== null) {
-      return entry.version;
+  let current: { version: string; lastSeen: string } | null = null;
+  for (const entry of monitoring.firmwareHistory) {
+    if (entry.version === null) {
+      continue;
+    }
+    if (current === null || entry.lastSeen > current.lastSeen) {
+      current = { version: entry.version, lastSeen: entry.lastSeen };
     }
   }
-  return null;
+  return current === null ? null : current.version;
 }
 
 function appendExperiments(

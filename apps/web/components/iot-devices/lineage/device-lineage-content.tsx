@@ -51,29 +51,49 @@ export default function DeviceLineagePage() {
   }));
   const [selected, setSelected] = useState<LineageNodeModel | null>(null);
 
-  const { data: device } = useIotDevice(deviceId);
+  const { data: device, isError: isDeviceError, refetch: refetchDevice } = useIotDevice(deviceId);
   const { data: activity } = useIotDeviceActivity(deviceId);
-  const { data: boundExperiments } = useDeviceExperiments(deviceId);
+  const {
+    data: boundExperiments,
+    isError: isBindingsError,
+    refetch: refetchBindings,
+  } = useDeviceExperiments(deviceId);
   // Names for entities the viewer can open; ids outside these lists stay
   // opaque, since a device publishing under an id says nothing about the
   // viewer's access to it.
-  const { data: visibleExperiments } = useQuery(
+  const { data: visibleExperiments, isPending: isExperimentListPending } = useQuery(
     orpc.experiments.listExperiments.queryOptions({ input: { filter: "member" } }),
   );
-  const { data: visibleProtocols } = useQuery(
+  const { data: visibleProtocols, isPending: isProtocolListPending } = useQuery(
     orpc.protocols.listProtocols.queryOptions({ input: {} }),
   );
-  const { data: visibleWorkbooks } = useQuery(
+  const { data: visibleWorkbooks, isPending: isWorkbookListPending } = useQuery(
     orpc.workbooks.listWorkbooks.queryOptions({ input: {} }),
   );
-  const { data: visibleMacros } = useQuery(orpc.macros.listMacros.queryOptions({ input: {} }));
+  const { data: visibleMacros, isPending: isMacroListPending } = useQuery(
+    orpc.macros.listMacros.queryOptions({ input: {} }),
+  );
   const {
     data: monitoring,
     isLoading,
     isFetching,
-    isError,
-    refetch,
+    isError: isMonitoringError,
+    refetch: refetchMonitoring,
   } = useDeviceMonitoring(deviceId, selection.range);
+
+  // Device, bindings and monitoring shape the graph itself: any of them failing
+  // must surface the error card, never an eternal skeleton or lying edges.
+  const hasError = isDeviceError || isBindingsError || isMonitoringError;
+  // Placeholder private labels must not flash before the access lists resolve;
+  // a FAILED list stops pending and degrades to conservative private labels.
+  const isAccessListPending =
+    isExperimentListPending || isProtocolListPending || isWorkbookListPending || isMacroListPending;
+
+  const handleRetry = () => {
+    void refetchDevice();
+    void refetchBindings();
+    void refetchMonitoring();
+  };
 
   const handleRangeChange = (range: MonitoringRange, preset: MonitoringPresetId | null) => {
     setSelection({ range, preset });
@@ -81,7 +101,7 @@ export default function DeviceLineagePage() {
   };
 
   const model = useMemo(() => {
-    if (device === undefined || monitoring === undefined) {
+    if (device === undefined || monitoring === undefined || isAccessListPending) {
       return null;
     }
     return buildDeviceLineage({
@@ -108,6 +128,7 @@ export default function DeviceLineagePage() {
   }, [
     device,
     monitoring,
+    isAccessListPending,
     activity,
     boundExperiments,
     visibleExperiments,
@@ -133,17 +154,11 @@ export default function DeviceLineagePage() {
         />
       </div>
 
-      {isError ? (
+      {hasError ? (
         <Card className="shadow-none">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <p className="text-muted-foreground text-sm">{t("iot.devices.monitoring.loadError")}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                void refetch();
-              }}
-            >
+            <Button variant="outline" size="sm" onClick={handleRetry}>
               {t("iot.devices.monitoring.retry")}
             </Button>
           </CardContent>

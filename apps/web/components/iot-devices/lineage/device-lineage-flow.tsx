@@ -35,13 +35,13 @@ interface DeviceLineageFlowProps {
 export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLineageFlowProps) {
   const locale = useLocale();
 
-  const { nodes, edges } = useMemo(() => {
+  // Layout is selection-independent, so clicking a node never re-runs dagre.
+  const { layoutNodes, edges } = useMemo(() => {
     const flowNodes: Node[] = model.nodes.map((node) => ({
       id: node.id,
       type: "lineage",
       position: { x: 0, y: 0 },
       data: { model: node },
-      selected: node.id === selectedNodeId,
     }));
 
     const flowEdges: Edge[] = model.edges.map((edge) => ({
@@ -55,8 +55,13 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
       labelBgStyle: { fill: "#FFFFFF", fillOpacity: 0.85 },
     }));
 
-    return { nodes: autoLayout(flowNodes, flowEdges), edges: flowEdges };
-  }, [model, selectedNodeId, locale]);
+    return { layoutNodes: autoLayout(flowNodes, flowEdges), edges: flowEdges };
+  }, [model, locale]);
+
+  const nodes = useMemo(
+    () => layoutNodes.map((node) => ({ ...node, selected: node.id === selectedNodeId })),
+    [layoutNodes, selectedNodeId],
+  );
 
   const handleNodeClick = (_event: React.MouseEvent, node: Node) => {
     const selected = model.nodes.find((candidate) => candidate.id === node.id) ?? null;

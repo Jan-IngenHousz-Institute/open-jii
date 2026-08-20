@@ -64,6 +64,7 @@ function mountAll(monitoringOverrides: Partial<DeviceMonitoring> = {}) {
       id: DEVICE_ID,
       name: "Gateway",
       thingName: "ambyte_GW-1",
+      serialNumber: "SN-77",
       connectivity: { connected: true, lastSeenAt: "2026-08-14T08:00:00.000Z" },
     }),
   });
@@ -141,7 +142,62 @@ describe("DeviceLineageContent", () => {
     expect(screen.queryByText("iot.devices.lineage.inspectHint")).not.toBeInTheDocument();
   });
 
-  it("shows a retry affordance when the warehouse query fails", async () => {
+  it("renders unattributed rows and folds attribution past the cap", async () => {
+    mountAll({
+      throughput: [
+        { bucketStart: "2026-08-13T00:00:00.000Z", experimentId: BOUND_EXPERIMENT, count: 12 },
+        { bucketStart: "2026-08-14T00:00:00.000Z", experimentId: null, count: 4 },
+      ],
+      payload: {
+        ...monitoring.payload,
+        protocolMix: Array.from({ length: 5 }, (_, index) => ({
+          protocolId: `4444444${String(index)}-4444-4444-8444-444444444444`,
+          count: 10 - index,
+        })),
+        workbookMix: [{ workbookVersionId: "55555555-5555-4555-8555-555555555555", count: 2 }],
+        macroMix: [{ macroId: "66666666-6666-4666-8666-666666666666", count: 1 }],
+      },
+    });
+
+    render(<DeviceLineageContent />);
+
+    expect(await screen.findByText("iot.devices.lineage.unattributedTitle")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.lineage.otherTitle")).toBeInTheDocument();
+    expect(screen.getByText(/lineage.workbookCaption/)).toBeInTheDocument();
+    expect(screen.getByText(/lineage.macroCaption/)).toBeInTheDocument();
+  });
+
+  it("inspects the device node and deselects on a pane click", async () => {
+    mountAll();
+
+    const { container } = render(<DeviceLineageContent />);
+
+    fireEvent.click(await screen.findByText("Gateway"));
+    expect(await screen.findByText("SN-77")).toBeInTheDocument();
+
+    const pane = container.querySelector(".react-flow__pane");
+    expect(pane).not.toBeNull();
+    if (pane !== null) {
+      fireEvent.click(pane);
+    }
+    expect(await screen.findByText("iot.devices.lineage.inspectHint")).toBeInTheDocument();
+  });
+
+  it("reloads the range when a preset changes", async () => {
+    mountAll();
+    const spy = server.mount(contract.iot.getDeviceMonitoring, { body: monitoring });
+
+    render(<DeviceLineageContent />);
+    await screen.findByText("iot.devices.lineage.brokerTitle");
+
+    fireEvent.click(screen.getByRole("button", { name: "iot.devices.monitoring.range.last24h" }));
+
+    await waitFor(() => {
+      expect(spy.calls.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("recovers the graph through the retry affordance after a warehouse failure", async () => {
     mountAll();
     server.mount(contract.iot.getDeviceMonitoring, { status: 500 });
 
@@ -150,8 +206,22 @@ describe("DeviceLineageContent", () => {
     await waitFor(() => {
       expect(screen.getByText("iot.devices.monitoring.loadError")).toBeInTheDocument();
     });
-    expect(
-      screen.getByRole("button", { name: "iot.devices.monitoring.retry" }),
-    ).toBeInTheDocument();
+
+    server.mount(contract.iot.getDeviceMonitoring, { body: monitoring });
+    fireEvent.click(screen.getByRole("button", { name: "iot.devices.monitoring.retry" }));
+
+    expect(await screen.findByText("iot.devices.lineage.brokerTitle")).toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.monitoring.loadError")).not.toBeInTheDocument();
+  });
+
+  it("surfaces a device-query failure instead of an eternal skeleton", async () => {
+    mountAll();
+    server.mount(contract.iot.getIotDevice, { status: 500 });
+
+    render(<DeviceLineageContent />);
+
+    await waitFor(() => {
+      expect(screen.getByText("iot.devices.monitoring.loadError")).toBeInTheDocument();
+    });
   });
 });

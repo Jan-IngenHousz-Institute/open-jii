@@ -47,10 +47,7 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
     );
   }
 
-  function panelTitle(): string {
-    if (selected === null) {
-      return "";
-    }
+  function panelTitle(selected: LineageNodeModel): string {
     if (selected.kind === "device") {
       return selected.label;
     }
@@ -69,11 +66,7 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
     return selected.entity.label;
   }
 
-  function renderDetails() {
-    if (selected === null) {
-      return null;
-    }
-
+  function renderDetails(selected: LineageNodeModel) {
     if (selected.kind === "device") {
       return (
         <>
@@ -232,9 +225,9 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
   return (
     <Card className="shadow-none">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">{panelTitle()}</CardTitle>
+        <CardTitle className="text-base">{panelTitle(selected)}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">{renderDetails()}</CardContent>
+      <CardContent className="space-y-2">{renderDetails(selected)}</CardContent>
     </Card>
   );
 }
