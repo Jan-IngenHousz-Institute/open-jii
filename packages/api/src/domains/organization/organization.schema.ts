@@ -52,8 +52,8 @@ export const zOrganizationDirectoryEntry = z.object({
   location: z.string().nullable(),
   memberCount: z.number().int(),
   /**
-   * How much of what the organization owns *this caller* can reach, summed across all
-   * five owned types. Access-scoped, so two callers reading the same row can legitimately
+   * How much of what the organization owns *this caller* can reach, summed across every
+   * owned type. Access-scoped, so two callers reading the same row can legitimately
    * see different totals — a non-member's is the public part.
    */
   resourceCount: z.number().int(),
@@ -83,8 +83,8 @@ export const zOrganizationProfile = z.object({
   visibility: zOrganizationVisibility,
   memberCount: z.number().int(),
   /**
-   * How much of what the organization owns *this caller* can reach, summed across all
-   * five owned types — scoped the same way the directory row is, so the profile and the
+   * How much of what the organization owns *this caller* can reach, summed across every
+   * owned type — scoped the same way the directory row is, so the profile and the
    * listing cannot disagree about the same organization for the same caller.
    */
   resourceCount: z.number().int(),
@@ -106,8 +106,8 @@ export const zMyOrganization = z.object({
   isPersonal: z.boolean(),
   memberCount: z.number().int(),
   /**
-   * How much of what the organization owns this caller can reach, summed across all
-   * five owned types. Scoped like the rest, though the caller is always a member here.
+   * How much of what the organization owns this caller can reach, summed across every
+   * owned type. Scoped like the rest, though the caller is always a member here.
    */
   resourceCount: z.number().int(),
 });
@@ -150,13 +150,9 @@ const zOrganizationResourceBase = z.object({
 });
 
 /**
- * One row of the organization's resources showcase — all five owned types, keyed by
- * {@link zSharingResourceType} so the rows and the counts cannot cover different sets.
- *
- * Discriminated rather than flattened because the one extra fact worth showing differs
- * per type: an experiment's status, a protocol's family, a macro's language, a device's
- * class. A workbook adds nothing, and a device's `description` is structurally `null` —
- * no such column.
+ * One row of the organization's resources showcase, one variant per member of
+ * {@link zSharingResourceType}. Discriminated rather than flattened because the extra
+ * fact worth showing differs per type, and a workbook has none.
  */
 export const zOrganizationResource = z.discriminatedUnion("type", [
   zOrganizationResourceBase.extend({
@@ -174,36 +170,31 @@ export const zOrganizationResource = z.discriminatedUnion("type", [
   zOrganizationResourceBase.extend({ type: z.literal("workbook") }),
   zOrganizationResourceBase.extend({
     type: z.literal("device"),
-    /**
-     * The device's class — `zSensorFamily` under another name, so a device row wears
-     * the same badge a protocol row does for the same value. Chosen over its lifecycle
-     * `status`: a showcase asks what the org owns, not what a certificate is doing.
-     */
+    /** The device's class — `zSensorFamily` renamed, so it badges like a protocol's. */
     deviceType: zDeviceType,
+  }),
+  zOrganizationResourceBase.extend({
+    type: z.literal("device_group"),
+    /** How many devices the group holds; stated in the footer, not as a badge. */
+    memberCount: z.number().int(),
   }),
 ]);
 
 /**
- * The owned types this surface shows. Narrower than {@link zSharingResourceType} on
- * purpose: device groups are org-owned and shareable too, but nothing here lists or
- * counts them yet, and a total that always read zero would claim otherwise. Adding
- * them means giving them rows, a label and a badge first.
+ * Compile-time guard: a discriminated union is not exhaustive on its own, so without
+ * this a newly grantable type would type-check with no showcase row. Anything
+ * uncovered names itself in the error.
  */
-export const zOrganizationResourceType = z.enum([
-  "experiment",
-  "protocol",
-  "macro",
-  "workbook",
-  "device",
-]);
+type UncoveredOwnedType = Exclude<
+  z.infer<typeof zSharingResourceType>,
+  z.infer<typeof zOrganizationResource>["type"]
+>;
+type MustBeCovered<T extends never> = T;
+export type EveryOwnedTypeHasAShowcaseRow = MustBeCovered<UncoveredOwnedType>;
 
 /**
- * How many of each shown type the caller may read, alongside the rows. Scoped exactly
+ * How many of each owned type the caller may read, alongside the rows. Scoped exactly
  * as the rows are, so a group header cannot promise more than "view all" would show.
- *
- * Total over {@link zOrganizationResourceType} — the same five {@link zOrganizationResource}
- * carries, so every total has rows behind it and a newly *shown* type cannot be added
- * without being counted.
  */
 export const zOrganizationResourceTotals = z.object({
   experiment: z.number().int(),
@@ -211,7 +202,8 @@ export const zOrganizationResourceTotals = z.object({
   macro: z.number().int(),
   workbook: z.number().int(),
   device: z.number().int(),
-}) satisfies z.ZodType<Record<z.infer<typeof zOrganizationResourceType>, number>>;
+  device_group: z.number().int(),
+}) satisfies z.ZodType<Record<z.infer<typeof zSharingResourceType>, number>>;
 
 export const zOrganizationResources = z.object({
   resources: z.array(zOrganizationResource),
@@ -225,9 +217,6 @@ export const zOrganizationResources = z.object({
  * Deliberately not the resources showcase: that is access-scoped, while the delete
  * guard counts the whole estate. An organization holding one private resource the
  * caller cannot read would otherwise look deletable right up to the confirmation.
- *
- * Counts, not rows: the remedy is per resource type ("transfer or delete your
- * devices").
  */
 export const zOrganizationDeletionBlocker = z.object({
   resourceType: zSharingResourceType,
@@ -309,7 +298,6 @@ export type MyOrganizationList = z.infer<typeof zMyOrganizationList>;
 export type OrganizationMember = z.infer<typeof zOrganizationMember>;
 export type OrganizationMembers = z.infer<typeof zOrganizationMembers>;
 export type OrganizationResource = z.infer<typeof zOrganizationResource>;
-export type OrganizationResourceType = z.infer<typeof zOrganizationResourceType>;
 export type OrganizationResourceTotals = z.infer<typeof zOrganizationResourceTotals>;
 export type OrganizationResources = z.infer<typeof zOrganizationResources>;
 export type OrganizationDeletionBlocker = z.infer<typeof zOrganizationDeletionBlocker>;

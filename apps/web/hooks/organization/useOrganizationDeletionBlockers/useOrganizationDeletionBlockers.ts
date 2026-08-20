@@ -6,10 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@repo/auth/client";
 
 /**
- * What stands between the organization and deletion, counted across all five owned
- * resource types. Deliberately not the resources showcase: that is scoped to what
- * the caller may read and carries only the four shareable types, so an organization
- * owning nothing but a device reads as empty there while the delete guard refuses it.
+ * What stands between the organization and deletion, counted across every owned
+ * resource type. Deliberately not the resources showcase: that is scoped to what the
+ * caller may read, so an organization whose remaining resources are all private to
+ * someone else reads as empty there while the delete guard refuses it.
  *
  * Owner-only, answering not-found otherwise — which is an answer, not a failure to
  * retry.

@@ -4,6 +4,7 @@ import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { zTransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
 import { useSession } from "@repo/auth/client";
 import deCommon from "@repo/i18n/locales/de-DE/common.json";
 import enCommon from "@repo/i18n/locales/en-US/common.json";
@@ -57,6 +58,13 @@ function mixedEstate() {
       deviceType: "ambyte",
       updatedAt: "2026-01-01T00:00:00.000Z",
     }),
+    createOrganizationResource({
+      type: "device_group",
+      id: "g1",
+      name: "Rooftop array",
+      memberCount: 12,
+      updatedAt: "2025-12-01T00:00:00.000Z",
+    }),
   ];
 }
 
@@ -67,7 +75,7 @@ describe("<OrganizationResourceRows />", () => {
     // The grouped card put a heading and a count above each type. Both are gone; the
     // estate bar in the sidebar reports counts now.
     expect(within(container).queryAllByRole("heading")).toHaveLength(0);
-    expect(rowsIn(container)).toHaveLength(5);
+    expect(rowsIn(container)).toHaveLength(6);
     // Default order is most recently updated first.
     expect(rowNames(container)).toEqual([
       "Drought stress",
@@ -75,6 +83,7 @@ describe("<OrganizationResourceRows />", () => {
       "Batch fit",
       "Canopy synthesis",
       "Ambyte 04",
+      "Rooftop array",
     ]);
   });
 
@@ -138,7 +147,7 @@ describe("<OrganizationResourceRows />", () => {
 
       await user.click(clear);
 
-      expect(rowsIn(container)).toHaveLength(5);
+      expect(rowsIn(container)).toHaveLength(6);
       expect(search).toHaveValue("");
     });
 
@@ -199,6 +208,7 @@ describe("<OrganizationResourceRows />", () => {
         "Canopy synthesis",
         "Dark adaptation",
         "Drought stress",
+        "Rooftop array",
       ]);
     });
 
@@ -212,7 +222,7 @@ describe("<OrganizationResourceRows />", () => {
         }),
       );
 
-      // Five types and no sixth, in GROUP_ORDER — a hand-written list could drift.
+      // Six types and no seventh, in GROUP_ORDER — a hand-written list could drift.
       expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual([
         "organizations.resources.allTypes",
         "organizations.resources.types.experiment",
@@ -220,6 +230,7 @@ describe("<OrganizationResourceRows />", () => {
         "organizations.resources.types.macro",
         "organizations.resources.types.workbook",
         "organizations.resources.types.device",
+        "organizations.resources.types.device_group",
       ]);
     });
   });
@@ -235,6 +246,8 @@ describe("<OrganizationResourceRows />", () => {
       expect(href("Batch fit")).toBe("/en-US/platform/macros/m1");
       expect(href("Canopy synthesis")).toBe("/en-US/platform/workbooks/w1");
       expect(href("Ambyte 04")).toBe("/en-US/platform/devices/d1");
+      // Two segments, because a group's listing lives under the devices section.
+      expect(href("Rooftop array")).toBe("/en-US/platform/devices/groups/g1");
     });
 
     it("carries each type's meta badge in the platform's own colour", () => {
@@ -267,6 +280,28 @@ describe("<OrganizationResourceRows />", () => {
       expect(rowFor("Drought stress").querySelector("p")?.textContent).toBe(
         "Rain-out shelter, 12 plots",
       );
+    });
+
+    /**
+     * A group's extra fact is a quantity, and the badge slot is for categorical values
+     * that carry a colour from their own listing. So it has to be text in the footer,
+     * and there has to be no badge — a numeric badge would be the first in the set and
+     * would redefine what the slot means.
+     */
+    it("states a device group's roster size as footer text, with no badge", () => {
+      const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
+
+      const row = within(container).getByRole("link", { name: "Rooftop array" }).closest("li");
+      if (!row) throw new Error("no row for Rooftop array");
+
+      const roster = within(row).getByText("organizations.resources.groupMemberCount");
+      expect(roster).toBeVisible();
+      // Sits with the type dot, not in the badge slot: `Badge` is the only thing on a
+      // row that renders as a `bg-*` pill, so no element here may be one.
+      expect(row.querySelector('[class*="bg-badge-"]')).toBeNull();
+      expect(roster.tagName).toBe("SPAN");
+      // Not vacuous: the same footer renders the type label right beside it.
+      expect(within(row).getByText("organizations.resources.types.device_group")).toBeVisible();
     });
 
     it("strips markup out of a description rather than printing it", () => {
@@ -333,7 +368,7 @@ describe("<OrganizationResourceRows />", () => {
       } as ReturnType<typeof useSession>);
     });
 
-    /** The row a resource is on, so a click can be aimed at one of five. */
+    /** The row a resource is on, so a click can be aimed at one of six. */
     function rowFor(container: HTMLElement, name: string): HTMLElement {
       const row = within(container).getByRole("link", { name }).closest("li");
       if (!row) throw new Error(`no row for ${name}`);
@@ -356,6 +391,19 @@ describe("<OrganizationResourceRows />", () => {
       );
     }
 
+    /**
+     * Pinned on the enum, not the render: transferring a group would strand its devices
+     * or force re-provisioning each one, so widening it must be a deliberate edit.
+     */
+    it("keeps devices and device groups out of the transferable set", () => {
+      expect(zTransferableResourceType.options).toEqual([
+        "experiment",
+        "macro",
+        "protocol",
+        "workbook",
+      ]);
+    });
+
     it("offers nothing to a member or a non-member", () => {
       // Neither is handed `transfer`, so one render covers both.
       const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
@@ -363,15 +411,18 @@ describe("<OrganizationResourceRows />", () => {
       expect(transferButtons(container)).toHaveLength(0);
     });
 
-    it("offers it on the four transferable types and not on a device", () => {
+    it("offers it on the four transferable types and not on a device or a group", () => {
       const { container } = renderTransferable();
 
-      // Five rows, four controls: there is no transfer route for a device.
-      expect(rowsIn(container)).toHaveLength(5);
+      // Six rows, four controls: neither a device nor a device group has a transfer
+      // route, so neither gets a control that would only refuse.
+      expect(rowsIn(container)).toHaveLength(6);
       expect(transferButtons(container)).toHaveLength(4);
-      expect(
-        within(rowFor(container, "Ambyte 04")).queryByRole("button", { name: TRANSFER }),
-      ).toBeNull();
+      for (const name of ["Ambyte 04", "Rooftop array"]) {
+        expect(
+          within(rowFor(container, name)).queryByRole("button", { name: TRANSFER }),
+        ).toBeNull();
+      }
       for (const name of ["Drought stress", "Dark adaptation", "Batch fit", "Canopy synthesis"]) {
         expect(
           within(rowFor(container, name)).getByRole("button", { name: TRANSFER }),

@@ -10,7 +10,7 @@ import { GROUP_ORDER, RESOURCE_TYPE_COLOR } from "./organization-resource-meta";
  * What kind of work this organization does, as one bar. The header carries the total,
  * which is what let the resources stat tile go.
  *
- * All five owned types, in the same order and from the same numbers the resources card
+ * Every owned type, in the same order and from the same numbers the resources card
  * below groups by, so every segment has a group beneath it and vice versa.
  *
  * Access-scoped: this is what *this caller* can see, deliberately not

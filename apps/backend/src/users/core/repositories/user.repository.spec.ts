@@ -1715,8 +1715,10 @@ describe("UserRepository", () => {
       expect(await isStillLive(soleOwner)).toBe(true);
     });
 
-    // The re-check is polymorphic over all four types, so a sole-owned macro is as
-    // unclearable a blocker as a sole-owned experiment.
+    // The re-check spans every staffed type — its query reads `ALL_STAFFED_RESOURCES`,
+    // built from a total map — so a sole-owned macro is as unclearable a blocker as a
+    // sole-owned experiment. These three stand in for the set: devices and device groups
+    // reach the same predicate and are not exercised here.
     it.each(["macro", "protocol", "workbook"] as const)(
       "refuses a deletion that would leave a %s with no answerable owner",
       async (resourceType) => {

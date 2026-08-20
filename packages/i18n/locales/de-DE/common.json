@@ -588,8 +588,12 @@
         "workbook_one": "Arbeitsmappe",
         "workbook_other": "Arbeitsmappen",
         "device_one": "Gerät",
-        "device_other": "Geräte"
+        "device_other": "Geräte",
+        "device_group_one": "Gerätegruppe",
+        "device_group_other": "Gerätegruppen"
       },
+      "groupMemberCount_one": "{{count}} Gerät",
+      "groupMemberCount_other": "{{count}} Geräte",
       "emptyTitle": "Noch nichts zu sehen",
       "emptyMemberHint": "In dieser Organisation erstellte Ressourcen erscheinen hier.",
       "emptyVisitorHint": "Diese Organisation hat noch nichts veröffentlicht.",

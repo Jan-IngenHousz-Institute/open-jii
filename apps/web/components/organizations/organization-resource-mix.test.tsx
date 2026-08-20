@@ -11,6 +11,7 @@ const NO_TOTALS: OrganizationResourceTotals = {
   macro: 0,
   workbook: 0,
   device: 0,
+  device_group: 0,
 };
 
 /**
@@ -34,7 +35,7 @@ describe("<OrganizationResourceMix />", () => {
   it("puts the total in the header — the number the resources stat tile used to carry", () => {
     render(
       <OrganizationResourceMix
-        totals={{ experiment: 4, protocol: 2, macro: 1, workbook: 1, device: 0 }}
+        totals={{ ...NO_TOTALS, experiment: 4, protocol: 2, macro: 1, workbook: 1 }}
         isMember
       />,
     );
@@ -46,7 +47,7 @@ describe("<OrganizationResourceMix />", () => {
   it("gives each type a segment proportional to its share", () => {
     const { container } = render(
       <OrganizationResourceMix
-        totals={{ experiment: 5, protocol: 3, macro: 1, workbook: 1, device: 0 }}
+        totals={{ ...NO_TOTALS, experiment: 5, protocol: 3, macro: 1, workbook: 1 }}
         isMember
       />,
     );
@@ -69,16 +70,17 @@ describe("<OrganizationResourceMix />", () => {
     ]);
   });
 
-  it("reads the four listed types in the resources card's order, then devices", () => {
+  it("reads every type in the resources card's order, hardware last", () => {
     const { container } = render(
       <OrganizationResourceMix
-        totals={{ experiment: 1, protocol: 1, macro: 1, workbook: 1, device: 1 }}
+        totals={{ experiment: 1, protocol: 1, macro: 1, workbook: 1, device: 1, device_group: 1 }}
         isMember
       />,
     );
 
-    // Devices last, after the four that have rows below — they are the type the
-    // resources card cannot show, so they read as the tail of the estate, not among it.
+    // The order the card below groups by, so a segment and its group read the same way
+    // — the two things you make, the two you write, then the hardware, a group directly
+    // after the devices it holds.
     expect(
       within(container)
         .getAllByRole("listitem")
@@ -89,6 +91,7 @@ describe("<OrganizationResourceMix />", () => {
       "organizations.resources.types.macro1",
       "organizations.resources.types.workbook1",
       "organizations.resources.types.device1",
+      "organizations.resources.types.device_group1",
     ]);
   });
 
