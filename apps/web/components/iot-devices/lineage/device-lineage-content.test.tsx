@@ -183,18 +183,23 @@ describe("DeviceLineageContent", () => {
     expect(await screen.findByText("iot.devices.lineage.inspectHint")).toBeInTheDocument();
   });
 
-  it("reloads the range when a preset changes", async () => {
+  it("refetches a narrower window when a preset changes", async () => {
     mountAll();
     const spy = server.mount(contract.iot.getDeviceMonitoring, { body: monitoring });
 
     render(<DeviceLineageContent />);
     await screen.findByText("iot.devices.lineage.brokerTitle");
+    const beforeClick = spy.calls.length;
+    const defaultFrom = spy.calls[beforeClick - 1].query.from;
 
     fireEvent.click(screen.getByRole("button", { name: "iot.devices.monitoring.range.last24h" }));
 
     await waitFor(() => {
-      expect(spy.calls.length).toBeGreaterThan(0);
+      expect(spy.calls.length).toBeGreaterThan(beforeClick);
     });
+    // The 24h preset starts later than the 30d default, so the refetch really
+    // carries the new window rather than repeating the old one.
+    expect(spy.calls[spy.calls.length - 1].query.from > defaultFrom).toBe(true);
   });
 
   it("keeps the inspect panel on the refreshed node after a background refetch", async () => {
