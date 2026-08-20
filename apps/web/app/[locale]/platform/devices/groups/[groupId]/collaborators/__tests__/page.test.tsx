@@ -40,7 +40,7 @@ describe("GroupCollaboratorsPage", () => {
   });
 
   it("mounts the generic collaborators surface for the group resource", async () => {
-    server.mount(contract.deviceGroups.getDeviceGroup, {
+    server.mount(contract.iot.getIotDeviceGroup, {
       body: createDeviceGroupDetail({ id: GROUP_ID }),
     });
 

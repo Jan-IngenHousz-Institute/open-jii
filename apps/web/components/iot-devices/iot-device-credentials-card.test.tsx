@@ -89,7 +89,7 @@ describe("IotDeviceCredentialsCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("rotates an active device's certificate and shows the new bundle", async () => {
+  it("rotates an active device's certificate after confirmation and shows the new bundle", async () => {
     const user = userEvent.setup();
     server.mount(contract.iot.rotateIotCredentials, { status: 201, body: CERT });
     render(
@@ -99,10 +99,55 @@ describe("IotDeviceCredentialsCard", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "iot.devices.credentials.rotate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText("iot.devices.credentials.rotateConfirm")).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "iot.devices.credentials.rotate" }),
+    );
 
     await waitFor(() => {
       expect(screen.getByText("iot.devices.credentials.dialogTitle")).toBeInTheDocument();
     });
+  });
+
+  it("warns that a connected device will disconnect before rotating", async () => {
+    const user = userEvent.setup();
+    render(
+      <IotDeviceCredentialsCard
+        device={createIotDevice({
+          status: "active",
+          certificateId: "cert-x",
+          connectivity: { connected: true, lastSeenAt: null },
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.credentials.rotate" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).getByText("iot.devices.credentials.disconnectWarning"),
+    ).toBeInTheDocument();
+  });
+
+  it("skips the disconnect warning when the device is offline", async () => {
+    const user = userEvent.setup();
+    render(
+      <IotDeviceCredentialsCard
+        device={createIotDevice({
+          status: "active",
+          certificateId: "cert-x",
+          connectivity: { connected: false, lastSeenAt: null },
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.credentials.revoke" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      within(dialog).queryByText("iot.devices.credentials.disconnectWarning"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows a rotating notice for a device mid-rotation", () => {

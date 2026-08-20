@@ -13,7 +13,7 @@ vi.mock("./iot-devices-table-view", () => ({
 describe("DevicesSectionTabs", () => {
   it("shows the devices list by default and opens the groups section", async () => {
     const user = userEvent.setup();
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [] });
     render(<DevicesSectionTabs />);
 
     expect(screen.getByTestId("devices-table-view")).toBeInTheDocument();

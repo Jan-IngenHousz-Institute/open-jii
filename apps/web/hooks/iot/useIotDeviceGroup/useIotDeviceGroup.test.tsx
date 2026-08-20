@@ -11,7 +11,7 @@ const GROUP_ID = "11111111-1111-4111-8111-111111111111";
 
 describe("useIotDeviceGroup", () => {
   it("fetches the group detail by id", async () => {
-    const spy = server.mount(contract.deviceGroups.getDeviceGroup, {
+    const spy = server.mount(contract.iot.getIotDeviceGroup, {
       body: createDeviceGroupDetail({ id: GROUP_ID }),
     });
 
@@ -24,7 +24,7 @@ describe("useIotDeviceGroup", () => {
   });
 
   it("surfaces a not-found error", async () => {
-    server.mount(contract.deviceGroups.getDeviceGroup, { status: 404 });
+    server.mount(contract.iot.getIotDeviceGroup, { status: 404 });
 
     const { result } = renderHook(() => useIotDeviceGroup(GROUP_ID));
 

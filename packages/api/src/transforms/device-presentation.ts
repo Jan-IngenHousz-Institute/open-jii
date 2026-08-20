@@ -1,9 +1,5 @@
-import type { DisplayRole } from "../domains/device/device-profile";
-import {
-  isDisplayRole,
-  resolveDeviceProfile,
-  UNKNOWN_DEVICE,
-} from "../domains/device/device-profile";
+import type { DisplayRole } from "../domains/iot/device-profile";
+import { isDisplayRole, resolveDeviceProfile, UNKNOWN_DEVICE } from "../domains/iot/device-profile";
 
 /**
  * Structural device-presentation transform. Like the neighbouring

@@ -12,7 +12,7 @@ import { Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
-import type { DeviceGroupMember } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupMember } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -64,7 +64,7 @@ export function DeviceGroupContent() {
 
   const canContribute = group.capabilities.canContribute;
 
-  function handleRemove(member: DeviceGroupMember) {
+  function handleRemove(member: IotDeviceGroupMember) {
     removeMember.mutate({ groupId, deviceId: member.deviceId });
   }
 

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { UpdateDeviceGroupBody } from "@repo/api/domains/device-group/device-group.schema";
+import type { UpdateIotDeviceGroupBody } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { IotDeviceGroupDto } from "../../../core/models/iot-device-group.model";
@@ -14,12 +14,12 @@ export class UpdateIotDeviceGroupUseCase {
 
   async execute(
     groupId: string,
-    body: UpdateDeviceGroupBody,
+    body: UpdateIotDeviceGroupBody,
     userId: string,
   ): Promise<Result<IotDeviceGroupDto>> {
     this.logger.log({
       msg: "Updating device group",
-      operation: "updateDeviceGroup",
+      operation: "updateIotDeviceGroup",
       groupId,
       userId,
     });

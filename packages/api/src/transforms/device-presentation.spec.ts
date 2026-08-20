@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { DisplayRole } from "../domains/device/device-profile";
-import { DEVICE_PROFILES, DISPLAY_ROLES, UNKNOWN_DEVICE } from "../domains/device/device-profile";
+import type { DisplayRole } from "../domains/iot/device-profile";
+import { DEVICE_PROFILES, DISPLAY_ROLES, UNKNOWN_DEVICE } from "../domains/iot/device-profile";
 import { presentDevice } from "./device-presentation";
 
 describe("device-presentation", () => {

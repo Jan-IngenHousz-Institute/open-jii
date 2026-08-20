@@ -15268,7 +15268,7 @@
     },
     "/api/v1/device-groups": {
       "get": {
-        "operationId": "deviceGroups.listDeviceGroups",
+        "operationId": "iot.listIotDeviceGroups",
         "responses": {
           "200": {
             "description": "OK",
@@ -15349,7 +15349,7 @@
         }
       },
       "post": {
-        "operationId": "deviceGroups.createDeviceGroup",
+        "operationId": "iot.createIotDeviceGroup",
         "requestBody": {
           "required": true,
           "content": {
@@ -15453,7 +15453,7 @@
     },
     "/api/v1/device-groups/{groupId}": {
       "get": {
-        "operationId": "deviceGroups.getDeviceGroup",
+        "operationId": "iot.getIotDeviceGroup",
         "parameters": [
           {
             "name": "groupId",
@@ -15574,7 +15574,7 @@
         }
       },
       "patch": {
-        "operationId": "deviceGroups.updateDeviceGroup",
+        "operationId": "iot.updateIotDeviceGroup",
         "parameters": [
           {
             "name": "groupId",
@@ -15687,7 +15687,7 @@
         }
       },
       "delete": {
-        "operationId": "deviceGroups.deleteDeviceGroup",
+        "operationId": "iot.deleteIotDeviceGroup",
         "parameters": [
           {
             "name": "groupId",
@@ -15720,9 +15720,646 @@
         }
       }
     },
+    "/api/v1/device-groups/{groupId}/onboard": {
+      "post": {
+        "operationId": "iot.onboardIotDeviceGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "experimentIds": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 100
+                  },
+                  "deviceIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "description": "Member subset to onboard; omitted means every member"
+                  },
+                  "includeWorkbook": {
+                    "default": true,
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "devices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "deviceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "config": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "thingName": {
+                                    "type": "string"
+                                  },
+                                  "deviceType": {
+                                    "enum": [
+                                      "multispeq",
+                                      "ambyte",
+                                      "minipar",
+                                      "generic",
+                                      "ambit"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "endpoint": {
+                                    "type": "string",
+                                    "description": "MQTT broker host (AWS IoT ATS data endpoint)"
+                                  },
+                                  "experiments": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "experimentId": {
+                                          "type": "string",
+                                          "format": "uuid"
+                                        },
+                                        "experimentName": {
+                                          "type": "string"
+                                        },
+                                        "topicPrefix": {
+                                          "type": "string",
+                                          "description": "Ingest topic prefix (experiment/data_ingest/v1/{experimentId}/{sensorType}); the device appends /{sensorVersion}/{sensorId} per measurement."
+                                        },
+                                        "workbookVersion": {
+                                          "anyOf": [
+                                            {
+                                              "type": "integer",
+                                              "minimum": 0
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ],
+                                          "description": "Pinned workbook version the procedures were compiled from"
+                                        },
+                                        "procedures": {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "type": {
+                                                    "const": "protocol"
+                                                  },
+                                                  "protocolId": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                  },
+                                                  "name": {
+                                                    "type": "string"
+                                                  },
+                                                  "family": {
+                                                    "enum": [
+                                                      "multispeq",
+                                                      "ambyte",
+                                                      "minipar",
+                                                      "generic",
+                                                      "ambit"
+                                                    ],
+                                                    "type": "string"
+                                                  },
+                                                  "code": {
+                                                    "description": "The protocol's executable code, snapshotted at workbook publish"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "type",
+                                                  "protocolId"
+                                                ]
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "type": {
+                                                    "const": "command"
+                                                  },
+                                                  "format": {
+                                                    "enum": [
+                                                      "string",
+                                                      "json",
+                                                      "yaml"
+                                                    ],
+                                                    "type": "string"
+                                                  },
+                                                  "content": {
+                                                    "type": "string"
+                                                  },
+                                                  "name": {
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "type",
+                                                  "format",
+                                                  "content"
+                                                ]
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "type": {
+                                                    "const": "question"
+                                                  },
+                                                  "id": {
+                                                    "type": "string",
+                                                    "description": "Workbook cell id; delivery-time answers key on it"
+                                                  },
+                                                  "name": {
+                                                    "type": "string",
+                                                    "description": "Canonical column key the pipeline uses for this question"
+                                                  },
+                                                  "kind": {
+                                                    "enum": [
+                                                      "yes_no",
+                                                      "open_ended",
+                                                      "multi_choice",
+                                                      "number"
+                                                    ],
+                                                    "type": "string"
+                                                  },
+                                                  "text": {
+                                                    "type": "string"
+                                                  },
+                                                  "options": {
+                                                    "type": "array",
+                                                    "items": {
+                                                      "type": "string"
+                                                    }
+                                                  },
+                                                  "required": {
+                                                    "type": "boolean"
+                                                  },
+                                                  "answer": {
+                                                    "anyOf": [
+                                                      {
+                                                        "type": "string"
+                                                      },
+                                                      {
+                                                        "type": "array",
+                                                        "items": {
+                                                          "anyOf": [
+                                                            {},
+                                                            {
+                                                              "type": "null"
+                                                            }
+                                                          ]
+                                                        }
+                                                      },
+                                                      {
+                                                        "type": "null"
+                                                      }
+                                                    ],
+                                                    "description": "Prefilled at delivery; the device attaches it to every measurement"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "type",
+                                                  "id",
+                                                  "name",
+                                                  "kind",
+                                                  "text",
+                                                  "required",
+                                                  "answer"
+                                                ]
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      },
+                                      "required": [
+                                        "experimentId",
+                                        "experimentName",
+                                        "topicPrefix",
+                                        "workbookVersion",
+                                        "procedures"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "thingName",
+                                  "deviceType",
+                                  "endpoint",
+                                  "experiments"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "deviceId",
+                          "config",
+                          "error"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "devices"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/device-groups/{groupId}/credentials": {
+      "post": {
+        "operationId": "iot.issueIotDeviceGroupCredentials",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "deviceIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "description": "Member subset; omitted means every member"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "devices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "deviceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "thingName": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "credentials": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "certificateId": {
+                                    "type": "string"
+                                  },
+                                  "certificateArn": {
+                                    "type": "string"
+                                  },
+                                  "certificatePem": {
+                                    "type": "string"
+                                  },
+                                  "publicKey": {
+                                    "type": "string"
+                                  },
+                                  "privateKey": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "certificateId",
+                                  "certificateArn",
+                                  "certificatePem",
+                                  "publicKey",
+                                  "privateKey"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "deviceId",
+                          "thingName",
+                          "credentials",
+                          "error"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "devices"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/device-groups/{groupId}/credentials/rotate": {
+      "post": {
+        "operationId": "iot.rotateIotDeviceGroupCredentials",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "deviceIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "description": "Member subset; omitted means every member"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "devices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "deviceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "thingName": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "credentials": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "certificateId": {
+                                    "type": "string"
+                                  },
+                                  "certificateArn": {
+                                    "type": "string"
+                                  },
+                                  "certificatePem": {
+                                    "type": "string"
+                                  },
+                                  "publicKey": {
+                                    "type": "string"
+                                  },
+                                  "privateKey": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "certificateId",
+                                  "certificateArn",
+                                  "certificatePem",
+                                  "publicKey",
+                                  "privateKey"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "deviceId",
+                          "thingName",
+                          "credentials",
+                          "error"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "devices"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/device-groups/{groupId}/credentials/revoke": {
+      "post": {
+        "operationId": "iot.revokeIotDeviceGroupCredentials",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "deviceIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "description": "Member subset; omitted means every member"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "devices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "deviceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "deviceId",
+                          "error"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "devices"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/device-groups/{groupId}/monitoring": {
       "get": {
-        "operationId": "deviceGroups.getDeviceGroupMonitoring",
+        "operationId": "iot.getIotDeviceGroupMonitoring",
         "parameters": [
           {
             "name": "groupId",
@@ -16061,7 +16698,7 @@
     },
     "/api/v1/device-groups/{groupId}/devices": {
       "get": {
-        "operationId": "deviceGroups.listDeviceGroupMembers",
+        "operationId": "iot.listIotDeviceGroupMembers",
         "parameters": [
           {
             "name": "groupId",
@@ -16120,6 +16757,16 @@
                         ],
                         "type": "string"
                       },
+                      "connected": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "addedAt": {
                         "type": "string",
                         "format": "date-time"
@@ -16131,6 +16778,7 @@
                       "serialNumber",
                       "deviceType",
                       "status",
+                      "connected",
                       "addedAt"
                     ]
                   }
@@ -16141,7 +16789,7 @@
         }
       },
       "post": {
-        "operationId": "deviceGroups.addDeviceGroupMembers",
+        "operationId": "iot.addIotDeviceGroupMembers",
         "parameters": [
           {
             "name": "groupId",
@@ -16224,6 +16872,16 @@
                         ],
                         "type": "string"
                       },
+                      "connected": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "addedAt": {
                         "type": "string",
                         "format": "date-time"
@@ -16235,6 +16893,7 @@
                       "serialNumber",
                       "deviceType",
                       "status",
+                      "connected",
                       "addedAt"
                     ]
                   }
@@ -16247,7 +16906,7 @@
     },
     "/api/v1/device-groups/{groupId}/devices/{deviceId}": {
       "delete": {
-        "operationId": "deviceGroups.removeDeviceGroupMember",
+        "operationId": "iot.removeIotDeviceGroupMember",
         "parameters": [
           {
             "name": "groupId",

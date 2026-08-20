@@ -5,14 +5,14 @@ export const useRemoveIotDeviceGroupMember = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    orpc.deviceGroups.removeDeviceGroupMember.mutationOptions({
+    orpc.iot.removeIotDeviceGroupMember.mutationOptions({
       // Membership touches the roster, the group's member count, and the list.
       onSettled: async () => {
         await queryClient.invalidateQueries({
-          queryKey: orpc.deviceGroups.listDeviceGroupMembers.key(),
+          queryKey: orpc.iot.listIotDeviceGroupMembers.key(),
         });
-        await queryClient.invalidateQueries({ queryKey: orpc.deviceGroups.getDeviceGroup.key() });
-        await queryClient.invalidateQueries({ queryKey: orpc.deviceGroups.listDeviceGroups.key() });
+        await queryClient.invalidateQueries({ queryKey: orpc.iot.getIotDeviceGroup.key() });
+        await queryClient.invalidateQueries({ queryKey: orpc.iot.listIotDeviceGroups.key() });
       },
     }),
   );

@@ -1,19 +1,19 @@
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { DeviceGroup } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroup } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 interface CreateIotDeviceGroupProps {
-  onSuccess?: (group: DeviceGroup) => void;
+  onSuccess?: (group: IotDeviceGroup) => void;
 }
 
 export const useCreateIotDeviceGroup = (props: CreateIotDeviceGroupProps = {}) => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    orpc.deviceGroups.createDeviceGroup.mutationOptions({
+    orpc.iot.createIotDeviceGroup.mutationOptions({
       onSettled: async () => {
-        await queryClient.invalidateQueries({ queryKey: orpc.deviceGroups.listDeviceGroups.key() });
+        await queryClient.invalidateQueries({ queryKey: orpc.iot.listIotDeviceGroups.key() });
       },
       onSuccess: (group) => {
         props.onSuccess?.(group);

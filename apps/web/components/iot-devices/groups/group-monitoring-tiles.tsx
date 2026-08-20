@@ -4,10 +4,10 @@ import { formatRelativeTime } from "@/util/date";
 import { AlertTriangle } from "lucide-react";
 
 import type {
-  DeviceGroupMemberHealth,
-  DeviceGroupMonitoring,
-  DeviceGroupThroughputBucket,
-} from "@repo/api/domains/device-group/device-group.schema";
+  IotDeviceGroupMemberHealth,
+  IotDeviceGroupMonitoring,
+  IotDeviceGroupThroughputBucket,
+} from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -16,10 +16,10 @@ import { Tile } from "../monitoring/tile";
 import { summarizeGroupHealth } from "./group-health";
 
 interface GroupMonitoringTilesProps {
-  monitoring: DeviceGroupMonitoring | undefined;
+  monitoring: IotDeviceGroupMonitoring | undefined;
   /** The filtered member subset the whole dashboard is scoped to. */
-  members: DeviceGroupMemberHealth[];
-  throughput: DeviceGroupThroughputBucket[];
+  members: IotDeviceGroupMemberHealth[];
+  throughput: IotDeviceGroupThroughputBucket[];
   range: MonitoringRange;
   locale: string;
   now: number;

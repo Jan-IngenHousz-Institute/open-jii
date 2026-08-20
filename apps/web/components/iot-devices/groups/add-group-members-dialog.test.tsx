@@ -39,10 +39,10 @@ describe("AddGroupMembersDialog", () => {
     const user = userEvent.setup();
     const mine = createIotDevice({ createdBy: "user-1", name: "Mine" });
     server.mount(contract.iot.listIotDevices, { body: [mine] });
-    server.mount(contract.deviceGroups.listDeviceGroupMembers, { body: [] });
-    server.mount(contract.deviceGroups.getDeviceGroup, { status: 404 });
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
-    const add = server.mount(contract.deviceGroups.addDeviceGroupMembers, { body: [] });
+    server.mount(contract.iot.listIotDeviceGroupMembers, { body: [] });
+    server.mount(contract.iot.getIotDeviceGroup, { status: 404 });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [] });
+    const add = server.mount(contract.iot.addIotDeviceGroupMembers, { body: [] });
 
     render(<AddGroupMembersDialog groupId={GROUP_ID} memberIds={[]} open onOpenChange={vi.fn()} />);
 
@@ -60,10 +60,10 @@ describe("AddGroupMembersDialog", () => {
     const onOpenChange = vi.fn();
     const mine = createIotDevice({ createdBy: "user-1", name: "Mine" });
     server.mount(contract.iot.listIotDevices, { body: [mine] });
-    server.mount(contract.deviceGroups.listDeviceGroupMembers, { body: [] });
-    server.mount(contract.deviceGroups.getDeviceGroup, { status: 404 });
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
-    server.mount(contract.deviceGroups.addDeviceGroupMembers, { body: [] });
+    server.mount(contract.iot.listIotDeviceGroupMembers, { body: [] });
+    server.mount(contract.iot.getIotDeviceGroup, { status: 404 });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [] });
+    server.mount(contract.iot.addIotDeviceGroupMembers, { body: [] });
 
     render(
       <AddGroupMembersDialog groupId={GROUP_ID} memberIds={[]} open onOpenChange={onOpenChange} />,

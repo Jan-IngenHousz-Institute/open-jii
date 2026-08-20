@@ -12,7 +12,7 @@ export class DeleteIotDeviceGroupUseCase {
   async execute(groupId: string, userId: string): Promise<Result<void>> {
     this.logger.log({
       msg: "Deleting device group",
-      operation: "deleteDeviceGroup",
+      operation: "deleteIotDeviceGroup",
       groupId,
       userId,
     });

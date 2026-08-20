@@ -2,15 +2,16 @@
 
 import { useBulkRegisterIotDevices } from "@/hooks/iot/useBulkRegisterIotDevices/useBulkRegisterIotDevices";
 import { useIotDeviceGroups } from "@/hooks/iot/useIotDeviceGroups/useIotDeviceGroups";
+import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { FileUp, Loader2 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import type { BulkRegisterIotDevicesResult } from "@repo/api/domains/iot/iot.schema";
-import { zRegisterableDeviceType, zRegisterIotDeviceBody } from "@repo/api/domains/iot/iot.schema";
+import { zRegisterableDeviceType } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -41,64 +42,24 @@ import {
 import { Textarea } from "@repo/ui/components/textarea";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { MAX_INPUT_ROWS, parseBulkBatch } from "./bulk-register-parse";
+import { BulkRegisterPreview } from "./bulk-register-preview";
 import { BulkRegisterResults } from "./bulk-register-results";
 
-const zSerialNumber = zRegisterIotDeviceBody.shape.serialNumber;
+const MAX_BATCH = 100;
 
-interface ParsedLine {
-  serialNumber: string;
-  name?: string;
-}
-
-/** One device per non-empty line: `serial` or `serial, name`. */
-function parseSerialLines(text: string): { devices: ParsedLine[]; badLine: string | null } {
-  const devices: ParsedLine[] = [];
-  for (const rawLine of text.split("\n")) {
-    const line = rawLine.trim();
-    if (line === "") continue;
-
-    const commaAt = line.indexOf(",");
-    const serialNumber = (commaAt === -1 ? line : line.slice(0, commaAt)).trim();
-    const name = commaAt === -1 ? undefined : line.slice(commaAt + 1).trim();
-    if (!zSerialNumber.safeParse(serialNumber).success) {
-      return { devices: [], badLine: line };
-    }
-
-    devices.push(name ? { serialNumber, name } : { serialNumber });
-  }
-  return { devices, badLine: null };
-}
+/** Rejected before reading: a pasted registry dump is a mistake, not a batch. */
+const MAX_FILE_BYTES = 512 * 1024;
 
 const bulkRegisterFormSchema = z
   .object({
     deviceType: zRegisterableDeviceType,
-    serials: z.string().trim().min(1),
+    serials: z.string(),
     groupMode: z.enum(["none", "existing", "new"]),
     groupId: z.string().optional(),
     groupName: z.string().max(255).optional(),
   })
   .superRefine((values, ctx) => {
-    const { devices, badLine } = parseSerialLines(values.serials);
-    if (badLine !== null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["serials"],
-        message: `Invalid line: ${badLine}`,
-      });
-    } else if (new Set(devices.map((device) => device.serialNumber)).size !== devices.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["serials"],
-        message: "Serial numbers must be unique within the batch",
-      });
-    } else if (devices.length > 100) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["serials"],
-        message: "At most 100 devices per batch",
-      });
-    }
-
     if (values.groupMode === "existing" && !values.groupId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -122,6 +83,12 @@ interface BulkRegisterIotDevicesDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Paste or import a manufacturer list, watch every line classify itself
+ * against the batch and the registry, then register only what is actually
+ * registrable. The pre-flight is the point: nothing is sent while a surprise
+ * is still visible.
+ */
 export function BulkRegisterIotDevicesDialog({
   open,
   onOpenChange,
@@ -129,7 +96,15 @@ export function BulkRegisterIotDevicesDialog({
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
   const { data: groups } = useIotDeviceGroups();
+  const {
+    data: devices,
+    isLoading: isRegistryLoading,
+    isError: isRegistryError,
+    refetch: refetchRegistry,
+  } = useIotDevices();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [result, setResult] = useState<BulkRegisterIotDevicesResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const form = useForm<BulkRegisterFormValues>({
     resolver: zodResolver(bulkRegisterFormSchema),
@@ -142,18 +117,35 @@ export function BulkRegisterIotDevicesDialog({
     },
   });
   const groupMode = form.watch("groupMode");
+  const serialsText = form.watch("serials");
+
+  const registeredSerials = useMemo(
+    () => new Set((devices ?? []).map((device) => device.serialNumber)),
+    [devices],
+  );
+  const batch = useMemo(
+    () => parseBulkBatch(serialsText, registeredSerials),
+    [serialsText, registeredSerials],
+  );
+  const overCap = batch.counts.ready > MAX_BATCH;
+  // Pre-flight lies without the registry: a pending or failed device list
+  // would classify colliding serials as ready, so submission waits for it.
+  const canSubmit =
+    batch.counts.ready > 0 &&
+    !overCap &&
+    !batch.overLineLimit &&
+    !isRegistryLoading &&
+    !isRegistryError;
 
   const bulkRegister = useBulkRegisterIotDevices({
     onSuccess: (outcome) => {
       const failures = outcome.devices.filter((row) => row.error !== null);
+      setResult(outcome);
       if (failures.length === 0 && outcome.groupError === null) {
         toast({
           title: t("iot.devices.bulkDialog.successToast", { count: outcome.devices.length }),
         });
-        closeAndReset();
-        return;
       }
-      setResult(outcome);
     },
   });
 
@@ -171,8 +163,38 @@ export function BulkRegisterIotDevicesDialog({
     onOpenChange(nextOpen);
   }
 
+  function appendFileContents(file: File) {
+    if (file.size > MAX_FILE_BYTES) {
+      setImportError(
+        t("iot.devices.bulkDialog.fileTooLarge", { maxKb: Math.floor(MAX_FILE_BYTES / 1024) }),
+      );
+      return;
+    }
+    setImportError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") return;
+      const current = form.getValues("serials");
+      form.setValue("serials", current === "" ? reader.result : `${current}\n${reader.result}`, {
+        shouldDirty: true,
+      });
+    };
+    reader.readAsText(file);
+  }
+
+  function handleFilePicked(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) appendFileContents(file);
+    event.target.value = "";
+  }
+
+  function handleDrop(event: React.DragEvent<HTMLTextAreaElement>) {
+    if (event.dataTransfer.files.length === 0) return;
+    event.preventDefault();
+    appendFileContents(event.dataTransfer.files[0]);
+  }
+
   function onSubmit(values: BulkRegisterFormValues) {
-    const { devices } = parseSerialLines(values.serials);
     const group =
       values.groupMode === "existing" && values.groupId
         ? { groupId: values.groupId }
@@ -181,7 +203,7 @@ export function BulkRegisterIotDevicesDialog({
           : undefined;
 
     bulkRegister.mutate(
-      { devices, deviceType: values.deviceType, ...(group ? { group } : {}) },
+      { devices: batch.ready, deviceType: values.deviceType, ...(group ? { group } : {}) },
       {
         onError: () => {
           toast({ title: t("iot.devices.dialog.createError"), variant: "destructive" });
@@ -192,9 +214,57 @@ export function BulkRegisterIotDevicesDialog({
 
   const isPending = bulkRegister.isPending;
 
+  function renderSummary() {
+    const parts = [
+      { key: "ready", count: batch.counts.ready },
+      { key: "registered", count: batch.counts.registered },
+      { key: "duplicate", count: batch.counts.duplicate },
+      { key: "invalid", count: batch.counts.invalid },
+    ].filter((part) => part.count > 0);
+
+    function summaryText(): string {
+      if (isRegistryError) {
+        return t("iot.devices.bulkDialog.registryError");
+      }
+      if (batch.overLineLimit) {
+        return t("iot.devices.bulkDialog.tooManyLines", { max: MAX_INPUT_ROWS });
+      }
+      if (overCap) {
+        return t("iot.devices.bulkDialog.overCap", { count: batch.counts.ready });
+      }
+      if (parts.length === 0) {
+        return t("iot.devices.bulkDialog.serialsHint");
+      }
+      return parts
+        .map((part) => t(`iot.devices.bulkDialog.summary.${part.key}`, { count: part.count }))
+        .join(" · ");
+    }
+
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-muted-foreground text-xs tabular-nums" aria-live="polite">
+          {summaryText()}
+        </p>
+        {importError !== null && <p className="text-destructive text-xs">{importError}</p>}
+        {isRegistryError && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void refetchRegistry();
+            }}
+          >
+            {t("iot.devices.monitoring.retry")}
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("iot.devices.bulkDialog.title")}</DialogTitle>
           <DialogDescription>{t("iot.devices.bulkDialog.description")}</DialogDescription>
@@ -242,19 +312,43 @@ export function BulkRegisterIotDevicesDialog({
                 disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("iot.devices.bulkDialog.serialsLabel")}</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>{t("iot.devices.bulkDialog.serialsLabel")}</FormLabel>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <FileUp className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                        {t("iot.devices.bulkDialog.importFile")}
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv,.txt,text/plain,text/csv"
+                        className="hidden"
+                        aria-label={t("iot.devices.bulkDialog.importFile")}
+                        onChange={handleFilePicked}
+                      />
+                    </div>
                     <FormControl>
                       <Textarea
-                        rows={6}
+                        rows={5}
                         placeholder={t("iot.devices.bulkDialog.serialsPlaceholder")}
                         className="font-mono"
+                        onDrop={handleDrop}
                         {...field}
                       />
                     </FormControl>
+                    {renderSummary()}
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {batch.rows.length > 0 && <BulkRegisterPreview batch={batch} />}
 
               <FormField
                 control={form.control}
@@ -348,9 +442,9 @@ export function BulkRegisterIotDevicesDialog({
                 >
                   {tCommon("common.cancel")}
                 </Button>
-                <Button type="submit" disabled={isPending}>
+                <Button type="submit" disabled={isPending || !canSubmit}>
                   {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t("iot.devices.bulkDialog.submit")}
+                  {t("iot.devices.bulkDialog.submit", { count: batch.counts.ready })}
                 </Button>
               </DialogFooter>
             </form>
