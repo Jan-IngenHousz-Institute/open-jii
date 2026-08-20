@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  AlertTriangle,
-  Download,
-  ExternalLink,
-  FileText,
-  KeyRound,
-  ShieldCheck,
-} from "lucide-react";
+import { Download, ExternalLink, FileText, KeyRound, ShieldCheck } from "lucide-react";
 
 import type { IssueIotCredentialsResponse } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -21,8 +14,14 @@ import {
   DialogTitle,
 } from "@repo/ui/components/dialog";
 
-import { AMAZON_ROOT_CA_1_PEM, AMAZON_ROOT_CA_3_PEM } from "./amazon-root-ca";
-import { IotCredentialFile, downloadZip } from "./iot-credential-file";
+import { AMAZON_ROOT_CA_1_PEM, AMAZON_ROOT_CA_3_PEM, ROOT_CA_FILES } from "./amazon-root-ca";
+import { CredentialsShowOnceBanner } from "./credentials-show-once-banner";
+import {
+  IotCredentialFile,
+  credentialBundleZipName,
+  deviceCredentialFiles,
+  downloadZip,
+} from "./iot-credential-file";
 
 const AMAZON_CA_DOCS =
   "https://docs.aws.amazon.com/iot/latest/developerguide/server-authentication.html";
@@ -45,16 +44,10 @@ export function IotCredentialsDialog({
 
   const files =
     credentials !== null
-      ? [
-          { filename: `${thingName}.cert.pem`, content: credentials.certificatePem },
-          { filename: `${thingName}.public.key`, content: credentials.publicKey },
-          { filename: `${thingName}.private.key`, content: credentials.privateKey },
-          { filename: "AmazonRootCA1.pem", content: AMAZON_ROOT_CA_1_PEM },
-          { filename: "AmazonRootCA3.pem", content: AMAZON_ROOT_CA_3_PEM },
-        ]
+      ? [...deviceCredentialFiles(thingName, credentials), ...ROOT_CA_FILES]
       : [];
 
-  const downloadAll = () => downloadZip(`${thingName}-credentials.zip`, files);
+  const downloadAll = () => downloadZip(credentialBundleZipName(thingName), files);
 
   return (
     <Dialog open={credentials !== null} onOpenChange={onOpenChange}>
@@ -92,10 +85,7 @@ export function IotCredentialsDialog({
                 </p>
               </div>
 
-              <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                <span>{t("iot.devices.credentials.showOnceWarning")}</span>
-              </div>
+              <CredentialsShowOnceBanner />
 
               <div className={CARD}>
                 <IotCredentialFile

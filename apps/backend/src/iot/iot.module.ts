@@ -28,17 +28,21 @@ import { GetIotDeviceGroupUseCase } from "./application/use-cases/get-iot-device
 import { GetIotDeviceUseCase } from "./application/use-cases/get-iot-device/get-iot-device";
 import { GetIotUploadUrlUseCase } from "./application/use-cases/get-upload-url/get-upload-url";
 import { IssueIotCredentialsUseCase } from "./application/use-cases/issue-iot-credentials/issue-iot-credentials";
+import { IssueIotDeviceGroupCredentialsUseCase } from "./application/use-cases/issue-iot-device-group-credentials/issue-iot-device-group-credentials";
 import { ListDeviceExperimentsUseCase } from "./application/use-cases/list-device-experiments/list-device-experiments";
 import { ListExperimentDevicesUseCase } from "./application/use-cases/list-experiment-devices/list-experiment-devices";
 import { ListIotDeviceGroupMembersUseCase } from "./application/use-cases/list-iot-device-group-members/list-iot-device-group-members";
 import { ListIotDeviceGroupsUseCase } from "./application/use-cases/list-iot-device-groups/list-iot-device-groups";
 import { ListIotDevicesUseCase } from "./application/use-cases/list-iot-devices/list-iot-devices";
 import { OnboardDeviceUseCase } from "./application/use-cases/onboard-device/onboard-device";
+import { OnboardIotDeviceGroupUseCase } from "./application/use-cases/onboard-iot-device-group/onboard-iot-device-group";
 import { RegisterIotDeviceUseCase } from "./application/use-cases/register-iot-device/register-iot-device";
 import { RemoveExperimentDeviceUseCase } from "./application/use-cases/remove-experiment-device/remove-experiment-device";
 import { RemoveIotDeviceGroupMemberUseCase } from "./application/use-cases/remove-iot-device-group-member/remove-iot-device-group-member";
 import { RevokeIotCredentialsUseCase } from "./application/use-cases/revoke-iot-credentials/revoke-iot-credentials";
+import { RevokeIotDeviceGroupCredentialsUseCase } from "./application/use-cases/revoke-iot-device-group-credentials/revoke-iot-device-group-credentials";
 import { RotateIotCredentialsUseCase } from "./application/use-cases/rotate-iot-credentials/rotate-iot-credentials";
+import { RotateIotDeviceGroupCredentialsUseCase } from "./application/use-cases/rotate-iot-device-group-credentials/rotate-iot-device-group-credentials";
 import { UpdateIotDeviceGroupUseCase } from "./application/use-cases/update-iot-device-group/update-iot-device-group";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
@@ -83,6 +87,10 @@ import { IotController } from "./presentation/iot.controller";
     RevokeIotCredentialsUseCase,
     RotateIotCredentialsUseCase,
     OnboardDeviceUseCase,
+    OnboardIotDeviceGroupUseCase,
+    IssueIotDeviceGroupCredentialsUseCase,
+    RotateIotDeviceGroupCredentialsUseCase,
+    RevokeIotDeviceGroupCredentialsUseCase,
     ListDeviceExperimentsUseCase,
     ListExperimentDevicesUseCase,
     RemoveExperimentDeviceUseCase,

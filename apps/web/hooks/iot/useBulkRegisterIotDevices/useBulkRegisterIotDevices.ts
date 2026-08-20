@@ -15,10 +15,10 @@ export const useBulkRegisterIotDevices = (props: BulkRegisterIotDevicesProps = {
       // The batch touches the registry and, when grouped, every group surface.
       onSettled: async () => {
         await queryClient.invalidateQueries({ queryKey: orpc.iot.listIotDevices.key() });
-        await queryClient.invalidateQueries({ queryKey: orpc.deviceGroups.listDeviceGroups.key() });
-        await queryClient.invalidateQueries({ queryKey: orpc.deviceGroups.getDeviceGroup.key() });
+        await queryClient.invalidateQueries({ queryKey: orpc.iot.listIotDeviceGroups.key() });
+        await queryClient.invalidateQueries({ queryKey: orpc.iot.getIotDeviceGroup.key() });
         await queryClient.invalidateQueries({
-          queryKey: orpc.deviceGroups.listDeviceGroupMembers.key(),
+          queryKey: orpc.iot.listIotDeviceGroupMembers.key(),
         });
       },
       onSuccess: (result) => {

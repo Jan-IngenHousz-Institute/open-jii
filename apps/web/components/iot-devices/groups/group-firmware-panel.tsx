@@ -3,12 +3,12 @@
 import { formatRelativeTime } from "@/util/date";
 import { AlertTriangle } from "lucide-react";
 
-import type { DeviceGroupFirmware } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupFirmware } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 
 interface GroupFirmwarePanelProps {
-  firmware: DeviceGroupFirmware[];
+  firmware: IotDeviceGroupFirmware[];
   labelByDeviceId: Map<string, string>;
   locale: string;
 }

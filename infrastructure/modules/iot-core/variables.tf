@@ -60,6 +60,26 @@ variable "iot_s3_policy_name" {
   type        = string
 }
 
+variable "firehose_delivery_stream_name" {
+  description = "Name of the Firehose delivery stream that buffers the raw IoT archive"
+  type        = string
+}
+
+variable "firehose_delivery_stream_arn" {
+  description = "ARN of the Firehose delivery stream that buffers the raw IoT archive"
+  type        = string
+}
+
+variable "iot_firehose_role_name" {
+  description = "Name for the IAM role that allows IoT Core to put records to Firehose"
+  type        = string
+}
+
+variable "iot_firehose_policy_name" {
+  description = "Name for the IAM policy that allows IoT Core to put records to Firehose"
+  type        = string
+}
+
 variable "large_iot_bucket_arn" {
   description = "ARN of the dedicated S3 bucket for large IoT payloads (>128 KB)"
   type        = string

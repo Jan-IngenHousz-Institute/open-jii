@@ -1,4 +1,4 @@
-import { GroupComingSoon } from "@/components/iot-devices/groups/group-coming-soon";
+import { GroupCredentialsContent } from "@/components/iot-devices/groups/group-credentials-content";
 import { buildDeviceGroupMetadata } from "@/lib/platform-metadata";
 import { safeMetadata } from "@/lib/safe-metadata";
 import type { Metadata } from "next";
@@ -15,5 +15,5 @@ export function generateMetadata({ params }: PageProps): Promise<Metadata> {
 }
 
 export default function DeviceGroupCredentialsPage() {
-  return <GroupComingSoon section="credentials" />;
+  return <GroupCredentialsContent />;
 }

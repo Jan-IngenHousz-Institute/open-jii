@@ -4,11 +4,11 @@ import { StatusCodes } from "http-status-codes";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type {
-  DeviceGroup,
-  DeviceGroupDetail,
-  DeviceGroupListItem,
-  DeviceGroupMember,
-} from "@repo/api/domains/device-group/device-group.schema";
+  IotDeviceGroup,
+  IotDeviceGroupDetail,
+  IotDeviceGroupListItem,
+  IotDeviceGroupMember,
+} from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
@@ -18,6 +18,10 @@ import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.a
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { GetIotDeviceGroupMonitoringUseCase } from "../application/use-cases/get-iot-device-group-monitoring/get-iot-device-group-monitoring";
+import { IssueIotDeviceGroupCredentialsUseCase } from "../application/use-cases/issue-iot-device-group-credentials/issue-iot-device-group-credentials";
+import { OnboardIotDeviceGroupUseCase } from "../application/use-cases/onboard-iot-device-group/onboard-iot-device-group";
+import { RevokeIotDeviceGroupCredentialsUseCase } from "../application/use-cases/revoke-iot-device-group-credentials/revoke-iot-device-group-credentials";
+import { RotateIotDeviceGroupCredentialsUseCase } from "../application/use-cases/rotate-iot-device-group-credentials/rotate-iot-device-group-credentials";
 
 const MONITORING_RANGE = {
   from: "2026-08-17T00:00:00.000Z",
@@ -50,9 +54,9 @@ describe("IotDeviceGroupController", () => {
     await testApp.teardown();
   });
 
-  async function createGroup(name = "Field campaign"): Promise<DeviceGroup> {
-    const response: SuperTestResponse<DeviceGroup> = await testApp
-      .post(testApp.resolveOrpcPath(contract.deviceGroups.createDeviceGroup))
+  async function createGroup(name = "Field campaign"): Promise<IotDeviceGroup> {
+    const response: SuperTestResponse<IotDeviceGroup> = await testApp
+      .post(testApp.resolveOrpcPath(contract.iot.createIotDeviceGroup))
       .withAuth(userId)
       .send({ name })
       .expect(StatusCodes.CREATED);
@@ -65,16 +69,16 @@ describe("IotDeviceGroupController", () => {
       analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, false);
 
       await testApp
-        .get(testApp.resolveOrpcPath(contract.deviceGroups.listDeviceGroups))
+        .get(testApp.resolveOrpcPath(contract.iot.listIotDeviceGroups))
         .withAuth(userId)
         .expect(StatusCodes.FORBIDDEN);
       await testApp
-        .post(testApp.resolveOrpcPath(contract.deviceGroups.createDeviceGroup))
+        .post(testApp.resolveOrpcPath(contract.iot.createIotDeviceGroup))
         .withAuth(userId)
         .send({ name: "x" })
         .expect(StatusCodes.FORBIDDEN);
 
-      const groupPath = testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroup, {
+      const groupPath = testApp.resolveOrpcPath(contract.iot.getIotDeviceGroup, {
         groupId: group.id,
       });
       await testApp.get(groupPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
@@ -85,18 +89,54 @@ describe("IotDeviceGroupController", () => {
         .expect(StatusCodes.FORBIDDEN);
       await testApp.delete(groupPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
 
-      const membersPath = testApp.resolveOrpcPath(contract.deviceGroups.listDeviceGroupMembers, {
+      const membersPath = testApp.resolveOrpcPath(contract.iot.listIotDeviceGroupMembers, {
         groupId: group.id,
       });
       await testApp.get(membersPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
       await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.onboardIotDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
         .get(
-          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+          testApp.resolveOrpcPath(contract.iot.getIotDeviceGroupMonitoring, {
             groupId: group.id,
           }),
         )
         .withAuth(userId)
         .query(MONITORING_RANGE)
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.issueIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({})
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.rotateIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({})
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.revokeIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({})
         .expect(StatusCodes.FORBIDDEN);
       await testApp
         .post(membersPath)
@@ -106,7 +146,7 @@ describe("IotDeviceGroupController", () => {
     });
   });
 
-  describe("createDeviceGroup", () => {
+  describe("createIotDeviceGroup", () => {
     it("creates a private group owned by the caller (201)", async () => {
       const group = await createGroup("Greenhouse A");
 
@@ -118,20 +158,20 @@ describe("IotDeviceGroupController", () => {
 
     it("returns 401 when unauthenticated", async () => {
       await testApp
-        .post(testApp.resolveOrpcPath(contract.deviceGroups.createDeviceGroup))
+        .post(testApp.resolveOrpcPath(contract.iot.createIotDeviceGroup))
         .withoutAuth()
         .send({ name: "x" })
         .expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
-  describe("listDeviceGroups", () => {
+  describe("listIotDeviceGroups", () => {
     it("lists the caller's groups with member counts", async () => {
       const group = await createGroup();
       const device = await testApp.createIotDevice({ createdBy: userId });
       await testApp
         .post(
-          testApp.resolveOrpcPath(contract.deviceGroups.addDeviceGroupMembers, {
+          testApp.resolveOrpcPath(contract.iot.addIotDeviceGroupMembers, {
             groupId: group.id,
           }),
         )
@@ -139,8 +179,8 @@ describe("IotDeviceGroupController", () => {
         .send({ deviceIds: [device.id] })
         .expect(StatusCodes.OK);
 
-      const response: SuperTestResponse<DeviceGroupListItem[]> = await testApp
-        .get(testApp.resolveOrpcPath(contract.deviceGroups.listDeviceGroups))
+      const response: SuperTestResponse<IotDeviceGroupListItem[]> = await testApp
+        .get(testApp.resolveOrpcPath(contract.iot.listIotDeviceGroups))
         .withAuth(userId)
         .expect(StatusCodes.OK);
 
@@ -152,8 +192,8 @@ describe("IotDeviceGroupController", () => {
       await createGroup();
       const otherId = await testApp.createTestUser({ name: "Other" });
 
-      const response: SuperTestResponse<DeviceGroupListItem[]> = await testApp
-        .get(testApp.resolveOrpcPath(contract.deviceGroups.listDeviceGroups))
+      const response: SuperTestResponse<IotDeviceGroupListItem[]> = await testApp
+        .get(testApp.resolveOrpcPath(contract.iot.listIotDeviceGroups))
         .withAuth(otherId)
         .expect(StatusCodes.OK);
 
@@ -161,12 +201,12 @@ describe("IotDeviceGroupController", () => {
     });
   });
 
-  describe("getDeviceGroup", () => {
+  describe("getIotDeviceGroup", () => {
     it("returns the group with the caller's capabilities (200)", async () => {
       const group = await createGroup();
 
-      const response: SuperTestResponse<DeviceGroupDetail> = await testApp
-        .get(testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroup, { groupId: group.id }))
+      const response: SuperTestResponse<IotDeviceGroupDetail> = await testApp
+        .get(testApp.resolveOrpcPath(contract.iot.getIotDeviceGroup, { groupId: group.id }))
         .withAuth(userId)
         .expect(StatusCodes.OK);
 
@@ -179,17 +219,17 @@ describe("IotDeviceGroupController", () => {
       const otherId = await testApp.createTestUser({ name: "Other" });
 
       await testApp
-        .get(testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroup, { groupId: group.id }))
+        .get(testApp.resolveOrpcPath(contract.iot.getIotDeviceGroup, { groupId: group.id }))
         .withAuth(otherId)
         .expect(StatusCodes.FORBIDDEN);
     });
   });
 
-  describe("updateDeviceGroup", () => {
+  describe("updateIotDeviceGroup", () => {
     it("returns 404 for a nonexistent group", async () => {
       await testApp
         .patch(
-          testApp.resolveOrpcPath(contract.deviceGroups.updateDeviceGroup, {
+          testApp.resolveOrpcPath(contract.iot.updateIotDeviceGroup, {
             groupId: faker.string.uuid(),
           }),
         )
@@ -203,9 +243,7 @@ describe("IotDeviceGroupController", () => {
       const stranger = await testApp.createTestUser({ name: "Stranger" });
 
       await testApp
-        .patch(
-          testApp.resolveOrpcPath(contract.deviceGroups.updateDeviceGroup, { groupId: group.id }),
-        )
+        .patch(testApp.resolveOrpcPath(contract.iot.updateIotDeviceGroup, { groupId: group.id }))
         .withAuth(stranger)
         .send({ name: "renamed" })
         .expect(StatusCodes.FORBIDDEN);
@@ -214,10 +252,8 @@ describe("IotDeviceGroupController", () => {
     it("renames the group (200)", async () => {
       const group = await createGroup();
 
-      const response: SuperTestResponse<DeviceGroup> = await testApp
-        .patch(
-          testApp.resolveOrpcPath(contract.deviceGroups.updateDeviceGroup, { groupId: group.id }),
-        )
+      const response: SuperTestResponse<IotDeviceGroup> = await testApp
+        .patch(testApp.resolveOrpcPath(contract.iot.updateIotDeviceGroup, { groupId: group.id }))
         .withAuth(userId)
         .send({ name: "Renamed" })
         .expect(StatusCodes.OK);
@@ -226,11 +262,11 @@ describe("IotDeviceGroupController", () => {
     });
   });
 
-  describe("deleteDeviceGroup", () => {
+  describe("deleteIotDeviceGroup", () => {
     it("returns 404 when deleting a nonexistent group", async () => {
       await testApp
         .delete(
-          testApp.resolveOrpcPath(contract.deviceGroups.deleteDeviceGroup, {
+          testApp.resolveOrpcPath(contract.iot.deleteIotDeviceGroup, {
             groupId: faker.string.uuid(),
           }),
         )
@@ -242,27 +278,252 @@ describe("IotDeviceGroupController", () => {
       const group = await createGroup();
 
       await testApp
-        .delete(
-          testApp.resolveOrpcPath(contract.deviceGroups.deleteDeviceGroup, { groupId: group.id }),
-        )
+        .delete(testApp.resolveOrpcPath(contract.iot.deleteIotDeviceGroup, { groupId: group.id }))
         .withAuth(userId)
         .expect(StatusCodes.NO_CONTENT);
 
       // Gone means gone: the guard resolves a deleted group to 404, not 403.
       await testApp
-        .get(testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroup, { groupId: group.id }))
+        .get(testApp.resolveOrpcPath(contract.iot.getIotDeviceGroup, { groupId: group.id }))
         .withAuth(userId)
         .expect(StatusCodes.NOT_FOUND);
     });
   });
 
-  describe("getDeviceGroupMonitoring", () => {
+  describe("onboardIotDeviceGroup", () => {
+    it("returns a per-device outcome list (200)", async () => {
+      const group = await createGroup();
+      const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.addIotDeviceGroupMembers, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ deviceIds: [device.id] })
+        .expect(StatusCodes.OK);
+      const awsAdapter = testApp.module.get(AwsAdapter);
+      vi.spyOn(awsAdapter, "getIotDataEndpoint").mockResolvedValue(
+        success("data.iot.example.amazonaws.com"),
+      );
+
+      const response: SuperTestResponse<{
+        devices: { deviceId: string; config: { thingName: string } | null; error: string | null }[];
+      }> = await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.onboardIotDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.devices).toHaveLength(1);
+      expect(response.body.devices[0].deviceId).toBe(device.id);
+      expect(response.body.devices[0].config?.thingName).toBe(device.thingName);
+    });
+
+    it("returns 403 for a viewer without contribute access", async () => {
+      const group = await createGroup();
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.onboardIotDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(stranger)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("maps a use-case failure through the error contract (500)", async () => {
+      const group = await createGroup();
+      const useCase = testApp.module.get(OnboardIotDeviceGroupUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(failure(AppError.internal("boom")));
+
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.onboardIotDeviceGroup, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ experimentIds: [] })
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+  });
+
+  describe("group credentials", () => {
+    const CERT = {
+      certificateId: "cert-new",
+      certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-new",
+      certificatePem: "PEM",
+      publicKey: "PUB",
+      privateKey: "KEY",
+    };
+
+    async function addMember(groupId: string, deviceId: string) {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.addIotDeviceGroupMembers, { groupId }))
+        .withAuth(userId)
+        .send({ deviceIds: [deviceId] })
+        .expect(StatusCodes.OK);
+    }
+
+    it("issues per-device credentials for the selection (200)", async () => {
+      const group = await createGroup();
+      const device = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+      await addMember(group.id, device.id);
+      const awsAdapter = testApp.module.get(AwsAdapter);
+      vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(CERT));
+      vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
+
+      const response: SuperTestResponse<{
+        devices: {
+          deviceId: string;
+          thingName: string | null;
+          credentials: { privateKey: string } | null;
+          error: string | null;
+        }[];
+      }> = await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.issueIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ deviceIds: [device.id] })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.devices).toEqual([
+        {
+          deviceId: device.id,
+          thingName: device.thingName,
+          credentials: CERT,
+          error: null,
+        },
+      ]);
+    });
+
+    it("revokes the selection with per-device outcomes (200)", async () => {
+      const group = await createGroup();
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        status: "active",
+        certificateId: "cert-old",
+        certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-old",
+      });
+      await addMember(group.id, device.id);
+      const awsAdapter = testApp.module.get(AwsAdapter);
+      vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+
+      const response: SuperTestResponse<{
+        devices: { deviceId: string; error: string | null }[];
+      }> = await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.revokeIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({})
+        .expect(StatusCodes.OK);
+
+      expect(response.body.devices).toEqual([{ deviceId: device.id, error: null }]);
+    });
+
+    it("returns 403 for a caller without manage access on the group", async () => {
+      const group = await createGroup();
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.issueIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(stranger)
+        .send({})
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.rotateIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(stranger)
+        .send({})
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.revokeIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(stranger)
+        .send({})
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("maps use-case failures through the error contract (500)", async () => {
+      const group = await createGroup();
+      const boom = failure(AppError.internal("boom"));
+      vi.spyOn(
+        testApp.module.get(IssueIotDeviceGroupCredentialsUseCase),
+        "execute",
+      ).mockResolvedValue(boom);
+      vi.spyOn(
+        testApp.module.get(RotateIotDeviceGroupCredentialsUseCase),
+        "execute",
+      ).mockResolvedValue(boom);
+      vi.spyOn(
+        testApp.module.get(RevokeIotDeviceGroupCredentialsUseCase),
+        "execute",
+      ).mockResolvedValue(boom);
+
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.issueIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({})
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.rotateIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({})
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.revokeIotDeviceGroupCredentials, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({})
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+  });
+
+  describe("getIotDeviceGroupMonitoring", () => {
     it("returns per-member health facts (200)", async () => {
       const group = await createGroup();
       const device = await testApp.createIotDevice({ createdBy: userId, name: "Gateway" });
       await testApp
         .post(
-          testApp.resolveOrpcPath(contract.deviceGroups.addDeviceGroupMembers, {
+          testApp.resolveOrpcPath(contract.iot.addIotDeviceGroupMembers, {
             groupId: group.id,
           }),
         )
@@ -296,7 +557,7 @@ describe("IotDeviceGroupController", () => {
         pipelineUnavailable: boolean;
       }> = await testApp
         .get(
-          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+          testApp.resolveOrpcPath(contract.iot.getIotDeviceGroupMonitoring, {
             groupId: group.id,
           }),
         )
@@ -318,7 +579,7 @@ describe("IotDeviceGroupController", () => {
 
       await testApp
         .get(
-          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+          testApp.resolveOrpcPath(contract.iot.getIotDeviceGroupMonitoring, {
             groupId: group.id,
           }),
         )
@@ -334,7 +595,7 @@ describe("IotDeviceGroupController", () => {
 
       await testApp
         .get(
-          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+          testApp.resolveOrpcPath(contract.iot.getIotDeviceGroupMonitoring, {
             groupId: group.id,
           }),
         )
@@ -348,7 +609,7 @@ describe("IotDeviceGroupController", () => {
 
       await testApp
         .get(
-          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+          testApp.resolveOrpcPath(contract.iot.getIotDeviceGroupMonitoring, {
             groupId: group.id,
           }),
         )
@@ -363,7 +624,7 @@ describe("IotDeviceGroupController", () => {
 
       await testApp
         .get(
-          testApp.resolveOrpcPath(contract.deviceGroups.getDeviceGroupMonitoring, {
+          testApp.resolveOrpcPath(contract.iot.getIotDeviceGroupMonitoring, {
             groupId: group.id,
           }),
         )
@@ -378,9 +639,9 @@ describe("IotDeviceGroupController", () => {
       const group = await createGroup();
       const device = await testApp.createIotDevice({ createdBy: userId, name: null });
 
-      const added: SuperTestResponse<DeviceGroupMember[]> = await testApp
+      const added: SuperTestResponse<IotDeviceGroupMember[]> = await testApp
         .post(
-          testApp.resolveOrpcPath(contract.deviceGroups.addDeviceGroupMembers, {
+          testApp.resolveOrpcPath(contract.iot.addIotDeviceGroupMembers, {
             groupId: group.id,
           }),
         )
@@ -397,7 +658,7 @@ describe("IotDeviceGroupController", () => {
 
       await testApp
         .delete(
-          testApp.resolveOrpcPath(contract.deviceGroups.removeDeviceGroupMember, {
+          testApp.resolveOrpcPath(contract.iot.removeIotDeviceGroupMember, {
             groupId: group.id,
             deviceId: device.id,
           }),
@@ -405,9 +666,9 @@ describe("IotDeviceGroupController", () => {
         .withAuth(userId)
         .expect(StatusCodes.NO_CONTENT);
 
-      const roster: SuperTestResponse<DeviceGroupMember[]> = await testApp
+      const roster: SuperTestResponse<IotDeviceGroupMember[]> = await testApp
         .get(
-          testApp.resolveOrpcPath(contract.deviceGroups.listDeviceGroupMembers, {
+          testApp.resolveOrpcPath(contract.iot.listIotDeviceGroupMembers, {
             groupId: group.id,
           }),
         )
@@ -416,10 +677,54 @@ describe("IotDeviceGroupController", () => {
       expect(roster.body).toHaveLength(0);
     });
 
+    it("enriches the roster with fleet-index connectivity, degrading to unknown", async () => {
+      const group = await createGroup();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.addIotDeviceGroupMembers, {
+            groupId: group.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ deviceIds: [device.id] })
+        .expect(StatusCodes.OK);
+      const rosterPath = testApp.resolveOrpcPath(contract.iot.listIotDeviceGroupMembers, {
+        groupId: group.id,
+      });
+      const awsAdapter = testApp.module.get(AwsAdapter);
+      const search = vi
+        .spyOn(awsAdapter, "searchThingsConnectivity")
+        .mockResolvedValue(
+          success(
+            new Map([
+              [
+                device.thingName,
+                { thingName: device.thingName, connected: true, lastSeenAt: null },
+              ],
+            ]),
+          ),
+        );
+
+      const online: SuperTestResponse<IotDeviceGroupMember[]> = await testApp
+        .get(rosterPath)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+      expect(online.body[0].connected).toBe(true);
+
+      // A fleet-index failure degrades every row to unknown, never an error.
+      search.mockResolvedValue(failure(AppError.internal("index down")));
+      const unknown: SuperTestResponse<IotDeviceGroupMember[]> = await testApp
+        .get(rosterPath)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+      expect(unknown.body[0].connected).toBeNull();
+    });
+
     it("re-adding a member is a no-op, not an error", async () => {
       const group = await createGroup();
       const device = await testApp.createIotDevice({ createdBy: userId });
-      const path = testApp.resolveOrpcPath(contract.deviceGroups.addDeviceGroupMembers, {
+      const path = testApp.resolveOrpcPath(contract.iot.addIotDeviceGroupMembers, {
         groupId: group.id,
       });
 
@@ -428,7 +733,7 @@ describe("IotDeviceGroupController", () => {
         .withAuth(userId)
         .send({ deviceIds: [device.id] })
         .expect(200);
-      const again: SuperTestResponse<DeviceGroupMember[]> = await testApp
+      const again: SuperTestResponse<IotDeviceGroupMember[]> = await testApp
         .post(path)
         .withAuth(userId)
         .send({ deviceIds: [device.id] })
@@ -445,7 +750,7 @@ describe("IotDeviceGroupController", () => {
 
       await testApp
         .post(
-          testApp.resolveOrpcPath(contract.deviceGroups.addDeviceGroupMembers, {
+          testApp.resolveOrpcPath(contract.iot.addIotDeviceGroupMembers, {
             groupId: group.id,
           }),
         )
@@ -453,9 +758,9 @@ describe("IotDeviceGroupController", () => {
         .send({ deviceIds: [mine.id, theirs.id] })
         .expect(StatusCodes.FORBIDDEN);
 
-      const roster: SuperTestResponse<DeviceGroupMember[]> = await testApp
+      const roster: SuperTestResponse<IotDeviceGroupMember[]> = await testApp
         .get(
-          testApp.resolveOrpcPath(contract.deviceGroups.listDeviceGroupMembers, {
+          testApp.resolveOrpcPath(contract.iot.listIotDeviceGroupMembers, {
             groupId: group.id,
           }),
         )
@@ -469,7 +774,7 @@ describe("IotDeviceGroupController", () => {
 
       await testApp
         .post(
-          testApp.resolveOrpcPath(contract.deviceGroups.addDeviceGroupMembers, {
+          testApp.resolveOrpcPath(contract.iot.addIotDeviceGroupMembers, {
             groupId: group.id,
           }),
         )

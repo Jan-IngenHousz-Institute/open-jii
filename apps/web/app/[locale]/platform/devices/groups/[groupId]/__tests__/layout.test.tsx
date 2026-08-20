@@ -24,7 +24,7 @@ describe("<DeviceGroupLayout />", () => {
   });
 
   it("renders the group header and a route-linked strip once loaded", async () => {
-    server.mount(contract.deviceGroups.getDeviceGroup, {
+    server.mount(contract.iot.getIotDeviceGroup, {
       body: createDeviceGroupDetail({
         id: GROUP_ID,
         name: "Greenhouse A",
@@ -50,7 +50,7 @@ describe("<DeviceGroupLayout />", () => {
   });
 
   it("shows the load error when the group is inaccessible", async () => {
-    server.mount(contract.deviceGroups.getDeviceGroup, { status: 403 });
+    server.mount(contract.iot.getIotDeviceGroup, { status: 403 });
 
     renderLayout();
 

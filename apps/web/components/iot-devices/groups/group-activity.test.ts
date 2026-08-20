@@ -1,7 +1,7 @@
 import { createDeviceGroupMemberHealth } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
-import type { DeviceGroupLifecycleEvent } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupLifecycleEvent } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import { buildGroupActivity, memberLabels } from "./group-activity";
 
@@ -12,7 +12,9 @@ const LATER = "2026-08-18T11:00:00.000Z";
 const UNKNOWN = "iot.groups.monitoring.unknownMember";
 const LABELS = new Map([[DEVICE_ID, "Gateway One"]]);
 
-function lifecycleEvent(overrides: Partial<DeviceGroupLifecycleEvent>): DeviceGroupLifecycleEvent {
+function lifecycleEvent(
+  overrides: Partial<IotDeviceGroupLifecycleEvent>,
+): IotDeviceGroupLifecycleEvent {
   return {
     deviceId: DEVICE_ID,
     eventType: "connected",

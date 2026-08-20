@@ -3,9 +3,9 @@ import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import type {
-  DeviceGroupMemberHealth,
-  DeviceGroupMonitoring,
-} from "@repo/api/domains/device-group/device-group.schema";
+  IotDeviceGroupMemberHealth,
+  IotDeviceGroupMonitoring,
+} from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import { GroupDevicesTable } from "./group-devices-table";
 
@@ -16,9 +16,9 @@ const RECENT = new Date(NOW - 30 * 60_000).toISOString();
 const online = { connected: true, lastSeenAt: null };
 
 function monitoringWith(
-  members: DeviceGroupMemberHealth[],
+  members: IotDeviceGroupMemberHealth[],
   pipelineUnavailable = false,
-): DeviceGroupMonitoring {
+): IotDeviceGroupMonitoring {
   return {
     members,
     throughput: [],
@@ -30,7 +30,7 @@ function monitoringWith(
 }
 
 interface TableSetup {
-  members: DeviceGroupMemberHealth[];
+  members: IotDeviceGroupMemberHealth[];
   labels?: Map<string, string>;
   versions?: Map<string, string>;
   pipelineUnavailable?: boolean;

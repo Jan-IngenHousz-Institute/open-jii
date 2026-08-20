@@ -47,7 +47,7 @@ describe("<DevicesLayout />", () => {
   it("opens the bulk register dialog from the section header", async () => {
     const user = userEvent.setup();
     vi.mocked(usePathname).mockReturnValue("/en-US/platform/devices");
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [] });
     renderLayout();
 
     await user.click(screen.getByRole("button", { name: "iot.devices.bulkDialog.open" }));

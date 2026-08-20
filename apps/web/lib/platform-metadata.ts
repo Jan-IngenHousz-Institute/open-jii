@@ -124,7 +124,7 @@ const fetchOrganizationTeamName = cache(async (organizationId: string, teamId: s
 const fetchDeviceGroupSummary = cache(async (groupId: string) => {
   try {
     const client = await createServerOrpcClient();
-    return await client.deviceGroups.getDeviceGroup({ groupId });
+    return await client.iot.getIotDeviceGroup({ groupId });
   } catch {
     return null;
   }

@@ -2,7 +2,7 @@
 
 import { formatRelativeTime } from "@/util/date";
 
-import type { DeviceGroupExperimentBucket } from "@repo/api/domains/device-group/device-group.schema";
+import type { IotDeviceGroupExperimentBucket } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { HorizontalBarChart } from "@repo/ui/components/charts/bar-chart";
 
@@ -12,7 +12,7 @@ import type { EntityAccess, ResolvedEntity } from "../monitoring/resolve-entity-
 import { resolveEntities } from "../monitoring/resolve-entity-label";
 
 interface GroupDataByExperimentPanelProps {
-  dataByExperiment: DeviceGroupExperimentBucket[];
+  dataByExperiment: IotDeviceGroupExperimentBucket[];
   /** Experiments the viewer is a member of; the rest stay unnamed. */
   visibleExperiments: EntityAccess[];
   locale: string;
@@ -94,7 +94,7 @@ export function GroupDataByExperimentPanel({
 }
 
 function buildRows(
-  buckets: DeviceGroupExperimentBucket[],
+  buckets: IotDeviceGroupExperimentBucket[],
   visibleExperiments: EntityAccess[],
   locale: string,
   privateLabel: (index: number) => string,

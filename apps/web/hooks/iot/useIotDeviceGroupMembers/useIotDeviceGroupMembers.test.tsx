@@ -11,7 +11,7 @@ const GROUP_ID = "11111111-1111-4111-8111-111111111111";
 
 describe("useIotDeviceGroupMembers", () => {
   it("fetches the roster for the group", async () => {
-    const spy = server.mount(contract.deviceGroups.listDeviceGroupMembers, {
+    const spy = server.mount(contract.iot.listIotDeviceGroupMembers, {
       body: [createDeviceGroupMember(), createDeviceGroupMember()],
     });
 
@@ -24,7 +24,7 @@ describe("useIotDeviceGroupMembers", () => {
   });
 
   it("surfaces an error response", async () => {
-    server.mount(contract.deviceGroups.listDeviceGroupMembers, { status: 500 });
+    server.mount(contract.iot.listIotDeviceGroupMembers, { status: 500 });
 
     const { result } = renderHook(() => useIotDeviceGroupMembers(GROUP_ID));
 

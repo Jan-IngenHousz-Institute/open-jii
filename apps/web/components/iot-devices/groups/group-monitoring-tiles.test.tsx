@@ -3,10 +3,10 @@ import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import type {
-  DeviceGroupMemberHealth,
-  DeviceGroupMonitoring,
-  DeviceGroupThroughputBucket,
-} from "@repo/api/domains/device-group/device-group.schema";
+  IotDeviceGroupMemberHealth,
+  IotDeviceGroupMonitoring,
+  IotDeviceGroupThroughputBucket,
+} from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import type { MonitoringRange } from "../monitoring/monitoring-range";
 import { GroupMonitoringTiles } from "./group-monitoring-tiles";
@@ -25,9 +25,9 @@ const RANGE: MonitoringRange = {
 };
 
 function monitoringWith(
-  members: DeviceGroupMemberHealth[],
+  members: IotDeviceGroupMemberHealth[],
   pipelineUnavailable = false,
-): DeviceGroupMonitoring {
+): IotDeviceGroupMonitoring {
   return {
     members,
     throughput: [],
@@ -39,9 +39,9 @@ function monitoringWith(
 }
 
 interface TilesSetup {
-  monitoring?: DeviceGroupMonitoring;
-  members?: DeviceGroupMemberHealth[];
-  throughput?: DeviceGroupThroughputBucket[];
+  monitoring?: IotDeviceGroupMonitoring;
+  members?: IotDeviceGroupMemberHealth[];
+  throughput?: IotDeviceGroupThroughputBucket[];
 }
 
 function renderTiles({ monitoring, members = [], throughput = [] }: TilesSetup) {

@@ -32,10 +32,10 @@ describe("DeviceGroupPage", () => {
   });
 
   it("renders the group overview roster", async () => {
-    server.mount(contract.deviceGroups.getDeviceGroup, {
+    server.mount(contract.iot.getIotDeviceGroup, {
       body: createDeviceGroupDetail({ id: GROUP_ID }),
     });
-    server.mount(contract.deviceGroups.listDeviceGroupMembers, {
+    server.mount(contract.iot.listIotDeviceGroupMembers, {
       body: [createDeviceGroupMember({ name: "Gateway One" })],
     });
     server.mount(contract.iot.listIotDevices, { body: [] });
