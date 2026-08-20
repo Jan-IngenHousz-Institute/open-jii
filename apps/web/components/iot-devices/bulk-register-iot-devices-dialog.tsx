@@ -42,11 +42,14 @@ import {
 import { Textarea } from "@repo/ui/components/textarea";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { parseBulkBatch } from "./bulk-register-parse";
+import { MAX_INPUT_ROWS, parseBulkBatch } from "./bulk-register-parse";
 import { BulkRegisterPreview } from "./bulk-register-preview";
 import { BulkRegisterResults } from "./bulk-register-results";
 
 const MAX_BATCH = 100;
+
+/** Rejected before reading: a pasted registry dump is a mistake, not a batch. */
+const MAX_FILE_BYTES = 512 * 1024;
 
 const bulkRegisterFormSchema = z
   .object({
@@ -93,9 +96,15 @@ export function BulkRegisterIotDevicesDialog({
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
   const { data: groups } = useIotDeviceGroups();
-  const { data: devices } = useIotDevices();
+  const {
+    data: devices,
+    isLoading: isRegistryLoading,
+    isError: isRegistryError,
+    refetch: refetchRegistry,
+  } = useIotDevices();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [result, setResult] = useState<BulkRegisterIotDevicesResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const form = useForm<BulkRegisterFormValues>({
     resolver: zodResolver(bulkRegisterFormSchema),
@@ -119,7 +128,14 @@ export function BulkRegisterIotDevicesDialog({
     [serialsText, registeredSerials],
   );
   const overCap = batch.counts.ready > MAX_BATCH;
-  const canSubmit = batch.counts.ready > 0 && !overCap;
+  // Pre-flight lies without the registry: a pending or failed device list
+  // would classify colliding serials as ready, so submission waits for it.
+  const canSubmit =
+    batch.counts.ready > 0 &&
+    !overCap &&
+    !batch.overLineLimit &&
+    !isRegistryLoading &&
+    !isRegistryError;
 
   const bulkRegister = useBulkRegisterIotDevices({
     onSuccess: (outcome) => {
@@ -148,6 +164,13 @@ export function BulkRegisterIotDevicesDialog({
   }
 
   function appendFileContents(file: File) {
+    if (file.size > MAX_FILE_BYTES) {
+      setImportError(
+        t("iot.devices.bulkDialog.fileTooLarge", { maxKb: Math.floor(MAX_FILE_BYTES / 1024) }),
+      );
+      return;
+    }
+    setImportError(null);
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result !== "string") return;
@@ -199,18 +222,43 @@ export function BulkRegisterIotDevicesDialog({
       { key: "invalid", count: batch.counts.invalid },
     ].filter((part) => part.count > 0);
 
+    function summaryText(): string {
+      if (isRegistryError) {
+        return t("iot.devices.bulkDialog.registryError");
+      }
+      if (batch.overLineLimit) {
+        return t("iot.devices.bulkDialog.tooManyLines", { max: MAX_INPUT_ROWS });
+      }
+      if (overCap) {
+        return t("iot.devices.bulkDialog.overCap", { count: batch.counts.ready });
+      }
+      if (parts.length === 0) {
+        return t("iot.devices.bulkDialog.serialsHint");
+      }
+      return parts
+        .map((part) => t(`iot.devices.bulkDialog.summary.${part.key}`, { count: part.count }))
+        .join(" · ");
+    }
+
     return (
-      <p className="text-muted-foreground text-xs tabular-nums" aria-live="polite">
-        {overCap
-          ? t("iot.devices.bulkDialog.overCap", { count: batch.counts.ready })
-          : parts.length === 0
-            ? t("iot.devices.bulkDialog.serialsHint")
-            : parts
-                .map((part) =>
-                  t(`iot.devices.bulkDialog.summary.${part.key}`, { count: part.count }),
-                )
-                .join(" · ")}
-      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-muted-foreground text-xs tabular-nums" aria-live="polite">
+          {summaryText()}
+        </p>
+        {importError !== null && <p className="text-destructive text-xs">{importError}</p>}
+        {isRegistryError && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void refetchRegistry();
+            }}
+          >
+            {t("iot.devices.monitoring.retry")}
+          </Button>
+        )}
+      </div>
     );
   }
 

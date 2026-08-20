@@ -36,6 +36,9 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { GroupOnboardResults } from "./group-onboard-results";
 
+/** Mirrors the contract's cap on an explicit `deviceIds` selection. */
+const MAX_BATCH = 100;
+
 /** Phones pick their experiment in the app; a config would never be consumed. */
 function isEligible(member: DeviceGroupMember): boolean {
   return member.deviceType !== "mobile" && member.status === "active";
@@ -69,6 +72,9 @@ export function GroupOnboardingContent() {
   const selectedIds = eligible
     .map((member) => member.deviceId)
     .filter((deviceId) => !deselectedIds.has(deviceId));
+  // The contract rejects an oversized selection outright, so the page has to
+  // ask for a smaller one instead of letting the submit die on a generic 400.
+  const isOverCap = selectedIds.length > MAX_BATCH;
 
   function labelFor(member: DeviceGroupMember): string {
     return resolveDevicePrimaryLabel(
@@ -121,17 +127,24 @@ export function GroupOnboardingContent() {
     setAnswers(next);
   }, []);
 
-  // Plan questions are experiment-level, so they are identical across the
-  // batch: collected once, applied to every delivered config.
+  // Plan questions are experiment-level and answered once, but each device's
+  // config carries its own full binding set (a re-issue can differ per member),
+  // so the union across every row is collected, deduplicated by question id.
   const questions = useMemo<PlanQuestionEntry[]>(() => {
-    const withPlan = (rows ?? []).find((row) =>
-      row.config?.experiments.some((experiment) => experiment.procedures.length > 0),
-    );
-    return (withPlan?.config?.experiments ?? []).flatMap((experiment) =>
-      experiment.procedures
-        .filter((procedure) => procedure.type === "question")
-        .map((question) => ({ experimentName: experiment.experimentName, question })),
-    );
+    const byId = new Map<string, PlanQuestionEntry>();
+    for (const row of rows ?? []) {
+      for (const experiment of row.config?.experiments ?? []) {
+        for (const procedure of experiment.procedures) {
+          if (procedure.type === "question" && !byId.has(procedure.id)) {
+            byId.set(procedure.id, {
+              experimentName: experiment.experimentName,
+              question: procedure,
+            });
+          }
+        }
+      }
+    }
+    return [...byId.values()];
   }, [rows]);
 
   // What the last batch actually bound, for the results narrative; captured at
@@ -243,10 +256,15 @@ export function GroupOnboardingContent() {
               </Label>
             </div>
 
+            {isOverCap && (
+              <p className="text-sm text-amber-600">
+                {t("iot.groups.onboarding.overCap", { max: MAX_BATCH })}
+              </p>
+            )}
             <Button
               className="w-fit"
               onClick={handleOnboard}
-              disabled={selectedIds.length === 0 || onboardGroup.isPending}
+              disabled={selectedIds.length === 0 || isOverCap || onboardGroup.isPending}
             >
               {onboardGroup.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />

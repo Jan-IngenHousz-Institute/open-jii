@@ -2,6 +2,9 @@ import { zRegisterIotDeviceBody } from "@repo/api/domains/iot/iot.schema";
 
 const zSerialNumber = zRegisterIotDeviceBody.shape.serialNumber;
 
+/** Preview stays responsive: lines past this cap are not parsed at all. */
+export const MAX_INPUT_ROWS = 500;
+
 export type BulkRowStatus = "ready" | "invalid" | "duplicate" | "registered";
 
 export interface BulkRow {
@@ -17,6 +20,8 @@ export interface BulkBatch {
   counts: Record<BulkRowStatus, number>;
   /** The rows a submit would actually send. */
   ready: { serialNumber: string; name?: string }[];
+  /** True when the input held more non-empty lines than the parser reads. */
+  overLineLimit: boolean;
 }
 
 /**
@@ -29,10 +34,15 @@ export interface BulkBatch {
 export function parseBulkBatch(text: string, registeredSerials: Set<string>): BulkBatch {
   const rows: BulkRow[] = [];
   const seen = new Set<string>();
+  let overLineLimit = false;
 
   for (const rawLine of text.split("\n")) {
     const line = rawLine.trim();
     if (line === "") continue;
+    if (rows.length >= MAX_INPUT_ROWS) {
+      overLineLimit = true;
+      break;
+    }
 
     const separatorAt = firstSeparator(line);
     const serialNumber = (separatorAt === -1 ? line : line.slice(0, separatorAt)).trim();
@@ -66,6 +76,7 @@ export function parseBulkBatch(text: string, registeredSerials: Set<string>): Bu
           ? { serialNumber: row.serialNumber, name: row.name }
           : { serialNumber: row.serialNumber },
       ),
+    overLineLimit,
   };
 }
 

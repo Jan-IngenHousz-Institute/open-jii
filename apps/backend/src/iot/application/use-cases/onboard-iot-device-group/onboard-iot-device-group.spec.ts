@@ -11,6 +11,7 @@ import {
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { CreateIotDeviceGroupUseCase } from "../create-iot-device-group/create-iot-device-group";
+import { OnboardDeviceUseCase } from "../onboard-device/onboard-device";
 import { OnboardIotDeviceGroupUseCase } from "./onboard-iot-device-group";
 
 describe("OnboardIotDeviceGroupUseCase", () => {
@@ -88,6 +89,38 @@ describe("OnboardIotDeviceGroupUseCase", () => {
     const row = result.value.devices[0];
     expect(row.error).toBeNull();
     expect(row.config?.experiments.map((entry) => entry.experimentId)).toEqual([experiment.id]);
+  });
+
+  it("runs a repeated selection id only once", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+    const groupId = await seedGroup([device.id]);
+
+    const result = await useCase.execute(
+      groupId,
+      { experimentIds: [], deviceIds: [device.id, device.id], includeWorkbook: true },
+      userId,
+    );
+
+    assertSuccess(result);
+    expect(result.value.devices).toHaveLength(1);
+    expect(result.value.devices[0].error).toBeNull();
+  });
+
+  it("masks internal executor failures behind a generic row error", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+    const groupId = await seedGroup([device.id]);
+    const onboardDevice = testApp.module.get(OnboardDeviceUseCase);
+    vi.spyOn(onboardDevice, "execute").mockResolvedValue(failure(AppError.internal("db exploded")));
+
+    const result = await useCase.execute(
+      groupId,
+      { experimentIds: [], includeWorkbook: true },
+      userId,
+    );
+
+    assertSuccess(result);
+    // The 500 internals stay in the logs; the row gets a generic message.
+    expect(result.value.devices[0].error).toBe("Onboarding failed");
   });
 
   it("rejects a default-everyone batch beyond the selection cap", async () => {

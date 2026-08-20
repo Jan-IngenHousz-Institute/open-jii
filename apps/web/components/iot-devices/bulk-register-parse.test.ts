@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseBulkBatch } from "./bulk-register-parse";
+import { MAX_INPUT_ROWS, parseBulkBatch } from "./bulk-register-parse";
 
 const NONE = new Set<string>();
 
@@ -35,5 +35,15 @@ describe("parseBulkBatch", () => {
 
     expect(batch.rows).toHaveLength(1);
     expect(batch.ready).toEqual([{ serialNumber: "S-1" }]);
+  });
+
+  it("stops parsing past the line cap and flags the overflow", () => {
+    const text = Array.from({ length: MAX_INPUT_ROWS + 1 }, (_, i) => `S-${String(i)}`).join("\n");
+
+    const batch = parseBulkBatch(text, new Set());
+
+    expect(batch.rows).toHaveLength(MAX_INPUT_ROWS);
+    expect(batch.overLineLimit).toBe(true);
+    expect(parseBulkBatch("S-1", new Set()).overLineLimit).toBe(false);
   });
 });

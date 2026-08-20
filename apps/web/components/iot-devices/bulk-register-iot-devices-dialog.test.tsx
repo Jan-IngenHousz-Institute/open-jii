@@ -126,6 +126,44 @@ describe("BulkRegisterIotDevicesDialog", () => {
     expect(bulk.calls).toHaveLength(0);
   });
 
+  it("blocks submission while the registry cannot vouch for the paste", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+    const registry = server.mount(contract.iot.listIotDevices, { status: 500 });
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    await pickFamily(user);
+    await user.type(serialsInput(), "S-1");
+
+    // Without the registry the collision pre-flight would lie, so the submit waits.
+    await screen.findByText("iot.devices.bulkDialog.registryError");
+    expect(submitButton()).toBeDisabled();
+    expect(registry.calls.length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("button", { name: "iot.devices.monitoring.retry" }),
+    ).toBeInTheDocument();
+  });
+
+  it("rejects an oversized import file before reading it", async () => {
+    const user = userEvent.setup();
+    mountBase();
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    await pickFamily(user);
+    const oversized = new File([new Uint8Array(512 * 1024 + 1)], "serials.csv", {
+      type: "text/csv",
+    });
+    fireEvent.drop(serialsInput(), { dataTransfer: { files: [oversized] } });
+
+    expect(await screen.findByText("iot.devices.bulkDialog.fileTooLarge")).toBeInTheDocument();
+    // Nothing was appended to the textarea.
+    expect(serialsInput()).toHaveValue("");
+    await user.type(serialsInput(), "S-1");
+    expect(submitButton()).toBeEnabled();
+  });
+
   it("sends the chosen group and shows per-serial failures", async () => {
     const user = userEvent.setup();
     const group = createDeviceGroup({ name: "Greenhouse A" });

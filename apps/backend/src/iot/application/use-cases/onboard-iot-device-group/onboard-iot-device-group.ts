@@ -10,6 +10,9 @@ import { OnboardDeviceUseCase } from "../onboard-device/onboard-device";
 /** Mirrors the contract's cap on an explicit `deviceIds` selection. */
 const MAX_BATCH = 100;
 
+/** Rows are independent; small chunks bound DB and AWS pressure per request. */
+const BATCH_CONCURRENCY = 5;
+
 export interface OnboardDeviceGroupWindow {
   experimentIds: string[];
   deviceIds?: string[];
@@ -62,7 +65,8 @@ export class OnboardIotDeviceGroupUseCase {
     }
 
     const memberIds = new Set(membersResult.value.map((member) => member.deviceId));
-    const selection = body.deviceIds ?? [...memberIds];
+    // Deduplicated: a repeated id must not run the executor twice.
+    const selection = body.deviceIds ? [...new Set(body.deviceIds)] : [...memberIds];
 
     // Same ceiling the contract puts on an explicit selection: each onboard is
     // a multi-query operation, so an oversized default-everyone batch asks for
@@ -76,8 +80,13 @@ export class OnboardIotDeviceGroupUseCase {
     }
 
     const devices: IotDeviceGroupOnboardRowDto[] = [];
-    for (const deviceId of selection) {
-      devices.push(await this.onboardOne(deviceId, memberIds, body, userId));
+    for (let i = 0; i < selection.length; i += BATCH_CONCURRENCY) {
+      const chunk = selection.slice(i, i + BATCH_CONCURRENCY);
+      devices.push(
+        ...(await Promise.all(
+          chunk.map((deviceId) => this.onboardOne(deviceId, memberIds, body, userId)),
+        )),
+      );
     }
 
     return success({ devices });
@@ -108,8 +117,22 @@ export class OnboardIotDeviceGroupUseCase {
       userId,
       body.includeWorkbook,
     );
-    return result.isSuccess()
-      ? { deviceId, config: result.value, error: null }
-      : { deviceId, config: null, error: result.error.message };
+    if (result.isSuccess()) {
+      return { deviceId, config: result.value, error: null };
+    }
+
+    // 4xx guard messages speak to the user; 5xx internals must not leak into
+    // the row, so they are logged and replaced with a generic failure.
+    if (result.error.statusCode >= 500) {
+      this.logger.error({
+        msg: "Device onboarding failed",
+        operation: "onboardDeviceGroup",
+        deviceId,
+        errorCode: result.error.code,
+        error: result.error.message,
+      });
+      return { deviceId, config: null, error: "Onboarding failed" };
+    }
+    return { deviceId, config: null, error: result.error.message };
   }
 }

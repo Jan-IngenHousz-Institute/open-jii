@@ -42,7 +42,7 @@ export function BulkRegisterResults({ result }: BulkRegisterResultsProps) {
             {row.serialNumber}
           </Link>
         )}
-        <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
+        <span className="text-muted-foreground min-w-0 flex-1 break-words text-xs">
           {row.error ?? row.device?.name ?? ""}
         </span>
         {row.device !== null && (

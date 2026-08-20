@@ -169,6 +169,97 @@ describe("GroupOnboardingContent", () => {
     ).toBeDisabled();
   });
 
+  it("collects required questions from every device's config, not only the first", async () => {
+    const user = userEvent.setup();
+    const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
+    const spare = createDeviceGroupMember({ name: "Spare", status: "active" });
+    mountGroup([gateway, spare]);
+    server.mount(contract.deviceGroups.onboardDeviceGroup, {
+      body: {
+        devices: [
+          {
+            deviceId: gateway.deviceId,
+            config: deviceConfig(
+              "ambyte_GW-1",
+              ["Field trial"],
+              [
+                {
+                  type: "question",
+                  id: "q-1",
+                  name: "row_number",
+                  kind: "open_ended",
+                  text: "Row number",
+                  required: false,
+                  answer: null,
+                },
+              ],
+            ),
+            error: null,
+          },
+          {
+            deviceId: spare.deviceId,
+            config: deviceConfig(
+              "ambyte_GW-2",
+              ["Soil study"],
+              [
+                {
+                  type: "question",
+                  id: "q-2",
+                  name: "plot_number",
+                  kind: "open_ended",
+                  text: "Plot number",
+                  required: true,
+                  answer: null,
+                },
+              ],
+            ),
+            error: null,
+          },
+        ],
+      },
+    });
+
+    render(<GroupOnboardingContent />);
+
+    await user.click(await screen.findByText("Field trial"));
+    await user.click(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ }));
+
+    // The second device's required question gates delivery for the whole batch.
+    expect(await screen.findByText(/Plot number/)).toBeInTheDocument();
+    expect(screen.getByText(/Row number/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /iot.groups.onboarding.downloadAll/ }),
+    ).toBeDisabled();
+  });
+
+  it("blocks a selection past the batch cap with a visible limit message", async () => {
+    mountGroup(
+      Array.from({ length: 101 }, (_, index) =>
+        createDeviceGroupMember({ name: `Node ${String(index)}`, status: "active" }),
+      ),
+    );
+
+    render(<GroupOnboardingContent />);
+
+    expect(await screen.findByText("Node 0")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.onboarding.overCap")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ })).toBeDisabled();
+  });
+
+  it("allows exactly the batch cap", async () => {
+    mountGroup(
+      Array.from({ length: 100 }, (_, index) =>
+        createDeviceGroupMember({ name: `Node ${String(index)}`, status: "active" }),
+      ),
+    );
+
+    render(<GroupOnboardingContent />);
+
+    expect(await screen.findByText("Node 0")).toBeInTheDocument();
+    expect(screen.queryByText("iot.groups.onboarding.overCap")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ })).toBeEnabled();
+  });
+
   it("supports reselecting a previously deselected device", async () => {
     const user = userEvent.setup();
     const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
