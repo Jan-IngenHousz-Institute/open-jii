@@ -111,14 +111,16 @@
         "measurementsInRange_other": "{{count}} metingen in periode",
         "lastData": "Laatste gegevens {{time}}",
         "stages": "Broker-regel → brons → zilver",
-        "protocolCaption": "Protocol",
-        "workbookCaption": "Workbook-versie",
-        "macroCaption": "Macro",
+        "protocolCaption": "Uitgevoerd protocol",
+        "workbookCaption": "Uitgevoerde workbook-versie",
+        "macroCaption": "Verwerkingsmacro",
         "legend": {
+          "input": "Uitgevoerd door het apparaat",
           "active": "Ontvangt gegevens",
           "silent": "Gebonden, geen gegevens in periode",
           "unbound": "Ontvangt zonder binding",
-          "unattributed": "Geen experiment-toewijzing"
+          "unattributed": "Geen experiment-toewijzing",
+          "processing": "Berekend in de pijplijn"
         },
         "inspectHint": "Selecteer een knooppunt om het te inspecteren.",
         "thingNameLabel": "Thing-naam",
@@ -137,7 +139,9 @@
         "bindingLabel": "Binding",
         "bound": "Onboarded",
         "recentTitle": "Recente metingen",
-        "unattributedHint": "Rijen die zonder experiment-toewijzing in het topic zijn aangekomen."
+        "unattributedHint": "Rijen die zonder experiment-toewijzing in het topic zijn aangekomen.",
+        "inputsHint": "Protocollen en workbook-versies die in de rijen van dit apparaat in deze periode zijn waargenomen.",
+        "macroHint": "Macro's die tijdens de verwerking over de rijen van dit apparaat zijn berekend; niet per experiment toegewezen."
       },
       "monitoring": {
         "title": "Monitoring",

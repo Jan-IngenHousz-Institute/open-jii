@@ -111,14 +111,16 @@
         "measurementsInRange_other": "{{count}} measurements in range",
         "lastData": "Last data {{time}}",
         "stages": "Broker rule → bronze → silver",
-        "protocolCaption": "Protocol",
-        "workbookCaption": "Workbook version",
-        "macroCaption": "Macro",
+        "protocolCaption": "Executed protocol",
+        "workbookCaption": "Executed workbook version",
+        "macroCaption": "Processing macro",
         "legend": {
+          "input": "Executed by the device",
           "active": "Receiving data",
           "silent": "Bound, no data in range",
           "unbound": "Receiving without a binding",
-          "unattributed": "No experiment attribution"
+          "unattributed": "No experiment attribution",
+          "processing": "Computed in the pipeline"
         },
         "inspectHint": "Select a node to inspect it.",
         "thingNameLabel": "Thing name",
@@ -137,7 +139,9 @@
         "bindingLabel": "Binding",
         "bound": "Onboarded",
         "recentTitle": "Recent measurements",
-        "unattributedHint": "Rows that arrived without an experiment attribution in the topic."
+        "unattributedHint": "Rows that arrived without an experiment attribution in the topic.",
+        "inputsHint": "Protocols and workbook versions observed on this device's rows in range.",
+        "macroHint": "Macros computed over this device's rows during processing; not attributed per experiment."
       },
       "monitoring": {
         "title": "Monitoring",

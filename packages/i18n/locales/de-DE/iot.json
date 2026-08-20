@@ -111,14 +111,16 @@
         "measurementsInRange_other": "{{count}} Messungen im Zeitraum",
         "lastData": "Letzte Daten {{time}}",
         "stages": "Broker-Regel → Bronze → Silber",
-        "protocolCaption": "Protokoll",
-        "workbookCaption": "Workbook-Version",
-        "macroCaption": "Makro",
+        "protocolCaption": "Ausgeführtes Protokoll",
+        "workbookCaption": "Ausgeführte Workbook-Version",
+        "macroCaption": "Verarbeitungsmakro",
         "legend": {
+          "input": "Vom Gerät ausgeführt",
           "active": "Empfängt Daten",
           "silent": "Gebunden, keine Daten im Zeitraum",
           "unbound": "Empfängt ohne Bindung",
-          "unattributed": "Keine Experiment-Zuordnung"
+          "unattributed": "Keine Experiment-Zuordnung",
+          "processing": "In der Pipeline berechnet"
         },
         "inspectHint": "Wählen Sie einen Knoten aus, um ihn zu inspizieren.",
         "thingNameLabel": "Thing-Name",
@@ -137,7 +139,9 @@
         "bindingLabel": "Bindung",
         "bound": "Eingebunden",
         "recentTitle": "Letzte Messungen",
-        "unattributedHint": "Zeilen, die ohne Experiment-Zuordnung im Topic angekommen sind."
+        "unattributedHint": "Zeilen, die ohne Experiment-Zuordnung im Topic angekommen sind.",
+        "inputsHint": "Protokolle und Workbook-Versionen, die in den Zeilen dieses Geräts im Zeitraum beobachtet wurden.",
+        "macroHint": "Makros, die während der Verarbeitung über die Zeilen dieses Geräts berechnet wurden; nicht pro Experiment zugeordnet."
       },
       "monitoring": {
         "title": "Überwachung",

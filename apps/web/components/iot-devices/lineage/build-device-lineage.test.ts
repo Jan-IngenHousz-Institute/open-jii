@@ -198,5 +198,30 @@ describe("buildDeviceLineage", () => {
     expect(workbook?.kind === "workbook" && workbook.entity.href).toContain("/workbooks/");
     const macro = model.nodes.find((node) => node.kind === "macro");
     expect(macro?.kind === "macro" && macro.entity.href).toContain("/macros/");
+
+    // Topology: what the device executed feeds the device; macros are a
+    // pipeline stage hanging off the warehouse.
+    const byTarget = new Map(model.edges.map((edge) => [edge.id, edge]));
+    expect(byTarget.get(`${protocolNodes[0].id}-device`)).toMatchObject({
+      source: protocolNodes[0].id,
+      target: "device",
+      state: "input",
+    });
+    expect(byTarget.get(`${String(workbook?.id)}-device`)).toMatchObject({
+      target: "device",
+      state: "input",
+    });
+    expect(byTarget.get("protocol:other-device")).toMatchObject({
+      target: "device",
+      state: "input",
+    });
+    expect(byTarget.get(`warehouse-${String(macro?.id)}`)).toMatchObject({
+      source: "warehouse",
+      target: macro?.id,
+      state: "processing",
+    });
+    // Nothing claims a macro reaches an experiment: that attribution does not
+    // exist in the data.
+    expect(model.edges.some((edge) => edge.source.startsWith("macro:"))).toBe(false);
   });
 });

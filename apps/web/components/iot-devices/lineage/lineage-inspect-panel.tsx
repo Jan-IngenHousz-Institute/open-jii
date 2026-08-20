@@ -208,7 +208,16 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
     }
 
     if (selected.kind === "attribution-other") {
-      return <FactRow label={t("iot.devices.monitoring.measurements")} value={selected.count} />;
+      return (
+        <>
+          <FactRow label={t("iot.devices.monitoring.measurements")} value={selected.count} />
+          <p className="text-muted-foreground pt-1 text-xs">
+            {selected.attributionKind === "macro"
+              ? t("iot.devices.lineage.macroHint")
+              : t("iot.devices.lineage.inputsHint")}
+          </p>
+        </>
+      );
     }
 
     return (
@@ -218,6 +227,11 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
           value={<EntityLink entity={selected.entity} />}
         />
         <FactRow label={t("iot.devices.monitoring.measurements")} value={selected.count} />
+        <p className="text-muted-foreground pt-1 text-xs">
+          {selected.kind === "macro"
+            ? t("iot.devices.lineage.macroHint")
+            : t("iot.devices.lineage.inputsHint")}
+        </p>
       </>
     );
   }

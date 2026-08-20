@@ -36,7 +36,21 @@ const KIND_STYLE: Record<LineageNodeModel["kind"], { accent: string; icon: Lucid
   "attribution-other": { accent: "#68737B", icon: Layers },
 };
 
-const SOURCE_KINDS: readonly LineageNodeModel["kind"][] = ["device", "broker", "warehouse"];
+function nodeHandles(model: LineageNodeModel): { hasInput: boolean; hasOutput: boolean } {
+  if (model.kind === "protocol" || model.kind === "workbook") {
+    return { hasInput: false, hasOutput: true };
+  }
+  if (model.kind === "attribution-other") {
+    // Folded macros receive from the warehouse; folded inputs feed the device.
+    return model.attributionKind === "macro"
+      ? { hasInput: true, hasOutput: false }
+      : { hasInput: false, hasOutput: true };
+  }
+  if (model.kind === "device" || model.kind === "broker" || model.kind === "warehouse") {
+    return { hasInput: true, hasOutput: true };
+  }
+  return { hasInput: true, hasOutput: false };
+}
 
 export interface LineageNodeData extends Record<string, unknown> {
   model: LineageNodeModel;
@@ -54,8 +68,7 @@ export function LineageNode(props: NodeProps) {
   const style = KIND_STYLE[model.kind];
   const Icon = style.icon;
 
-  const hasInput = model.kind !== "device";
-  const hasOutput = SOURCE_KINDS.includes(model.kind);
+  const { hasInput, hasOutput } = nodeHandles(model);
 
   function title(): string {
     if (model.kind === "device") {

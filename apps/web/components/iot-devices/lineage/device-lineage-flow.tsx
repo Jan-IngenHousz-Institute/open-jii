@@ -1,6 +1,5 @@
 "use client";
 
-import { autoLayout } from "@/components/flow-editor/auto-layout";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
 import type { Edge, Node, NodeTypes } from "@xyflow/react";
@@ -13,12 +12,15 @@ import type {
   LineageEdgeModel,
   LineageNodeModel,
 } from "./build-device-lineage";
+import { layoutLineage } from "./layout-lineage";
 import { LineageNode } from "./lineage-node";
 
 const NODE_TYPES: NodeTypes = { lineage: LineageNode };
 
 const EDGE_STYLE: Record<LineageEdgeModel["state"], React.CSSProperties> = {
   identity: { stroke: "#CDD5DB", strokeWidth: 1.5 },
+  input: { stroke: "#CDD5DB", strokeWidth: 1.5 },
+  processing: { stroke: "#6F8596", strokeWidth: 1.5, strokeDasharray: "2 4" },
   active: { stroke: "#005e5e", strokeWidth: 2 },
   silent: { stroke: "#CDD5DB", strokeWidth: 1.5, strokeDasharray: "6 4" },
   unbound: { stroke: "#D97706", strokeWidth: 1.5, strokeDasharray: "6 4" },
@@ -55,7 +57,7 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
       labelBgStyle: { fill: "#FFFFFF", fillOpacity: 0.85 },
     }));
 
-    return { layoutNodes: autoLayout(flowNodes, flowEdges), edges: flowEdges };
+    return { layoutNodes: layoutLineage(flowNodes), edges: flowEdges };
   }, [model, locale]);
 
   const nodes = useMemo(
@@ -94,14 +96,14 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
   );
 }
 
-/** Counts (and recency for live edges) belong on the arrival edges only. */
+/** Counts (and recency for live edges) ride the data-bearing edges. */
 function edgeLabel(edge: LineageEdgeModel, locale: string): string | undefined {
   if (edge.state === "active" && edge.count !== null) {
     return edge.lastBucketAt === null
       ? String(edge.count)
       : `${String(edge.count)} · ${formatRelativeTime(edge.lastBucketAt, locale)}`;
   }
-  if (edge.state === "unattributed" && edge.count !== null) {
+  if (edge.count !== null && ["input", "processing", "unattributed"].includes(edge.state)) {
     return String(edge.count);
   }
   return undefined;

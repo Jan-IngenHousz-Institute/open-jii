@@ -56,7 +56,14 @@ export type LineageNodeModel =
       count: number;
     };
 
-export type LineageEdgeState = "identity" | "active" | "silent" | "unbound" | "unattributed";
+export type LineageEdgeState =
+  | "identity"
+  | "input"
+  | "processing"
+  | "active"
+  | "silent"
+  | "unbound"
+  | "unattributed";
 
 export interface LineageEdgeModel {
   id: string;
@@ -100,16 +107,20 @@ interface ExperimentArrival {
 }
 
 /**
- * The identity chain as a graph: device -> broker identity -> warehouse, then
- * one fan-out per experiment rows landed in (or were promised to), and a
- * device-global attribution fan-out (protocols / workbook versions / macros).
- * Pure data shaping; access resolution keeps ids the viewer cannot open opaque.
+ * The causal chain as a graph: what the device executed (protocols, workbook
+ * versions) feeds the device, whose identity carries through the broker into
+ * the warehouse; macros process rows there before they surface in the
+ * experiments the rows landed in (or were promised to). Attribution stays
+ * device-global for the range; access resolution keeps ids the viewer cannot
+ * open opaque.
  */
 export function buildDeviceLineage(input: BuildDeviceLineageInput): DeviceLineageModel {
   const { device, monitoring } = input;
 
   const nodes: LineageNodeModel[] = [];
   const edges: LineageEdgeModel[] = [];
+
+  appendExecutionInputs(input, nodes, edges);
 
   nodes.push({
     id: "device",
@@ -154,7 +165,7 @@ export function buildDeviceLineage(input: BuildDeviceLineageInput): DeviceLineag
   });
 
   appendExperiments(input, nodes, edges);
-  appendAttribution(input, nodes, edges);
+  appendMacros(input, nodes, edges);
 
   return { nodes, edges };
 }
@@ -250,7 +261,8 @@ function edgeStateFor(bound: boolean, count: number): LineageEdgeState {
   return count > 0 ? "active" : "silent";
 }
 
-function appendAttribution(
+/** What the device ran to produce its rows: observed on the rows themselves. */
+function appendExecutionInputs(
   input: BuildDeviceLineageInput,
   nodes: LineageNodeModel[],
   edges: LineageEdgeModel[],
@@ -263,6 +275,14 @@ function appendAttribution(
     accessible: input.visibleProtocols,
     buildHref: (id) => `/${input.locale}/platform/protocols/${id}`,
     privateLabel: input.labels.privateProtocol,
+    edgeFor: (nodeId, count) => ({
+      id: `${nodeId}-device`,
+      source: nodeId,
+      target: "device",
+      state: "input",
+      count,
+      lastBucketAt: null,
+    }),
   });
   appendAttributionKind(nodes, edges, {
     kind: "workbook",
@@ -270,13 +290,41 @@ function appendAttribution(
     accessible: input.visibleWorkbooks,
     buildHref: (id) => `/${input.locale}/platform/workbooks/${id}`,
     privateLabel: input.labels.privateWorkbook,
+    edgeFor: (nodeId, count) => ({
+      id: `${nodeId}-device`,
+      source: nodeId,
+      target: "device",
+      state: "input",
+      count,
+      lastBucketAt: null,
+    }),
   });
+}
+
+/** Macros run in the pipeline: they process rows between arrival and the
+ * experiment tables, so they hang off the warehouse as a processing stage. */
+function appendMacros(
+  input: BuildDeviceLineageInput,
+  nodes: LineageNodeModel[],
+  edges: LineageEdgeModel[],
+): void {
   appendAttributionKind(nodes, edges, {
     kind: "macro",
-    mix: payload.macroMix.map((entry) => ({ id: entry.macroId, count: entry.count })),
+    mix: input.monitoring.payload.macroMix.map((entry) => ({
+      id: entry.macroId,
+      count: entry.count,
+    })),
     accessible: input.visibleMacros,
     buildHref: (id) => `/${input.locale}/platform/macros/${id}`,
     privateLabel: input.labels.privateMacro,
+    edgeFor: (nodeId, count) => ({
+      id: `warehouse-${nodeId}`,
+      source: "warehouse",
+      target: nodeId,
+      state: "processing",
+      count,
+      lastBucketAt: null,
+    }),
   });
 }
 
@@ -286,6 +334,7 @@ interface AttributionKindInput {
   accessible: EntityAccess[];
   buildHref: (id: string) => string;
   privateLabel: (index: number) => string;
+  edgeFor: (nodeId: string, count: number | null) => LineageEdgeModel;
 }
 
 function appendAttributionKind(
@@ -319,14 +368,7 @@ function appendAttributionKind(
     }
     const nodeId = `${input.kind}:${entry.id}`;
     nodes.push({ id: nodeId, kind: input.kind, entity, count: entry.count });
-    edges.push({
-      id: `warehouse-${nodeId}`,
-      source: "warehouse",
-      target: nodeId,
-      state: "identity",
-      count: entry.count,
-      lastBucketAt: null,
-    });
+    edges.push(input.edgeFor(nodeId, entry.count));
   }
 
   if (folded.length > 0) {
@@ -338,13 +380,6 @@ function appendAttributionKind(
       folded: folded.length,
       count: folded.reduce((sum, entry) => sum + entry.count, 0),
     });
-    edges.push({
-      id: `warehouse-${nodeId}`,
-      source: "warehouse",
-      target: nodeId,
-      state: "identity",
-      count: null,
-      lastBucketAt: null,
-    });
+    edges.push(input.edgeFor(nodeId, null));
   }
 }
