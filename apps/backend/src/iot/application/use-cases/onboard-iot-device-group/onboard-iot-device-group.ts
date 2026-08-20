@@ -126,7 +126,7 @@ export class OnboardIotDeviceGroupUseCase {
     if (result.error.statusCode >= 500) {
       this.logger.error({
         msg: "Device onboarding failed",
-        operation: "onboardDeviceGroup",
+        operation: "onboardIotDeviceGroup",
         deviceId,
         errorCode: result.error.code,
         error: result.error.message,

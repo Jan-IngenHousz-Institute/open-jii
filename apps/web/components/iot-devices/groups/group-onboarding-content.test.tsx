@@ -174,7 +174,7 @@ describe("GroupOnboardingContent", () => {
     const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
     const spare = createDeviceGroupMember({ name: "Spare", status: "active" });
     mountGroup([gateway, spare]);
-    server.mount(contract.deviceGroups.onboardDeviceGroup, {
+    server.mount(contract.iot.onboardIotDeviceGroup, {
       body: {
         devices: [
           {

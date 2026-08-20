@@ -128,7 +128,7 @@ describe("BulkRegisterIotDevicesDialog", () => {
 
   it("blocks submission while the registry cannot vouch for the paste", async () => {
     const user = userEvent.setup();
-    server.mount(contract.deviceGroups.listDeviceGroups, { body: [] });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [] });
     const registry = server.mount(contract.iot.listIotDevices, { status: 500 });
 
     render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
