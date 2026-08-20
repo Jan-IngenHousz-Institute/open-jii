@@ -5,10 +5,11 @@ import { CredentialConfirmDialog } from "./credential-confirm-dialog";
 
 function renderDialog(overrides: Partial<Parameters<typeof CredentialConfirmDialog>[0]> = {}) {
   const onConfirm = vi.fn();
+  const onOpenChange = vi.fn();
   render(
     <CredentialConfirmDialog
       open
-      onOpenChange={vi.fn()}
+      onOpenChange={onOpenChange}
       title="Rotate?"
       description="Old certificate stops working."
       actionLabel="Rotate"
@@ -17,7 +18,7 @@ function renderDialog(overrides: Partial<Parameters<typeof CredentialConfirmDial
       {...overrides}
     />,
   );
-  return { onConfirm };
+  return { onConfirm, onOpenChange };
 }
 
 describe("CredentialConfirmDialog", () => {
@@ -44,5 +45,15 @@ describe("CredentialConfirmDialog", () => {
 
     expect(screen.getByRole("button", { name: "common.cancel" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Rotate" })).not.toBeInTheDocument();
+  });
+
+  it("ignores Escape while the mutation runs", async () => {
+    const user = userEvent.setup();
+    const { onOpenChange } = renderDialog({ pending: true });
+
+    await user.keyboard("{Escape}");
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });
 });

@@ -45,8 +45,16 @@ export function CredentialConfirmDialog({
 }: CredentialConfirmDialogProps) {
   const { t: tCommon } = useTranslation("common");
 
+  // Escape must not dismiss a running mutation's pending state.
+  const handleOpenChange = (next: boolean) => {
+    if (pending) {
+      return;
+    }
+    onOpenChange(next);
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>

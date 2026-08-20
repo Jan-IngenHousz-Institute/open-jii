@@ -81,6 +81,20 @@ describe("IssueIotDeviceGroupCredentialsUseCase", () => {
     expect(byId.get(active.id)?.error).toContain("already has a certificate");
   });
 
+  it("runs a repeated selection id only once", async () => {
+    vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(CERT));
+    vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
+    const pending = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const groupId = await seedGroup([pending.id]);
+
+    const result = await useCase.execute(groupId, [pending.id, pending.id], userId);
+
+    assertSuccess(result);
+    expect(result.value.devices).toHaveLength(1);
+    expect(result.value.devices[0].error).toBeNull();
+  });
+
   it("reports a non-member selection as a row error", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
     const groupId = await seedGroup([device.id]);

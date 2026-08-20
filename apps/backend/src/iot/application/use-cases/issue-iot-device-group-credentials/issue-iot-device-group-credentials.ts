@@ -49,7 +49,8 @@ export class IssueIotDeviceGroupCredentialsUseCase {
     const thingByDeviceId = new Map(
       membersResult.value.map((member) => [member.deviceId, member.thingName]),
     );
-    const selection = deviceIds ?? [...thingByDeviceId.keys()];
+    // Deduplicated: a repeated id must not run the executor twice.
+    const selection = deviceIds ? [...new Set(deviceIds)] : [...thingByDeviceId.keys()];
 
     // Same ceiling the contract puts on an explicit selection: each issuance is
     // a multi-step AWS operation, so an oversized default-everyone batch asks

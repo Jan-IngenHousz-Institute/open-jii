@@ -91,6 +91,28 @@ describe("RotateIotDeviceGroupCredentialsUseCase", () => {
     expect(byId.get(pending.id)?.error).not.toBeNull();
   });
 
+  it("runs a repeated selection id only once", async () => {
+    vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(NEW_CERT));
+    vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+    const active = await testApp.createIotDevice({
+      createdBy: userId,
+      status: "active",
+      certificateId: "cert-old",
+      certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-old",
+    });
+    const groupId = await seedGroup([active.id]);
+
+    const result = await useCase.execute(groupId, [active.id, active.id], userId);
+
+    assertSuccess(result);
+    // One rotation, one row: a second pass would retire the bundle just issued.
+    expect(result.value.devices).toHaveLength(1);
+    expect(result.value.devices[0].error).toBeNull();
+  });
+
   it("reports a non-member selection as a row error", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
     const groupId = await seedGroup([device.id]);

@@ -35,6 +35,9 @@ import type { GroupCredentialBatch } from "./group-credential-results";
 
 type CredentialAction = "issue" | "rotate" | "revoke";
 
+/** Mirrors the contract's cap on an explicit `deviceIds` selection. */
+const MAX_BATCH = 100;
+
 const ELIGIBLE_STATUSES: Record<CredentialAction, readonly IotDeviceGroupMember["status"][]> = {
   issue: ["pending", "revoked"],
   rotate: ["active"],
@@ -85,6 +88,9 @@ export function GroupCredentialsContent() {
   const selectedIds = selected.map((member) => member.deviceId);
   const selectedOnlineCount = selected.filter((member) => member.connected === true).length;
   const isDisruptive = action === "rotate" || action === "revoke";
+  // The contract rejects an oversized selection outright, so the page has to
+  // ask for a smaller one instead of letting the submit die on a generic 400.
+  const isOverCap = selectedIds.length > MAX_BATCH;
 
   function labelFor(member: IotDeviceGroupMember): string {
     return resolveDevicePrimaryLabel(
@@ -113,6 +119,17 @@ export function GroupCredentialsContent() {
     });
   };
 
+  // The batch endpoint succeeds even when every row fails, so the toast has to
+  // read the rows, not the HTTP outcome.
+  const reportOutcome = (rows: { error: string | null }[], successTitle: string) => {
+    const anySucceeded = rows.some((row) => row.error === null);
+    if (anySucceeded) {
+      toast({ title: successTitle });
+      return;
+    }
+    toast({ title: t("iot.groups.credentials.allFailed"), variant: "destructive" });
+  };
+
   const runBatch = () => {
     const input = { groupId, deviceIds: selectedIds };
     const onError = () => {
@@ -126,7 +143,7 @@ export function GroupCredentialsContent() {
       issueCredentials.mutate(input, {
         onSuccess: (data) => {
           setBatch({ action: "issue", rows: data.devices });
-          toast({ title: t("iot.groups.credentials.issueSuccess") });
+          reportOutcome(data.devices, t("iot.groups.credentials.issueSuccess"));
         },
         onError,
       });
@@ -137,7 +154,7 @@ export function GroupCredentialsContent() {
       rotateCredentials.mutate(input, {
         onSuccess: (data) => {
           setBatch({ action: "rotate", rows: data.devices });
-          toast({ title: t("iot.groups.credentials.rotateSuccess") });
+          reportOutcome(data.devices, t("iot.groups.credentials.rotateSuccess"));
         },
         onError,
         onSettled: closeConfirm,
@@ -148,7 +165,7 @@ export function GroupCredentialsContent() {
     revokeCredentials.mutate(input, {
       onSuccess: (data) => {
         setBatch({ action: "revoke", rows: data.devices });
-        toast({ title: t("iot.groups.credentials.revokeSuccess") });
+        reportOutcome(data.devices, t("iot.groups.credentials.revokeSuccess"));
       },
       onError,
       onSettled: closeConfirm,
@@ -282,12 +299,17 @@ export function GroupCredentialsContent() {
             <ul className="divide-y rounded-lg border">{members.map(renderMemberRow)}</ul>
           )}
 
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-4">
+            {isOverCap && (
+              <p className="text-sm text-amber-600">
+                {t("iot.groups.credentials.overCap", { max: MAX_BATCH })}
+              </p>
+            )}
             <Button
               className="w-fit"
               variant={action === "revoke" ? "destructive" : "default"}
               onClick={handleSubmit}
-              disabled={selectedIds.length === 0 || isPending}
+              disabled={selectedIds.length === 0 || isOverCap || isPending}
             >
               {isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />

@@ -92,7 +92,11 @@ export function GroupCredentialResults({
 
   function renderCredentialRow(row: IotDeviceGroupCredentialRow) {
     const label = labelByDeviceId.get(row.deviceId) ?? row.deviceId;
-    const deliverable = row.credentials !== null && row.thingName !== null;
+    // Narrowed once so the click handler closes over a non-null bundle.
+    const bundle: IssuedBundle | null =
+      row.credentials !== null && row.thingName !== null
+        ? { thingName: row.thingName, credentials: row.credentials }
+        : null;
 
     return (
       <li key={row.deviceId} className="flex items-center gap-2 py-1.5 text-sm">
@@ -103,15 +107,13 @@ export function GroupCredentialResults({
         )}
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {row.error !== null && <span className="text-muted-foreground text-xs">{row.error}</span>}
-        {deliverable && (
+        {bundle !== null && (
           <Button
             variant="ghost"
             size="sm"
             aria-label={t("iot.groups.credentials.downloadOne", { device: label })}
             onClick={() => {
-              if (row.credentials !== null && row.thingName !== null) {
-                downloadOne({ thingName: row.thingName, credentials: row.credentials });
-              }
+              downloadOne(bundle);
             }}
           >
             <Download className="h-3.5 w-3.5" aria-hidden />

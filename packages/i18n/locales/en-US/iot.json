@@ -519,6 +519,8 @@
         "rotateSuccess": "Certificates rotated",
         "revokeSuccess": "Certificates revoked",
         "actionError": "The batch could not be processed",
+        "allFailed": "No devices could be processed",
+        "overCap": "At most {{max}} devices can be processed in one batch; deselect some devices.",
         "resultsTitle": "Results",
         "downloadOne": "Download credentials for {{device}}",
         "downloadAll_one": "Download {{count}} bundle (zip)",

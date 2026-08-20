@@ -49,7 +49,9 @@ export class RotateIotDeviceGroupCredentialsUseCase {
     const thingByDeviceId = new Map(
       membersResult.value.map((member) => [member.deviceId, member.thingName]),
     );
-    const selection = deviceIds ?? [...thingByDeviceId.keys()];
+    // Deduplicated: a repeated id would rotate twice and hand back a bundle
+    // whose certificate the second pass already retired.
+    const selection = deviceIds ? [...new Set(deviceIds)] : [...thingByDeviceId.keys()];
 
     // Same ceiling the contract puts on an explicit selection: each rotation is
     // a multi-step AWS operation, so an oversized default-everyone batch asks

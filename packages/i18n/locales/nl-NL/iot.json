@@ -519,6 +519,8 @@
         "rotateSuccess": "Certificaten geroteerd",
         "revokeSuccess": "Certificaten ingetrokken",
         "actionError": "De batch kon niet worden verwerkt",
+        "allFailed": "Geen apparaten konden worden verwerkt",
+        "overCap": "Maximaal {{max}} apparaten kunnen in één batch worden verwerkt; deselecteer enkele apparaten.",
         "resultsTitle": "Resultaten",
         "downloadOne": "Inloggegevens voor {{device}} downloaden",
         "downloadAll_one": "{{count}} pakket downloaden (zip)",

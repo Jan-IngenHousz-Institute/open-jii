@@ -47,7 +47,8 @@ export class RevokeIotDeviceGroupCredentialsUseCase {
     }
 
     const memberIds = new Set(membersResult.value.map((member) => member.deviceId));
-    const selection = deviceIds ?? [...memberIds];
+    // Deduplicated: a repeated id must not run the executor twice.
+    const selection = deviceIds ? [...new Set(deviceIds)] : [...memberIds];
 
     // Same ceiling the contract puts on an explicit selection: revocation must
     // never silently process part of the group, so an oversized batch asks for

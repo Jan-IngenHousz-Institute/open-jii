@@ -10,8 +10,11 @@ import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { GroupCredentialsContent } from "./group-credentials-content";
+
+vi.mock("@repo/ui/hooks/use-toast", () => ({ toast: vi.fn() }));
 
 const GROUP_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -166,6 +169,47 @@ describe("GroupCredentialsContent", () => {
     expect(
       screen.queryByRole("button", { name: /iot.groups.credentials.downloadAll/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("disables the submit and explains when the selection exceeds the batch cap", async () => {
+    mountGroup(
+      Array.from({ length: 101 }, (_, index) =>
+        createDeviceGroupMember({ name: `Node ${String(index)}`, status: "pending" }),
+      ),
+    );
+
+    render(<GroupCredentialsContent />);
+
+    expect(await screen.findByText("Node 0")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.credentials.overCap")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /submitIssue/ })).toBeDisabled();
+  });
+
+  it("reports a destructive outcome when every row fails", async () => {
+    const user = userEvent.setup();
+    const waiting = createDeviceGroupMember({ name: "Waiting", status: "pending" });
+    mountGroup([waiting]);
+    server.mount(contract.iot.issueIotDeviceGroupCredentials, {
+      body: {
+        devices: [
+          { deviceId: waiting.deviceId, thingName: null, credentials: null, error: "boom" },
+        ],
+      },
+    });
+
+    render(<GroupCredentialsContent />);
+    await screen.findByText("Waiting");
+
+    await user.click(screen.getByRole("button", { name: /submitIssue/ }));
+
+    // The batch endpoint succeeded, but nothing was processed: no success toast.
+    expect(await screen.findByText("iot.groups.credentials.resultsTitle")).toBeInTheDocument();
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "iot.groups.credentials.allFailed",
+        variant: "destructive",
+      }),
+    );
   });
 
   it("sends someone below manage back to the group overview", async () => {

@@ -519,6 +519,8 @@
         "rotateSuccess": "Zertifikate rotiert",
         "revokeSuccess": "Zertifikate widerrufen",
         "actionError": "Der Stapel konnte nicht verarbeitet werden",
+        "allFailed": "Keine Geräte konnten verarbeitet werden",
+        "overCap": "Höchstens {{max}} Geräte können in einem Durchgang verarbeitet werden; wählen Sie einige Geräte ab.",
         "resultsTitle": "Ergebnisse",
         "downloadOne": "Zugangsdaten für {{device}} herunterladen",
         "downloadAll_one": "{{count}} Paket herunterladen (ZIP)",
