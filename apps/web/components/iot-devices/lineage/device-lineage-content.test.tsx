@@ -1,7 +1,6 @@
 import { createIotDeviceDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import type * as xyflowReact from "@xyflow/react";
+import { fireEvent, render, screen, waitFor } from "@/test/test-utils";
 import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,40 +8,6 @@ import { contract } from "@repo/api/contract";
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 
 import DeviceLineageContent from "./device-lineage-content";
-
-// ReactFlow's real canvas leaks post-teardown timers in jsdom (the reason the
-// flow-editor suite stubs it too); this stub still renders every node through
-// `nodeTypes`, so node content and click-to-select stay real behavior.
-vi.mock("@xyflow/react", async () => {
-  const actual = await vi.importActual("@xyflow/react");
-  const ReactFlow = ({ nodes = [], nodeTypes, onNodeClick }: xyflowReact.ReactFlowProps) => (
-    <div data-testid="rf">
-      {nodes.map((node) => {
-        const NodeComponent = nodeTypes?.[node.type ?? ""];
-        if (NodeComponent === undefined) {
-          return null;
-        }
-        const nodeProps = {
-          id: node.id,
-          data: node.data,
-          selected: node.selected ?? false,
-        } as unknown as xyflowReact.NodeProps;
-        return (
-          <div key={node.id} onClick={(event) => onNodeClick?.(event, node)}>
-            <NodeComponent {...nodeProps} />
-          </div>
-        );
-      })}
-    </div>
-  );
-  return {
-    ...(actual as Record<string, unknown>),
-    ReactFlow,
-    Background: () => null,
-    Controls: () => null,
-    Handle: () => null,
-  };
-});
 
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 const BOUND_EXPERIMENT = "22222222-2222-4222-8222-222222222222";
@@ -159,14 +124,16 @@ describe("DeviceLineageContent", () => {
   });
 
   it("inspects an experiment node on click, including its recent measurements", async () => {
-    const user = userEvent.setup();
     mountAll();
 
     render(<DeviceLineageContent />);
 
     expect(await screen.findByText("iot.devices.lineage.inspectHint")).toBeInTheDocument();
 
-    await user.click(screen.getByText("Soil Health"));
+    // fireEvent, not user-event: user-event's mousedown carries view: null,
+    // which d3-zoom's pan handler cannot survive in jsdom; a plain click still
+    // drives ReactFlow's node selection.
+    fireEvent.click(screen.getByText("Soil Health"));
 
     expect(await screen.findByText("iot.devices.lineage.bindingLabel")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.lineage.bound")).toBeInTheDocument();

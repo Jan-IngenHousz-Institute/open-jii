@@ -1,47 +1,12 @@
 import { createIotDeviceDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
-import type * as xyflowReact from "@xyflow/react";
 import { useParams } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import DeviceLineagePage, { generateMetadata } from "../page";
-
-// ReactFlow's real canvas leaks post-teardown timers in jsdom (the reason the
-// flow-editor suite stubs it too); this stub still renders every node through
-// `nodeTypes`, so node content and click-to-select stay real behavior.
-vi.mock("@xyflow/react", async () => {
-  const actual = await vi.importActual("@xyflow/react");
-  const ReactFlow = ({ nodes = [], nodeTypes, onNodeClick }: xyflowReact.ReactFlowProps) => (
-    <div data-testid="rf">
-      {nodes.map((node) => {
-        const NodeComponent = nodeTypes?.[node.type ?? ""];
-        if (NodeComponent === undefined) {
-          return null;
-        }
-        const nodeProps = {
-          id: node.id,
-          data: node.data,
-          selected: node.selected ?? false,
-        } as unknown as xyflowReact.NodeProps;
-        return (
-          <div key={node.id} onClick={(event) => onNodeClick?.(event, node)}>
-            <NodeComponent {...nodeProps} />
-          </div>
-        );
-      })}
-    </div>
-  );
-  return {
-    ...(actual as Record<string, unknown>),
-    ReactFlow,
-    Background: () => null,
-    Controls: () => null,
-    Handle: () => null,
-  };
-});
 
 vi.mock("@/lib/platform-metadata", () => ({
   buildDeviceMetadata: vi.fn(({ deviceId, section }: { deviceId: string; section: string }) => ({
