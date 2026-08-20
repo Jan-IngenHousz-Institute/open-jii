@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
+import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import { eq, macros, organizations, organizationMembers, profiles } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
@@ -55,7 +56,9 @@ describe("listGrants", () => {
     assertSuccess(result);
     // The owner is synthesized from the owning org, not read from a grant; the
     // outsider is the only actual grant row.
-    expect(result.value.map((row) => [row.kind, row.granteeId])).toEqual([
+    expect(
+      result.value.flatMap((row) => (isGranteeRow(row) ? [[row.kind, row.granteeId]] : [])),
+    ).toEqual([
       ["owner", owner],
       ["grant", outsider],
     ]);
@@ -116,7 +119,160 @@ describe("listGrants", () => {
 
       // A closed account is nobody to escalate to, so it is not offered as the
       // resource's owner.
-      expect(result.value.map((row) => [row.kind, row.granteeId])).toEqual([["grant", keeper]]);
+      expect(
+        result.value.flatMap((row) => (isGranteeRow(row) ? [[row.kind, row.granteeId]] : [])),
+      ).toEqual([["grant", keeper]]);
+    });
+  });
+
+  describe("synthesized organization rows", () => {
+    /** A macro owned by an org the caller owns, so `share` is allowed. */
+    async function ownedMacro() {
+      const org = await testApp.createOrganization("Greenhouse Lab");
+      await testApp.addOrganizationMember(org, owner, "owner");
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner, organizationId: org });
+      return { org, macro };
+    }
+
+    it("counts admins and members as one row each, with owners still named", async () => {
+      const { org, macro } = await ownedMacro();
+      for (const name of ["Admin One", "Admin Two"]) {
+        await testApp.addOrganizationMember(org, await testApp.createTestUser({ name }), "admin");
+      }
+      await testApp.addOrganizationMember(
+        org,
+        await testApp.createTestUser({ name: "Plain Member" }),
+        "member",
+      );
+
+      const result = await listGrants.execute(owner, "macro", macro.id);
+      assertSuccess(result);
+
+      expect(result.value.map((row) => row.kind)).toEqual(["owner", "orgAdmins", "orgMembers"]);
+      expect(result.value[1]).toMatchObject({ adminCount: 2, organizationName: "Greenhouse Lab" });
+      expect(result.value[2]).toMatchObject({ memberCount: 1 });
+    });
+
+    it("reads a comma-joined `member,owner` as an owner, counted in neither summary", async () => {
+      const { org, macro } = await ownedMacro();
+      const both = await testApp.createTestUser({ name: "Both Roles" });
+      await testApp.addOrganizationMember(org, both, "member,owner" as "owner");
+
+      const result = await listGrants.execute(owner, "macro", macro.id);
+      assertSuccess(result);
+
+      // The precedence `can()` applies: they hold owner, so they are named rather
+      // than counted, and neither summary may claim them a second time.
+      expect(result.value.flatMap((row) => (row.kind === "owner" ? [row.granteeId] : []))).toEqual(
+        expect.arrayContaining([both]),
+      );
+      expect(result.value.some((row) => row.kind === "orgAdmins")).toBe(false);
+      expect(result.value.some((row) => row.kind === "orgMembers")).toBe(false);
+    });
+
+    it("breaks a grant holder out of the summary rather than counting them twice", async () => {
+      const { org, macro } = await ownedMacro();
+      const plain = await testApp.createTestUser({ name: "Ada Admin" });
+      const granted = await testApp.createTestUser({ name: "Bo Staleadmin" });
+      await testApp.addOrganizationMember(org, plain, "admin");
+      await testApp.addOrganizationMember(org, granted, "admin");
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: granted,
+        role: "viewer",
+      });
+
+      const result = await listGrants.execute(owner, "macro", macro.id);
+      assertSuccess(result);
+
+      // Two admins, but only the one with nothing explicit is a count; the other has
+      // a row of their own, and counting them in both places would make the roster
+      // add up to more collaborators than there are.
+      expect(result.value.find((row) => row.kind === "orgAdmins")).toMatchObject({ adminCount: 1 });
+      expect(result.value.find((row) => row.kind === "grant")).toMatchObject({
+        granteeId: granted,
+        owningOrganization: { role: "admin", name: "Greenhouse Lab" },
+      });
+    });
+
+    it("breaks a member with a grant out of the members summary too", async () => {
+      const { org, macro } = await ownedMacro();
+      const plain = await testApp.createTestUser({ name: "Mira Member" });
+      const raised = await testApp.createTestUser({ name: "Rex Raised" });
+      await testApp.addOrganizationMember(org, plain, "member");
+      await testApp.addOrganizationMember(org, raised, "member");
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: raised,
+        role: "admin",
+      });
+
+      const result = await listGrants.execute(owner, "macro", macro.id);
+      assertSuccess(result);
+
+      expect(result.value.find((row) => row.kind === "orgMembers")).toMatchObject({
+        memberCount: 1,
+      });
+      // Their role is on the row, which is how it can state both sources of access.
+      expect(result.value.find((row) => row.kind === "grant")).toMatchObject({
+        granteeId: raised,
+        owningOrganization: { role: "member" },
+      });
+    });
+
+    it("leaves no organization on the row of a grantee outside the owning org", async () => {
+      const { macro } = await ownedMacro();
+      const outsider = await testApp.createTestUser({ name: "Otto Outside" });
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: outsider,
+        role: "admin",
+      });
+
+      const result = await listGrants.execute(owner, "macro", macro.id);
+      assertSuccess(result);
+
+      expect(result.value.find((row) => row.kind === "grant")).toMatchObject({
+        granteeId: outsider,
+        owningOrganization: null,
+        isOutsideCollaborator: true,
+      });
+    });
+
+    it("does not count a member whose role token nothing recognises", async () => {
+      const { org, macro } = await ownedMacro();
+      const stranger = await testApp.createTestUser({ name: "Odd Role" });
+      await testApp.addOrganizationMember(org, stranger, "guest" as "member");
+
+      const result = await listGrants.execute(owner, "macro", macro.id);
+      assertSuccess(result);
+
+      // `orgRoleCan` ignores a token it does not know, so this person holds nothing
+      // through the organization. Counting them as a plain member — which negating
+      // full-control does — would credit them with read access they do not have.
+      expect(result.value.some((row) => row.kind === "orgMembers")).toBe(false);
+    });
+
+    it("omits an admin whose account has been closed", async () => {
+      const { org, macro } = await ownedMacro();
+      const gone = await testApp.createTestUser({ name: "Gone Admin" });
+      await testApp.addOrganizationMember(org, gone, "admin");
+      await testApp.database
+        .update(profiles)
+        .set({ deletedAt: new Date() })
+        .where(eq(profiles.userId, gone));
+
+      const result = await listGrants.execute(owner, "macro", macro.id);
+      assertSuccess(result);
+
+      // An empty summary would claim a group of administrators that is not there.
+      expect(result.value.some((row) => row.kind === "orgAdmins")).toBe(false);
     });
   });
 

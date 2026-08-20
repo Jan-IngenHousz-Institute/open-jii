@@ -54,6 +54,12 @@ export const zProtocol = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   organizationId: z.string().uuid().nullable(),
+  /**
+   * Display name of the owning organization, `null` for a personal workspace.
+   * Populated by the detail read only — the lists have no room for it — which is
+   * why it is optional rather than required.
+   */
+  organizationName: z.string().nullish(),
   visibility: z.enum(["private", "public"]),
 });
 // List rows intentionally skip recursive code validation. A protocol document

@@ -1,5 +1,6 @@
 "use client";
 
+import { DocsHelpLink } from "@/components/docs-help-link";
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
@@ -74,6 +75,7 @@ export function DangerZoneCard({ profile, userId }: DangerZoneCardProps) {
         <CardTitle className="text-destructive text-lg font-semibold">
           {t("dangerZone.title")}
         </CardTitle>
+        <DocsHelpLink path="/guide/reference/access-troubleshooting" className="mt-1" />
       </CardHeader>
 
       <CardContent className="space-y-4">

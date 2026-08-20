@@ -40,7 +40,11 @@
     "library": "Library",
     "protocol1": "Protocol 1",
     "otherDevices": "Other devices",
-    "otherDevice1": "Other device 1"
+    "otherDevice1": "Other device 1",
+    "organizations": "Organizations",
+    "newOrganization": "New organization",
+    "myOrganizations": "My organizations",
+    "organizationDirectory": "Directory"
   },
   "breadcrumbs": {
     "home": "Home",

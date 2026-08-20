@@ -38,6 +38,22 @@
     "./render/join-request-rejected": {
       "types": "./dist/render/join-request-rejected.d.ts",
       "default": "./dist/render/join-request-rejected.js"
+    },
+    "./render/organization-invitation": {
+      "types": "./dist/render/organization-invitation.d.ts",
+      "default": "./dist/render/organization-invitation.js"
+    },
+    "./render/organization-join-request-submitted": {
+      "types": "./dist/render/organization-join-request-submitted.d.ts",
+      "default": "./dist/render/organization-join-request-submitted.js"
+    },
+    "./render/organization-join-request-approved": {
+      "types": "./dist/render/organization-join-request-approved.d.ts",
+      "default": "./dist/render/organization-join-request-approved.js"
+    },
+    "./render/organization-join-request-rejected": {
+      "types": "./dist/render/organization-join-request-rejected.d.ts",
+      "default": "./dist/render/organization-join-request-rejected.js"
     }
   },
   "scripts": {

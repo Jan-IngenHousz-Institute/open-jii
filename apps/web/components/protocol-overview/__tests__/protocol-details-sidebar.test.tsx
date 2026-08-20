@@ -11,6 +11,27 @@ import { useSession } from "@repo/auth/client";
 
 import { ProtocolDetailsSidebar } from "../protocol-details-sidebar";
 
+// The owning-organization field carries the transfer flow's dialog and select; this
+// file mocks both by testid, so stub the field out and cover it in its own test file.
+vi.mock("../../organizations/owning-organization-field", () => ({
+  OwningOrganizationField: ({
+    resourceType,
+    organizationId,
+    canTransfer,
+  }: {
+    resourceType: string;
+    organizationId: string | null;
+    canTransfer: boolean;
+  }) => (
+    <div
+      data-testid="owning-organization-field"
+      data-resource-type={resourceType}
+      data-organization-id={organizationId ?? ""}
+      data-can-transfer={String(canTransfer)}
+    />
+  ),
+}));
+
 vi.mock("@/util/date", () => ({
   formatDate: (dateString: string) => `formatted-${dateString}`,
 }));

@@ -29,6 +29,7 @@ import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
+import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedAvatarUrl,
   getAnonymizedFirstName,
@@ -244,7 +245,13 @@ export class ExperimentRepository {
     status?: ExperimentStatus,
     search?: string,
     limit?: number,
+    options?: {
+      organizationId?: string;
+      includeArchived?: boolean;
+    },
   ): Promise<Result<ExperimentDto[]>> {
+    const { organizationId, includeArchived = false } = options ?? {};
+
     const experimentFields = {
       id: experiments.id,
       name: experiments.name,
@@ -264,8 +271,9 @@ export class ExperimentRepository {
     return tryCatch(async () => {
       const conditions: (SQL | undefined)[] = [];
 
-      // Always exclude archived experiments unless explicitly requested
-      if (status !== "archived") {
+      // Archived rows are hidden unless asked for, either by filtering to them or by
+      // opting in: a listing is a place to work, and archived means finished.
+      if (!includeArchived && status !== "archived") {
         conditions.push(ne(experiments.status, "archived"));
       }
 
@@ -296,6 +304,13 @@ export class ExperimentRepository {
       });
       if (scope) {
         conditions.push(scope);
+      }
+
+      // Narrow to one owning organization (the org profile's resources showcase).
+      // Applied on top of the access scope, never instead of it: an org's page shows
+      // each viewer exactly the rows they could already reach.
+      if (organizationId) {
+        conditions.push(eq(experiments.organizationId, organizationId));
       }
 
       if (filter === "member") {
@@ -480,6 +495,7 @@ export class ExperimentRepository {
         updatedAt: experiments.updatedAt,
         ownerFirstName: getAnonymizedFirstName(),
         ownerLastName: getAnonymizedLastName(),
+        organizationName: owningOrganizationNameSql("experiments"),
       };
 
       const result = await this.database

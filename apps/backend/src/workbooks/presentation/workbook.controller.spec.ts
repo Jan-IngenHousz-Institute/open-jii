@@ -49,6 +49,7 @@ describe("WorkbookController", () => {
     vi.spyOn(testApp.module.get(AuthorizationService), "can").mockResolvedValue({
       allow: true,
       reason: "org-role",
+      organizationId: null,
     });
   });
 
@@ -555,7 +556,7 @@ describe("WorkbookController", () => {
     ])("requires $action access to $name", async ({ action, request }) => {
       const canSpy = vi
         .spyOn(testApp.module.get(AuthorizationService), "can")
-        .mockResolvedValue({ allow: false, reason: "forbidden" });
+        .mockResolvedValue({ allow: false, reason: "forbidden", organizationId: null });
       const workbookId = faker.string.uuid();
 
       await request(workbookId, testUserId).expect(StatusCodes.FORBIDDEN);

@@ -46,7 +46,13 @@ describe("MacroCollaboratorsPage", () => {
         createResourceGrant({
           resourceType: "macro",
           resourceId: "macro-1",
-          grantee: { type: "user", displayName: "Lin Zhao", email: "lin@uni.edu", avatarUrl: null },
+          grantee: {
+            type: "user",
+            displayName: "Lin Zhao",
+            email: "lin@uni.edu",
+            avatarUrl: null,
+            memberCount: null,
+          },
         }),
       ],
     });

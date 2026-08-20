@@ -25,6 +25,7 @@ import { HealthModule } from "./health/health.module";
 import { IotModule } from "./iot/iot.module";
 import { MacroModule } from "./macros/macro.module";
 import { NewsletterModule } from "./newsletter/newsletter.module";
+import { OrganizationModule } from "./organizations/organization.module";
 import { ProtocolModule } from "./protocols/protocol.module";
 import { SearchModule } from "./search/search.module";
 import { SharingModule } from "./sharing/sharing.module";
@@ -68,6 +69,7 @@ const orpcLogger = new Logger("ORPC");
     IotModule,
     MacroModule,
     NewsletterModule,
+    OrganizationModule,
     ProtocolModule,
     SearchModule,
     SharingModule,

@@ -39,11 +39,29 @@ export function RichTextRenderer({
     return <p className="text-muted-foreground text-sm italic">No description provided</p>;
   }
 
-  if (!isRichText) {
-    return <p className={cn("text-sm", className)}>{content}</p>;
-  }
-
   const lineClampStyle = truncate ? { WebkitLineClamp: maxLines } : {};
+
+  if (!isRichText) {
+    // The same clamp the rich-text branch gets. This branch used to drop
+    // `truncate`/`maxLines`, so a clamp held only if the author used a rich editor.
+    return (
+      <p
+        className={cn("text-sm", className)}
+        style={
+          truncate
+            ? {
+                ...lineClampStyle,
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }
+            : undefined
+        }
+      >
+        {content}
+      </p>
+    );
+  }
 
   return (
     <>

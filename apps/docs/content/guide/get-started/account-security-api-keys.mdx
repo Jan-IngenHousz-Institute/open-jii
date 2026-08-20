@@ -3,10 +3,12 @@ title: "Account security & API keys"
 description: "Use remembered sign-in methods, passkeys, and personal API keys to access openJII securely."
 ---
 
-{/* verified: code@05a2b563 2026-07-23 */}
+{/* verified: code@cd4ecb0f7 2026-08-19 */}
 
-Your account page (**Profile menu → Account**) is organised into three tabs:
-**General**, **Security**, and **API keys**.
+Your account page (**Profile menu → Account**) is organised into four tabs:
+**General**, **Security**, **API keys**, and **Invitations** — the last of which is
+where you answer invitations to join an organization. See
+[Find and join an organization](/guide/organizations/finding-and-joining).
 
 ## Your sign-in choices
 
@@ -115,6 +117,19 @@ out browser sessions or revoke other keys.
 
 Deleting your account revokes its passkeys and API keys, removes linked OAuth
 credentials, and ends all browser sessions before the account is anonymized.
+
+It also gives up every organization association: you leave every shared organization
+and team, any join request still waiting is withdrawn, and any invitation still waiting
+for your address is cancelled. Your personal workspace is the one you keep, because it
+still holds whatever it owns. Nothing you own moves — it stays where it is, and whoever
+else can administer it keeps their access.
+
+Deletion is refused while removing you would strand other people. Two things block
+it: being the **last Owner** of a shared organization, and being the **last person who
+can administer** a resource. The dialog lists exactly what is in the way — promote
+another Owner, or hand the resources over, then try again. Your personal workspace
+never blocks deletion. See
+[Access troubleshooting](/guide/reference/access-troubleshooting).
 
 openJII evaluates the same organization and resource permissions after any
 successful sign-in method. For the current IAM rollout and the intended

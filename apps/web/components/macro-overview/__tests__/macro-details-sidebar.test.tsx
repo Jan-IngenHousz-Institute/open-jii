@@ -44,6 +44,27 @@ vi.mock("../../macro-settings/macro-compatible-protocols-card", () => ({
   ),
 }));
 
+// The owning-organization field carries the transfer flow's dialog and select; this
+// file mocks both by testid, so stub the field out and cover it in its own test file.
+vi.mock("../../organizations/owning-organization-field", () => ({
+  OwningOrganizationField: ({
+    resourceType,
+    organizationId,
+    canTransfer,
+  }: {
+    resourceType: string;
+    organizationId: string | null;
+    canTransfer: boolean;
+  }) => (
+    <div
+      data-testid="owning-organization-field"
+      data-resource-type={resourceType}
+      data-organization-id={organizationId ?? ""}
+      data-can-transfer={String(canTransfer)}
+    />
+  ),
+}));
+
 // Mock DetailsSidebarCard - render children directly with the title
 // The publish control renders its own confirm Dialog; this file mocks Dialog by
 // testid, so stub the control out and cover it in its own test file.

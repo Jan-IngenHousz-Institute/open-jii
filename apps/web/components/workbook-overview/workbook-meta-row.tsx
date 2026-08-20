@@ -1,5 +1,6 @@
 "use client";
 
+import { OwningOrganizationField } from "@/components/organizations/owning-organization-field";
 import { PublishConfirmDialog } from "@/components/visibility/publish-confirm-dialog";
 import { WorkbookDeleteAction } from "@/components/workbook-overview/workbook-delete-action";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
@@ -89,7 +90,7 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
   // latest published version is the meaningful number to surface here.
   const latestVersion = versionsData?.[0]?.version;
   // Capability, not ownership: a "Can edit" grantee renames and edits.
-  const { canManage } = workbook.capabilities;
+  const { canManage, canTransfer } = workbook.capabilities;
 
   return (
     <div className="flex flex-wrap items-start gap-x-6 gap-y-6 border-b border-[#EDF2F6] pb-8 sm:gap-x-10">
@@ -117,6 +118,14 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
           {workbook.createdByName ?? "-"}
         </span>
       </div>
+      <OwningOrganizationField
+        resourceType="workbook"
+        resourceId={id}
+        organizationId={workbook.organizationId}
+        organizationName={workbook.organizationName}
+        canTransfer={canTransfer}
+        layout="meta"
+      />
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
           {t("workbooks.version")}

@@ -249,6 +249,8 @@ describe("Iot Schema", () => {
       canManage: true,
       canShare: true,
       canLeave: false,
+      // A device is never transferable: its cloud identity belongs to its org.
+      canTransfer: false,
     };
     const connectivity = { connected: true, lastSeenAt: "2025-01-10T00:00:00.000Z" };
 

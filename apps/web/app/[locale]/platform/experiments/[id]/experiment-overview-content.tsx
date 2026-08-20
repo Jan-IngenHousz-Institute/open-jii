@@ -34,9 +34,13 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   const locations = locationsData ?? [];
 
   // Contributors (people with a grant that lets them add data here)
-  const { data: contributorsData, isLoading: isContributorsLoading } =
-    useExperimentContributors(id);
-  const contributors = contributorsData ?? [];
+  const {
+    data: contributorsData,
+    isLoading: isContributorsLoading,
+    isError: isContributorsError,
+  } = useExperimentContributors(id);
+  const contributors = contributorsData?.contributors ?? [];
+  const collaboratorCount = contributorsData?.collaboratorCount ?? 0;
 
   const initialStatusRef = useRef<Experiment["status"] | null>(null);
 
@@ -70,9 +74,12 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
         experiment={experiment}
         locations={locations}
         contributors={contributors}
+        collaboratorCount={collaboratorCount}
+        isContributorsError={isContributorsError}
         isContributorsLoading={isContributorsLoading}
         hasAccess={hasAccess}
         canManage={accessData.isAdmin}
+        canTransfer={accessData.capabilities.canTransfer}
         canContribute={accessData.capabilities.canContribute}
       />
 

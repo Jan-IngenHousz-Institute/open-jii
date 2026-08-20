@@ -13,6 +13,7 @@ import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { WizardStepButtons } from "@repo/ui/components/wizard-form";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
+import { useOwningOrganizationLabel } from "../../organizations/use-owning-organization-label";
 import type { NewProtocolFormValues } from "../new-protocol-form-values";
 import { codeSchema } from "./code-test-step";
 import { detailsSchema } from "./details-step";
@@ -39,6 +40,7 @@ export function ReviewStep({
 }: ReviewStepProps) {
   const formData = form.getValues();
   const { t } = useTranslation();
+  const organizationLabel = useOwningOrganizationLabel(formData.organizationId);
   // Read-only preview inside the wizard, so it follows the stored preference
   // without its own control; the toggle lives on the editors this step reviews.
   const { style } = useJsonFormatStyle();
@@ -80,6 +82,14 @@ export function ReviewStep({
                   <div className="mt-1 text-base font-medium">
                     {getSensorFamilyLabel(formData.family)}
                   </div>
+                </div>
+                {/* Who will own it: never blank, since leaving the picker alone
+                    still means the personal workspace. */}
+                <div>
+                  <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                    {t("organizations.picker.label")}
+                  </div>
+                  <div className="mt-1 text-base font-medium">{organizationLabel ?? "..."}</div>
                 </div>
               </div>
 

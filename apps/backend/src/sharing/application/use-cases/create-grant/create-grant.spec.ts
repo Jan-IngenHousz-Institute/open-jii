@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
+import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import {
   and,
   createSecondaryDatabase,
@@ -318,7 +319,7 @@ describe("createGrant", () => {
         role: "viewer",
       });
       assertSuccess(result);
-      expect(result.value.map((g) => g.granteeId)).toContain(orgId);
+      expect(result.value.flatMap((g) => (isGranteeRow(g) ? [g.granteeId] : []))).toContain(orgId);
     });
   });
 
