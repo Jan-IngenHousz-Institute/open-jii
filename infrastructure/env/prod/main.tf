@@ -140,6 +140,25 @@ module "large_iot_s3" {
   }
 }
 
+module "iot_firehose" {
+  source = "../../modules/firehose"
+
+  delivery_stream_name   = "open-jii-${var.environment}-iot-raw-archive"
+  destination_bucket_arn = module.iot_raw_archive_s3.bucket_arn
+  s3_prefix              = "raw-iot/!{timestamp:yyyy/MM/dd}/"
+  error_output_prefix    = "raw-iot-errors/!{firehose:error-output-type}/!{timestamp:yyyy/MM/dd}/"
+
+  role_name   = "open_jii_${var.environment}_firehose_raw_archive_role"
+  policy_name = "open_jii_${var.environment}_firehose_raw_archive_policy"
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot"
+  }
+}
+
 module "iot_core" {
   source      = "../../modules/iot-core"
   environment = var.environment
@@ -154,6 +173,11 @@ module "iot_core" {
   s3_archive_bucket_arn  = module.iot_raw_archive_s3.bucket_arn
   iot_s3_role_name       = "open_jii_${var.environment}_iot_s3_role"
   iot_s3_policy_name     = "open_jii_${var.environment}_iot_s3_policy"
+
+  firehose_delivery_stream_name = module.iot_firehose.delivery_stream_name
+  firehose_delivery_stream_arn  = module.iot_firehose.delivery_stream_arn
+  iot_firehose_role_name        = "open_jii_${var.environment}_iot_firehose_role"
+  iot_firehose_policy_name      = "open_jii_${var.environment}_iot_firehose_policy"
 
   large_iot_bucket_arn = module.large_iot_s3.bucket_arn
 
