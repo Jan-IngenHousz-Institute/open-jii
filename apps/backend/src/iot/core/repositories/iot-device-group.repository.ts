@@ -22,6 +22,7 @@ import {
   CreateIotDeviceGroupDto,
   IotDeviceGroupDto,
   IotDeviceGroupMemberDto,
+  IotDeviceGroupMemberThingDto,
   IotDeviceGroupWithCountDto,
   UpdateIotDeviceGroupDto,
 } from "../models/iot-device-group.model";
@@ -150,6 +151,23 @@ export class IotDeviceGroupRepository {
           deviceType: iotDevices.deviceType,
           status: iotDevices.status,
           addedAt: deviceGroupMembers.createdAt,
+        })
+        .from(deviceGroupMembers)
+        .innerJoin(iotDevices, eq(deviceGroupMembers.deviceId, iotDevices.id))
+        .where(eq(deviceGroupMembers.groupId, groupId))
+        .orderBy(desc(deviceGroupMembers.createdAt));
+    });
+  }
+
+  async listMemberThings(groupId: string): Promise<Result<IotDeviceGroupMemberThingDto[]>> {
+    return tryCatch(async () => {
+      return this.database
+        .select({
+          deviceId: iotDevices.id,
+          name: iotDevices.name,
+          serialNumber: iotDevices.serialNumber,
+          deviceType: iotDevices.deviceType,
+          thingName: iotDevices.thingName,
         })
         .from(deviceGroupMembers)
         .innerJoin(iotDevices, eq(deviceGroupMembers.deviceId, iotDevices.id))

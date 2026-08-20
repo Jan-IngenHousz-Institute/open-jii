@@ -396,6 +396,34 @@
         "members": "Geräte",
         "created": "Erstellt"
       },
+      "monitoring": {
+        "filter": {
+          "searchPlaceholder": "Geräte durchsuchen",
+          "all": "Alle",
+          "offline": "Offline",
+          "silent": "Still",
+          "noMatches": "Keine Geräte entsprechen dem aktuellen Filter."
+        },
+        "versionColumn": "Firmware",
+        "firmwareTitle": "Firmware",
+        "firmwareHint": "Im Zeitfenster gemeldete Versionen, pro Gerät.",
+        "noFirmware": "Keine Firmware-Versionen in diesem Zeitraum gemeldet.",
+        "mixedFirmware": "{{count}} Versionen im Einsatz",
+        "experimentsHint": "Wo die Daten der Gruppe im Zeitfenster gelandet sind.",
+        "experimentsGroupWide": "Gesamte Gruppe; dieses Panel folgt dem Gerätefilter nicht.",
+        "description": "Flottenzustand auf einen Blick, aggregiert über alle Geräte.",
+        "unknownMember": "Unbekanntes Gerät",
+        "silentCount_one": "{{count}} verbunden, aber still",
+        "silentCount_other": "{{count}} verbunden, aber still",
+        "onlineLabel": "Online",
+        "onlineValue": "{{online}} von {{total}}",
+        "unknownLabel": "Unbekannt",
+        "stateColumn": "Status",
+        "lastSeenColumn": "Zuletzt gesehen",
+        "lastDataColumn": "Letzte Daten",
+        "noData": "Noch keine Daten",
+        "pipelineUnavailable": "Die Monitoring-Daten konnten nicht vollständig geladen werden, Stille wird nicht beurteilt."
+      },
       "nameLabel": "Name",
       "namePlaceholder": "z. B. Gewächshaus A",
       "noAddableDevices": "Alle Ihre Geräte sind bereits in dieser Gruppe.",
@@ -406,7 +434,6 @@
       "pageTitle": "Gerätegruppe",
       "comingSoon": {
         "credentials": "Zertifikate für alle Geräte dieser Gruppe gemeinsam ausstellen, rotieren und widerrufen.",
-        "monitoring": "Gruppenstatus auf einen Blick: wie viele Geräte online, still oder abwesend sind.",
         "onboarding": "Die gesamte Gruppe auf Experimente onboarden und alle Konfigurationen gemeinsam herunterladen."
       }
     }

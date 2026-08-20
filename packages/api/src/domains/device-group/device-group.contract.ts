@@ -8,6 +8,8 @@ import {
   zDeviceGroupDetail,
   zDeviceGroupList,
   zDeviceGroupMemberList,
+  zDeviceGroupMonitoring,
+  zDeviceGroupMonitoringQuery,
   zDeviceGroupPathParam,
   zRemoveDeviceGroupMemberParams,
   zUpdateDeviceGroupBody,
@@ -33,6 +35,14 @@ export const deviceGroupContract = {
     .route({ method: "DELETE", path: "/api/v1/device-groups/{groupId}", successStatus: 204 })
     .input(zDeviceGroupPathParam)
     .output(z.void()),
+  getDeviceGroupMonitoring: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/device-groups/{groupId}/monitoring",
+      successStatus: 200,
+    })
+    .input(zDeviceGroupMonitoringQuery)
+    .output(zDeviceGroupMonitoring),
   listDeviceGroupMembers: oc
     .route({ method: "GET", path: "/api/v1/device-groups/{groupId}/devices", successStatus: 200 })
     .input(zDeviceGroupPathParam)

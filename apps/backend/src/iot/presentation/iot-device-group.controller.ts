@@ -16,6 +16,7 @@ import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { AddIotDeviceGroupMembersUseCase } from "../application/use-cases/add-iot-device-group-members/add-iot-device-group-members";
 import { CreateIotDeviceGroupUseCase } from "../application/use-cases/create-iot-device-group/create-iot-device-group";
 import { DeleteIotDeviceGroupUseCase } from "../application/use-cases/delete-iot-device-group/delete-iot-device-group";
+import { GetIotDeviceGroupMonitoringUseCase } from "../application/use-cases/get-iot-device-group-monitoring/get-iot-device-group-monitoring";
 import { GetIotDeviceGroupUseCase } from "../application/use-cases/get-iot-device-group/get-iot-device-group";
 import { ListIotDeviceGroupMembersUseCase } from "../application/use-cases/list-iot-device-group-members/list-iot-device-group-members";
 import { ListIotDeviceGroupsUseCase } from "../application/use-cases/list-iot-device-groups/list-iot-device-groups";
@@ -35,6 +36,7 @@ export class IotDeviceGroupController {
     private readonly createIotDeviceGroupUseCase: CreateIotDeviceGroupUseCase,
     private readonly listIotDeviceGroupsUseCase: ListIotDeviceGroupsUseCase,
     private readonly getIotDeviceGroupUseCase: GetIotDeviceGroupUseCase,
+    private readonly getIotDeviceGroupMonitoringUseCase: GetIotDeviceGroupMonitoringUseCase,
     private readonly updateIotDeviceGroupUseCase: UpdateIotDeviceGroupUseCase,
     private readonly deleteIotDeviceGroupUseCase: DeleteIotDeviceGroupUseCase,
     private readonly listIotDeviceGroupMembersUseCase: ListIotDeviceGroupMembersUseCase,
@@ -141,6 +143,26 @@ export class IotDeviceGroupController {
       }
 
       return throwOrpcFailure(result, this.logger, "deleteDeviceGroup");
+    });
+  }
+
+  @CanAccess({ resource: "device_group", action: "read", param: "groupId" })
+  @Implement(deviceGroupContract.getDeviceGroupMonitoring)
+  getDeviceGroupMonitoring(@Session() session: UserSession) {
+    return implement(deviceGroupContract.getDeviceGroupMonitoring).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("getDeviceGroupMonitoring");
+
+      const result = await this.getIotDeviceGroupMonitoringUseCase.execute(input.groupId, {
+        from: input.from,
+        to: input.to,
+        bucket: input.bucket,
+      });
+
+      if (result.isSuccess()) {
+        return result.value;
+      }
+
+      return throwOrpcFailure(result, this.logger, "getDeviceGroupMonitoring");
     });
   }
 

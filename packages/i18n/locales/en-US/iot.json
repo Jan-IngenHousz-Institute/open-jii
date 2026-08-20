@@ -396,6 +396,34 @@
         "members": "Devices",
         "created": "Created"
       },
+      "monitoring": {
+        "filter": {
+          "searchPlaceholder": "Search devices",
+          "all": "All",
+          "offline": "Offline",
+          "silent": "Silent",
+          "noMatches": "No devices match the current filter."
+        },
+        "versionColumn": "Firmware",
+        "firmwareTitle": "Firmware",
+        "firmwareHint": "Versions reported in the window's data, per device.",
+        "noFirmware": "No firmware versions reported in this range.",
+        "mixedFirmware": "{{count}} versions in the field",
+        "experimentsHint": "Where the group's data landed over the window.",
+        "experimentsGroupWide": "Whole group; this panel does not follow the device filter.",
+        "description": "Fleet health at a glance, aggregated from every device's data.",
+        "unknownMember": "Unknown device",
+        "silentCount_one": "{{count}} connected but silent",
+        "silentCount_other": "{{count}} connected but silent",
+        "onlineLabel": "Online",
+        "onlineValue": "{{online}} of {{total}}",
+        "unknownLabel": "Unknown",
+        "stateColumn": "State",
+        "lastSeenColumn": "Last seen",
+        "lastDataColumn": "Last data",
+        "noData": "No data yet",
+        "pipelineUnavailable": "Monitoring data could not be fully loaded, so silence is not judged."
+      },
       "nameLabel": "Name",
       "namePlaceholder": "e.g. Greenhouse A",
       "noAddableDevices": "All of your devices are already in this group.",
@@ -406,7 +434,6 @@
       "pageTitle": "Device group",
       "comingSoon": {
         "credentials": "Rotate, issue, and revoke credentials for every device in this group at once.",
-        "monitoring": "Group health at a glance: how many devices are online, silent, or missing.",
         "onboarding": "Onboard the whole group onto experiments and download all configs together."
       }
     }
