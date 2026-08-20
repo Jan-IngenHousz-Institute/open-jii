@@ -88,7 +88,6 @@
       "comingSoon": {
         "title": "Coming soon",
         "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
-        "lineage": "Trace this device's identity through to its ingested measurements.",
         "onboarding": "Onboard each device from its detail page (Onboarding tab). Bulk onboarding from this view is coming soon."
       },
       "connectivity": {
@@ -98,6 +97,47 @@
         "disconnected": "Disconnected",
         "unknown": "Unknown",
         "never": "Never connected"
+      },
+      "lineage": {
+        "title": "Lineage",
+        "description": "How this device's identity carries through the broker into the warehouse, and where its measurements landed.",
+        "brokerTitle": "Broker identity",
+        "warehouseTitle": "Warehouse",
+        "unattributedTitle": "Unattributed rows",
+        "otherTitle": "+{{count}} more",
+        "firmware": "Firmware {{version}}",
+        "uptime": "{{percent}}% uptime",
+        "measurementsInRange_one": "{{count}} measurement in range",
+        "measurementsInRange_other": "{{count}} measurements in range",
+        "lastData": "Last data {{time}}",
+        "stages": "Broker rule → bronze → silver",
+        "protocolCaption": "Protocol",
+        "workbookCaption": "Workbook version",
+        "macroCaption": "Macro",
+        "legend": {
+          "active": "Receiving data",
+          "silent": "Bound, no data in range",
+          "unbound": "Receiving without a binding",
+          "unattributed": "No experiment attribution"
+        },
+        "inspectHint": "Select a node to inspect it.",
+        "thingNameLabel": "Thing name",
+        "serialLabel": "Serial number",
+        "familyLabel": "Family",
+        "statusLabel": "Status",
+        "certificateLabel": "Certificate",
+        "firmwareLabel": "Firmware",
+        "connectivityLabel": "Connectivity",
+        "uptimeLabel": "Uptime",
+        "sessionsLabel": "Sessions in range",
+        "brokerHint": "The broker stamps every row this device publishes with its thing name as client_id, so warehouse rows join back to it unforgeably.",
+        "warehouseHint": "Rows arrive through the broker rule into bronze, are cleaned into silver, and feed the experiment tables from there.",
+        "lastDataLabel": "Last data",
+        "experimentLabel": "Experiment",
+        "bindingLabel": "Binding",
+        "bound": "Onboarded",
+        "recentTitle": "Recent measurements",
+        "unattributedHint": "Rows that arrived without an experiment attribution in the topic."
       },
       "monitoring": {
         "title": "Monitoring",
