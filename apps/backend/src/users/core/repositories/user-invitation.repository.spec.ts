@@ -61,7 +61,7 @@ describe("InvitationRepository", () => {
         .select({ role: invitations.role })
         .from(invitations)
         .where(eq(invitations.id, result.value.id));
-      expect(stored.role).toBe("member");
+      expect(stored.role).toBe("viewer");
     });
 
     it("should lowercase the email", async () => {
@@ -456,7 +456,7 @@ describe("InvitationRepository", () => {
   });
 
   describe("acceptInvitation", () => {
-    it("accepts a stored 'member' invitation as a 'viewer' grant", async () => {
+    it("accepts a stored 'viewer' invitation as a 'viewer' grant", async () => {
       const inviteeEmail = "accept@example.com";
       const { experiment } = await testApp.createExperiment({
         name: "Accept Invitation Test",
@@ -476,7 +476,7 @@ describe("InvitationRepository", () => {
         .select({ role: invitations.role })
         .from(invitations)
         .where(eq(invitations.id, createResult.value.id));
-      expect(storedInvitation.role).toBe("member");
+      expect(storedInvitation.role).toBe("viewer");
 
       const newUserId = await testApp.createTestUser({ email: inviteeEmail });
 

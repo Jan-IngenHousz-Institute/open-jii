@@ -137,11 +137,12 @@ describe("IotDeviceRepository", () => {
 });
 
 /**
- * Org-aware device listing: `listAccessible` mirrors the experiment
- * `findAll` scoping — creator OR owning-org member OR grantee OR public. Devices
- * have no sharing/publish surface yet, so the grant and public tiers are
- * dormant in production; they are asserted here with hand-inserted grants /
- * visibility to prove they light up when the device product surface lands.
+ * Org-aware device listing: `listAccessible` is `accessibleResourceCondition` and
+ * nothing else — owning-org member OR grantee OR public, the same scoping every other
+ * type's `findAll` uses. Devices have no publish surface, so the public tier is
+ * unreachable in production and the grant tier is dormant; both are asserted here with
+ * hand-inserted grants and visibility to prove they light up when the device product
+ * surface lands.
  */
 describe("IotDeviceRepository — listAccessible scoping", () => {
   const testApp = TestHarness.App;
@@ -237,17 +238,52 @@ describe("IotDeviceRepository — listAccessible scoping", () => {
     expect(await listIdsFor(stranger)).toContain(pub.id);
   });
 
-  it("still shows the creator their private device after they leave the owning org", async () => {
-    // The creator's only tie to this device is `createdBy` once org membership
-    // is revoked (device is private, no grant) — the explicit creator tier must
-    // keep it listed.
+  /**
+   * This asserted the opposite — that `createdBy` kept the device listed for its creator
+   * after they left the owning organization. That arm was a leftover from when the device
+   * registry shipped standalone and authorship *was* the access model; devices were the
+   * only type where making something granted a permanent read on it, while migration
+   * `0041` had already deleted creators' own grants across all five so they would behave
+   * identically. Removed, so a device is reached the same way every other resource is.
+   *
+   * Both reads are asserted, because the property that matters is that they agree: the
+   * user-wide device listing and the organization showcase now narrow together.
+   */
+  it("stops showing the creator their private device once they leave the owning org", async () => {
     await testApp.database
       .delete(organizationMembers)
       .where(
         and(eq(organizationMembers.organizationId, orgId), eq(organizationMembers.userId, owner)),
       );
 
+    expect(await listIdsFor(owner)).not.toContain(privateDeviceId);
+
+    const scopedToOrg = await repository.listAccessible(owner, { organizationId: orgId });
+    assertSuccess(scopedToOrg);
+    expect(scopedToOrg.value.map((d) => d.id)).not.toContain(privateDeviceId);
+  });
+
+  it("still shows the creator their device while they remain a member", async () => {
+    // Not vacuous: the removal above must not have cost a creator who is still in the
+    // organization the access their membership gives them.
     expect(await listIdsFor(owner)).toContain(privateDeviceId);
+  });
+
+  it("scopes to one organization when asked, without widening what is visible", async () => {
+    const otherOrg = await testApp.createOrganization();
+    await testApp.addOrganizationMember(otherOrg, owner, "owner");
+    const elsewhere = await testApp.createIotDevice({
+      createdBy: owner,
+      organizationId: otherOrg,
+    });
+
+    const all = await listIdsFor(owner);
+    expect(all).toContain(privateDeviceId);
+    expect(all).toContain(elsewhere.id);
+
+    const scoped = await repository.listAccessible(owner, { organizationId: orgId });
+    assertSuccess(scoped);
+    expect(scoped.value.map((d) => d.id)).toEqual([privateDeviceId]);
   });
 
   describe("grant teardown on delete", () => {

@@ -15,8 +15,9 @@ import { notFound } from "next/navigation";
 import { use, useMemo, useState } from "react";
 import { useExperimentJoinRequests } from "~/hooks/experiment/join-request/useExperimentJoinRequests/useExperimentJoinRequests";
 import { useUserInvitations } from "~/hooks/user-invitation/useUserInvitations/useUserInvitations";
-import { matchesGrantee } from "~/util/collaborator-filter";
+import { matchesCollaborator } from "~/util/collaborator-filter";
 
+import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -73,7 +74,7 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
 
   const filteredGrants = useMemo(() => {
     if (!normalizedFilter) return grants;
-    return grants.filter((grant) => matchesGrantee(grant.grantee, normalizedFilter));
+    return grants.filter((grant) => matchesCollaborator(grant, normalizedFilter));
   }, [grants, normalizedFilter]);
 
   const filteredInvitations = useMemo(() => {
@@ -232,7 +233,9 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
       <ExperimentInviteModal
         experimentId={id}
         invitations={invitations}
-        existingGranteeIds={grants.map((grant) => grant.granteeId)}
+        existingGranteeIds={grants.flatMap((grant) =>
+          isGranteeRow(grant) ? [grant.granteeId] : [],
+        )}
         isArchived={isArchived}
         canShare={canShare}
         isPublic={experiment.visibility === "public"}

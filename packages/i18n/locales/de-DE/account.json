@@ -115,12 +115,12 @@
       "successMessage": "Konto gelöscht. Ihre persönlichen Daten wurden gelöscht, aber Ihre veröffentlichten Beiträge bleiben einem Systemkonto zugeordnet.",
       "blockers": {
         "title": "Übergeben Sie zuerst Ihre Inhalte",
-        "description": "Sie sind die einzige Administratorin bzw. der einzige Administrator der unten aufgeführten Einträge – ohne Übergabe blieben sie ohne Eigentümer. Wählen Sie, wer die Administratorrechte übernehmen soll, und übertragen Sie sie – alles hier an einem Ort.",
+        "description": "Sie sind die letzte Person, die für die unten aufgeführten Einträge verantwortlich ist – entweder halten Sie die einzige Freigabe, die sie verwalten kann, oder Sie sind die einzige Eigentümerin bzw. der einzige Eigentümer der Organisation, die sie besitzt. Einen Eintrag klären Sie, indem Sie hier einer anderen Person Administratorrechte geben. Ebenso, indem Sie in der besitzenden Organisation eine weitere Person zur Eigentümerin bzw. zum Eigentümer ernennen, sofern eine Organisation sie besitzt.",
         "loading": "Ihre Einträge werden geprüft…",
         "applyToAllLabel": "Alle an eine Person übertragen",
         "applyToAllPlaceholder": "Person suchen, die alles übernimmt…",
         "rowPlaceholder": "Person suchen…",
-        "noCandidatesHint": "Noch keine Mitarbeitenden – suchen Sie oben nach einer beliebigen Person oder laden Sie jemanden über die Mitarbeitenden-Seite des Eintrags ein.",
+        "noCandidatesHint": "Bisher hält niemand sonst eine Freigabe darauf, daher gibt es keine Vorschläge. Suchen Sie oben nach einer beliebigen Person, um den Eintrag zu übergeben – oder ernennen Sie, falls eine geteilte Organisation ihn besitzt, dort eine weitere Eigentümerin bzw. einen weiteren Eigentümer; dann klärt sich dies, ohne etwas zu teilen.",
         "manageLink": "Mitarbeitende öffnen",
         "transferAll": "Administratorrechte übertragen",
         "transferring": "Wird übertragen…",
@@ -136,6 +136,12 @@
           "workbook": "Arbeitsmappe",
           "device": "Gerät"
         }
+      },
+      "organizationBlockers": {
+        "title": "Übergeben Sie zuerst Ihre Organisationen",
+        "description": "Sie sind die einzige Eigentümerin bzw. der einzige Eigentümer der unten aufgeführten Organisationen – es bliebe niemand übrig, der sie führen kann. Ernennen Sie eine andere Person zur Eigentümerin bzw. zum Eigentümer oder löschen Sie die Organisation, und kommen Sie dann hierher zurück.",
+        "alsoClearsResources": "Beginnen Sie hier: Falls ein Eintrag weiter unten blockiert ist, weil eine dieser Organisationen ihn besitzt, klärt sich auch dieser, sobald Sie eine andere Person zur Eigentümerin bzw. zum Eigentümer ernennen.",
+        "manageLink": "Mitglieder öffnen"
       }
     },
     "cancel": "Abbrechen"
@@ -143,7 +149,8 @@
   "tabs": {
     "general": "Allgemein",
     "security": "Sicherheit",
-    "apiKeys": "API-Schlüssel"
+    "apiKeys": "API-Schlüssel",
+    "invitations": "Einladungen"
   },
   "apiKeys": {
     "title": "API-Schlüssel",
@@ -182,6 +189,9 @@
     "expiresUntil": "Bis {{date}}",
     "expiresInDays": "Läuft in {{count}} Tagen ab",
     "expired": "Abgelaufen"
+  },
+  "invitations": {
+    "title": "Einladungen"
   },
   "passkeys": {
     "title": "Passkeys",

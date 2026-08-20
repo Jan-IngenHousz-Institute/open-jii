@@ -1,0 +1,54 @@
+---
+title: "Choosing the owning workspace"
+description: "Every create form asks which workspace will own the new resource. What that choice commits you to, and how to change it later."
+---
+
+{/* verified: code@2a0698c44 2026-08-17 */}
+
+When you create an experiment, macro, protocol, workbook or device, the form asks which
+workspace should own it. It is a small dropdown with a large consequence, so it is worth
+understanding once rather than discovering later.
+
+## The two answers
+
+**Your personal workspace** is the default. The resource is yours: nobody else can open
+it unless you share it with them individually, and nobody can be added to your personal
+workspace to gain access in bulk.
+
+**A shared organization** means the organization owns it, and its people can reach it
+immediately:
+
+- **Owners and Admins** can edit, share and delete it — straight away, without you
+  sharing anything.
+- **Members** can read it. On an experiment they can also contribute measurements and
+  annotations.
+
+<Callout type="warn">
+  Picking an organization grants access to everyone already in it, at the moment you create. That is
+  the point of a shared workspace, but it is not reversible by "unsharing" — there is no share to
+  remove. To narrow it afterwards you have to [move the resource](/guide/sharing/moving-resources)
+  somewhere else.
+</Callout>
+
+## Which to pick
+
+Choose the **organization** when the work belongs to the group: the lab paid for it, the
+group will keep using it, and it should outlast your involvement.
+
+Choose your **personal workspace** when the work is exploratory, unfinished, or genuinely
+yours — then move it into the organization when it is ready. Moving is a supported step,
+not a workaround.
+
+<Callout type="info">
+  Only shared organizations you belong to appear in the picker. Your personal workspace is always
+  there. Other people's organizations never are.
+</Callout>
+
+## Changing your mind
+
+The owning workspace is shown on every resource's detail page as **Owning organization**,
+and can be changed later — except for devices, which cannot be moved at all. See
+[Moving a resource](/guide/sharing/moving-resources).
+
+That makes the device picker the one choice worth pausing over: for a device, the
+workspace you pick at registration is the one it keeps for its whole life.

@@ -3,9 +3,10 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
+import type { ExperimentContributors } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import type { Experiment, ExperimentList } from "@repo/api/domains/experiment/experiment.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
+import { eq, experiments } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
@@ -900,6 +901,70 @@ describe("ExperimentController", () => {
   });
 
   describe("experimentContributors", () => {
+    /**
+     * **The count agreement**, the overview's half of it. The Details card and the
+     * organization's resource card print the same word, so they have to print the
+     * same number — asserted against the collaborators surface itself rather than an
+     * integer, so neither can drift without this failing.
+     */
+    async function expectCountAgreesWithCollaborators(experimentId: string, callerId: string) {
+      const contributors: SuperTestResponse<ExperimentContributors> = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.experiments.listExperimentContributors, {
+            id: experimentId,
+          }),
+        )
+        .withAuth(callerId)
+        .expect(StatusCodes.OK);
+
+      const collaborators = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.sharing.listGrants, {
+            resourceType: "experiment",
+            id: experimentId,
+          }),
+        )
+        .withAuth(callerId)
+        .expect(StatusCodes.OK);
+
+      expect(contributors.body.collaboratorCount).toBe((collaborators.body as unknown[]).length);
+      return contributors.body;
+    }
+
+    it("counts every collaborator row, not only the faces it may credit", async () => {
+      const organizationId = await testApp.createOrganization("Photosynthesis Lab");
+      await testApp.addOrganizationMember(organizationId, testUserId, "owner");
+      const quiet = await testApp.createTestUser({ email: "quiet-member@example.com" });
+      await testApp.addOrganizationMember(organizationId, quiet, "member");
+      const { experiment } = await testApp.createExperiment({
+        name: "Org-owned Experiment",
+        userId: testUserId,
+      });
+      await testApp.database
+        .update(experiments)
+        .set({ organizationId })
+        .where(eq(experiments.id, experiment.id));
+
+      const body = await expectCountAgreesWithCollaborators(experiment.id, testUserId);
+
+      // One creditable face — the creator's seeded grant — against two rows: their
+      // own owner row, which absorbs that grant, and the summary standing in for the
+      // member who holds nothing explicit. The faces were never the total.
+      expect(body.contributors.map((c) => c.userId)).toEqual([testUserId]);
+      expect(body.collaboratorCount).toBe(2);
+    });
+
+    it("agrees with the collaborators surface once grants are added too", async () => {
+      const collaboratorId = await testApp.createTestUser({ email: "counted@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Counted Experiment",
+        userId: testUserId,
+      });
+      await testApp.addExperimentCollaborator(experiment.id, collaboratorId);
+
+      await expectCountAgreesWithCollaborators(experiment.id, testUserId);
+    });
+
     it("credits everyone who holds a grant on the experiment", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Contributor Test Experiment",
@@ -912,17 +977,17 @@ describe("ExperimentController", () => {
         id: experiment.id,
       });
 
-      const response: SuperTestResponse<ExperimentContributor[]> = await testApp
+      const response: SuperTestResponse<ExperimentContributors> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
       // Credit is names and avatars only — no emails, no tiers. Who holds which
       // tier is the sharing surface's business, and it is gated on can(share).
-      expect(response.body.map((c) => c.userId).sort()).toEqual(
+      expect(response.body.contributors.map((c) => c.userId).sort()).toEqual(
         [testUserId, collaboratorId].sort(),
       );
-      for (const contributor of response.body) {
+      for (const contributor of response.body.contributors) {
         expect(Object.keys(contributor).sort()).toEqual([
           "avatarUrl",
           "firstName",
@@ -952,13 +1017,13 @@ describe("ExperimentController", () => {
 
       // A public reader is exactly the caller this protects: read access alone must
       // not undo the experiment's own anonymization setting.
-      const response: SuperTestResponse<ExperimentContributor[]> = await testApp
+      const response: SuperTestResponse<ExperimentContributors> = await testApp
         .get(path)
         .withAuth(readerId)
         .expect(StatusCodes.OK);
 
-      expect(response.body).toHaveLength(2);
-      for (const contributor of response.body) {
+      expect(response.body.contributors).toHaveLength(2);
+      for (const contributor of response.body.contributors) {
         expect(contributor.firstName).toMatch(/^Contributor-[0-9A-F]{6}$/);
         expect(contributor.lastName).toBe("");
         expect(contributor.avatarUrl).toBeNull();
@@ -966,17 +1031,17 @@ describe("ExperimentController", () => {
         // and recover the name, so it is pseudonymised too.
         expect(contributor.userId).toBe(contributor.firstName);
       }
-      expect(response.body.map((c) => c.userId)).not.toContain(collaboratorId);
-      expect(response.body.map((c) => c.userId)).not.toContain(testUserId);
+      expect(response.body.contributors.map((c) => c.userId)).not.toContain(collaboratorId);
+      expect(response.body.contributors.map((c) => c.userId)).not.toContain(testUserId);
 
       // The admin sees the same pseudonyms here; real identities live on the
       // can(share)-gated collaborators list instead.
-      const asAdmin: SuperTestResponse<ExperimentContributor[]> = await testApp
+      const asAdmin: SuperTestResponse<ExperimentContributors> = await testApp
         .get(path)
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
-      expect(asAdmin.body.map((c) => c.userId).sort()).toEqual(
-        response.body.map((c) => c.userId).sort(),
+      expect(asAdmin.body.contributors.map((c) => c.userId).sort()).toEqual(
+        response.body.contributors.map((c) => c.userId).sort(),
       );
     });
 

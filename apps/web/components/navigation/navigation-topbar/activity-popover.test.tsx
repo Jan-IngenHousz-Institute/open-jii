@@ -1,8 +1,10 @@
 import { useActivity } from "@/components/activity/activity-context";
 import type { ActivityEntry } from "@/components/activity/activity-context";
-import { render, screen, userEvent, act } from "@/test/test-utils";
+import { render, screen, userEvent, act, waitFor, within } from "@/test/test-utils";
 import * as React from "react";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
+
+import { authClient, useSession } from "@repo/auth/client";
 
 import { ActivityPopover, NOTIFICATION_BELL_OPEN_EVENT } from "./activity-popover";
 
@@ -156,5 +158,122 @@ describe("ActivityPopover", () => {
     await user.click(screen.getByLabelText(/Activity/i));
     expect(await screen.findByText("Export of Light Response (CSV)")).toBeInTheDocument();
     expect(screen.getByLabelText(/^Activity$/i)).toBeInTheDocument();
+  });
+});
+
+/**
+ * Organization invitations are the bell's second source, and not an activity entry:
+ * they are server-held, have no job status, and stay actionable until answered —
+ * where an entry is this tab's own in-memory record of something it started.
+ */
+describe("ActivityPopover — organization invitations", () => {
+  const listUserInvitations = () => vi.mocked(authClient.organization.listUserInvitations);
+
+  const invitation = {
+    id: "invitation-1",
+    email: "ada@example.com",
+    role: "admin",
+    organizationId: "org-1",
+    organizationName: "Helix Lab",
+    inviterId: "user-9",
+    status: "pending",
+    expiresAt: new Date(Date.now() + 3_600_000),
+    createdAt: new Date("2026-08-01T00:00:00.000Z"),
+  };
+
+  function signedIn() {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-a" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+  }
+
+  afterEach(() => {
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+    listUserInvitations().mockResolvedValue({ data: [], error: null });
+  });
+
+  it("lists a pending invitation in its own section, linked to where it is answered", async () => {
+    const user = userEvent.setup();
+    signedIn();
+    listUserInvitations().mockResolvedValue({ data: [invitation], error: null });
+
+    renderPopover([]);
+    await user.click(screen.getByLabelText(/Activity/i));
+
+    const section = await screen.findByTestId("bell-invitations");
+    expect(within(section).getByText("organizations.myInvitations.title")).toBeVisible();
+    expect(within(section).getByText("Helix Lab")).toBeVisible();
+    // The role is on the row: it is what the recipient would be agreeing to.
+    expect(within(section).getByText(/organizations\.roles\.admin/)).toBeVisible();
+    expect(within(section).getByRole("link")).toHaveAttribute(
+      "href",
+      "/en-US/platform/account/invitations",
+    );
+
+    // The job list keeps its own header and its own empty state alongside.
+    expect(screen.getByText("Activity")).toBeVisible();
+    expect(screen.getByText(/Nothing to show yet/i)).toBeVisible();
+  });
+
+  /**
+   * `unreadCount` is answered by `lastSeenAt`, which lives in memory and resets on
+   * reload. An invitation is not read or unread — it is unanswered — so it drives the
+   * dot on its own, with no job in the tracker at all.
+   */
+  it("raises the indicator with no unread jobs, and does not clear it on open", async () => {
+    const user = userEvent.setup();
+    signedIn();
+    listUserInvitations().mockResolvedValue({ data: [invitation], error: null });
+
+    renderPopover([]);
+
+    expect(await screen.findByTestId("bell-indicator")).toBeInTheDocument();
+    await user.click(screen.getByLabelText(/Activity/i));
+    expect(await screen.findByTestId("bell-invitations")).toBeInTheDocument();
+    expect(screen.getByTestId("bell-indicator")).toBeInTheDocument();
+  });
+
+  /**
+   * The failure this section exists to prevent. Better Auth refuses this endpoint
+   * outright for an address it considers unverified, and rendering that as "no
+   * invitations" would hide one the recipient can still accept.
+   */
+  it("renders a failed read as an error with a retry, not as an absent section", async () => {
+    const user = userEvent.setup();
+    signedIn();
+    listUserInvitations().mockResolvedValue({
+      data: null,
+      error: { message: "Email verification is required", status: 403 },
+    });
+
+    renderPopover([]);
+    await user.click(screen.getByLabelText(/Activity/i));
+
+    const error = await screen.findByTestId("bell-invitations-error");
+    expect(within(error).getByText("organizations.myInvitations.loadError")).toBeVisible();
+    expect(
+      within(error).getByRole("button", { name: "organizations.myInvitations.retry" }),
+    ).toBeVisible();
+
+    // And a failure the user cannot clear must not leave a permanent dot on the bell.
+    expect(screen.queryByTestId("bell-indicator")).not.toBeInTheDocument();
+  });
+
+  it("shows no invitation section when there is none waiting", async () => {
+    const user = userEvent.setup();
+    signedIn();
+    listUserInvitations().mockResolvedValue({ data: [], error: null });
+
+    renderPopover([]);
+    await user.click(screen.getByLabelText(/Activity/i));
+
+    expect(await screen.findByText(/Nothing to show yet/i)).toBeVisible();
+    await waitFor(() => {
+      expect(listUserInvitations()).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId("bell-invitations")).not.toBeInTheDocument();
   });
 });

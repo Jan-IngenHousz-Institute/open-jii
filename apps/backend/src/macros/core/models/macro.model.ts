@@ -33,6 +33,8 @@ export const updateMacroSchema = createInsertSchema(macros).partial().omit({
 
 export const selectMacroSchema = createSelectSchema(macros).omit({ searchVector: true }).extend({
   createdByName: z.string().optional(),
+  /** Display name of the owning organization; `null` for a personal workspace. */
+  organizationName: z.string().nullish(),
 });
 
 export type CreateMacroDto = z.infer<typeof createMacroSchema>;

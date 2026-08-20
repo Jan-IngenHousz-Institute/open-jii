@@ -26,6 +26,8 @@ export const selectWorkbookSchema = createSelectSchema(workbooks)
     cells: zWorkbookCellArray,
     metadata: z.record(z.string(), z.unknown()),
     createdByName: z.string().optional(),
+    /** Display name of the owning organization; `null` for a personal workspace. */
+    organizationName: z.string().nullish(),
     isUpgradable: z.boolean().optional(),
     experimentCount: z.number().int().nonnegative().optional(),
   });

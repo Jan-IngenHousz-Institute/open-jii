@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
+import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import { and, eq, resourceGrants } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
@@ -92,7 +93,9 @@ describe("revokeGrant", () => {
     const after = await listGrants.execute(owner, "macro", macro.id);
     assertSuccess(after);
     // Only the creator's own grant is left.
-    expect(after.value.map((grant) => grant.granteeId)).toEqual([owner]);
+    expect(after.value.flatMap((grant) => (isGranteeRow(grant) ? [grant.granteeId] : []))).toEqual([
+      owner,
+    ]);
   });
 
   // An archived experiment is immutable everywhere else — the read-only row controls

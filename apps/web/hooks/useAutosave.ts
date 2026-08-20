@@ -22,6 +22,8 @@ interface UseAutosaveReturn {
   hasError: boolean;
   error: unknown;
   flush: () => Promise<void>;
+  /** Treat the current value as saved, for hosts that adopt a server copy. */
+  rebase: () => void;
 }
 
 /**
@@ -137,6 +139,18 @@ export function useAutosave<T>({
     };
   }, [key, enabled, delayMs, runSave]);
 
+  // Call after the adopting `setState`; `keyRef` is assigned during render.
+  const rebase = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    pendingFlushRef.current = false;
+    lastSavedKeyRef.current = keyRef.current;
+    setStatus("idle");
+    setError(null);
+  }, []);
+
   const flush = useCallback(async (): Promise<void> => {
     if (timerRef.current || pendingFlushRef.current) {
       if (timerRef.current) {
@@ -166,5 +180,6 @@ export function useAutosave<T>({
     hasError: status === "error",
     error,
     flush,
+    rebase,
   };
 }

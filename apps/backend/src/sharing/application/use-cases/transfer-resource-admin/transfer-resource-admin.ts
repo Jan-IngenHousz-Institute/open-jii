@@ -1,20 +1,15 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
-
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, success } from "../../../../common/utils/fp-utils";
+import type { ResourceRef } from "../../../core/models/sharing.model";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
 
-export interface AdminTransfer {
-  resourceType: SharingResourceType;
-  resourceId: string;
+export interface AdminTransfer extends ResourceRef {
   targetUserId: string;
 }
 
-export interface AdminTransferResult {
-  resourceType: SharingResourceType;
-  resourceId: string;
+export interface AdminTransferResult extends ResourceRef {
   success: boolean;
   error?: string;
 }
@@ -105,7 +100,7 @@ export class TransferResourceAdminUseCase {
 
     // The target must be someone the caller could have shared with: handing admin to
     // a closed or deactivated account would leave the resource unstaffed again.
-    if (!(await this.repo.granteeIsSelectable("user", targetUserId, currentUserId))) {
+    if (!(await this.repo.granteeIsSelectable("user", targetUserId, currentUserId, null))) {
       return fail("Target user is not available");
     }
 

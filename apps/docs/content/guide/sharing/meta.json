@@ -1,4 +1,11 @@
 {
   "title": "Sharing & Collaboration",
-  "pages": ["index", "visibility-embargo", "project-transfers", "open-fair-data"]
+  "pages": [
+    "index",
+    "choosing-the-owning-workspace",
+    "moving-resources",
+    "visibility-embargo",
+    "project-transfers",
+    "open-fair-data"
+  ]
 }

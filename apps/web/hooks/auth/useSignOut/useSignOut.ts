@@ -1,5 +1,6 @@
 "use client";
 
+import { myOrganizationInvitationsFamily } from "@/hooks/organization/organization-cache";
 import { allResourceCacheFamilies } from "@/hooks/sharing/resource-cache-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -31,6 +32,9 @@ export function useSignOut() {
         orpc.users.listInvitations.key(),
         orpc.experiments.getMyJoinRequest.key(),
         orpc.users.getDeletionBlockers.key(),
+        // The signed-out user's own pending invitations name the organizations that
+        // asked for them; invalidating the `auth` namespace would leave them readable.
+        myOrganizationInvitationsFamily(),
         ...allResourceCacheFamilies(),
       ];
       for (const queryKey of authorizationSensitiveKeys) {

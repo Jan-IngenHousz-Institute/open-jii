@@ -7,7 +7,11 @@ import { NEWSLETTER_PORT } from "../../../../newsletter/core/ports/newsletter.po
 import { UserDto } from "../../../core/models/user.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import { UserRepository } from "../../../core/repositories/user.repository";
+import {
+  SOLE_ORGANIZATION_OWNER_MESSAGE,
+  SOLE_RESOURCE_ADMIN_MESSAGE,
+  UserRepository,
+} from "../../../core/repositories/user.repository";
 
 @Injectable()
 export class DeleteUserUseCase {
@@ -40,9 +44,24 @@ export class DeleteUserUseCase {
         return failure(AppError.notFound(`User with ID ${id} not found`));
       }
 
-      // Pre-flight blocker: surfaces the hand-off UX before anything is touched.
-      // `UserRepository.delete` re-checks this inside its transaction under row
-      // locks, which is what actually makes the invariant hold.
+      // Pre-flight blockers: surface the hand-off UX before anything is touched.
+      // `UserRepository.delete` re-checks both inside its transaction under row
+      // locks, which is what actually makes the invariants hold.
+      const organizationCheckResult = await this.userRepository.findSoleOwnedOrganizations(id);
+      if (organizationCheckResult.isFailure()) {
+        return organizationCheckResult;
+      }
+      if (organizationCheckResult.value.length > 0) {
+        this.logger.warn({
+          msg: "Cannot delete user - sole owner of shared organizations",
+          errorCode: ErrorCodes.USER_IS_ONLY_ORG_OWNER,
+          operation: "deleteUser",
+          userId: id,
+          organizationIds: organizationCheckResult.value.map((org) => org.id),
+        });
+        return failure(AppError.forbidden(SOLE_ORGANIZATION_OWNER_MESSAGE));
+      }
+
       const adminCheckResult = await this.userRepository.isOnlyAdminOfAnyResources(id);
 
       return adminCheckResult.chain(async (isOnlyAdmin: boolean) => {
@@ -53,11 +72,7 @@ export class DeleteUserUseCase {
             operation: "deleteUser",
             userId: id,
           });
-          return failure(
-            AppError.forbidden(
-              "Cannot delete account - you are the only admin of one or more experiments, macros, protocols, workbooks or devices. Please assign other admins before deleting.",
-            ),
-          );
+          return failure(AppError.forbidden(SOLE_RESOURCE_ADMIN_MESSAGE));
         }
 
         // Soft delete

@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/ca
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 
 import { useWorkbook } from "../../../../hooks/workbook/useWorkbook/useWorkbook";
+import { useOwningOrganizationLabel } from "../../../organizations/use-owning-organization-label";
 
 interface DetailsSectionProps {
   formData: CreateExperimentBody;
@@ -20,6 +21,7 @@ export function DetailsSection({ formData, onEdit, className }: DetailsSectionPr
   const { data: workbookData } = useWorkbook(formData.workbookId ?? "");
 
   const workbookName = formData.workbookId ? workbookData?.name : undefined;
+  const organizationLabel = useOwningOrganizationLabel(formData.organizationId);
 
   return (
     <Card className={className}>
@@ -52,6 +54,13 @@ export function DetailsSection({ formData, onEdit, className }: DetailsSectionPr
         <div className="text-base font-medium">
           {formData.workbookId ? (workbookName ?? "...") : "\u2014"}
         </div>
+
+        {/* Who will own it: the one review row that is never blank, since leaving the
+            picker alone still means the personal workspace. */}
+        <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+          {t("organizations.picker.label")}
+        </div>
+        <div className="text-base font-medium">{organizationLabel ?? "..."}</div>
       </CardContent>
     </Card>
   );

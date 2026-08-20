@@ -741,6 +741,40 @@ describe("MacroRepository", () => {
       });
     });
 
+    /**
+     * The detail read carries the owning organization's display name so the resource
+     * page can show who owns it beside who made it. A personal workspace answers
+     * `null` rather than its generated title: that name is not one anybody chose, and
+     * collapsing it here means no client has to know the slug rule.
+     */
+    it("names the owning organization, and leaves a personal workspace unnamed", async () => {
+      const organizationId = await testApp.createOrganization("Greenhouse Lab");
+      await testApp.addOrganizationMember(organizationId, testUserId, "owner");
+
+      const owned = await testApp.createMacro({
+        name: "Owned macro",
+        createdBy: testUserId,
+        organizationId,
+      });
+      // No organization given: the helper falls back to the creator's own workspace.
+      const personal = await testApp.createMacro({
+        name: "Personal macro",
+        createdBy: testUserId,
+      });
+
+      const ownedResult = await repository.findById(owned.id);
+      assertSuccess(ownedResult);
+      expect(ownedResult.value).toMatchObject({
+        organizationId,
+        organizationName: "Greenhouse Lab",
+      });
+
+      const personalResult = await repository.findById(personal.id);
+      assertSuccess(personalResult);
+      expect(personalResult.value?.organizationId).not.toBeNull();
+      expect(personalResult.value?.organizationName).toBeNull();
+    });
+
     it("should return null for non-existent macro", async () => {
       // Arrange
       const nonExistentId = faker.string.uuid();

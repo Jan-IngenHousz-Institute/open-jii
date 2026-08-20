@@ -14,7 +14,11 @@ export type CmsEmailType =
   | "project-transfer-complete"
   | "transfer-request-confirmation"
   | "join-request-submitted"
-  | "join-request-rejected";
+  | "join-request-rejected"
+  | "organization-invitation"
+  | "organization-join-request-submitted"
+  | "organization-join-request-approved"
+  | "organization-join-request-rejected";
 
 export interface CmsEmail {
   internalName: string;

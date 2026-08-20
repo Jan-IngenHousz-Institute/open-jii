@@ -1,11 +1,42 @@
-import { eq } from "drizzle-orm";
+import { eq, isNull, like, not, or } from "drizzle-orm";
 
 import type { DbOrTx } from "./database";
 import { organizationMembers, organizations } from "./schema";
 
+/** The reserved slug namespace personal organizations live in. */
+export const PERSONAL_ORG_SLUG_PREFIX = "personal-";
+
+/**
+ * Max members per organization. Shared by Better Auth's `membershipLimit` and the
+ * admission primitive guarding direct membership writes, so the two cannot drift.
+ * Personal workspaces are exempt — nothing can be added to one.
+ */
+export const ORGANIZATION_MEMBERSHIP_LIMIT = 100;
+
 /** Deterministic, collision-free slug for a user's personal organization. */
 export function personalOrgSlug(userId: string): string {
-  return `personal-${userId}`;
+  return `${PERSONAL_ORG_SLUG_PREFIX}${userId}`;
+}
+
+/**
+ * Whether a slug names a personal organization. There is no type column — the
+ * slug shape is the whole signal — so this is the single matcher every caller
+ * must use, in SQL (`LIKE 'personal-%'`) as much as in TypeScript. The prefix is
+ * reserved at organization create/update so nothing else can enter the namespace.
+ */
+export function isPersonalOrgSlug(slug: string | null | undefined): boolean {
+  return typeof slug === "string" && slug.startsWith(PERSONAL_ORG_SLUG_PREFIX);
+}
+
+/**
+ * SQL predicate form of {@link isPersonalOrgSlug} for a query over
+ * `organizations`. A null slug can never be a personal-org slug, so it passes.
+ */
+export function isNotPersonalOrgSql() {
+  return or(
+    isNull(organizations.slug),
+    not(like(organizations.slug, `${PERSONAL_ORG_SLUG_PREFIX}%`)),
+  );
 }
 
 /** Display name for a user's personal organization. */

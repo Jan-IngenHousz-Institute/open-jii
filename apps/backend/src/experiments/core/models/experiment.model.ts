@@ -57,6 +57,8 @@ export const selectExperimentSchema = createSelectSchema(experiments)
   .omit({ searchVector: true })
   .extend({
     ownerFirstName: z.string().nullable().optional(),
+    /** Display name of the owning organization; `null` for a personal workspace. */
+    organizationName: z.string().nullish(),
     ownerLastName: z.string().nullable().optional(),
   });
 

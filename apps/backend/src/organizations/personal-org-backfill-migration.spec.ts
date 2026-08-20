@@ -76,22 +76,46 @@ describe("personal-org migration data ops (0035)", () => {
   });
 
   describe("legacy institution cleanup", () => {
+    /**
+     * 0035 runs while `slug` is still nullable; 0042 constrains it seven migrations
+     * later. The rows this DML exists for cannot be built under today's schema, so the
+     * column is returned to its state at 0035 for the length of the test.
+     */
+    beforeEach(async () => {
+      await testApp.database.execute(
+        sql`ALTER TABLE "organizations" ALTER COLUMN "slug" DROP NOT NULL`,
+      );
+    });
+
+    afterEach(async () => {
+      // Whatever the cleanup kept is still slug-less, so the constraint can only come
+      // back the way 0042 brings it back — behind the same backfill.
+      await testApp.database.execute(
+        sql`UPDATE "organizations" SET "slug" = 'legacy-' || "id"::text WHERE "slug" IS NULL`,
+      );
+      await testApp.database.execute(
+        sql`ALTER TABLE "organizations" ALTER COLUMN "slug" SET NOT NULL`,
+      );
+    });
+
+    /** A pre-Better-Auth row, which is what the cleanup was written to find. */
+    async function insertSluglessOrg(name: string): Promise<string> {
+      const [row] = await testApp.database.execute<{ id: string }>(
+        sql`INSERT INTO "organizations" ("name") VALUES (${name}) RETURNING "id"`,
+      );
+      return row.id;
+    }
+
     it("deletes only slug-less organizations that have no members", async () => {
       // (a) legacy institution row: no slug, no members -> must be deleted
-      const [legacy] = await testApp.database
-        .insert(organizations)
-        .values({ name: "Old Institute" })
-        .returning();
+      const legacyId = await insertSluglessOrg("Old Institute");
 
       // (b) slug-less but has a member -> must be kept (NOT EXISTS guard)
       const memberUserId = await testApp.createTestUser({ name: "Member Owner" });
-      const [legacyWithMember] = await testApp.database
-        .insert(organizations)
-        .values({ name: "Legacy With Member" })
-        .returning();
+      const legacyWithMemberId = await insertSluglessOrg("Legacy With Member");
       await testApp.database
         .insert(organizationMembers)
-        .values({ organizationId: legacyWithMember.id, userId: memberUserId, role: "owner" });
+        .values({ organizationId: legacyWithMemberId, userId: memberUserId, role: "owner" });
 
       // (c) proper Better Auth org with a slug -> must be kept
       const [proper] = await testApp.database
@@ -103,9 +127,35 @@ describe("personal-org migration data ops (0035)", () => {
 
       const remaining = await testApp.database.select({ id: organizations.id }).from(organizations);
       const ids = remaining.map((r) => r.id);
-      expect(ids).not.toContain(legacy.id);
-      expect(ids).toContain(legacyWithMember.id);
+      expect(ids).not.toContain(legacyId);
+      expect(ids).toContain(legacyWithMemberId);
       expect(ids).toContain(proper.id);
+    });
+
+    it("leaves 0042's backfill nothing to do once the cleanup has run", async () => {
+      const memberUserId = await testApp.createTestUser({ name: "Member Owner" });
+      const keptId = await insertSluglessOrg("Legacy With Member");
+      await testApp.database
+        .insert(organizationMembers)
+        .values({ organizationId: keptId, userId: memberUserId, role: "owner" });
+
+      await testApp.database.execute(LEGACY_CLEANUP_SQL);
+
+      const sluglessIds = async () =>
+        (
+          await testApp.database.execute<{ id: string }>(
+            sql`SELECT "id" FROM "organizations" WHERE "slug" IS NULL`,
+          )
+        ).map((row) => row.id);
+
+      // The row the cleanup deliberately keeps is exactly the one 0042's backfill
+      // exists for: without it, `SET NOT NULL` would fail on a database that has one.
+      expect(await sluglessIds()).toEqual([keptId]);
+
+      await testApp.database.execute(
+        sql`UPDATE "organizations" SET "slug" = 'legacy-' || "id"::text WHERE "slug" IS NULL`,
+      );
+      expect(await sluglessIds()).toEqual([]);
     });
   });
 

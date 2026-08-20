@@ -5,11 +5,13 @@ import {
   emailOTPClient,
   genericOAuthClient,
   inferAdditionalFields,
+  inferOrgAdditionalFields,
   lastLoginMethodClient,
   organizationClient,
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
+import { ac, roles } from "../access";
 import type { auth } from "../server";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3020";
@@ -20,7 +22,15 @@ export const authClient = createAuthClient({
     inferAdditionalFields<typeof auth>(),
     emailOTPClient(),
     genericOAuthClient(), // Required for custom OAuth providers like ORCID
-    organizationClient({ teams: { enabled: true } }),
+    // `schema` carries the organization additionalFields (profile fields and
+    // directory visibility) into the create/update body types; `ac`/`roles` make
+    // `checkRolePermission` evaluate our matrix instead of Better Auth's defaults.
+    organizationClient({
+      teams: { enabled: true },
+      schema: inferOrgAdditionalFields<typeof auth>(),
+      ac,
+      roles,
+    }),
     apiKeyClient(),
     passkeyClient(),
     lastLoginMethodClient(),

@@ -1,5 +1,6 @@
 import { useMacroCompatibleProtocols } from "@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import { useLocale } from "@/hooks/useLocale";
+import { getMacroLanguageBadgeColor, getMacroLanguageLabel } from "@/util/macro-language";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
@@ -32,32 +33,6 @@ interface MacroOverviewCardsProps {
   macros: Macro[] | undefined;
   isLoading: boolean;
 }
-
-const getLanguageDisplay = (language: string) => {
-  switch (language) {
-    case "python":
-      return "Python";
-    case "r":
-      return "R";
-    case "javascript":
-      return "JavaScript";
-    default:
-      return language;
-  }
-};
-
-const getLanguageColor = (language: string) => {
-  switch (language) {
-    case "python":
-      return "bg-badge-published";
-    case "r":
-      return "bg-badge-stale";
-    case "javascript":
-      return "bg-badge";
-    default:
-      return "bg-badge-archived";
-  }
-};
 
 function CompatibleProtocolsList({ macroId, enabled }: { macroId: string; enabled: boolean }) {
   const { data } = useMacroCompatibleProtocols(macroId, enabled);
@@ -99,8 +74,8 @@ function MacroCard({
     >
       <div className={cardVariants({ featured: isPreferred })}>
         <div className="inline-flex gap-1">
-          <Badge className={getLanguageColor(macro.language)}>
-            {getLanguageDisplay(macro.language)}
+          <Badge className={getMacroLanguageBadgeColor(macro.language)}>
+            {getMacroLanguageLabel(macro.language)}
           </Badge>
           {isPreferred && (
             <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>

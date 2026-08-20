@@ -42,6 +42,8 @@ export const selectProtocolSchema = createSelectSchema(protocols, {
   .omit({ searchVector: true })
   .extend({
     createdByName: z.string().optional(),
+    /** Display name of the owning organization; `null` for a personal workspace. */
+    organizationName: z.string().nullish(),
     // The DB column is the shared sensor_family enum, but no protocol row can
     // be mobile (the contract rejects it on every write path), so the DTO
     // carries the same narrowed family the contract promises.

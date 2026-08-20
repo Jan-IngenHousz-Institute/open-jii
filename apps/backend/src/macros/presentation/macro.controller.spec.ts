@@ -55,6 +55,7 @@ describe("MacroController", () => {
     vi.spyOn(testApp.module.get(AuthorizationService), "can").mockResolvedValue({
       allow: true,
       reason: "org-role",
+      organizationId: null,
     });
   });
 
@@ -784,7 +785,7 @@ describe("MacroController", () => {
     ])("requires $action access to $name", async ({ action, request }) => {
       const canSpy = vi
         .spyOn(testApp.module.get(AuthorizationService), "can")
-        .mockResolvedValue({ allow: false, reason: "forbidden" });
+        .mockResolvedValue({ allow: false, reason: "forbidden", organizationId: null });
       const macroId = faker.string.uuid();
 
       await request(macroId, testUserId).expect(StatusCodes.FORBIDDEN);

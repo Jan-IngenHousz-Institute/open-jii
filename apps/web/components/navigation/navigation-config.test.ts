@@ -20,6 +20,7 @@ describe("navigation-config", () => {
       "BookOpen",
       "Library",
       "RadioReceiver",
+      "Users",
       "Webcam",
       "LifeBuoy",
       "HelpCircle",
@@ -32,6 +33,7 @@ describe("navigation-config", () => {
       ["dashboard", `/${locale}/platform`],
       ["experiments", `/${locale}/platform/experiments`],
       ["workbooks", `/${locale}/platform/workbooks`],
+      ["organizations", `/${locale}/platform/organizations`],
     ] as const)("%s generates correct URL", (key, expected) => {
       expect(mainNavigation[key].url(locale)).toBe(expected);
     });
@@ -49,7 +51,7 @@ describe("navigation-config", () => {
     });
 
     it("generates sub-item URLs containing parent path", () => {
-      for (const key of ["experiments"] as const) {
+      for (const key of ["experiments", "organizations"] as const) {
         mainNavigation[key].items.forEach((item) => {
           expect(item.url(locale)).toContain(mainNavigation[key].url(locale));
         });

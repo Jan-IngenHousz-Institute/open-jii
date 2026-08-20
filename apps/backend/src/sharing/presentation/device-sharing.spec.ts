@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
+import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import type { ResourceCollaboratorDto } from "@repo/api/domains/sharing/sharing.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
@@ -76,7 +77,9 @@ describe("device sharing", () => {
    * asking for one is a mistake worth failing on here.
    */
   const grantRowFor = (rows: ResourceCollaboratorDto[], granteeId: string) => {
-    const row = rows.find((candidate) => candidate.granteeId === granteeId);
+    const row = rows.find(
+      (candidate) => isGranteeRow(candidate) && candidate.granteeId === granteeId,
+    );
     if (row?.kind !== "grant") {
       throw new Error(`Expected a grant row for ${granteeId}, got ${row?.kind ?? "nothing"}`);
     }
@@ -98,7 +101,7 @@ describe("device sharing", () => {
 
     // The owner appears as a synthesized Owner row, the grantee as a grant row.
     const rows = created.body as ResourceCollaboratorDto[];
-    expect(rows.find((row) => row.granteeId === owner)?.kind).toBe("owner");
+    expect(rows.find((row) => isGranteeRow(row) && row.granteeId === owner)?.kind).toBe("owner");
     const grant = grantRowFor(rows, grantee);
     expect(grant.role).toBe("viewer");
 
@@ -109,9 +112,11 @@ describe("device sharing", () => {
       .get(collaboratorsPath(device.id))
       .withAuth(owner)
       .expect(StatusCodes.OK);
-    expect((listed.body as ResourceCollaboratorDto[]).map((row) => row.granteeId).sort()).toEqual(
-      [owner, grantee].sort(),
-    );
+    expect(
+      (listed.body as ResourceCollaboratorDto[])
+        .flatMap((row) => (isGranteeRow(row) ? [row.granteeId] : []))
+        .sort(),
+    ).toEqual([owner, grantee].sort());
 
     await testApp
       .patch(

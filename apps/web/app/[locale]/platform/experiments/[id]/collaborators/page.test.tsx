@@ -54,6 +54,7 @@ function accessPayload({ experiment, ...overrides }: AccessOverrides = {}): Expe
       canManage: true,
       canShare: true,
       canLeave: false,
+      canTransfer: false,
     },
     ...overrides,
   });
@@ -123,6 +124,7 @@ describe("ExperimentCollaboratorsPage", () => {
               displayName: "Lin Zhao",
               email: "lin@uni.edu",
               avatarUrl: null,
+              memberCount: null,
             },
           }),
         ],
@@ -159,6 +161,7 @@ describe("ExperimentCollaboratorsPage", () => {
               displayName: "Lin Zhao",
               email: "lin@uni.edu",
               avatarUrl: null,
+              memberCount: null,
             },
           }),
         ],
@@ -236,6 +239,7 @@ describe("ExperimentCollaboratorsPage", () => {
               displayName: "Lin Zhao",
               email: "lin@uni.edu",
               avatarUrl: null,
+              memberCount: null,
             },
           }),
           createResourceGrant({
@@ -245,6 +249,7 @@ describe("ExperimentCollaboratorsPage", () => {
               displayName: "Asha Okafor",
               email: "asha@greenhouse.lab",
               avatarUrl: null,
+              memberCount: null,
             },
           }),
         ],
@@ -277,6 +282,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: true,
             canShare: false,
             canLeave: false,
+            canTransfer: false,
           },
         }),
       });
@@ -307,6 +313,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: false,
             canShare: false,
             canLeave: true,
+            canTransfer: false,
           },
         }),
       });
@@ -339,6 +346,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: false,
             canShare: false,
             canLeave: false,
+            canTransfer: false,
           },
         }),
       });
@@ -367,6 +375,7 @@ describe("ExperimentCollaboratorsPage", () => {
               displayName: "Asha Okafor",
               email: "asha@greenhouse.lab",
               avatarUrl: null,
+              memberCount: null,
             },
           }),
         ],
@@ -393,6 +402,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: false,
             canShare: false,
             canLeave: false,
+            canTransfer: false,
           },
         }),
       });
@@ -420,6 +430,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: true,
             canShare: false,
             canLeave: false,
+            canTransfer: false,
           },
         }),
       });
@@ -456,6 +467,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: false,
             canShare: false,
             canLeave: false,
+            canTransfer: false,
           },
         }),
       });
@@ -490,6 +502,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: false,
             canShare: false,
             canLeave: false,
+            canTransfer: false,
           },
         }),
       });
@@ -515,6 +528,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: false,
             canShare: false,
             canLeave: false,
+            canTransfer: false,
           },
         }),
       });
@@ -541,6 +555,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: false,
             canShare: false,
             canLeave: false,
+            canTransfer: false,
           },
         }),
       });
@@ -571,6 +586,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: false,
             canShare: false,
             canLeave: true,
+            canTransfer: false,
           },
         }),
       });
@@ -655,6 +671,7 @@ describe("ExperimentCollaboratorsPage", () => {
             canManage: true,
             canShare: false,
             canLeave: false,
+            canTransfer: false,
           },
         }),
       });
