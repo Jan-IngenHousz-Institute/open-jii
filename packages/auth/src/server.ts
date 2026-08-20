@@ -4,14 +4,14 @@ import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
-import { emailOTP, genericOAuth, lastLoginMethod, organization } from "better-auth/plugins";
+import { emailOTP, genericOAuth, lastLoginMethod } from "better-auth/plugins";
 
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
-import { ac, roles } from "./access";
 import { getApiKeyForSessionCheck } from "./api-key-session";
 import { sendOtpEmail } from "./email/otpEmail";
+import { openJiiOrganization } from "./organization/plugin";
 import { orcidProvider } from "./providers/orcid";
 
 const environmentPrefix = process.env.ENVIRONMENT_PREFIX ?? "dev";
@@ -163,27 +163,7 @@ export const auth = betterAuth({
     }),
     // Organization tier: per-org membership + roles (owner/admin/member).
     // Resources are org-owned; org membership grants baseline access.
-    organization({
-      allowUserToCreateOrganization: true,
-      creatorRole: "owner",
-      teams: { enabled: true },
-      // Single permission matrix (replaces the backend's hand-rolled abilities):
-      // org roles owner/admin → full control, member → read, across every
-      // openJII resource type. See packages/auth/src/access.ts.
-      ac,
-      roles,
-      // openJII org profile fields, persisted in one organization.create call.
-      schema: {
-        organization: {
-          additionalFields: {
-            type: { type: "string", required: false, input: true },
-            description: { type: "string", required: false, input: true },
-            website: { type: "string", required: false, input: true },
-            location: { type: "string", required: false, input: true },
-          },
-        },
-      },
-    }),
+    openJiiOrganization(),
     // Add custom OAuth providers using the generic OAuth plugin
     ...(customOAuthProviders.length > 0
       ? [

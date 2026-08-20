@@ -32,8 +32,9 @@ export class ListGrantsUseCase {
       );
     }
 
-    // Owning org powers the "Outside Collaborator" label.
-    const ownership = await this.authz.getOwnership(resourceType, resourceId);
-    return this.repo.list(resourceType, resourceId, ownership?.organizationId ?? null);
+    // The organization the decision was resolved against, never a fresh read: a
+    // transfer landing between the two would list another organization's owners,
+    // admins and members as this resource's collaborators.
+    return this.repo.list(resourceType, resourceId, decision.organizationId);
   }
 }

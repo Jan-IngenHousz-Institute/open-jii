@@ -57,6 +57,22 @@ export class UserAuthHook {
     await this.acceptInvitationsForNewUser(ctx);
   }
 
+  /**
+   * `/sign-in/social` only hands out the provider's redirect URL — the session is
+   * created when the provider redirects back, so these two callback paths are the
+   * only place an OAuth sign-up can be caught. Better Auth matches hooks on the
+   * route pattern by exact equality, so the parameter names have to be its own.
+   */
+  @AfterHook("/callback/:id")
+  async handleOAuthCallback(ctx: AuthHookContext) {
+    await this.acceptInvitationsForNewUser(ctx);
+  }
+
+  @AfterHook("/oauth2/callback/:providerId")
+  async handleGenericOAuthCallback(ctx: AuthHookContext) {
+    await this.acceptInvitationsForNewUser(ctx);
+  }
+
   @AfterHook("/email-otp/verify-email")
   async handleOtpVerify(ctx: AuthHookContext) {
     await this.acceptInvitationsForNewUser(ctx);
@@ -74,14 +90,16 @@ export class UserAuthHook {
 
       if (!user?.id || !user.email) return;
 
-      // Only process for users who haven't completed registration yet
-      if (user.registered) return;
-
+      // Deliberately no `registered` short-circuit: a first sign-in is the only
+      // attempt such a check would ever allow, so any transient failure would be
+      // lost for good. The pending lookups are indexed on `(email, status)`, so
+      // signing in with nothing waiting costs two index probes and an acceptance
+      // that failed once heals on the next sign-in.
       const result = await this.acceptInvitationUseCase.execute(user.id, user.email);
 
       if (result.isSuccess() && result.value > 0) {
         this.logger.log({
-          msg: `Auto-accepted ${result.value} pending invitation(s) for new user`,
+          msg: `Auto-accepted ${result.value} pending invitation(s)`,
           operation: "invitation-auth-hook",
           userId: user.id,
           email: user.email,

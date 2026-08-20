@@ -154,13 +154,33 @@ describe("UserAuthHook", () => {
     });
   });
 
+  describe("handleOAuthCallback", () => {
+    it("should call acceptInvitationsForNewUser", async () => {
+      const ctx = createMockContext();
+
+      await hook.handleOAuthCallback(ctx);
+
+      expect(mockUseCase.execute).toHaveBeenCalledWith("user-123", "test@example.com");
+    });
+  });
+
+  describe("handleGenericOAuthCallback", () => {
+    it("should call acceptInvitationsForNewUser", async () => {
+      const ctx = createMockContext();
+
+      await hook.handleGenericOAuthCallback(ctx);
+
+      expect(mockUseCase.execute).toHaveBeenCalledWith("user-123", "test@example.com");
+    });
+  });
+
   describe("acceptInvitationsForNewUser (via handlers)", () => {
-    it("should skip if user is already registered", async () => {
+    it("processes an already-registered user, so a failed acceptance heals later", async () => {
       const ctx = createMockContext({ registered: true });
 
       await hook.handleEmailSignIn(ctx);
 
-      expect(mockUseCase.execute).not.toHaveBeenCalled();
+      expect(mockUseCase.execute).toHaveBeenCalledWith("user-123", "test@example.com");
     });
 
     it("should skip if user id is missing", async () => {

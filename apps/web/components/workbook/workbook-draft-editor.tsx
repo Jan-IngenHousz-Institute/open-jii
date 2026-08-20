@@ -5,7 +5,7 @@ import { WorkbookEditor } from "@/components/workbook/workbook-editor";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useWorkbookExecution } from "@/hooks/workbook/useWorkbookExecution/useWorkbookExecution";
 import { useWorkbookUpdate } from "@/hooks/workbook/useWorkbookUpdate/useWorkbookUpdate";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
@@ -85,6 +85,34 @@ export function WorkbookDraftEditor({
   });
 
   useReportAutosaveStatus(autosave);
+
+  // Adopt a newer server copy: fork pointers live inside `cells`, so a
+  // never-reconciling editor silently un-forks cells it overwrites (OJD-1722).
+  const serverKey = useMemo(() => JSON.stringify(initialCells), [initialCells]);
+  const localKey = useMemo(() => JSON.stringify(cells), [cells]);
+  const adoptedKeyRef = useRef(serverKey);
+  const adoptedCellsRef = useRef<WorkbookCell[] | null>(null);
+
+  useEffect(() => {
+    if (serverKey === adoptedKeyRef.current) return;
+    if (serverKey === localKey) {
+      adoptedKeyRef.current = serverKey;
+      return;
+    }
+    // Divergence from the last known server copy means unsaved work.
+    // `autosave.status` lags a commit, so it cannot be the guard.
+    if (localKey !== adoptedKeyRef.current) return;
+    adoptedKeyRef.current = serverKey;
+    adoptedCellsRef.current = initialCells;
+    setCells(initialCells);
+  }, [serverKey, localKey, initialCells]);
+
+  // Keyed on array identity: a flag would clear before the adopting commit.
+  useEffect(() => {
+    if (adoptedCellsRef.current === null || cells !== adoptedCellsRef.current) return;
+    adoptedCellsRef.current = null;
+    autosave.rebase();
+  }, [cells, autosave]);
 
   const handleCellsChange = useCallback((next: WorkbookCell[]) => {
     setCells(next);

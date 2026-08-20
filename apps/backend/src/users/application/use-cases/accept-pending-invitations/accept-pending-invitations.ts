@@ -15,22 +15,32 @@ export class AcceptPendingInvitationsUseCase {
   ) {}
 
   /**
-   * Accept all pending invitations for an email, granting each one's tier. Called
-   * when a user completes registration.
+   * Accept every pending resource invitation for an email and report how many
+   * landed. Runs on every sign-in, not only the first: the lookup is indexed on
+   * `(email, status)`, so having nothing pending costs one index probe, and an
+   * acceptance that failed once heals on the next sign-in instead of being lost.
    *
-   * Every invitation is re-authorized first: one can sit around while the inviter is
-   * demoted or the resource deleted, and applying it verbatim would mint access the
-   * inviter could no longer create. A failed check retires the invitation so it is
-   * not retried on every sign-in.
+   * Organization invitations are a separate model with separate rules and are
+   * accepted by their own hook in the organizations module.
    */
   async execute(userId: string, email: string): Promise<Result<number>> {
     this.logger.log({
-      msg: "Processing pending invitations for new user",
+      msg: "Processing pending resource invitations",
       operation: "accept-pending-invitations",
       userId,
       email,
     });
 
+    return this.acceptResourceInvitations(userId, email);
+  }
+
+  /**
+   * Every resource invitation is re-authorized first: one can sit around while the
+   * inviter is demoted or the resource deleted, and applying it verbatim would mint
+   * access the inviter could no longer create. A failed check retires the invitation
+   * so it is not retried on every sign-in.
+   */
+  private async acceptResourceInvitations(userId: string, email: string): Promise<Result<number>> {
     const pendingResult = await this.invitationRepository.findPendingByEmail(email);
 
     if (pendingResult.isFailure()) {
@@ -161,7 +171,7 @@ export class AcceptPendingInvitationsUseCase {
     }
 
     this.logger.log({
-      msg: `Processed pending invitations for new user`,
+      msg: `Processed pending resource invitations`,
       operation: "accept-pending-invitations",
       userId,
       email,

@@ -24,7 +24,7 @@ describe("DangerZoneCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     server.mount(contract.users.getDeletionBlockers, {
-      body: { resources: [] },
+      body: { resources: [], organizations: [] },
       status: 200,
     });
   });
@@ -230,6 +230,128 @@ describe("DangerZoneCard", () => {
           variant: "destructive",
         }),
       );
+    });
+
+    // Solely-owned organizations cannot be handed over from this dialog — the only ways
+    // out live on the organization's own pages, so the row is a link there.
+    describe("when the user is an organization's last owner", () => {
+      const mountOrganizationBlocker = () =>
+        server.mount(contract.users.getDeletionBlockers, {
+          body: {
+            resources: [],
+            organizations: [
+              { id: "11111111-1111-4111-8111-111111111111", name: "Solo Lab", slug: "solo-lab" },
+            ],
+          },
+          status: 200,
+        });
+
+      it("lists the organization with a link to its members page", async () => {
+        mountOrganizationBlocker();
+        const user = userEvent.setup();
+        renderCard();
+
+        await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+
+        // The dialog body is portaled out of render()'s container, so these are
+        // screen-scoped like every other assertion against it in this file.
+        expect(
+          await screen.findByText("dangerZone.delete.organizationBlockers.title"),
+        ).toBeInTheDocument();
+        expect(screen.getByText("Solo Lab")).toBeInTheDocument();
+        expect(
+          screen.getByRole("link", {
+            name: "dangerZone.delete.organizationBlockers.manageLink",
+          }),
+        ).toHaveAttribute(
+          "href",
+          "/en-US/platform/organizations/11111111-1111-4111-8111-111111111111/members",
+        );
+      });
+
+      it("keeps the delete button disabled and hides the confirmation input", async () => {
+        mountOrganizationBlocker();
+        const user = userEvent.setup();
+        renderCard();
+
+        await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+        await screen.findByText("dangerZone.delete.organizationBlockers.title");
+
+        expect(
+          screen.queryByPlaceholderText("dangerZone.delete.confirmPlaceholder"),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "dangerZone.delete.buttonConfirm" }),
+        ).toBeDisabled();
+      });
+
+      // Nothing else is blocking, so there is no "anything below this" to point at.
+      it("does not claim promoting an owner clears resources when none are blocking", async () => {
+        mountOrganizationBlocker();
+        const user = userEvent.setup();
+        renderCard();
+
+        await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+        await screen.findByText("dangerZone.delete.organizationBlockers.title");
+
+        expect(
+          screen.queryByText("dangerZone.delete.organizationBlockers.alsoClearsResources"),
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    // Both prongs at once, which is the common case rather than an edge one: a resource
+    // is blocked when nobody else can administer it, and being its owning organization's
+    // only owner is one of the two ways that happens — so an organization that owns
+    // anything produces both sections together.
+    describe("when both an organization and its resources are blocking", () => {
+      const mountBothBlockers = () =>
+        server.mount(contract.users.getDeletionBlockers, {
+          body: {
+            resources: [
+              {
+                resourceType: "experiment",
+                id: "22222222-2222-4222-8222-222222222222",
+                name: "Tidal transect survey",
+                status: "active",
+                candidates: [],
+              },
+            ],
+            organizations: [
+              { id: "11111111-1111-4111-8111-111111111111", name: "Solo Lab", slug: "solo-lab" },
+            ],
+          },
+          status: 200,
+        });
+
+      it("shows both sections", async () => {
+        mountBothBlockers();
+        const user = userEvent.setup();
+        renderCard();
+
+        await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+
+        expect(
+          await screen.findByText("dangerZone.delete.organizationBlockers.title"),
+        ).toBeInTheDocument();
+        expect(screen.getByText("dangerZone.delete.blockers.title")).toBeInTheDocument();
+        expect(screen.getByText("Solo Lab")).toBeInTheDocument();
+        expect(screen.getByText("Tidal transect survey")).toBeInTheDocument();
+      });
+
+      // The two sections are not independent work, and the dialog has to say so where
+      // the decision is made — a user who cannot see it does the job twice or gives up.
+      it("says that promoting another owner clears the resources too", async () => {
+        mountBothBlockers();
+        const user = userEvent.setup();
+        renderCard();
+
+        await user.click(screen.getByRole("button", { name: "dangerZone.delete.button" }));
+
+        expect(
+          await screen.findByText("dangerZone.delete.organizationBlockers.alsoClearsResources"),
+        ).toBeInTheDocument();
+      });
     });
 
     it("shows deleting state when pending", async () => {

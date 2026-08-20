@@ -115,12 +115,12 @@
       "successMessage": "Account deleted. Your personal data has been erased.",
       "blockers": {
         "title": "Hand over your work first",
-        "description": "You're the only admin of the items below, so they'd be left without an owner. Choose who should take over admin rights, then transfer. You can do it all here.",
+        "description": "You're the last person answerable for the items below — either you hold the only share that can administer them, or you're the only owner of the organization that owns them. Giving someone else admin rights here clears an item. So does promoting another owner of the organization that owns it, if one does.",
         "loading": "Checking what you administer…",
         "applyToAllLabel": "Transfer all to one person",
         "applyToAllPlaceholder": "Search someone to take over everything…",
         "rowPlaceholder": "Search a person…",
-        "noCandidatesHint": "No collaborators yet. Search anyone above, or invite someone from the item's collaborators page.",
+        "noCandidatesHint": "Nobody else holds a share on this yet, so there is no one to suggest. Search above for anyone to hand it to — or, if a shared organization owns it, promote another owner there instead and this clears without sharing anything.",
         "manageLink": "Open collaborators",
         "transferAll": "Transfer admin rights",
         "transferring": "Transferring…",
@@ -136,6 +136,12 @@
           "workbook": "Workbook",
           "device": "Device"
         }
+      },
+      "organizationBlockers": {
+        "title": "Hand over your organizations first",
+        "description": "You're the only owner of the organizations below, so nobody would be left who can run them. Make someone else an owner, or delete the organization, then come back here.",
+        "alsoClearsResources": "Start here: if anything below this is blocked because one of these organizations owns it, making someone else an owner clears that too.",
+        "manageLink": "Open members"
       }
     },
     "cancel": "Cancel"
@@ -143,7 +149,8 @@
   "tabs": {
     "general": "General",
     "security": "Security",
-    "apiKeys": "API keys"
+    "apiKeys": "API keys",
+    "invitations": "Invitations"
   },
   "apiKeys": {
     "title": "API keys",
@@ -182,6 +189,9 @@
     "expiresUntil": "Until {{date}}",
     "expiresInDays": "Expires in {{count}} days",
     "expired": "Expired"
+  },
+  "invitations": {
+    "title": "Invitations"
   },
   "passkeys": {
     "title": "Passkeys",

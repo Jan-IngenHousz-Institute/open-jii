@@ -23,6 +23,7 @@ import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
+import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
@@ -40,6 +41,8 @@ export interface WorkbookFilter {
   search?: string;
   filter?: "my";
   userId?: string;
+  /** Narrow to one owning organization (the org profile's resources showcase). */
+  organizationId?: string;
 }
 
 // All workbook columns except the internal full-text `search_vector` (never returned to clients).
@@ -235,6 +238,12 @@ export class WorkbookRepository {
         conditions.push(scope);
       }
 
+      // Applied on top of the access scope, never instead of it: an org's page shows
+      // each viewer exactly the rows they could already reach.
+      if (filter?.organizationId) {
+        conditions.push(eq(workbooks.organizationId, filter.organizationId));
+      }
+
       if (filter?.filter === "my" && filter.userId) {
         // "My workbooks" narrows that down to what the caller authored.
         conditions.push(eq(workbooks.createdBy, filter.userId));
@@ -275,6 +284,7 @@ export class WorkbookRepository {
           workbooks: workbookColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
+          organizationName: owningOrganizationNameSql("workbooks"),
           experimentCount: experimentCountSql(),
         })
         .from(workbooks)
@@ -291,6 +301,7 @@ export class WorkbookRepository {
       const lastName = result[0].lastName;
       augmented.createdByName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
       augmented.experimentCount = result[0].experimentCount;
+      augmented.organizationName = result[0].organizationName;
       return augmented;
     });
   }

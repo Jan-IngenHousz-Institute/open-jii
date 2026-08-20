@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type { ResourceCapabilities } from "@repo/api/domains/authorization/capabilities.schema";
+import { eq, profiles } from "@repo/database";
 
 import { TestHarness } from "../test/test-harness";
 
@@ -63,6 +64,7 @@ describe("resource capabilities on detail responses", () => {
         canManage: true,
         canShare: true,
         canLeave: false,
+        canTransfer: true,
       });
     });
 
@@ -79,12 +81,15 @@ describe("resource capabilities on detail responses", () => {
 
       const path = testApp.resolveOrpcPath(contract.macros.getMacro, { id: macro.id });
       // "Can edit" in the collaborators picker must actually mean editable here.
+      // Not transferable, though: the owning organization still has a living
+      // owner, and a grantee moving the macro elsewhere would be taking it.
       expect(await capabilitiesFor(path, collaborator)).toEqual({
         canContribute: true,
         canUpdate: true,
         canManage: true,
         canShare: true,
         canLeave: true,
+        canTransfer: false,
       });
     });
 
@@ -108,6 +113,7 @@ describe("resource capabilities on detail responses", () => {
         canManage: false,
         canShare: false,
         canLeave: true,
+        canTransfer: false,
       });
     });
 
@@ -122,7 +128,47 @@ describe("resource capabilities on detail responses", () => {
         canManage: false,
         canShare: false,
         canLeave: false,
+        canTransfer: false,
       });
+    });
+
+    it("offers the transfer to a grantee once the owning organization is a husk", async () => {
+      const organizationId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(organizationId, owner, "owner");
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner, organizationId });
+      const collaborator = await testApp.createTestUser({ name: "Collaborator" });
+      await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: collaborator,
+        role: "admin",
+      });
+
+      const path = testApp.resolveOrpcPath(contract.macros.getMacro, { id: macro.id });
+      expect(await capabilitiesFor(path, collaborator)).toMatchObject({ canTransfer: false });
+
+      // An admin joins, then the only owner closes their account. Losing an owner
+      // does not abandon an organization — somebody inside can still act, so the
+      // macro is not the collaborator's to move.
+      const admin = await testApp.createTestUser({ name: "Admin" });
+      await testApp.addOrganizationMember(organizationId, admin, "admin");
+      await testApp.database
+        .update(profiles)
+        .set({ deletedAt: new Date() })
+        .where(eq(profiles.userId, owner));
+
+      expect(await capabilitiesFor(path, collaborator)).toMatchObject({ canTransfer: false });
+
+      // Now the admin goes too: nobody is left to move the macro out, and it
+      // cannot stay where it is either — the organization can never be deleted
+      // while it owns something.
+      await testApp.database
+        .update(profiles)
+        .set({ deletedAt: new Date() })
+        .where(eq(profiles.userId, admin));
+
+      expect(await capabilitiesFor(path, collaborator)).toMatchObject({ canTransfer: true });
     });
   });
 

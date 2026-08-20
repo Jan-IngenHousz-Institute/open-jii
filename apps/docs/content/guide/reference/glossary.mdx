@@ -3,7 +3,7 @@ title: "Glossary"
 description: "Canonical openJII terms for accounts, experiments, hardware, workflows, and data."
 ---
 
-{/* verified: code@efd66bdd4 2026-08-04 */}
+{/* verified: code@2a0698c44 2026-08-17 */}
 
 ### Access level
 
@@ -72,6 +72,11 @@ In researcher-facing copy, handheld hardware requiring regular human operation,
 such as a MultispeQ. Some technical interfaces use “device” more broadly for
 registered IoT hardware.
 
+### Directory
+
+The listing of **public** organizations that anyone can browse and ask to join.
+Private organizations are not listed, and personal workspaces never are.
+
 ### Embargo
 
 A temporary period during which an experiment remains private. The end date must
@@ -90,6 +95,11 @@ Principles for making digital research outputs Findable, Accessible,
 Interoperable, and Reusable. FAIR does not mean that every dataset must be fully
 open, and public visibility alone does not establish FAIR compliance.
 
+### Join request
+
+An ask to be added to a public organization, with an optional message. An Owner or
+Admin approves or rejects it; approval adds the person as a Member.
+
 ### Macro
 
 Code used by a workbook to transform or analyze a protocol result. In the mobile
@@ -107,10 +117,21 @@ Structured context that explains how to interpret measurements: subject or
 sample identity, species, genotype, treatment, location, conditions, units, and
 other non-measurement variables relevant to the study.
 
+### Move
+
+Changing which workspace owns a resource — from your personal workspace into an
+organization, or between organizations. Devices cannot be moved.
+
 ### MultispeQ
 
 Handheld hardware used for protocol-guided optical measurements. The mobile app
 connects over Bluetooth or USB; multi-device mobile work uses wired USB.
+
+### Organization
+
+A shared workspace owned collectively by a lab, group or project. It owns resources,
+has Owners, Admins and Members, and can contain teams. Distinct from your personal
+workspace, which is yours alone.
 
 ### Outside Collaborator
 
@@ -124,6 +145,11 @@ A phishing-resistant sign-in credential protected by a device screen lock,
 password manager, or hardware security key. A passkey is an additional way to
 sign in to an existing account; removing one does not end browser sessions or
 remove other sign-in methods.
+
+### Personal workspace
+
+The workspace every account gets, which owns anything you create outside an
+organization. Nobody else can be added to it, and it cannot be shared or deleted.
 
 ### Protocol
 
@@ -143,6 +169,11 @@ In researcher-facing copy, autonomous hardware that records observations over
 time with little interaction after setup. In technical UI, **sensor family** is
 also the legacy shared enum for MultispeQ, Ambyte, Ambit, MiniPAR, and generic
 hardware; that technical field name does not make the Ambyte gateway a sensor.
+
+### Team
+
+A named subgroup of one organization's members, used to share with a group in one
+step. Teams are flat, and deleting one withdraws every share it held.
 
 ### Visibility
 

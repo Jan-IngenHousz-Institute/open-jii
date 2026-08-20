@@ -240,6 +240,16 @@
                         }
                       ]
                     },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -531,6 +541,16 @@
                           }
                         ]
                       },
+                      "organizationName": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "createdBy": {
                         "type": "string",
                         "format": "uuid"
@@ -788,6 +808,16 @@
                         {
                           "type": "string",
                           "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
                         },
                         {
                           "type": "null"
@@ -1139,6 +1169,16 @@
                         }
                       ]
                     },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "createdBy": {
                       "type": "string",
                       "format": "uuid"
@@ -1438,6 +1478,16 @@
                             }
                           ]
                         },
+                        "organizationName": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "createdBy": {
                           "type": "string",
                           "format": "uuid"
@@ -1621,6 +1671,9 @@
                         },
                         "canLeave": {
                           "type": "boolean"
+                        },
+                        "canTransfer": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -1628,7 +1681,8 @@
                         "canUpdate",
                         "canManage",
                         "canShare",
-                        "canLeave"
+                        "canLeave",
+                        "canTransfer"
                       ]
                     }
                   },
@@ -3569,38 +3623,50 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "userId": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "firstName": {
-                        "type": "string"
-                      },
-                      "lastName": {
-                        "type": "string"
-                      },
-                      "avatarUrl": {
-                        "anyOf": [
-                          {
+                  "type": "object",
+                  "properties": {
+                    "contributors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "userId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "firstName": {
                             "type": "string"
                           },
-                          {
-                            "type": "null"
+                          "lastName": {
+                            "type": "string"
+                          },
+                          "avatarUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
+                        },
+                        "required": [
+                          "userId",
+                          "firstName",
+                          "lastName",
+                          "avatarUrl"
                         ]
                       }
                     },
-                    "required": [
-                      "userId",
-                      "firstName",
-                      "lastName",
-                      "avatarUrl"
-                    ]
-                  }
+                    "collaboratorCount": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "contributors",
+                    "collaboratorCount"
+                  ]
                 }
               }
             }
@@ -6100,6 +6166,16 @@
                         {
                           "type": "string",
                           "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
                         },
                         {
                           "type": "null"
@@ -14004,6 +14080,9 @@
                         },
                         "canLeave": {
                           "type": "boolean"
+                        },
+                        "canTransfer": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -14011,7 +14090,8 @@
                         "canUpdate",
                         "canManage",
                         "canShare",
-                        "canLeave"
+                        "canLeave",
+                        "canTransfer"
                       ]
                     }
                   },
@@ -15460,6 +15540,9 @@
                         },
                         "canLeave": {
                           "type": "boolean"
+                        },
+                        "canTransfer": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -15467,7 +15550,8 @@
                         "canUpdate",
                         "canManage",
                         "canShare",
-                        "canLeave"
+                        "canLeave",
+                        "canTransfer"
                       ]
                     }
                   },
@@ -16296,6 +16380,16 @@
                           }
                         ]
                       },
+                      "organizationName": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "visibility": {
                         "enum": [
                           "private",
@@ -16464,6 +16558,16 @@
                         }
                       ]
                     },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "visibility": {
                       "enum": [
                         "private",
@@ -16592,6 +16696,16 @@
                         }
                       ]
                     },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "visibility": {
                       "enum": [
                         "private",
@@ -16616,6 +16730,9 @@
                         },
                         "canLeave": {
                           "type": "boolean"
+                        },
+                        "canTransfer": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -16623,7 +16740,8 @@
                         "canUpdate",
                         "canManage",
                         "canShare",
-                        "canLeave"
+                        "canLeave",
+                        "canTransfer"
                       ]
                     }
                   },
@@ -16771,6 +16889,16 @@
                         {
                           "type": "string",
                           "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
                         },
                         {
                           "type": "null"
@@ -17470,6 +17598,1654 @@
         }
       }
     },
+    "/api/v1/organizations": {
+      "get": {
+        "operationId": "organizations.listOrganizations",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Name or description substring"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "organizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "logo": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "type": {
+                            "anyOf": [
+                              {
+                                "enum": [
+                                  "research_institute",
+                                  "non_profit",
+                                  "private_company",
+                                  "government_agency",
+                                  "university"
+                                ],
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "location": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "memberCount": {
+                            "type": "integer"
+                          },
+                          "resourceCount": {
+                            "type": "integer"
+                          },
+                          "visibility": {
+                            "enum": [
+                              "private",
+                              "public"
+                            ],
+                            "type": "string"
+                          },
+                          "membershipStatus": {
+                            "enum": [
+                              "none",
+                              "pending_request",
+                              "member"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "logo",
+                          "type",
+                          "description",
+                          "location",
+                          "memberCount",
+                          "resourceCount",
+                          "visibility",
+                          "membershipStatus"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "organizations"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/organizations": {
+      "get": {
+        "operationId": "organizations.listMyOrganizations",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "slug": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "description": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "visibility": {
+                        "enum": [
+                          "private",
+                          "public"
+                        ],
+                        "type": "string"
+                      },
+                      "role": {
+                        "enum": [
+                          "owner",
+                          "admin",
+                          "member"
+                        ],
+                        "type": "string"
+                      },
+                      "isPersonal": {
+                        "type": "boolean"
+                      },
+                      "memberCount": {
+                        "type": "integer"
+                      },
+                      "resourceCount": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "slug",
+                      "description",
+                      "visibility",
+                      "role",
+                      "isPersonal",
+                      "memberCount",
+                      "resourceCount"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}": {
+      "get": {
+        "operationId": "organizations.getOrganization",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "logo": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "type": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "research_institute",
+                            "non_profit",
+                            "private_company",
+                            "government_agency",
+                            "university"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "website": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "location": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
+                    "memberCount": {
+                      "type": "integer"
+                    },
+                    "resourceCount": {
+                      "type": "integer"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "role": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "owner",
+                            "admin",
+                            "member"
+                          ],
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "membershipStatus": {
+                      "enum": [
+                        "none",
+                        "pending_request",
+                        "member"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "slug",
+                    "logo",
+                    "type",
+                    "description",
+                    "website",
+                    "location",
+                    "visibility",
+                    "memberCount",
+                    "resourceCount",
+                    "createdAt",
+                    "role",
+                    "membershipStatus"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}/resources": {
+      "get": {
+        "operationId": "organizations.listOrganizationResources",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "resources": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "experiment"
+                              },
+                              "status": {
+                                "enum": [
+                                  "active",
+                                  "stale",
+                                  "archived",
+                                  "published"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "status"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "protocol"
+                              },
+                              "family": {
+                                "enum": [
+                                  "multispeq",
+                                  "ambyte",
+                                  "minipar",
+                                  "generic",
+                                  "ambit",
+                                  "mobile"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "family"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "macro"
+                              },
+                              "language": {
+                                "enum": [
+                                  "python",
+                                  "r",
+                                  "javascript"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "language"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "workbook"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "device"
+                              },
+                              "deviceType": {
+                                "enum": [
+                                  "multispeq",
+                                  "ambyte",
+                                  "minipar",
+                                  "generic",
+                                  "ambit",
+                                  "mobile"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "deviceType"
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "experiment": {
+                          "type": "integer"
+                        },
+                        "protocol": {
+                          "type": "integer"
+                        },
+                        "macro": {
+                          "type": "integer"
+                        },
+                        "workbook": {
+                          "type": "integer"
+                        },
+                        "device": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "experiment",
+                        "protocol",
+                        "macro",
+                        "workbook",
+                        "device"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "resources",
+                    "totals"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}/members": {
+      "get": {
+        "operationId": "organizations.listOrganizationMembers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "userId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "firstName": {
+                            "type": "string"
+                          },
+                          "lastName": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "avatarUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "role": {
+                            "type": "string"
+                          },
+                          "joinedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "userId",
+                          "firstName",
+                          "lastName",
+                          "email",
+                          "avatarUrl",
+                          "role",
+                          "joinedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "members"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}/deletion-blockers": {
+      "get": {
+        "operationId": "organizations.getOrganizationDeletionBlockers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "blockers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "resourceType": {
+                            "enum": [
+                              "experiment",
+                              "macro",
+                              "protocol",
+                              "workbook",
+                              "device",
+                              "device_group"
+                            ],
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "resourceType",
+                          "count"
+                        ]
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "blockers",
+                    "total"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}/teams": {
+      "get": {
+        "operationId": "organizations.listOrganizationTeams",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "organizationId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "members": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "userId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "firstName": {
+                              "type": "string"
+                            },
+                            "lastName": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "avatarUrl": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "userId",
+                            "firstName",
+                            "lastName",
+                            "email",
+                            "avatarUrl"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "organizationId",
+                      "createdAt",
+                      "members"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}/team-grants": {
+      "get": {
+        "operationId": "organizations.listOrganizationTeamGrants",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID of the grant row"
+                      },
+                      "teamId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "resourceType": {
+                        "enum": [
+                          "experiment",
+                          "macro",
+                          "protocol",
+                          "workbook",
+                          "device",
+                          "device_group"
+                        ],
+                        "type": "string"
+                      },
+                      "resourceId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "resourceName": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "enum": [
+                          "owner",
+                          "admin",
+                          "viewer"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "teamId",
+                      "resourceType",
+                      "resourceId",
+                      "resourceName",
+                      "role"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/{resourceType}/{id}/grantee-teams": {
+      "get": {
+        "operationId": "organizations.listGranteeTeams",
+        "parameters": [
+          {
+            "name": "resourceType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "experiment",
+                "macro",
+                "protocol",
+                "workbook",
+                "device",
+                "device_group"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the resource being shared"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "organizationId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "memberCount": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "organizationId",
+                      "memberCount"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}/join-requests": {
+      "post": {
+        "operationId": "organizations.createOrganizationJoinRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "maxLength": 250,
+                    "description": "Optional short message to the organization's owners and admins"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "firstName": {
+                          "type": "string"
+                        },
+                        "lastName": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "avatarUrl": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "firstName",
+                        "lastName",
+                        "email",
+                        "avatarUrl"
+                      ]
+                    },
+                    "message": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "approved",
+                        "rejected",
+                        "cancelled"
+                      ],
+                      "type": "string"
+                    },
+                    "decidedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "decidedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "organizationId",
+                    "user",
+                    "message",
+                    "status",
+                    "decidedBy",
+                    "decidedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "organizations.listOrganizationJoinRequests",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "organizationId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "user": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "firstName": {
+                            "type": "string"
+                          },
+                          "lastName": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "avatarUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "firstName",
+                          "lastName",
+                          "email",
+                          "avatarUrl"
+                        ]
+                      },
+                      "message": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "status": {
+                        "enum": [
+                          "pending",
+                          "approved",
+                          "rejected",
+                          "cancelled"
+                        ],
+                        "type": "string"
+                      },
+                      "decidedBy": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "decidedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "organizationId",
+                      "user",
+                      "message",
+                      "status",
+                      "decidedBy",
+                      "decidedAt",
+                      "createdAt",
+                      "updatedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}/join-requests/me": {
+      "delete": {
+        "operationId": "organizations.cancelMyOrganizationJoinRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}/join-requests/{requestId}": {
+      "patch": {
+        "operationId": "organizations.decideOrganizationJoinRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the organization"
+            }
+          },
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the join request"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "decision": {
+                    "enum": [
+                      "approve",
+                      "reject"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "firstName": {
+                          "type": "string"
+                        },
+                        "lastName": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "avatarUrl": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "firstName",
+                        "lastName",
+                        "email",
+                        "avatarUrl"
+                      ]
+                    },
+                    "message": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "approved",
+                        "rejected",
+                        "cancelled"
+                      ],
+                      "type": "string"
+                    },
+                    "decidedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "decidedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "organizationId",
+                    "user",
+                    "message",
+                    "status",
+                    "decidedBy",
+                    "decidedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/protocols": {
       "get": {
         "operationId": "protocols.listProtocols",
@@ -17575,6 +19351,16 @@
                           {
                             "type": "string",
                             "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "organizationName": {
+                        "anyOf": [
+                          {
+                            "type": "string"
                           },
                           {
                             "type": "null"
@@ -18122,6 +19908,16 @@
                         }
                       ]
                     },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "visibility": {
                       "enum": [
                         "private",
@@ -18436,6 +20232,16 @@
                         }
                       ]
                     },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "visibility": {
                       "enum": [
                         "private",
@@ -18460,6 +20266,9 @@
                         },
                         "canLeave": {
                           "type": "boolean"
+                        },
+                        "canTransfer": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -18467,7 +20276,8 @@
                         "canUpdate",
                         "canManage",
                         "canShare",
-                        "canLeave"
+                        "canLeave",
+                        "canTransfer"
                       ]
                     }
                   },
@@ -18996,6 +20806,16 @@
                         }
                       ]
                     },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "visibility": {
                       "enum": [
                         "private",
@@ -19504,13 +21324,17 @@
                             "type": "string",
                             "format": "uuid"
                           },
+                          "organizationName": {
+                            "type": "string"
+                          },
                           "grantee": {
                             "type": "object",
                             "properties": {
                               "type": {
                                 "enum": [
                                   "user",
-                                  "organization"
+                                  "organization",
+                                  "team"
                                 ],
                                 "type": "string"
                               },
@@ -19543,13 +21367,52 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "memberCount": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [
                               "type",
                               "displayName",
                               "email",
-                              "avatarUrl"
+                              "avatarUrl",
+                              "memberCount"
+                            ]
+                          },
+                          "inertGrant": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "owner",
+                                      "admin",
+                                      "viewer"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
                             ]
                           }
                         },
@@ -19557,7 +21420,57 @@
                           "kind",
                           "granteeType",
                           "granteeId",
-                          "grantee"
+                          "organizationName",
+                          "grantee",
+                          "inertGrant"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgAdmins"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "adminCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "adminCount"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgMembers"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "memberCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "memberCount"
                         ]
                       },
                       {
@@ -19585,7 +21498,8 @@
                           "granteeType": {
                             "enum": [
                               "user",
-                              "organization"
+                              "organization",
+                              "team"
                             ],
                             "type": "string"
                           },
@@ -19624,7 +21538,8 @@
                               "type": {
                                 "enum": [
                                   "user",
-                                  "organization"
+                                  "organization",
+                                  "team"
                                 ],
                                 "type": "string"
                               },
@@ -19657,17 +21572,59 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "memberCount": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [
                               "type",
                               "displayName",
                               "email",
-                              "avatarUrl"
+                              "avatarUrl",
+                              "memberCount"
                             ]
                           },
                           "kind": {
                             "const": "grant"
+                          },
+                          "owningOrganization": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "admin",
+                                      "member"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -19681,7 +21638,8 @@
                           "createdBy",
                           "isOutsideCollaborator",
                           "grantee",
-                          "kind"
+                          "kind",
+                          "owningOrganization"
                         ]
                       }
                     ]
@@ -19732,7 +21690,8 @@
                   "granteeType": {
                     "enum": [
                       "user",
-                      "organization"
+                      "organization",
+                      "team"
                     ],
                     "type": "string"
                   },
@@ -19779,13 +21738,17 @@
                             "type": "string",
                             "format": "uuid"
                           },
+                          "organizationName": {
+                            "type": "string"
+                          },
                           "grantee": {
                             "type": "object",
                             "properties": {
                               "type": {
                                 "enum": [
                                   "user",
-                                  "organization"
+                                  "organization",
+                                  "team"
                                 ],
                                 "type": "string"
                               },
@@ -19818,13 +21781,52 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "memberCount": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [
                               "type",
                               "displayName",
                               "email",
-                              "avatarUrl"
+                              "avatarUrl",
+                              "memberCount"
+                            ]
+                          },
+                          "inertGrant": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "owner",
+                                      "admin",
+                                      "viewer"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
                             ]
                           }
                         },
@@ -19832,7 +21834,57 @@
                           "kind",
                           "granteeType",
                           "granteeId",
-                          "grantee"
+                          "organizationName",
+                          "grantee",
+                          "inertGrant"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgAdmins"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "adminCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "adminCount"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgMembers"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "memberCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "memberCount"
                         ]
                       },
                       {
@@ -19860,7 +21912,8 @@
                           "granteeType": {
                             "enum": [
                               "user",
-                              "organization"
+                              "organization",
+                              "team"
                             ],
                             "type": "string"
                           },
@@ -19899,7 +21952,8 @@
                               "type": {
                                 "enum": [
                                   "user",
-                                  "organization"
+                                  "organization",
+                                  "team"
                                 ],
                                 "type": "string"
                               },
@@ -19932,17 +21986,59 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "memberCount": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [
                               "type",
                               "displayName",
                               "email",
-                              "avatarUrl"
+                              "avatarUrl",
+                              "memberCount"
                             ]
                           },
                           "kind": {
                             "const": "grant"
+                          },
+                          "owningOrganization": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "admin",
+                                      "member"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -19956,7 +22052,8 @@
                           "createdBy",
                           "isOutsideCollaborator",
                           "grantee",
-                          "kind"
+                          "kind",
+                          "owningOrganization"
                         ]
                       }
                     ]
@@ -20053,13 +22150,17 @@
                             "type": "string",
                             "format": "uuid"
                           },
+                          "organizationName": {
+                            "type": "string"
+                          },
                           "grantee": {
                             "type": "object",
                             "properties": {
                               "type": {
                                 "enum": [
                                   "user",
-                                  "organization"
+                                  "organization",
+                                  "team"
                                 ],
                                 "type": "string"
                               },
@@ -20092,13 +22193,52 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "memberCount": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [
                               "type",
                               "displayName",
                               "email",
-                              "avatarUrl"
+                              "avatarUrl",
+                              "memberCount"
+                            ]
+                          },
+                          "inertGrant": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "owner",
+                                      "admin",
+                                      "viewer"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
                             ]
                           }
                         },
@@ -20106,7 +22246,57 @@
                           "kind",
                           "granteeType",
                           "granteeId",
-                          "grantee"
+                          "organizationName",
+                          "grantee",
+                          "inertGrant"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgAdmins"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "adminCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "adminCount"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "orgMembers"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "memberCount": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "organizationId",
+                          "organizationName",
+                          "memberCount"
                         ]
                       },
                       {
@@ -20134,7 +22324,8 @@
                           "granteeType": {
                             "enum": [
                               "user",
-                              "organization"
+                              "organization",
+                              "team"
                             ],
                             "type": "string"
                           },
@@ -20173,7 +22364,8 @@
                               "type": {
                                 "enum": [
                                   "user",
-                                  "organization"
+                                  "organization",
+                                  "team"
                                 ],
                                 "type": "string"
                               },
@@ -20206,17 +22398,59 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "memberCount": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [
                               "type",
                               "displayName",
                               "email",
-                              "avatarUrl"
+                              "avatarUrl",
+                              "memberCount"
                             ]
                           },
                           "kind": {
                             "const": "grant"
+                          },
+                          "owningOrganization": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "enum": [
+                                      "admin",
+                                      "member"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "role"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -20230,7 +22464,8 @@
                           "createdBy",
                           "isOutsideCollaborator",
                           "grantee",
-                          "kind"
+                          "kind",
+                          "owningOrganization"
                         ]
                       }
                     ]
@@ -20354,7 +22589,7 @@
         }
       }
     },
-    "/api/v1/organizations/search": {
+    "/api/v1/grantee-organizations": {
       "get": {
         "operationId": "sharing.searchGranteeOrganizations",
         "parameters": [
@@ -20414,6 +22649,148 @@
                       "id",
                       "name",
                       "slug"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/{resourceType}/{id}/grantee-users": {
+      "get": {
+        "operationId": "sharing.searchGranteeUsers",
+        "parameters": [
+          {
+            "name": "resourceType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "experiment",
+                "macro",
+                "protocol",
+                "workbook",
+                "device",
+                "device_group"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the resource being shared"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "description": "Name or email substring to match"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Maximum number of users to return"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "userId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "firstName": {
+                        "type": "string"
+                      },
+                      "lastName": {
+                        "type": "string"
+                      },
+                      "email": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "avatarUrl": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "organizationRole": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "member"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "existingGrantRole": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "viewer"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "userId",
+                      "firstName",
+                      "lastName",
+                      "email",
+                      "avatarUrl",
+                      "organizationRole",
+                      "existingGrantRole"
                     ]
                   }
                 }
@@ -20523,6 +22900,93 @@
                   },
                   "required": [
                     "results"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/{resourceType}/{id}/transfer": {
+      "post": {
+        "operationId": "sharing.transferResourceOrganization",
+        "parameters": [
+          {
+            "name": "resourceType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "experiment",
+                "macro",
+                "protocol",
+                "workbook"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the resource being transferred"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetOrganizationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Organization to move the resource to; the caller must be a member of it"
+                  }
+                },
+                "required": [
+                  "targetOrganizationId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "resourceType": {
+                      "enum": [
+                        "experiment",
+                        "macro",
+                        "protocol",
+                        "workbook"
+                      ],
+                      "type": "string"
+                    },
+                    "resourceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "resourceType",
+                    "resourceId",
+                    "organizationId"
                   ]
                 }
               }
@@ -21006,10 +23470,34 @@
                           "candidates"
                         ]
                       }
+                    },
+                    "organizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug"
+                        ]
+                      }
                     }
                   },
                   "required": [
-                    "resources"
+                    "resources",
+                    "organizations"
                   ]
                 }
               }
@@ -21522,6 +24010,16 @@
                           {
                             "type": "string",
                             "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "organizationName": {
+                        "anyOf": [
+                          {
+                            "type": "string"
                           },
                           {
                             "type": "null"
@@ -22604,6 +25102,16 @@
                         }
                       ]
                     },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "visibility": {
                       "enum": [
                         "private",
@@ -23181,6 +25689,16 @@
                         }
                       ]
                     },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "visibility": {
                       "enum": [
                         "private",
@@ -23238,6 +25756,9 @@
                         },
                         "canLeave": {
                           "type": "boolean"
+                        },
+                        "canTransfer": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -23245,7 +25766,8 @@
                         "canUpdate",
                         "canManage",
                         "canShare",
-                        "canLeave"
+                        "canLeave",
+                        "canTransfer"
                       ]
                     }
                   },
@@ -24265,6 +26787,16 @@
                         {
                           "type": "string",
                           "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
                         },
                         {
                           "type": "null"

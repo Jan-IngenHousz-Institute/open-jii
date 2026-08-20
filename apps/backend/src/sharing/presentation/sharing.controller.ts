@@ -5,6 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { sharingContract } from "@repo/api/domains/sharing/sharing.contract";
 import { sharingTransferAdminContract } from "@repo/api/domains/sharing/transfer-admin/sharing-transfer-admin.contract";
+import { sharingTransferOrgContract } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.contract";
 
 import { formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
@@ -13,7 +14,9 @@ import { LeaveResourceUseCase } from "../application/use-cases/leave-resource/le
 import { ListGrantsUseCase } from "../application/use-cases/list-grants/list-grants";
 import { RevokeGrantUseCase } from "../application/use-cases/revoke-grant/revoke-grant";
 import { SearchGranteeOrganizationsUseCase } from "../application/use-cases/search-grantee-organizations/search-grantee-organizations";
+import { SearchGranteeUsersUseCase } from "../application/use-cases/search-grantee-users/search-grantee-users";
 import { TransferResourceAdminUseCase } from "../application/use-cases/transfer-resource-admin/transfer-resource-admin";
+import { TransferResourceOrgUseCase } from "../application/use-cases/transfer-resource-org/transfer-resource-org";
 import { UpdateGrantUseCase } from "../application/use-cases/update-grant/update-grant";
 
 /**
@@ -32,7 +35,9 @@ export class SharingController {
     private readonly leaveResourceUseCase: LeaveResourceUseCase,
     private readonly revokeGrantUseCase: RevokeGrantUseCase,
     private readonly transferResourceAdminUseCase: TransferResourceAdminUseCase,
+    private readonly transferResourceOrgUseCase: TransferResourceOrgUseCase,
     private readonly searchGranteeOrganizationsUseCase: SearchGranteeOrganizationsUseCase,
+    private readonly searchGranteeUsersUseCase: SearchGranteeUsersUseCase,
   ) {}
 
   @Implement(sharingContract.listGrants)
@@ -139,6 +144,29 @@ export class SharingController {
   }
 
   /**
+   * Move a resource to another organization. No `@CanAccess` guard for the same
+   * reason as the rest of this controller — the resource type is a runtime path
+   * value — and the gate is more than access anyway: see the use-case.
+   */
+  @Implement(sharingTransferOrgContract.transferResourceOrganization)
+  transferResourceOrganization(@Session() session: UserSession) {
+    return implement(sharingTransferOrgContract.transferResourceOrganization).handler(
+      async ({ input }) => {
+        const result = await this.transferResourceOrgUseCase.execute(
+          session.user.id,
+          input.resourceType,
+          input.id,
+          input.targetOrganizationId,
+        );
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
+  }
+
+  /**
    * Organization lookup for the grantee picker. Read-scoped to the caller's own
    * memberships (see the use-case), so it needs no per-resource authorization.
    */
@@ -149,6 +177,26 @@ export class SharingController {
         query: input.query,
         limit: input.limit,
       });
+      if (result.isSuccess()) {
+        return result.value;
+      }
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  /**
+   * User lookup for the grantee picker, annotated with the access each candidate
+   * already holds here — so `can(share)` inside the use-case, not mere sign-in.
+   */
+  @Implement(sharingContract.searchGranteeUsers)
+  searchGranteeUsers(@Session() session: UserSession) {
+    return implement(sharingContract.searchGranteeUsers).handler(async ({ input }) => {
+      const result = await this.searchGranteeUsersUseCase.execute(
+        session.user.id,
+        input.resourceType,
+        input.id,
+        { query: input.query, limit: input.limit },
+      );
       if (result.isSuccess()) {
         return result.value;
       }

@@ -48,7 +48,13 @@ describe("ProtocolCollaboratorsPage", () => {
         createResourceGrant({
           resourceType: "protocol",
           resourceId: "proto-1",
-          grantee: { type: "user", displayName: "Lin Zhao", email: "lin@uni.edu", avatarUrl: null },
+          grantee: {
+            type: "user",
+            displayName: "Lin Zhao",
+            email: "lin@uni.edu",
+            avatarUrl: null,
+            memberCount: null,
+          },
         }),
       ],
     });

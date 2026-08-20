@@ -37,6 +37,7 @@ interface NavigationData {
   navExperiments: NavigationItem[];
   navDevices: NavigationItem[];
   navWorkbooks: NavigationItem[];
+  navOrganizations: NavigationItem[];
   navLibrary: NavigationItem[];
 }
 
@@ -47,6 +48,7 @@ interface Translations {
   experimentsTitle: string;
   libraryTitle: string;
   workbooksTitle: string;
+  organizationsTitle: string;
 }
 
 export function AppSidebar({
@@ -90,6 +92,7 @@ export function AppSidebar({
   const processedNavExperiments = navigationData.navExperiments.map(mapItem);
   const processedNavDevices = navigationData.navDevices.map(mapItem);
   const processedNavWorkbooks = navigationData.navWorkbooks.map(mapItem);
+  const processedNavOrganizations = navigationData.navOrganizations.map(mapItem);
   const processedNavLibrary = navigationData.navLibrary.map(mapItem);
 
   return (
@@ -130,6 +133,7 @@ export function AppSidebar({
           <NavItems items={processedNavExperiments} />
           <NavItems items={processedNavDevices} />
           <NavItems items={processedNavWorkbooks} />
+          <NavItems items={processedNavOrganizations} />
           <NavItems items={processedNavLibrary} />
         </div>
 

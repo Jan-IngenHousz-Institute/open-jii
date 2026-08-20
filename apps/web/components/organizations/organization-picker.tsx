@@ -1,0 +1,96 @@
+"use client";
+
+import { DocsHelpLink } from "@/components/docs-help-link";
+import { useMyOrganizations } from "@/hooks/organization/useMyOrganizations/useMyOrganizations";
+import { UserRound } from "lucide-react";
+
+import { useTranslation } from "@repo/i18n";
+import { Label } from "@repo/ui/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
+
+interface OrganizationPickerProps {
+  /** `undefined` means the default target — the caller's personal workspace. */
+  value: string | undefined;
+  onChange: (organizationId: string | undefined) => void;
+  disabled?: boolean;
+  /** Field id, so a host form can label it in its own layout. */
+  id?: string;
+  className?: string;
+}
+
+/**
+ * Which organization a new resource belongs to. The default is the personal
+ * workspace — the same default the backend applies when the field is omitted — so
+ * creating something without thinking about organizations behaves as it always did.
+ *
+ * Renders nothing when the caller belongs to no organization beyond their own
+ * workspace: a picker with a single unchangeable option is a decision presented
+ * where none exists. The membership check still happens server-side on create.
+ */
+export function OrganizationPicker({
+  value,
+  onChange,
+  disabled = false,
+  id = "resource-organization",
+  className,
+}: OrganizationPickerProps) {
+  const { t } = useTranslation();
+  const { data } = useMyOrganizations();
+
+  const organizations = data ?? [];
+  const personal = organizations.find((organization) => organization.isPersonal);
+  const shared = organizations.filter((organization) => !organization.isPersonal);
+
+  if (shared.length === 0) return null;
+
+  return (
+    <div className={className ?? "space-y-1.5"}>
+      <Label htmlFor={id}>{t("organizations.picker.label")}</Label>
+      {/* Personal is shown as its own id so the Select has something to select, but the
+          contract is `undefined` — mapped back here so a return to Personal omits the
+          field on the wire rather than naming the personal workspace. */}
+      <Select
+        value={value ?? personal?.id ?? ""}
+        onValueChange={(next) => onChange(next === personal?.id ? undefined : next)}
+        disabled={disabled}
+      >
+        <SelectTrigger id={id} aria-label={t("organizations.picker.label")}>
+          <SelectValue placeholder={t("organizations.picker.personal")} />
+        </SelectTrigger>
+        <SelectContent>
+          {personal ? (
+            <>
+              <SelectGroup className="bg-muted/50 -mx-1 -mt-1 block border-b px-1 pb-1 pt-1">
+                <SelectItem value={personal.id} className="py-2">
+                  <span className="flex items-center gap-2">
+                    <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    {t("organizations.picker.personal")}
+                  </span>
+                </SelectItem>
+                <p className="text-muted-foreground px-2 pb-1 text-xs leading-relaxed">
+                  {t("organizations.picker.personalCaption")}
+                </p>
+              </SelectGroup>
+              {shared.length > 0 ? <SelectSeparator className="my-1.5" /> : null}
+            </>
+          ) : null}
+          {shared.map((organization) => (
+            <SelectItem key={organization.id} value={organization.id}>
+              {organization.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-muted-foreground text-xs">{t("organizations.picker.hint")}</p>
+      <DocsHelpLink path="/guide/sharing/choosing-the-owning-workspace" />
+    </div>
+  );
+}

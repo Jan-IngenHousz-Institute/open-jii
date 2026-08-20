@@ -8,6 +8,7 @@ import { locales } from "@repo/i18n/config";
 import deCommon from "@repo/i18n/locales/de-DE/common.json";
 
 import { generateMetadata as generateApiKeysMetadata } from "../account/api-keys/page";
+import { generateMetadata as generateInvitationsMetadata } from "../account/invitations/page";
 import { generateMetadata as generateAccountMetadata } from "../account/page";
 import { generateMetadata as generateSecurityMetadata } from "../account/security/page";
 import { generateMetadata as generateDevicesMetadata } from "../devices/page";
@@ -16,6 +17,8 @@ import { generateMetadata as generateNewExperimentMetadata } from "../experiment
 import { generateMetadata as generateExperimentsMetadata } from "../experiments/page";
 import { generateMetadata as generateNewMacroMetadata } from "../macros/new/page";
 import { generateMetadata as generateMacrosMetadata } from "../macros/page";
+import { generateMetadata as generateNewOrganizationMetadata } from "../organizations/new/page";
+import { generateMetadata as generateOrganizationsMetadata } from "../organizations/page";
 import { generateMetadata as generatePlatformMetadata } from "../page";
 import { generateMetadata as generateNewProtocolMetadata } from "../protocols/new/page";
 import { generateMetadata as generateProtocolsMetadata } from "../protocols/page";
@@ -38,6 +41,7 @@ const testedPlatformTitleBuilders = new Set([
   "buildDeviceGroupMetadata",
   "buildDeviceMetadata",
   "buildExperimentMetadata",
+  "buildOrganizationMetadata",
   "buildMacroMetadata",
   "buildProtocolMetadata",
   "buildProtocolRunMetadata",
@@ -158,8 +162,8 @@ function ownsTitleMetadata(source: string): boolean {
 describe("platform metadata ownership inventory", () => {
   const pageRoutes = findPageRoutes(platformDirectory).sort();
 
-  it("covers all 50 current page routes", () => {
-    expect(pageRoutes).toHaveLength(50);
+  it("covers all 58 current page routes", () => {
+    expect(pageRoutes).toHaveLength(58);
   });
 
   it.each(pageRoutes)("gives %s title ownership or a documented redirect exception", (route) => {
@@ -222,6 +226,7 @@ const { translations } = vi.hoisted(() => ({
   translations: {
     "en-US": {
       "account:apiKeys.title": "API keys",
+      "account:invitations.title": "Invitations",
       "account:security.title": "Security",
       "account:tabs.general": "General",
       "common:experiments.archiveTitle": "Experiments Archive",
@@ -235,10 +240,13 @@ const { translations } = vi.hoisted(() => ({
       "iot:iot.devices.title": "Devices",
       "macro:macros.newMacro": "New Macro",
       "macro:macros.title": "Macros",
+      "common:organizations.createAction": "Create organization",
+      "common:organizations.title": "Organizations",
       "workbook:workbooks.title": "Workbooks",
     },
     "de-DE": {
       "account:apiKeys.title": "API-Schlüssel",
+      "account:invitations.title": "Einladungen",
       "account:security.title": "Sicherheit",
       "account:tabs.general": "Allgemein",
       "common:experiments.archiveTitle": "Experiment-Archiv",
@@ -252,6 +260,8 @@ const { translations } = vi.hoisted(() => ({
       "iot:iot.devices.title": "Geräte",
       "macro:macros.newMacro": "Neues Makro",
       "macro:macros.title": "Makros",
+      "common:organizations.createAction": "Organisation erstellen",
+      "common:organizations.title": "Organisationen",
       "workbook:workbooks.title": "Arbeitsmappen",
     },
   } as const,
@@ -278,6 +288,7 @@ const routes = [
   ["account", generateAccountMetadata],
   ["security", generateSecurityMetadata],
   ["apiKeys", generateApiKeysMetadata],
+  ["invitations", generateInvitationsMetadata],
   ["devices", generateDevicesMetadata],
   ["experiments", generateExperimentsMetadata],
   ["newExperiment", generateNewExperimentMetadata],
@@ -289,6 +300,8 @@ const routes = [
   ["workbooks", generateWorkbooksMetadata],
   ["transferRequest", generateTransferRequestMetadata],
   ["transferHistory", generateTransferHistoryMetadata],
+  ["organizations", generateOrganizationsMetadata],
+  ["newOrganization", generateNewOrganizationMetadata],
 ] as const;
 
 const expectedTitles: Record<
@@ -300,6 +313,7 @@ const expectedTitles: Record<
     account: "General",
     security: "Security",
     apiKeys: "API keys",
+    invitations: "Invitations",
     devices: "Devices",
     experiments: "Experiments",
     newExperiment: "New Experiment",
@@ -311,12 +325,15 @@ const expectedTitles: Record<
     workbooks: "Workbooks",
     transferRequest: "Request Project Transfer",
     transferHistory: "Your Transfer Requests",
+    organizations: "Organizations",
+    newOrganization: "Create organization",
   },
   "de-DE": {
     dashboard: "Dashboard",
     account: "Allgemein",
     security: "Sicherheit",
     apiKeys: "API-Schlüssel",
+    invitations: "Einladungen",
     devices: "Geräte",
     experiments: "Experimente",
     newExperiment: "Neues Experiment",
@@ -328,13 +345,19 @@ const expectedTitles: Record<
     workbooks: "Arbeitsmappen",
     transferRequest: "Projekttransfer beantragen",
     transferHistory: "Ihre Transferanfragen",
+    organizations: "Organisationen",
+    newOrganization: "Organisation erstellen",
   },
 };
 
 async function getTitles(locale: string) {
   const entries = await Promise.all(
     routes.map(async ([route, generateMetadata]) => {
-      const metadata = await generateMetadata({ params: Promise.resolve({ locale }) });
+      // `id` is carried for the routes that have a dynamic segment; the ones
+      // without simply do not declare it.
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ locale, id: "invitation-1" }),
+      });
 
       if (typeof metadata.title !== "string") {
         throw new TypeError(`Expected a string title for ${route}`);

@@ -18,6 +18,7 @@ import {
 } from "@repo/ui/components/dialog";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { roleRaisesAccess } from "./collaborator-roles";
 import type { GranteeSelection } from "./grantee-picker";
 import { GranteePicker } from "./grantee-picker";
 import { RoleSelect } from "./role-select";
@@ -69,6 +70,11 @@ export function CollaboratorInviteDialog({
   const isSubmitting = isSharing || isEmailInvitePending;
   const controlsDisabled = disabled || isSubmitting;
 
+  // The tier can be changed after the grantee was picked, so what the picker ruled
+  // selectable at the time says nothing about what is about to be submitted.
+  const access = selection?.kind === "grantee" ? selection.grantee.access : undefined;
+  const isInertShare = !!access && !roleRaisesAccess(access, role, resourceType);
+
   const reset = () => {
     setSelection(null);
     setRole(DEFAULT_ROLE);
@@ -85,7 +91,7 @@ export function CollaboratorInviteDialog({
   };
 
   const handleSubmit = async () => {
-    if (!selection || disabled) return;
+    if (!selection || disabled || isInertShare) return;
 
     try {
       if (selection.kind === "grantee") {
@@ -127,6 +133,9 @@ export function CollaboratorInviteDialog({
 
         <div className="space-y-3 py-2">
           <GranteePicker
+            resourceType={resourceType}
+            resourceId={resourceId}
+            role={role}
             selection={selection}
             onSelectionChange={setSelection}
             allowEmailInvite={!!onEmailInvite}
@@ -145,6 +154,12 @@ export function CollaboratorInviteDialog({
             />
           </div>
 
+          {isInertShare && (
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              {t("sharing.granteeTierAddsNothing")}
+            </p>
+          )}
+
           {hint ? <p className="text-muted-foreground text-xs leading-relaxed">{hint}</p> : null}
         </div>
 
@@ -152,7 +167,10 @@ export function CollaboratorInviteDialog({
           <Button variant="ghost" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={() => void handleSubmit()} disabled={controlsDisabled || !selection}>
+          <Button
+            onClick={() => void handleSubmit()}
+            disabled={controlsDisabled || !selection || isInertShare}
+          >
             {isSubmitting ? t("sharing.sharing") : t("common.add")}
           </Button>
         </DialogFooter>

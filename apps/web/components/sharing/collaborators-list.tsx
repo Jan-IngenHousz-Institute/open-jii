@@ -6,6 +6,7 @@ import { Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
+import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import type {
   ResourceCollaboratorDto,
   ResourceGrantDto,
@@ -17,8 +18,42 @@ import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { effectiveRole } from "./collaborator-roles";
 import { CollaboratorRow } from "./collaborator-row";
+import type { RetainedAccess } from "./revoke-collaborator-dialog";
 import { RevokeCollaboratorDialog } from "./revoke-collaborator-dialog";
+
+/** What a confirmed revoke needs, from either a grant row or an org row's inert grant. */
+interface PendingRevoke {
+  grantId: string;
+  name: string;
+  isSelf: boolean;
+  /** Org-derived access the revoke leaves behind, when the row resolved one. */
+  retainedAccess: RetainedAccess | null;
+}
+
+/**
+ * What removing this row's grant would leave the person with. Only the organization
+ * side is knowable here — a team grant or public visibility is not — so the dialog
+ * falls back to its hedged wording when this is `null`.
+ */
+function retainedAccessOf(
+  row: ResourceCollaboratorDto,
+  resourceType: SharingResourceType,
+): RetainedAccess | null {
+  if (row.kind === "owner") {
+    return { organizationName: row.organizationName, organizationRole: "owner", tier: "admin" };
+  }
+  if (row.kind !== "grant" || !row.owningOrganization) return null;
+  return {
+    organizationName: row.owningOrganization.name,
+    organizationRole: row.owningOrganization.role,
+    tier: effectiveRole(
+      { organizationRole: row.owningOrganization.role, existingGrantRole: null },
+      resourceType,
+    ),
+  };
+}
 
 interface CollaboratorsListProps {
   resourceType: SharingResourceType;
@@ -58,7 +93,7 @@ export function CollaboratorsList({
   const { mutateAsync: revoke, isPending: isRevoking } = useCollaboratorRevoke();
 
   const [busyGrantId, setBusyGrantId] = useState<string | null>(null);
-  const [pendingRevoke, setPendingRevoke] = useState<ResourceGrantDto | null>(null);
+  const [pendingRevoke, setPendingRevoke] = useState<PendingRevoke | null>(null);
 
   // Close the live revoke path if the surface becomes read-only mid-session.
   useEffect(() => {
@@ -66,13 +101,24 @@ export function CollaboratorsList({
   }, [readOnly]);
 
   const isSelfRow = (row: ResourceCollaboratorDto) =>
-    !!currentUserId && row.granteeType === "user" && row.granteeId === currentUserId;
+    !!currentUserId &&
+    isGranteeRow(row) &&
+    row.granteeType === "user" &&
+    row.granteeId === currentUserId;
 
-  // Owners first, then the signed-in user's grant.
+  // Org-derived access first — grants sit on top of it — then the caller's own row.
+  const rank = (row: ResourceCollaboratorDto) =>
+    row.kind === "owner" ? 0 : row.kind === "orgAdmins" ? 1 : row.kind === "orgMembers" ? 2 : 3;
   const sortedGrants = [...grants].sort((a, b) => {
-    const byOwner = Number(b.kind === "owner") - Number(a.kind === "owner");
-    return byOwner !== 0 ? byOwner : Number(isSelfRow(b)) - Number(isSelfRow(a));
+    const byKind = rank(a) - rank(b);
+    return byKind !== 0 ? byKind : Number(isSelfRow(b)) - Number(isSelfRow(a));
   });
+
+  /** The name a revoke confirmation names, for either row shape. */
+  const revokeTargetName = (row: ResourceCollaboratorDto) =>
+    isGranteeRow(row)
+      ? (row.grantee.displayName ?? row.grantee.email ?? row.granteeId)
+      : row.organizationName;
 
   const handleRoleChange = async (grant: ResourceGrantDto, role: ShareableRole) => {
     setBusyGrantId(grant.id);
@@ -93,13 +139,11 @@ export function CollaboratorsList({
     // Guard against a confirm racing with a read-only transition.
     if (readOnly || !pendingRevoke) return;
     const grant = pendingRevoke;
-    setBusyGrantId(grant.id);
+    setBusyGrantId(grant.grantId);
     try {
-      await revoke({ resourceType, id: resourceId, grantId: grant.id });
+      await revoke({ resourceType, id: resourceId, grantId: grant.grantId });
       toast({
-        description: isSelfRow(grant)
-          ? t("sharing.leftResource")
-          : t("sharing.collaboratorRevoked"),
+        description: grant.isSelf ? t("sharing.leftResource") : t("sharing.collaboratorRevoked"),
       });
       setPendingRevoke(null);
     } catch (err) {
@@ -163,17 +207,32 @@ export function CollaboratorsList({
       >
         {sortedGrants.map((row) => (
           <CollaboratorRow
-            // Owner rows have no grant id.
-            key={row.kind === "owner" ? `owner-${row.granteeId}` : row.id}
+            // Only grant rows have a grant id to key on.
+            key={rowKey(row)}
             collaborator={row}
+            resourceType={resourceType}
             isSelf={isSelfRow(row)}
-            isBusy={row.kind === "grant" && busyGrantId === row.id}
+            isBusy={busyGrantId !== null && busyGrantId === grantIdOf(row)}
             disabled={readOnly}
             onRoleChange={(role) => {
               if (row.kind === "grant") void handleRoleChange(row, role);
             }}
             onRevoke={() => {
-              if (row.kind === "grant") setPendingRevoke(row);
+              // An org row's only revocable thing is the inert grant riding on it.
+              const grantId =
+                row.kind === "grant"
+                  ? row.id
+                  : row.kind === "owner"
+                    ? row.inertGrant?.id
+                    : undefined;
+              if (grantId) {
+                setPendingRevoke({
+                  grantId,
+                  name: revokeTargetName(row),
+                  isSelf: isSelfRow(row),
+                  retainedAccess: retainedAccessOf(row, resourceType),
+                });
+              }
             }}
           />
         ))}
@@ -184,17 +243,32 @@ export function CollaboratorsList({
         onOpenChange={(open) => {
           if (!open) setPendingRevoke(null);
         }}
-        granteeName={
-          pendingRevoke?.grantee.displayName ??
-          pendingRevoke?.grantee.email ??
-          pendingRevoke?.granteeId ??
-          ""
-        }
-        isSelf={pendingRevoke !== null && isSelfRow(pendingRevoke)}
+        granteeName={pendingRevoke?.name ?? ""}
+        isSelf={pendingRevoke?.isSelf ?? false}
+        retainedAccess={pendingRevoke?.retainedAccess ?? null}
         isRevoking={isRevoking}
         confirmDisabled={readOnly}
         onConfirm={() => void confirmRevoke()}
       />
     </>
   );
+}
+
+/** A stable key per row: grants have an id, the synthesized rows are keyed by subject. */
+function rowKey(row: ResourceCollaboratorDto): string {
+  switch (row.kind) {
+    case "grant":
+      return row.id;
+    case "owner":
+      return `owner-${row.granteeId}`;
+    case "orgAdmins":
+      return `admins-${row.organizationId}`;
+    case "orgMembers":
+      return `members-${row.organizationId}`;
+  }
+}
+
+/** The grant a row can revoke, direct or inert. */
+function grantIdOf(row: ResourceCollaboratorDto): string | undefined {
+  return row.kind === "grant" ? row.id : row.kind === "owner" ? row.inertGrant?.id : undefined;
 }

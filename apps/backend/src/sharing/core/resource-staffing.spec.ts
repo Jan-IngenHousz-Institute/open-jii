@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
+import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import {
   and,
@@ -383,7 +384,9 @@ describe("last-admin invariant (sharing use-cases)", () => {
         .get(ListGrantsUseCase)
         .execute(multiOwner, "macro", macro.id);
       assertSuccess(listed);
-      expect(listed.value.map((row) => [row.kind, row.granteeId])).toEqual([["owner", multiOwner]]);
+      expect(
+        listed.value.flatMap((row) => (isGranteeRow(row) ? [[row.kind, row.granteeId]] : [])),
+      ).toEqual([["owner", multiOwner]]);
     });
   });
 
@@ -713,9 +716,9 @@ describe("last-admin invariant (sharing use-cases)", () => {
           const row = listed.value.find((r) => r.kind === "grant" && r.granteeId === keeper);
           expect(row?.kind).toBe("grant");
           expect(row?.kind === "grant" && row.role).toBe("admin");
-          expect(row?.grantee.displayName).toBe("Unknown User");
+          expect(row?.kind === "grant" && row.grantee.displayName).toBe("Unknown User");
           // Anonymized, not omitted: the identity is withheld, the row is not.
-          expect(row?.grantee.email).toBeNull();
+          expect(row?.kind === "grant" && row.grantee.email).toBeNull();
         });
 
         it("is still blocked from closing their account, so the resource has an exit", async () => {

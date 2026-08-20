@@ -24,6 +24,12 @@ export const zExperiment = z.object({
   workbookId: z.string().uuid().nullable(),
   workbookVersionId: z.string().uuid().nullable(),
   organizationId: z.string().uuid().nullable(),
+  /**
+   * Display name of the owning organization, `null` for a personal workspace.
+   * Populated by the detail read only — the lists have no room for it — which is
+   * why it is optional rather than required.
+   */
+  organizationName: z.string().nullish(),
   createdBy: z.string().uuid(),
   ownerFirstName: z.string().nullable().optional(),
   ownerLastName: z.string().nullable().optional(),

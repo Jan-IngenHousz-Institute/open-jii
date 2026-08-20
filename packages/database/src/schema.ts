@@ -231,7 +231,7 @@ export const orgBasePermissionEnum = pgEnum("org_base_permission", ["none", "rea
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
-  slug: varchar("slug", { length: 255 }).unique(),
+  slug: varchar("slug", { length: 255 }).unique().notNull(),
   logo: text("logo"),
   metadata: text("metadata"),
   type: organizationTypeEnum("type"),
@@ -240,6 +240,9 @@ export const organizations = pgTable("organizations", {
   location: text("location"),
   // Baseline access a plain member gets to this org's resources (default read).
   basePermission: orgBasePermissionEnum("base_permission").default("read").notNull(),
+  // Directory listing. Private by default, so an organization is only discoverable
+  // once somebody deliberately publishes it; personal organizations stay private.
+  visibility: visibilityEnum("visibility").default("private").notNull(),
   ...timestamps,
 });
 
@@ -268,22 +271,28 @@ export const organizationMembers = pgTable(
 // Organization Invitations (Better Auth organization plugin, model "invitation").
 // Separate from the legacy `invitations` table (platform/experiment), which is kept
 // during the transition and deprecated later.
-export const organizationInvitations = pgTable("organization_invitations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id")
-    .notNull()
-    .references(() => organizations.id, { onDelete: "cascade" }),
-  email: text("email").notNull(),
-  role: text("role"),
-  status: text("status").default("pending").notNull(),
-  inviterId: uuid("inviter_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  // Better Auth teams: optional team the invite is for.
-  teamId: uuid("team_id").references(() => teams.id, { onDelete: "set null" }),
-  expiresAt: timestamp("expires_at").notNull(),
-  ...timestamps,
-});
+export const organizationInvitations = pgTable(
+  "organization_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: text("role"),
+    status: text("status").default("pending").notNull(),
+    inviterId: uuid("inviter_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Better Auth teams: optional team the invite is for.
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "set null" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    ...timestamps,
+  },
+  // Every sign-in looks up the signer's pending invitations by email, so this
+  // lookup is on the hot path of authentication rather than of an org screen.
+  (t) => [index("organization_invitations_email_status_idx").on(t.email, t.status)],
+);
 
 // Teams (Better Auth organization plugin, model "team"): a sub-group within an org.
 export const teams = pgTable(
@@ -331,36 +340,43 @@ export const experimentStatusEnum = pgEnum("experiment_status", [
 // Experiment Visibility Enum
 export const experimentVisibilityEnum = pgEnum("experiment_visibility", ["private", "public"]);
 
-export const experiments = pgTable("experiments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
-  description: text("description"),
-  status: experimentStatusEnum("status").default("active").notNull(),
-  visibility: experimentVisibilityEnum("visibility").default("public").notNull(),
-  embargoUntil: timestamp("embargo_until")
-    .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
-    .notNull(),
-  anonymizeContributors: boolean("anonymize_contributors").default(false).notNull(),
-  workbookId: uuid("workbook_id").references(() => workbooks.id, { onDelete: "set null" }),
-  workbookVersionId: uuid("workbook_version_id").references(() => workbookVersions.id, {
-    onDelete: "set null",
-  }),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
-    .notNull(),
-  // Owning organization (nullable during transition; backfilled to the creator's
-  // personal org). Experiments already carry visibility above.
-  organizationId: uuid("organization_id").references(() => organizations.id, {
-    onDelete: "cascade",
-  }),
-  ...timestamps,
-  // Weighted full-text search vector: name (A) + description (B). See migration for the
-  // GENERATED ALWAYS expression and the GIN index. Excluded from API responses.
-  searchVector: tsvector("search_vector").generatedAlwaysAs(
-    (): SQL =>
-      sql`setweight(to_tsvector('english', coalesce(${experiments.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${experiments.description}, '')), 'B')`,
-  ),
-});
+export const experiments = pgTable(
+  "experiments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull().unique(),
+    description: text("description"),
+    status: experimentStatusEnum("status").default("active").notNull(),
+    visibility: experimentVisibilityEnum("visibility").default("public").notNull(),
+    embargoUntil: timestamp("embargo_until")
+      .default(sql`((now() AT TIME ZONE 'UTC') + interval '90 days')`)
+      .notNull(),
+    anonymizeContributors: boolean("anonymize_contributors").default(false).notNull(),
+    workbookId: uuid("workbook_id").references(() => workbooks.id, { onDelete: "set null" }),
+    workbookVersionId: uuid("workbook_version_id").references(() => workbookVersions.id, {
+      onDelete: "set null",
+    }),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    // Owning organization (nullable during transition; backfilled to the creator's
+    // personal org). Experiments already carry visibility above.
+    // RESTRICT, like every other org-owned resource: deleting an organization is
+    // refused while it still owns work, and the constraint is what holds when a
+    // transfer lands after the delete path counted.
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "restrict",
+    }),
+    ...timestamps,
+    // Weighted full-text search vector: name (A) + description (B). See migration for the
+    // GENERATED ALWAYS expression and the GIN index. Excluded from API responses.
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL =>
+        sql`setweight(to_tsvector('english', coalesce(${experiments.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${experiments.description}, '')), 'B')`,
+    ),
+  },
+  (t) => [index("experiments_organization_id_idx").on(t.organizationId)],
+);
 
 export const experimentMembersEnum = pgEnum("experiment_members_role", ["admin", "member"]);
 /**
@@ -406,9 +422,9 @@ export const invitations = pgTable(
     resourceType: invitationResourceTypeEnum("resource_type").notNull(),
     resourceId: uuid("resource_id"),
     email: text("email").notNull(),
-    // Kept as `member` for the lower tier while older application instances can
-    // accept pending invitations; application reads normalize it to `viewer`.
-    role: text("role").default("member").notNull(),
+    // The access tier granted on acceptance, as a `resourceGrants` role: 'admin' or
+    // the read-and-contribute tier 'viewer'. Written only from `InvitationTier`.
+    role: text("role").default("viewer").notNull(),
     status: invitationStatusEnum("status").default("pending").notNull(),
     invitedBy: uuid("invited_by")
       .references(() => users.id)
@@ -420,6 +436,8 @@ export const invitations = pgTable(
       "resource_id_check",
       sql`(${table.resourceType} = 'platform' AND ${table.resourceId} IS NULL) OR (${table.resourceType} != 'platform' AND ${table.resourceId} IS NOT NULL)`,
     ),
+    // Same hot path as the org invitations index above: resolved on every sign-in.
+    index("invitations_email_status_idx").on(table.email, table.status),
   ],
 );
 
@@ -457,6 +475,32 @@ export const experimentJoinRequests = pgTable(
   ],
 );
 
+// Organization Join Requests Table
+export const organizationJoinRequests = pgTable(
+  "organization_join_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    message: varchar("message", { length: 250 }),
+    status: joinRequestStatusEnum("status").default("pending").notNull(),
+    decidedBy: uuid("decided_by").references(() => users.id),
+    decidedAt: timestamp("decided_at"),
+    ...timestamps,
+  },
+  (table) => [
+    // At most one pending request per (organization, user); resolved rows are not deduped.
+    uniqueIndex("organization_join_requests_pending_uniq")
+      .on(table.organizationId, table.userId)
+      .where(sql`${table.status} = 'pending'`),
+    index("organization_join_requests_organization_idx").on(table.organizationId),
+  ],
+);
+
 // Audit Log Table
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -471,65 +515,73 @@ export const auditLogs = pgTable("audit_logs", {
 });
 
 // Protocols Table
-export const protocols = pgTable("protocols", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
-  description: text("description"),
-  code: postgresJsJsonb("code").notNull(),
-  family: sensorFamilyEnum("family").notNull(),
-  sortOrder: integer("sort_order"),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
-    .notNull(),
-  // Source protocol this was forked from (a copy made by a non-creator so they
-  // can edit it); null for originals.
-  forkedFrom: uuid("forked_from").references((): AnyPgColumn => protocols.id, {
-    onDelete: "set null",
-  }),
-  organizationId: uuid("organization_id").references(() => organizations.id, {
-    onDelete: "cascade",
-  }),
-  visibility: visibilityEnum("visibility").default("public").notNull(),
-  ...timestamps,
-  // Weighted full-text search vector: name (A) + description (B). The `family` enum is matched at
-  // query time (enum->text casts are not immutable, so they can't live in a generated column).
-  searchVector: tsvector("search_vector").generatedAlwaysAs(
-    (): SQL =>
-      sql`setweight(to_tsvector('english', coalesce(${protocols.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${protocols.description}, '')), 'B')`,
-  ),
-});
+export const protocols = pgTable(
+  "protocols",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull().unique(),
+    description: text("description"),
+    code: postgresJsJsonb("code").notNull(),
+    family: sensorFamilyEnum("family").notNull(),
+    sortOrder: integer("sort_order"),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    // Source protocol this was forked from (a copy made by a non-creator so they
+    // can edit it); null for originals.
+    forkedFrom: uuid("forked_from").references((): AnyPgColumn => protocols.id, {
+      onDelete: "set null",
+    }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "restrict",
+    }),
+    visibility: visibilityEnum("visibility").default("public").notNull(),
+    ...timestamps,
+    // Weighted full-text search vector: name (A) + description (B). The `family` enum is matched at
+    // query time (enum->text casts are not immutable, so they can't live in a generated column).
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL =>
+        sql`setweight(to_tsvector('english', coalesce(${protocols.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${protocols.description}, '')), 'B')`,
+    ),
+  },
+  (t) => [index("protocols_organization_id_idx").on(t.organizationId)],
+);
 
 // Macro Language Enum
 export const macroLanguageEnum = pgEnum("macro_language", ["python", "r", "javascript"]);
 
 // Macros Table - only stores metadata, actual code files are handled by Databricks
-export const macros = pgTable("macros", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull().unique(),
-  filename: varchar("filename", { length: 255 }).notNull().unique(),
-  description: text("description"),
-  language: macroLanguageEnum("language").notNull(),
-  code: text("code").notNull(), // Base64 encoded content of the macro code
-  sortOrder: integer("sort_order"),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
-    .notNull(),
-  // Source macro this was forked from; null for originals.
-  forkedFrom: uuid("forked_from").references((): AnyPgColumn => macros.id, {
-    onDelete: "set null",
-  }),
-  organizationId: uuid("organization_id").references(() => organizations.id, {
-    onDelete: "cascade",
-  }),
-  visibility: visibilityEnum("visibility").default("public").notNull(),
-  ...timestamps,
-  // Weighted full-text search vector: name (A) + description (B). The `language` enum is matched at
-  // query time (enum->text casts are not immutable, so they can't live in a generated column).
-  searchVector: tsvector("search_vector").generatedAlwaysAs(
-    (): SQL =>
-      sql`setweight(to_tsvector('english', coalesce(${macros.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${macros.description}, '')), 'B')`,
-  ),
-});
+export const macros = pgTable(
+  "macros",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull().unique(),
+    filename: varchar("filename", { length: 255 }).notNull().unique(),
+    description: text("description"),
+    language: macroLanguageEnum("language").notNull(),
+    code: text("code").notNull(), // Base64 encoded content of the macro code
+    sortOrder: integer("sort_order"),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    // Source macro this was forked from; null for originals.
+    forkedFrom: uuid("forked_from").references((): AnyPgColumn => macros.id, {
+      onDelete: "set null",
+    }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "restrict",
+    }),
+    visibility: visibilityEnum("visibility").default("public").notNull(),
+    ...timestamps,
+    // Weighted full-text search vector: name (A) + description (B). The `language` enum is matched at
+    // query time (enum->text casts are not immutable, so they can't live in a generated column).
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL =>
+        sql`setweight(to_tsvector('english', coalesce(${macros.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${macros.description}, '')), 'B')`,
+    ),
+  },
+  (t) => [index("macros_organization_id_idx").on(t.organizationId)],
+);
 
 // Protocol-Macro Compatibility (many-to-many)
 export const protocolMacros = pgTable(
@@ -647,7 +699,7 @@ export const workbooks = pgTable(
       onDelete: "set null",
     }),
     organizationId: uuid("organization_id").references(() => organizations.id, {
-      onDelete: "cascade",
+      onDelete: "restrict",
     }),
     visibility: visibilityEnum("visibility").default("public").notNull(),
     ...timestamps,
@@ -658,7 +710,10 @@ export const workbooks = pgTable(
         sql`setweight(to_tsvector('english', coalesce(${workbooks.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${workbooks.description}, '')), 'B')`,
     ),
   },
-  (table) => [index("workbooks_created_by_idx").on(table.createdBy)],
+  (table) => [
+    index("workbooks_created_by_idx").on(table.createdBy),
+    index("workbooks_organization_id_idx").on(table.organizationId),
+  ],
 );
 
 // Immutable cell snapshots; published when a workbook is attached to an experiment.
@@ -820,8 +875,10 @@ export const deviceGroups = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
+    // RESTRICT like every other org-owned resource: deleting an organization is
+    // refused while it still owns work, rather than taking the group with it.
     organizationId: uuid("organization_id").references(() => organizations.id, {
-      onDelete: "cascade",
+      onDelete: "restrict",
     }),
     visibility: visibilityEnum("visibility").default("private").notNull(),
     createdBy: uuid("created_by")

@@ -71,7 +71,7 @@ export class UserController {
 
       const result = await this.getDeletionBlockersUseCase.execute(input.id);
       if (result.isSuccess()) {
-        return { resources: result.value };
+        return result.value;
       }
       return throwOrpcFailure(result, this.logger);
     });

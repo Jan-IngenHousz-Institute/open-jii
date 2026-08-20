@@ -29,6 +29,9 @@ const navigationData = {
   navWorkbooks: [
     { title: "Workbooks", url: "/en/platform/workbooks", icon: "BookOpen", items: [] },
   ],
+  navOrganizations: [
+    { title: "Organizations", url: "/en/platform/organizations", icon: "Users", items: [] },
+  ],
   navLibrary: [
     {
       title: "Library",
@@ -51,6 +54,7 @@ const translations = {
   experimentsTitle: "Experiments",
   libraryTitle: "Library",
   workbooksTitle: "Workbooks",
+  organizationsTitle: "Organizations",
 };
 
 function renderSidebar() {
