@@ -588,8 +588,12 @@
         "workbook_one": "Werkmap",
         "workbook_other": "Werkmappen",
         "device_one": "Apparaat",
-        "device_other": "Apparaten"
+        "device_other": "Apparaten",
+        "device_group_one": "Apparaatgroep",
+        "device_group_other": "Apparaatgroepen"
       },
+      "groupMemberCount_one": "{{count}} apparaat",
+      "groupMemberCount_other": "{{count}} apparaten",
       "emptyTitle": "Nog niets te zien",
       "emptyMemberHint": "Resources die in deze organisatie worden aangemaakt, staan hier.",
       "emptyVisitorHint": "Deze organisatie heeft nog niets gepubliceerd.",

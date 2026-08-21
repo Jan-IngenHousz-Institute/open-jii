@@ -16,7 +16,7 @@ function mockSession(user: { id: string } | null) {
   } as ReturnType<typeof useSession>);
 }
 
-/** The authoritative blocker read: all five owned types, counts only. */
+/** The authoritative blocker read: every owned type, counts only. */
 function mountBlockers(blockers: OrganizationDeletionBlocker[]) {
   return server.mount(contract.organizations.getOrganizationDeletionBlockers, {
     body: { blockers, total: blockers.reduce((sum, { count }) => sum + count, 0) },

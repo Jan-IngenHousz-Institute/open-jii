@@ -74,8 +74,10 @@ describe("GetDeletionBlockersUseCase", () => {
     });
   });
 
-  // All four types are created with a creator admin grant, so all four can end up
-  // with a single named admin and block the deletion.
+  // Every staffed type is created with a creator admin grant — `seedCreatorControl` runs
+  // on all six create paths — so any of them can end up with a single named admin and
+  // block the deletion. The cases below cover four of the six; devices and device groups
+  // seed the same grant and are not exercised here.
   it.each([
     [
       "macro" as const,

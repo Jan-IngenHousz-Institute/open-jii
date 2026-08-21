@@ -588,8 +588,12 @@
         "workbook_one": "Workbook",
         "workbook_other": "Workbooks",
         "device_one": "Device",
-        "device_other": "Devices"
+        "device_other": "Devices",
+        "device_group_one": "Device group",
+        "device_group_other": "Device groups"
       },
+      "groupMemberCount_one": "{{count}} device",
+      "groupMemberCount_other": "{{count}} devices",
       "emptyTitle": "Nothing to show yet",
       "emptyMemberHint": "Resources created in this organization appear here.",
       "emptyVisitorHint": "This organization has not published anything yet.",

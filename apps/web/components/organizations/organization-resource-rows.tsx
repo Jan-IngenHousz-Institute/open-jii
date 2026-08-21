@@ -79,7 +79,11 @@ function metaBadge(
         label: getSensorFamilyLabel(resource.deviceType),
         colorClass: getSensorFamilyBadgeColor(resource.deviceType),
       };
+    // A workbook has no second fact. A group does — its roster size — but that is a
+    // quantity rather than a category, so it has no colour of its own to wear and
+    // reads as footer text beside the type instead.
     case "workbook":
+    case "device_group":
       return null;
   }
 }
@@ -229,7 +233,8 @@ function ResourceRow({
   const locale = useLocale();
 
   const meta = metaBadge(resource, t);
-  // A device has no transfer route, so it gets no control rather than one that refuses.
+  // Neither a device nor a device group has a transfer route, so they get no control
+  // rather than one that refuses.
   const transferableAs = onTransfer ? transferableType(resource.type) : null;
 
   return (
@@ -285,6 +290,12 @@ function ResourceRow({
           />
           {t(`organizations.resources.types.${resource.type}`, { count: 1 })}
         </span>
+
+        {resource.type === "device_group" ? (
+          <span className="shrink-0 tabular-nums">
+            {t("organizations.resources.groupMemberCount", { count: resource.memberCount })}
+          </span>
+        ) : null}
 
         {meta ? (
           <Badge className={`shrink-0 rounded px-1.5 py-0 font-medium ${meta.colorClass}`}>

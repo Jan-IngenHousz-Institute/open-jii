@@ -8,10 +8,10 @@ import type { ResourceAction, ResourceType } from "./access";
 /**
  * The capability matrix, pinned action by action. The asymmetry to hold: `contribute`
  * exists on experiments only, and there both the lowest grant tier and plain org
- * membership carry it — on the other four types both are read-only.
+ * membership carry it — on every other type both are read-only.
  *
  * The action and resource-type lists come from the matrix itself rather than being
- * restated here. A copied list would let a sixth resource type be added to
+ * restated here. A copied list would let a new resource type be added to
  * `RESOURCE_TYPES` and the `statement`, forgotten in `grantRoles`, and still leave
  * this suite green — while every grantee was silently read-only on it.
  */

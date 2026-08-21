@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { zExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import deCommon from "@repo/i18n/locales/de-DE/common.json";
 import deNavigation from "@repo/i18n/locales/de-DE/navigation.json";
 import enCommon from "@repo/i18n/locales/en-US/common.json";
@@ -169,16 +170,14 @@ describe("organization and sharing strings", () => {
       ...["pending", "approved", "rejected", "cancelled"].map(
         (status) => `organizations.requests.status.${status}`,
       ),
-      // Built from a template literal, so the source scan above cannot see these.
-      // This list is the only thing standing between a missing label and a row
-      // rendering its own key.
-      ...["experiment", "macro", "protocol", "workbook", "device"].map(
-        (type) => `organizations.resources.types.${type}`,
-      ),
-      // The delete-blocker breakdown names every owned type.
-      ...["experiment", "macro", "protocol", "workbook", "device"].map(
-        (type) => `organizations.delete.owned.${type}`,
-      ),
+      // Both are built from a template literal, so the source scan above cannot see
+      // them. Read from the schema rather than listed, so a newly owned type has to be
+      // given a label instead of shipping as a raw key on the showcase and in the
+      // delete-blocker breakdown.
+      ...zSharingResourceType.options.flatMap((type) => [
+        `organizations.resources.types.${type}`,
+        `organizations.delete.owned.${type}`,
+      ]),
       // An experiment row's meta badge. Read from the schema rather than listed, so a
       // sixth status has to be given a label instead of shipping as a raw key.
       ...zExperimentStatus.options.map((status) => `organizations.resources.status.${status}`),

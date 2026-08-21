@@ -40,11 +40,15 @@ Both sides are checked:
   be stranded in an organization nobody can act on.
 </Callout>
 
-## Devices cannot be moved
+## Devices and device groups cannot be moved
 
 Experiments, macros, protocols and workbooks can all be transferred. **Devices cannot** —
 there is no transfer route for them at all. A device stays with the organization that
 registered it until the device is deleted.
+
+**Device groups cannot be moved either**, for the same reason one step removed: a group is
+its list of devices, and those devices are pinned to the organization that registered
+them. A group that moved on its own would arrive without them.
 
 This matters when you are trying to empty an organization before
 [deleting it](/guide/organizations/deleting).

@@ -3,6 +3,8 @@ import { vi } from "vitest";
 import type { DatabaseInstance } from "@repo/database";
 
 import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { CreateIotDeviceGroupUseCase } from "../../../../iot/application/use-cases/create-iot-device-group/create-iot-device-group";
+import { IotDeviceGroupRepository } from "../../../../iot/core/repositories/iot-device-group.repository";
 import { ListGrantsUseCase } from "../../../../sharing/application/use-cases/list-grants/list-grants";
 import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import { TestHarness } from "../../../../test/test-harness";
@@ -12,6 +14,8 @@ describe("listOrganizationResources", () => {
   const testApp = TestHarness.App;
   let listResources: ListOrganizationResourcesUseCase;
   let listGrants: ListGrantsUseCase;
+  let createGroup: CreateIotDeviceGroupUseCase;
+  let groupRepository: IotDeviceGroupRepository;
   let sharingRepository: SharingRepository;
   let owner: string;
   let member: string;
@@ -25,6 +29,8 @@ describe("listOrganizationResources", () => {
     await testApp.beforeEach();
     listResources = testApp.module.get(ListOrganizationResourcesUseCase);
     listGrants = testApp.module.get(ListGrantsUseCase);
+    createGroup = testApp.module.get(CreateIotDeviceGroupUseCase);
+    groupRepository = testApp.module.get(IotDeviceGroupRepository);
     sharingRepository = testApp.module.get(SharingRepository);
 
     owner = await testApp.createTestUser({ name: "Olive Owner" });
@@ -60,7 +66,10 @@ describe("listOrganizationResources", () => {
    * failing, whichever of them changes.
    */
   describe("collaborator counts agree with the collaborators surface", () => {
-    async function expectAgreement(resourceType: "macro" | "workbook", resourceId: string) {
+    async function expectAgreement(
+      resourceType: "macro" | "workbook" | "device_group",
+      resourceId: string,
+    ) {
       const grants = await listGrants.execute(owner, resourceType, resourceId);
       assertSuccess(grants);
       const row = await showcaseRow(owner, resourceId);
@@ -212,10 +221,98 @@ describe("listOrganizationResources", () => {
       // goes and the total is unchanged rather than incremented.
       expect(await expectAgreement("macro", macro.id)).toBe(3);
     });
+
+    /**
+     * The count is keyed by resource type, and a type the key builder does not reach
+     * reports zero for every one of its rows — which reads as "nobody has this" rather
+     * than as a bug. So a group is checked against the collaborators surface too, and
+     * against a number that is not zero.
+     */
+    it("counts a device group's collaborators like any other resource", async () => {
+      const created = await createGroup.execute({ name: "Rooftop array", organizationId }, owner);
+      assertSuccess(created);
+      const outsider = await testApp.createTestUser({ name: "Otto Outsider" });
+      await testApp.addResourceGrant({
+        resourceType: "device_group",
+        resourceId: created.value.id,
+        granteeType: "user",
+        granteeId: outsider,
+        role: "viewer",
+        createdBy: owner,
+      });
+
+      // Owner, the members summary, and the outsider's own row.
+      expect(await expectAgreement("device_group", created.value.id)).toBe(3);
+    });
+  });
+
+  describe("device group rows", () => {
+    it("carries the roster size the group list already reads", async () => {
+      const created = await createGroup.execute({ name: "Field array", organizationId }, owner);
+      assertSuccess(created);
+      const first = await testApp.createIotDevice({ createdBy: owner, organizationId });
+      const second = await testApp.createIotDevice({ createdBy: owner, organizationId });
+      const added = await groupRepository.addMembers(
+        created.value.id,
+        [first.id, second.id],
+        owner,
+      );
+      assertSuccess(added);
+
+      const row = await showcaseRow(owner, created.value.id);
+
+      expect(row.type).toBe("device_group");
+      // Two devices, not the two-member group's zero: the count rides on the row the
+      // list already selected, so a projection that dropped it would read as empty.
+      expect(row).toMatchObject({ type: "device_group", memberCount: 2 });
+    });
+
+    it("counts groups into the totals and leaves another organization's out", async () => {
+      const elsewhere = await testApp.createOrganization("Somewhere Else", {
+        visibility: "public",
+      });
+      await testApp.addOrganizationMember(elsewhere, owner, "owner");
+      const ours = await createGroup.execute({ name: "Ours", organizationId }, owner);
+      assertSuccess(ours);
+      const theirs = await createGroup.execute(
+        { name: "Theirs", organizationId: elsewhere },
+        owner,
+      );
+      assertSuccess(theirs);
+
+      const result = await listResources.execute(organizationId, owner);
+      assertSuccess(result);
+
+      // The caller created both and can read both, so only the organization filter
+      // keeps the other one off this page.
+      expect(result.value.resources.map((row) => row.id)).toEqual([ours.value.id]);
+      expect(result.value.totals.device_group).toBe(1);
+    });
+
+    it("shows a non-member none of them, groups being permanently private", async () => {
+      const created = await createGroup.execute({ name: "Private array", organizationId }, owner);
+      assertSuccess(created);
+      const outsider = await testApp.createTestUser({ name: "Nina Nonmember" });
+
+      const result = await listResources.execute(organizationId, outsider);
+      assertSuccess(result);
+
+      expect(result.value.resources).toEqual([]);
+      expect(result.value.totals.device_group).toBe(0);
+      // Not vacuous: the group is there, and the organization's own owner sees it.
+      const asOwner = await showcaseRow(owner, created.value.id);
+      expect(asOwner.id).toBe(created.value.id);
+    });
   });
 
   describe("a fixed number of reads for the whole page", () => {
-    /** A resource of every showcased type, so the page spans all four. */
+    /**
+     * One resource of every showcased type per round, so the page spans all of them —
+     * hardware included. A seed that stopped at the four authored types would leave the
+     * single-call assertion below true of only part of the page.
+     */
+    const SHOWCASED_TYPES = 6;
+
     async function seedOneOfEveryType(count: number) {
       for (let index = 0; index < count; index++) {
         const { experiment } = await testApp.createExperiment({
@@ -237,6 +334,9 @@ describe("listOrganizationResources", () => {
           createdBy: owner,
           organizationId,
         });
+        await testApp.createIotDevice({ createdBy: owner, organizationId });
+        const group = await createGroup.execute({ name: `Group ${index}`, organizationId }, owner);
+        assertSuccess(group);
       }
     }
 
@@ -247,12 +347,14 @@ describe("listOrganizationResources", () => {
       const result = await listResources.execute(organizationId, owner);
       assertSuccess(result);
 
-      // A loop over the rows would be twelve calls on an organization this small, and
+      // A loop over the rows would be eighteen calls on an organization this small, and
       // the showcase is uncapped — so the shape of the read, not its cost here, is
       // what this pins down.
       expect(countCollaborators).toHaveBeenCalledTimes(1);
       const [, asked] = countCollaborators.mock.calls[0];
-      expect(asked).toHaveLength(12);
+      expect(asked).toHaveLength(3 * SHOWCASED_TYPES);
+      // Every type is in that one call, not just the four that carry an author.
+      expect(new Set(asked.map((row) => row.resourceType)).size).toBe(SHOWCASED_TYPES);
       expect(new Set(asked.map((row) => row.resourceId))).toEqual(
         new Set(result.value.resources.map((row) => row.id)),
       );
