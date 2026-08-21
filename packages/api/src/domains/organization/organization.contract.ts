@@ -73,7 +73,7 @@ export const organizationContract = {
     .input(zOrganizationIdPathParam)
     .output(zOrganizationMembers),
   /**
-   * What blocks this organization's deletion, across all five owned resource types.
+   * What blocks this organization's deletion, across every owned resource type.
    * Owner-only, because deleting is: it answers the same question the delete guard
    * asks, so the danger zone can refuse up front instead of after a confirmation.
    */

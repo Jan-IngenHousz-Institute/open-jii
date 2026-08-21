@@ -52,7 +52,7 @@ import type {
 import { normalizeOrgRole } from "../organization-access";
 
 /**
- * The resource tables an organization can own, keyed by the grant enum so a sixth
+ * The resource tables an organization can own, keyed by the grant enum so a new
  * org-owning type cannot be added without this stopping compiling — the same total
  * `Record` the delete guard in `@repo/auth` keys its own count on. The two have to
  * agree: this one decides whether the danger zone offers deletion, that one decides
@@ -93,23 +93,18 @@ const RESOURCE_NAME_SQL: Record<ResourceType, SQL> = {
 };
 
 /**
- * The types the organization showcase lists and counts. Narrower than
- * {@link OWNED_RESOURCE_TABLES} on purpose: a device group is owned and grantable, so it
- * blocks a delete and can be named in a grant, but nothing lists one yet — counting it
- * would put a total on screen with no rows behind it.
+ * Every type the showcase lists and counts, which is every type an organization can
+ * own. Read off {@link OWNED_RESOURCE_TABLES} rather than listed again: a separate list
+ * is one nobody is forced to extend, so a newly grantable type would land, be counted
+ * nowhere, and leave the page quietly claiming a smaller estate than the organization
+ * has. The keys are exhaustive because that map's `satisfies` says so.
  */
-const SHOWN_RESOURCE_TYPES = [
-  "experiment",
-  "protocol",
-  "macro",
-  "workbook",
-  "device",
-] as const satisfies readonly ResourceType[];
+const OWNED_RESOURCE_TYPES = Object.keys(OWNED_RESOURCE_TABLES) as ResourceType[];
 
 /**
  * Every resource a grant can name, with the name to show for it —
  * {@link ALL_STAFFED_RESOURCES} plus that column. Generated from the same total map,
- * so a sixth grantable type joins this set by being added there.
+ * so a new grantable type joins this set by being added there.
  */
 const ALL_NAMED_RESOURCES: SQL = sql.join(
   Object.entries(OWNED_RESOURCE_TABLES).map(
@@ -175,7 +170,7 @@ function accessibleResourceCountSql(params: {
 /**
  * How much of the organization the caller can actually reach, summed across every type
  * it can own — one correlated count per table rather than a join, so a listing pays for
- * the sum once per row instead of fanning its rows out five times.
+ * the sum once per row instead of fanning its rows out once per owned type.
  *
  * Scoped, not absolute: the unscoped total promised a visitor 43 resources and then
  * showed them 3. So the same organization reports a different size to different
@@ -183,7 +178,7 @@ function accessibleResourceCountSql(params: {
  */
 function resourceCountSql(database: DatabaseInstance, userId: string | undefined): SQL<number> {
   return sql<number>`(${sql.join(
-    SHOWN_RESOURCE_TYPES.map((resourceType) =>
+    OWNED_RESOURCE_TYPES.map((resourceType) =>
       accessibleResourceCountSql({
         database,
         resourceType: resourceType,
@@ -244,8 +239,8 @@ export class OrganizationRepository {
   }
 
   /**
-   * How many resources of each type the organization owns. Counted across all five
-   * types regardless of who is asking — this answers "may this be deleted", which
+   * How many resources of each type the organization owns. Counted across every owned
+   * type regardless of who is asking — this answers "may this be deleted", which
    * is a fact about the organization, not about the caller's read access. Types
    * holding nothing are left out, so an empty array means deletable.
    */
@@ -471,16 +466,17 @@ export class OrganizationRepository {
   /**
    * How many resources of each owned type the caller may read in this organization.
    * The per-type breakdown of {@link resourceCountSql}, from the same fragment, so the
-   * profile's single number and these five agree by construction. One statement.
+   * profile's single number and these agree by construction. One statement.
    *
-   * Devices are permanently private, so a non-member always counts zero of them.
+   * Devices and device groups are permanently private, so a non-member always counts
+   * zero of both.
    */
   async countAccessibleResources(
     organizationId: string,
     userId: string,
   ): Promise<Result<OrganizationResourceTotalsDto>> {
     return tryCatch(async () => {
-      const counts = SHOWN_RESOURCE_TYPES.map(
+      const counts = OWNED_RESOURCE_TYPES.map(
         (resourceType) =>
           sql`${accessibleResourceCountSql({
             database: this.database,
@@ -504,6 +500,7 @@ export class OrganizationRepository {
         macro: row.macro ?? 0,
         workbook: row.workbook ?? 0,
         device: row.device ?? 0,
+        device_group: row.device_group ?? 0,
       };
     });
   }

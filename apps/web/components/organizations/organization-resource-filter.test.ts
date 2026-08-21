@@ -1,7 +1,7 @@
 import { createOrganizationResource } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
-import type { OrganizationResourceType } from "@repo/api/domains/organization/organization.schema";
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import {
   DEFAULT_RESOURCE_FILTER,
@@ -11,7 +11,7 @@ import {
 
 function resource(
   name: string,
-  extra: { type?: OrganizationResourceType; updatedAt?: string; description?: string | null } = {},
+  extra: { type?: SharingResourceType; updatedAt?: string; description?: string | null } = {},
 ) {
   return createOrganizationResource({
     name,
@@ -75,6 +75,7 @@ describe("filterAndSortResources", () => {
         resource("Campaign", { type: "experiment" }),
         resource("Dark adaptation", { type: "protocol" }),
         resource("Ambyte 04", { type: "device" }),
+        resource("Rooftop array", { type: "device_group" }),
       ];
 
       expect(
@@ -83,7 +84,12 @@ describe("filterAndSortResources", () => {
       expect(
         namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, type: "device" })),
       ).toEqual(["Ambyte 04"]);
-      expect(filterAndSortResources(rows, DEFAULT_RESOURCE_FILTER)).toHaveLength(3);
+      // A group is its own type, not a kind of device: filtering to devices must not
+      // pick it up, and it has a chip of its own.
+      expect(
+        namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, type: "device_group" })),
+      ).toEqual(["Rooftop array"]);
+      expect(filterAndSortResources(rows, DEFAULT_RESOURCE_FILTER)).toHaveLength(4);
     });
 
     it("combines with the search rather than replacing it", () => {
@@ -136,10 +142,11 @@ describe("filterAndSortResources", () => {
         resource("Newer experiment", { type: "experiment", updatedAt: "2026-05-01T00:00:00.000Z" }),
         resource("A macro", { type: "macro" }),
         resource("A protocol", { type: "protocol" }),
+        resource("A device group", { type: "device_group" }),
       ];
 
-      // experiment, protocol, macro, workbook, device — the order the featured card
-      // rotates through and the estate bar segments by.
+      // experiment, protocol, macro, workbook, device, device group — the order the
+      // featured card rotates through and the estate bar segments by.
       expect(
         namesOf(filterAndSortResources(rows, { ...DEFAULT_RESOURCE_FILTER, sort: "type" })),
       ).toEqual([
@@ -149,6 +156,7 @@ describe("filterAndSortResources", () => {
         "A macro",
         "A workbook",
         "A device",
+        "A device group",
       ]);
     });
   });
