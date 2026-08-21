@@ -44,12 +44,15 @@
      carries it. */
   --sidebar: oklch(0.323 0.033 190.6334);
   --sidebar-foreground: oklch(0.9527 0.0119 106.6239);
-  --sidebar-primary: oklch(0.868 0.0112 167.7571);
+  /* The export shipped chroma 0.0112 here — a gray that read as a dimmer
+     --sidebar-foreground on the slab, not an accent. Raised at the export's own
+     hue; every consumer is a foreground or a dot, so no paired change. */
+  --sidebar-primary: oklch(0.845 0.115 168);
   --sidebar-primary-foreground: oklch(0.2719 0.0191 190.5697);
   --sidebar-accent: oklch(0.403 0.038 190.6334);
   --sidebar-accent-foreground: oklch(0.9884 0.0093 113.1546);
   --sidebar-border: oklch(0.403 0.038 190.6334);
-  --sidebar-ring: oklch(0.868 0.0112 167.7571);
+  --sidebar-ring: oklch(0.845 0.115 168);
   --font-sans: var(--font-inter), Inter, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Georgia, serif;
   --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;

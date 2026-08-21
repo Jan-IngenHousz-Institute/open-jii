@@ -8,6 +8,7 @@ import { Button } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import { LineChart } from "@repo/ui/components/charts/line-chart";
+import { readThemeColor } from "@repo/ui/components/charts/utils";
 
 interface ExperimentDataTableChartProps {
   data: number[];
@@ -43,8 +44,10 @@ export function ExperimentDataTableChart({
       x: xValues,
       y: data,
       mode: "lines",
+      // Plotly takes a concrete colour, so the contract token is resolved
+      // rather than passed as `var()`.
       line: {
-        color: "#0a4d4d",
+        color: readThemeColor("--chart-1"),
         width: 2,
       },
       showlegend: true,

@@ -20,21 +20,25 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
+import { Card } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { LineageNodeModel } from "./build-device-lineage";
 import { lineageNodeTitle } from "./lineage-title";
 
+// `var()` rather than concrete values: every consumer feeds these to a CSS
+// property, so the browser resolves them and a theme swap moves them live.
+// Kinds that correspond to a flow-node type wear that type's identity accent.
 const KIND_STYLE: Record<LineageNodeModel["kind"], { accent: string; icon: LucideIcon }> = {
-  device: { accent: "#2D3142", icon: Cpu },
-  broker: { accent: "#119DA4", icon: Radio },
-  warehouse: { accent: "#6F8596", icon: Database },
-  experiment: { accent: "#005e5e", icon: FlaskConical },
-  unattributed: { accent: "#68737B", icon: HelpCircle },
-  protocol: { accent: "#6C5CE7", icon: ScrollText },
-  workbook: { accent: "#D08A3C", icon: NotebookText },
-  macro: { accent: "#C58AAE", icon: Wand2 },
-  "attribution-other": { accent: "#68737B", icon: Layers },
+  device: { accent: "var(--node-measurement)", icon: Cpu },
+  broker: { accent: "var(--node-command)", icon: Radio },
+  warehouse: { accent: "var(--node-instruction)", icon: Database },
+  experiment: { accent: "var(--primary)", icon: FlaskConical },
+  unattributed: { accent: "var(--muted-foreground)", icon: HelpCircle },
+  protocol: { accent: "var(--node-analysis)", icon: ScrollText },
+  workbook: { accent: "var(--node-branch)", icon: NotebookText },
+  macro: { accent: "var(--node-question)", icon: Wand2 },
+  "attribution-other": { accent: "var(--muted-foreground)", icon: Layers },
 };
 
 function nodeHandles(model: LineageNodeModel): { hasInput: boolean; hasOutput: boolean } {
@@ -135,12 +139,12 @@ export function LineageNode(props: NodeProps) {
             {t("iot.devices.lineage.measurementsInRange", { count: model.count })}
           </p>
           {model.count === 0 && model.bound && (
-            <p className="text-xs text-amber-600 dark:text-amber-500">
+            <p className="text-status-stale-foreground text-xs">
               {t("iot.devices.monitoring.boundButSilent")}
             </p>
           )}
           {!model.bound && (
-            <p className="text-xs text-amber-600 dark:text-amber-500">
+            <p className="text-status-stale-foreground text-xs">
               {t("iot.devices.monitoring.notBound")}
             </p>
           )}
@@ -166,15 +170,15 @@ export function LineageNode(props: NodeProps) {
   }
 
   return (
-    <div
+    <Card
       data-testid="lineage-node"
       className={cn(
-        "bg-card relative w-[260px] overflow-hidden rounded-[12px] border shadow-sm transition-shadow",
-        props.selected ? "ring-jii-dark-green border-[#005e5e] ring-2" : "border-[#E2E8F0]",
+        "relative w-[260px] gap-0 overflow-hidden py-0",
+        props.selected && "ring-primary border-primary ring-2",
       )}
     >
-      {hasInput && <Handle type="target" position={Position.Left} className="!bg-[#CDD5DB]" />}
-      {hasOutput && <Handle type="source" position={Position.Right} className="!bg-[#CDD5DB]" />}
+      {hasInput && <Handle type="target" position={Position.Left} className="!bg-border" />}
+      {hasOutput && <Handle type="source" position={Position.Right} className="!bg-border" />}
       <div
         className="absolute bottom-0 left-0 top-0 w-1"
         style={{ backgroundColor: style.accent }}
@@ -190,6 +194,6 @@ export function LineageNode(props: NodeProps) {
         </div>
         {renderFacts()}
       </div>
-    </div>
+    </Card>
   );
 }
