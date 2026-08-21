@@ -136,7 +136,7 @@ export function wrapWithAggregation(
   const from =
     explode === undefined
       ? `(${innerSql})`
-      : `(${innerSql}) LATERAL VIEW EXPLODE(${builder.escapeIdentifier(explode.column)}) AS ${builder.escapeIdentifier(explode.alias)}`;
+      : builder.explodeClause(innerSql, explode.column, explode.alias);
 
   let sql: string;
   if (groupByClauses.length === 0 && selectClauses.length === 0) {

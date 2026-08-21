@@ -78,17 +78,17 @@ describe("DuckDbQueryBuilder", () => {
         SELECT * FROM (VALUES
           ('exp-1', 'm-1', TIMESTAMP '2026-01-01 10:15:00',
             CAST({'SPAD': 1.5, 'Leaf Temp': 21.0, 'meta': {'unit': 'C'}} AS VARIANT),
-            {'id': 'user-1', 'name': 'Ada'}),
+            {'id': 'user-1', 'name': 'Ada'}, ['a', 'b']),
           ('exp-1', 'm-1', TIMESTAMP '2026-01-01 10:45:00',
             CAST({'SPAD': 2.5, 'Leaf Temp': 22.0, 'meta': {'unit': 'C'}} AS VARIANT),
-            {'id': 'user-2', 'name': 'Grace'}),
+            {'id': 'user-2', 'name': 'Grace'}, ['b']),
           ('exp-1', 'm-1', TIMESTAMP '2026-01-01 11:15:00',
             CAST({'SPAD': 3.5, 'Leaf Temp': 23.0, 'meta': {'unit': 'C'}} AS VARIANT),
-            {'id': NULL, 'name': NULL}),
+            {'id': NULL, 'name': NULL}, ['c']),
           ('exp-2', 'm-1', TIMESTAMP '2026-01-02 09:00:00',
             CAST({'SPAD': 9.0, 'Leaf Temp': 30.0, 'meta': {'unit': 'F'}} AS VARIANT),
-            {'id': 'user-3', 'name': 'Alan'})
-        ) AS t(experiment_id, macro_id, "timestamp", macro_output, contributor)
+            {'id': 'user-3', 'name': 'Alan'}, ['z'])
+        ) AS t(experiment_id, macro_id, "timestamp", macro_output, contributor, tags)
       `);
     });
 
@@ -181,6 +181,30 @@ describe("DuckDbQueryBuilder", () => {
         }),
       );
       expect(rows.map((r) => r.SPAD_cumsum)).toEqual([4.0, 7.5]);
+    });
+
+    it("explodes an array column with UNNEST, which is DuckDB's LATERAL VIEW", async () => {
+      // Spark's `LATERAL VIEW EXPLODE` is a parser error in DuckDB, so an
+      // exploded aggregation hard-fails without the dialect override.
+      const result = service.buildQuery({
+        table: "macro_data",
+        whereConditions: [["experiment_id", "exp-1"]],
+        aggregation: {
+          explode: { column: "tags", alias: "tag" },
+          groupBy: [{ column: "tag", alias: "tag" }],
+          functions: [{ column: "*", function: "count", alias: "row_count" }],
+        },
+      });
+      expect(result.isSuccess()).toBe(true);
+      if (result.isFailure()) throw result.error;
+      expect(result.value).toContain("UNNEST");
+      expect(result.value).not.toContain("LATERAL VIEW");
+
+      const rows = await run(result.value);
+      // exp-1 rows carry ['a','b'], ['b'] and ['c'], so grouping the exploded
+      // elements gives one row per distinct tag and 'b' counts twice.
+      const counts = new Map(rows.map((r) => [String(r.tag), Number(r.row_count)]));
+      expect(Object.fromEntries(counts)).toEqual({ a: 1, b: 2, c: 1 });
     });
 
     it("selects distinct projected values with pagination", async () => {

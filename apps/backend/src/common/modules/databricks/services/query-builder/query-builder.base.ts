@@ -100,6 +100,14 @@ export abstract class BaseQueryBuilder {
   }
 
   /**
+   * FROM source that flattens an array column into one row per element.
+   * Spark spells it `LATERAL VIEW EXPLODE`, which other engines do not parse.
+   */
+  explodeClause(innerSql: string, column: string, alias: string): string {
+    return `(${innerSql}) LATERAL VIEW EXPLODE(${this.escapeIdentifier(column)}) AS ${this.escapeIdentifier(alias)}`;
+  }
+
+  /**
    * ORDER BY term for an already-escaped column. Spark's default null
    * placement (first ascending, last descending) is implicit here; dialects
    * that order nulls differently must spell it out or paginate differently.

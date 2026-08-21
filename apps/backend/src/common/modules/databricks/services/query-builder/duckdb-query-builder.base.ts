@@ -22,6 +22,12 @@ function duckDbDateTruncExpression(unit: TimeBucketUnit, colSql: string): string
   return `date_trunc('${unit.toLowerCase()}', CAST(${colSql} AS TIMESTAMP))`;
 }
 
+function duckDbExplodeClause(innerSql: string, columnSql: string, aliasSql: string): string {
+  // DuckDB has no LATERAL VIEW; UNNEST in the FROM list is the equivalent, and
+  // it needs the subquery aliased so the array column can be addressed.
+  return `(${innerSql}) AS __exploded_src, UNNEST(__exploded_src.${columnSql}) AS __exploded(${aliasSql})`;
+}
+
 function duckDbOrderByTerm(colSql: string, direction: "ASC" | "DESC"): string {
   // DuckDB defaults NULLs last in both directions; Spark puts them first when
   // ascending. Left implicit, page 1 of an ascending sort over a nullable
@@ -51,6 +57,14 @@ export class DuckDbSqlQueryBuilder extends SqlQueryBuilder {
   orderByTerm(colSql: string, direction: "ASC" | "DESC"): string {
     return duckDbOrderByTerm(colSql, direction);
   }
+
+  explodeClause(innerSql: string, column: string, alias: string): string {
+    return duckDbExplodeClause(
+      innerSql,
+      this.escapeIdentifier(column),
+      this.escapeIdentifier(alias),
+    );
+  }
 }
 
 export class DuckDbVariantQueryBuilder extends VariantQueryBuilder {
@@ -73,6 +87,14 @@ export class DuckDbVariantQueryBuilder extends VariantQueryBuilder {
 
   orderByTerm(colSql: string, direction: "ASC" | "DESC"): string {
     return duckDbOrderByTerm(colSql, direction);
+  }
+
+  explodeClause(innerSql: string, column: string, alias: string): string {
+    return duckDbExplodeClause(
+      innerSql,
+      this.escapeIdentifier(column),
+      this.escapeIdentifier(alias),
+    );
   }
 
   /**
