@@ -38,3 +38,13 @@ output "databricks_device_lifecycle_read_policy_arn" {
   description = "ARN of the IAM policy granting the Databricks storage-credential role read access to the raw archive's device-lifecycle-events prefix (null when disabled)"
   value       = var.enable_databricks_lifecycle_read ? aws_iam_policy.databricks_device_lifecycle_read[0].arn : null
 }
+
+output "jobs_policy_name" {
+  description = "Name of the IoT policy granting a device access to its own AWS IoT Jobs topics"
+  value       = aws_iot_policy.jobs.name
+}
+
+output "jobs_presign_role_arn" {
+  description = "ARN of the role AWS IoT Jobs assumes to presign firmware objects (null when firmware_bucket_arn is unset)"
+  value       = var.firmware_bucket_arn != "" ? aws_iam_role.jobs_presign[0].arn : null
+}

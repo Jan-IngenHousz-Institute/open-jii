@@ -125,6 +125,104 @@ resource "aws_iot_policy" "iot_policy" {
   })
 }
 
+# ------------------------------------------------------------------
+# AWS IoT Jobs (firmware delivery)
+# ------------------------------------------------------------------
+# Hand-written rather than derived from asyncapi.yaml: that file is our own
+# message contract, while `$aws/*` is AWS's reserved namespace with a fixed
+# shape. Every statement is scoped by the thing policy variable, so a device
+# can only read and update the job executions addressed to itself.
+# https://docs.aws.amazon.com/iot/latest/developerguide/iot-data-plane-jobs.html
+locals {
+  jobs_thing_topic = "$${iot:Connection.Thing.ThingName}/jobs"
+
+  # notify-next carries the next queued execution; $next/get and +/update are
+  # request/response pairs, so the device also needs their accepted/rejected
+  # replies (the trailing +).
+  jobs_subscribe_topics = [
+    "${local.jobs_thing_topic}/notify-next",
+    "${local.jobs_thing_topic}/$next/get/+",
+    "${local.jobs_thing_topic}/+/update/+",
+  ]
+
+  jobs_publish_topics = [
+    "${local.jobs_thing_topic}/$next/get",
+    "${local.jobs_thing_topic}/+/update",
+  ]
+}
+
+resource "aws_iot_policy" "jobs" {
+  name = "open_jii_${var.environment}_iot_policy_jobs"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = "iot:Connect",
+        Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:client/$${iot:Connection.Thing.ThingName}"
+      },
+      {
+        Effect = "Allow",
+        Action = "iot:Subscribe",
+        Resource = [
+          for topic in local.jobs_subscribe_topics :
+          "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topicfilter/$aws/things/${topic}"
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = "iot:Receive",
+        Resource = [
+          for topic in local.jobs_subscribe_topics :
+          "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/$aws/things/${topic}"
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = "iot:Publish",
+        Resource = [
+          for topic in local.jobs_publish_topics :
+          "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/$aws/things/${topic}"
+        ]
+      }
+    ]
+  })
+}
+
+# Lets AWS IoT presign the firmware object when it substitutes the job
+# document's `${aws:iot:s3-presigned-url:...}` placeholder at delivery time.
+# https://docs.aws.amazon.com/iot/latest/apireference/API_PresignedUrlConfig.html
+resource "aws_iam_role" "jobs_presign" {
+  count = var.firmware_bucket_arn != "" ? 1 : 0
+
+  name = "open_jii_${var.environment}_iot_jobs_presign"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "iot.amazonaws.com" },
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "jobs_presign" {
+  count = var.firmware_bucket_arn != "" ? 1 : 0
+
+  name = "open_jii_${var.environment}_iot_jobs_presign"
+  role = aws_iam_role.jobs_presign[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect   = "Allow",
+      Action   = "s3:GetObject",
+      Resource = "${var.firmware_bucket_arn}/*"
+    }]
+  })
+}
+
 # --------------------------------------------------
 # Managed device registry (Thing type + group)
 # --------------------------------------------------
