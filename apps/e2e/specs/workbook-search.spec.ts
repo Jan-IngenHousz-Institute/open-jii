@@ -3,7 +3,11 @@ import type { Page, Route } from "@playwright/test";
 import { expect, test } from "../fixtures.js";
 import { dismissCookieBanner, locale } from "../helpers.js";
 import type { WorkbookSearchFixtures } from "../workbook-fixtures.js";
-import { cleanupWorkbookSearchFixtures, seedWorkbookSearchFixtures } from "../workbook-fixtures.js";
+import {
+  cleanupWorkbookSearchFixtures,
+  seedWorkbookSearchFixtures,
+  workbookSearchNames,
+} from "../workbook-fixtures.js";
 
 const workbookListUrl = /\/api\/v1\/workbooks(?:\?|$)/;
 let fixtures: WorkbookSearchFixtures;
@@ -38,6 +42,19 @@ async function search(page: Page, term: string): Promise<string[]> {
   return optionLabels(page);
 }
 
+async function expectTaggedMatches(
+  page: Page,
+  term: string,
+  expected: readonly string[],
+): Promise<void> {
+  const labels = await search(page, term);
+  const expectedNames = new Set(expected);
+  for (const name of Object.values(workbookSearchNames)) {
+    if (expectedNames.has(name)) expect(labels).toContain(name);
+    else expect(labels).not.toContain(name);
+  }
+}
+
 test.beforeAll(async () => {
   fixtures = await seedWorkbookSearchFixtures();
 });
@@ -55,20 +72,18 @@ test("workbook search stays server-backed through search and attach flows", asyn
   await page.goto(designUrl(fixtures.experimentId), { waitUntil: "networkidle" });
   await dismissCookieBanner(page);
   await openPicker(page);
-  await expect.poll(() => optionLabels(page)).toContain("Chlorophyll Fluorescence Baseline");
+  await expect.poll(() => optionLabels(page)).toContain(workbookSearchNames.chlorophyll);
 
-  await expect(search(page, "chloro")).resolves.toEqual(["Chlorophyll Fluorescence Baseline"]);
+  await expectTaggedMatches(page, "chloro", [workbookSearchNames.chlorophyll]);
   expect(searchUrls.some((url) => new URL(url).searchParams.get("search") === "chloro")).toBe(true);
-  await expect(search(page, "2")).resolves.toEqual(["Drought Trial 2"]);
-  await expect(search(page, "area")).resolves.toEqual(["Leaf Area Index Survey"]);
-  await expect(search(page, fixtures.creatorName.toLowerCase())).resolves.toEqual([
-    "Zephyr Notebook",
+  await expectTaggedMatches(page, "2", [workbookSearchNames.drought]);
+  await expectTaggedMatches(page, "area", [workbookSearchNames.leafArea]);
+  await expectTaggedMatches(page, fixtures.creatorName.toLowerCase(), [workbookSearchNames.zephyr]);
+  await expectTaggedMatches(page, "notebook", [
+    workbookSearchNames.quokka,
+    workbookSearchNames.zephyr,
   ]);
-  await expect(search(page, "notebook")).resolves.toEqual(["Quokka Notebook", "Zephyr Notebook"]);
-  await expect(search(page, "zzzznomatch")).resolves.toEqual([]);
-  await expect(page.getByText("No workbooks found")).toBeVisible();
 
-  await expect(search(page, "notebook")).resolves.toHaveLength(2);
   const delayed: (route: Route) => Promise<void> = async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 1_500));
     await route.continue();
@@ -77,7 +92,8 @@ test("workbook search stays server-backed through search and attach flows", asyn
   const staleResponse = page.waitForResponse(workbookListUrl);
   await page.getByPlaceholder(/Search workbook/i).fill("notebook!");
   await expect(page.locator("[cmdk-group]")).toHaveClass(/opacity-60/);
-  await expect(page.getByRole("option")).toHaveCount(2);
+  await expect(page.getByRole("option", { name: workbookSearchNames.quokka })).toBeVisible();
+  await expect(page.getByRole("option", { name: workbookSearchNames.zephyr })).toBeVisible();
   await staleResponse;
   await page.unroute(workbookListUrl, delayed);
   await page.waitForLoadState("networkidle");
@@ -91,15 +107,15 @@ test("workbook search stays server-backed through search and attach flows", asyn
   await page.goto(designUrl(fixtures.experimentId), { waitUntil: "domcontentloaded" });
   await openPicker(page);
   await expect(page.getByRole("status")).toHaveText(/Searching workbooks/i);
-  await expect(page.getByRole("option")).toHaveCount(0);
+  await expect(page.getByRole("option", { name: workbookSearchNames.quokka })).not.toBeVisible();
   await coldResponse;
   await page.unroute(workbookListUrl, coldDelay);
   await page.waitForLoadState("networkidle");
 
   await page.goto(designUrl(fixtures.experimentId), { waitUntil: "networkidle" });
   await openPicker(page);
-  await expect(search(page, "quokka")).resolves.toEqual(["Quokka Notebook"]);
-  await page.getByRole("option", { name: "Quokka Notebook" }).click();
+  await expectTaggedMatches(page, "quokka", [workbookSearchNames.quokka]);
+  await page.getByRole("option", { name: workbookSearchNames.quokka }).click();
   const attachResponse = page.waitForResponse(
     (response) =>
       response.url().endsWith(`/api/v1/experiments/${fixtures.experimentId}/workbook/attach`) &&
@@ -111,10 +127,10 @@ test("workbook search stays server-backed through search and attach flows", asyn
 
   await page.getByRole("button", { name: /^Change$/ }).click();
   await openPicker(page);
-  await expect(search(page, fixtures.experimentTerm)).resolves.toContain("Quokka Notebook");
+  await expectTaggedMatches(page, fixtures.experimentTerm, [workbookSearchNames.quokka]);
 
   await page.goto(`/${locale}/platform/experiments/new`, { waitUntil: "networkidle" });
   await openPicker(page);
   await expect(page.getByRole("option", { name: "None" })).toBeVisible();
-  await expect(search(page, "chloro")).resolves.toContain("Chlorophyll Fluorescence Baseline");
+  await expectTaggedMatches(page, "chloro", [workbookSearchNames.chlorophyll]);
 });

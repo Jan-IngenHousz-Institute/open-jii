@@ -36,8 +36,7 @@ export async function findSeedExperimentId(): Promise<string> {
     const rows = await sql<{ id: string }[]>`
       select e.id
       from experiments e
-      join experiment_members m on m.experiment_id = e.id
-      join users u on u.id = m.user_id
+      join users u on u.id = e.created_by
       where u.email = ${seedEmail}
         and e.status = 'active'
         and e.name like '[Seed]%'

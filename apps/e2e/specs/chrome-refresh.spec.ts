@@ -14,9 +14,9 @@ test("the authenticated navigation shell remains usable", async ({ page }) => {
 
   const sidebar = page.locator("[data-state][data-collapsible]").first();
   const initialSidebarState = await sidebar.getAttribute("data-state");
-  await page.keyboard.press("Control+b");
+  await page.keyboard.press("ControlOrMeta+b");
   await expect(sidebar).not.toHaveAttribute("data-state", initialSidebarState ?? "");
-  await page.keyboard.press("Control+b");
+  await page.keyboard.press("ControlOrMeta+b");
 
   await page.keyboard.press("Control+k");
   const palette = page.getByRole("dialog", { name: "Command palette" });
@@ -34,7 +34,7 @@ test("the authenticated navigation shell remains usable", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
   await clearOverlays(page);
 
-  // Client-side navigation avoids the known direct-load account-page hydration failure.
+  // Direct-load coverage stays isolated in the fixme below while the hydration bug remains.
   await page.getByRole("button", { name: /SE|JII/ }).click();
   await page.getByRole("menuitem", { name: "Account" }).click();
   await page.waitForURL(`**/${locale}/platform/account`);
@@ -49,12 +49,17 @@ test("the authenticated navigation shell remains usable", async ({ page }) => {
   await page.goto(`/${locale}/platform/experiments/${experimentId}`, {
     waitUntil: "networkidle",
   });
-  const experimentTitle = page.locator(".text-2xl").first();
+  const experimentTitle = page.getByTestId("experiment-title");
   await expect(experimentTitle).toBeVisible();
-  await expect(experimentTitle.locator("xpath=..").locator("svg").first()).toBeVisible();
+  await expect(experimentTitle.locator("svg").first()).toBeVisible();
 
   await page.goto(`/${locale}/platform/experiments/${experimentId}/data`, {
     waitUntil: "networkidle",
   });
   await expect(page.getByText(/Application error|Unhandled Runtime Error/)).toHaveCount(0);
+});
+
+test.fixme("direct account-page loads hydrate without browser errors", async ({ page }) => {
+  await page.goto(`/${locale}/platform/account`, { waitUntil: "networkidle" });
+  await expect(page.getByRole("tab", { name: "General" })).toBeVisible();
 });

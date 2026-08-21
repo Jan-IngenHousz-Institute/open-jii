@@ -1,6 +1,8 @@
 name: Web E2E
 
 on:
+  schedule:
+    - cron: "17 2 * * *"
   workflow_dispatch:
 
 permissions:
@@ -71,5 +73,7 @@ jobs:
           path: |
             apps/e2e/playwright-report/
             apps/e2e/test-results/
+            /tmp/openjii-backend.log
+            /tmp/openjii-web.log
           if-no-files-found: warn
           retention-days: 7

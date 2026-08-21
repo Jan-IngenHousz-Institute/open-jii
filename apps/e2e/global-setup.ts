@@ -26,8 +26,11 @@ export default async function globalSetup(): Promise<void> {
     await dismissCookieBanner(page);
 
     const emailInput = page.getByPlaceholder("Enter your email...");
-    await emailInput.click();
-    await emailInput.pressSequentially(seedEmail, { delay: 20 });
+    await emailInput.fill(seedEmail);
+    const enteredEmail = await emailInput.inputValue();
+    if (enteredEmail !== seedEmail) {
+      throw new Error(`Email input contains ${enteredEmail}; expected ${seedEmail}`);
+    }
 
     const previousOtp = await readLatestSignInOtp(databaseUrl, seedEmail).catch(() => null);
     await page.getByRole("button", { name: "Continue with Email" }).click();
