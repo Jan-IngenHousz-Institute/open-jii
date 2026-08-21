@@ -92,7 +92,7 @@ export default async function Page({ params }: LandingPageProps) {
         {/* Background skew block */}
         <div
           aria-hidden="true"
-          className="shadow-primary/10 ring-primary/20 bg-card absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
+          className="shadow-primary/10 ring-primary/20 bg-background absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
         />
 
         <div className="py-20">

@@ -315,16 +315,10 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
           </div>
           <LanguageSwitcher locale={locale} />
 
-          {/* Light / dark / system, in this nav's icon-button idiom: no hover
-              fill, the icon itself shifts to the accent — the same as the user
-              menu and the mobile menu trigger.
-              The fill has to go for a reason worth recording: `--accent` (what a
-              ghost button paints on hover) and `--sidebar-primary` are the same
-              colour in light mode, so a hovered icon vanished into its own
-              background. `dark:hover:bg-transparent` is needed alongside
-              `hover:bg-transparent` because stock ghost declares the dark fill
-              as its own variant, which the unprefixed class does not override —
-              the two buttons beside this one were quietly losing the same way. */}
+          {/* This nav's icon-button idiom: no hover fill, the icon shifts to the
+              accent. `dark:hover:bg-transparent` is needed alongside the
+              unprefixed class because stock ghost declares the dark fill as its
+              own variant. */}
           <ThemeToggle className="text-sidebar-foreground hover:text-sidebar-primary hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent" />
 
           {/* Mobile Navigation Menu */}
