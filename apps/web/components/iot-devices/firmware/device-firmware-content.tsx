@@ -86,7 +86,9 @@ export default function DeviceFirmwarePage() {
 
   useEffect(() => {
     // `replace`, not `push`: this route is not somewhere to come back to.
-    if (hasNoSurface) router.replace(detailPath);
+    if (hasNoSurface) {
+      router.replace(detailPath);
+    }
   }, [hasNoSurface, detailPath, router]);
 
   if (device === undefined || !isManaged) {
@@ -96,11 +98,11 @@ export default function DeviceFirmwarePage() {
   const installed = reportedVersion(firmwareHistory);
   const latest = (releases?.releases ?? []).find((release) => release.latest) ?? null;
 
-  function renderNotice(key: string) {
+  function renderNotice(message: string) {
     return (
       <Card className="shadow-none">
         <CardContent className="text-muted-foreground py-6 text-center text-sm">
-          {t(key)}
+          {message}
         </CardContent>
       </Card>
     );
@@ -108,10 +110,10 @@ export default function DeviceFirmwarePage() {
 
   function renderReleases() {
     if (hasNoFirmwareLine) {
-      return renderNotice("iot.devices.firmware.noFirmwareLine");
+      return renderNotice(t("iot.devices.firmware.noFirmwareLine"));
     }
     if (isError) {
-      return renderNotice("iot.devices.firmware.loadError");
+      return renderNotice(t("iot.devices.firmware.loadError"));
     }
     if (isLoading) {
       return <Skeleton className="h-48 w-full rounded-lg" />;

@@ -23,8 +23,15 @@ const RELEASES_PER_PAGE = 20;
  * FAILURE_TTL_MS. Without that last part one unreadable repository (a typo, a
  * private repo) would burn the whole hourly budget and take the working
  * families down with it.
+ *
+ * FRESH_MS is sized against that budget rather than against how fresh the data
+ * needs to be: the cache is per task, so the worst case is
+ * (60 / FRESH_MS_minutes) x tasks x repositories requests an hour. At five
+ * minutes, three tasks and three families that is 108, well over the limit. At
+ * fifteen it is 36. Releases move on a human cadence, so the staleness costs
+ * nothing.
  */
-const FRESH_MS = 5 * 60 * 1000;
+const FRESH_MS = 15 * 60 * 1000;
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const FAILURE_TTL_MS = 60 * 1000;
 const CACHE_PREFIX = "github-releases:";

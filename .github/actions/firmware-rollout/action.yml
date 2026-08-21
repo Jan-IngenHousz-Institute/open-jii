@@ -86,8 +86,12 @@ runs:
         RELEASE_TAG: ${{ inputs.release-tag }}
       run: |
         set -euo pipefail
-        REPO="$(jq -r --arg f "$FAMILY" '.[$f].repository' .github/firmware/families.json)"
-        ASSET="$(jq -r --arg f "$FAMILY" '.[$f].asset' .github/firmware/families.json)"
+        REPO="$(jq -r --arg f "$FAMILY" '.[$f].repository // "null"' .github/firmware/families.json)"
+        ASSET="$(jq -r --arg f "$FAMILY" '.[$f].asset // "null"' .github/firmware/families.json)"
+        # Adding a family to the workflow's choices without adding it here would
+        # otherwise surface as `gh --repo null`, which says nothing useful.
+        [ "$REPO" != "null" ] && [ "$ASSET" != "null" ] || {
+          echo "::error::$FAMILY has no repository/asset in .github/firmware/families.json"; exit 1; }
 
         if [ "$RELEASE_TAG" = "latest" ]; then
           TAG="$(gh release list --repo "$REPO" --limit 100 --json tagName,isDraft,isPrerelease \
@@ -378,8 +382,27 @@ runs:
         done
         jq -sc . executions.ndjson > executions.json
 
-        jq -n --arg jobId "$JOB_ID" --arg status "$STATUS" --slurpfile execs executions.json \
-          '{jobId: $jobId, status: $status, executions: $execs[0], error: null}' > results.json
+        BAD="$(jq '[.[] | select(.jobExecutionSummary.status
+          | IN("FAILED","TIMED_OUT","REJECTED","CANCELED","REMOVED"))] | length' executions.json)"
+
+        # A canceled job means the abort criteria tripped, which is the loudest
+        # safety signal this workflow has. The verdict is decided before the
+        # artifact is written, so the 90-day audit record carries it too rather
+        # than reading `error: null` for a rollout that was stopped.
+        if [ "$STATUS" = "CANCELED" ]; then
+          OUTCOME="rollout CANCELED: the abort criteria tripped"
+        elif [ "$BAD" -gt 0 ]; then
+          OUTCOME="$BAD execution(s) did not succeed"
+        elif [ -n "$GAVE_UP" ]; then
+          OUTCOME="unfinished at hand-off; the job continues in AWS"
+        else
+          OUTCOME=""
+        fi
+
+        jq -n --arg jobId "$JOB_ID" --arg status "$STATUS" --arg outcome "$OUTCOME" \
+          --slurpfile execs executions.json \
+          '{jobId: $jobId, status: $status, executions: $execs[0],
+            error: (if $outcome == "" then null else $outcome end)}' > results.json
 
         {
           echo "### Result: \`$STATUS\`"
@@ -388,15 +411,11 @@ runs:
           jq -r '.[] | "| \(.thingArn | split("/") | last) | \(.jobExecutionSummary.status) |"' executions.json
         } >> "$GITHUB_STEP_SUMMARY"
 
-        # A canceled job means the abort criteria tripped, which is the loudest
-        # safety signal this workflow has; it must never read as a green run.
-        [ "$STATUS" != "CANCELED" ] || { echo "::error::rollout CANCELED: the abort criteria tripped"; exit 1; }
-
-        BAD="$(jq '[.[] | select(.jobExecutionSummary.status
-          | IN("FAILED","TIMED_OUT","REJECTED","CANCELED","REMOVED"))] | length' executions.json)"
-        [ "$BAD" -eq 0 ] || { echo "::error::$BAD execution(s) did not succeed"; exit 1; }
-
-        [ -z "$GAVE_UP" ] || echo "::warning::rollout unfinished at hand-off; read the job in AWS for the final state"
+        if [ "$STATUS" = "CANCELED" ] || [ "$BAD" -gt 0 ]; then
+          echo "::error::$OUTCOME"
+          exit 1
+        fi
+        [ -z "$GAVE_UP" ] || echo "::warning::$OUTCOME"
 
     - name: Upload results
       if: always()
