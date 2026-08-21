@@ -47,7 +47,10 @@ function RunTimer() {
     return () => clearInterval(id);
   }, []);
   return (
-    <span className="text-[11px] tabular-nums text-blue-500" data-testid="run-timer">
+    <span
+      className="text-status-published-foreground text-[11px] tabular-nums"
+      data-testid="run-timer"
+    >
       {formatElapsed(elapsed)}
     </span>
   );
@@ -200,13 +203,13 @@ export function CellWrapper({
 
             {executionStatus === "running" && (
               <div className="flex items-center gap-1.5">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                <Loader2 className="text-status-published-foreground h-3.5 w-3.5 animate-spin" />
                 <RunTimer />
               </div>
             )}
             {executionStatus === "completed" && (
               <div className="flex w-5 items-center justify-center">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                <CheckCircle2 className="text-status-active-foreground h-3.5 w-3.5" />
               </div>
             )}
             {executionStatus === "error" && (

@@ -1,11 +1,13 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { extractMeasurement } from "@/lib/multispeq/detect";
 import type { InputRecord, OutputRecord, ProtocolJson } from "@/lib/multispeq/pipeline";
 import { LED_COLORS, LED_NAMES, measurementToTimeseries } from "@/lib/multispeq/pipeline";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
+import { Card } from "@repo/ui/components/card";
 import { PlotlyChart } from "@repo/ui/components/charts/plotly-chart";
 // Plotly's own types are a workspace dep of @repo/ui, not of apps/web —
 // re-export them through the UI charts module so we don't pull plotly.js
@@ -281,26 +283,35 @@ export function OutputCellTimeseries({
 
   if (loading) {
     return (
-      <div className="flex h-[960px] items-center justify-center rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] text-xs text-[#68737B]">
+      <InsetPanel
+        padding="none"
+        className="text-muted-foreground flex h-[960px] items-center justify-center text-xs"
+      >
         {t("output.loadingProtocol")}
-      </div>
+      </InsetPanel>
     );
   }
 
   if (!decoded) {
     return (
-      <div className="flex h-[120px] items-center justify-center rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] text-xs text-[#68737B]">
+      <InsetPanel
+        padding="none"
+        className="text-muted-foreground flex h-[120px] items-center justify-center text-xs"
+      >
         {errorLabel}
-      </div>
+      </InsetPanel>
     );
   }
 
   const groups = groupOutputs(decoded.outputs);
   if (groups.length === 0) {
     return (
-      <div className="flex h-[120px] items-center justify-center rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] text-xs text-[#68737B]">
+      <InsetPanel
+        padding="none"
+        className="text-muted-foreground flex h-[120px] items-center justify-center text-xs"
+      >
         {emptyLabel}
-      </div>
+      </InsetPanel>
     );
   }
 
@@ -369,7 +380,7 @@ export function OutputCellTimeseries({
   };
 
   return (
-    <div className="h-[820px] w-full overflow-hidden rounded-lg border border-[#EDF2F6] bg-white">
+    <Card className="h-[820px] w-full gap-0 overflow-hidden py-0">
       <PlotlyChart
         data={traces}
         layout={layout}
@@ -380,6 +391,6 @@ export function OutputCellTimeseries({
           toImageButtonOptions: { format: "png", filename: "multispeq-timeseries" },
         }}
       />
-    </div>
+    </Card>
   );
 }

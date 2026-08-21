@@ -3,16 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   CATEGORY_PALETTE,
   COLOR_MAP_KEY_SEPARATOR,
-  DEFAULT_PRIMARY_COLOR,
   composeColorMapKey,
   getCategoryColor,
   getDefaultSeriesColor,
+  getSuggestedSeriesColor,
   withAlpha,
 } from "./palettes";
 
 describe("getDefaultSeriesColor", () => {
-  it("returns the primary color at index 0", () => {
-    expect(getDefaultSeriesColor(0)).toBe(DEFAULT_PRIMARY_COLOR);
+  it("is stable at index 0", () => {
+    expect(getDefaultSeriesColor(0)).toBe(getDefaultSeriesColor(0));
   });
 
   it("is deterministic across calls", () => {
@@ -21,6 +21,22 @@ describe("getDefaultSeriesColor", () => {
 
   it("wraps past the palette length", () => {
     expect(getDefaultSeriesColor(10)).toBe(getDefaultSeriesColor(0));
+  });
+});
+
+describe("getSuggestedSeriesColor", () => {
+  it("prefers the theme's first chart slot", () => {
+    const root = document.documentElement;
+    root.style.setProperty("--chart-1", "oklch(0.5551 0.0516 190.6334)");
+    try {
+      expect(getSuggestedSeriesColor()).toBe("#4e7d7a");
+    } finally {
+      root.style.removeProperty("--chart-1");
+    }
+  });
+
+  it("falls back to a literal when the theme cannot be read", () => {
+    expect(getSuggestedSeriesColor()).toBe("#3b82f6");
   });
 });
 

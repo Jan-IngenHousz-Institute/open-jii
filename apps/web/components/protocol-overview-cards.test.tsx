@@ -33,7 +33,7 @@ describe("ProtocolOverviewCards", () => {
       />,
     );
 
-    expect(screen.getByText("ambyte")).toHaveClass("bg-badge-active");
+    expect(screen.getByText("ambyte")).toHaveClass("bg-status-active");
   });
 
   it("shows preferred badge for sorted protocols", () => {

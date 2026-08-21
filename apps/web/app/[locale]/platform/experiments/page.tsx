@@ -1,5 +1,6 @@
 import { ListExperiments } from "@/components/list-experiments";
 import { PageContainer } from "@/components/page-container";
+import { PageHeader } from "@/components/shared/page-header";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -26,29 +27,26 @@ export default async function ExperimentPage({ params }: ExperimentPageProps) {
 
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        {/* Left: title, description and archive link */}
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900">{t("experiments.title")}</h1>
-          <p>{t("experiments.listDescription")}</p>
-
-          <Link href={`/${locale}/platform/experiments-archive`}>
-            <Button variant="link" className="!p-0">
-              {t("experiments.viewArchived")}
-            </Button>
-          </Link>
-        </div>
-
-        {/* Right: actions (create, transfer) */}
-        <div className="flex gap-4">
-          <Link href={`/${locale}/platform/transfer-request`}>
-            <Button variant="secondary">{t("transferRequest.title")}</Button>
-          </Link>
-          <Link href={`/platform/experiments/new`} locale={locale}>
-            <Button>{t("experiments.create")}</Button>
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={t("experiments.title")}
+        description={t("experiments.listDescription")}
+        actions={
+          <>
+            <Link href={`/${locale}/platform/transfer-request`}>
+              <Button variant="secondary">{t("transferRequest.title")}</Button>
+            </Link>
+            <Link href={`/platform/experiments/new`} locale={locale}>
+              <Button>{t("experiments.create")}</Button>
+            </Link>
+          </>
+        }
+      >
+        <Link href={`/${locale}/platform/experiments-archive`}>
+          <Button variant="link" className="!p-0">
+            {t("experiments.viewArchived")}
+          </Button>
+        </Link>
+      </PageHeader>
 
       <ListExperiments />
     </PageContainer>

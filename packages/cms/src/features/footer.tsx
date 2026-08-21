@@ -51,7 +51,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
 
   // Render button list helper
   const renderButtonList = (buttons: (ButtonFieldsFragment | null)[]) => (
-    <ul className="space-y-3 text-center text-sm text-white md:text-left">
+    <ul className="text-sidebar-foreground space-y-3 text-center text-sm md:text-left">
       {buttons.map((button, idx) => {
         if (!button?.label || !button.url) return null;
         const buttonInspectorProps = useContentfulInspectorMode({
@@ -61,10 +61,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
 
         return (
           <li key={`${button.url}-${idx}`} {...buttonInspectorProps({ fieldId: "label" })}>
-            <Link
-              href={buildHref(button.url)}
-              className="hover:text-jii-bright-green transition-colors"
-            >
+            <Link href={buildHref(button.url)} className="hover:text-primary transition-colors">
               {button.label}
             </Link>
           </li>
@@ -74,7 +71,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
   );
 
   return (
-    <footer className="bg-sidebar w-full py-12 text-white">
+    <footer className="bg-sidebar text-sidebar-foreground w-full py-12">
       <div className="mx-auto w-full max-w-7xl px-4">
         <div className="mb-8 flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           {/* openJII Brand/Description aligned left */}
@@ -88,13 +85,16 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
               className="mb-3 h-12 w-auto"
             />
             <p
-              className="mb-4 leading-relaxed text-white"
+              className="text-sidebar-foreground mb-4 leading-relaxed"
               {...inspectorProps({ fieldId: "title" })}
             >
               {currentFooter.title}
             </p>
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-white" {...inspectorProps({ fieldId: "badge" })}>
+              <span
+                className="text-sidebar-foreground text-sm"
+                {...inspectorProps({ fieldId: "badge" })}
+              >
                 {currentFooter.badge}
               </span>
             </div>
@@ -125,31 +125,34 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
           </div>
         </div>
 
-        <div className="w-full border-t border-white/40 pt-8 text-center">
+        <div className="border-border/40 w-full border-t pt-8 text-center">
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <p className="text-sm text-white" {...inspectorProps({ fieldId: "copyright" })}>
+            <p
+              className="text-sidebar-foreground text-sm"
+              {...inspectorProps({ fieldId: "copyright" })}
+            >
               {currentFooter.copyright}
             </p>
-            <span className="hidden text-white sm:inline">•</span>
+            <span className="text-sidebar-foreground hidden sm:inline">•</span>
             <Link
               href={buildHref("/releases")}
-              className="hover:text-jii-bright-green text-sm text-white transition-colors"
+              className="hover:text-sidebar-primary text-sidebar-foreground text-sm transition-colors"
             >
               Releases
             </Link>
-            <span className="hidden text-white sm:inline">•</span>
+            <span className="text-sidebar-foreground hidden sm:inline">•</span>
             <Link
               href={buildHref("/cookie-settings")}
-              className="hover:text-jii-bright-green text-sm text-white transition-colors"
+              className="hover:text-sidebar-primary text-sidebar-foreground text-sm transition-colors"
             >
               Cookie Settings
             </Link>
-            <span className="hidden text-white sm:inline">•</span>
+            <span className="text-sidebar-foreground hidden sm:inline">•</span>
             <Link
               href="https://github.com/Jan-IngenHousz-Institute/open-jii"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-jii-bright-green flex items-center gap-2 text-sm text-white transition-colors"
+              className="hover:text-sidebar-primary text-sidebar-foreground flex items-center gap-2 text-sm transition-colors"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path

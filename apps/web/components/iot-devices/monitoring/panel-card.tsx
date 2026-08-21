@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
+import { SettingsCard } from "@/components/shared/settings-card";
 
 interface PanelCardProps {
   title: string;
@@ -17,12 +11,8 @@ interface PanelCardProps {
 /** The dashboard's shared panel chrome. */
 export function PanelCard({ title, description, children }: PanelCardProps) {
   return (
-    <Card className="shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        {description !== undefined && <CardDescription>{description}</CardDescription>}
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
+    <SettingsCard title={title} description={description}>
+      {children}
+    </SettingsCard>
   );
 }

@@ -6,10 +6,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { Button } from "@repo/ui/components/button";
+
 // Lucide icons are stroke-only — `fill-*` paints the inside of the outline and
 // looks garbled. Active state is conveyed by the row's background + font weight,
 // not by the icon.
-const navIconClass = "h-5 w-5 shrink-0";
+//
+// Spelled `size-5` rather than `h-5 w-5` so it opts out of `Button`'s
+// `[&_svg:not([class*='size-'])]:size-4`, which would otherwise win on
+// specificity and shrink the group header's icon below its siblings'.
+const navIconClass = "size-5 shrink-0";
 
 interface NavItem {
   title: string;
@@ -42,9 +48,9 @@ export function NavItems({ items }: { items: NavItem[] }) {
           <div key={item.title} className="group-data-[collapsible=icon]:contents">
             <Link
               href={item.url}
-              className={`flex h-12 items-center gap-2 rounded-lg px-4 text-white transition-colors duration-200 hover:bg-white/10 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-2xl group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:transition-none group-data-[collapsible=icon]:hover:!mx-0 group-data-[collapsible=icon]:hover:!w-full group-data-[collapsible=icon]:hover:!rounded-none ${
+              className={`hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-12 items-center gap-2 rounded-lg px-4 transition-colors duration-200 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-2xl group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:transition-none group-data-[collapsible=icon]:hover:!mx-0 group-data-[collapsible=icon]:hover:!w-full group-data-[collapsible=icon]:hover:!rounded-none ${
                 isActive
-                  ? "bg-sidebar-active-bg font-semibold group-data-[collapsible=icon]:!mx-0 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!rounded-none group-data-[collapsible=icon]:bg-white/10"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold group-data-[collapsible=icon]:!mx-0 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!rounded-none"
                   : "font-medium"
               }`}
             >
@@ -70,10 +76,11 @@ function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
   return (
     <div className="group-data-[collapsible=icon]:contents">
       {/* Group header - not a link */}
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => setOpen((v) => !v)}
-        className={`flex h-12 w-full items-center gap-2 rounded-lg px-4 text-white transition-colors duration-200 hover:bg-white/10 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-2xl group-data-[collapsible=icon]:p-0 ${
+        className={`hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-12 w-full justify-start gap-2 rounded-lg px-4 transition-colors duration-200 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-2xl group-data-[collapsible=icon]:p-0 ${
           anyChildActive ? "font-semibold" : "font-medium"
         }`}
       >
@@ -82,9 +89,9 @@ function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
           {item.title}
         </span>
         <ChevronDown
-          className={`ml-auto h-4 w-4 shrink-0 text-white/60 transition-transform group-data-[collapsible=icon]:hidden ${open ? "rotate-180" : ""}`}
+          className={`text-sidebar-foreground/60 ml-auto size-4 shrink-0 transition-transform group-data-[collapsible=icon]:hidden ${open ? "rotate-180" : ""}`}
         />
-      </button>
+      </Button>
 
       {/* Children */}
       {open && (
@@ -99,9 +106,9 @@ function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
               <Link
                 key={child.title}
                 href={child.url}
-                className={`flex h-10 items-center gap-2 rounded-lg px-4 text-sm text-white transition-colors duration-200 hover:bg-white/10 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-2xl group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:transition-none group-data-[collapsible=icon]:hover:!mx-0 group-data-[collapsible=icon]:hover:!w-full group-data-[collapsible=icon]:hover:!rounded-none ${
+                className={`hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-10 items-center gap-2 rounded-lg px-4 text-sm transition-colors duration-200 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-2xl group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:transition-none group-data-[collapsible=icon]:hover:!mx-0 group-data-[collapsible=icon]:hover:!w-full group-data-[collapsible=icon]:hover:!rounded-none ${
                   isChildActive
-                    ? "bg-sidebar-active-bg font-semibold group-data-[collapsible=icon]:!mx-0 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!rounded-none group-data-[collapsible=icon]:bg-white/10"
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold group-data-[collapsible=icon]:!mx-0 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!rounded-none"
                     : "font-medium"
                 }`}
               >

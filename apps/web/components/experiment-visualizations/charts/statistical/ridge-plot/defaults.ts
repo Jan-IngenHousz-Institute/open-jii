@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function ridgePlotDefaultConfig(): ChartFormConfig {
@@ -10,7 +9,6 @@ export function ridgePlotDefaultConfig(): ChartFormConfig {
     showLegend: false,
     showGrid: true,
     useWebGL: false,
-    color: [DEFAULT_PRIMARY_COLOR],
     // 0.5 is the canonical "mountain ridges" overlap; 0 gives crisply
     // separated lanes, 0.7+ gives the "Joy Division" intermingling look.
     ridgeOverlap: 0.5,

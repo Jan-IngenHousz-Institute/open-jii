@@ -116,8 +116,8 @@ export function IotDevicesTableView() {
       </div>
 
       {!isLoading && filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#CDD5DB] p-10 text-center text-sm text-[#68737B]">
-          <p className="font-medium text-[#011111]">{t("iot.devices.zeroResults.title")}</p>
+        <div className="border-border text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">
+          <p className="text-foreground font-medium">{t("iot.devices.zeroResults.title")}</p>
           <p className="mt-1">{t("iot.devices.zeroResults.description")}</p>
           <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
             {t("iot.devices.zeroResults.clear")}

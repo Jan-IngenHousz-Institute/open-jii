@@ -102,7 +102,7 @@ export function PasskeyCreatePrompt({ userId, sessionId }: { userId: string; ses
           <>
             <DialogHeader>
               <div className="flex justify-center py-2">
-                <CheckCircle2 className="text-jii-dark-green h-10 w-10" />
+                <CheckCircle2 className="text-primary h-10 w-10" />
               </div>
               <DialogTitle className="text-center">{t("passkeys.promptSuccessTitle")}</DialogTitle>
               <DialogDescription className="text-center">

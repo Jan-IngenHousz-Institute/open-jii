@@ -4,6 +4,7 @@ import React from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import {
   Dialog,
@@ -56,7 +57,6 @@ export function RegistrationFields({
                   {...field}
                   type="email"
                   placeholder={t("registration.emailPlaceholder")}
-                  className="h-12 rounded-xl"
                   disabled={isPending}
                 />
               </FormControl>
@@ -80,7 +80,6 @@ export function RegistrationFields({
                   <Input
                     {...field}
                     placeholder={t("registration.firstNamePlaceholder")}
-                    className="h-12 rounded-xl"
                     disabled={isPending}
                   />
                 </FormControl>
@@ -100,7 +99,6 @@ export function RegistrationFields({
                   <Input
                     {...field}
                     placeholder={t("registration.lastNamePlaceholder")}
-                    className="h-12 rounded-xl"
                     disabled={isPending}
                   />
                 </FormControl>
@@ -134,9 +132,9 @@ export function RegistrationFields({
                 {t("auth.termsPrefix")}
                 <Dialog>
                   <DialogTrigger asChild>
-                    <button type="button" className="cursor-pointer underline">
+                    <Button type="button" variant="link" className="h-auto p-0 text-xs">
                       {t("auth.terms")}
-                    </button>
+                    </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-lg">
                     <DialogHeader>

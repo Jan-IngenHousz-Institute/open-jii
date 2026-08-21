@@ -4,6 +4,8 @@ import { Pin, X } from "lucide-react";
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import { LineChart } from "@repo/ui/components/charts/line-chart";
 
@@ -50,21 +52,23 @@ export function ExperimentDataTableChart({
   ];
 
   return (
-    <div className="bg-background w-full rounded-lg border p-4 shadow-lg">
+    <Card className="w-full gap-0 p-4">
       {isClicked && onClose && (
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Pin className="h-4 w-4 text-teal-600" />
+            <Pin className="text-status-active-foreground h-4 w-4" />
             <h4 className="text-sm font-medium">{columnName}</h4>
           </div>
-          <button
+          <Button
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1 rounded px-2 py-1 text-sm transition-colors hover:bg-gray-100"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground font-normal"
             type="button"
           >
             <X className="h-4 w-4" />
             {t("common.close")}
-          </button>
+          </Button>
         </div>
       )}
       <div className="h-[460px] w-full">
@@ -78,6 +82,6 @@ export function ExperimentDataTableChart({
           }}
         />
       </div>
-    </div>
+    </Card>
   );
 }

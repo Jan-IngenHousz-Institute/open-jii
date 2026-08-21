@@ -59,11 +59,8 @@ export function DataTableCellCollapsible({
   }
 
   return (
-    <TableRow className="min-w-full bg-gray-50 dark:bg-gray-800">
-      <TableCell
-        colSpan={columnCount + 1}
-        className="border-t border-gray-200 p-0 dark:border-gray-700"
-      >
+    <TableRow className="bg-muted min-w-full">
+      <TableCell colSpan={columnCount + 1} className="border-border border-t p-0">
         <div className="sticky left-0 w-[74vw]">{content}</div>
       </TableCell>
     </TableRow>

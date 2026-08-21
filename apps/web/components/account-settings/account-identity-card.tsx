@@ -58,7 +58,7 @@ export function AccountIdentityCard({
             avatarUrl={previewAvatarUrl}
             firstName={profile.firstName}
             lastName={profile.lastName}
-            className="border-card bg-surface ring-primary/15 h-24 w-24 shrink-0 border-4 text-2xl shadow-md ring-1"
+            className="border-card bg-muted ring-primary/15 h-24 w-24 shrink-0 border-4 text-2xl shadow-md ring-1"
           />
 
           <div className="flex w-full min-w-0 flex-1 flex-col items-center gap-3 sm:w-auto sm:items-start">
@@ -74,19 +74,19 @@ export function AccountIdentityCard({
 
             <div className="flex max-w-full flex-wrap justify-center gap-2 sm:justify-start">
               {email && (
-                <span className="bg-surface text-foreground/80 inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs">
+                <span className="bg-muted text-foreground/80 inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs">
                   <Mail className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{email}</span>
                 </span>
               )}
               {activeOrg?.name && (
-                <span className="bg-surface text-foreground/80 inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs">
+                <span className="bg-muted text-foreground/80 inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs">
                   <Building2 className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{activeOrg.name}</span>
                 </span>
               )}
               <Badge
-                className={profile.activated === false ? "bg-badge-archived" : "bg-badge-active"}
+                className={profile.activated === false ? "bg-status-archived" : "bg-status-active"}
               >
                 {profile.activated === false
                   ? t("settings.status.deactivated")

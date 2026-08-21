@@ -6,6 +6,7 @@ import {
   useDevicesRegister,
 } from "@/components/iot-devices/devices-register-context";
 import { PageContainer } from "@/components/page-container";
+import { PageHeader } from "@/components/shared/page-header";
 import { useLocale } from "@/hooks/useLocale";
 import { Plus } from "lucide-react";
 import { notFound, usePathname } from "next/navigation";
@@ -51,26 +52,26 @@ function DevicesLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900">{t("iot.devices.title")}</h1>
-          <p className="text-muted-foreground">{t("iot.devices.description")}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setBulkOpen(true);
-            }}
-          >
-            {t("iot.devices.bulkDialog.open")}
-          </Button>
-          <Button onClick={openRegister}>
-            <Plus className="h-4 w-4" />
-            {t("iot.devices.register")}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={t("iot.devices.title")}
+        description={t("iot.devices.description")}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBulkOpen(true);
+              }}
+            >
+              {t("iot.devices.bulkDialog.open")}
+            </Button>
+            <Button onClick={openRegister}>
+              <Plus className="h-4 w-4" />
+              {t("iot.devices.register")}
+            </Button>
+          </>
+        }
+      />
 
       {children}
 

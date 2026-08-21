@@ -79,7 +79,7 @@ function assertNever(value: never): never {
 function OrgGroupRow({ name, count, tier }: { name: string; count: string; tier: string }) {
   return (
     <div role="listitem" className="flex items-center gap-3 px-3 py-2.5">
-      <div className="bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
+      <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
         <Users className="text-muted-foreground h-4 w-4" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
@@ -163,7 +163,7 @@ function PersonRow({
   return (
     <div role="listitem" className="flex items-center gap-3 px-3 py-2.5">
       {isOrganization || isTeam ? (
-        <div className="bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
+        <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
           {isTeam ? (
             <Users className="text-muted-foreground h-4 w-4" />
           ) : (

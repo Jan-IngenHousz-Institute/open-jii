@@ -1,5 +1,4 @@
 import { TranslationsProvider } from "@/components/translations-provider";
-import { Poppins, Overpass, Inter, Noto_Sans } from "next/font/google";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import React from "react";
@@ -10,36 +9,11 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import { defaultLocale, isKnownLocale, namespaces } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
-import { cn } from "@repo/ui/lib/utils";
 
 import { AlertsBar } from "../../components/alerts-bar";
 import { PostHogIdentifier } from "../../hooks/usePostHogAuth";
 import { QueryProvider } from "../../providers/QueryProvider";
 import "../globals.css";
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  variable: "--font-poppins",
-});
-
-const overpass = Overpass({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  variable: "--font-overpass",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  variable: "--font-inter",
-});
-
-const notoSans = Noto_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-noto-sans",
-});
 
 interface LocaleLayoutProps {
   children: ReactNode;
@@ -71,15 +45,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   });
 
   return (
-    <div
-      className={cn(
-        "bg-background font-inter flex h-full min-h-screen flex-col antialiased",
-        poppins.variable,
-        overpass.variable,
-        inter.variable,
-        notoSans.variable,
-      )}
-    >
+    <div className="bg-background flex h-full min-h-screen flex-col antialiased">
       <ContentfulPreviewProvider
         locale={locale}
         enableInspectorMode={preview}

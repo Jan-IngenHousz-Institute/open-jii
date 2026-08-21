@@ -2,6 +2,7 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { PageContainer } from "@/components/page-container";
+import { EmptyState } from "@/components/shared/empty-state";
 import { BarChart3, FileSpreadsheet, Pencil, Upload } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -118,21 +119,15 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
-            <BarChart3 className="text-muted-foreground h-12 w-12" />
-          </div>
-          <p className="text-muted-foreground mb-4 text-center text-sm">
-            {t("experimentData.noData")}
-          </p>
+        <EmptyState icon={BarChart3} description={t("experimentData.noData")}>
           <Link
             href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/measuring/taking-measurements`}
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Button variant="muted">{t("experimentData.readMore")}</Button>
+            <Button variant="secondary">{t("experimentData.readMore")}</Button>
           </Link>
-        </div>
+        </EmptyState>
 
         <UploadDataModal
           experimentId={id}

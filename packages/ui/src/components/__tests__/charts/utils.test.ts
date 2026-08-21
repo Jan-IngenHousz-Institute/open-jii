@@ -204,7 +204,7 @@ describe("utils", () => {
         plot_bgcolor: "rgba(0,0,0,0)",
         paper_bgcolor: "#ffffff",
         font: {
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
           color: "#000000",
           size: 12,
         },
@@ -237,7 +237,7 @@ describe("utils", () => {
         text: "Test Chart",
         font: {
           size: 14,
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
           color: "#000000",
         },
       });
@@ -257,7 +257,7 @@ describe("utils", () => {
         font: {
           size: 14,
           color: "#000000",
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
         },
       });
 
@@ -266,7 +266,7 @@ describe("utils", () => {
         font: {
           size: 14,
           color: "#000000",
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
         },
       });
     });
@@ -382,7 +382,7 @@ describe("utils", () => {
         font: {
           color: "#000000",
           size: 12,
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
         },
         bgcolor: "rgba(255,255,255,0.8)",
       });

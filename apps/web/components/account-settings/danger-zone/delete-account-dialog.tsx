@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -131,7 +132,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
           >
             {/* What deletion erases / preserves — laid out side by side when there's room */}
             {!isExpanded && (
-              <div className="border-destructive/30 bg-muted shrink-0 rounded-md border p-3 text-sm">
+              <InsetPanel tone="destructive" className="shrink-0 text-sm">
                 <div
                   className={cn(hasBlockers ? "grid gap-x-6 gap-y-3 sm:grid-cols-2" : "space-y-3")}
                 >
@@ -150,8 +151,8 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
                   </div>
                   <div>
                     <div className="mb-1.5 flex items-start gap-2">
-                      <AlertTriangle className="text-jii-dark-green mt-0.5 h-5 w-5 shrink-0" />
-                      <p className="text-jii-dark-green font-medium">
+                      <AlertTriangle className="text-primary mt-0.5 h-5 w-5 shrink-0" />
+                      <p className="text-primary font-medium">
                         {t("dangerZone.delete.warningPreserveTitle")}
                       </p>
                     </div>
@@ -160,7 +161,7 @@ export function DeleteAccountDialog({ userId }: DeleteAccountDialogProps) {
                     </ul>
                   </div>
                 </div>
-              </div>
+              </InsetPanel>
             )}
 
             {/* Organizations are cleared elsewhere, so they stay visible alongside the

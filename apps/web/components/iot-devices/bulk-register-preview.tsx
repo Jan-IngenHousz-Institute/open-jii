@@ -20,10 +20,9 @@ interface BulkRegisterPreviewProps {
 }
 
 const STATUS_CLASS: Record<BulkRowStatus, string> = {
-  ready:
-    "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  invalid: "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  duplicate: "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  ready: "border-transparent bg-status-active text-status-active-foreground",
+  invalid: "border-transparent bg-status-stale text-status-stale-foreground",
+  duplicate: "border-transparent bg-status-stale text-status-stale-foreground",
   registered: "border-transparent bg-secondary text-secondary-foreground",
 };
 

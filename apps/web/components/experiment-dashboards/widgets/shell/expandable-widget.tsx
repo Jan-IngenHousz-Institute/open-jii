@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -28,15 +29,17 @@ export function ExpandableWidget({ title, children }: ExpandableWidgetProps) {
   const handleOpen = () => setOpen(true);
 
   const tab = (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="xs"
       aria-label={t("widget.expand")}
       onClick={handleOpen}
       data-no-drag=""
-      className="bg-card text-muted-foreground hover:text-foreground focus-visible:ring-primary/40 shadow-xs focus-visible:outline-hidden pointer-events-auto inline-flex translate-y-1 items-center justify-center rounded-t-md border-x border-t px-2 py-1 opacity-0 transition-[opacity,transform] duration-150 focus-visible:translate-y-0 focus-visible:opacity-100 focus-visible:ring-2 group-hover/widget:translate-y-0 group-hover/widget:opacity-100"
+      className="text-muted-foreground hover:text-foreground pointer-events-auto translate-y-1 border-b-0 opacity-0 transition-[opacity,transform] duration-150 focus-visible:translate-y-0 focus-visible:opacity-100 group-hover/widget:translate-y-0 group-hover/widget:opacity-100"
     >
       <Maximize2 className="size-3.5" />
-    </button>
+    </Button>
   );
 
   // Mount in exactly one slot at a time so charts/hooks don't double-init.

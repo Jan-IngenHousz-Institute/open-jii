@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { Plus, Trash2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
@@ -22,7 +23,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 
 import type { ChartFormValues } from "../../charts/chart-config";
-import { getDefaultSeriesColor } from "../../charts/colors/palettes";
+import { getDefaultSeriesColor, getSuggestedSeriesColor } from "../../charts/colors/palettes";
 import { dataSourcesByRole, makeDataSource } from "../../charts/data/data-sources";
 import { useDataSourcesFieldArray } from "../context/data-sources-field-array-context";
 
@@ -82,7 +83,7 @@ export function MultiColumnShelf({
       if (Array.isArray(currentColors)) {
         form.setValue("config.color", [...currentColors, next]);
       } else {
-        form.setValue("config.color", [currentColors ?? "#3b82f6", next]);
+        form.setValue("config.color", [currentColors ?? getSuggestedSeriesColor(), next]);
       }
     }
   };
@@ -104,10 +105,7 @@ export function MultiColumnShelf({
           const dsIndex = entry.index;
           const canRemove = entries.length > minSeries;
           return (
-            <div
-              key={entry.source.role + dsIndex}
-              className="bg-muted/30 space-y-3 rounded-md border p-3"
-            >
+            <InsetPanel className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-xs font-medium">
                   {t("workspace.shelves.series", { index: seriesIndex + 1 })}
@@ -206,7 +204,7 @@ export function MultiColumnShelf({
                               <TooltipTrigger asChild>
                                 <FormColorInput
                                   value={typeof field.value === "string" ? field.value : undefined}
-                                  fallback="#3b82f6"
+                                  fallback={getSuggestedSeriesColor()}
                                   onCommit={field.onChange}
                                   disabled={isColorMapped}
                                 />
@@ -225,7 +223,7 @@ export function MultiColumnShelf({
                   )}
                 </div>
               )}
-            </div>
+            </InsetPanel>
           );
         })}
       </div>

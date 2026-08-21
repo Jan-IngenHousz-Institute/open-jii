@@ -140,7 +140,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
           <h4 className="text-sm font-medium">{tCommon("common.forkedFrom")}</h4>
           <Link
             href={`/${locale}/platform/macros/${macro.forkedFrom}`}
-            className="text-sm text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+            className="text-primary hover:text-primary/80 text-sm underline underline-offset-2"
           >
             {tCommon("common.viewOriginal")}
           </Link>

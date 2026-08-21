@@ -1,33 +1,16 @@
+import { ResourceCard, ResourceCardGrid } from "@/components/shared/resource-card";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useMacroCompatibleProtocols } from "@/hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import { useLocale } from "@/hooks/useLocale";
-import { getMacroLanguageBadgeColor, getMacroLanguageLabel } from "@/util/macro-language";
-import { ChevronRight } from "lucide-react";
-import Link from "next/link";
+import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
 import React, { useMemo, useState } from "react";
 
 import type { Macro, MacroProtocolEntry } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
-import { Skeleton } from "@repo/ui/components/skeleton";
-import { cva } from "@repo/ui/lib/utils";
 
 import { VisibilityBadge } from "./visibility/visibility-badge";
-
-const cardVariants = cva(
-  "relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg",
-  {
-    variants: {
-      featured: {
-        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-xs",
-        false: "border-gray-200 bg-white",
-      },
-    },
-    defaultVariants: {
-      featured: false,
-    },
-  },
-);
 
 interface MacroOverviewCardsProps {
   macros: Macro[] | undefined;
@@ -45,7 +28,7 @@ function CompatibleProtocolsList({ macroId, enabled }: { macroId: string; enable
       {protocols.map((entry) => (
         <span
           key={entry.protocol.id}
-          className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+          className="bg-muted text-muted-foreground inline-block truncate rounded px-1.5 py-0.5 text-[11px]"
         >
           {entry.protocol.name}
         </span>
@@ -67,37 +50,27 @@ function MacroCard({
   const isPreferred = macro.sortOrder !== null;
 
   return (
-    <Link
+    <ResourceCard
       href={`/${locale}/platform/macros/${macro.id}`}
+      title={macro.name}
+      featured={isPreferred}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-    >
-      <div className={cardVariants({ featured: isPreferred })}>
-        <div className="inline-flex gap-1">
-          <Badge className={getMacroLanguageBadgeColor(macro.language)}>
+      badges={
+        <>
+          <StatusBadge tone={getMacroLanguageBadgeTone(macro.language)}>
             {getMacroLanguageLabel(macro.language)}
-          </Badge>
-          {isPreferred && (
-            <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
-          )}
+          </StatusBadge>
+          {isPreferred && <Badge variant="secondary">{t("common.preferred")}</Badge>}
           {/* Only when private: "public" is the unremarkable default. */}
           <VisibilityBadge visibility={macro.visibility} privateOnly />
-        </div>
-        <div className="mb-auto">
-          <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
-            {macro.name}
-          </h3>
-          <div className="overflow-hidden text-sm text-gray-500">
-            <RichTextRenderer content={macro.description ?? " "} truncate maxLines={2} />
-          </div>
-        </div>
-        <CompatibleProtocolsList macroId={macro.id} enabled={hovered} />
-        <p className="text-xs text-gray-400">
-          {t("macros.lastUpdate")}: {new Date(macro.updatedAt).toLocaleDateString()}
-        </p>
-        <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
-      </div>
-    </Link>
+        </>
+      }
+      extra={<CompatibleProtocolsList macroId={macro.id} enabled={hovered} />}
+      footer={`${t("macros.lastUpdate")}: ${new Date(macro.updatedAt).toLocaleDateString()}`}
+    >
+      <RichTextRenderer content={macro.description ?? " "} truncate maxLines={2} />
+    </ResourceCard>
   );
 }
 
@@ -105,29 +78,13 @@ export function MacroOverviewCards({ macros, isLoading }: MacroOverviewCardsProp
   const { t } = useTranslation(["macro", "common"]);
   const locale = useLocale();
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <Skeleton key={index} className="h-48" />
-        ))}
-      </div>
-    );
-  }
-
-  if (!macros || macros.length === 0) {
-    return (
-      <div className="text-[0.9rem] font-normal leading-[1.3125rem] text-[#68737B]">
-        {t("macros.noMacros")}
-      </div>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {macros.map((macro) => (
-        <MacroCard key={macro.id} macro={macro} locale={locale} t={t} />
-      ))}
-    </div>
+    <ResourceCardGrid
+      isLoading={isLoading}
+      isEmpty={!macros || macros.length === 0}
+      emptyMessage={t("macros.noMacros")}
+    >
+      {macros?.map((macro) => <MacroCard key={macro.id} macro={macro} locale={locale} t={t} />)}
+    </ResourceCardGrid>
   );
 }

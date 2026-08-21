@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@repo/ui/components/card";
 import { cva } from "@repo/ui/lib/utils";
 
 const toggleButtonVariants = cva(
-  "absolute right-4 z-20 flex items-center justify-center md:hidden dark:bg-gray-900/80",
+  "absolute right-4 z-20 flex items-center justify-center md:hidden",
   {
     variants: {
       collapsed: {

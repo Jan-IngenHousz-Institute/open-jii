@@ -66,7 +66,7 @@ export function WorkbookCodeEditor({
   return (
     <div
       className={`rounded-md border ${
-        isDark ? "border-zinc-700 bg-zinc-900" : "border-zinc-200 bg-white"
+        isDark ? "border-border bg-card" : "border-border bg-card"
       } ${className}`}
       style={{ minHeight, maxHeight }}
     >

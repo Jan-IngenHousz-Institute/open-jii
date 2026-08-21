@@ -18,9 +18,9 @@ export function DashboardSection({
   return (
     <div className="flex flex-col">
       <div className="mb-4 flex items-end justify-between">
-        <h2 className="text-[1rem] font-bold leading-[1.3125rem] text-[#011111]">{title}</h2>
+        <h2 className="text-foreground text-[1rem] font-bold leading-[1.3125rem]">{title}</h2>
         <Link href={seeAllHref} locale={locale} className="hidden md:block">
-          <span className="text-[1rem] font-semibold leading-[1.25rem] text-[#005E5E] hover:text-[#004a4a]">
+          <span className="text-primary hover:text-primary/80 text-[1rem] font-semibold leading-[1.25rem]">
             {seeAllLabel}
           </span>
         </Link>
@@ -29,7 +29,7 @@ export function DashboardSection({
       <Link
         href={seeAllHref}
         locale={locale}
-        className="mt-6 flex w-full items-center justify-center rounded-lg bg-gray-100 py-3 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-200 md:hidden"
+        className="bg-muted text-foreground hover:bg-accent hover:text-accent-foreground mt-6 flex w-full items-center justify-center rounded-lg py-3 text-sm font-semibold transition-colors md:hidden"
       >
         {seeAllLabel}
       </Link>

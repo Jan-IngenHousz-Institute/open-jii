@@ -222,7 +222,7 @@ export function MacroCellComponent({
         />
       }
       labelText={displayName}
-      accentColor="#6C5CE7"
+      accentColor="var(--node-analysis)"
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
       onDelete={onDelete}
@@ -237,7 +237,7 @@ export function MacroCellComponent({
             {forkedFrom ? (
               <Link
                 href={`/platform/macros/${forkedFrom}`}
-                className="text-xs text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+                className="text-primary hover:text-primary text-xs underline underline-offset-2"
               >
                 {t("cells.forkedFrom")}
               </Link>
@@ -251,7 +251,7 @@ export function MacroCellComponent({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-muted-foreground h-6 w-6 shrink-0 p-0 hover:text-[#005E5E]"
+                        className="text-muted-foreground hover:text-primary h-6 w-6 shrink-0 p-0"
                         aria-label={t("cells.fork")}
                         onClick={() => void handleFork()}
                         disabled={isForking}
@@ -285,7 +285,7 @@ export function MacroCellComponent({
             asChild
             variant="ghost"
             size="sm"
-            className="text-muted-foreground h-7 w-7 p-0 hover:text-[#005E5E]"
+            className="text-muted-foreground hover:text-primary h-7 w-7 p-0"
             title="Open macro in new tab"
           >
             <Link
@@ -328,7 +328,11 @@ export function MacroCellComponent({
             className="text-muted-foreground h-7 w-7 p-0"
             onClick={handleCopy}
           >
-            {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+            {copied ? (
+              <Check className="text-status-active-foreground h-3 w-3" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
           </Button>
         </div>
       }

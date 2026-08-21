@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useDebounce } from "@/hooks/useDebounce";
 import { orpc } from "@/lib/orpc";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
@@ -11,13 +12,6 @@ import type { UseFormReturn } from "react-hook-form";
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
 import { Input } from "@repo/ui/components/input";
 import { RichTextarea } from "@repo/ui/components/rich-textarea";
@@ -77,156 +71,154 @@ export function NewProtocolDetailsCard({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("newProtocol.detailsTitle")}</CardTitle>
-        <CardDescription>{t("newProtocol.detailsDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Name + Family — side by side */}
-        <div className="grid gap-6 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("newProtocol.name")}</FormLabel>
-                <FormControl>
-                  <Input {...field} trim />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="family"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("newProtocol.family")}</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("newProtocol.selectFamily")} />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {SENSOR_FAMILY_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
-                        {opt.label}
-                        {opt.disabled ? ` (${t("common.comingSoon")})` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
+    <SettingsCard
+      title={t("newProtocol.detailsTitle")}
+      description={t("newProtocol.detailsDescription")}
+      contentClassName="space-y-6"
+    >
+      {/* Name + Family — side by side */}
+      <div className="grid gap-6 sm:grid-cols-2">
         <FormField
           control={form.control}
-          name="organizationId"
+          name="name"
           render={({ field }) => (
             <FormItem>
-              <OrganizationPicker
-                id="new-protocol-organization"
-                value={field.value ?? undefined}
-                onChange={(organizationId) => field.onChange(organizationId ?? undefined)}
-              />
+              <FormLabel>{t("newProtocol.name")}</FormLabel>
+              <FormControl>
+                <Input {...field} trim />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
-        {/* Visibility */}
         <FormField
           control={form.control}
-          name="visibility"
+          name="family"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("newProtocol.visibility")}</FormLabel>
+              <FormLabel>{t("newProtocol.family")}</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder={t("newProtocol.selectVisibility")} />
+                    <SelectValue placeholder={t("newProtocol.selectFamily")} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="public">{t("newProtocol.public")}</SelectItem>
-                  <SelectItem value="private">{t("newProtocol.private")}</SelectItem>
+                  {SENSOR_FAMILY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                      {opt.label}
+                      {opt.disabled ? ` (${t("common.comingSoon")})` : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />
             </FormItem>
           )}
         />
+      </div>
 
-        {/* Description */}
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("newProtocol.description_field")}</FormLabel>
+      <FormField
+        control={form.control}
+        name="organizationId"
+        render={({ field }) => (
+          <FormItem>
+            <OrganizationPicker
+              id="new-protocol-organization"
+              value={field.value ?? undefined}
+              onChange={(organizationId) => field.onChange(organizationId ?? undefined)}
+            />
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Visibility */}
+      <FormField
+        control={form.control}
+        name="visibility"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("newProtocol.visibility")}</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
-                <RichTextarea
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  placeholder={t("newProtocol.description_field")}
-                />
+                <SelectTrigger>
+                  <SelectValue placeholder={t("newProtocol.selectVisibility")} />
+                </SelectTrigger>
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              <SelectContent>
+                <SelectItem value="public">{t("newProtocol.public")}</SelectItem>
+                <SelectItem value="private">{t("newProtocol.private")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
-        {/* Compatible Macros */}
-        <div className="space-y-3">
-          <div>
-            <FormLabel>{t("newProtocol.compatibleMacros")}</FormLabel>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {t("newProtocol.compatibleMacrosDescription")}
-            </p>
-          </div>
-          {selectedMacros.length > 0 && (
-            <div className="space-y-2">
-              {selectedMacros.map((macro) => (
-                <div
-                  key={macro.id}
-                  className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="truncate text-sm font-medium">{macro.name}</span>
-                    <span className="text-muted-foreground text-xs">{macro.language}</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 shrink-0"
-                    aria-label={`${t("common.remove")} ${macro.name}`}
-                    onClick={() => onRemoveMacro(macro.id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-          <MacroSearchWithDropdown
-            availableMacros={availableMacros}
-            value=""
-            placeholder={t("protocolSettings.addCompatibleMacro")}
-            loading={!isDebounced}
-            searchValue={macroSearch}
-            onSearchChange={setMacroSearch}
-            onAddMacro={handleAddMacro}
-            isAddingMacro={false}
-          />
+      {/* Description */}
+      <FormField
+        control={form.control}
+        name="description"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("newProtocol.description_field")}</FormLabel>
+            <FormControl>
+              <RichTextarea
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                placeholder={t("newProtocol.description_field")}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Compatible Macros */}
+      <div className="space-y-3">
+        <div>
+          <FormLabel>{t("newProtocol.compatibleMacros")}</FormLabel>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t("newProtocol.compatibleMacrosDescription")}
+          </p>
         </div>
-      </CardContent>
-    </Card>
+        {selectedMacros.length > 0 && (
+          <div className="space-y-2">
+            {selectedMacros.map((macro) => (
+              <div
+                key={macro.id}
+                className="border-border flex items-center justify-between rounded-md border px-3 py-2"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-sm font-medium">{macro.name}</span>
+                  <span className="text-muted-foreground text-xs">{macro.language}</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  aria-label={`${t("common.remove")} ${macro.name}`}
+                  onClick={() => onRemoveMacro(macro.id)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        <MacroSearchWithDropdown
+          availableMacros={availableMacros}
+          value=""
+          placeholder={t("protocolSettings.addCompatibleMacro")}
+          loading={!isDebounced}
+          searchValue={macroSearch}
+          onSearchChange={setMacroSearch}
+          onAddMacro={handleAddMacro}
+          isAddingMacro={false}
+        />
+      </div>
+    </SettingsCard>
   );
 }

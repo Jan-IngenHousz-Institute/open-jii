@@ -177,16 +177,18 @@ describe("ExperimentDataTableChart", () => {
     expect(pinIcon).toBeInTheDocument();
   });
 
-  it("applies correct container styling", () => {
+  it("renders the chart on a card surface", () => {
     render(<ExperimentDataTableChart data={mockData} columnName={mockColumnName} visible={true} />);
 
     const container = screen.getByTestId("line-chart").parentElement?.parentElement;
-    expect(container).toHaveClass("bg-background");
-    expect(container).toHaveClass("w-full");
-    expect(container).toHaveClass("rounded-lg");
+    // The surface is the Card primitive's; width and padding are this
+    // component's own layout.
+    expect(container).toHaveClass("bg-card");
+    expect(container).toHaveClass("rounded-xl");
     expect(container).toHaveClass("border");
+    expect(container).toHaveClass("shadow-sm");
+    expect(container).toHaveClass("w-full");
     expect(container).toHaveClass("p-4");
-    expect(container).toHaveClass("shadow-lg");
   });
 
   it("applies correct chart container height", () => {

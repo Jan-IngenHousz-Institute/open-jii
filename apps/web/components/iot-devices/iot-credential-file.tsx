@@ -68,11 +68,11 @@ export function IotCredentialFile({
 
   return (
     <div className="flex items-center gap-3 py-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#F6F8FA] text-[#68737B]">
+      <div className="bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-md">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-[#011111]">{label}</p>
+        <p className="text-foreground truncate text-sm font-medium">{label}</p>
         <p className="text-muted-foreground truncate text-xs">{sublabel}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
@@ -86,7 +86,11 @@ export function IotCredentialFile({
             aria-label={t("iot.devices.credentials.copy")}
             onClick={() => copy(content)}
           >
-            {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+            {copied ? (
+              <Check className="text-status-active-foreground h-4 w-4" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
           </Button>
         )}
         <Button

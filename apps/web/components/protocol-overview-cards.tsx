@@ -1,8 +1,8 @@
+import { ResourceCard, ResourceCardGrid } from "@/components/shared/resource-card";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useLocale } from "@/hooks/useLocale";
-import { getSensorFamilyBadgeColor } from "@/util/sensor-family";
-import { ChevronRight } from "lucide-react";
-import Link from "next/link";
+import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
 import React, { useMemo, useState } from "react";
 
 import type {
@@ -13,25 +13,8 @@ import type {
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
-import { Skeleton } from "@repo/ui/components/skeleton";
-import { cva } from "@repo/ui/lib/utils";
 
 import { VisibilityBadge } from "./visibility/visibility-badge";
-
-const cardVariants = cva(
-  "relative flex h-full min-h-[180px] flex-col gap-3 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg",
-  {
-    variants: {
-      featured: {
-        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-xs",
-        false: "border-gray-200 bg-white",
-      },
-    },
-    defaultVariants: {
-      featured: false,
-    },
-  },
-);
 
 function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; enabled: boolean }) {
   const { data } = useProtocolCompatibleMacros(protocolId, enabled);
@@ -44,7 +27,7 @@ function CompatibleMacrosList({ protocolId, enabled }: { protocolId: string; ena
       {macros.map((entry) => (
         <span
           key={entry.macro.id}
-          className="inline-block truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+          className="bg-muted text-muted-foreground inline-block truncate rounded px-1.5 py-0.5 text-[11px]"
         >
           {entry.macro.name}
         </span>
@@ -66,37 +49,27 @@ function ProtocolCard({
   const isPreferred = protocol.sortOrder !== null;
 
   return (
-    <Link
+    <ResourceCard
       href={`/${locale}/platform/protocols/${protocol.id}`}
+      title={protocol.name}
+      featured={isPreferred}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-    >
-      <div className={cardVariants({ featured: isPreferred })}>
-        <div className="inline-flex gap-1">
-          <Badge className={`${getSensorFamilyBadgeColor(protocol.family)} capitalize`}>
+      badges={
+        <>
+          <StatusBadge tone={getSensorFamilyBadgeTone(protocol.family)} className="capitalize">
             {protocol.family}
-          </Badge>
-          {isPreferred && (
-            <Badge className="bg-secondary/30 text-primary">{t("common.preferred")}</Badge>
-          )}
+          </StatusBadge>
+          {isPreferred && <Badge variant="secondary">{t("common.preferred")}</Badge>}
           {/* Only when private: "public" is the unremarkable default. */}
           <VisibilityBadge visibility={protocol.visibility} privateOnly />
-        </div>
-        <div className="mb-auto">
-          <h3 className="mb-2 line-clamp-2 break-words text-base font-semibold text-gray-900 md:text-lg">
-            {protocol.name}
-          </h3>
-          <div className="overflow-hidden text-sm text-gray-500">
-            <RichTextRenderer content={protocol.description ?? " "} truncate maxLines={2} />
-          </div>
-        </div>
-        <CompatibleMacrosList protocolId={protocol.id} enabled={hovered} />
-        <p className="text-xs text-gray-400">
-          {t("protocols.lastUpdate")}: {new Date(protocol.updatedAt).toLocaleDateString()}
-        </p>
-        <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
-      </div>
-    </Link>
+        </>
+      }
+      extra={<CompatibleMacrosList protocolId={protocol.id} enabled={hovered} />}
+      footer={`${t("protocols.lastUpdate")}: ${new Date(protocol.updatedAt).toLocaleDateString()}`}
+    >
+      <RichTextRenderer content={protocol.description ?? " "} truncate maxLines={2} />
+    </ResourceCard>
   );
 }
 
@@ -104,29 +77,15 @@ export function ProtocolOverviewCards({ protocols }: { protocols: ProtocolList |
   const { t } = useTranslation("common");
   const locale = useLocale();
 
-  if (!protocols) {
-    return (
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <Skeleton key={index} className="h-48" />
-        ))}
-      </div>
-    );
-  }
-
-  if (protocols.length === 0) {
-    return (
-      <div className="text-[0.9rem] font-normal leading-[1.3125rem] text-[#68737B]">
-        {t("protocols.noProtocols")}
-      </div>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {protocols.map((protocol) => (
+    <ResourceCardGrid
+      isLoading={!protocols}
+      isEmpty={protocols?.length === 0}
+      emptyMessage={t("protocols.noProtocols")}
+    >
+      {protocols?.map((protocol) => (
         <ProtocolCard key={protocol.id} protocol={protocol} locale={locale} t={t} />
       ))}
-    </div>
+    </ResourceCardGrid>
   );
 }

@@ -1,31 +1,26 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { AlertCircle } from "lucide-react";
+import type { StatusTone } from "~/components/shared/status-badge";
+import { StatusBadge } from "~/components/shared/status-badge";
 import { useTransferRequests } from "~/hooks/useTransferRequests/useTransferRequests";
 import { formatDate } from "~/util/date";
 
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
-import { Badge } from "@repo/ui/components/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { cva } from "@repo/ui/lib/utils";
 
-const statusBadgeVariants = cva("", {
-  variants: {
-    status: {
-      pending: "bg-badge-stale",
-      approved: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      partial_failed: "bg-destructive text-destructive-foreground",
-      completed: "bg-badge-active",
-      rejected: "bg-destructive text-destructive-foreground",
-      failed: "bg-destructive text-destructive-foreground",
-    },
-  },
-  defaultVariants: {
-    status: "pending",
-  },
-});
+/** Request status to the pill it wears. A total record, so a seventh status
+ *  fails to compile rather than rendering an unstyled badge. */
+const STATUS_TONES: Record<string, StatusTone> = {
+  pending: "stale",
+  approved: "published",
+  partial_failed: "destructive",
+  completed: "active",
+  rejected: "destructive",
+  failed: "destructive",
+};
 
 export default function TransferRequestHistoryClient() {
   const { t } = useTranslation();
@@ -73,24 +68,21 @@ export default function TransferRequestHistoryClient() {
       <div className="max-h-[320px] space-y-3 overflow-y-auto pr-2">
         {requests.map((request) => {
           return (
-            <Card key={request.requestId} className="bg-surface-light">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-base">{request.projectIdOld}</CardTitle>
-                  </div>
-                  <Badge className={statusBadgeVariants({ status: request.status })}>
-                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <p className="text-muted-foreground text-sm">{request.projectUrlOld}</p>
-                <p className="text-muted-foreground text-sm">
-                  {t("transferRequest.requestedAt")} {formatDate(request.requestedAt)}
-                </p>
-              </CardContent>
-            </Card>
+            <SettingsCard
+              key={request.requestId}
+              title={request.projectIdOld}
+              action={
+                <StatusBadge tone={STATUS_TONES[request.status] ?? "stale"}>
+                  {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                </StatusBadge>
+              }
+              contentClassName="space-y-1"
+            >
+              <p className="text-muted-foreground text-sm">{request.projectUrlOld}</p>
+              <p className="text-muted-foreground text-sm">
+                {t("transferRequest.requestedAt")} {formatDate(request.requestedAt)}
+              </p>
+            </SettingsCard>
           );
         })}
       </div>

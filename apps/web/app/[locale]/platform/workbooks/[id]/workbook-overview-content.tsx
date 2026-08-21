@@ -46,8 +46,10 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
           here rather than in the layout — the Collaborators route renders on
           plain background, like the experiment collaborators page. */}
       <div
-        className="-mx-6 -mb-6 flex-1 border-t border-[#EDF2F6] px-6 pb-6"
-        style={{ background: "linear-gradient(270.03deg, #F5FFF8 0%, #F4F9FF 100%)" }}
+        className="border-border -mx-6 -mb-6 flex-1 border-t px-6 pb-6"
+        style={{
+          background: "linear-gradient(270.03deg, var(--accent) 0%, var(--secondary) 100%)",
+        }}
       >
         <div className="flex w-full flex-1 flex-col gap-6">
           <WorkbookDraftEditor

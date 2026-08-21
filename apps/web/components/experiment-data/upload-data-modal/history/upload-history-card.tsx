@@ -34,7 +34,7 @@ export function UploadHistoryCard({ upload, index }: UploadHistoryCardProps) {
         </TooltipTrigger>
         <TooltipContent
           side="top"
-          className="max-w-xs border bg-white text-center text-gray-700 shadow-md dark:border-gray-700 dark:bg-gray-100 dark:text-gray-800"
+          className="bg-popover text-popover-foreground max-w-xs border text-center shadow-md"
         >
           {errorMessage}
         </TooltipContent>

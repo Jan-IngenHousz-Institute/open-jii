@@ -1,0 +1,13 @@
+{
+  "name": "@repo/theme-guard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Regression tripwire for class strings that escape the globals.css theme contract",
+  "scripts": {
+    "clean": "git clean -xdf .cache .turbo node_modules",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "node ./ratchet.mjs",
+    "theme:baseline": "node ./ratchet.mjs --write"
+  }
+}

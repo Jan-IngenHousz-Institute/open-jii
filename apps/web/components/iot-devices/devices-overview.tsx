@@ -36,9 +36,9 @@ export function DevicesOverview() {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       {stats.map((stat) => (
-        <div key={stat.key} className="rounded-lg border border-[#EDF2F6] p-4">
+        <div key={stat.key} className="border-border rounded-lg border p-4">
           <p className="text-muted-foreground text-sm">{stat.label}</p>
-          <p className="mt-1 text-2xl font-semibold text-[#011111]">{stat.value}</p>
+          <p className="text-foreground mt-1 text-2xl font-semibold">{stat.value}</p>
         </div>
       ))}
     </div>

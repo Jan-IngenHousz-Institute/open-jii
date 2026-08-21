@@ -237,11 +237,7 @@ export function RegistrationForm({
           )}
 
           {/* Submit */}
-          <Button
-            type="submit"
-            className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark h-12 w-full rounded-xl"
-            disabled={isPending}
-          >
+          <Button type="submit" className="w-full" disabled={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

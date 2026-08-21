@@ -14,7 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
-import { TableBody } from "@repo/ui/components/table";
+import { Table, TableBody } from "@repo/ui/components/table";
 
 import { useDashboardFiltersForTable } from "../../dashboard-filters-context";
 import { WidgetEmptyState } from "../shell/widget-empty-state";
@@ -109,7 +109,7 @@ export function LoadedTableView({
   return (
     <div className="flex h-full min-h-0 flex-col text-xs">
       <div className="text-muted-foreground min-h-0 flex-1 overflow-auto [&_td]:px-2 [&_td]:py-1 [&_td_*]:!text-xs [&_th]:h-8 [&_th]:px-2">
-        <table className="w-max min-w-full caption-bottom">
+        <Table className="w-max min-w-full text-xs">
           {isInitialHeaderLoad ? (
             <SkeletonTableHeader columnCount={SKELETON_FALLBACK_COLUMN_COUNT} />
           ) : (
@@ -127,7 +127,7 @@ export function LoadedTableView({
               <DataTableRows rows={table.getRowModel().rows} columnCount={columns.length} />
             )}
           </TableBody>
-        </table>
+        </Table>
       </div>
       {showFooter && (
         <TablePaginationFooter

@@ -20,9 +20,9 @@ describe("BooleanAnswerDisplay", () => {
     expect(svg).toBeInTheDocument();
   });
 
-  it("has green gradient styling", () => {
+  it("wears the active tone's wash", () => {
     const { container } = render(<BooleanAnswerDisplay />);
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveClass("from-green-50", "to-green-100");
+    expect(wrapper).toHaveClass("bg-status-active");
   });
 });

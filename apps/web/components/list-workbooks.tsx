@@ -64,14 +64,16 @@ export function ListWorkbooks() {
             className="w-full pr-8"
           />
           {search && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               aria-label={t("workbooks.clearSearch")}
               onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 flex -translate-y-1/2 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-gray-400 hover:text-gray-600"
+              className="text-muted-foreground hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2"
             >
               <X className="h-4 w-4" />
-            </button>
+            </Button>
           )}
         </div>
         <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-4">

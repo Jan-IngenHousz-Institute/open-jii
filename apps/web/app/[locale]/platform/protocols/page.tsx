@@ -1,5 +1,6 @@
 import { ListProtocols } from "@/components/list-protocols";
 import { PageContainer } from "@/components/page-container";
+import { PageHeader } from "@/components/shared/page-header";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -26,15 +27,15 @@ export default async function ProtocolPage({ params }: ProtocolPageProps) {
 
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900">{t("protocols.title")}</h1>
-          <p>{t("protocols.listDescription")}</p>
-        </div>
-        <Link href={`/platform/protocols/new`} locale={locale}>
-          <Button>{t("protocols.create")}</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title={t("protocols.title")}
+        description={t("protocols.listDescription")}
+        actions={
+          <Link href={`/platform/protocols/new`} locale={locale}>
+            <Button>{t("protocols.create")}</Button>
+          </Link>
+        }
+      />
       <ListProtocols />
     </PageContainer>
   );

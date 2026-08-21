@@ -13,6 +13,7 @@ import {
   getPlotType,
   responsiveChrome,
   tierAxisFontSizes,
+  chartGridColor,
 } from "./utils";
 
 export interface PolarSeriesData extends BaseSeries {
@@ -181,7 +182,7 @@ export function PolarPlot({
         ticktext: radialAxis.ticktext,
         angle: radialAxis.angle || 90,
         side: radialAxis.side || "clockwise",
-        gridcolor: radialAxis.gridcolor || "#E6E6E6",
+        gridcolor: radialAxis.gridcolor || chartGridColor(),
         linecolor: radialAxis.linecolor || "#444",
         showgrid: radialAxis.showgrid !== false,
         showline: radialAxis.showline !== false,
@@ -198,7 +199,7 @@ export function PolarPlot({
         direction: angularAxis.direction || "counterclockwise",
         rotation: angularAxis.rotation || 0,
         period: angularAxis.period || 360,
-        gridcolor: angularAxis.gridcolor || "#E6E6E6",
+        gridcolor: angularAxis.gridcolor || chartGridColor(),
         linecolor: angularAxis.linecolor || "#444",
         showgrid: angularAxis.showgrid !== false,
         showline: angularAxis.showline !== false,

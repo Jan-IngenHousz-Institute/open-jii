@@ -47,7 +47,10 @@ export function LanguageSwitcher({ locale, variant = "default" }: LanguageSwitch
     return `/${newLocale}${pathWithoutLocale}`;
   };
 
-  const buttonClassName = variant === "header" ? "text-white hover:bg-primary-light" : "";
+  const buttonClassName =
+    variant === "header"
+      ? "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      : "";
 
   return (
     <DropdownMenu>

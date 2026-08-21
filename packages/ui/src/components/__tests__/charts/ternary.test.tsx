@@ -23,6 +23,8 @@ vi.mock("../../charts/plotly-chart", () => ({
 }));
 
 vi.mock("../../charts/utils", () => ({
+  chartGridColor: vi.fn(() => "#E6E6E6"),
+  readThemeColor: vi.fn(() => undefined),
   getRenderer: vi.fn(() => "svg"),
   getPlotType: vi.fn((type: string, renderer: string) =>
     renderer === "webgl" ? `${type}gl` : type,
