@@ -80,7 +80,8 @@
         "onboarding": "Einrichtung",
         "collaborators": "Mitwirkende",
         "lineage": "Herkunft",
-        "monitoring": "Überwachung"
+        "monitoring": "Überwachung",
+        "firmware": "Firmware"
       },
       "overview": {
         "total": "Geräte insgesamt"
@@ -340,6 +341,33 @@
         "copy": "Kopieren",
         "download": "Herunterladen",
         "downloadAll": "Alle herunterladen"
+      },
+      "firmware": {
+        "title": "Firmware",
+        "description": "Was dieses Gerät ausführt, was JII veröffentlicht hat und wie Updates es erreichen.",
+        "currentTitle": "Auf diesem Gerät",
+        "unknownVersion": "Dieses Gerät hat kürzlich keine Firmware-Version gemeldet.",
+        "upToDate": "Führt {{version}} aus, die neueste veröffentlichte Version.",
+        "updateAvailable": "Führt {{installed}} aus; {{latest}} ist verfügbar.",
+        "reported": "Führt {{version}} aus.",
+        "releasesTitle": "Versionen",
+        "releasesHint": "Von JII veröffentlicht; die neueste stabile Version wird bei einem Rollout standardmäßig installiert.",
+        "latest": "Neueste",
+        "prerelease": "Vorabversion",
+        "installed": "Auf diesem Gerät",
+        "noNotes": "Keine Versionshinweise.",
+        "showAllNotes": "Alle Hinweise anzeigen",
+        "viewOnGitHub": "Auf GitHub ansehen",
+        "noReleases": "Für diese Familie wurden noch keine Versionen veröffentlicht.",
+        "loadError": "Versionen konnten nicht geladen werden.",
+        "guide": {
+          "title": "Wie Updates dieses Gerät erreichen",
+          "intro": "JII startet Rollouts über einen geprüften Workflow; Geräte werden nie über diese Seite aktualisiert.",
+          "step1": "Eine Version wird im Firmware-Repository veröffentlicht.",
+          "step2": "Eine Bedienperson startet ein Rollout, das gestaffelt ausgeliefert und bei zu vielen Fehlern automatisch gestoppt wird.",
+          "step3": "Das Gerät erhält einen Update-Auftrag, lädt das Abbild über einen kurzlebigen Link und prüft die Prüfsumme.",
+          "step4": "Das Gerät wendet das Update an, startet neu und meldet das Ergebnis; ein fehlgeschlagenes Update wird zurückgerollt."
+        }
       }
     },
     "onboarding": {
