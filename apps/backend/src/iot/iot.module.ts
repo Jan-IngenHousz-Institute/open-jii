@@ -130,7 +130,8 @@ import { IotController } from "./presentation/iot.controller";
       useExisting: DatabricksAdapter,
     },
   ],
-  // For the organization showcase's device rows, scoped by the shared read predicate.
-  exports: [IotDeviceRepository],
+  // For the organization showcase's device and device-group rows, both scoped by the
+  // shared read predicate.
+  exports: [IotDeviceRepository, IotDeviceGroupRepository],
 })
 export class IotModule {}

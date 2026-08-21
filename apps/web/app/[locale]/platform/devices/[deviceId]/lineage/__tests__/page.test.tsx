@@ -1,8 +1,12 @@
+import { createIotDeviceDetail } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
+import { useParams } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 
-import DeviceLineageContent from "../device-lineage-content";
-import { generateMetadata } from "../page";
+import { contract } from "@repo/api/contract";
+
+import DeviceLineagePage, { generateMetadata } from "../page";
 
 vi.mock("@/lib/platform-metadata", () => ({
   buildDeviceMetadata: vi.fn(({ deviceId, section }: { deviceId: string; section: string }) => ({
@@ -23,9 +27,40 @@ describe("generateMetadata", () => {
 });
 
 describe("DeviceLineagePage", () => {
-  it("names the tab it stands in for, so the placeholder is not ambiguous", () => {
-    render(<DeviceLineageContent />);
+  it("renders the live lineage surface", async () => {
+    vi.mocked(useParams).mockReturnValue({ deviceId: DEVICE_ID });
+    server.mount(contract.iot.getIotDevice, { body: createIotDeviceDetail({ id: DEVICE_ID }) });
+    server.mount(contract.iot.getIotDeviceActivity, {
+      body: { lastDataAt: null, pipelineUnavailable: false },
+    });
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.iot.getDeviceMonitoring, {
+      body: {
+        bucket: "day",
+        events: [],
+        sessions: [],
+        uptimePercent: null,
+        truncated: false,
+        throughput: [],
+        battery: [],
+        payload: {
+          totalMeasurements: 0,
+          withGps: 0,
+          withBattery: 0,
+          workbookRuns: 0,
+          firmwareMix: [],
+          protocolMix: [],
+          workbookMix: [],
+          macroMix: [],
+        },
+        firmwareHistory: [],
+        recentMeasurements: [],
+      },
+    });
 
-    expect(screen.getByText("iot.devices.comingSoon.lineage")).toBeInTheDocument();
+    render(<DeviceLineagePage />);
+
+    expect(await screen.findByText("iot.devices.lineage.title")).toBeInTheDocument();
+    expect(await screen.findByText("iot.devices.lineage.brokerTitle")).toBeInTheDocument();
   });
 });

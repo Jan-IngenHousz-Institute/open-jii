@@ -8,11 +8,11 @@ import { OrganizationRepository } from "../../../core/repositories/organization.
 /**
  * What still stands between this organization and deletion.
  *
- * Deleting is owner-only, so reading the reason is too — and the answer covers all
- * five owned resource types, devices included. The resources showcase cannot serve
- * this purpose: it is scoped to what the caller may read and carries only the four
- * shareable types, so an organization owning nothing but a device reads as empty
- * there while the delete guard refuses it.
+ * Deleting is owner-only, so reading the reason is too — and the answer covers every
+ * owned resource type. The resources showcase cannot serve this purpose even though it
+ * now lists the same set: it is scoped to what the caller may read, so an organization
+ * whose remaining resources are private to someone else reads as empty there while the
+ * delete guard refuses it. Counts, not rows, for the same reason.
  *
  * A non-owner gets the same "no such organization" a non-member gets on any other
  * organization read, rather than a 403 that would confirm the id.

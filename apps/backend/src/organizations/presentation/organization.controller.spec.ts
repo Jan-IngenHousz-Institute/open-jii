@@ -12,9 +12,11 @@ import type {
   OrganizationTeamGrantList,
   OrganizationTeamList,
 } from "@repo/api/domains/organization/organization.schema";
+import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { assertSuccess } from "../../common/utils/fp-utils";
+import { CreateIotDeviceGroupUseCase } from "../../iot/application/use-cases/create-iot-device-group/create-iot-device-group";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { OrganizationRepository } from "../core/repositories/organization.repository";
@@ -491,26 +493,32 @@ describe("OrganizationController", () => {
       await testApp.createMacro({ name: "Batch fit", createdBy: ownerId, organizationId });
       await testApp.createWorkbook({ name: "Synthesis", createdBy: ownerId, organizationId });
       await testApp.createIotDevice({ createdBy: ownerId, organizationId });
+      const group = await testApp.module
+        .get(CreateIotDeviceGroupUseCase)
+        .execute({ name: "Rooftop array", organizationId }, ownerId);
+      assertSuccess(group);
 
       return { live, archived };
     }
 
     /**
-     * Rows of each owned type, keyed the same way `totals` is — **all five**.
+     * Rows of each owned type, keyed the same way `totals` is. Built from the grant enum
+     * rather than written out, so a newly owned type joins this invariant by existing —
+     * a hand-keyed object would leave that type's rows and its total free to disagree
+     * while every assertion here stayed green.
      *
      * There was briefly a `showcaseTotals()` helper here that destructured `device` out,
      * because devices were counted and never listed. They are listed now, so the
      * exemption is gone and the invariant covers every type it counts. An exemption is
      * exactly where the two sides drift.
      */
-    function rowsPerType(body: OrganizationResources) {
-      return {
-        experiment: body.resources.filter((row) => row.type === "experiment").length,
-        protocol: body.resources.filter((row) => row.type === "protocol").length,
-        macro: body.resources.filter((row) => row.type === "macro").length,
-        workbook: body.resources.filter((row) => row.type === "workbook").length,
-        device: body.resources.filter((row) => row.type === "device").length,
-      };
+    function rowsPerType(body: OrganizationResources): Record<string, number> {
+      return Object.fromEntries(
+        zSharingResourceType.options.map((type) => [
+          type,
+          body.resources.filter((row) => row.type === type).length,
+        ]),
+      );
     }
 
     it("holds the totals-equal-rows invariant for a member, archived included", async () => {
@@ -530,6 +538,7 @@ describe("OrganizationController", () => {
         macro: 1,
         workbook: 1,
         device: 1,
+        device_group: 1,
       });
       // The archived row carries its status, which is the only surface that shows it.
       expect(response.body.resources.find((row) => row.id === archived.id)).toMatchObject({
@@ -616,6 +625,7 @@ describe("OrganizationController", () => {
         macro: 0,
         workbook: 0,
         device: 0,
+        device_group: 0,
       });
       // Scoped exactly like the rows: the private experiment is behind neither.
       expect(asOutsider.body.totals.experiment).toBe(1);
@@ -738,8 +748,8 @@ describe("OrganizationController", () => {
         .withAuth(outsiderId)
         .expect(StatusCodes.OK);
 
-      // Four groups and four segments for a visitor, five and five for a member — the
-      // rows and the counts narrow together.
+      // A visitor gets fewer groups and fewer segments than a member does — the rows
+      // and the counts narrow together.
       expect(response.body.resources.map((row) => row.type)).toEqual(["experiment"]);
       expect(response.body.totals.device).toBe(0);
     });
@@ -819,7 +829,7 @@ describe("OrganizationController", () => {
       return { shared };
     }
 
-    /** The profile's single number and the showcase's five, for one caller. */
+    /** The profile's single number and the showcase's per-type breakdown, for one caller. */
     async function countsFor(organizationId: string, userId: string) {
       const profile: SuperTestResponse<OrganizationProfile> = await testApp
         .get(profilePath(organizationId))

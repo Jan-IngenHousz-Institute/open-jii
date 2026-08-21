@@ -500,7 +500,9 @@ export function createOrganizationResource(
           ? { language: "python" }
           : type === "device"
             ? { deviceType: "multispeq" }
-            : {};
+            : type === "device_group"
+              ? { memberCount: 3 }
+              : {};
 
   return {
     type,

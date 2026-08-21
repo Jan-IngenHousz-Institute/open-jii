@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { AppError, Result, failure, isFailure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
+import { IotDeviceGroupRepository } from "../../../../iot/core/repositories/iot-device-group.repository";
 import { IotDeviceRepository } from "../../../../iot/core/repositories/iot-device.repository";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
@@ -57,6 +58,7 @@ export class ListOrganizationResourcesUseCase {
     private readonly macroRepository: MacroRepository,
     private readonly workbookRepository: WorkbookRepository,
     private readonly iotDeviceRepository: IotDeviceRepository,
+    private readonly iotDeviceGroupRepository: IotDeviceGroupRepository,
     private readonly sharingRepository: SharingRepository,
   ) {}
 
@@ -82,25 +84,28 @@ export class ListOrganizationResourcesUseCase {
       return failure(AppError.notFound(`Organization with ID ${organizationId} not found`));
     }
 
-    const [experiments, protocols, macros, workbooks, devices, totals] = await Promise.all([
-      // Archived stay in: every other count of what an organization owns includes them,
-      // so dropping them here would let a group header promise a row the list cannot show.
-      this.experimentRepository.findAll(userId, undefined, undefined, undefined, undefined, {
-        organizationId,
-        includeArchived: true,
-      }),
-      this.protocolRepository.findAll(undefined, undefined, userId, undefined, organizationId),
-      this.macroRepository.findAll({ userId, organizationId }),
-      this.workbookRepository.findAll({ userId, organizationId }),
-      this.iotDeviceRepository.listAccessible(userId, { organizationId }),
-      this.organizationRepository.countAccessibleResources(organizationId, userId),
-    ]);
+    const [experiments, protocols, macros, workbooks, devices, deviceGroups, totals] =
+      await Promise.all([
+        // Archived stay in: every other count of what an organization owns includes them,
+        // so dropping them here would let a group header promise a row the list cannot show.
+        this.experimentRepository.findAll(userId, undefined, undefined, undefined, undefined, {
+          organizationId,
+          includeArchived: true,
+        }),
+        this.protocolRepository.findAll(undefined, undefined, userId, undefined, organizationId),
+        this.macroRepository.findAll({ userId, organizationId }),
+        this.workbookRepository.findAll({ userId, organizationId }),
+        this.iotDeviceRepository.listAccessible(userId, { organizationId }),
+        this.iotDeviceGroupRepository.listAccessible(userId, { organizationId }),
+        this.organizationRepository.countAccessibleResources(organizationId, userId),
+      ]);
 
     if (isFailure(experiments)) return failure(experiments.error);
     if (isFailure(protocols)) return failure(protocols.error);
     if (isFailure(macros)) return failure(macros.error);
     if (isFailure(workbooks)) return failure(workbooks.error);
     if (isFailure(devices)) return failure(devices.error);
+    if (isFailure(deviceGroups)) return failure(deviceGroups.error);
     if (totals.isFailure()) {
       return failure(AppError.internal("Failed to count an organization's resources"));
     }
@@ -114,6 +119,10 @@ export class ListOrganizationResourcesUseCase {
       ...macros.value.map((row) => ({ resourceType: "macro" as const, resourceId: row.id })),
       ...workbooks.value.map((row) => ({ resourceType: "workbook" as const, resourceId: row.id })),
       ...devices.value.map((row) => ({ resourceType: "device" as const, resourceId: row.id })),
+      ...deviceGroups.value.map((row) => ({
+        resourceType: "device_group" as const,
+        resourceId: row.id,
+      })),
     ]);
     if (collaborators.isFailure()) {
       return failure(AppError.internal("Failed to count an organization's collaborators"));
@@ -148,6 +157,13 @@ export class ListOrganizationResourcesUseCase {
         ...base({ ...row, name: deviceName(row), description: null }, countFor("device", row.id)),
         type: "device" as const,
         deviceType: row.deviceType,
+      })),
+      ...deviceGroups.value.map((row) => ({
+        ...base(row, countFor("device_group", row.id)),
+        type: "device_group" as const,
+        // Already on the row the list read: the group projection carries its roster
+        // size, so showing it costs no second query.
+        memberCount: row.memberCount,
       })),
     ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
