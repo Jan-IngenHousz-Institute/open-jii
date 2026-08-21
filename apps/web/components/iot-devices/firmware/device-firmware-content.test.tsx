@@ -132,6 +132,19 @@ describe("DeviceFirmwareContent", () => {
     expect(screen.queryByText("iot.devices.firmware.loadError")).not.toBeInTheDocument();
   });
 
+  it("does not claim the device never reported while the scan is still running", async () => {
+    mountAll({ reportedVersion: "v1.3.0" });
+    server.mount(contract.iot.getDeviceFirmwareHistory, { delay: "infinite" });
+
+    render(<DeviceFirmwareContent />);
+
+    // The releases panel arrives first, so the tab is rendered and the version
+    // line is the only thing still pending.
+    expect(await screen.findByText("iot.devices.firmware.currentTitle")).toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.firmware.unknownVersion")).not.toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.firmware.versionUnavailable")).not.toBeInTheDocument();
+  });
+
   it("admits the reported version could not be read when the scan fails", async () => {
     mountAll({ reportedVersion: "v1.3.0" });
     server.mount(contract.iot.getDeviceFirmwareHistory, { status: 500 });

@@ -9,7 +9,7 @@ inputs:
     description: Release tag, or "latest" for the newest stable release
     required: true
   things:
-    description: Comma-separated thing names; empty targets the managed-devices group
+    description: Comma-separated thing names, each of which must be a registered device of this family; empty targets every registered device of the family
     required: false
     default: ""
   max-per-minute:
@@ -52,7 +52,17 @@ outputs:
 runs:
   using: composite
   steps:
-    # Seeded first so a crash still uploads evidence of what was attempted.
+    # Genuinely first: every later step can fail, and the upload is
+    # `if: always()`, so the artifact has to exist before anything can crash.
+    - name: Initialize result artifact
+      shell: bash
+      env:
+        FAMILY: ${{ inputs.family }}
+        ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        jq -n --arg family "$FAMILY" --arg env "$ENVIRONMENT" \
+          '{family: $family, environment: $env, error: "rollout did not start"}' > results.json
+
     - name: Validate inputs
       shell: bash
       env:
@@ -65,15 +75,6 @@ runs:
         printf '%s' "$MAX_PER_MINUTE" | grep -qE '^[1-9][0-9]*$' || fail "max_per_minute must be a positive integer"
         printf '%s' "$ABORT_THRESHOLD" | grep -qE '^[1-9][0-9]?$|^100$' || fail "abort_threshold_percent must be 1-100"
         printf '%s' "$TIMEOUT_MINUTES" | grep -qE '^[1-9][0-9]*$' || fail "timeout_minutes must be a positive integer"
-
-    - name: Initialize result artifact
-      shell: bash
-      env:
-        FAMILY: ${{ inputs.family }}
-        ENVIRONMENT: ${{ inputs.environment }}
-      run: |
-        jq -n --arg family "$FAMILY" --arg env "$ENVIRONMENT" \
-          '{family: $family, environment: $env, error: "rollout did not start"}' > results.json
 
     # Deliberately before AWS credentials are configured: release validation
     # must not need, and cannot misuse, fleet access.
@@ -353,7 +354,8 @@ runs:
         GAVE_UP=""
 
         while :; do
-          STATUS="$(aws iot describe-job --job-id "$JOB_ID" --query 'job.status' --output text)"
+          JOB="$(aws iot describe-job --job-id "$JOB_ID" --output json)"
+          STATUS="$(jq -r '.job.status' <<<"$JOB")"
           echo "job status: $STATUS"
           case "$STATUS" in
             COMPLETED|CANCELED|DELETION_IN_PROGRESS) break ;;
@@ -365,6 +367,10 @@ runs:
           fi
           sleep 30
         done
+
+        # A job is CANCELED whether the abort criteria fired or a human stopped
+        # it in the console, so report AWS's own reason instead of guessing.
+        REASON="$(jq -r '[.job.reasonCode, .job.comment] | map(select(. != null and . != "")) | join(": ")' <<<"$JOB")"
 
         : > executions.ndjson
         NEXT=""
@@ -385,12 +391,12 @@ runs:
         BAD="$(jq '[.[] | select(.jobExecutionSummary.status
           | IN("FAILED","TIMED_OUT","REJECTED","CANCELED","REMOVED"))] | length' executions.json)"
 
-        # A canceled job means the abort criteria tripped, which is the loudest
-        # safety signal this workflow has. The verdict is decided before the
-        # artifact is written, so the 90-day audit record carries it too rather
-        # than reading `error: null` for a rollout that was stopped.
+        # A cancellation is the loudest signal this workflow has, however it was
+        # triggered. The verdict is decided before the artifact is written, so
+        # the 90-day audit record carries it too rather than reading
+        # `error: null` for a rollout that was stopped.
         if [ "$STATUS" = "CANCELED" ]; then
-          OUTCOME="rollout CANCELED: the abort criteria tripped"
+          OUTCOME="rollout CANCELED${REASON:+ ($REASON)}"
         elif [ "$BAD" -gt 0 ]; then
           OUTCOME="$BAD execution(s) did not succeed"
         elif [ -n "$GAVE_UP" ]; then
