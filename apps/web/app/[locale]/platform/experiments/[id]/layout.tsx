@@ -2,10 +2,10 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { useFeatureFlagEnabled } from "@/hooks/useFeatureFlag";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { notFound, usePathname, useParams } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";
 
 import { FEATURE_FLAGS } from "@repo/analytics";

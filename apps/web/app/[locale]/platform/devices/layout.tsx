@@ -6,10 +6,10 @@ import {
   useDevicesRegister,
 } from "@/components/iot-devices/devices-register-context";
 import { PageContainer } from "@/components/page-container";
+import { useFeatureFlagEnabled } from "@/hooks/useFeatureFlag";
 import { useLocale } from "@/hooks/useLocale";
 import { Plus } from "lucide-react";
 import { notFound, usePathname } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";

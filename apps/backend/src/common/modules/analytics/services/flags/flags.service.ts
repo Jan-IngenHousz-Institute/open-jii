@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 
 import type { FeatureFlagKey } from "@repo/analytics";
-import { FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
+import { FEATURE_FLAG_DEFAULTS, isFlagForcedOn } from "@repo/analytics";
 import {
   getPostHogServerClient,
   initializePostHogServer,
@@ -107,6 +107,10 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
    * @returns Whether the flag is enabled (falls back to default on error)
    */
   async isFeatureFlagEnabled(flagKey: FeatureFlagKey, distinctId = "anonymous"): Promise<boolean> {
+    if (isFlagForcedOn(flagKey)) {
+      return true;
+    }
+
     const cacheKey = `${flagKey}:${distinctId}`;
     const cached = this.flagCache.get(cacheKey);
     if (cached !== undefined && cached.expiresAt > Date.now()) {
