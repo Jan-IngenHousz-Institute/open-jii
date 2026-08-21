@@ -31,6 +31,20 @@ describe("useIotFirmwareReleases", () => {
     expect(spy.params.family).toBe("ambyte");
   });
 
+  it("stays put while disabled", async () => {
+    const spy = server.mount(contract.iot.listIotFirmwareReleases, {
+      body: { releases: [RELEASE] },
+    });
+
+    const { result } = renderHook(() => useIotFirmwareReleases("ambyte", { enabled: false }));
+
+    await waitFor(() => {
+      expect(result.current.fetchStatus).toBe("idle");
+    });
+    expect(spy.called).toBe(false);
+    expect(result.current.data).toBeUndefined();
+  });
+
   it("surfaces a failure", async () => {
     server.mount(contract.iot.listIotFirmwareReleases, { status: 500 });
 
