@@ -139,15 +139,27 @@ locals {
   # notify-next carries the next queued execution; $next/get and +/update are
   # request/response pairs, so the device also needs their accepted/rejected
   # replies (the trailing +).
+  #
+  # Subscribe resources are topic FILTERS, where + is the MQTT single-level
+  # wildcard. Publish and Receive resolve against a concrete topic, where the
+  # IoT policy wildcard is *; a + there risks matching the literal character
+  # and denying every status report, which surfaces only as executions that
+  # sit QUEUED forever.
   jobs_subscribe_topics = [
     "${local.jobs_thing_topic}/notify-next",
     "${local.jobs_thing_topic}/$next/get/+",
     "${local.jobs_thing_topic}/+/update/+",
   ]
 
+  jobs_receive_topics = [
+    "${local.jobs_thing_topic}/notify-next",
+    "${local.jobs_thing_topic}/$next/get/*",
+    "${local.jobs_thing_topic}/*/update/*",
+  ]
+
   jobs_publish_topics = [
     "${local.jobs_thing_topic}/$next/get",
-    "${local.jobs_thing_topic}/+/update",
+    "${local.jobs_thing_topic}/*/update",
   ]
 }
 
@@ -174,7 +186,7 @@ resource "aws_iot_policy" "jobs" {
         Effect = "Allow",
         Action = "iot:Receive",
         Resource = [
-          for topic in local.jobs_subscribe_topics :
+          for topic in local.jobs_receive_topics :
           "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/$aws/things/${topic}"
         ]
       },
