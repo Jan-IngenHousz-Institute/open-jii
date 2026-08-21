@@ -143,12 +143,29 @@ runs:
         ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
         GROUP="open_jii_${ENVIRONMENT}_managed_devices"
 
+        # Paged by hand with --no-paginate rather than trusting the CLI to
+        # aggregate: auto-pagination applies --query per page, so a group past
+        # one page would answer `length(things)` once per page.
+        : > managed.txt
+        NEXT=""
+        while :; do
+          if [ -n "$NEXT" ]; then
+            PAGE="$(aws iot list-things-in-thing-group --thing-group-name "$GROUP" \
+              --next-token "$NEXT" --no-paginate --output json)"
+          else
+            PAGE="$(aws iot list-things-in-thing-group --thing-group-name "$GROUP" \
+              --no-paginate --output json)"
+          fi
+          jq -r '.things[]?' <<<"$PAGE" >> managed.txt
+          NEXT="$(jq -r '.nextToken // empty' <<<"$PAGE")"
+          [ -n "$NEXT" ] || break
+        done
+        sort -u -o managed.txt managed.txt
+
         if [ -n "$THINGS" ]; then
           # An explicit list still has to be platform-managed: a typo would
           # otherwise create a job against a thing this platform does not own,
           # and the mistake only surfaces as an execution that never reports.
-          aws iot list-things-in-thing-group --thing-group-name "$GROUP" \
-            --query 'things' --output json | jq -r '.[]' | sort > managed.txt
           printf '%s' "$THINGS" | tr ',' '\n' \
             | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | sed '/^$/d' | sort -u > requested.txt
 
@@ -161,8 +178,7 @@ runs:
           COUNT="$(jq 'length' <<<"$TARGETS")"
         else
           TARGETS="$(jq -nc --arg arn "arn:aws:iot:$REGION:$ACCOUNT:thinggroup/$GROUP" '[$arn]')"
-          COUNT="$(aws iot list-things-in-thing-group --thing-group-name "$GROUP" \
-            --query 'length(things)' --output text)"
+          COUNT="$(wc -l < managed.txt | tr -d ' ')"
         fi
 
         {
@@ -256,7 +272,11 @@ runs:
         # jobId accepts [a-zA-Z0-9_-] only (max 64), so the tag's dots must go:
         # https://docs.aws.amazon.com/iot/latest/apireference/API_CreateJob.html
         SAFE_TAG="$(printf '%s' "$RELEASE_TAG" | tr -c 'a-zA-Z0-9_-' '-')"
-        JOB_ID="$(printf 'fw-%s-%s-%s' "$FAMILY" "$SAFE_TAG" "$RUN_ID" | cut -c1-64)"
+        # Trim the tag to fit, never the run id: the run id is what makes the
+        # id unique, and a second rollout landing on a taken jobId just fails.
+        PREFIX="fw-$FAMILY-"
+        SUFFIX="-$RUN_ID"
+        JOB_ID="$PREFIX${SAFE_TAG:0:$(( 64 - ${#PREFIX} - ${#SUFFIX} ))}$SUFFIX"
         # Mirrors aws_iam_role.jobs_presign in infrastructure/modules/iot-core;
         # renaming it there without changing this line breaks create-job.
         PRESIGN_ROLE="arn:aws:iam::${ACCOUNT}:role/open_jii_${ENVIRONMENT}_iot_jobs_presign"
