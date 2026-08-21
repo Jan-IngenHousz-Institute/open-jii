@@ -193,8 +193,11 @@ resource "aws_iot_policy" "jobs" {
 # Lets AWS IoT presign the firmware object when it substitutes the job
 # document's `${aws:iot:s3-presigned-url:...}` placeholder at delivery time.
 # https://docs.aws.amazon.com/iot/latest/apireference/API_PresignedUrlConfig.html
+# count keys off a static flag, never off firmware_bucket_arn: on a first apply
+# the bucket does not exist yet, so its ARN is unknown at plan time and cannot
+# decide how many instances to create.
 resource "aws_iam_role" "jobs_presign" {
-  count = var.firmware_bucket_arn != "" ? 1 : 0
+  count = var.enable_firmware_jobs ? 1 : 0
 
   name = "open_jii_${var.environment}_iot_jobs_presign"
   assume_role_policy = jsonencode({
@@ -208,7 +211,7 @@ resource "aws_iam_role" "jobs_presign" {
 }
 
 resource "aws_iam_role_policy" "jobs_presign" {
-  count = var.firmware_bucket_arn != "" ? 1 : 0
+  count = var.enable_firmware_jobs ? 1 : 0
 
   name = "open_jii_${var.environment}_iot_jobs_presign"
   role = aws_iam_role.jobs_presign[0].id
