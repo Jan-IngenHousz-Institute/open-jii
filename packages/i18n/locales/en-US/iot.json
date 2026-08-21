@@ -80,7 +80,8 @@
         "onboarding": "Onboarding",
         "collaborators": "Collaborators",
         "lineage": "Lineage",
-        "monitoring": "Monitoring"
+        "monitoring": "Monitoring",
+        "firmware": "Firmware"
       },
       "overview": {
         "total": "Total devices"
@@ -384,6 +385,33 @@
         "copy": "Copy",
         "download": "Download",
         "downloadAll": "Download all"
+      },
+      "firmware": {
+        "title": "Firmware",
+        "description": "What this device runs, what JII has published, and how updates reach it.",
+        "currentTitle": "On this device",
+        "unknownVersion": "This device has not reported a firmware version recently.",
+        "upToDate": "Running {{version}}, the newest published release.",
+        "updateAvailable": "Running {{installed}}; {{latest}} is available.",
+        "reported": "Running {{version}}.",
+        "releasesTitle": "Releases",
+        "releasesHint": "Published by JII; the newest stable release is what a rollout installs by default.",
+        "latest": "Latest",
+        "prerelease": "Pre-release",
+        "installed": "On this device",
+        "noNotes": "No release notes.",
+        "showAllNotes": "Show all notes",
+        "viewOnGitHub": "View on GitHub",
+        "noReleases": "No releases have been published for this family yet.",
+        "loadError": "Releases could not be loaded.",
+        "guide": {
+          "title": "How updates reach this device",
+          "intro": "JII starts rollouts from a reviewed workflow; devices are never updated from this page.",
+          "step1": "A release is published in the firmware repository.",
+          "step2": "An operator starts a rollout, which stages it across devices and stops automatically if too many fail.",
+          "step3": "The device receives an update job, downloads the image over a short-lived link, and verifies its checksum.",
+          "step4": "The device applies the update, reboots, and reports the outcome; a failed update rolls back."
+        }
       }
     },
     "onboarding": {
