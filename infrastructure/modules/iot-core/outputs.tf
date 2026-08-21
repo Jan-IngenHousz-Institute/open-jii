@@ -45,6 +45,6 @@ output "jobs_policy_name" {
 }
 
 output "jobs_presign_role_arn" {
-  description = "ARN of the role AWS IoT Jobs assumes to presign firmware objects (null when firmware_bucket_arn is unset)"
-  value       = var.firmware_bucket_arn != "" ? aws_iam_role.jobs_presign[0].arn : null
+  description = "ARN of the role AWS IoT Jobs assumes to presign firmware objects (null when enable_firmware_jobs is false)"
+  value       = var.enable_firmware_jobs ? aws_iam_role.jobs_presign[0].arn : null
 }

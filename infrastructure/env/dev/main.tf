@@ -233,7 +233,8 @@ module "iot_core" {
   enable_fleet_indexing            = true
   enable_databricks_lifecycle_read = true
 
-  firmware_bucket_arn = module.firmware_s3.bucket_arn
+  firmware_bucket_arn  = module.firmware_s3.bucket_arn
+  enable_firmware_jobs = true
 }
 
 module "firmware_rollout_role" {
