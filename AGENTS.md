@@ -32,7 +32,8 @@ the devkit. `infrastructure/` is OpenTofu — change it only when that is explic
 
 The platform UI is auth-gated, so a real check needs Postgres and the backend, not just the web app.
 
-- `pnpm db:setup` — starts Postgres, **resets** the local database, applies migrations.
+- After the user authorizes resetting local data, run `pnpm db:setup` to start Postgres,
+  **reset** the local database, and apply migrations.
 - `pnpm --filter database db:seed` — seeds the local user and development data.
 - `pnpm local:login` — a session cookie with no browser and no email; reads the OTP from Postgres.
 - `pnpm dev:fb` — runs backend and web together.
