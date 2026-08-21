@@ -33,7 +33,7 @@ on:
         type: string
         default: latest
       things:
-        description: "Optional comma-separated thing names; empty targets the managed-devices group"
+        description: "Optional comma-separated thing names; empty targets every registered device of the chosen family"
         type: string
         default: ""
       max_per_minute:

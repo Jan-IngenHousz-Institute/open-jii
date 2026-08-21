@@ -59,11 +59,11 @@ export default function DeviceFirmwarePage() {
   // Both queries wait for the family: a device with no JII firmware line shows
   // no tab, so neither the warehouse scan nor the release read is worth paying.
   const range = useMemo(() => resolveMonitoringPreset(FIRMWARE_LOOKBACK), []);
-  const { data: firmwareHistory, isError: isHistoryError } = useDeviceFirmwareHistory(
-    deviceId,
-    range,
-    { enabled: isManaged },
-  );
+  const {
+    data: firmwareHistory,
+    isError: isHistoryError,
+    isLoading: isHistoryLoading,
+  } = useDeviceFirmwareHistory(deviceId, range, { enabled: isManaged });
 
   // Only a placeholder to keep the input typed: the query is held until the
   // device reports a family JII publishes for.
@@ -124,6 +124,11 @@ export default function DeviceFirmwarePage() {
   // Sequential guards rather than precomputed flags: each arm narrows the two
   // nullable versions it actually reads.
   function renderStatus() {
+    // An unfinished scan reads as `installed === null` too, so answer it before
+    // the guards below claim the device never reported.
+    if (isHistoryLoading) {
+      return <Skeleton className="h-5 w-64" />;
+    }
     // A failed scan is not the same as a device that never reported, and
     // saying "has not reported" for a warehouse error would be a lie.
     if (isHistoryError) {

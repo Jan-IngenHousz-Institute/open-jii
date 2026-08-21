@@ -39,15 +39,16 @@ resource "aws_iam_role_policy" "firmware_rollout" {
     Version = "2012-10-17",
     Statement = [
       {
+        # Exactly what the rollout action invokes, nothing held in reserve.
+        # Stopping a bad rollout is the abort config's job, or a human's in the
+        # console with their own credentials; this role is assumable only by the
+        # workflow, so a cancel grant here would never be the thing used.
         Sid    = "ManageFirmwareJobs",
         Effect = "Allow",
         Action = [
           "iot:CreateJob",
           "iot:DescribeJob",
-          "iot:DescribeJobExecution",
           "iot:ListJobExecutionsForJob",
-          "iot:CancelJob",
-          "iot:CancelJobExecution",
         ],
         Resource = [
           "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:job/*",
@@ -56,12 +57,9 @@ resource "aws_iam_role_policy" "firmware_rollout" {
         ]
       },
       {
-        Sid    = "ResolveTargetGroup",
-        Effect = "Allow",
-        Action = [
-          "iot:ListThingsInThingGroup",
-          "iot:DescribeThingGroup",
-        ],
+        Sid      = "ResolveTargetGroup",
+        Effect   = "Allow",
+        Action   = "iot:ListThingsInThingGroup",
         Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:thinggroup/*"
       },
       {
