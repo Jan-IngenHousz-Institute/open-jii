@@ -106,7 +106,7 @@ export function FormatSelectionStep({
         >
           {isCreating ? (
             <>
-              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+              <div className="border-b-primary-foreground mr-2 h-4 w-4 animate-spin rounded-full border-b-2" />
               {t("experimentData.exportModal.creating")}
             </>
           ) : (

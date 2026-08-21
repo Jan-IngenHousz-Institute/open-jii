@@ -8,6 +8,7 @@ import React, { useCallback } from "react";
 import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
 import {
   Command,
   CommandGroup,
@@ -23,8 +24,8 @@ const protocolItemVariants = cva(
   {
     variants: {
       featured: {
-        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-xs data-[selected=true]:from-badge-featured/80 data-[selected=true]:to-surface",
-        false: "border-gray-200 bg-white",
+        true: "border-secondary/30 from-status-featured bg-gradient-to-br to-card shadow-xs data-[selected=true]:from-status-featured/80 data-[selected=true]:to-muted",
+        false: "border-border bg-card",
       },
     },
     defaultVariants: {
@@ -134,7 +135,7 @@ function SearchStatus({ loading, hasProtocols, hasSearchQuery, searchValue }: Se
   if (loading) {
     return (
       <div className="text-muted-foreground flex items-center justify-center py-4 text-sm">
-        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+        <div className="border-border border-t-primary mr-2 h-4 w-4 animate-spin rounded-full border-2"></div>
         {t("experiments.searchingProtocols")}
       </div>
     );
@@ -183,13 +184,15 @@ function SearchField({ searchValue, onSearchChange, isAddingProtocol }: SearchFi
         style={{ paddingRight: 36 }}
       />
       {searchValue && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={() => onSearchChange("")}
-          className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 z-10 -translate-y-1/2 text-xl"
+          className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 z-10 -translate-y-1/2"
         >
           <SearchX />
-        </button>
+        </Button>
       )}
     </div>
   );

@@ -45,7 +45,7 @@ export function IotDeviceLayoutContent({
         </Link>
 
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-[#011111]">{displayName}</h1>
+          <h1 className="text-foreground text-2xl font-semibold">{displayName}</h1>
           <IotDeviceStatusBadge status={device.status} />
           <ConnectivityDot connectivity={device.connectivity} />
         </div>

@@ -49,7 +49,7 @@ export default async function UserRegistrationPage(props: {
         <Image src={bgImage} alt="Registration background" fill priority className="object-cover" />
 
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-l from-black via-black/80 to-black/40" />
+        <div className="from-sidebar via-sidebar/80 to-sidebar/40 absolute inset-0 bg-gradient-to-l" />
       </div>
 
       {/* Foreground content */}

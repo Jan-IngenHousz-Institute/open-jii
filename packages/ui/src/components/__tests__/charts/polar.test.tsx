@@ -19,6 +19,8 @@ vi.mock("../../charts/plotly-chart", () => ({
 }));
 
 vi.mock("../../charts/utils", () => ({
+  chartGridColor: vi.fn(() => "#E6E6E6"),
+  readThemeColor: vi.fn(() => undefined),
   createPlotlyConfig: vi.fn((config: any) => ({
     displayModeBar: config.displayModeBar !== false,
     responsive: config.responsive !== false,

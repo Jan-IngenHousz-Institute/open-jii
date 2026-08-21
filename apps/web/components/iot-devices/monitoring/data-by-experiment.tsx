@@ -88,7 +88,7 @@ export function DataByExperiment({
             <div className="min-w-0 flex-1">
               <EntityLink entity={row.entity} />
               {row.count === 0 && row.bound && (
-                <span className="ml-2 inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
+                <span className="text-status-stale-foreground ml-2 inline-flex items-center gap-1 text-xs">
                   <AlertTriangle className="h-3 w-3" />
                   {t("iot.devices.monitoring.boundButSilent")}
                 </span>

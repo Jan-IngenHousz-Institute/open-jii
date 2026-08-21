@@ -1,16 +1,20 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { extractMeasurement } from "@/lib/multispeq/detect";
 import type { InputRecord, OutputRecord, ProtocolJson } from "@/lib/multispeq/pipeline";
 import { LED_COLORS, LED_NAMES, measurementToTimeseries } from "@/lib/multispeq/pipeline";
 import { useMemo } from "react";
+import { useIsDarkTheme } from "~/hooks/useIsDarkTheme";
 
 import { useTranslation } from "@repo/i18n";
+import { Card } from "@repo/ui/components/card";
 import { PlotlyChart } from "@repo/ui/components/charts/plotly-chart";
 // Plotly's own types are a workspace dep of @repo/ui, not of apps/web —
 // re-export them through the UI charts module so we don't pull plotly.js
 // into web's package.json just to type a layout object.
 import type { Layout, PlotData, Shape } from "@repo/ui/components/charts/types";
+import { readThemeColor } from "@repo/ui/components/charts/utils";
 
 interface OutputCellTimeseriesProps {
   data: unknown;
@@ -25,6 +29,15 @@ interface OutputCellTimeseriesProps {
  * stored as an array of dicts; the first dict is what carries _protocol_set_
  * and v_arrays. Falls back to the object itself for the bundled-JSON shape.
  */
+/**
+ * Plotly takes concrete colours, not `var()`, so contract tokens have to be
+ * resolved to a value at build-the-layout time — the same accommodation the
+ * chart colorway makes.
+ */
+function themeColor(name: string): string {
+  return readThemeColor(name) ?? "transparent";
+}
+
 function pickProtocolJson(code: unknown): ProtocolJson | null {
   if (code == null) return null;
   if (Array.isArray(code)) {
@@ -83,7 +96,7 @@ function buildDetectorTraces(groups: SeriesGroup[]): Partial<PlotData>[] {
     const name = g.subProtocol
       ? `${g.subProtocol} · ${ledLabel} ${rangeText}`
       : `${ledLabel} ${rangeText}`;
-    const color = LED_COLORS[g.light] ?? "#005E5E";
+    const color = LED_COLORS[g.light] ?? themeColor("--muted-foreground");
     const trace = {
       type: "scatter",
       mode: "markers",
@@ -134,7 +147,7 @@ function buildLightLegendTraces(inputs: InputRecord[]): Partial<PlotData>[] {
     const tag = lightType === "pre_illumination" ? "pre-illum" : "actinic";
     const rangeText = min === max ? `${min}` : `${min}-${max}`;
     const name = `${ledLabel} (${tag}) [${rangeText} µmol]`;
-    const color = LED_COLORS[led] ?? "#1976d2";
+    const color = LED_COLORS[led] ?? themeColor("--muted-foreground");
     const trace = {
       type: "scatter",
       mode: "markers",
@@ -157,7 +170,7 @@ function buildShapes(inputs: InputRecord[], totalDurationS: number): Partial<Sha
   for (const r of inputs) {
     if (r.light_type !== "actinic" && r.light_type !== "pre_illumination") continue;
     if (r.led == null) continue;
-    const color = LED_COLORS[r.led] ?? "#1976d2";
+    const color = LED_COLORS[r.led] ?? themeColor("--muted-foreground");
     // Right axis (yaxis2) carries the actinic light scale in µmol m⁻² s⁻¹.
     // Phases without a resolved brightness fall back to 500, matching the
     // matplotlib notebook's `r.brightness if r.brightness is not None else 500`.
@@ -193,7 +206,7 @@ function buildShapes(inputs: InputRecord[], totalDurationS: number): Partial<Sha
       x1: sorted[i],
       y0: 0,
       y1: 1,
-      line: { color: "#CDD5DB", width: 0.5, dash: "dot" },
+      line: { color: themeColor("--border"), width: 0.5, dash: "dot" },
       layer: "below",
     });
   }
@@ -243,8 +256,8 @@ function buildAnnotations(inputs: InputRecord[], totalDurationS: number) {
       yref: "y" as const,
       text: label,
       showarrow: false,
-      font: { size: 10, color: "#68737B" },
-      bgcolor: "rgba(255,255,255,0.85)",
+      font: { size: 10, color: themeColor("--muted-foreground") },
+      bgcolor: themeColor("--card"),
     };
   });
 }
@@ -267,6 +280,9 @@ export function OutputCellTimeseries({
   errorLabel,
 }: OutputCellTimeseriesProps) {
   const { t } = useTranslation("workbook");
+  // Plotly cannot read a CSS variable, so the palette is resolved on each
+  // render; this subscription is what makes a theme toggle trigger one.
+  useIsDarkTheme();
 
   const decoded = useMemo(() => {
     const measurement = extractMeasurement(data);
@@ -281,26 +297,35 @@ export function OutputCellTimeseries({
 
   if (loading) {
     return (
-      <div className="flex h-[960px] items-center justify-center rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] text-xs text-[#68737B]">
+      <InsetPanel
+        padding="none"
+        className="text-muted-foreground flex h-[960px] items-center justify-center text-xs"
+      >
         {t("output.loadingProtocol")}
-      </div>
+      </InsetPanel>
     );
   }
 
   if (!decoded) {
     return (
-      <div className="flex h-[120px] items-center justify-center rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] text-xs text-[#68737B]">
+      <InsetPanel
+        padding="none"
+        className="text-muted-foreground flex h-[120px] items-center justify-center text-xs"
+      >
         {errorLabel}
-      </div>
+      </InsetPanel>
     );
   }
 
   const groups = groupOutputs(decoded.outputs);
   if (groups.length === 0) {
     return (
-      <div className="flex h-[120px] items-center justify-center rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] text-xs text-[#68737B]">
+      <InsetPanel
+        padding="none"
+        className="text-muted-foreground flex h-[120px] items-center justify-center text-xs"
+      >
         {emptyLabel}
-      </div>
+      </InsetPanel>
     );
   }
 
@@ -324,25 +349,28 @@ export function OutputCellTimeseries({
     margin: { l: 60, r: 70, t: 30, b: 220 },
     xaxis: {
       title: { text: t("output.timeseriesXAxis"), font: { size: 12 } },
-      gridcolor: "#EDF2F6",
+      gridcolor: themeColor("--border"),
       zeroline: false,
       automargin: false,
     },
     yaxis: {
       title: { text: t("output.timeseriesYAxis"), font: { size: 12 } },
-      gridcolor: "#EDF2F6",
+      gridcolor: themeColor("--border"),
       zeroline: false,
       range: [-0.05, 1.1],
       automargin: false,
     },
     yaxis2: {
-      title: { text: t("output.timeseriesActinic"), font: { size: 12, color: "#68737B" } },
+      title: {
+        text: t("output.timeseriesActinic"),
+        font: { size: 12, color: themeColor("--muted-foreground") },
+      },
       overlaying: "y",
       side: "right",
       range: [0, yaxis2Max],
       showgrid: false,
       zeroline: false,
-      tickfont: { color: "#68737B" },
+      tickfont: { color: themeColor("--muted-foreground") },
       automargin: false,
     },
     shapes,
@@ -364,12 +392,13 @@ export function OutputCellTimeseries({
       entrywidth: 240,
       entrywidthmode: "pixels",
     } as Partial<Layout["legend"]>,
-    plot_bgcolor: "#FFFFFF",
-    paper_bgcolor: "#FFFFFF",
+    plot_bgcolor: themeColor("--card"),
+    paper_bgcolor: themeColor("--card"),
+    font: { color: themeColor("--foreground") },
   };
 
   return (
-    <div className="h-[820px] w-full overflow-hidden rounded-lg border border-[#EDF2F6] bg-white">
+    <Card className="h-[820px] w-full gap-0 overflow-hidden py-0">
       <PlotlyChart
         data={traces}
         layout={layout}
@@ -380,6 +409,6 @@ export function OutputCellTimeseries({
           toImageButtonOptions: { format: "png", filename: "multispeq-timeseries" },
         }}
       />
-    </div>
+    </Card>
   );
 }

@@ -1,5 +1,6 @@
 import { ListWorkbooks } from "@/components/list-workbooks";
 import { PageContainer } from "@/components/page-container";
+import { PageHeader } from "@/components/shared/page-header";
 import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";
@@ -24,10 +25,7 @@ export default async function WorkbookPage({ params }: WorkbookPageProps) {
 
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-bold text-gray-900">{t("workbooks.title")}</h1>
-        <p>{t("workbooks.listDescription")}</p>
-      </div>
+      <PageHeader title={t("workbooks.title")} description={t("workbooks.listDescription")} />
       <ListWorkbooks />
     </PageContainer>
   );

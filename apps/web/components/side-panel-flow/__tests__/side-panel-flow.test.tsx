@@ -275,8 +275,9 @@ describe("<ExperimentSidePanel />", () => {
       nodes: [n1, n2],
     });
 
-    const disabledCb = screen.getByRole("checkbox");
-    expect((disabledCb as HTMLInputElement).disabled).toBe(true);
+    const disabledCb = screen.getByRole("switch");
+    expect(disabledCb).toBeDisabled();
+    expect(disabledCb).toHaveAttribute("aria-checked", "false");
     await user.click(disabledCb);
     expect(first.props.onNodeDataChange).not.toHaveBeenCalled();
 
@@ -290,8 +291,9 @@ describe("<ExperimentSidePanel />", () => {
       nodes: [n1],
     });
 
-    const enabledCb = screen.getByRole("checkbox");
-    expect((enabledCb as HTMLInputElement).disabled).toBe(false);
+    const enabledCb = screen.getByRole("switch");
+    expect(enabledCb).toBeEnabled();
+    expect(enabledCb).toHaveAttribute("aria-checked", "false");
     await user.click(enabledCb);
 
     expect(second.props.onNodeDataChange).toHaveBeenCalledWith("n1", {

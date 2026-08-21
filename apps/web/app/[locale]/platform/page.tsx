@@ -2,6 +2,7 @@ import { DashboardBanner } from "@/components/dashboard/dashboard-banner";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import { PageContainer } from "@/components/page-container";
+import { PageHeader } from "@/components/shared/page-header";
 import type { Metadata } from "next";
 import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
 import { env } from "~/env";
@@ -46,7 +47,7 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
       </div>
 
       {/* Dashboard Header */}
-      <h1 className="text-4xl font-bold text-gray-900">{t("dashboard.title")}</h1>
+      <PageHeader title={t("dashboard.title")} />
 
       {/* First Row - User's Experiments */}
       <DashboardSection

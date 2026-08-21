@@ -397,7 +397,7 @@ describe("PlotlyChart", () => {
             expect.objectContaining({
               type: "scatter",
               line: expect.objectContaining({
-                color: "#1f77b4", // Default color
+                color: undefined, // Left to the layout colorway
                 width: 2,
                 dash: "solid",
               }),

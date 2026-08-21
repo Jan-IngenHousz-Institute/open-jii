@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { RotateCcw } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMemo } from "react";
@@ -233,7 +234,7 @@ function CategorySwatchList({
   return (
     <div className="space-y-1.5">
       {heading && <div className="text-foreground text-xs font-semibold">{heading}</div>}
-      <div className="bg-muted/30 max-h-[220px] overflow-y-auto rounded-md border p-2">
+      <InsetPanel padding="sm" className="max-h-[220px] overflow-y-auto">
         <ul className="space-y-1">
           {categories.map((c, i) => {
             const mapKey = keyFor(c);
@@ -282,7 +283,7 @@ function CategorySwatchList({
             );
           })}
         </ul>
-      </div>
+      </InsetPanel>
     </div>
   );
 }
@@ -298,7 +299,7 @@ function PalettePreview() {
         {CATEGORY_PALETTE.slice(0, 12).map((color) => (
           <div
             key={color}
-            className="h-4 w-4 rounded-sm border border-black/10"
+            className="border-border h-4 w-4 rounded-sm border"
             style={{ background: color }}
           />
         ))}

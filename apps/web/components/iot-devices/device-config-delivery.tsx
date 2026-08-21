@@ -1,6 +1,7 @@
 "use client";
 
 import { ConnectionTypeSelector } from "@/components/iot/iot-connection-type-selector";
+import { SettingsCard } from "@/components/shared/settings-card";
 import { sensorFamilyToDeviceType } from "@/hooks/iot/device-type-mapping";
 import { useAutoConnectionType } from "@/hooks/iot/useAutoConnectionType";
 import { useIotBrowserSupport } from "@/hooks/iot/useIotBrowserSupport";
@@ -15,13 +16,6 @@ import { useTranslation } from "@repo/i18n";
 import type { DeviceType } from "@repo/iot";
 import { deliverDeviceConfig, supportsConfigDelivery } from "@repo/iot";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { downloadText } from "./iot-credential-file";
@@ -115,79 +109,77 @@ export function DeviceConfigDelivery({
   };
 
   return (
-    <Card className="shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">{t("iot.onboarding.deliveryTitle")}</CardTitle>
-        <CardDescription>{t("iot.onboarding.deliveryDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="bg-muted/50 space-y-2 rounded-lg p-3">
-          <p className="text-xs font-medium">{t("iot.onboarding.endpointLabel")}</p>
-          <p className="text-muted-foreground break-all font-mono text-xs">{config.endpoint}</p>
+    <SettingsCard
+      title={t("iot.onboarding.deliveryTitle")}
+      description={t("iot.onboarding.deliveryDescription")}
+      contentClassName="space-y-4"
+    >
+      <div className="bg-muted/50 space-y-2 rounded-lg p-3">
+        <p className="text-xs font-medium">{t("iot.onboarding.endpointLabel")}</p>
+        <p className="text-muted-foreground break-all font-mono text-xs">{config.endpoint}</p>
 
-          <p className="pt-1 text-xs font-medium">{t("iot.onboarding.topicsLabel")}</p>
-          <ul className="space-y-1">
-            {config.experiments.map((experiment) => (
-              <li key={experiment.experimentId} className="text-muted-foreground font-mono text-xs">
-                {experiment.topicPrefix}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <p className="pt-1 text-xs font-medium">{t("iot.onboarding.topicsLabel")}</p>
+        <ul className="space-y-1">
+          {config.experiments.map((experiment) => (
+            <li key={experiment.experimentId} className="text-muted-foreground font-mono text-xs">
+              {experiment.topicPrefix}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {supportsPush && !isConnected && (
+        <ConnectionTypeSelector
+          connectionType={connectionType}
+          onConnectionTypeChange={handleConnectionTypeChange}
+          browserSupport={browserSupport}
+        />
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" onClick={handleDownload} disabled={disabled}>
+          <Download className="mr-1.5 h-4 w-4" />
+          {t("iot.onboarding.download")}
+        </Button>
 
         {supportsPush && !isConnected && (
-          <ConnectionTypeSelector
-            connectionType={connectionType}
-            onConnectionTypeChange={handleConnectionTypeChange}
-            browserSupport={browserSupport}
-          />
+          <Button
+            onClick={handleConnect}
+            disabled={disabled || isConnecting || !isSelectedTransportSupported}
+          >
+            {isConnecting ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Usb className="mr-1.5 h-4 w-4" />
+            )}
+            {t("iot.onboarding.connect")}
+          </Button>
         )}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={handleDownload} disabled={disabled}>
-            <Download className="mr-1.5 h-4 w-4" />
-            {t("iot.onboarding.download")}
-          </Button>
-
-          {supportsPush && !isConnected && (
-            <Button
-              onClick={handleConnect}
-              disabled={disabled || isConnecting || !isSelectedTransportSupported}
-            >
-              {isConnecting ? (
+        {supportsPush && isConnected && (
+          <>
+            <Button onClick={handlePush} disabled={disabled || isPushing}>
+              {isPushing ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : (
-                <Usb className="mr-1.5 h-4 w-4" />
+                <Send className="mr-1.5 h-4 w-4" />
               )}
-              {t("iot.onboarding.connect")}
+              {t("iot.onboarding.push")}
             </Button>
-          )}
-
-          {supportsPush && isConnected && (
-            <>
-              <Button onClick={handlePush} disabled={disabled || isPushing}>
-                {isPushing ? (
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-1.5 h-4 w-4" />
-                )}
-                {t("iot.onboarding.push")}
-              </Button>
-              <Button variant="outline" onClick={handleDisconnect}>
-                {t("iot.onboarding.disconnect")}
-              </Button>
-            </>
-          )}
-        </div>
-
-        {disabledHint !== null && <p className="text-muted-foreground text-xs">{disabledHint}</p>}
-
-        {showConnectError && (
-          <p className="text-destructive text-xs">{t("iot.onboarding.connectError")}</p>
+            <Button variant="outline" onClick={handleDisconnect}>
+              {t("iot.onboarding.disconnect")}
+            </Button>
+          </>
         )}
+      </div>
 
-        {!supportsPush && <p className="text-muted-foreground text-xs">{t(downloadOnlyNoteKey)}</p>}
-      </CardContent>
-    </Card>
+      {disabledHint !== null && <p className="text-muted-foreground text-xs">{disabledHint}</p>}
+
+      {showConnectError && (
+        <p className="text-destructive text-xs">{t("iot.onboarding.connectError")}</p>
+      )}
+
+      {!supportsPush && <p className="text-muted-foreground text-xs">{t(downloadOnlyNoteKey)}</p>}
+    </SettingsCard>
   );
 }

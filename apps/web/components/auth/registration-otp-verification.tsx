@@ -6,6 +6,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { FormField, FormItem, FormControl, FormMessage } from "@repo/ui/components/form";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@repo/ui/components/input-otp";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -71,14 +72,15 @@ export function RegistrationOtpVerification({
       <h2 className="text-xl font-bold">{t("auth.checkEmail")}</h2>
       <div className="muted-foreground mb-4 text-sm">
         {t("auth.otpInstructions")}{" "}
-        <button
+        <Button
           type="button"
-          className="inline-flex items-center font-medium text-[#005e5e] hover:underline"
+          variant="link"
+          className="inline-flex h-auto items-center p-0 font-medium"
           onClick={onEditEmail}
           aria-label="Edit email address"
         >
           {pendingEmail} <Pencil className="ml-1 h-3 w-3" aria-hidden="true" />
-        </button>
+        </Button>
       </div>
       <FormField
         control={form.control}
@@ -89,19 +91,13 @@ export function RegistrationOtpVerification({
               <InputOTP
                 maxLength={OTP_LENGTH}
                 pattern={REGEXP_ONLY_DIGITS_PATTERN}
-                containerClassName="gap-2 justify-center"
+                containerClassName="justify-center"
                 onComplete={() => onComplete()}
                 {...field}
               >
-                <InputOTPGroup className="gap-2">
+                <InputOTPGroup>
                   {Array.from({ length: OTP_LENGTH }, (_, index) => (
-                    <InputOTPSlot
-                      key={index}
-                      index={index}
-                      className={`h-12 w-12 rounded-md border text-lg ${
-                        fieldState.invalid ? "border-destructive" : ""
-                      }`}
-                    />
+                    <InputOTPSlot key={index} index={index} aria-invalid={fieldState.invalid} />
                   ))}
                 </InputOTPGroup>
               </InputOTP>
@@ -111,15 +107,16 @@ export function RegistrationOtpVerification({
         )}
       />
       <div className="pt-2">
-        <button
+        <Button
           type="button"
-          className="text-sm font-medium text-[#005e5e] hover:underline disabled:opacity-50"
+          variant="link"
+          className="h-auto p-0 text-sm font-medium"
           onClick={handleResendCode}
           disabled={countdown > 0 || isPending}
           aria-label={countdown > 0 ? `Resend code in ${countdown} seconds` : "Resend code"}
         >
           {countdown > 0 ? `${t("auth.resendCode")} (${countdown}s)` : t("auth.resendCode")}
-        </button>
+        </Button>
       </div>
     </>
   );

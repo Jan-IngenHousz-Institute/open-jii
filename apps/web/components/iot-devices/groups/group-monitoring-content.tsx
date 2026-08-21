@@ -190,7 +190,10 @@ export function GroupMonitoringContent() {
         <div className="space-y-6">
           {monitoring.pipelineUnavailable && (
             <p className="text-muted-foreground flex items-center gap-2 text-sm">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+              <AlertTriangle
+                className="text-status-stale-foreground h-4 w-4 shrink-0"
+                aria-hidden
+              />
               {t("iot.groups.monitoring.pipelineUnavailable")}
             </p>
           )}

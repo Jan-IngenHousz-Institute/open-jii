@@ -94,7 +94,7 @@ export function ExperimentMeasurements({
           href={`/${locale}/platform/${isArchived ? "experiments-archive" : "experiments"}/${experimentId}/data`}
           className="shrink-0"
         >
-          <Button variant="buttonLink" className="h-auto p-0">
+          <Button variant="link" className="h-auto p-0">
             {t("measurements.seeAll")}
           </Button>
         </Link>
@@ -102,7 +102,7 @@ export function ExperimentMeasurements({
       <Card className="overflow-hidden shadow-none">
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-surface-light">
+            <TableHeader className="bg-muted">
               <TableRow>
                 <TableHead className="px-4">{t("measurements.deviceId")}</TableHead>
                 <TableHead className="px-4 text-right">{t("measurements.lastProcessed")}</TableHead>

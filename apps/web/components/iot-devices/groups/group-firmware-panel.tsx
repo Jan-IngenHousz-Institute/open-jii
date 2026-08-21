@@ -60,7 +60,7 @@ export function GroupFirmwarePanel({ firmware, labelByDeviceId, locale }: GroupF
   return (
     <div className="space-y-3">
       {rows.length > 1 && (
-        <p className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-500">
+        <p className="text-status-stale-foreground flex items-center gap-2 text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
           {t("iot.groups.monitoring.mixedFirmware", { count: rows.length })}
         </p>

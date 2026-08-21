@@ -16,6 +16,7 @@ import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { getDeviceTransportSupport } from "@repo/iot";
+import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -258,10 +259,7 @@ export function WorkbookHeader({
   const hasOutputs = cells.some((c) => c.type === "output");
 
   return (
-    <div
-      className="sticky top-16 z-30 flex items-center gap-2 border-b px-4 py-2 xl:gap-3 xl:py-3"
-      style={{ background: "#FFFFFF", borderColor: "#EDF2F6" }}
-    >
+    <div className="bg-card border-border sticky top-16 z-30 flex items-center gap-2 border-b px-4 py-2 xl:gap-3 xl:py-3">
       <div className="flex items-center gap-1.5 xl:gap-2.5">
         {onSensorFamilyChange && (
           <Select
@@ -275,10 +273,7 @@ export function WorkbookHeader({
             }}
             disabled={isConnected || isConnecting}
           >
-            <SelectTrigger
-              className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
-              style={{ borderColor: "#CDD5DB", borderRadius: 12, color: "#011111" }}
-            >
+            <SelectTrigger className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -297,10 +292,7 @@ export function WorkbookHeader({
             onValueChange={(v) => onConnectionTypeChange(v as WorkbookConnectionType)}
             disabled={isConnecting}
           >
-            <SelectTrigger
-              className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
-              style={{ borderColor: "#CDD5DB", borderRadius: 12, color: "#011111" }}
-            >
+            <SelectTrigger className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -317,25 +309,22 @@ export function WorkbookHeader({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              type="button"
+              variant={isConnected ? "secondary" : "default"}
+              size="sm"
               className={cn(
-                "inline-flex shrink-0 items-center justify-center gap-1.5 text-[12px] font-semibold leading-[18px]",
-                "h-[34px] px-2.5 xl:h-[38px] xl:gap-2 xl:px-3 xl:text-[13px]",
+                "shrink-0",
                 (isConnecting || (!isConnected && !transportSupported)) &&
                   "cursor-not-allowed opacity-50",
               )}
-              style={
-                isConnected
-                  ? { background: "#EDF2F6", borderRadius: 8, color: "#011111" }
-                  : { background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }
-              }
               onClick={onConnect}
               disabled={isConnecting || !transportSupported}
               data-testid="connect-device"
             >
               <Usb className="size-4" />
               <span className="hidden xl:inline">{isConnected ? "Add device" : "Connect"}</span>
-            </button>
+            </Button>
           </TooltipTrigger>
           {transportTooltip && (
             <TooltipContent>
@@ -350,10 +339,10 @@ export function WorkbookHeader({
           className={cn(
             "size-2 shrink-0",
             isConnected
-              ? "fill-emerald-500 text-emerald-500"
+              ? "fill-status-active-foreground text-status-active-foreground"
               : isConnecting
-                ? "animate-pulse fill-amber-400 text-amber-400"
-                : "fill-gray-300 text-gray-300",
+                ? "fill-status-stale-foreground text-status-stale-foreground animate-pulse"
+                : "fill-muted-foreground/40 text-muted-foreground/40",
           )}
         />
         {isConnected ? (
@@ -361,8 +350,11 @@ export function WorkbookHeader({
           // lists every connected device with per-device disconnect.
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
-                className="flex min-w-0 items-center gap-1 text-[12px] leading-[18px] text-[#68737B] hover:text-[#011111] xl:text-[13px] xl:leading-[21px]"
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground min-w-0 gap-1 font-normal"
                 data-testid="device-menu-trigger"
               >
                 <span className="truncate">
@@ -371,12 +363,12 @@ export function WorkbookHeader({
                     : (presentedDevices[0]?.primary ?? "Connected")}
                 </span>
                 {presentedDevices.length === 1 && presentedDevices[0]?.secondary && (
-                  <span className="hidden truncate text-[11px] text-[#68737B] xl:inline">
+                  <span className="text-muted-foreground hidden truncate text-[11px] xl:inline">
                     · {presentedDevices[0].secondary}
                   </span>
                 )}
                 <ChevronDown className="size-3 shrink-0" />
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               {presentedDevices.map((device) => (
@@ -390,10 +382,10 @@ export function WorkbookHeader({
                   <span className="flex flex-col">
                     <span>{device.primary}</span>
                     {device.secondary && device.secondary !== device.primary && (
-                      <span className="text-[10px] text-[#68737B]">{device.secondary}</span>
+                      <span className="text-muted-foreground text-[10px]">{device.secondary}</span>
                     )}
                   </span>
-                  <span className="text-[11px] text-[#68737B]">Disconnect</span>
+                  <span className="text-muted-foreground text-[11px]">Disconnect</span>
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
@@ -403,7 +395,7 @@ export function WorkbookHeader({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <span className="hidden text-[12px] leading-[18px] text-[#68737B] xl:inline xl:text-[13px] xl:leading-[21px]">
+          <span className="text-muted-foreground hidden text-[12px] leading-[18px] xl:inline xl:text-[13px] xl:leading-[21px]">
             {isConnecting ? "Connecting..." : "Disconnected"}
           </span>
         )}
@@ -412,18 +404,16 @@ export function WorkbookHeader({
       <div className="flex-1" />
 
       {onToggleFlowchart && (
-        <button
-          className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
-          style={
-            flowchartOpen
-              ? { background: "rgba(0, 94, 94, 0.1)", borderRadius: 8, color: "#005E5E" }
-              : { background: "#EDF2F6", borderRadius: 8, color: "#011111" }
-          }
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className={cn("shrink-0", flowchartOpen && "bg-accent text-accent-foreground")}
           onClick={onToggleFlowchart}
         >
           <GitBranch className="size-4" />
           <span className="hidden xl:inline">Flow</span>
-        </button>
+        </Button>
       )}
 
       <div
@@ -437,18 +427,10 @@ export function WorkbookHeader({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
-            className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 border px-2.5 text-[12px] font-normal leading-[18px] hover:bg-[#EDF2F6] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
-            style={{
-              borderColor: "#CDD5DB",
-              borderRadius: 12,
-              color: "#011111",
-              background: "#FFFFFF",
-            }}
-          >
+          <Button type="button" variant="outline" size="sm" className="shrink-0 font-normal">
             <span className="hidden xl:inline">Export</span>
             <ChevronDown className="size-3 xl:size-4" />
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuItem onClick={handleExportJSON}>Export as JSON</DropdownMenuItem>
@@ -465,44 +447,43 @@ export function WorkbookHeader({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <button
-        className={cn(
-          "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
-          !hasOutputs && "cursor-not-allowed opacity-50",
-        )}
-        style={{ background: "#EDF2F6", borderRadius: 8, color: "#011111" }}
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className="shrink-0"
         onClick={onClearOutputs}
         disabled={!hasOutputs}
       >
         <Trash2 className="size-4" />
         <span className="hidden xl:inline">Clear all</span>
-      </button>
+      </Button>
 
       {/* Only the workbook creator can run cells; the backend rejects updates
           from others, so non-creators don't see the Run all / Stop control. */}
       {!readOnly &&
         (isRunningAll ? (
-          <button
-            className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
-            style={{ background: "#DC2626", borderRadius: 8, color: "#FFFFFF" }}
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="shrink-0"
             onClick={onStopExecution}
           >
             <Square className="size-4 fill-current" />
             <span className="hidden xl:inline">Stop</span>
-          </button>
+          </Button>
         ) : (
-          <button
-            className={cn(
-              "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
-              cells.length === 0 && "cursor-not-allowed opacity-50",
-            )}
-            style={{ background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }}
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0"
             onClick={onRunAll}
             disabled={cells.length === 0}
           >
             <Play className="size-4 fill-current" />
             <span className="hidden xl:inline">Run all</span>
-          </button>
+          </Button>
         ))}
     </div>
   );

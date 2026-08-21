@@ -9,6 +9,7 @@ import Link from "next/link";
 import * as React from "react";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
+import { Button } from "@repo/ui/components/button";
 import { Sidebar, SidebarRail, SidebarTrigger } from "@repo/ui/components/sidebar";
 
 import { NavItems } from "../nav-items/nav-items";
@@ -96,11 +97,7 @@ export function AppSidebar({
   const processedNavLibrary = navigationData.navLibrary.map(mapItem);
 
   return (
-    <Sidebar
-      collapsible="hidden"
-      className="[&_[data-sidebar=sidebar]]:from-sidebar-gradient-from [&_[data-sidebar=sidebar]]:to-sidebar-gradient-to hidden md:flex [&_[data-sidebar=sidebar]]:bg-gradient-to-b"
-      {...props}
-    >
+    <Sidebar collapsible="hidden" className="hidden md:flex" {...props}>
       <div className="flex h-full flex-col">
         <div className="flex h-16 items-center justify-between px-4">
           <Link href={`/${locale}/platform`} className="flex items-center gap-2">
@@ -112,20 +109,21 @@ export function AppSidebar({
               className="h-auto w-full max-w-[120px]"
             />
           </Link>
-          <SidebarTrigger className="bg-jii-dark-green hover:bg-sidebar-trigger-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white" />
+          <SidebarTrigger className="bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" />
         </div>
 
         <div className="px-4 pb-2">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={openCommandPalette}
             aria-label="Open command palette"
-            className="focus-visible:ring-sidebar-ring focus-visible:outline-hidden flex h-9 w-full items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2"
+            className="border-sidebar-border bg-sidebar-accent/40 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring h-9 w-full justify-start gap-2 border px-3 text-left font-normal"
           >
             <Search className="size-4 shrink-0" />
             <span className="flex-1 truncate">Search…</span>
             <CommandKHint />
-          </button>
+          </Button>
         </div>
 
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
@@ -137,7 +135,7 @@ export function AppSidebar({
           <NavItems items={processedNavLibrary} />
         </div>
 
-        <div className="border-t border-white/10 px-4 py-2">
+        <div className="border-sidebar-border border-t px-4 py-2">
           <WhatsNewFooterItem entries={releaseNotes} />
         </div>
       </div>

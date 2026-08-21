@@ -18,6 +18,7 @@ import type { User } from "@repo/auth/types";
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import { Input } from "@repo/ui/components/input";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 import {
   Sheet,
@@ -27,6 +28,7 @@ import {
   SheetTitle,
 } from "@repo/ui/components/sheet";
 import { SidebarTrigger, useSidebar } from "@repo/ui/components/sidebar";
+import { ThemeToggle } from "@repo/ui/components/theme";
 
 import { NavUser } from "../nav-user/nav-user";
 
@@ -84,7 +86,7 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
   return (
     <>
       <header
-        className="sticky z-40 flex h-16 w-full items-center gap-2 border-b bg-white px-4"
+        className="bg-card sticky z-40 flex h-16 w-full items-center gap-2 border-b px-4"
         style={{ top: "var(--banner-offset, 0px)" }}
       >
         <div className="flex w-full items-center gap-2">
@@ -107,6 +109,9 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
 
             {/* Language Switcher */}
             <LanguageSwitcher locale={locale} />
+
+            {/* Light / dark / system, in the bell's own treatment. */}
+            <ThemeToggle className="text-foreground/70 hover:text-foreground" />
 
             {/* User Dropdown */}
             <NavUser
@@ -142,7 +147,7 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
           onInteractOutside={() => setIsMobileMenuOpen(false)}
         >
           <ScrollArea className="h-screen w-full">
-            <div className="bg-sidebar-mobile-bg flex min-h-screen flex-col">
+            <div className="bg-sidebar text-sidebar-foreground flex min-h-screen flex-col">
               {/* Header */}
               <SheetHeader className="flex flex-row items-center justify-between px-4 pb-6 pt-4">
                 <SheetTitle className="sr-only">Navigation menu</SheetTitle>
@@ -158,7 +163,7 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
                   variant="ghost"
                   size="icon"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="h-auto w-auto p-2 text-white hover:bg-white/10"
+                  className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-auto w-auto p-2"
                 >
                   <X className="!h-6 !w-6" />
                 </Button>
@@ -168,12 +173,12 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
                 <div>
                   {/* Search Bar */}
                   <div className="relative h-12 px-4 pb-4">
-                    <input
+                    <Input
                       type="text"
                       placeholder="Search by keyword..."
-                      className="placeholder:text-sidebar-search-placeholder focus:outline-hidden h-12 w-full rounded-lg border border-white/10 bg-transparent px-4 pl-10 text-[13px] text-white focus:border-white/20"
+                      className="border-sidebar-border text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus-visible:border-sidebar-ring focus-visible:ring-sidebar-ring/50 h-12 w-full rounded-lg px-4 pl-10 text-[13px] md:text-[13px]"
                     />
-                    <Search className="text-sidebar-search-icon absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2" />
+                    <Search className="text-sidebar-foreground/60 absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2" />
                   </div>
 
                   {/* Navigation Items */}
@@ -192,7 +197,7 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
                           href={item.url}
                           onClick={() => setIsMobileMenuOpen(false)}
                           className={`mx-4 flex items-center gap-3 rounded-lg py-3 transition-colors ${
-                            isActive ? "text-white" : "text-white/80"
+                            isActive ? "text-sidebar-foreground" : "text-sidebar-foreground/80"
                           }`}
                         >
                           <Icon className="h-5 w-5" />
@@ -218,9 +223,11 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
                     {/* Language */}
                     {availableLocales.length > 1 && (
                       <>
-                        <div className="mx-4 flex w-full items-center justify-between rounded-lg py-3 text-white/80">
+                        <div className="text-sidebar-foreground/80 mx-4 flex w-full items-center justify-between rounded-lg py-3">
                           <span className="font-medium">{t("common.language")}</span>
-                          <span className="text-sm text-white/60">{locale.toUpperCase()}</span>
+                          <span className="text-sidebar-foreground/60 text-sm">
+                            {locale.toUpperCase()}
+                          </span>
                         </div>
                         {availableLocales.map((loc) => (
                           <Link
@@ -228,7 +235,9 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
                             href={`/${loc.code}/platform`}
                             onClick={() => setIsMobileMenuOpen(false)}
                             className={`mx-4 flex w-full items-center justify-between rounded-lg py-2.5 pl-4 transition-colors ${
-                              locale === loc.code ? "bg-white/10 text-white" : "text-white/70"
+                              locale === loc.code
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                                : "text-sidebar-foreground/70"
                             }`}
                           >
                             <span className="text-sm">{loc.name}</span>
@@ -238,21 +247,22 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
                     )}
 
                     {/* Sign Out */}
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={handleSignOut}
                       disabled={signOut.isPending}
-                      className="mx-4 flex w-full items-center rounded-lg py-3 text-white/80 transition-colors disabled:opacity-50"
+                      className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground mx-4 h-auto w-full justify-start rounded-lg px-0 py-3 transition-colors"
                     >
                       <span className="font-medium">
                         {t("navigation.logout", {
                           ns: "navigation",
                         })}
                       </span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
-                <div className="border-t border-white/10 py-3">
+                <div className="border-sidebar-border border-t py-3">
                   <WhatsNewFooterItem
                     entries={releaseNotes}
                     onOpen={() => setIsMobileMenuOpen(false)}

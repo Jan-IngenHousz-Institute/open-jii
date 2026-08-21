@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@repo/ui/components/alert-dialog";
+import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,7 +80,7 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
     <>
       <TableRow
         className={cn(
-          "group cursor-pointer bg-white hover:bg-[#F6F8FA] has-[[data-state=open]]:bg-[#F6F8FA]",
+          "bg-card hover:bg-muted has-[[data-state=open]]:bg-muted group cursor-pointer",
           LIST_TABLE_BORDER,
         )}
         onClick={() => router.push(viewHref)}
@@ -124,16 +125,15 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
           <div className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label={t("iot.devices.actions.more")}
-                  className={cn(
-                    "inline-flex size-8 items-center justify-center rounded-md hover:bg-[#EDF2F6] hover:text-[#011111] data-[state=open]:bg-[#EDF2F6] data-[state=open]:text-[#011111]",
-                    LIST_TEXT_MUTED,
-                  )}
+                  className={cn("data-[state=open]:bg-accent size-8", LIST_TEXT_MUTED)}
                 >
                   <MoreHorizontal className="size-4" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>

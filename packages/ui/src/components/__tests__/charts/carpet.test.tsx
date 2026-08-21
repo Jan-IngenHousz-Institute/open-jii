@@ -24,6 +24,8 @@ vi.mock("../../charts/plotly-chart", () => ({
 }));
 
 vi.mock("../../charts/utils", () => ({
+  chartGridColor: vi.fn(() => "#E6E6E6"),
+  readThemeColor: vi.fn(() => undefined),
   createPlotlyConfig: vi.fn((config: any) => ({
     displayModeBar: config.displayModeBar !== false,
     responsive: config.responsive !== false,
@@ -213,9 +215,9 @@ describe("CarpetPlot", () => {
       mode: "markers",
       marker: {
         size: 8,
-        color: "#1f77b4",
       },
     });
+    expect(chartData[1].marker.color).toBeUndefined();
   });
 
   it("handles scatter data with custom markers", () => {
@@ -303,7 +305,6 @@ describe("CarpetPlot", () => {
     const chartData = JSON.parse(getByTestId("chart-data").textContent || "[]");
     expect(chartData[1].marker).toEqual({
       size: 8,
-      color: "#1f77b4",
     });
   });
 
@@ -494,7 +495,6 @@ describe("CarpetPlot", () => {
       mode: "markers",
       marker: {
         size: 8,
-        color: "#1f77b4",
       },
       showlegend: true,
     });

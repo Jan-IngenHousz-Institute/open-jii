@@ -18,7 +18,8 @@ export function NavigationMobileNavItem({
 
   const linkProps = {
     onClick: onItemClick,
-    className: "mx-4 flex w-full items-center rounded-lg py-3 text-white/80 transition-colors",
+    className:
+      "mx-4 flex w-full items-center rounded-lg py-3 text-sidebar-foreground/80 transition-colors",
   };
 
   const content = <span className="font-medium">{t(item.titleKey, { ns: item.namespace })}</span>;

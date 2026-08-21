@@ -3,6 +3,7 @@
 import { DevicePlanQuestions } from "@/components/iot-devices/device-plan-questions";
 import type { PlanQuestionEntry } from "@/components/iot-devices/device-plan-questions";
 import { DeviceSelectableExperimentRow } from "@/components/iot-devices/device-selectable-experiment-row";
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
 import { useOnboardIotDeviceGroup } from "@/hooks/iot/useOnboardIotDeviceGroup/useOnboardIotDeviceGroup";
@@ -21,13 +22,6 @@ import type { DeviceAnswer } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { Label } from "@repo/ui/components/label";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -196,35 +190,33 @@ export function GroupOnboardingContent() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle className="text-base">{t("iot.groups.onboarding.title")}</CardTitle>
-          <CardDescription>{t("iot.groups.onboarding.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {experiments.length === 0 ? (
-            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              {t("iot.groups.onboarding.noExperiments")}
-            </p>
-          ) : (
-            <ul className="divide-y rounded-lg border">
-              {experiments.map((experiment) => (
-                <DeviceSelectableExperimentRow
-                  key={experiment.id}
-                  experiment={experiment}
-                  isSelected={experimentIds.includes(experiment.id)}
-                  onToggle={handleExperimentToggle}
-                />
-              ))}
-            </ul>
-          )}
-          <p className="text-muted-foreground text-xs">{t("iot.groups.onboarding.reissueHint")}</p>
-        </CardContent>
-      </Card>
+      <SettingsCard
+        title={t("iot.groups.onboarding.title")}
+        description={t("iot.groups.onboarding.description")}
+        contentClassName="space-y-2"
+      >
+        {experiments.length === 0 ? (
+          <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+            {t("iot.groups.onboarding.noExperiments")}
+          </p>
+        ) : (
+          <ul className="divide-y rounded-lg border">
+            {experiments.map((experiment) => (
+              <DeviceSelectableExperimentRow
+                key={experiment.id}
+                experiment={experiment}
+                isSelected={experimentIds.includes(experiment.id)}
+                onToggle={handleExperimentToggle}
+              />
+            ))}
+          </ul>
+        )}
+        <p className="text-muted-foreground text-xs">{t("iot.groups.onboarding.reissueHint")}</p>
+      </SettingsCard>
 
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+      <SettingsCard
+        title={
+          <>
             {t("iot.groups.onboarding.devicesTitle")}
             <Badge variant="secondary">
               {t("iot.groups.onboarding.devicesSelected", {
@@ -232,70 +224,65 @@ export function GroupOnboardingContent() {
                 total: members.length,
               })}
             </Badge>
-          </CardTitle>
-          <CardDescription>{t("iot.groups.onboarding.devicesDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {members.length === 0 ? (
-            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              {t("iot.groups.noMembers")}
-            </p>
-          ) : (
-            <ul className="divide-y rounded-lg border">{members.map(renderMemberRow)}</ul>
-          )}
+          </>
+        }
+        description={t("iot.groups.onboarding.devicesDescription")}
+        contentClassName="space-y-4"
+      >
+        {members.length === 0 ? (
+          <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+            {t("iot.groups.noMembers")}
+          </p>
+        ) : (
+          <ul className="divide-y rounded-lg border">{members.map(renderMemberRow)}</ul>
+        )}
 
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Switch
-                id="group-include-workbook"
-                checked={includeWorkbook}
-                onCheckedChange={setIncludeWorkbook}
-              />
-              <Label htmlFor="group-include-workbook" className="text-sm font-normal">
-                {t("iot.onboarding.includeWorkbook")}
-              </Label>
-            </div>
-
-            {isOverCap && (
-              <p className="text-sm text-amber-600">
-                {t("iot.groups.onboarding.overCap", { max: MAX_BATCH })}
-              </p>
-            )}
-            <Button
-              className="w-fit"
-              onClick={handleOnboard}
-              disabled={selectedIds.length === 0 || isOverCap || onboardGroup.isPending}
-            >
-              {onboardGroup.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Rocket className="mr-2 h-4 w-4" aria-hidden />
-              )}
-              {t("iot.groups.onboarding.onboard", { count: selectedIds.length })}
-            </Button>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="group-include-workbook"
+              checked={includeWorkbook}
+              onCheckedChange={setIncludeWorkbook}
+            />
+            <Label htmlFor="group-include-workbook" className="text-sm font-normal">
+              {t("iot.onboarding.includeWorkbook")}
+            </Label>
           </div>
-        </CardContent>
-      </Card>
+
+          {isOverCap && (
+            <p className="text-status-stale-foreground text-sm">
+              {t("iot.groups.onboarding.overCap", { max: MAX_BATCH })}
+            </p>
+          )}
+          <Button
+            className="w-fit"
+            onClick={handleOnboard}
+            disabled={selectedIds.length === 0 || isOverCap || onboardGroup.isPending}
+          >
+            {onboardGroup.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Rocket className="mr-2 h-4 w-4" aria-hidden />
+            )}
+            {t("iot.groups.onboarding.onboard", { count: selectedIds.length })}
+          </Button>
+        </div>
+      </SettingsCard>
 
       {rows !== null && (
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="text-base">{t("iot.groups.onboarding.resultsTitle")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {questions.length > 0 && (
-              <DevicePlanQuestions questions={questions} onAnswersChange={handleAnswersChange} />
-            )}
-            <GroupOnboardResults
-              groupName={group?.name ?? "group"}
-              rows={rows}
-              labelByDeviceId={labels}
-              boundExperimentNames={boundExperimentNames}
-              answers={answers}
-              deliveryBlocked={hasUnansweredRequired}
-            />
-          </CardContent>
-        </Card>
+        <SettingsCard title={t("iot.groups.onboarding.resultsTitle")} contentClassName="space-y-4">
+          {questions.length > 0 && (
+            <DevicePlanQuestions questions={questions} onAnswersChange={handleAnswersChange} />
+          )}
+          <GroupOnboardResults
+            groupName={group?.name ?? "group"}
+            rows={rows}
+            labelByDeviceId={labels}
+            boundExperimentNames={boundExperimentNames}
+            answers={answers}
+            deliveryBlocked={hasUnansweredRequired}
+          />
+        </SettingsCard>
       )}
     </div>
   );

@@ -195,14 +195,15 @@ export function EmailLoginForm({
           </h2>
           <div className="muted-foreground mb-4 text-sm">
             {t("auth.otpInstructions", "Please enter the 6-digit code we sent to")}{" "}
-            <button
+            <Button
               type="button"
-              className="inline-flex items-center font-medium text-[#005e5e] hover:underline"
+              variant="link"
+              className="inline-flex h-auto items-center p-0 font-medium"
               onClick={handleEditEmail}
               aria-label="Edit email address"
             >
               {email} <Pencil className="ml-1 h-3 w-3" aria-hidden="true" />
-            </button>
+            </Button>
           </div>
 
           <FormField
@@ -214,19 +215,13 @@ export function EmailLoginForm({
                   <InputOTP
                     maxLength={OTP_LENGTH}
                     pattern={REGEXP_ONLY_DIGITS_PATTERN}
-                    containerClassName="gap-2 justify-center"
+                    containerClassName="justify-center"
                     onComplete={() => otpForm.handleSubmit(handleOTPSubmit)()}
                     {...field}
                   >
-                    <InputOTPGroup className="gap-2">
+                    <InputOTPGroup>
                       {Array.from({ length: OTP_LENGTH }, (_, index) => (
-                        <InputOTPSlot
-                          key={index}
-                          index={index}
-                          className={`h-12 w-12 rounded-md border text-lg ${
-                            fieldState.invalid ? "border-destructive" : ""
-                          }`}
-                        />
+                        <InputOTPSlot key={index} index={index} aria-invalid={fieldState.invalid} />
                       ))}
                     </InputOTPGroup>
                   </InputOTP>
@@ -237,9 +232,10 @@ export function EmailLoginForm({
           />
 
           <div className="pt-2">
-            <button
+            <Button
               type="button"
-              className="text-sm font-medium text-[#005e5e] hover:underline disabled:opacity-50"
+              variant="link"
+              className="h-auto p-0 text-sm font-medium"
               onClick={handleResendCode}
               disabled={countdown > 0 || isPending}
               aria-label={countdown > 0 ? `Resend code in ${countdown} seconds` : "Resend code"}
@@ -247,7 +243,7 @@ export function EmailLoginForm({
               {countdown > 0
                 ? `${t("auth.resendCode", "Re-send code")} (${countdown}s)`
                 : t("auth.resendCode", "Re-send code")}
-            </button>
+            </Button>
           </div>
         </form>
       </Form>
@@ -269,7 +265,6 @@ export function EmailLoginForm({
                   autoComplete="username webauthn"
                   placeholder={t("auth.emailPlaceholder")}
                   disabled={isPending}
-                  className="h-12 rounded-xl"
                   {...field}
                 />
               </FormControl>
@@ -282,7 +277,7 @@ export function EmailLoginForm({
           <Button
             type="submit"
             variant="default"
-            className="bg-primary text-primary-foreground hover:bg-primary-light active:bg-primary-dark h-12 w-full rounded-xl"
+            className="w-full"
             disabled={isPending || (!emailForm.formState.isValid && emailForm.formState.isDirty)}
           >
             {isPending ? (

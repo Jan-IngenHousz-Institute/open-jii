@@ -35,8 +35,8 @@ describe("NewsletterSubscribeForm", () => {
     expect(screen.getByText("footer.title")).toBeInTheDocument();
     expect(screen.getByLabelText("footer.emailLabel")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "footer.submit" })).toHaveClass(
-      "bg-quaternary",
-      "text-primary",
+      "bg-secondary",
+      "text-secondary-foreground",
     );
   });
 

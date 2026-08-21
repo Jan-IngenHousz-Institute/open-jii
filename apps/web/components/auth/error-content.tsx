@@ -23,8 +23,8 @@ export function ErrorContent({ locale, error, errorDescription }: ErrorContentPr
       <div className="flex flex-col items-center">
         {/* Error Icon */}
         <div className="mb-6 flex items-center justify-center">
-          <div className="rounded-full bg-red-500/10 p-4">
-            <AlertCircle className="h-12 w-12 text-red-500" />
+          <div className="bg-destructive/10 rounded-full p-4">
+            <AlertCircle className="text-destructive h-12 w-12" />
           </div>
         </div>
 
@@ -43,11 +43,11 @@ export function ErrorContent({ locale, error, errorDescription }: ErrorContentPr
 
         {/* Action Buttons */}
         <div className="w-full space-y-3">
-          <Button asChild className="h-12 w-full rounded-full" size="lg">
+          <Button asChild className="w-full" size="lg">
             <Link href={`/${locale}/login`}>{t("auth.errorTryAgain")}</Link>
           </Button>
 
-          <Button asChild variant="outline" className="h-12 w-full rounded-full" size="lg">
+          <Button asChild variant="outline" className="w-full" size="lg">
             <Link href={`/${locale}`}>{t("auth.errorGoHome")}</Link>
           </Button>
         </div>

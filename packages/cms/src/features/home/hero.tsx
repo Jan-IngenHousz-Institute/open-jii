@@ -63,7 +63,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
       >
         <Button
           variant="secondary"
-          className="shadow-xs group px-5 py-6 font-semibold transition-all duration-300 ease-out hover:scale-[1.03] hover:bg-white"
+          className="shadow-xs hover:bg-card group px-5 py-6 font-semibold transition-all duration-300 ease-out hover:scale-[1.03]"
           {...buttonInspectorProps({ fieldId: "label" })}
         >
           <div className="flex items-center space-x-2">
@@ -76,7 +76,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
   };
 
   return (
-    <section className="relative isolate -mt-16 min-h-screen w-full overflow-hidden bg-white">
+    <section className="bg-card relative isolate -mt-16 min-h-screen w-full overflow-hidden">
       {/* Background image block */}
       <div className="absolute inset-0 -z-10" {...inspectorProps({ fieldId: "image" })}>
         {currentHero.image?.url && (
@@ -90,7 +90,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
         )}
 
         {/* Black transparent vertical fade */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-transparent" />
+        <div className="from-sidebar/70 via-sidebar/50 absolute inset-0 bg-gradient-to-b to-transparent" />
 
         {/* Radial center fade */}
         <div
@@ -109,7 +109,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
           {/* Badge */}
           {currentHero.badge && (
             <div
-              className="backdrop-blur-xs mb-6 inline-flex items-center rounded-full bg-white/10 px-4 py-1.5 text-sm text-white ring-1 ring-white/20"
+              className="backdrop-blur-xs bg-sidebar-foreground/10 text-sidebar-foreground ring-sidebar-foreground/20 mb-6 inline-flex items-center rounded-full px-4 py-1.5 text-sm ring-1"
               {...inspectorProps({ fieldId: "badge" })}
             >
               {currentHero.badge}
@@ -117,14 +117,14 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
           )}
           {/* Title */}
           <h1
-            className="text-5xl font-semibold tracking-tight text-white sm:text-7xl"
+            className="text-sidebar-foreground text-5xl font-semibold tracking-tight sm:text-7xl"
             {...inspectorProps({ fieldId: "title" })}
           >
             {currentHero.title}
           </h1>
           {/* Subtitle */}
           <p
-            className="mt-6 text-lg font-medium text-gray-200 sm:text-xl"
+            className="text-sidebar-foreground/80 mt-6 text-lg font-medium sm:text-xl"
             {...inspectorProps({ fieldId: "subtitle" })}
           >
             {currentHero.subtitle}
@@ -142,7 +142,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
 
       {/* Bouncing down arrow */}
       <div className="absolute inset-x-0 bottom-8 flex animate-bounce justify-center">
-        <ChevronDown className="mx-auto h-8 w-8 text-white" />
+        <ChevronDown className="text-sidebar-foreground mx-auto h-8 w-8" />
       </div>
     </section>
   );
