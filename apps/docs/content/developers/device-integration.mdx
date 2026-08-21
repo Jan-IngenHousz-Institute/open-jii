@@ -217,7 +217,15 @@ The [Jobs device MQTT API](https://docs.aws.amazon.com/iot/latest/developerguide
 | `$aws/things/{thingName}/jobs/$next/get` (+ `/accepted`, `/rejected`)      | publish, subscribe | ask for pending work, typically on boot |
 | `$aws/things/{thingName}/jobs/{jobId}/update` (+ `/accepted`, `/rejected`) | publish, subscribe | report progress                         |
 
-The device certificate carries a policy granting exactly these topics for its own thing, so no extra credentials are involved. A job queued while a device is offline is delivered when it next connects.
+Certificates issued or rotated from the Credentials tab carry a policy granting exactly these topics for their own thing, so no extra credentials are involved. A job queued while a device is offline is delivered when it next connects.
+
+<Callout type="warn">
+  A certificate issued before Jobs support was added does **not** have this policy, and AWS does not
+  apply new policies to existing certificates retroactively. Such a device is denied on its job
+  topics, so its execution stays `QUEUED` forever: it never fails, so it never counts toward the
+  rollout's abort criteria either. Rotate its credentials, or attach the Jobs policy to the existing
+  certificate once, before treating the device as rollout-eligible.
+</Callout>
 
 ### The job document
 

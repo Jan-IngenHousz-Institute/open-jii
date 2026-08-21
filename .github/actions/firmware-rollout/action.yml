@@ -138,55 +138,78 @@ runs:
         REGION: ${{ inputs.aws-region }}
         THINGS: ${{ inputs.things }}
         ENVIRONMENT: ${{ inputs.environment }}
+        FAMILY: ${{ inputs.family }}
       run: |
         set -euo pipefail
         ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
         GROUP="open_jii_${ENVIRONMENT}_managed_devices"
 
         # Paged by hand with --no-paginate rather than trusting the CLI to
-        # aggregate: auto-pagination applies --query per page, so a group past
-        # one page would answer `length(things)` once per page.
-        : > managed.txt
-        NEXT=""
-        while :; do
-          if [ -n "$NEXT" ]; then
-            PAGE="$(aws iot list-things-in-thing-group --thing-group-name "$GROUP" \
-              --next-token "$NEXT" --no-paginate --output json)"
-          else
-            PAGE="$(aws iot list-things-in-thing-group --thing-group-name "$GROUP" \
-              --no-paginate --output json)"
-          fi
-          jq -r '.things[]?' <<<"$PAGE" >> managed.txt
-          NEXT="$(jq -r '.nextToken // empty' <<<"$PAGE")"
-          [ -n "$NEXT" ] || break
-        done
-        sort -u -o managed.txt managed.txt
+        # aggregate: auto-pagination applies --query per page, so a listing past
+        # one page would answer once per page instead of once in total.
+        collect() {
+          local filter="$1" next="" page; shift
+          while :; do
+            if [ -n "$next" ]; then
+              page="$("$@" --next-token "$next" --no-paginate --output json)"
+            else
+              page="$("$@" --no-paginate --output json)"
+            fi
+            jq -r "$filter" <<<"$page"
+            next="$(jq -r '.nextToken // empty' <<<"$page")"
+            [ -n "$next" ] || break
+          done
+        }
+
+        collect '.things[]?' \
+          aws iot list-things-in-thing-group --thing-group-name "$GROUP" | sort -u > managed.txt
+
+        # The managed-devices group holds EVERY registered thing, phones
+        # included, so it can never be the target on its own: an unfiltered
+        # rollout would queue an ambyte image for hardware that cannot run it,
+        # and nothing downstream would reject it (the digest matches, and the
+        # device contract has no family check). Narrow by the deviceType
+        # attribute the registry already carries.
+        collect '.things[]?.thingName' \
+          aws iot list-things --attribute-name deviceType --attribute-value "$FAMILY" \
+          | sort -u > family.txt
+
+        comm -12 managed.txt family.txt > eligible.txt
 
         if [ -n "$THINGS" ]; then
-          # An explicit list still has to be platform-managed: a typo would
-          # otherwise create a job against a thing this platform does not own,
-          # and the mistake only surfaces as an execution that never reports.
           printf '%s' "$THINGS" | tr ',' '\n' \
             | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | sed '/^$/d' | sort -u > requested.txt
 
-          UNKNOWN="$(comm -23 requested.txt managed.txt | tr '\n' ' ')"
-          [ -z "${UNKNOWN// /}" ] || { echo "::error::not registered in $GROUP: $UNKNOWN"; exit 1; }
-
-          TARGETS="$(while read -r THING; do
-            echo "arn:aws:iot:$REGION:$ACCOUNT:thing/$THING"
-          done < requested.txt | jq -R . | jq -sc .)"
-          COUNT="$(jq 'length' <<<"$TARGETS")"
+          UNKNOWN="$(comm -23 requested.txt eligible.txt | tr '\n' ' ')"
+          [ -z "${UNKNOWN// /}" ] || {
+            echo "::error::not registered $FAMILY devices in $GROUP: $UNKNOWN"; exit 1; }
+          cp requested.txt selected.txt
         else
-          TARGETS="$(jq -nc --arg arn "arn:aws:iot:$REGION:$ACCOUNT:thinggroup/$GROUP" '[$arn]')"
-          COUNT="$(wc -l < managed.txt | tr -d ' ')"
+          cp eligible.txt selected.txt
         fi
+
+        COUNT="$(wc -l < selected.txt | tr -d ' ')"
+        [ "$COUNT" -gt 0 ] || { echo "::error::no $FAMILY devices are registered in $GROUP"; exit 1; }
+        # CreateJob takes a bounded target list. Past this the scaling path is a
+        # family-scoped dynamic thing group, not a longer list.
+        [ "$COUNT" -le 100 ] || {
+          echo "::error::$COUNT $FAMILY devices exceeds the 100-target bound; narrow with the things input"
+          exit 1; }
+
+        TARGETS="$(while read -r THING; do
+          echo "arn:aws:iot:$REGION:$ACCOUNT:thing/$THING"
+        done < selected.txt | jq -R . | jq -sc .)"
 
         {
           echo "targets<<EOF"; echo "$TARGETS"; echo "EOF"
           echo "count=$COUNT"
           echo "account=$ACCOUNT"
         } >> "$GITHUB_OUTPUT"
-        echo "Targets: **$COUNT** device(s)" >> "$GITHUB_STEP_SUMMARY"
+        {
+          echo "Targets: **$COUNT** \`$FAMILY\` device(s)"
+          echo "<details><summary>Target things</summary>"
+          echo; sed 's/^/- /' selected.txt; echo "</details>"
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Render job document
       id: document
@@ -301,15 +324,29 @@ runs:
         echo "job-id=$JOB_ID" >> "$GITHUB_OUTPUT"
         echo "Created job \`$JOB_ID\`" >> "$GITHUB_STEP_SUMMARY"
 
+        # Claim the artifact the moment the job is live: if tracking dies, the
+        # evidence must not still read "rollout did not start" for a real job.
+        jq -n --arg jobId "$JOB_ID" \
+          '{jobId: $jobId, status: "IN_PROGRESS", executions: [], error: "tracking did not finish"}' \
+          > results.json
+
     - name: Track executions
       if: inputs.dry-run != 'true'
       shell: bash
       env:
         JOB_ID: ${{ steps.create.outputs.job-id }}
         TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+        MAX_PER_MINUTE: ${{ inputs.max-per-minute }}
+        COUNT: ${{ steps.target.outputs.count }}
       run: |
         set -euo pipefail
-        DEADLINE=$(( $(date +%s) + $TIMEOUT_MINUTES * 60 ))
+        # Executions start at MAX_PER_MINUTE, so the fleet needs time to even
+        # begin before any one device's timeout can apply. Watching only for
+        # TIMEOUT_MINUTES would abandon every rollout wider than one minute's
+        # worth of starts.
+        START_MINUTES=$(( (COUNT + MAX_PER_MINUTE - 1) / MAX_PER_MINUTE ))
+        DEADLINE=$(( $(date +%s) + (START_MINUTES + TIMEOUT_MINUTES) * 60 ))
+        GAVE_UP=""
 
         while :; do
           STATUS="$(aws iot describe-job --job-id "$JOB_ID" --query 'job.status' --output text)"
@@ -318,28 +355,48 @@ runs:
             COMPLETED|CANCELED|DELETION_IN_PROGRESS) break ;;
           esac
           if [ "$(date +%s)" -ge "$DEADLINE" ]; then
-            echo "::warning::stopped watching after the configured timeout; the job is still $STATUS"
+            echo "::warning::stopped watching after ${START_MINUTES}+${TIMEOUT_MINUTES}m; the job is still $STATUS and continues in AWS"
+            GAVE_UP=1
             break
           fi
           sleep 30
         done
 
-        # Capped: a rollout wider than this reports its first 500 executions
-        # here, and the rest must be read from the job in the AWS console.
-        aws iot list-job-executions-for-job --job-id "$JOB_ID" --max-items 500 > executions.json
-        TOTAL="$(jq '.executionSummaries | length' executions.json)"
-        if [ "$TOTAL" -ge 500 ]; then
-          echo "::warning::execution list truncated at 500; see the job in AWS for the full set"
-        fi
+        : > executions.ndjson
+        NEXT=""
+        while :; do
+          if [ -n "$NEXT" ]; then
+            PAGE="$(aws iot list-job-executions-for-job --job-id "$JOB_ID" \
+              --next-token "$NEXT" --no-paginate --output json)"
+          else
+            PAGE="$(aws iot list-job-executions-for-job --job-id "$JOB_ID" \
+              --no-paginate --output json)"
+          fi
+          jq -c '.executionSummaries[]?' <<<"$PAGE" >> executions.ndjson
+          NEXT="$(jq -r '.nextToken // empty' <<<"$PAGE")"
+          [ -n "$NEXT" ] || break
+        done
+        jq -sc . executions.ndjson > executions.json
+
         jq -n --arg jobId "$JOB_ID" --arg status "$STATUS" --slurpfile execs executions.json \
-          '{jobId: $jobId, status: $status, executions: $execs[0].executionSummaries, error: null}' > results.json
+          '{jobId: $jobId, status: $status, executions: $execs[0], error: null}' > results.json
 
         {
           echo "### Result: \`$STATUS\`"
           echo "| Device | State |"
           echo "|---|---|"
-          jq -r '.executionSummaries[] | "| \(.thingArn | split("/") | last) | \(.jobExecutionSummary.status) |"' executions.json
+          jq -r '.[] | "| \(.thingArn | split("/") | last) | \(.jobExecutionSummary.status) |"' executions.json
         } >> "$GITHUB_STEP_SUMMARY"
+
+        # A canceled job means the abort criteria tripped, which is the loudest
+        # safety signal this workflow has; it must never read as a green run.
+        [ "$STATUS" != "CANCELED" ] || { echo "::error::rollout CANCELED: the abort criteria tripped"; exit 1; }
+
+        BAD="$(jq '[.[] | select(.jobExecutionSummary.status
+          | IN("FAILED","TIMED_OUT","REJECTED","CANCELED","REMOVED"))] | length' executions.json)"
+        [ "$BAD" -eq 0 ] || { echo "::error::$BAD execution(s) did not succeed"; exit 1; }
+
+        [ -z "$GAVE_UP" ] || echo "::warning::rollout unfinished at hand-off; read the job in AWS for the final state"
 
     - name: Upload results
       if: always()

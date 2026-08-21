@@ -7,7 +7,7 @@ import type { FirmwareRelease } from "@repo/api/domains/iot/firmware/iot-firmwar
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { ErrorCodes } from "../../../../utils/error-codes";
-import { AppError, Result, success, tryCatch } from "../../../../utils/fp-utils";
+import { AppError, Result, failure, success, tryCatch } from "../../../../utils/fp-utils";
 import { GithubConfigService } from "../config/config.service";
 import type { GithubReleasePayload } from "./releases.types";
 
@@ -15,11 +15,25 @@ const RELEASES_PER_PAGE = 20;
 
 /**
  * Releases change on a human cadence, while the anonymous GitHub rate limit is
- * 60 requests per hour per IP. Caching belongs here rather than in the domain:
- * it protects this client's own budget, not a business rule.
+ * 60 requests per hour per shared egress IP. Caching belongs here rather than
+ * in the domain: it protects this client's own budget, not a business rule.
+ *
+ * An entry is served without asking GitHub for FRESH_MS, kept as a fallback
+ * until CACHE_TTL_MS, and a repository that just failed is not retried for
+ * FAILURE_TTL_MS. Without that last part one unreadable repository (a typo, a
+ * private repo) would burn the whole hourly budget and take the working
+ * families down with it.
  */
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const FRESH_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 60 * 60 * 1000;
+const FAILURE_TTL_MS = 60 * 1000;
 const CACHE_PREFIX = "github-releases:";
+const FAILURE_PREFIX = "github-releases-failed:";
+
+interface CachedReleases {
+  releases: FirmwareRelease[];
+  fetchedAt: number;
+}
 
 @Injectable()
 export class GithubReleasesService {
@@ -33,13 +47,16 @@ export class GithubReleasesService {
   ) {}
 
   async listReleases(repository: string): Promise<Result<FirmwareRelease[]>> {
-    const cacheKey = `${CACHE_PREFIX}${repository}`;
-    const cached = await this.cache.get<FirmwareRelease[]>(cacheKey);
-    if (cached) {
-      return success(cached);
+    const cached = await this.readCache<CachedReleases>(`${CACHE_PREFIX}${repository}`);
+    if (cached && Date.now() - cached.fetchedAt < FRESH_MS) {
+      return success(cached.releases);
     }
 
-    return tryCatch(
+    if (await this.readCache<true>(`${FAILURE_PREFIX}${repository}`)) {
+      return this.staleOr(cached, repository, "recently failed");
+    }
+
+    const fetched = await tryCatch(
       async () => {
         const response = await this.httpService.axiosRef.get<GithubReleasePayload[]>(
           `https://api.github.com/repos/${repository}/releases`,
@@ -56,7 +73,11 @@ export class GithubReleasesService {
         );
 
         const releases = this.toReleases(response.data);
-        await this.cache.set(cacheKey, releases, CACHE_TTL_MS);
+        await this.writeCache(
+          `${CACHE_PREFIX}${repository}`,
+          { releases, fetchedAt: Date.now() },
+          CACHE_TTL_MS,
+        );
         return releases;
       },
       (error) => {
@@ -66,12 +87,63 @@ export class GithubReleasesService {
           repository,
           error: getAxiosErrorMessage(error),
         });
-        return AppError.internal(
+        // An unreadable repository is a configuration gap, not a platform
+        // fault: it reads the same as a family nobody publishes for.
+        return AppError.notFound(
           `Could not read releases for ${repository}`,
           ErrorCodes.GITHUB_RELEASES_FAILED,
         );
       },
     );
+
+    if (fetched.isSuccess()) {
+      return fetched;
+    }
+
+    await this.writeCache(`${FAILURE_PREFIX}${repository}`, true, FAILURE_TTL_MS);
+    return this.staleOr(cached, repository, "refresh failed");
+  }
+
+  /** Last good answer beats an error the caller can do nothing about. */
+  private staleOr(
+    cached: CachedReleases | undefined,
+    repository: string,
+    reason: string,
+  ): Result<FirmwareRelease[]> {
+    if (cached) {
+      this.logger.warn({
+        msg: "Serving stale firmware releases",
+        operation: "listReleases",
+        repository,
+        reason,
+      });
+      return success(cached.releases);
+    }
+
+    return failure(
+      AppError.notFound(
+        `Could not read releases for ${repository}`,
+        ErrorCodes.GITHUB_RELEASES_FAILED,
+      ),
+    );
+  }
+
+  /** A cache outage degrades to a miss rather than failing the request. */
+  private async readCache<T>(key: string): Promise<T | undefined> {
+    try {
+      return (await this.cache.get<T>(key)) ?? undefined;
+    } catch (error) {
+      this.logger.warn({ msg: "Cache read failed, treating as miss", key, error });
+      return undefined;
+    }
+  }
+
+  private async writeCache(key: string, value: unknown, ttlMs: number): Promise<void> {
+    try {
+      await this.cache.set(key, value, ttlMs);
+    } catch (error) {
+      this.logger.warn({ msg: "Cache write failed", key, error });
+    }
   }
 
   /**

@@ -1974,8 +1974,13 @@ module "backend_ecs" {
       value = module.iot_core.jobs_policy_name
     },
     {
-      # Placeholders until the firmware repositories are confirmed; the Firmware
-      # tab reports "no repository configured" for any family left unset.
+      # A family left unset renders the Firmware tab as "JII does not publish
+      # firmware for this device family yet" rather than an error.
+      #
+      # GITHUB_TOKEN is deliberately NOT set: these repositories are public, so
+      # reads work anonymously, but that shares a 60-requests-per-hour budget
+      # across this account's egress IP. Add the token to the app secret and
+      # wire it here if the Firmware tab ever gets heavy use.
       name  = "FIRMWARE_REPO_AMBYTE"
       value = "Jan-IngenHousz-Institute/ambyte-iot"
     },

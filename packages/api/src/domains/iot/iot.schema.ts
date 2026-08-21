@@ -368,11 +368,12 @@ export const zDeviceMeasurement = z.object({
   sample: z.string().nullable(),
 });
 
-// The monitoring dashboard's one-range response; queries run in parallel server-side.
+// Firmware versions reported across the range, one row per distinct version.
 export const zDeviceFirmwareHistory = z.object({
   versions: z.array(zDeviceFirmwareVersion),
 });
 
+// The monitoring dashboard's one-range response; queries run in parallel server-side.
 export const zDeviceMonitoring = z.object({
   bucket: zMonitoringBucket,
   events: z.array(zDeviceLifecycleEvent),
