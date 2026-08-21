@@ -21,7 +21,7 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
-    "tsx": "^4.23.0",
+    "tsx": "^4.21.0",
     "typescript": "catalog:"
   }
 }

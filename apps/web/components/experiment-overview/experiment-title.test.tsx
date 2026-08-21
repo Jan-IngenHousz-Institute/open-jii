@@ -32,7 +32,7 @@ function renderComponent(
 describe("ExperimentTitle", () => {
   it("renders experiment title", () => {
     renderComponent({ name: "My Experiment" });
-    expect(screen.getByText("My Experiment")).toBeInTheDocument();
+    expect(screen.getByTestId("experiment-title")).toHaveTextContent("My Experiment");
   });
 
   it("does not render the active / public pills anymore", () => {

@@ -4,6 +4,13 @@ import { databaseUrl, seedEmail } from "./helpers.js";
 
 const tag = "workbook-search";
 const experimentName = "[E2E] Photosynthesis Workbook Search";
+export const workbookSearchNames = {
+  chlorophyll: "Chlorophyll Fluorescence Baseline",
+  leafArea: "Leaf Area Index Survey",
+  drought: "Drought Trial 2",
+  zephyr: "Zephyr Notebook",
+  quokka: "Quokka Notebook",
+} as const;
 
 export interface WorkbookSearchFixtures {
   creatorName: string;
@@ -25,6 +32,11 @@ export async function cleanupWorkbookSearchFixtures(): Promise<void> {
       const experimentIds = experiments.map(({ id }) => id);
       if (experimentIds.length > 0) {
         await transaction`delete from experiment_members where experiment_id in ${transaction(experimentIds)}`;
+        await transaction`
+          delete from resource_grants
+          where resource_type = 'experiment'
+            and resource_id in ${transaction(experimentIds)}
+        `;
         await transaction`delete from experiments where id in ${transaction(experimentIds)}`;
       }
       await transaction`delete from workbooks where metadata->>'e2e' = ${tag}`;
@@ -65,11 +77,11 @@ export async function seedWorkbookSearchFixtures(): Promise<WorkbookSearchFixtur
       if (!other) throw new Error("No second active workbook creator found");
 
       const workbookRows = [
-        ["Chlorophyll Fluorescence Baseline", "Baseline run", seed.id, seed.organization_id],
-        ["Leaf Area Index Survey", "Canopy survey", seed.id, seed.organization_id],
-        ["Drought Trial 2", "Second trial", seed.id, seed.organization_id],
-        ["Zephyr Notebook", "Unrelated name", other.id, other.organization_id],
-        ["Quokka Notebook", "To be linked", seed.id, seed.organization_id],
+        [workbookSearchNames.chlorophyll, "Baseline run", seed.id, seed.organization_id],
+        [workbookSearchNames.leafArea, "Canopy survey", seed.id, seed.organization_id],
+        [workbookSearchNames.drought, "Second trial", seed.id, seed.organization_id],
+        [workbookSearchNames.zephyr, "Unrelated name", other.id, other.organization_id],
+        [workbookSearchNames.quokka, "To be linked", seed.id, seed.organization_id],
       ];
       for (const [name, description, createdBy, organizationId] of workbookRows) {
         await transaction`
@@ -94,8 +106,11 @@ export async function seedWorkbookSearchFixtures(): Promise<WorkbookSearchFixtur
       const experimentId = experiments.at(0)?.id;
       if (!experimentId) throw new Error("Failed to create workbook-search experiment");
       await transaction`
-        insert into experiment_members (experiment_id, user_id, role)
-        values (${experimentId}, ${seed.id}, 'admin')
+        insert into resource_grants (
+          resource_type, resource_id, grantee_type, grantee_id, role, created_by
+        ) values (
+          'experiment', ${experimentId}, 'user', ${seed.id}, 'admin', ${seed.id}
+        )
       `;
 
       return {
