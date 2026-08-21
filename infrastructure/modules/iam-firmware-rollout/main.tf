@@ -56,13 +56,22 @@ resource "aws_iam_role_policy" "firmware_rollout" {
         ]
       },
       {
-        Sid    = "ResolveTargets",
+        Sid    = "ResolveTargetGroup",
         Effect = "Allow",
         Action = [
           "iot:ListThingsInThingGroup",
           "iot:DescribeThingGroup",
         ],
         Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:thinggroup/*"
+      },
+      {
+        # Narrowing a rollout to one device family reads the registry by the
+        # deviceType attribute. ListThings is an account-level query and has no
+        # per-resource ARN to scope to, so it can only be granted on "*".
+        Sid      = "ResolveTargetFamily",
+        Effect   = "Allow",
+        Action   = "iot:ListThings",
+        Resource = "*"
       },
       {
         Sid      = "PublishFirmwareArtifact",

@@ -155,9 +155,10 @@ describe("GithubReleasesService", () => {
       .reply(200, [release()]);
     assertSuccess(await service.listReleases(REPOSITORY));
 
-    // Past the freshness window, so the next read goes back to GitHub.
     vi.useFakeTimers();
-    vi.setSystemTime(Date.now() + 10 * 60 * 1000);
+    // Past FRESH_MS so the read goes back to GitHub, but inside CACHE_TTL_MS so
+    // the previous answer is still there to fall back on.
+    vi.setSystemTime(Date.now() + 30 * 60 * 1000);
     nock("https://api.github.com").get(`/repos/${REPOSITORY}/releases`).query(true).reply(500);
 
     const stale = await service.listReleases(REPOSITORY);

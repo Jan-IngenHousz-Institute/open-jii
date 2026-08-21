@@ -12,9 +12,9 @@ export const useDeviceFirmwareHistory = (
   range: MonitoringRange,
   options?: { enabled?: boolean },
 ) =>
-  useQuery({
-    ...orpc.iot.getDeviceFirmwareHistory.queryOptions({
+  useQuery(
+    orpc.iot.getDeviceFirmwareHistory.queryOptions({
       input: { deviceId, from: range.from, to: range.to, bucket: range.bucket },
+      enabled: options?.enabled ?? true,
     }),
-    enabled: options?.enabled ?? true,
-  });
+  );

@@ -45,6 +45,18 @@ describe("useIotFirmwareReleases", () => {
     expect(result.current.data).toBeUndefined();
   });
 
+  it("does not retry a family whose repository is not configured", async () => {
+    const spy = server.mount(contract.iot.listIotFirmwareReleases, { status: 404 });
+
+    const { result } = renderHook(() => useIotFirmwareReleases("minipar"));
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    // A configuration gap is settled on the first answer.
+    expect(spy.calls).toHaveLength(1);
+  });
+
   it("surfaces a failure", async () => {
     server.mount(contract.iot.listIotFirmwareReleases, { status: 500 });
 
