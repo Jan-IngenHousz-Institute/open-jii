@@ -1,0 +1,27 @@
+{
+  "name": "@repo/e2e",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "clean": "git clean -xdf .auth .cache .turbo node_modules playwright-report test-results",
+    "e2e": "playwright test",
+    "lint": "eslint",
+    "record-maintenance": "tsx scripts/record-maintenance.ts"
+  },
+  "dependencies": {
+    "@repo/devkit": "workspace:*",
+    "postgres": "^3.4.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.1",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "tsx": "^4.21.0",
+    "typescript": "catalog:"
+  }
+}

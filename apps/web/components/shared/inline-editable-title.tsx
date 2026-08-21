@@ -20,6 +20,7 @@ interface InlineEditableTitleProps {
   actions?: ReactNode;
   /** When true, actions render right after the title instead of pushed to the row's far end. */
   actionsInline?: boolean;
+  testId?: string;
 }
 
 const titleVariants = cva("text-2xl transition-all duration-300", {
@@ -43,6 +44,7 @@ export function InlineEditableTitle({
   badges,
   actions,
   actionsInline = false,
+  testId,
 }: InlineEditableTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
@@ -77,6 +79,7 @@ export function InlineEditableTitle({
 
   return (
     <div
+      data-testid={testId}
       className={actionsInline ? "flex items-center gap-2" : "flex items-center justify-between"}
     >
       <div className="flex min-w-0 items-center gap-2">
