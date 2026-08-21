@@ -2,6 +2,7 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import { formatShortDate } from "@/util/date";
+import { isSameFirmwareVersion } from "@/util/firmware-family";
 import { Download, ExternalLink } from "lucide-react";
 
 import type { FirmwareRelease } from "@repo/api/domains/iot/firmware/iot-firmware.schema";
@@ -58,7 +59,8 @@ export function FirmwareReleaseList({ releases, installedVersion }: FirmwareRele
   }
 
   function renderRelease(release: FirmwareRelease) {
-    const isInstalled = installedVersion !== null && release.version === installedVersion;
+    const isInstalled =
+      installedVersion !== null && isSameFirmwareVersion(installedVersion, release.version);
 
     return (
       <li key={release.version} className="space-y-2 px-3 py-3">
