@@ -11,6 +11,7 @@ import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
 import {
+  buildMacroInputShapeFingerprint,
   emptyEnvelopeError,
   LambdaExecutionResponseSchema,
 } from "../../../core/models/macro-execution.model";
@@ -30,6 +31,13 @@ export class ExecuteMacroUseCase {
     macroId: string,
     request: MacroExecutionRequestBody,
   ): Promise<Result<MacroExecutionResponse>> {
+    this.logger.log({
+      msg: "Macro input shape fingerprint",
+      operation: "executeMacro",
+      boundary: "backend-received",
+      ...buildMacroInputShapeFingerprint(request.data, macroId),
+    });
+
     this.logger.log({
       msg: "Starting single macro execution",
       operation: "executeMacro",
@@ -89,7 +97,15 @@ export class ExecuteMacroUseCase {
 
     const payload: LambdaExecutionPayload = {
       script: macro.code,
-      items: [{ id: itemId, data: normalized.value, context: request.context }],
+      items: [
+        {
+          id: itemId,
+          macro_id: macroId,
+          operation: "executeMacro",
+          data: normalized.value,
+          context: request.context,
+        },
+      ],
       timeout: request.timeout ?? 30,
     };
 

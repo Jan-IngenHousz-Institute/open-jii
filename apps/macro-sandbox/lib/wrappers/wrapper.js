@@ -85,6 +85,87 @@ function deepFreezeClone(value) {
   return value;
 }
 
+// Describe input structure without emitting measurement content. The only
+// data values retained are the explicitly permitted set labels.
+const KNOWN_TOP_LEVEL_KEYS = new Set([
+  "set",
+  "macros",
+  "protocol_id",
+  "sample",
+  "gps",
+  "data",
+  "output",
+  "time",
+  "timestamp",
+  "latitude",
+  "longitude",
+  "questions",
+  "annotations",
+  "device",
+  "protocol",
+  "id",
+]);
+const SAFE_LABEL = /^[A-Za-z0-9_-]{1,24}$/;
+
+function fingerprintDigest(value) {
+  let hash = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(value)) {
+    hash ^= byte;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `#${hash.toString(16).padStart(8, "0")}`;
+}
+
+function redactKey(key) {
+  return KNOWN_TOP_LEVEL_KEYS.has(key) ? key : fingerprintDigest(key);
+}
+
+function redactLabel(label) {
+  return SAFE_LABEL.test(label) ? label : fingerprintDigest(label);
+}
+
+function buildShapeFingerprint(item) {
+  const data = item.data;
+  const isArray = Array.isArray(data);
+  const isRecord = data !== null && typeof data === "object" && !isArray;
+  const set = isRecord ? data.set : undefined;
+  const setIsArray = Array.isArray(set);
+
+  return {
+    msg: "Macro input shape fingerprint",
+    operation: typeof item.operation === "string" ? item.operation : null,
+    boundary: "sandbox-pre-execution",
+    typeof: typeof data,
+    isArray,
+    length: isArray ? data.length : typeof data === "string" ? Array.from(data).length : null,
+    topLevelKeys: isRecord ? Object.keys(data).sort().map(redactKey) : [],
+    setIsArray,
+    setTypeof: set === null ? "null" : Array.isArray(set) ? "array" : typeof set,
+    setLength: setIsArray ? set.length : null,
+    setLabels: setIsArray
+      ? set.flatMap((entry) => {
+          if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return [];
+          return typeof entry.label === "string" ? [redactLabel(entry.label)] : [];
+        })
+      : [],
+    macro_id: typeof item.macro_id === "string" ? item.macro_id : null,
+    workbook_version_id:
+      typeof item.workbook_version_id === "string" ? item.workbook_version_id : null,
+  };
+}
+
+function formatError(error) {
+  const type =
+    error !== null && typeof error === "object" && error.constructor
+      ? error.constructor.name
+      : typeof error;
+  const message =
+    error !== null && typeof error === "object" && typeof error.message === "string"
+      ? error.message
+      : String(error);
+  return `${type}: ${message}`;
+}
+
 // 4. CREATE CONTEXT ONCE
 // Minimal sandbox: no Date, performance, setTimeout, process, require, eval
 const sandbox = {
@@ -156,6 +237,7 @@ try {
 }
 
 let results = [];
+let fingerprints = [];
 
 // 5. EXECUTION LOOP
 for (const item of batchItems) {
@@ -163,6 +245,8 @@ for (const item of batchItems) {
   sandbox.input_data = cloneData(item.data);
   sandbox.ctx = item.context ? deepFreezeClone(item.context) : Object.create(null);
   sandbox.output = Object.create(null);
+
+  fingerprints.push(buildShapeFingerprint(item));
 
   try {
     script.runInContext(context, { timeout: 1000, displayErrors: false });
@@ -175,10 +259,10 @@ for (const item of batchItems) {
     results.push({
       id: item.id,
       success: false,
-      error: e.message,
+      error: formatError(e),
     });
   }
 }
 
 // 6. OUTPUT
-console.log(JSON.stringify({ status: "success", results: results }));
+console.log(JSON.stringify({ status: "success", results: results, fingerprints }));

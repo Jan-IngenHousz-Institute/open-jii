@@ -133,6 +133,25 @@ resource "grafana_contact_point" "slack" {
 # ALERT RULES - Standard monitoring
 # ============================================================================
 
+# Extract only the use-case completion event. The webhook controller emits the
+# same message and failureCount, so matching the logger context prevents every
+# batch from being counted twice.
+resource "aws_cloudwatch_log_metric_filter" "macro_batch_failures" {
+  count = var.enable_macro_failure_alert ? 1 : 0
+
+  name           = "macro-batch-failures-${var.environment}"
+  log_group_name = var.ecs_log_group_name
+  pattern        = "{ $.context = \"ExecuteMacroBatchUseCase\" && $.msg = \"Macro batch execution completed\" && $.operation = \"executeMacroBatch\" && $.failureCount = * }"
+
+  metric_transformation {
+    name          = "MacroBatchFailureCount-${var.environment}"
+    namespace     = "OpenJII/MacroExecution"
+    value         = "$.failureCount"
+    default_value = 0
+    unit          = "Count"
+  }
+}
+
 # Backend API Alerts
 resource "grafana_rule_group" "backend_alerts" {
   provider           = grafana.amg
@@ -140,6 +159,8 @@ resource "grafana_rule_group" "backend_alerts" {
   folder_uid         = grafana_folder.folder.uid
   interval_seconds   = 60
   disable_provenance = true
+
+  depends_on = [aws_cloudwatch_log_metric_filter.macro_batch_failures]
 
   rule {
     name      = "Backend High CPU Usage"
@@ -363,6 +384,87 @@ EOT
     labels = {
       severity = "critical"
       service  = "backend"
+    }
+  }
+
+  dynamic "rule" {
+    for_each = var.enable_macro_failure_alert ? [1] : []
+
+    content {
+      name      = "Macro Batch Failures High"
+      condition = "C"
+
+      data {
+        ref_id         = "A"
+        query_type     = ""
+        datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+        model = jsonencode({
+          refId            = "A"
+          region           = var.aws_region
+          namespace        = "OpenJII/MacroExecution"
+          metricName       = "MacroBatchFailureCount-${var.environment}"
+          statistic        = "Sum"
+          period           = "60"
+          matchExact       = true
+          metricEditorMode = 0
+          metricQueryType  = 0
+          queryMode        = "Metrics"
+          expression       = "FILL(m1, 0)"
+          id               = "m1"
+        })
+
+        relative_time_range {
+          from = 300
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "B"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"sum"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"sum","refId":"B","type":"reduce"}
+EOT
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      data {
+        ref_id         = "C"
+        query_type     = ""
+        datasource_uid = "__expr__"
+
+        model = jsonencode({
+          expression = "$B > ${var.macro_batch_failure_threshold}"
+          type       = "math"
+          refId      = "C"
+        })
+
+        relative_time_range {
+          from = 0
+          to   = 0
+        }
+      }
+
+      no_data_state  = "OK"
+      exec_err_state = "Alerting"
+      for            = "1m"
+
+      annotations = {
+        description = "More than ${var.macro_batch_failure_threshold} macro items failed in the last five minutes"
+        summary     = "Macro batch failure rate is high"
+      }
+
+      labels = {
+        severity = "critical"
+        service  = "macro-execution"
+      }
     }
   }
 }

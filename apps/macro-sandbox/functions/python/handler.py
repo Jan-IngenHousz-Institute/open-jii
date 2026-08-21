@@ -4,6 +4,7 @@ import gzip
 import subprocess
 import os
 import shutil
+import sys
 import tempfile
 
 
@@ -120,11 +121,23 @@ def _execute(event):
             try:
                 parsed = json.loads(stdout)
             except json.JSONDecodeError:
+                stderr = result.stderr.strip()
+                if stderr:
+                    print(f"[handler] wrapper stderr: {stderr[:4000]}", file=sys.stderr, flush=True)
                 return {
                     "status": "error",
                     "results": [],
                     "errors": ["Wrapper returned invalid JSON"],
                 }
+            if isinstance(parsed, dict):
+                fingerprints = parsed.pop("fingerprints", None)
+                if isinstance(fingerprints, list):
+                    for fingerprint in fingerprints:
+                        print(
+                            json.dumps(fingerprint, separators=(",", ":"), ensure_ascii=False),
+                            file=sys.stderr,
+                            flush=True,
+                        )
             return parsed
         else:
             return {

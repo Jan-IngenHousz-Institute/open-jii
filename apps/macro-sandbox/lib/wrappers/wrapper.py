@@ -5,6 +5,7 @@ import os
 import signal
 import textwrap
 import types
+import re
 
 # 1. SETUP PATHS
 # Add src/helpers to path
@@ -270,7 +271,110 @@ def _freeze(value):
     return value
 
 
+def _json_typeof(value):
+    """Match JavaScript's typeof strings for values representable in JSON."""
+    if value is None or isinstance(value, (dict, list)):
+        return "object"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, (int, float)):
+        return "number"
+    return type(value).__name__
+
+
+_KNOWN_TOP_LEVEL_KEYS = {
+    "set",
+    "macros",
+    "protocol_id",
+    "sample",
+    "gps",
+    "data",
+    "output",
+    "time",
+    "timestamp",
+    "latitude",
+    "longitude",
+    "questions",
+    "annotations",
+    "device",
+    "protocol",
+    "id",
+}
+_SAFE_LABEL = re.compile(r"^[A-Za-z0-9_-]{1,24}$")
+_MISSING = object()
+
+
+def _fingerprint_digest(value):
+    """FNV-1a 32-bit over UTF-8 bytes."""
+    hash_value = 0x811C9DC5
+    for byte in value.encode("utf-8"):
+        hash_value ^= byte
+        hash_value = (hash_value * 0x01000193) & 0xFFFFFFFF
+    return f"#{hash_value:08x}"
+
+
+def _redact_key(key):
+    return key if key in _KNOWN_TOP_LEVEL_KEYS else _fingerprint_digest(key)
+
+
+def _redact_label(label):
+    return label if _SAFE_LABEL.fullmatch(label) else _fingerprint_digest(label)
+
+
+def _javascript_sort_key(value):
+    """Match Array.prototype.sort's default UTF-16 code-unit ordering."""
+    return value.encode("utf-16-be", errors="surrogatepass")
+
+
+def _build_shape_fingerprint(item):
+    """Describe input structure without retaining measurement content."""
+    data = item.get("data")
+    is_array = isinstance(data, list)
+    is_record = isinstance(data, dict)
+    set_value = data.get("set", _MISSING) if is_record else _MISSING
+    set_is_array = isinstance(set_value, list)
+    if set_value is _MISSING:
+        set_typeof = "undefined"
+    elif set_value is None:
+        set_typeof = "null"
+    elif set_is_array:
+        set_typeof = "array"
+    else:
+        set_typeof = _json_typeof(set_value)
+
+    return {
+        "msg": "Macro input shape fingerprint",
+        "operation": item.get("operation") if isinstance(item.get("operation"), str) else None,
+        "boundary": "sandbox-pre-execution",
+        "typeof": _json_typeof(data),
+        "isArray": is_array,
+        # Python string length is already measured in Unicode code points.
+        "length": len(data) if is_array or isinstance(data, str) else None,
+        "topLevelKeys": [
+            _redact_key(key)
+            for key in sorted(data.keys(), key=_javascript_sort_key)
+        ] if is_record else [],
+        "setIsArray": set_is_array,
+        "setTypeof": set_typeof,
+        "setLength": len(set_value) if set_is_array else None,
+        "setLabels": [
+            _redact_label(entry["label"])
+            for entry in set_value
+            if isinstance(entry, dict) and isinstance(entry.get("label"), str)
+        ] if set_is_array else [],
+        "macro_id": item.get("macro_id") if isinstance(item.get("macro_id"), str) else None,
+        "workbook_version_id": (
+            item.get("workbook_version_id")
+            if isinstance(item.get("workbook_version_id"), str)
+            else None
+        ),
+    }
+
+
 results = []
+fingerprints = []
 
 # 4. EXECUTION LOOP
 for item in batch_items:
@@ -330,6 +434,8 @@ for item in batch_items:
         "scipy": SafeModule(scipy),
         "json_module": SafeModule(json)
     }
+
+    fingerprints.append(_build_shape_fingerprint(item))
     
     try:
         # 1s per-item timeout via SIGALRM
@@ -358,4 +464,10 @@ for item in batch_items:
         })
 
 # 5. OUTPUT
-print(json.dumps({"status": "success", "results": results}))
+print(
+    json.dumps(
+        {"status": "success", "results": results, "fingerprints": fingerprints},
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+)

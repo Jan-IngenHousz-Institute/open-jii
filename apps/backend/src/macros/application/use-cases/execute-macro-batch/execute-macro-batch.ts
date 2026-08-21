@@ -10,8 +10,12 @@ import { normalizeMacroInput } from "@repo/api/transforms/normalize-macro-input"
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../common/utils/fp-utils";
-import type { LambdaExecutionPayload } from "../../../core/models/macro-execution.model";
+import type {
+  LambdaExecutionPayload,
+  MacroInputShapeFingerprint,
+} from "../../../core/models/macro-execution.model";
 import {
+  buildMacroInputShapeFingerprint,
   emptyEnvelopeError,
   LambdaExecutionResponseSchema,
 } from "../../../core/models/macro-execution.model";
@@ -22,6 +26,8 @@ import {
   MacroSnapshotRepository,
 } from "../../../core/repositories/macro-snapshot.repository";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
+
+const SHAPE_SAMPLE_LIMIT = 5;
 
 @Injectable()
 export class ExecuteMacroBatchUseCase {
@@ -36,6 +42,36 @@ export class ExecuteMacroBatchUseCase {
   async execute(
     request: MacroBatchExecutionRequestBody,
   ): Promise<Result<MacroBatchExecutionResponse>> {
+    // One record per distinct shape, not per item: Spark batches run to
+    // thousands and would otherwise flood the same log group the macro failure
+    // alert scans. sampleItemIds keeps a bounded handle on the offending rows.
+    const shapes = new Map<
+      string,
+      { fingerprint: MacroInputShapeFingerprint; itemCount: number; sampleItemIds: string[] }
+    >();
+    for (const item of request.items) {
+      const fingerprint = buildMacroInputShapeFingerprint(
+        item.data,
+        item.macro_id,
+        item.workbook_version_id,
+      );
+      const key = JSON.stringify(fingerprint);
+      const entry = shapes.get(key) ?? { fingerprint, itemCount: 0, sampleItemIds: [] };
+      entry.itemCount += 1;
+      if (entry.sampleItemIds.length < SHAPE_SAMPLE_LIMIT) entry.sampleItemIds.push(item.id);
+      shapes.set(key, entry);
+    }
+    for (const { fingerprint, itemCount, sampleItemIds } of shapes.values()) {
+      this.logger.log({
+        msg: "Macro input shape fingerprint",
+        operation: "executeMacroBatch",
+        boundary: "backend-received",
+        itemCount,
+        sampleItemIds,
+        ...fingerprint,
+      });
+    }
+
     this.logger.log({
       msg: "Starting macro batch execution",
       operation: "executeMacroBatch",
@@ -230,6 +266,9 @@ export class ExecuteMacroBatchUseCase {
       script: macro.code,
       items: validItems.map(({ item, data }) => ({
         id: item.id,
+        macro_id: macroId,
+        workbook_version_id: workbookVersionId,
+        operation: "executeMacroBatch",
         data,
         context: item.context,
       })),

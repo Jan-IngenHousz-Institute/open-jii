@@ -2324,7 +2324,9 @@ module "grafana_dashboard" {
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
-  macro_sandbox_function_names = module.macro_sandbox.function_names
+  enable_macro_failure_alert    = true
+  macro_batch_failure_threshold = 10
+  macro_sandbox_function_names  = module.macro_sandbox.function_names
 
   enable_site_availability_alert = true
   route53_health_check_id        = module.route53.health_check_id

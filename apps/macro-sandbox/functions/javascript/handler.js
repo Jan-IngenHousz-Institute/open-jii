@@ -125,13 +125,19 @@ async function _runMacroBatch(event) {
           const output = (stdout || "").trim();
           if (output) {
             try {
-              resolve(JSON.parse(output));
+              const parsed = JSON.parse(output);
+              if (Array.isArray(parsed?.fingerprints)) {
+                for (const fingerprint of parsed.fingerprints) {
+                  console.error(JSON.stringify(fingerprint));
+                }
+              }
+              if (parsed !== null && typeof parsed === "object") {
+                delete parsed.fingerprints;
+              }
+              resolve(parsed);
             } catch (parseErr) {
               const code = error?.code ?? "unknown";
               const signal = error?.signal ?? "none";
-              // Stderr goes to CloudWatch via console.error, not into the
-              // response. The response propagates into the macro_error column
-              // downstream and shouldn't carry server internals.
               const stderrTrimmed = (stderr || "").trim();
               if (stderrTrimmed) {
                 console.error("[handler] wrapper stderr:", stderrTrimmed.slice(0, 4000));

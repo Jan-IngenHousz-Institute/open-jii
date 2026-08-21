@@ -6,6 +6,18 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
+# The base image defaults to the C locale, where jsonlite treats non-ASCII UTF-8
+# bytes as separate characters. Prefer Debian's built-in UTF-8 locale so JSON
+# strings survive the handler-to-wrapper file boundary as Unicode code points.
+# Warn and continue rather than fail: a missing locale degrades non-ASCII
+# strings, but stopping here would take down all R macro execution.
+if (identical(Sys.setlocale("LC_CTYPE", "C.UTF-8"), "")) {
+  writeLines(
+    "[handler] C.UTF-8 locale unavailable; non-ASCII JSON strings may be mangled",
+    con = stderr()
+  )
+}
+
 # Limits
 MAX_SCRIPT_SIZE <- 1048576  # 1MB
 MAX_ITEM_COUNT  <- 1000
@@ -77,9 +89,22 @@ dir.create(tmpdir)
 script_path <- file.path(tmpdir, "script")
 input_path <- file.path(tmpdir, "input.json")
 output_path <- file.path(tmpdir, "output.json")
+stderr_path <- file.path(tmpdir, "stderr.log")
 
 writeLines(script_content, script_path)
 writeLines(toJSON(items, auto_unbox = TRUE, null = "null"), input_path)
+
+surface_wrapper_stderr <- function() {
+  if (!file.exists(stderr_path)) return()
+  wrapper_stderr <- paste(readLines(stderr_path, warn = FALSE), collapse = "\n")
+  if (nchar(wrapper_stderr) > 0) {
+    writeLines(
+      paste0("[handler] wrapper stderr: ", substr(wrapper_stderr, 1, 4000)),
+      con = stderr()
+    )
+    flush(stderr())
+  }
+}
 
 # Run wrapper in a subprocess with stripped environment (env -i).
 # Output file (3rd arg) prevents user cat()/print() from corrupting JSON.
@@ -90,11 +115,12 @@ result <- tryCatch({
       "-i",
       "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
       "HOME=/tmp",
+      "LC_CTYPE=C.UTF-8",
       "timeout", as.character(timeout + 5),
       "Rscript", WRAPPER_PATH, script_path, input_path, output_path
     ),
     stdout = FALSE,
-    stderr = ""  # inherit Lambda stderr so wrapper crash messages reach CloudWatch
+    stderr = stderr_path
   )
 
   if (exit_code == 124) {
@@ -106,7 +132,13 @@ result <- tryCatch({
     } else {
       output_str <- paste(readLines(output_path, warn = FALSE), collapse = "\n")
       if (nchar(output_str) > 0) {
-        fromJSON(output_str, simplifyVector = FALSE)
+        tryCatch(
+          fromJSON(output_str, simplifyVector = FALSE),
+          error = function(e) {
+            surface_wrapper_stderr()
+            stop(e)
+          }
+        )
       } else {
         list(status = "error", results = list(), errors = list("Wrapper returned no output"))
       }
@@ -117,6 +149,20 @@ result <- tryCatch({
 }, error = function(e) {
   list(status = "error", results = list(), errors = list(paste0("Execution failed: ", e$message)))
 })
+
+if (is.list(result) && "fingerprints" %in% names(result)) {
+  fingerprints <- result$fingerprints
+  result$fingerprints <- NULL
+  if (is.list(fingerprints) && is.null(names(fingerprints))) {
+    for (fingerprint in fingerprints) {
+      writeLines(
+        toJSON(fingerprint, auto_unbox = TRUE, digits = NA, null = "null"),
+        con = stderr()
+      )
+      flush(stderr())
+    }
+  }
+}
 
 # Clean up
 unlink(tmpdir, recursive = TRUE)

@@ -63,6 +63,23 @@ variable "ecs_log_group_name" {
   type        = string
 }
 
+variable "enable_macro_failure_alert" {
+  description = "Whether to extract macro batch failures from backend logs and create the Grafana alert"
+  type        = bool
+  default     = false
+}
+
+variable "macro_batch_failure_threshold" {
+  description = "Macro item failures in a rolling five-minute window above which the alert fires"
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.macro_batch_failure_threshold >= 1
+    error_message = "macro_batch_failure_threshold must be at least 1."
+  }
+}
+
 variable "iot_log_group_name" {
   description = "The CloudWatch Log Group name for IoT Core logs"
   type        = string
@@ -86,4 +103,3 @@ variable "route53_health_check_id" {
   type        = string
   default     = ""
 }
-
