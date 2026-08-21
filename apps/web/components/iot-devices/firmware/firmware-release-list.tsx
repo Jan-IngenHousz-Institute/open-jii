@@ -3,6 +3,7 @@
 import { useLocale } from "@/hooks/useLocale";
 import { formatShortDate } from "@/util/date";
 import { isSameFirmwareVersion } from "@/util/firmware-family";
+import { formatFileSize } from "@/util/format-file-size";
 import { Download, ExternalLink } from "lucide-react";
 
 import type { FirmwareRelease } from "@repo/api/domains/iot/firmware/iot-firmware.schema";
@@ -21,13 +22,6 @@ interface FirmwareReleaseListProps {
   releases: FirmwareRelease[];
   /** Version the device last reported, so its own release is marked. */
   installedVersion: string | null;
-}
-
-function formatBytes(sizeBytes: number): string {
-  if (sizeBytes < 1024) {
-    return `${String(sizeBytes)} B`;
-  }
-  return `${String(Math.round(sizeBytes / 1024))} KB`;
 }
 
 export function FirmwareReleaseList({ releases, installedVersion }: FirmwareReleaseListProps) {
@@ -91,7 +85,7 @@ export function FirmwareReleaseList({ releases, installedVersion }: FirmwareRele
             >
               <Download className="h-3 w-3" aria-hidden />
               {asset.name}
-              <span className="text-muted-foreground">({formatBytes(asset.sizeBytes)})</span>
+              <span className="text-muted-foreground">({formatFileSize(asset.sizeBytes)})</span>
             </a>
           ))}
           <a

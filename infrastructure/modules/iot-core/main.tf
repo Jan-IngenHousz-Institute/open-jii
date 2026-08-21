@@ -205,7 +205,12 @@ resource "aws_iam_role" "jobs_presign" {
     Statement = [{
       Effect    = "Allow",
       Principal = { Service = "iot.amazonaws.com" },
-      Action    = "sts:AssumeRole"
+      Action    = "sts:AssumeRole",
+      # Scope the service principal to this account so the role cannot be
+      # assumed on behalf of someone else's IoT resources.
+      Condition = {
+        StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
+      }
     }]
   })
 }

@@ -119,12 +119,51 @@ describe("GithubReleasesService", () => {
     expect(nock.pendingMocks()).toHaveLength(0);
   });
 
-  it("fails when GitHub rejects the read", async () => {
+  it("reports an unreadable repository as not found rather than a platform fault", async () => {
     nock("https://api.github.com").get(`/repos/${REPOSITORY}/releases`).query(true).reply(404);
 
     const result = await service.listReleases(REPOSITORY);
 
     assertFailure(result);
     expect(result.error.code).toBe("GITHUB_RELEASES_FAILED");
+    // A typo'd or private repository must not read as a 500.
+    expect(result.error.statusCode).toBe(404);
+  });
+
+  it("does not re-ask GitHub about a repository that just failed", async () => {
+    let calls = 0;
+    nock("https://api.github.com")
+      .get(`/repos/${REPOSITORY}/releases`)
+      .query(true)
+      .times(2)
+      .reply(() => {
+        calls += 1;
+        return [500, {}];
+      });
+
+    assertFailure(await service.listReleases(REPOSITORY));
+    assertFailure(await service.listReleases(REPOSITORY));
+
+    // One bad repository must not burn the shared hourly budget.
+    expect(calls).toBe(1);
+  });
+
+  it("serves the last good answer when a refresh fails", async () => {
+    nock("https://api.github.com")
+      .get(`/repos/${REPOSITORY}/releases`)
+      .query(true)
+      .reply(200, [release()]);
+    assertSuccess(await service.listReleases(REPOSITORY));
+
+    // Past the freshness window, so the next read goes back to GitHub.
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.now() + 10 * 60 * 1000);
+    nock("https://api.github.com").get(`/repos/${REPOSITORY}/releases`).query(true).reply(500);
+
+    const stale = await service.listReleases(REPOSITORY);
+
+    vi.useRealTimers();
+    assertSuccess(stale);
+    expect(stale.value.map((entry) => entry.version)).toEqual(["v1.3.0"]);
   });
 });

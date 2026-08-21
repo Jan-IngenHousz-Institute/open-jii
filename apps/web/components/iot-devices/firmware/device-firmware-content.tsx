@@ -8,6 +8,7 @@ import { useDeviceFirmwareHistory } from "@/hooks/iot/useDeviceFirmwareHistory/u
 import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
 import { useIotFirmwareReleases } from "@/hooks/iot/useIotFirmwareReleases/useIotFirmwareReleases";
 import { useLocale } from "@/hooks/useLocale";
+import { getOrpcError } from "@/lib/orpc";
 import { hasManagedFirmware, isSameFirmwareVersion } from "@/util/firmware-family";
 import { AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
@@ -58,9 +59,11 @@ export default function DeviceFirmwarePage() {
   // Both queries wait for the family: a device with no JII firmware line shows
   // no tab, so neither the warehouse scan nor the release read is worth paying.
   const range = useMemo(() => resolveMonitoringPreset(FIRMWARE_LOOKBACK), []);
-  const { data: firmwareHistory } = useDeviceFirmwareHistory(deviceId, range, {
-    enabled: isManaged,
-  });
+  const { data: firmwareHistory, isError: isHistoryError } = useDeviceFirmwareHistory(
+    deviceId,
+    range,
+    { enabled: isManaged },
+  );
 
   // Only a placeholder to keep the input typed: the query is held until the
   // device reports a family JII publishes for.
@@ -69,7 +72,13 @@ export default function DeviceFirmwarePage() {
     data: releases,
     isLoading,
     isError,
+    error,
   } = useIotFirmwareReleases(releasesFamily, { enabled: isManaged });
+
+  // A family with no repository configured yet is a gap, not a fault: the
+  // backend answers 404 for it, and "we publish nothing here yet" is the
+  // honest thing to show rather than a generic failure.
+  const hasNoFirmwareLine = getOrpcError(error)?.status === 404;
 
   // Families without a JII firmware line have no tab; a direct visit leaves.
   const detailPath = `/${locale}/platform/devices/${deviceId}`;
@@ -87,9 +96,42 @@ export default function DeviceFirmwarePage() {
   const installed = reportedVersion(firmwareHistory);
   const latest = (releases?.releases ?? []).find((release) => release.latest) ?? null;
 
+  function renderNotice(key: string) {
+    return (
+      <Card className="shadow-none">
+        <CardContent className="text-muted-foreground py-6 text-center text-sm">
+          {t(key)}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  function renderReleases() {
+    if (hasNoFirmwareLine) {
+      return renderNotice("iot.devices.firmware.noFirmwareLine");
+    }
+    if (isError) {
+      return renderNotice("iot.devices.firmware.loadError");
+    }
+    if (isLoading) {
+      return <Skeleton className="h-48 w-full rounded-lg" />;
+    }
+    return <FirmwareReleaseList releases={releases?.releases ?? []} installedVersion={installed} />;
+  }
+
   // Sequential guards rather than precomputed flags: each arm narrows the two
   // nullable versions it actually reads.
   function renderStatus() {
+    // A failed scan is not the same as a device that never reported, and
+    // saying "has not reported" for a warehouse error would be a lie.
+    if (isHistoryError) {
+      return (
+        <p className="text-muted-foreground flex items-center gap-2 text-sm">
+          <AlertTriangle className="h-4 w-4" aria-hidden />
+          {t("iot.devices.firmware.versionUnavailable")}
+        </p>
+      );
+    }
     if (installed === null) {
       return (
         <p className="text-muted-foreground flex items-center gap-2 text-sm">
@@ -132,17 +174,7 @@ export default function DeviceFirmwarePage() {
         title={t("iot.devices.firmware.releasesTitle")}
         description={t("iot.devices.firmware.releasesHint")}
       >
-        {isError ? (
-          <Card className="shadow-none">
-            <CardContent className="text-muted-foreground py-6 text-center text-sm">
-              {t("iot.devices.firmware.loadError")}
-            </CardContent>
-          </Card>
-        ) : isLoading ? (
-          <Skeleton className="h-48 w-full rounded-lg" />
-        ) : (
-          <FirmwareReleaseList releases={releases?.releases ?? []} installedVersion={installed} />
-        )}
+        {renderReleases()}
       </PanelCard>
 
       <FirmwareDeliveryGuide />

@@ -404,6 +404,8 @@
         "viewOnGitHub": "Bekijk op GitHub",
         "noReleases": "Voor deze familie zijn nog geen versies gepubliceerd.",
         "loadError": "Versies konden niet worden geladen.",
+        "versionUnavailable": "De gemelde firmwareversie kon niet worden gelezen.",
+        "noFirmwareLine": "JII publiceert nog geen firmware voor deze apparaatfamilie.",
         "guide": {
           "title": "Hoe updates dit apparaat bereiken",
           "intro": "JII start uitrollen via een beoordeelde workflow; apparaten worden nooit vanaf deze pagina bijgewerkt.",

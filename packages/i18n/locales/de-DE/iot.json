@@ -404,6 +404,8 @@
         "viewOnGitHub": "Auf GitHub ansehen",
         "noReleases": "Für diese Familie wurden noch keine Versionen veröffentlicht.",
         "loadError": "Versionen konnten nicht geladen werden.",
+        "versionUnavailable": "Die gemeldete Firmware-Version konnte nicht gelesen werden.",
+        "noFirmwareLine": "JII veröffentlicht für diese Gerätefamilie noch keine Firmware.",
         "guide": {
           "title": "Wie Updates dieses Gerät erreichen",
           "intro": "JII startet Rollouts über einen geprüften Workflow; Geräte werden nie über diese Seite aktualisiert.",

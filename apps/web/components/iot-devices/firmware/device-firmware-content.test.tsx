@@ -121,6 +121,28 @@ describe("DeviceFirmwareContent", () => {
     expect(screen.getByText("iot.devices.firmware.currentTitle")).toBeInTheDocument();
   });
 
+  it("says the family has no firmware line when the backend has no repository for it", async () => {
+    mountAll({ reportedVersion: "v1.3.0" });
+    server.mount(contract.iot.listIotFirmwareReleases, { status: 404 });
+
+    render(<DeviceFirmwareContent />);
+
+    expect(await screen.findByText("iot.devices.firmware.noFirmwareLine")).toBeInTheDocument();
+    // A configuration gap is not a failure, so the generic error stays away.
+    expect(screen.queryByText("iot.devices.firmware.loadError")).not.toBeInTheDocument();
+  });
+
+  it("admits the reported version could not be read when the scan fails", async () => {
+    mountAll({ reportedVersion: "v1.3.0" });
+    server.mount(contract.iot.getDeviceFirmwareHistory, { status: 500 });
+
+    render(<DeviceFirmwareContent />);
+
+    expect(await screen.findByText("iot.devices.firmware.versionUnavailable")).toBeInTheDocument();
+    // Claiming the device never reported would be a different, false statement.
+    expect(screen.queryByText("iot.devices.firmware.unknownVersion")).not.toBeInTheDocument();
+  });
+
   it("sends a family with no JII firmware line back to the device", async () => {
     const { releases, history } = mountAll({ deviceType: "mobile" });
 
