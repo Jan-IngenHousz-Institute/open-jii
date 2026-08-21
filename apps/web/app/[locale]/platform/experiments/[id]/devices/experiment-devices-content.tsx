@@ -3,8 +3,8 @@
 import { ExperimentDevicesPanel } from "@/components/experiment-settings/devices/experiment-devices-panel";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useFeatureFlagEnabled } from "@/hooks/useFeatureFlag";
 import { notFound } from "next/navigation";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { use } from "react";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
