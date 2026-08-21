@@ -16,6 +16,7 @@ import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
 import emailConfig from "./common/config/email.config";
+import githubConfig from "./common/config/github.config";
 import mailchimpConfig from "./common/config/mailchimp.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
@@ -46,6 +47,7 @@ const orpcLogger = new Logger("ORPC");
         emailConfig,
         mailchimpConfig,
         analyticsConfig,
+        githubConfig,
       ],
     }),
     LoggerModule.forRoot({
