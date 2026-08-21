@@ -1,13 +1,13 @@
 import { createOrganizationResource } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
-import type { OrganizationResourceType } from "@repo/api/domains/organization/organization.schema";
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import { pickFeaturedResources } from "./organization-featured-selection";
 
 /** A resource of `type` with a known collaborator count, named so it is identifiable. */
 function resource(
-  type: OrganizationResourceType,
+  type: SharingResourceType,
   collaboratorCount: number,
   extra: { id?: string; updatedAt?: string } = {},
 ) {
@@ -111,13 +111,14 @@ describe("pickFeaturedResources", () => {
     expect(featured.map((row) => row.collaboratorCount)).toEqual([2, 1, 9]);
   });
 
-  it("rotates devices last, matching the order the resources card groups by", () => {
+  it("rotates the hardware last, matching the order the resources card groups by", () => {
     const resources = [
       ...[9, 8].map((n) => resource("experiment", n)),
       resource("protocol", 7),
       resource("macro", 6),
       resource("workbook", 5),
       ...[4, 3].map((n) => resource("device", n)),
+      resource("device_group", 2),
     ];
 
     expect(typesOf(pickFeaturedResources(resources))).toEqual([
@@ -126,8 +127,19 @@ describe("pickFeaturedResources", () => {
       "macro",
       "workbook",
       "device",
-      "experiment",
+      "device_group",
     ]);
+  });
+
+  it("can feature a device group, which is a resource like any other", () => {
+    // Same reason a device can be featured: a group is in the resources card and in the
+    // estate bar, so a featured card that could never show one would contradict both.
+    const resources = [resource("experiment", 2), resource("device_group", 9)];
+
+    const featured = pickFeaturedResources(resources);
+
+    expect(typesOf(featured)).toEqual(["experiment", "device_group"]);
+    expect(featured.map((row) => row.collaboratorCount)).toEqual([2, 9]);
   });
 
   it("does not consume the caller's array", () => {

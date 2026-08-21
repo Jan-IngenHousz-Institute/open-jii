@@ -60,10 +60,18 @@ export class IotDeviceGroupRepository {
     });
   }
 
-  // Same tiering as devices: creators keep seeing groups they made even after
-  // leaving the owning org. The predicate's public arm is unreachable, groups
-  // are permanently private.
-  async listAccessible(userId: string): Promise<Result<IotDeviceGroupWithCountDto[]>> {
+  /**
+   * Groups the caller may read — every one of them, or one organization's, which is
+   * what lets the group list and the organization showcase share this method.
+   *
+   * Same tiering as devices: creators keep seeing groups they made even after
+   * leaving the owning org. The predicate's public arm is unreachable, groups
+   * are permanently private.
+   */
+  async listAccessible(
+    userId: string,
+    options?: { organizationId?: string },
+  ): Promise<Result<IotDeviceGroupWithCountDto[]>> {
     return tryCatch(async () => {
       const scope = accessibleResourceCondition({
         database: this.database,
@@ -73,6 +81,8 @@ export class IotDeviceGroupRepository {
         visibilityColumn: deviceGroups.visibility,
         userId,
       });
+      const visible = or(eq(deviceGroups.createdBy, userId), scope);
+      const organizationId = options?.organizationId;
       return this.database
         .select({
           id: deviceGroups.id,
@@ -86,7 +96,9 @@ export class IotDeviceGroupRepository {
           memberCount: this.memberCount(),
         })
         .from(deviceGroups)
-        .where(or(eq(deviceGroups.createdBy, userId), scope))
+        .where(
+          organizationId ? and(eq(deviceGroups.organizationId, organizationId), visible) : visible,
+        )
         .orderBy(desc(deviceGroups.createdAt));
     });
   }

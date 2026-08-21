@@ -136,7 +136,7 @@ export type OrgRole = keyof typeof roles;
  * beat belonging to the organization that owns the experiment. A public experiment's
  * passer-by still gets read only — that comes from the `visibility` branch in `can()`,
  * not from either matrix. The two matrices stay separate because they disagree
- * elsewhere: `viewer` is read-only on the other four types, where `member` is too.
+ * elsewhere: `viewer` is read-only on every other type, where `member` is too.
  *
  * These keys are the whole set. `GRANT_ROLES` in `@repo/database` types every write
  * path against them, so anything else reaching `grantRoleCan` is a bug and is refused.

@@ -86,12 +86,15 @@ describe("<OrganizationTeamGrants />", () => {
           createOrganizationTeamGrant({ resourceType: "macro", resourceName: "Fit" }),
           createOrganizationTeamGrant({ resourceType: "workbook", resourceName: "Synthesis" }),
           createOrganizationTeamGrant({ resourceType: "device", resourceName: "Ambyte" }),
+          createOrganizationTeamGrant({ resourceType: "device_group", resourceName: "Fleet" }),
         ]}
       />,
     );
 
-    // The marks the sidebar and the command palette already use for these five types,
-    // so a row here is recognisable from anywhere else the type shows up.
+    // The marks the sidebar and the command palette already use for these types, so a
+    // row here is recognisable from anywhere else the type shows up. Every grantable
+    // type is here on purpose: an icon map missing one renders `undefined` as the
+    // component, which throws at render rather than falling back to something neutral.
     const iconFor = (name: string) =>
       within(container)
         .getByRole("link", { name })
@@ -103,6 +106,7 @@ describe("<OrganizationTeamGrants />", () => {
     expect(iconFor("Fit")).toHaveClass("lucide-code");
     expect(iconFor("Synthesis")).toHaveClass("lucide-book-open");
     expect(iconFor("Ambyte")).toHaveClass("lucide-radio-receiver");
+    expect(iconFor("Fleet")).toHaveClass("lucide-boxes");
 
     // The type is already stated in words on the right of the row; an accessible name
     // here would have it announced twice.
