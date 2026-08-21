@@ -220,10 +220,14 @@ runs:
         # https://docs.aws.amazon.com/iot/latest/apireference/API_CreateJob.html
         SAFE_TAG="$(printf '%s' "$RELEASE_TAG" | tr -c 'a-zA-Z0-9_-' '-')"
         JOB_ID="$(printf 'fw-%s-%s-%s' "$FAMILY" "$SAFE_TAG" "$RUN_ID" | cut -c1-64)"
+        # Mirrors aws_iam_role.jobs_presign in infrastructure/modules/iot-core;
+        # renaming it there without changing this line breaks create-job.
         PRESIGN_ROLE="arn:aws:iam::${{ steps.target.outputs.account }}:role/open_jii_${ENVIRONMENT}_iot_jobs_presign"
 
         # Rollout, abort and timeout configuration replace what a bespoke runner
-        # would otherwise implement by hand.
+        # would otherwise implement by hand. The abort criteria only arm once 5
+        # devices have executed, so a rollout to fewer than that has no automatic
+        # stop and should be watched.
         # https://docs.aws.amazon.com/iot/latest/developerguide/jobs-configurations-details.html
         aws iot create-job \
           --job-id "$JOB_ID" \
@@ -261,7 +265,13 @@ runs:
           sleep 30
         done
 
+        # Capped: a rollout wider than this reports its first 500 executions
+        # here, and the rest must be read from the job in the AWS console.
         aws iot list-job-executions-for-job --job-id "$JOB_ID" --max-items 500 > executions.json
+        TOTAL="$(jq '.executionSummaries | length' executions.json)"
+        if [ "$TOTAL" -ge 500 ]; then
+          echo "::warning::execution list truncated at 500; see the job in AWS for the full set"
+        fi
         jq -n --arg jobId "$JOB_ID" --arg status "$STATUS" --slurpfile execs executions.json \
           '{jobId: $jobId, status: $status, executions: $execs[0].executionSummaries, error: null}' > results.json
 

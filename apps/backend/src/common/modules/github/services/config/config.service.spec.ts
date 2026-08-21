@@ -25,7 +25,13 @@ describe("GithubConfigService", () => {
   it("resolves the configured repository per family", () => {
     expect(service.repositoryFor("ambyte")).toBe(process.env.FIRMWARE_REPO_AMBYTE);
     expect(service.repositoryFor("ambit")).toBe(process.env.FIRMWARE_REPO_AMBIT);
-    expect(service.repositoryFor("minipar")).toBe(process.env.FIRMWARE_REPO_MINIPAR);
+  });
+
+  it("treats an unset family as unconfigured rather than an empty repository", () => {
+    // FIRMWARE_REPO_MINIPAR is deliberately blank until the repo is supplied;
+    // it must resolve to undefined so the route answers "not configured".
+    expect(process.env.FIRMWARE_REPO_MINIPAR).toBe("");
+    expect(service.repositoryFor("minipar")).toBeUndefined();
   });
 
   it("exposes the token as an empty string when unset", () => {
