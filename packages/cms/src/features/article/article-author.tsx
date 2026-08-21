@@ -50,7 +50,7 @@ export const ArticleAuthor: FC<ArticleAuthorProps> = ({
         </span>
         {author?.profession && !noAvatar && (
           <span
-            className={`mt-1 text-sm ${isTile ? "text-gray-400" : "text-gray-500"}`}
+            className={`mt-1 text-sm ${isTile ? "text-muted-foreground" : "text-muted-foreground"}`}
             {...inspectorProps({ fieldId: "profession" })}
           >
             {author.profession}

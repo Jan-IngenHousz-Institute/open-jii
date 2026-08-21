@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useIssueIotCredentials } from "@/hooks/iot/useIssueIotCredentials/useIssueIotCredentials";
 import { useRevokeIotCredentials } from "@/hooks/iot/useRevokeIotCredentials/useRevokeIotCredentials";
 import { useRotateIotCredentials } from "@/hooks/iot/useRotateIotCredentials/useRotateIotCredentials";
@@ -12,7 +13,6 @@ import type {
 } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CredentialConfirmDialog } from "./credential-confirm-dialog";
@@ -59,66 +59,61 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConn
     );
 
   return (
-    <Card className="shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">{t("iot.devices.detail.credentials.title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {(device.status === "pending" || device.status === "revoked") && (
-          <div className="flex flex-col gap-3">
-            <p className="text-muted-foreground text-sm">
-              {device.status === "revoked"
-                ? t("iot.devices.credentials.revokedDescription")
-                : t("iot.devices.credentials.pendingDescription")}
+    <SettingsCard title={t("iot.devices.detail.credentials.title")} contentClassName="space-y-4">
+      {(device.status === "pending" || device.status === "revoked") && (
+        <div className="flex flex-col gap-3">
+          <p className="text-muted-foreground text-sm">
+            {device.status === "revoked"
+              ? t("iot.devices.credentials.revokedDescription")
+              : t("iot.devices.credentials.pendingDescription")}
+          </p>
+          <Button className="w-fit" onClick={handleIssue} disabled={isIssuing}>
+            {isIssuing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <KeyRound className="mr-2 h-4 w-4" />
+            )}
+            {device.status === "revoked"
+              ? t("iot.devices.credentials.reissue")
+              : t("iot.devices.credentials.issue")}
+          </Button>
+        </div>
+      )}
+
+      {device.status === "active" && (
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="text-foreground text-sm font-medium">
+              {t("iot.devices.credentials.activeLabel")}
             </p>
-            <Button className="w-fit" onClick={handleIssue} disabled={isIssuing}>
-              {isIssuing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <KeyRound className="mr-2 h-4 w-4" />
-              )}
-              {device.status === "revoked"
-                ? t("iot.devices.credentials.reissue")
-                : t("iot.devices.credentials.issue")}
+            {device.certificateId !== null && (
+              <p className="text-muted-foreground truncate font-mono text-xs">
+                {device.certificateId}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setConfirmingRotate(true)}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {t("iot.devices.credentials.rotate")}
+            </Button>
+            <Button
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              onClick={() => setConfirmingRevoke(true)}
+            >
+              <ShieldOff className="mr-2 h-4 w-4" />
+              {t("iot.devices.credentials.revoke")}
             </Button>
           </div>
-        )}
+        </div>
+      )}
 
-        {device.status === "active" && (
-          <div className="flex flex-col gap-3">
-            <div>
-              <p className="text-sm font-medium text-[#011111]">
-                {t("iot.devices.credentials.activeLabel")}
-              </p>
-              {device.certificateId !== null && (
-                <p className="text-muted-foreground truncate font-mono text-xs">
-                  {device.certificateId}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => setConfirmingRotate(true)}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                {t("iot.devices.credentials.rotate")}
-              </Button>
-              <Button
-                variant="outline"
-                className="border-destructive/40 text-destructive hover:bg-destructive/10"
-                onClick={() => setConfirmingRevoke(true)}
-              >
-                <ShieldOff className="mr-2 h-4 w-4" />
-                {t("iot.devices.credentials.revoke")}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {device.status === "rotating" && (
-          <p className="text-muted-foreground text-sm">
-            {t("iot.devices.credentials.rotatingDescription")}
-          </p>
-        )}
-      </CardContent>
+      {device.status === "rotating" && (
+        <p className="text-muted-foreground text-sm">
+          {t("iot.devices.credentials.rotatingDescription")}
+        </p>
+      )}
 
       <IotCredentialsDialog
         thingName={device.thingName}
@@ -150,6 +145,6 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConn
         pending={isRevoking}
         onConfirm={handleRevoke}
       />
-    </Card>
+    </SettingsCard>
   );
 }

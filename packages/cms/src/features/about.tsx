@@ -34,11 +34,11 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
   });
 
   return (
-    <div className="from-jii-bright-green/40 relative isolate min-h-screen overflow-hidden bg-gradient-to-br via-white to-white">
+    <div className="from-primary/40 via-background to-background relative isolate min-h-screen overflow-hidden bg-gradient-to-br">
       {/* Background skew block */}
       <div
         aria-hidden="true"
-        className="shadow-primary/10 ring-jii-bright-green/20 absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] bg-white shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
+        className="shadow-primary/10 ring-primary/20 bg-card absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
       />
 
       {/* Middle container */}
@@ -73,7 +73,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
         {currentAbout.image && (
           <div className="mt-10 xl:row-span-2 xl:row-end-2 xl:mt-20">
             <div
-              className="relative h-[550px] w-full max-w-3xl overflow-hidden rounded-2xl outline outline-1 outline-black/5"
+              className="outline-border relative h-[550px] w-full max-w-3xl overflow-hidden rounded-2xl outline outline-1"
               {...inspectorProps({ fieldId: "image" })}
             >
               <CtfImage

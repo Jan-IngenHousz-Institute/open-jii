@@ -43,7 +43,7 @@ describe("Calendar", () => {
 
   it("renders custom chevron icons for navigation", () => {
     const { container } = render(<Calendar />);
-    const chevrons = container.querySelectorAll("svg.h-4.w-4");
+    const chevrons = container.querySelectorAll("svg.size-4");
     expect(chevrons.length).toBeGreaterThan(0);
   });
 

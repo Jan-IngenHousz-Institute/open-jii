@@ -73,7 +73,7 @@ export function GroupDevicesTable({
     return (
       <TableRow
         key={member.deviceId}
-        className={cn("group cursor-pointer bg-white hover:bg-[#F6F8FA]", LIST_TABLE_BORDER)}
+        className={cn("bg-card hover:bg-muted group cursor-pointer", LIST_TABLE_BORDER)}
         onClick={() => router.push(monitoringHref)}
       >
         <TableCell className="px-6 py-3">
@@ -92,7 +92,7 @@ export function GroupDevicesTable({
           <div className="flex flex-col gap-0.5">
             <ConnectivityDot connectivity={member.connectivity} />
             {silent && (
-              <span className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-500">
+              <span className="text-status-stale-foreground flex items-center gap-1 text-[11px]">
                 <AlertTriangle className="h-3 w-3" aria-hidden />
                 {t("iot.devices.monitoring.connectedButSilent")}
               </span>

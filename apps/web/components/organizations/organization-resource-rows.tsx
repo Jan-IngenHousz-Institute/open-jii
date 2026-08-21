@@ -1,10 +1,12 @@
 "use client";
 
+import { StatusBadge } from "@/components/shared/status-badge";
+import type { StatusTone } from "@/components/shared/status-badge";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime, formatShortDate } from "@/util/date";
-import { getExperimentStatusBadgeColor } from "@/util/experiment-status";
-import { getMacroLanguageBadgeColor, getMacroLanguageLabel } from "@/util/macro-language";
-import { getSensorFamilyBadgeColor, getSensorFamilyLabel } from "@/util/sensor-family";
+import { getExperimentStatusBadgeTone } from "@/util/experiment-status";
+import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
+import { getSensorFamilyBadgeTone, getSensorFamilyLabel } from "@/util/sensor-family";
 import { stripHtml } from "@/util/strip-html";
 import { Lock } from "lucide-react";
 import Link from "next/link";
@@ -14,7 +16,6 @@ import type { OrganizationResource } from "@repo/api/domains/organization/organi
 import type { TransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
 import { zTransferableResourceType } from "@repo/api/domains/sharing/transfer-org/sharing-transfer-org.schema";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { SearchInput } from "@repo/ui/components/search-input";
 import {
@@ -57,27 +58,27 @@ function transferableType(type: OrganizationResource["type"]): TransferableResou
 function metaBadge(
   resource: OrganizationResource,
   t: (key: string) => string,
-): { label: string; colorClass: string } | null {
+): { label: string; tone: StatusTone } | null {
   switch (resource.type) {
     case "experiment":
       return {
         label: t(`organizations.resources.status.${resource.status}`),
-        colorClass: getExperimentStatusBadgeColor(resource.status),
+        tone: getExperimentStatusBadgeTone(resource.status),
       };
     case "protocol":
       return {
         label: getSensorFamilyLabel(resource.family),
-        colorClass: getSensorFamilyBadgeColor(resource.family),
+        tone: getSensorFamilyBadgeTone(resource.family),
       };
     case "macro":
       return {
         label: getMacroLanguageLabel(resource.language),
-        colorClass: getMacroLanguageBadgeColor(resource.language),
+        tone: getMacroLanguageBadgeTone(resource.language),
       };
     case "device":
       return {
         label: getSensorFamilyLabel(resource.deviceType),
-        colorClass: getSensorFamilyBadgeColor(resource.deviceType),
+        tone: getSensorFamilyBadgeTone(resource.deviceType),
       };
     // A workbook has no second fact. A group does — its roster size — but that is a
     // quantity rather than a category, so it has no colour of its own to wear and
@@ -263,7 +264,7 @@ function ResourceRow({
 
         {onTransfer && transferableAs ? (
           <Button
-            variant="buttonLink"
+            variant="link"
             className="ml-auto h-auto shrink-0 p-0"
             // Named for its row: every one of these reads "Transfer" otherwise.
             aria-label={t("organizations.transfer.actionFor", { name: resource.name })}
@@ -298,9 +299,9 @@ function ResourceRow({
         ) : null}
 
         {meta ? (
-          <Badge className={`shrink-0 rounded px-1.5 py-0 font-medium ${meta.colorClass}`}>
+          <StatusBadge tone={meta.tone} className="shrink-0 rounded px-1.5 py-0">
             {meta.label}
-          </Badge>
+          </StatusBadge>
         ) : null}
 
         {/* One string, so the space survives a wrap. The absolute date rides as the

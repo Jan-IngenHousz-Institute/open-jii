@@ -5,8 +5,10 @@ import * as React from "react";
 
 import type { ExperimentUploadMetadata } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
+import { Card } from "@repo/ui/components/card";
+import { cn } from "@repo/ui/lib/utils";
 
-import { UPLOAD_STATUS_BORDER_COLOR, UploadStatusBadge } from "./upload-status-badge";
+import { UploadStatusBadge } from "./upload-status-badge";
 
 export interface UploadHistoryCardBodyProps extends React.ComponentPropsWithoutRef<"div"> {
   upload: ExperimentUploadMetadata;
@@ -24,24 +26,22 @@ export const UploadHistoryCardBody = React.forwardRef<HTMLDivElement, UploadHist
     const dateTime = formatDateTime(upload.createdAt);
 
     return (
-      <div
+      <Card
         ref={ref}
-        className={`flex min-h-[56px] items-center gap-3 rounded-lg border border-l-4 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800 ${UPLOAD_STATUS_BORDER_COLOR[upload.status]}${className ? ` ${className}` : ""}`}
+        className={cn("min-h-[56px] flex-row items-center gap-3 px-3 py-2.5", className)}
         {...props}
       >
-        <div className="shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
-          <Database className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+        <div className="bg-muted shrink-0 rounded-md p-1.5">
+          <Database className="text-muted-foreground h-4 w-4" />
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
-              {tableLabel}
-            </span>
+            <span className="text-foreground truncate text-sm font-semibold">{tableLabel}</span>
             <UploadStatusBadge status={upload.status} />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs">
             <span className="inline-flex items-center gap-1">
               <FileText className="h-3 w-3" />
               {sourceLabel}
@@ -70,7 +70,7 @@ export const UploadHistoryCardBody = React.forwardRef<HTMLDivElement, UploadHist
         <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline">
           {t("experimentData.uploadDataModal.history.uploadTitle", { number: index })}
         </span>
-      </div>
+      </Card>
     );
   },
 );

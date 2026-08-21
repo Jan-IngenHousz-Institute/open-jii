@@ -116,10 +116,7 @@ export function MetadataTable({
                     <PencilIcon className="mr-2 h-4 w-4" />
                     Rename column
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => onDeleteColumn(col.id)}
-                  >
+                  <DropdownMenuItem variant="destructive" onClick={() => onDeleteColumn(col.id)}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete column
                   </DropdownMenuItem>

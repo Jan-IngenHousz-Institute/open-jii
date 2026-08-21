@@ -1,17 +1,11 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 
 import type { DeviceAnswer } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
 
 import type { DevicePlanQuestion } from "./device-plan-question-field";
 import { DevicePlanQuestionField } from "./device-plan-question-field";
@@ -68,14 +62,11 @@ export function DevicePlanQuestions({ questions, onAnswersChange }: DevicePlanQu
   );
 
   return (
-    <Card className="shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">{t("iot.onboarding.questionsTitle")}</CardTitle>
-        <CardDescription>{t("iot.onboarding.questionsDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="divide-y rounded-lg border">{questions.map(renderField)}</div>
-      </CardContent>
-    </Card>
+    <SettingsCard
+      title={t("iot.onboarding.questionsTitle")}
+      description={t("iot.onboarding.questionsDescription")}
+    >
+      <div className="divide-y rounded-lg border">{questions.map(renderField)}</div>
+    </SettingsCard>
   );
 }

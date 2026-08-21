@@ -7,7 +7,13 @@ import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartSizing } from "./use-is-compact";
-import { createPlotlyConfig, getRenderer, responsiveChrome, tierAxisFontSizes } from "./utils";
+import {
+  createPlotlyConfig,
+  getRenderer,
+  responsiveChrome,
+  tierAxisFontSizes,
+  chartGridColor,
+} from "./utils";
 
 export interface CarpetSeriesData extends BaseSeries {
   a: number[];
@@ -129,7 +135,7 @@ export function CarpetPlot({
                 dtick: series.aaxis.dtick || 1,
                 tickvals: series.aaxis.tickvals,
                 ticktext: series.aaxis.ticktext,
-                gridcolor: series.aaxis.gridcolor || "#E6E6E6",
+                gridcolor: series.aaxis.gridcolor || chartGridColor(),
                 linecolor: series.aaxis.linecolor || "#444",
                 showgrid: series.aaxis.showgrid !== false,
                 showline: series.aaxis.showline !== false,
@@ -137,7 +143,7 @@ export function CarpetPlot({
             : {
                 title: "A",
                 tickfont: { size: fontSizes.tick },
-                gridcolor: "#E6E6E6",
+                gridcolor: chartGridColor(),
                 linecolor: "#444",
               },
 
@@ -150,7 +156,7 @@ export function CarpetPlot({
                 dtick: series.baxis.dtick || 1,
                 tickvals: series.baxis.tickvals,
                 ticktext: series.baxis.ticktext,
-                gridcolor: series.baxis.gridcolor || "#E6E6E6",
+                gridcolor: series.baxis.gridcolor || chartGridColor(),
                 linecolor: series.baxis.linecolor || "#444",
                 showgrid: series.baxis.showgrid !== false,
                 showline: series.baxis.showline !== false,
@@ -158,7 +164,7 @@ export function CarpetPlot({
             : {
                 title: "B",
                 tickfont: { size: fontSizes.tick },
-                gridcolor: "#E6E6E6",
+                gridcolor: chartGridColor(),
                 linecolor: "#444",
               },
 
@@ -195,7 +201,7 @@ export function CarpetPlot({
               }
             : {
                 size: 8,
-                color: "#1f77b4",
+                color: undefined,
               },
 
           line: series.line

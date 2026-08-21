@@ -62,9 +62,9 @@ function getSortIcon(
 
   if (isCurrentlySorted) {
     return sortDirection === "ASC" ? (
-      <ArrowUp className="ml-2 inline h-4 w-4 text-green-700 dark:text-green-600" />
+      <ArrowUp className="text-status-active-foreground ml-2 inline h-4 w-4" />
     ) : (
-      <ArrowDown className="ml-2 inline h-4 w-4 text-green-700 dark:text-green-600" />
+      <ArrowDown className="text-status-active-foreground ml-2 inline h-4 w-4" />
     );
   }
 

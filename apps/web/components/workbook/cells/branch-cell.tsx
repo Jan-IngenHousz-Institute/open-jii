@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { ArrowRight, ChevronRight, GitBranch, Plus, Route, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
@@ -259,7 +260,7 @@ export function BranchCellComponent({
 
     return (
       <div key={cond.id} className="group/cond flex items-center gap-1.5">
-        <span className="w-7 shrink-0 text-right text-xs font-semibold uppercase text-orange-600/80 dark:text-orange-400/80">
+        <span className="text-node-branch w-7 shrink-0 text-right text-xs font-semibold uppercase">
           {index === 0 ? "If" : "And"}
         </span>
 
@@ -364,9 +365,11 @@ export function BranchCellComponent({
         <Collapsible open={isExpanded} onOpenChange={() => togglePathExpanded(path.id)}>
           <div className="flex items-center gap-1">
             <CollapsibleTrigger asChild>
-              <button
-                className={`hover:bg-muted/50 flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors ${
-                  isEvaluated ? "bg-green-50 dark:bg-green-950/30" : ""
+              <Button
+                type="button"
+                variant="ghost"
+                className={`hover:bg-muted/50 h-auto flex-1 justify-start gap-2 px-2 py-1.5 text-left font-normal ${
+                  isEvaluated ? "bg-status-active/40" : ""
                 }`}
               >
                 <Route className="text-muted-foreground size-4 shrink-0" />
@@ -380,7 +383,7 @@ export function BranchCellComponent({
                 />
 
                 {isEvaluated && (
-                  <span className="shrink-0 rounded bg-green-500 px-1.5 py-0.5 text-xs font-semibold text-white">
+                  <span className="bg-status-active-foreground text-status-active shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold">
                     ACTIVE
                   </span>
                 )}
@@ -390,7 +393,7 @@ export function BranchCellComponent({
                     isExpanded ? "rotate-90" : ""
                   }`}
                 />
-              </button>
+              </Button>
             </CollapsibleTrigger>
 
             {!readOnly && cell.paths.length > 1 && (
@@ -407,18 +410,20 @@ export function BranchCellComponent({
 
           <CollapsibleContent>
             <div className="border-border/60 ml-6 border-l pl-4 pt-2">
-              <div className="border-border/60 overflow-hidden rounded-md border bg-orange-50/30 dark:bg-orange-950/10">
+              <InsetPanel padding="none" className="overflow-hidden">
                 <div className="space-y-1.5 p-2.5">
                   {path.conditions.map((cond, index) => renderCondition(path, cond, index))}
                   {!readOnly && (
                     <div className="pl-[34px]">
-                      <button
+                      <Button
                         type="button"
-                        className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
+                        variant="ghost"
+                        size="xs"
+                        className="text-muted-foreground hover:text-foreground font-normal"
                         onClick={() => handleAddCondition(path.id)}
                       >
                         <Plus className="size-3" /> condition
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -445,7 +450,7 @@ export function BranchCellComponent({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              </InsetPanel>
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -457,7 +462,7 @@ export function BranchCellComponent({
     <CellWrapper
       icon={<GitBranch className="h-3.5 w-3.5" />}
       label="Branch"
-      accentColor="#F29D38"
+      accentColor="var(--node-branch)"
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
       onDelete={onDelete}
@@ -465,7 +470,7 @@ export function BranchCellComponent({
       executionError={executionError}
       readOnly={readOnly}
       headerBadges={
-        <span className="text-xs font-normal text-[#68737B]">
+        <span className="text-muted-foreground text-xs font-normal">
           {cell.paths.length} path{cell.paths.length !== 1 ? "s" : ""}
         </span>
       }
@@ -479,14 +484,16 @@ export function BranchCellComponent({
         ))}
 
         {!readOnly && (
-          <button
+          <Button
             type="button"
-            className="text-muted-foreground hover:bg-muted/50 hover:text-foreground flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors"
+            variant="ghost"
+            size="xs"
+            className="text-muted-foreground hover:bg-muted/50 hover:text-foreground w-full justify-start gap-2 font-normal"
             onClick={handleAddPath}
           >
             <Plus className="size-3.5" />
             Add path
-          </button>
+          </Button>
         )}
       </div>
     </CellWrapper>

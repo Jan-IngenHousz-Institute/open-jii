@@ -95,11 +95,8 @@ export function VisualizationSettingsMenu({
             {t("workspace.detailsSidebar.clearVisualization")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => setIsDeleteOpen(true)}
-            className="focus:text-destructive focus:bg-destructive/10 group"
-          >
-            <Trash2 className="text-muted-foreground group-focus:text-destructive mr-2 h-4 w-4" />
+          <DropdownMenuItem variant="destructive" onClick={() => setIsDeleteOpen(true)}>
+            <Trash2 className="mr-2 h-4 w-4" />
             {t("workspace.detailsSidebar.deleteVisualization")}
           </DropdownMenuItem>
         </DropdownMenuContent>

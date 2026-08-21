@@ -23,6 +23,6 @@ describe("TextAnswerDisplay", () => {
   it("has the correct styling classes", () => {
     const { container } = render(<TextAnswerDisplay />);
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveClass("rounded-lg", "bg-gradient-to-r", "p-6", "text-center");
+    expect(wrapper).toHaveClass("bg-accent", "rounded-lg", "p-6", "text-center");
   });
 });

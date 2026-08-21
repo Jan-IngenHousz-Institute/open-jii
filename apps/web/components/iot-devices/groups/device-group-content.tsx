@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useDeleteIotDeviceGroup } from "@/hooks/iot/useDeleteIotDeviceGroup/useDeleteIotDeviceGroup";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
@@ -16,7 +17,7 @@ import type { IotDeviceGroupMember } from "@repo/api/domains/iot/device-group/io
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {
   Table,
@@ -88,7 +89,7 @@ export function DeviceGroupContent() {
       )}
 
       {(members ?? []).length === 0 ? (
-        <Card className="shadow-none">
+        <Card>
           <CardContent className="text-muted-foreground py-10 text-center text-sm">
             {t("iot.groups.noMembers")}
           </CardContent>
@@ -144,31 +145,27 @@ export function DeviceGroupContent() {
       )}
 
       {group.capabilities.canManage && (
-        <Card className="border-destructive/30 max-w-3xl shadow-none">
-          <CardHeader>
-            <CardTitle className="text-destructive text-base">
-              {t("iot.groups.dangerZone.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">{t("iot.groups.dangerZone.deleteLabel")}</p>
-              <p className="text-muted-foreground text-sm">
-                {t("iot.groups.dangerZone.deleteDescription")}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 shrink-0"
-              onClick={() => {
-                setDeleteOpen(true);
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t("iot.groups.delete")}
-            </Button>
-          </CardContent>
-        </Card>
+        <SettingsCard
+          title={t("iot.groups.dangerZone.title")}
+          contentClassName="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="text-sm font-medium">{t("iot.groups.dangerZone.deleteLabel")}</p>
+            <p className="text-muted-foreground text-sm">
+              {t("iot.groups.dangerZone.deleteDescription")}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 shrink-0"
+            onClick={() => {
+              setDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t("iot.groups.delete")}
+          </Button>
+        </SettingsCard>
       )}
 
       <AddGroupMembersDialog

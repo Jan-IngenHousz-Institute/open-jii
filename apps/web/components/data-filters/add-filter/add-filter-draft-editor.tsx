@@ -59,14 +59,16 @@ export function AddFilterDraftEditor({
 
   return (
     <div className="space-y-3 p-3">
-      <button
+      <Button
         type="button"
-        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
+        variant="ghost"
+        size="xs"
+        className="text-muted-foreground hover:text-foreground font-normal"
         onClick={onBack}
       >
         <ArrowLeft className="h-3 w-3" />
         {column.name}
-      </button>
+      </Button>
       <Select value={operator} onValueChange={handleOperatorChange}>
         <SelectTrigger className="h-9 w-full">
           <SelectValue />

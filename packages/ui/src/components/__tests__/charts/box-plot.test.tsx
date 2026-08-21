@@ -26,6 +26,8 @@ vi.mock("../../charts/plotly-chart", () => ({
 }));
 
 vi.mock("../../charts/utils", () => ({
+  chartGridColor: vi.fn(() => "#E6E6E6"),
+  readThemeColor: vi.fn(() => undefined),
   createBaseLayout: vi.fn((config) => ({
     title: config.title,
     showlegend: config.showLegend !== false,

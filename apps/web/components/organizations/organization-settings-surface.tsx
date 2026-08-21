@@ -354,14 +354,15 @@ function VisibilityCard({
   onSelect: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
       role="radio"
+      variant="outline"
       aria-checked={isSelected}
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "rounded-md border p-3.5 text-left transition-colors disabled:opacity-60",
+        "h-auto flex-col items-stretch p-3.5 text-left font-normal",
         isSelected ? "border-primary bg-primary/5" : "hover:border-primary/60",
       )}
     >
@@ -381,7 +382,7 @@ function VisibilityCard({
       <span className="text-muted-foreground mt-1.5 block text-xs leading-relaxed">
         {description}
       </span>
-    </button>
+    </Button>
   );
 }
 

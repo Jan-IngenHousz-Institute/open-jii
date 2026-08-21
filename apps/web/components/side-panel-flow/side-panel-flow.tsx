@@ -1,9 +1,13 @@
+import { SettingsCard } from "@/components/shared/settings-card";
 import type { Edge, Node } from "@xyflow/react";
 import { Info } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
+import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
+import { Input } from "@repo/ui/components/input";
+import { Switch } from "@repo/ui/components/switch";
 import {
   Tooltip,
   TooltipContent,
@@ -144,28 +148,29 @@ export function ExperimentSidePanel({
         className={
           "fixed inset-0 z-50 transition-opacity duration-300 " +
           (open && nodeType
-            ? "pointer-events-auto bg-black/60 opacity-100"
-            : "pointer-events-none bg-black/0 opacity-0")
+            ? "bg-sidebar/60 pointer-events-auto opacity-100"
+            : "bg-sidebar/0 pointer-events-none opacity-0")
         }
         onClick={onClose}
         aria-label="Close side panel backdrop"
       />
       <div
         className={
-          "fixed bottom-0 right-0 top-0 z-50 flex w-full flex-col rounded-none border-none bg-white shadow-none transition-transform duration-300 ease-in-out " +
-          "md:w-[480px] md:rounded-bl-xl md:rounded-tl-xl md:border-l md:border-gray-200 md:bg-white md:shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.3)]" +
+          "bg-card fixed bottom-0 right-0 top-0 z-50 flex w-full flex-col rounded-none border-none shadow-none transition-transform duration-300 ease-in-out " +
+          "md:border-border md:w-[480px] md:rounded-bl-xl md:rounded-tl-xl md:border-l md:shadow-2xl" +
           (open && nodeType ? " translate-x-0" : " translate-x-full")
         }
       >
         <div className="flex-1 overflow-y-auto p-6">
-          <button
+          <Button
             type="button"
-            className="text-jii-dark-green hover:text-jii-medium-green absolute right-6 top-6 text-xl font-bold"
+            variant="ghost"
+            className="text-primary hover:text-primary/80 absolute right-6 top-6 h-auto p-0 text-xl font-bold hover:bg-transparent"
             onClick={onClose}
           >
             &times;
-          </button>
-          <h2 className="text-jii-dark-green mb-4 text-xl font-bold">
+          </Button>
+          <h2 className="text-primary mb-4 text-xl font-bold">
             {displayNodeType
               ? displayNodeType.charAt(0) + displayNodeType.slice(1).toLowerCase()
               : ""}{" "}
@@ -173,108 +178,95 @@ export function ExperimentSidePanel({
           </h2>
 
           {/* Label input field wrapped in Card */}
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-jii-dark-green">{t("sidePanelFlow.label")}</CardTitle>
-                {displayNodeType === "QUESTION" && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs">
-                        <div className="space-y-1">
-                          <p className="font-medium">{t("flow.questionTooltip.title")}</p>
-                          <p className="text-xs">
-                            {t("flow.questionTooltip.description")}
-                            <span className="ml-1 rounded bg-gray-800 px-1 font-mono text-xs text-white">
-                              {currentTitle
-                                ? formatNodeLabelAsColumnName(currentTitle)
-                                : t("flow.questionTooltip.defaultColumnName")}
-                            </span>
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <input
-                id="node-label"
-                type="text"
-                value={currentTitle}
-                onChange={handleTitleChange}
-                placeholder={t("sidePanelFlow.labelPlaceholder")}
-                disabled={isDisabled}
-                required={displayNodeType === "QUESTION"}
-                aria-required={displayNodeType === "QUESTION"}
-                className="focus:border-jii-dark-green focus:ring-jii-dark-green/50 focus:outline-hidden w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
-              />
-              {displayNodeType === "QUESTION" && (
-                <p className="mt-1.5 text-xs text-gray-500">{t("sidePanelFlow.labelHint")}</p>
-              )}
-            </CardContent>
-          </Card>
+          <SettingsCard
+            title={t("sidePanelFlow.label")}
+            action={
+              displayNodeType === "QUESTION" && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="text-muted-foreground hover:text-foreground h-4 w-4" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <div className="space-y-1">
+                        <p className="font-medium">{t("flow.questionTooltip.title")}</p>
+                        <p className="text-xs">
+                          {t("flow.questionTooltip.description")}
+                          <span className="bg-foreground text-background ml-1 rounded px-1 font-mono text-xs">
+                            {currentTitle
+                              ? formatNodeLabelAsColumnName(currentTitle)
+                              : t("flow.questionTooltip.defaultColumnName")}
+                          </span>
+                        </p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )
+            }
+            className="mb-6"
+          >
+            <Input
+              id="node-label"
+              type="text"
+              value={currentTitle}
+              onChange={handleTitleChange}
+              placeholder={t("sidePanelFlow.labelPlaceholder")}
+              disabled={isDisabled}
+              required={displayNodeType === "QUESTION"}
+              aria-required={displayNodeType === "QUESTION"}
+              className="w-full"
+            />
+            {displayNodeType === "QUESTION" && (
+              <p className="text-muted-foreground mt-1.5 text-xs">{t("sidePanelFlow.labelHint")}</p>
+            )}
+          </SettingsCard>
 
           {/* Node Type Toggles */}
           {selectedNode && (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="text-jii-dark-green">
-                  {t("sidePanelFlow.nodeProperties")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Start Node Toggle */}
-                <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {t("sidePanelFlow.startNode")}
-                    </p>
-                    <p className="text-xs text-gray-500">{t("sidePanelFlow.startNodeLimit")}</p>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selectedNode.data.isStartNode)}
-                      onChange={() => {
-                        if (isDisabled) return;
-                        const currentIsStart = selectedNode.data.isStartNode;
-                        const hasOtherStartNode = nodes.some(
-                          (node) => node.id !== selectedNode.id && node.data.isStartNode,
-                        );
-
-                        // Only allow toggling on if there's no other start node
-                        if (!currentIsStart && hasOtherStartNode) {
-                          return; // Don't allow multiple start nodes
-                        }
-
-                        if (onNodeDataChange) {
-                          onNodeDataChange(selectedNode.id, {
-                            ...selectedNode.data,
-                            isStartNode: !currentIsStart,
-                            // Clear end node if setting as start node
-                            isEndNode: !currentIsStart ? false : selectedNode.data.isEndNode,
-                          });
-                        }
-                      }}
-                      className="peer sr-only"
-                      disabled={
-                        isDisabled ||
-                        (!selectedNode.data.isStartNode &&
-                          nodes.some(
-                            (node) => node.id !== selectedNode.id && node.data.isStartNode,
-                          ))
-                      }
-                    />
-                    <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer-focus:outline-hidden peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-4 peer-disabled:bg-gray-300"></div>
-                  </label>
+            <SettingsCard title={t("sidePanelFlow.nodeProperties")} contentClassName="space-y-4">
+              {/* Start Node Toggle */}
+              <Card className="flex-row items-center justify-between gap-0 p-4">
+                <div>
+                  <p className="text-foreground text-sm font-medium">
+                    {t("sidePanelFlow.startNode")}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("sidePanelFlow.startNodeLimit")}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
+                <Switch
+                  aria-label={t("sidePanelFlow.startNode")}
+                  checked={Boolean(selectedNode.data.isStartNode)}
+                  onCheckedChange={() => {
+                    if (isDisabled) return;
+                    const currentIsStart = selectedNode.data.isStartNode;
+                    const hasOtherStartNode = nodes.some(
+                      (node) => node.id !== selectedNode.id && node.data.isStartNode,
+                    );
+
+                    // Only allow toggling on if there's no other start node
+                    if (!currentIsStart && hasOtherStartNode) {
+                      return; // Don't allow multiple start nodes
+                    }
+
+                    if (onNodeDataChange) {
+                      onNodeDataChange(selectedNode.id, {
+                        ...selectedNode.data,
+                        isStartNode: !currentIsStart,
+                        // Clear end node if setting as start node
+                        isEndNode: !currentIsStart ? false : selectedNode.data.isEndNode,
+                      });
+                    }
+                  }}
+                  disabled={
+                    isDisabled ||
+                    (!selectedNode.data.isStartNode &&
+                      nodes.some((node) => node.id !== selectedNode.id && node.data.isStartNode))
+                  }
+                />
+              </Card>
+            </SettingsCard>
           )}
 
           {/* InstructionPanel for instruction node */}

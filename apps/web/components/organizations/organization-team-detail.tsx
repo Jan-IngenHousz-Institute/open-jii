@@ -207,15 +207,16 @@ export function OrganizationTeamDetail({
           ) : canManage ? (
             // The heading itself is the affordance: renaming a team is a correction,
             // not a decision, so it does not warrant a control of its own.
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => setRenameValue(team.name)}
               aria-label={t("organizations.teams.renameLabel", { name: team.name })}
-              className="hover:bg-muted -mx-2 flex items-center gap-2 rounded-md px-2 py-0.5 text-left"
+              className="-mx-2 h-auto justify-start px-2 py-0.5 text-left"
             >
               <h2 className="truncate text-lg font-semibold tracking-tight">{team.name}</h2>
               <Pencil className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden />
-            </button>
+            </Button>
           ) : (
             <h2 className="truncate text-lg font-semibold tracking-tight">{team.name}</h2>
           )}

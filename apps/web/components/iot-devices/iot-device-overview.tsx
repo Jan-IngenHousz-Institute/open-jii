@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useDeleteIotDevice } from "@/hooks/iot/useDeleteIotDevice/useDeleteIotDevice";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
@@ -26,7 +27,6 @@ import {
   AlertDialogTitle,
 } from "@repo/ui/components/alert-dialog";
 import { Button } from "@repo/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { MetaField } from "../experiment-dashboards/meta-field";
@@ -96,31 +96,25 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
       </div>
 
       {device.capabilities.canManage && (
-        <Card className="border-destructive/30 max-w-3xl shadow-none">
-          <CardHeader>
-            <CardTitle className="text-destructive text-base">
-              {t("iot.devices.detail.dangerZone.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">
-                {t("iot.devices.detail.dangerZone.deleteLabel")}
-              </p>
-              <p className="text-muted-foreground text-sm">
-                {t("iot.devices.detail.dangerZone.deleteDescription")}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 shrink-0"
-              onClick={() => setConfirmingDelete(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t("iot.devices.actions.delete")}
-            </Button>
-          </CardContent>
-        </Card>
+        <SettingsCard
+          title={t("iot.devices.detail.dangerZone.title")}
+          contentClassName="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="text-sm font-medium">{t("iot.devices.detail.dangerZone.deleteLabel")}</p>
+            <p className="text-muted-foreground text-sm">
+              {t("iot.devices.detail.dangerZone.deleteDescription")}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 shrink-0"
+            onClick={() => setConfirmingDelete(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {t("iot.devices.actions.delete")}
+          </Button>
+        </SettingsCard>
       )}
 
       <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>

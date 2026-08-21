@@ -1,16 +1,11 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { Globe, Lock } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
+import { Button } from "@repo/ui/components/button";
 import { FormField, FormItem, FormMessage } from "@repo/ui/components/form";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -30,44 +25,41 @@ export function NewOrganizationVisibilityCard({ form }: NewOrganizationVisibilit
 
   return (
     // `min-w-0` because this card shares a grid row and would otherwise widen it.
-    <Card className="min-w-0">
-      <CardHeader>
-        <CardTitle>{t("organizations.visibility.title")}</CardTitle>
-        <CardDescription>{t("organizations.visibility.description")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <FormField
-          control={form.control}
-          name="visibility"
-          render={({ field }) => (
-            <FormItem>
-              {/* Stacked, not side by side: this card already shares a row. */}
-              <div
-                role="radiogroup"
-                aria-label={t("organizations.visibility.title")}
-                className="grid gap-3"
-              >
-                <VisibilityOption
-                  icon={Lock}
-                  title={t("organizations.visibility.privateLabel")}
-                  description={t("organizations.visibility.privateHint")}
-                  isSelected={field.value === "private"}
-                  onSelect={() => field.onChange("private")}
-                />
-                <VisibilityOption
-                  icon={Globe}
-                  title={t("organizations.visibility.publicLabel")}
-                  description={t("organizations.visibility.publicHint")}
-                  isSelected={field.value === "public"}
-                  onSelect={() => field.onChange("public")}
-                />
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </CardContent>
-    </Card>
+    <SettingsCard
+      title={t("organizations.visibility.title")}
+      description={t("organizations.visibility.description")}
+    >
+      <FormField
+        control={form.control}
+        name="visibility"
+        render={({ field }) => (
+          <FormItem>
+            {/* Stacked, not side by side: this card already shares a row. */}
+            <div
+              role="radiogroup"
+              aria-label={t("organizations.visibility.title")}
+              className="grid gap-3"
+            >
+              <VisibilityOption
+                icon={Lock}
+                title={t("organizations.visibility.privateLabel")}
+                description={t("organizations.visibility.privateHint")}
+                isSelected={field.value === "private"}
+                onSelect={() => field.onChange("private")}
+              />
+              <VisibilityOption
+                icon={Globe}
+                title={t("organizations.visibility.publicLabel")}
+                description={t("organizations.visibility.publicHint")}
+                isSelected={field.value === "public"}
+                onSelect={() => field.onChange("public")}
+              />
+            </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </SettingsCard>
   );
 }
 
@@ -85,13 +77,14 @@ function VisibilityOption({
   onSelect: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
       role="radio"
+      variant="outline"
       aria-checked={isSelected}
       onClick={onSelect}
       className={cn(
-        "rounded-md border p-3.5 text-left transition-colors",
+        "h-auto flex-col items-stretch p-3.5 text-left font-normal",
         isSelected ? "border-primary bg-primary/5" : "hover:border-primary/60",
       )}
     >
@@ -111,6 +104,6 @@ function VisibilityOption({
       <span className="text-muted-foreground mt-1.5 block text-xs leading-relaxed">
         {description}
       </span>
-    </button>
+    </Button>
   );
 }

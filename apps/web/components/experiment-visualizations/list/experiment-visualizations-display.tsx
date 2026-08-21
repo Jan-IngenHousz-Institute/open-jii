@@ -77,7 +77,7 @@ export default function ExperimentVisualizationsDisplay({
               </svg>
             </div>
             {isArchived || !hasAccess ? (
-              <Button variant="muted" disabled>
+              <Button variant="secondary" disabled>
                 {t("selector.createVisualization")}
               </Button>
             ) : (
@@ -85,7 +85,7 @@ export default function ExperimentVisualizationsDisplay({
                 href={`/en-US/platform/experiments/${experimentId}/analysis/visualizations`}
                 passHref
               >
-                <Button variant="muted">{t("selector.createVisualization")}</Button>
+                <Button variant="secondary">{t("selector.createVisualization")}</Button>
               </Link>
             )}
           </CardContent>

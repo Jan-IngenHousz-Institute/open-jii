@@ -35,7 +35,7 @@ export function PasskeyLoginButton({ callbackUrl, isLastUsed }: PasskeyLoginButt
       <Button
         type="button"
         variant="outline"
-        className="bg-surface text-foreground hover:bg-surface-light active:bg-surface-dark flex h-12 w-full items-center justify-center rounded-full"
+        className="flex w-full items-center justify-center"
         disabled={signInPasskey.isPending}
         onClick={handleClick}
       >
@@ -44,7 +44,7 @@ export function PasskeyLoginButton({ callbackUrl, isLastUsed }: PasskeyLoginButt
         ) : (
           <Fingerprint className="mr-2 h-5 w-5" />
         )}
-        <span className="font-notosans">{t("auth.loginWith-passkey")}</span>
+        <span>{t("auth.loginWith-passkey")}</span>
       </Button>
       {isLastUsed && <LastUsedBadge />}
     </div>

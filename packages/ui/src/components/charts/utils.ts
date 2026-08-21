@@ -68,6 +68,76 @@ export function getPlotType(baseType: string, renderer: WebGLRenderer): string {
   return webglTypes[baseType] || baseType;
 }
 
+const OKLCH_RE =
+  /^oklch\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)(?:deg)?\s*(?:\/\s*([\d.]+%?)\s*)?\)$/i;
+
+/** sRGB gamma encode, per CSS Color 4. */
+function encodeChannel(value: number): number {
+  const linear = value <= 0.0031308 ? 12.92 * value : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
+  return Math.round(Math.min(1, Math.max(0, linear)) * 255);
+}
+
+/**
+ * Converts an `oklch()` string to `#rrggbb`. Plotly paints to SVG and canvas
+ * and parses colours itself, so it never sees a value CSS would resolve — the
+ * theme's oklch has to be turned into sRGB here. Returns `undefined` for
+ * anything that is not oklch, which the callers pass through untouched.
+ */
+export function oklchToHex(value: string): string | undefined {
+  const match = OKLCH_RE.exec(value.trim());
+  if (!match) return undefined;
+  const [, rawL, rawC, rawH] = match;
+  const lightness = rawL!.endsWith("%") ? Number.parseFloat(rawL!) / 100 : Number.parseFloat(rawL!);
+  const chroma = Number.parseFloat(rawC!);
+  const hue = (Number.parseFloat(rawH!) * Math.PI) / 180;
+  if (!Number.isFinite(lightness) || !Number.isFinite(chroma) || !Number.isFinite(hue)) {
+    return undefined;
+  }
+
+  const a = chroma * Math.cos(hue);
+  const b = chroma * Math.sin(hue);
+  const l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
+
+  const channels = [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ].map(encodeChannel);
+
+  return `#${channels.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/**
+ * Reads a theme custom property off the document root and returns it in a form
+ * Plotly can parse. `undefined` when rendering on the server or when the
+ * property is unset, so every caller keeps its own fallback.
+ */
+export function readThemeColor(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (!raw) return undefined;
+  return oklchToHex(raw) ?? raw;
+}
+
+/** Axis/grid rule colour, matching every other bordered surface. */
+export function chartGridColor(): string {
+  return readThemeColor("--border") ?? "#E6E6E6";
+}
+
+/**
+ * The series palette. Charts get their colours from the same `--chart-1..5`
+ * block every other surface reads, so swapping the theme re-colours them too.
+ * Falls back to Plotly's own palette when the properties are not readable.
+ */
+export function resolveChartColorway(): string[] | undefined {
+  const colorway = [1, 2, 3, 4, 5]
+    .map((index) => readThemeColor(`--chart-${index}`))
+    .filter((color): color is string => color !== undefined);
+  return colorway.length === 5 ? colorway : undefined;
+}
+
 // ISO 8601 (year, year-month, or date with optional time / fractional
 // seconds / timezone). Year-month covers date_trunc('month', ...) output.
 const ISO_DATE_RE =
@@ -391,10 +461,14 @@ export function createBaseLayout(
       auto: { grid: "rgba(0,0,0,0.1)", text: "#000000", bg: "#ffffff" }, // Default to light
     };
 
-  const gridColor = colorScheme[theme ?? "auto"].grid;
-  const textColor = colorScheme[theme ?? "auto"].text;
+  // Chrome colours come from the theme when the document is readable; the
+  // scheme above stays as the server-render fallback.
+  const gridColor = readThemeColor("--border") ?? colorScheme[theme ?? "auto"].grid;
+  const textColor = readThemeColor("--foreground") ?? colorScheme[theme ?? "auto"].text;
   const bgColor = backgroundColor || "rgba(0,0,0,0)";
-  const paperBgColor = backgroundColor || colorScheme[theme ?? "auto"].bg;
+  const paperBgColor =
+    backgroundColor || readThemeColor("--card") || colorScheme[theme ?? "auto"].bg;
+  const colorway = resolveChartColorway();
 
   // Tier-aware typography. Axis chrome (tick fonts, axis title font,
   // tick density) keys off cell tiers so per-cell ticks shrink in faceted
@@ -402,13 +476,13 @@ export function createBaseLayout(
   const tickFont = {
     size: cellVeryCompact ? 9 : cellCompact ? 10 : cellSnug ? 11 : 12,
     color: textColor,
-    family: "var(--font-inter), Inter, sans-serif",
+    family: "var(--font-sans)",
   };
 
   const axisTitleFont = {
     size: cellVeryCompact ? 10 : cellCompact ? 11 : cellSnug ? 13 : 14,
     color: textColor,
-    family: "var(--font-inter), Inter, sans-serif",
+    family: "var(--font-sans)",
   };
   // Chart-level title (outer tier; sits above the whole canvas).
   const titleFontSize = veryCompact ? 11 : compact ? 12 : snug ? 13 : 14;
@@ -425,7 +499,7 @@ export function createBaseLayout(
           text: title,
           font: {
             size: titleFontSize,
-            family: "var(--font-inter), Inter, sans-serif",
+            family: "var(--font-sans)",
             color: textColor,
           },
         }
@@ -473,7 +547,7 @@ export function createBaseLayout(
       font: {
         size: veryCompact ? 9 : compact ? 10 : snug ? 11 : 12,
         color: textColor,
-        family: "var(--font-inter), Inter, sans-serif",
+        family: "var(--font-sans)",
       },
     },
 
@@ -482,7 +556,7 @@ export function createBaseLayout(
     hoverlabel: {
       font: {
         size: veryCompact ? 10 : compact ? 11 : 12,
-        family: "var(--font-inter), Inter, sans-serif",
+        family: "var(--font-sans)",
       },
     },
 
@@ -517,9 +591,10 @@ export function createBaseLayout(
     ...(height && { height }), // Only include height if it's defined
     plot_bgcolor: bgColor,
     paper_bgcolor: paperBgColor,
+    ...(colorway && { colorway }),
 
     font: {
-      family: "var(--font-inter), Inter, sans-serif",
+      family: "var(--font-sans)",
       color: textColor,
       size: 12,
     },
@@ -529,7 +604,7 @@ export function createBaseLayout(
       font: {
         color: ann.font?.color || textColor,
         size: ann.font?.size || 12,
-        family: ann.font?.family || "var(--font-inter), Inter, sans-serif",
+        family: ann.font?.family || "var(--font-sans)",
       },
       bgcolor: ann.bgcolor || (isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)"),
       bordercolor: gridColor,
@@ -1046,7 +1121,7 @@ export function applyReferenceLines(
 
   for (const line of referenceLines) {
     if (!Number.isFinite(line.value)) continue;
-    const color = line.color ?? "#9ca3af";
+    const color = line.color ?? readThemeColor("--muted-foreground") ?? "#9ca3af";
     const dash = line.dash ?? "dash";
     const width = line.width ?? 1.5;
 

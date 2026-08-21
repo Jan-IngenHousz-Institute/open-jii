@@ -2,6 +2,7 @@
 
 import { CredentialConfirmDialog } from "@/components/iot-devices/credential-confirm-dialog";
 import { ConnectivityDot } from "@/components/iot-devices/device-connectivity";
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
 import { useIssueIotDeviceGroupCredentials } from "@/hooks/iot/useIssueIotDeviceGroupCredentials/useIssueIotDeviceGroupCredentials";
@@ -17,13 +18,6 @@ import type { IotDeviceGroupMember } from "@repo/api/domains/iot/device-group/io
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { Label } from "@repo/ui/components/label";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -248,38 +242,32 @@ export function GroupCredentialsContent() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle className="text-base">{t("iot.groups.credentials.title")}</CardTitle>
-          <CardDescription>{t("iot.groups.credentials.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <ToggleGroup
-            type="single"
-            size="sm"
-            value={action}
-            onValueChange={handleActionChange}
-            className="bg-muted w-fit rounded-md p-0.5"
-          >
-            <ToggleGroupItem value="issue">
-              {t("iot.groups.credentials.actionIssue")}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="rotate">
-              {t("iot.groups.credentials.actionRotate")}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="revoke">
-              {t("iot.groups.credentials.actionRevoke")}
-            </ToggleGroupItem>
-          </ToggleGroup>
-          <p className="text-muted-foreground text-xs">
-            {t(`iot.groups.credentials.${action}Hint`)}
-          </p>
-        </CardContent>
-      </Card>
+      <SettingsCard
+        title={t("iot.groups.credentials.title")}
+        description={t("iot.groups.credentials.description")}
+        contentClassName="space-y-2"
+      >
+        <ToggleGroup
+          type="single"
+          size="sm"
+          value={action}
+          onValueChange={handleActionChange}
+          className="bg-muted w-fit rounded-md p-0.5"
+        >
+          <ToggleGroupItem value="issue">{t("iot.groups.credentials.actionIssue")}</ToggleGroupItem>
+          <ToggleGroupItem value="rotate">
+            {t("iot.groups.credentials.actionRotate")}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="revoke">
+            {t("iot.groups.credentials.actionRevoke")}
+          </ToggleGroupItem>
+        </ToggleGroup>
+        <p className="text-muted-foreground text-xs">{t(`iot.groups.credentials.${action}Hint`)}</p>
+      </SettingsCard>
 
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+      <SettingsCard
+        title={
+          <>
             {t("iot.groups.credentials.devicesTitle")}
             <Badge variant="secondary">
               {t("iot.groups.credentials.devicesSelected", {
@@ -287,54 +275,49 @@ export function GroupCredentialsContent() {
                 total: members.length,
               })}
             </Badge>
-          </CardTitle>
-          <CardDescription>{t("iot.groups.credentials.devicesDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {members.length === 0 ? (
-            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              {t("iot.groups.noMembers")}
-            </p>
-          ) : (
-            <ul className="divide-y rounded-lg border">{members.map(renderMemberRow)}</ul>
-          )}
+          </>
+        }
+        description={t("iot.groups.credentials.devicesDescription")}
+        contentClassName="space-y-4"
+      >
+        {members.length === 0 ? (
+          <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+            {t("iot.groups.noMembers")}
+          </p>
+        ) : (
+          <ul className="divide-y rounded-lg border">{members.map(renderMemberRow)}</ul>
+        )}
 
-          <div className="flex items-center justify-end gap-4">
-            {isOverCap && (
-              <p className="text-sm text-amber-600">
-                {t("iot.groups.credentials.overCap", { max: MAX_BATCH })}
-              </p>
+        <div className="flex items-center justify-end gap-4">
+          {isOverCap && (
+            <p className="text-status-stale-foreground text-sm">
+              {t("iot.groups.credentials.overCap", { max: MAX_BATCH })}
+            </p>
+          )}
+          <Button
+            className="w-fit"
+            variant={action === "revoke" ? "destructive" : "default"}
+            onClick={handleSubmit}
+            disabled={selectedIds.length === 0 || isOverCap || isPending}
+          >
+            {isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <>
+                {action === "issue" && <KeyRound className="mr-2 h-4 w-4" aria-hidden />}
+                {action === "rotate" && <RefreshCw className="mr-2 h-4 w-4" aria-hidden />}
+                {action === "revoke" && <ShieldOff className="mr-2 h-4 w-4" aria-hidden />}
+              </>
             )}
-            <Button
-              className="w-fit"
-              variant={action === "revoke" ? "destructive" : "default"}
-              onClick={handleSubmit}
-              disabled={selectedIds.length === 0 || isOverCap || isPending}
-            >
-              {isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <>
-                  {action === "issue" && <KeyRound className="mr-2 h-4 w-4" aria-hidden />}
-                  {action === "rotate" && <RefreshCw className="mr-2 h-4 w-4" aria-hidden />}
-                  {action === "revoke" && <ShieldOff className="mr-2 h-4 w-4" aria-hidden />}
-                </>
-              )}
-              {submitLabel()}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            {submitLabel()}
+          </Button>
+        </div>
+      </SettingsCard>
 
       {batch !== null && (
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="text-base">{t("iot.groups.credentials.resultsTitle")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <GroupCredentialResults groupName={group.name} batch={batch} labelByDeviceId={labels} />
-          </CardContent>
-        </Card>
+        <SettingsCard title={t("iot.groups.credentials.resultsTitle")}>
+          <GroupCredentialResults groupName={group.name} batch={batch} labelByDeviceId={labels} />
+        </SettingsCard>
       )}
 
       <CredentialConfirmDialog

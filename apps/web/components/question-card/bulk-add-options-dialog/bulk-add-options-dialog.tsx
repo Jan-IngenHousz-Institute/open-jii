@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components/dialog";
+import { Textarea } from "@repo/ui/components/textarea";
 
 interface BulkAddOptionsDialogProps {
   open: boolean;
@@ -51,31 +53,22 @@ export function BulkAddOptionsDialog({
         </DialogHeader>
 
         <div className="py-4">
-          <textarea
+          <Textarea
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
             placeholder={t("questionCard.bulkAdd.placeholder")}
-            className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 focus:outline-hidden min-h-[300px] w-full rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:ring-2"
+            className="min-h-[300px] w-full"
           />
-          <p className="mt-2 text-xs text-gray-500">{t("questionCard.bulkAdd.hint")}</p>
+          <p className="text-muted-foreground mt-2 text-xs">{t("questionCard.bulkAdd.hint")}</p>
         </div>
 
         <DialogFooter>
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-          >
+          <Button type="button" variant="outline" onClick={handleCancel}>
             {t("questionCard.bulkAdd.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={!bulkText.trim()}
-            className="bg-jii-dark-green hover:bg-jii-dark-green/90 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          </Button>
+          <Button type="button" onClick={handleAdd} disabled={!bulkText.trim()}>
             {t("questionCard.bulkAdd.add")}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

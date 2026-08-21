@@ -16,6 +16,7 @@ import { useMemo } from "react";
 import type { WorkbookListItem } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
+import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,10 +41,10 @@ interface WorkbookListProps {
   showEmptyHelp?: boolean;
 }
 
-const HEADER_BG = "bg-[#F6F8FA]";
-const TABLE_BORDER = "border-[#CDD5DB]";
-const TEXT_STRONG = "text-[#011111]";
-const TEXT_MUTED = "text-[#68737B]";
+const HEADER_BG = "bg-muted";
+const TABLE_BORDER = "border-border";
+const TEXT_STRONG = "text-foreground";
+const TEXT_MUTED = "text-muted-foreground";
 
 export function WorkbookList({ workbooks, isLoading, showEmptyHelp = false }: WorkbookListProps) {
   const { t } = useTranslation("workbook");
@@ -176,7 +177,7 @@ function WorkbookTableRow({ workbook }: { workbook: WorkbookListItem }) {
     <>
       <TableRow
         className={cn(
-          "group cursor-pointer bg-white hover:bg-[#F6F8FA] has-[[data-state=open]]:bg-[#F6F8FA]",
+          "bg-card hover:bg-muted has-[[data-state=open]]:bg-muted group cursor-pointer",
           TABLE_BORDER,
         )}
         onClick={() => router.push(viewHref)}
@@ -220,16 +221,15 @@ function WorkbookTableRow({ workbook }: { workbook: WorkbookListItem }) {
           <div className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label={t("workbooks.actions.more")}
-                  className={cn(
-                    "inline-flex size-8 items-center justify-center rounded-md hover:bg-[#EDF2F6] hover:text-[#011111] data-[state=open]:bg-[#EDF2F6] data-[state=open]:text-[#011111]",
-                    TEXT_MUTED,
-                  )}
+                  className={cn("data-[state=open]:bg-accent size-8", TEXT_MUTED)}
                 >
                   <MoreHorizontal className="size-4" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>

@@ -75,11 +75,11 @@ export function VisualizationLayoutContent({
             aria-label={t("workspace.layout.descriptionTitle")}
             disabled={!isCreator}
             rows={1}
-            className="min-h-0 resize-none border-0 bg-transparent p-0 text-base text-[#68737B] shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="text-muted-foreground min-h-0 resize-none border-0 bg-transparent p-0 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
         </div>
 
-        <div className="flex items-start gap-10 border-b border-[#EDF2F6] pb-8">
+        <div className="border-border flex items-start gap-10 border-b pb-8">
           <VisualizationMetaField
             label={t("workspace.detailsSidebar.createdAt")}
             value={formatDate(visualization.createdAt)}
@@ -101,8 +101,10 @@ export function VisualizationLayoutContent({
       </div>
 
       <div
-        className="-mx-6 -mb-6 flex-1 border-t border-[#EDF2F6] px-6 pb-6"
-        style={{ background: "linear-gradient(270.03deg, #F5FFF8 0%, #F4F9FF 100%)" }}
+        className="border-border -mx-6 -mb-6 flex-1 border-t px-6 pb-6"
+        style={{
+          background: "linear-gradient(270.03deg, var(--accent) 0%, var(--secondary) 100%)",
+        }}
       >
         <div className="w-full pt-6">{children}</div>
       </div>

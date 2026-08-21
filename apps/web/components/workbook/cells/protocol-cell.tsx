@@ -281,7 +281,7 @@ export function ProtocolCellComponent({
         />
       }
       labelText={displayName}
-      accentColor="#2D3142"
+      accentColor="var(--node-measurement)"
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
       onDelete={onDelete}
@@ -296,14 +296,14 @@ export function ProtocolCellComponent({
         forkedFrom ? (
           <div className="flex items-center gap-2">
             {protocolFamily ? (
-              <span className="text-xs capitalize text-[#68737B]">
+              <span className="text-muted-foreground text-xs capitalize">
                 {getSensorFamilyLabel(protocolFamily)}
               </span>
             ) : null}
             {forkedFrom ? (
               <Link
                 href={`/platform/protocols/${forkedFrom}`}
-                className="text-xs text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+                className="text-primary hover:text-primary text-xs underline underline-offset-2"
               >
                 {tWorkbook("cells.forkedFrom")}
               </Link>
@@ -319,7 +319,7 @@ export function ProtocolCellComponent({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-muted-foreground h-6 w-6 shrink-0 p-0 hover:text-[#005E5E]"
+                        className="text-muted-foreground hover:text-primary h-6 w-6 shrink-0 p-0"
                         aria-label={tWorkbook("cells.fork")}
                         onClick={() => void handleFork()}
                         disabled={isForking}
@@ -359,7 +359,7 @@ export function ProtocolCellComponent({
             asChild
             variant="ghost"
             size="sm"
-            className="text-muted-foreground h-7 w-7 p-0 hover:text-[#005E5E]"
+            className="text-muted-foreground hover:text-primary h-7 w-7 p-0"
             title="Open protocol in new tab"
           >
             <Link
@@ -377,7 +377,11 @@ export function ProtocolCellComponent({
             className="text-muted-foreground h-7 w-7 p-0"
             onClick={handleCopy}
           >
-            {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+            {copied ? (
+              <Check className="text-status-active-foreground h-3 w-3" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
           </Button>
         </div>
       }

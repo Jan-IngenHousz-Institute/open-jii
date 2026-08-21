@@ -103,9 +103,9 @@ export function SPCChart({
       marker: {
         size: markerSize,
         opacity: markerOpacity,
-        color: seriesColor ?? "#1f77b4",
+        color: seriesColor,
       },
-      line: { color: seriesColor ?? "#1f77b4", width: 1.5 },
+      line: { color: seriesColor, width: 1.5 },
       hoverinfo: "x+y",
     } as unknown as PlotData,
     // Centre line is solid grey per SPC convention; dotted would compete

@@ -5,12 +5,13 @@ import { Sparkles } from "lucide-react";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 
 import { WHATS_NEW_OPEN_EVENT, countUnread } from "./whats-new-shared";
 
 /**
  * Standalone sidebar-footer row that opens the What's new sheet. Shows a brand-green
- * unread dot when there are new entries. Styled for the dark sidebar (white text), matching the
+ * unread dot when there are new entries. Styled for the sidebar slab, matching the
  * search button above it.
  */
 export function WhatsNewFooterItem({
@@ -29,8 +30,9 @@ export function WhatsNewFooterItem({
   const label = t("whatsNew.navLabel");
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={() => {
         onOpen?.();
         window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT));
@@ -38,16 +40,16 @@ export function WhatsNewFooterItem({
       aria-label={
         hasUnread ? `${label} (${t("whatsNew.unreadBadge", { count: unreadCount })})` : label
       }
-      className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+      className="text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-9 w-full justify-start gap-2 rounded-md px-3 text-left font-normal transition-colors"
     >
       <Sparkles className="size-4 shrink-0" />
       <span className="flex-1 truncate">{label}</span>
       {hasUnread && (
         <span
-          className="bg-jii-bright-green ml-auto size-2 shrink-0 rounded-full"
+          className="bg-sidebar-primary ml-auto size-2 shrink-0 rounded-full"
           aria-hidden="true"
         />
       )}
-    </button>
+    </Button>
   );
 }

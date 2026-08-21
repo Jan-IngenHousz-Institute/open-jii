@@ -1,12 +1,12 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useState } from "react";
 import { useProtocolSearch } from "~/hooks/protocol/useProtocolSearch/useProtocolSearch";
 
 import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 
@@ -38,25 +38,18 @@ export function MeasurementPanel({
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="text-jii-dark-green">
-          {t("experiments.measurementPanelTitle")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ProtocolSearchWithDropdown
-          availableProtocols={availableProtocols}
-          value={selectedProtocolId}
-          placeholder={t("experiments.searchProtocols")}
-          loading={!isDebounced || isFetchingProtocols}
-          searchValue={protocolSearch}
-          onSearchChange={setProtocolSearch}
-          onAddProtocol={handleAddProtocol}
-          isAddingProtocol={false}
-          disabled={disabled}
-        />
-      </CardContent>
-    </Card>
+    <SettingsCard title={t("experiments.measurementPanelTitle")}>
+      <ProtocolSearchWithDropdown
+        availableProtocols={availableProtocols}
+        value={selectedProtocolId}
+        placeholder={t("experiments.searchProtocols")}
+        loading={!isDebounced || isFetchingProtocols}
+        searchValue={protocolSearch}
+        onSearchChange={setProtocolSearch}
+        onAddProtocol={handleAddProtocol}
+        isAddingProtocol={false}
+        disabled={disabled}
+      />
+    </SettingsCard>
   );
 }

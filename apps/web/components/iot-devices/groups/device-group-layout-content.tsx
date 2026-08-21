@@ -36,7 +36,7 @@ export function DeviceGroupLayoutContent({
         </Link>
 
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold text-[#011111]">{group.name}</h1>
+          <h1 className="text-foreground text-2xl font-semibold">{group.name}</h1>
           {group.description !== null && (
             <p className="text-muted-foreground text-sm">{group.description}</p>
           )}

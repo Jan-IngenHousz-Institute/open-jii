@@ -93,6 +93,6 @@ describe("DeleteAllOptionsDialog", () => {
     );
 
     const deleteButton = screen.getByText("questionCard.deleteAll.confirm");
-    expect(deleteButton).toHaveClass("bg-red-600");
+    expect(deleteButton).toHaveClass("bg-destructive");
   });
 });

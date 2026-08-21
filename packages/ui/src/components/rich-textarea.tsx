@@ -210,7 +210,7 @@ export function RichTextarea({
             border: none;
           }
           .ql-toolbar {
-            border-bottom: 1px solid #ccc;
+            border-bottom: 1px solid var(--border);
             border-top: none;
             border-left: none;
             border-right: none;
@@ -225,20 +225,20 @@ export function RichTextarea({
             border: none;
           }
           .ql-editor blockquote {
-            border-left: 4px solid #ccc;
+            border-left: 4px solid var(--border);
             margin-bottom: 5px;
             margin-top: 5px;
             padding-left: 16px;
             font-style: italic;
           }
           .ql-editor code {
-            background-color: #f4f4f4;
+            background-color: var(--muted);
             padding: 2px 4px;
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
           }
           .ql-editor pre {
-            background-color: #f4f4f4;
+            background-color: var(--muted);
             padding: 10px;
             border-radius: 5px;
             overflow-x: auto;

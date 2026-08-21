@@ -91,25 +91,25 @@ export const contentfulBaseRichTextOptions = ({
 
     // Blockquote
     [BLOCKS.QUOTE]: (node: Node, children: React.ReactNode) => (
-      <blockquote className="my-8 border-l-4 border-gray-300/70 pl-6">{children}</blockquote>
+      <blockquote className="border-border/70 my-8 border-l-4 pl-6">{children}</blockquote>
     ),
 
     // Tables
     [BLOCKS.TABLE]: (node: Node, children: React.ReactNode) => (
       <div className="-mx-4 my-6 min-w-full overflow-x-auto sm:-mx-0">
-        <table className="w-full table-fixed border-collapse border border-gray-300">
+        <table className="border-border w-full table-fixed border-collapse border">
           <tbody>{children}</tbody>
         </table>
       </div>
     ),
     [BLOCKS.TABLE_ROW]: (node: Node, children: React.ReactNode) => <tr>{children}</tr>,
     [BLOCKS.TABLE_HEADER_CELL]: (node: Node, children: React.ReactNode) => (
-      <th className="border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold">
+      <th className="border-border bg-muted border px-4 py-2 text-left font-semibold">
         {children}
       </th>
     ),
     [BLOCKS.TABLE_CELL]: (node: Node, children: React.ReactNode) => (
-      <td className="border border-gray-300 px-4 py-2">{children}</td>
+      <td className="border-border border px-4 py-2">{children}</td>
     ),
 
     // Inline hyperlinks
@@ -156,7 +156,7 @@ export const CtfRichText = ({
   });
 
   return (
-    <div className="w-full break-words leading-relaxed text-gray-900">
+    <div className="text-foreground w-full break-words leading-relaxed">
       {documentToReactComponents(json, baseOptions)}
     </div>
   );

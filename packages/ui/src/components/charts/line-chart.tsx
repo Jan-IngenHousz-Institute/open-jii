@@ -82,7 +82,7 @@ export function LineChart({
       mode: series.mode || "lines",
 
       line: {
-        color: series.line?.color || series.color || "#1f77b4",
+        color: series.line?.color || series.color || undefined,
         width: series.line?.width || 2,
         dash: series.line?.dash || "solid",
         shape: series.line?.shape || "linear",
