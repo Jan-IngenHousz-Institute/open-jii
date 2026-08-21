@@ -245,7 +245,9 @@ describe("device titles", () => {
       deviceType: "unknown",
     });
     const titles = await Promise.all(
-      (["collaborators", "credentials", "lineage", "monitoring", "onboarding"] as const).map(
+      (
+        ["collaborators", "credentials", "firmware", "lineage", "monitoring", "onboarding"] as const
+      ).map(
         async (section) =>
           (await buildDeviceMetadata({ locale: EN, deviceId: "dev-1", section })).title,
       ),
@@ -254,6 +256,7 @@ describe("device titles", () => {
     expect(titles).toEqual([
       "Collaborators · Greenhouse Sensor",
       "Credentials · Greenhouse Sensor",
+      "Firmware · Greenhouse Sensor",
       "Lineage · Greenhouse Sensor",
       "Monitoring · Greenhouse Sensor",
       "Onboarding · Greenhouse Sensor",

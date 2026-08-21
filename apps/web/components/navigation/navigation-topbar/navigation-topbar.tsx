@@ -5,11 +5,11 @@ import { mainNavigation, userNavigation, iconMap } from "@/components/navigation
 import { NavigationMobileNavItem } from "@/components/navigation/navigation-mobile-nav-item/navigation-mobile-nav-item";
 import { ActivityPopover } from "@/components/navigation/navigation-topbar/activity-popover";
 import { WhatsNewFooterItem } from "@/components/whats-new/whats-new-footer-item";
+import { useFeatureFlagEnabled } from "@/hooks/useFeatureFlag";
 import { Menu, Search, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 
