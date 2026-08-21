@@ -23,6 +23,10 @@ export interface BuildUploadPayloadArgs {
   workbookRunId: string;
   /** Immutable workbook version that owns the macro snapshot. */
   workbookVersionId?: string;
+  /** The workbook that version belongs to, so a stored measurement's macro can
+   * be re-run against the producing workbook even after the experiment is
+   * detached or re-attached elsewhere. */
+  workbookId?: string;
   /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
   macroContext?: Record<string, unknown>;
   fallbackDeviceId?: string;
@@ -43,6 +47,7 @@ export function buildUploadPayload({
   commentText,
   workbookRunId,
   workbookVersionId,
+  workbookId,
   macroContext,
   fallbackDeviceId,
   location,
@@ -78,6 +83,7 @@ export function buildUploadPayload({
       : {}),
     workbook_run_id: workbookRunId,
     ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
+    ...(workbookId ? { workbook_id: workbookId } : {}),
     ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
   };

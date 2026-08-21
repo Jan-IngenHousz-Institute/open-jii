@@ -57,6 +57,8 @@ interface SharedUploadArgs {
   questions: AnswerData[];
   commentText?: string;
   workbookVersionId?: string;
+  /** The workbook that version belongs to; stored so re-runs survive re-linking. */
+  workbookId?: string;
   /** Stable UUID for the complete workbook attempt, across sequential nodes. */
   workbookRunId: string;
 }
@@ -82,6 +84,7 @@ export function useMeasurementUpload() {
       questions,
       commentText,
       workbookVersionId,
+      workbookId,
       workbookRunId,
     }: SharedUploadArgs & {
       results: {
@@ -133,6 +136,7 @@ export function useMeasurementUpload() {
           commentText,
           workbookRunId,
           workbookVersionId,
+          workbookId,
           macroContext,
           fallbackDeviceId: device?.id,
           location,

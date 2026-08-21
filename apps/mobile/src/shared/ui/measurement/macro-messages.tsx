@@ -3,12 +3,7 @@ import { AlertCircle, Info, AlertTriangle } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
 import { useTranslation } from "~/shared/i18n";
-
-export interface MacroMessageGroup {
-  info?: string[];
-  warning?: string[];
-  danger?: string[];
-}
+import type { MacroMessageGroup } from "~/shared/measurements/macro-output";
 
 interface MacroMessagesProps {
   messages: MacroMessageGroup[];

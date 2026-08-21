@@ -60,6 +60,16 @@
     "questionsHeading": "Vragen & Antwoorden",
     "noQuestionsAnswered": "Geen vragen beantwoord voor deze meting"
   },
+  "macroPreview": {
+    "heading": "Macroresultaat",
+    "no-workbook-version": "Deze meting is opgeslagen voordat macroversies werden vastgelegd, dus de macro kan niet opnieuw worden uitgevoerd.",
+    "unknown-experiment": "Deze meting is niet aan een experiment gekoppeld, dus de macro kan niet opnieuw worden uitgevoerd.",
+    "decode-failed": "De opgeslagen gegevens van deze meting konden niet worden gelezen, dus de macro kan niet opnieuw worden uitgevoerd.",
+    "experiment-unavailable": "Het experiment waarbij deze meting hoort, is niet meer beschikbaar op dit apparaat, dus de macro kan niet opnieuw worden uitgevoerd.",
+    "version-unavailable": "De workbookversie die deze meting heeft gemaakt, is niet gevonden, dus de macro kan niet opnieuw worden uitgevoerd.",
+    "macro-not-found": "De macro die deze meting heeft gemaakt, hoort niet meer bij deze workbookversie.",
+    "offline": "Kon de macro niet laden. Maak verbinding met internet en open deze meting opnieuw."
+  },
   "alerts": {
     "uploadMeasurementTitle": "Meting uploaden",
     "uploadMeasurementMessage": "Weet je zeker dat je \"{{name}}\" wilt uploaden?",
