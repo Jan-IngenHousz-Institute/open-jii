@@ -4,7 +4,7 @@ import { FirmwareDeliveryGuide } from "@/components/iot-devices/firmware/firmwar
 import { FirmwareReleaseList } from "@/components/iot-devices/firmware/firmware-release-list";
 import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
-import { useDeviceMonitoring } from "@/hooks/iot/useDeviceMonitoring/useDeviceMonitoring";
+import { useDeviceFirmwareHistory } from "@/hooks/iot/useDeviceFirmwareHistory/useDeviceFirmwareHistory";
 import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
 import { useIotFirmwareReleases } from "@/hooks/iot/useIotFirmwareReleases/useIotFirmwareReleases";
 import { useLocale } from "@/hooks/useLocale";
@@ -13,7 +13,7 @@ import { AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
-import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
+import type { DeviceFirmwareHistory } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -23,12 +23,12 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 const FIRMWARE_LOOKBACK = "last30d" as const;
 
 /** Latest reported version in the window; null when the device never said. */
-function reportedVersion(monitoring: DeviceMonitoring | undefined): string | null {
-  if (monitoring === undefined) {
+function reportedVersion(history: DeviceFirmwareHistory | undefined): string | null {
+  if (history === undefined) {
     return null;
   }
   let current: { version: string; lastSeen: string } | null = null;
-  for (const entry of monitoring.firmwareHistory) {
+  for (const entry of history.versions) {
     if (entry.version === null) {
       continue;
     }
@@ -53,7 +53,7 @@ export default function DeviceFirmwarePage() {
 
   const { data: device } = useIotDevice(deviceId);
   const range = useMemo(() => resolveMonitoringPreset(FIRMWARE_LOOKBACK), []);
-  const { data: monitoring } = useDeviceMonitoring(deviceId, range);
+  const { data: firmwareHistory } = useDeviceFirmwareHistory(deviceId, range);
 
   const family = device?.deviceType;
   const isManaged = family !== undefined && hasManagedFirmware(family);
@@ -76,7 +76,7 @@ export default function DeviceFirmwarePage() {
     return null;
   }
 
-  const installed = reportedVersion(monitoring);
+  const installed = reportedVersion(firmwareHistory);
   const latest = (releases?.releases ?? []).find((release) => release.latest) ?? null;
 
   // Sequential guards rather than precomputed flags: each arm narrows the two

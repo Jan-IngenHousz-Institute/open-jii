@@ -32,7 +32,7 @@ describe("DeviceFirmwarePage", () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({ id: DEVICE_ID, deviceType: "ambyte" }),
     });
-    server.mount(contract.iot.getDeviceMonitoring, { status: 500 });
+    server.mount(contract.iot.getDeviceFirmwareHistory, { status: 500 });
     server.mount(contract.iot.listIotFirmwareReleases, { body: { releases: [] } });
 
     render(<DeviceFirmwarePage />);

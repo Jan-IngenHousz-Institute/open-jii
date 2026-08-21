@@ -2012,6 +2012,20 @@ module "backend_ecs" {
       value = module.iot_core.jobs_policy_name
     },
     {
+      # Placeholders until the firmware repositories are confirmed; the Firmware
+      # tab reports "no repository configured" for any family left unset.
+      name  = "FIRMWARE_REPO_AMBYTE"
+      value = "Jan-IngenHousz-Institute/ambyte-iot"
+    },
+    {
+      name  = "FIRMWARE_REPO_AMBIT"
+      value = "Jan-IngenHousz-Institute/ambit"
+    },
+    {
+      name  = "FIRMWARE_REPO_MINIPAR"
+      value = ""
+    },
+    {
       name  = "AWS_IOT_DEVICE_THING_TYPE_NAME"
       value = module.iot_core.device_thing_type_name
     },
