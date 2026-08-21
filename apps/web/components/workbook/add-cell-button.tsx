@@ -44,12 +44,12 @@ const cellOptions: {
   icon: typeof FileText;
   color: string;
 }[] = [
-  { type: "markdown", label: "Markdown", icon: FileText, color: "#6F8596" },
-  { type: "protocol", label: "Protocol", icon: Microscope, color: "#2D3142" },
-  { type: "macro", label: "Macro", icon: Code, color: "#6C5CE7" },
-  { type: "command", label: "Command", icon: Terminal, color: "#119DA4" },
-  { type: "question", label: "Question", icon: HelpCircle, color: "#C58AAE" },
-  { type: "branch", label: "Branch", icon: GitBranch, color: "#F29D38" },
+  { type: "markdown", label: "Markdown", icon: FileText, color: "var(--node-instruction)" },
+  { type: "protocol", label: "Protocol", icon: Microscope, color: "var(--node-measurement)" },
+  { type: "macro", label: "Macro", icon: Code, color: "var(--node-analysis)" },
+  { type: "command", label: "Command", icon: Terminal, color: "var(--node-command)" },
+  { type: "question", label: "Question", icon: HelpCircle, color: "var(--node-question)" },
+  { type: "branch", label: "Branch", icon: GitBranch, color: "var(--node-branch)" },
 ];
 
 export function AddCellButton({

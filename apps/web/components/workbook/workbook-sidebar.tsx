@@ -39,13 +39,13 @@ import { cn } from "@repo/ui/lib/utils";
 
 /** Accent color per cell type, matching the cell components. */
 const cellColors: Record<string, string> = {
-  question: "#C58AAE",
-  protocol: "#2D3142",
-  command: "#119DA4",
-  macro: "#6C5CE7",
-  branch: "#F29D38",
-  markdown: "#6F8596",
-  output: "#94A3B8",
+  question: "var(--node-question)",
+  protocol: "var(--node-measurement)",
+  command: "var(--node-command)",
+  macro: "var(--node-analysis)",
+  branch: "var(--node-branch)",
+  markdown: "var(--node-instruction)",
+  output: "var(--muted-foreground)",
 };
 
 /** Active/selected background per cell type (light tint of accent). */
@@ -138,7 +138,7 @@ function SidebarRow({
     disabled: !draggable,
   });
 
-  const color = cellColors[cell.type] ?? "#94A3B8";
+  const color = cellColors[cell.type] ?? "var(--muted-foreground)";
   const isRequiredQuestion = cell.type === "question" && cell.question.required === true;
   const Icon = cellIcons[cell.type];
   // Show the question's label (its data column name) rather than repeating the
@@ -189,21 +189,21 @@ function SidebarRow({
                 "truncate text-[13px] leading-[18px] tracking-[0.02em]",
                 isActive ? "font-semibold" : "font-medium",
               )}
-              style={{ color: isActive ? color : "#011111" }}
+              style={{ color: isActive ? color : "var(--foreground)" }}
             >
               {primaryText}
             </span>
             {isRequiredQuestion && (
               <Asterisk
                 className="size-3 shrink-0"
-                style={{ color: "#005E5E" }}
+                style={{ color: "var(--primary)" }}
                 aria-label={requiredLabel}
               />
             )}
           </span>
           <span
             className="truncate text-[13px] font-normal leading-[21px]"
-            style={{ color: "#68737B" }}
+            style={{ color: "var(--muted-foreground)" }}
           >
             {getCellSubtitle(cell)}
           </span>
@@ -213,7 +213,7 @@ function SidebarRow({
       {/* Drag handle (visual indicator only; the whole card drags) */}
       {draggable && (
         <div className="shrink-0">
-          <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
+          <GripVertical className="h-4 w-4" style={{ color: "var(--primary)" }} />
         </div>
       )}
     </Button>

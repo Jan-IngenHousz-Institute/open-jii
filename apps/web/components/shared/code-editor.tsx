@@ -10,9 +10,11 @@ import { r } from "@codemirror/legacy-modes/mode/r";
 import { forceLinting, lintGutter, linter } from "@codemirror/lint";
 import type { Diagnostic } from "@codemirror/lint";
 import type { Extension } from "@codemirror/state";
+import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { useCallback, useMemo } from "react";
+import { useIsDarkTheme } from "~/hooks/useIsDarkTheme";
 
 export type CodeLanguage = "json" | "javascript" | "python" | "r" | "markdown" | "yaml" | "text";
 export type { Diagnostic };
@@ -83,6 +85,35 @@ const baseTheme = EditorView.theme({
   },
   ".cm-diagnostic-warning": {
     borderLeft: "3px solid #d97706",
+  },
+});
+
+/**
+ * Applied last, after any dark token theme, so the editor's chrome comes from
+ * the contract rather than from CodeMirror's built-in palette. The background
+ * is transparent on purpose: the surrounding panel already paints `bg-card`, so
+ * the editor inherits it and follows a theme swap without knowing anything.
+ *
+ * Syntax token colours are the one thing left to the library — `oneDark` below
+ * in dark mode, CodeMirror's default in light. They are a code palette rather
+ * than a brand one, and defining our own would need `@lezer/highlight`, which
+ * is not a direct dependency here.
+ */
+const surfaceTheme = EditorView.theme({
+  "&": { backgroundColor: "transparent", color: "var(--foreground)" },
+  ".cm-content": { caretColor: "var(--foreground)" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--foreground)" },
+  ".cm-gutters": { backgroundColor: "transparent", color: "var(--muted-foreground)" },
+  ".cm-activeLine": { backgroundColor: "var(--muted)" },
+  ".cm-activeLineGutter": { backgroundColor: "transparent", color: "var(--foreground)" },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+    backgroundColor: "var(--accent)",
+  },
+  ".cm-panels": { backgroundColor: "var(--popover)", color: "var(--popover-foreground)" },
+  ".cm-tooltip": {
+    backgroundColor: "var(--popover)",
+    color: "var(--popover-foreground)",
+    borderColor: "var(--border)",
   },
 });
 
@@ -166,6 +197,8 @@ export function CodeEditor({
   onCreateEditor,
   basicSetup: basicSetupOverrides,
 }: CodeEditorProps) {
+  const isDark = useIsDarkTheme();
+
   const handleChange = useCallback(
     (val: string) => {
       onChange?.(val);
@@ -191,8 +224,15 @@ export function CodeEditor({
       exts.push(...extraExtensions);
     }
 
+    // Order matters: the dark token palette first, then our surface, so the
+    // editor's background and gutters stay on the contract either way.
+    if (isDark) {
+      exts.push(oneDark);
+    }
+    exts.push(surfaceTheme);
+
     return exts;
-  }, [language, lintSource, syntaxLinting, lintDelay, extraExtensions]);
+  }, [language, lintSource, syntaxLinting, lintDelay, extraExtensions, isDark]);
 
   const hasLinting = !!(lintSource ?? syntaxLinting);
 
@@ -211,6 +251,11 @@ export function CodeEditor({
 
   return (
     <CodeMirror
+      // `theme="none"`: the default is `"light"`, which injects a hard white
+      // `.cm-editor` background that survived every override we layered on top.
+      // With no theme of its own, the surface comes from `surfaceTheme` and the
+      // token palette from `oneDark`/the default highlight style.
+      theme="none"
       value={value}
       onChange={handleChange}
       onCreateEditor={handleCreateEditor}

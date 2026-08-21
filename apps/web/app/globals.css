@@ -22,8 +22,15 @@
   --accent-foreground: oklch(0.2719 0.0191 190.5697);
   --destructive: oklch(0.6032 0.163 16.5549);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9139 0.0094 106.5838);
-  --input: oklch(1 0 0);
+  /* The export shipped `--input: oklch(1 0 0)` — pure white, which is the
+     border colour `border-input` paints on a white card, i.e. no border at all.
+     Both values are taken down Bamboo's own warm-neutral hue so a field reads as
+     a field now that nothing casts a shadow (Vlad, visual pass). `--input` sits
+     darker than `--border`: a form control should announce itself more than a
+     card edge. Note `--input` is also the Switch's off-track fill and the
+     `bg-input/30` wash on dark-mode fields, so it cannot go arbitrarily dark. */
+  --border: oklch(0.885 0.0098 106.5838);
+  --input: oklch(0.83 0.0125 106.5838);
   --ring: oklch(0.5551 0.0516 190.6334);
   --chart-1: oklch(0.5551 0.0516 190.6334);
   --chart-2: oklch(0.7037 0.0304 168.3872);
@@ -54,11 +61,13 @@
   --shadow-offset-x: 0px;
   --shadow-offset-y: 8px;
   --letter-spacing: 0em;
-  --shadow-2xs: 0px 8px 4px 0px hsl(175.7143 20% 13.7255% / 0.03);
-  --shadow-xs: 0px 8px 4px 0px hsl(175.7143 20% 13.7255% / 0.03);
-  --shadow-sm:
-    0px 8px 4px 0px hsl(175.7143 20% 13.7255% / 0.05),
-    0px 1px 2px -1px hsl(175.7143 20% 13.7255% / 0.05);
+  /* The small end of the scale is flat on purpose (Vlad, visual pass): cards,
+     inputs and their relatives define themselves with a border, not a lift.
+     `--shadow-md` and up are untouched, so dialogs, popovers and dropdowns keep
+     their elevation and still read as floating above the page. */
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
   --shadow:
     0px 8px 4px 0px hsl(175.7143 20% 13.7255% / 0.05),
     0px 1px 2px -1px hsl(175.7143 20% 13.7255% / 0.05);
@@ -118,8 +127,11 @@
   --accent-foreground: oklch(0.9408 0.0032 197.102);
   --destructive: oklch(0.7178 0.1487 15.8971);
   --destructive-foreground: oklch(0.181 0.008 181.9193);
+  /* Same problem in dark: the export set `--input` to the card colour, so a
+     field's border vanished into the card it sat on. `--border` was already
+     legible here and is left alone. */
   --border: oklch(0.3387 0.0197 191.2008);
-  --input: oklch(0.2156 0.0092 184.3011);
+  --input: oklch(0.405 0.021 191.2008);
   --ring: oklch(0.6902 0.061 188.9839);
   --chart-1: oklch(0.6902 0.061 188.9839);
   --chart-2: oklch(0.8014 0.0405 167.7355);
@@ -149,9 +161,9 @@
   --shadow-offset-y: 8px;
   --letter-spacing: 0em;
   --spacing: 0.25rem;
-  --shadow-2xs: 0px 8px 8px 0px hsl(0 0% 0% / 0.2);
-  --shadow-xs: 0px 8px 8px 0px hsl(0 0% 0% / 0.2);
-  --shadow-sm: 0px 8px 8px 0px hsl(0 0% 0% / 0.4), 0px 1px 2px -1px hsl(0 0% 0% / 0.4);
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
   --shadow: 0px 8px 8px 0px hsl(0 0% 0% / 0.4), 0px 1px 2px -1px hsl(0 0% 0% / 0.4);
   --shadow-md: 0px 8px 8px 0px hsl(0 0% 0% / 0.4), 0px 2px 4px -1px hsl(0 0% 0% / 0.4);
   --shadow-lg: 0px 8px 8px 0px hsl(0 0% 0% / 0.4), 0px 4px 6px -1px hsl(0 0% 0% / 0.4);

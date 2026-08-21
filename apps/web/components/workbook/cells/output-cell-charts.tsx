@@ -49,7 +49,7 @@ export function Sparkline({
         <path
           d={path}
           fill="none"
-          stroke="#005E5E"
+          stroke="var(--primary)"
           strokeWidth="1"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -76,7 +76,7 @@ export function ExpandedChart({
       x: data.map((_, idx) => idx),
       y: data,
       mode: "lines",
-      line: { color: "#005E5E", width: 2 },
+      line: { color: "var(--primary)", width: 2 },
       showlegend: false,
     },
   ];

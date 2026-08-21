@@ -69,7 +69,7 @@ function UserMenu({
         <Button
           variant="ghost"
           size="sm"
-          className="group flex gap-2 hover:bg-transparent focus:bg-transparent"
+          className="group flex gap-2 hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent"
           aria-label={t("auth.userMenu", "User menu")}
         >
           {avatarUrl ? (
@@ -315,12 +315,17 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
           </div>
           <LanguageSwitcher locale={locale} />
 
-          {/* Light / dark / system. The nav forces a light text colour for the
-              hero overlay; the toggle needs the theme's own, or its icons
-              disappear into the button's background. */}
-          <div className="text-foreground">
-            <ThemeToggle />
-          </div>
+          {/* Light / dark / system, in this nav's icon-button idiom: no hover
+              fill, the icon itself shifts to the accent — the same as the user
+              menu and the mobile menu trigger.
+              The fill has to go for a reason worth recording: `--accent` (what a
+              ghost button paints on hover) and `--sidebar-primary` are the same
+              colour in light mode, so a hovered icon vanished into its own
+              background. `dark:hover:bg-transparent` is needed alongside
+              `hover:bg-transparent` because stock ghost declares the dark fill
+              as its own variant, which the unprefixed class does not override —
+              the two buttons beside this one were quietly losing the same way. */}
+          <ThemeToggle className="text-sidebar-foreground hover:text-sidebar-primary hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent" />
 
           {/* Mobile Navigation Menu */}
           <div className="md:hidden">
@@ -330,7 +335,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                   variant="ghost"
                   size="sm"
                   aria-label={t("navigation.menu", "Navigation menu")}
-                  className="group hover:bg-transparent focus:bg-transparent"
+                  className="group hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent"
                 >
                   <Menu className="group-hover:text-sidebar-primary text-sidebar-foreground h-4 w-4 transition-colors duration-200" />
                 </Button>

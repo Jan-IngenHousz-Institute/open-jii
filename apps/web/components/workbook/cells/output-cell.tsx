@@ -66,9 +66,21 @@ function getMessageType(message: string): "error" | "warning" | "info" {
 }
 
 const messageStyles = {
-  error: { icon: AlertCircle, color: "#D14343", bg: "rgba(209, 67, 67, 0.06)" },
-  warning: { icon: AlertCircle, color: "#D97706", bg: "rgba(217, 119, 6, 0.06)" },
-  info: { icon: Info, color: "#68737B", bg: "rgba(0, 94, 94, 0.04)" },
+  error: {
+    icon: AlertCircle,
+    color: "var(--destructive)",
+    bg: "color-mix(in srgb, var(--destructive) 8%, transparent)",
+  },
+  warning: {
+    icon: AlertCircle,
+    color: "var(--status-stale-foreground)",
+    bg: "color-mix(in srgb, var(--status-stale-foreground) 8%, transparent)",
+  },
+  info: {
+    icon: Info,
+    color: "var(--muted-foreground)",
+    bg: "color-mix(in srgb, var(--primary) 6%, transparent)",
+  },
 } as const;
 
 function isQuestionAnswer(data: unknown): data is { answer: string } {
@@ -244,9 +256,9 @@ function DeviceResultBlock({
       {failed ? (
         <div
           className="flex items-start gap-2 rounded-lg px-3 py-2"
-          style={{ background: "rgba(209, 67, 67, 0.06)" }}
+          style={{ background: "color-mix(in srgb, var(--destructive) 8%, transparent)" }}
         >
-          <span className="text-[13px] leading-[18px]" style={{ color: "#D14343" }}>
+          <span className="text-[13px] leading-[18px]" style={{ color: "var(--destructive)" }}>
             {result.error}
           </span>
         </div>
