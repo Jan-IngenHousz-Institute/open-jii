@@ -3,8 +3,6 @@
 # AI artifacts
 .wolf/
 .claude/rules/openwolf.md
-.claude/settings.json
-CLAUDE.md
 **/ssr
 
 # Dependencies
@@ -17,11 +15,20 @@ vrn
 
 # AI Generated Files
 .wolf/
-CLAUDE.md
-# `next dev` regenerates both of these on every run; only CLAUDE.md was listed,
-# so AGENTS.md kept turning up as untracked and getting committed by accident.
-AGENTS.md
-.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/openjii-docs-update
+!.claude/skills/openjii-local-stack
+!.claude/skills/openjii-mobile-control
+!.claude/skills/openjii-mobile-device
+!.claude/skills/unslop
+!.claude/hooks/
+.claude/hooks/*
+!.claude/hooks/docs-reminder.sh
+!.claude/hooks/protect-main.sh
+!.claude/settings.json
+.claude/settings.local.json
 
 # Local env files
 .env
