@@ -208,6 +208,16 @@ module "iot_core" {
   firmware_bucket_arn = module.firmware_s3.bucket_arn
 }
 
+module "firmware_rollout_role" {
+  source = "../../modules/iam-firmware-rollout"
+
+  aws_region          = var.aws_region
+  environment         = var.environment
+  oidc_provider_arn   = module.iam_oidc.oidc_provider_arn
+  firmware_bucket_arn = module.firmware_s3.bucket_arn
+  presign_role_arn    = module.iot_core.jobs_presign_role_arn
+}
+
 module "cognito" {
   source                           = "../../modules/cognito"
   region                           = var.aws_region
