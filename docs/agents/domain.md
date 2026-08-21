@@ -19,7 +19,7 @@ suggest creating them upfront. The `/domain-modeling` skill, reached through `/g
 
 ## File structure
 
-```
+```text
 /
 ├── AGENTS.md                  ← the router; read it first
 ├── CONTEXT.md                 ← the glossary
