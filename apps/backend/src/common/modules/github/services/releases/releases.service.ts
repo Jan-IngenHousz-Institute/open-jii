@@ -81,14 +81,16 @@ export class GithubReleasesService {
    */
   private toReleases(payload: GithubReleasePayload[]): FirmwareRelease[] {
     const published = payload.flatMap((release) =>
-      release.draft || release.published_at === null ? [] : [release],
+      release.draft || release.published_at === null
+        ? []
+        : [{ ...release, publishedAt: release.published_at }],
     );
     const latestStable = published.find((release) => !release.prerelease);
 
     return published.map((release) => ({
       version: release.tag_name,
       name: release.name,
-      publishedAt: new Date(release.published_at ?? "").toISOString(),
+      publishedAt: new Date(release.publishedAt).toISOString(),
       prerelease: release.prerelease,
       latest: release === latestStable,
       notes: release.body,

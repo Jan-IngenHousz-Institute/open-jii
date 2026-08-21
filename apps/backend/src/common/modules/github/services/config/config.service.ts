@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 
 import type { FirmwareFamily } from "@repo/api/domains/iot/firmware/iot-firmware.schema";
 
-import { GithubConfig, githubConfigSchema } from "./config.types";
+import { FirmwareRepositories, GithubConfig, githubConfigSchema } from "./config.types";
 
 @Injectable()
 export class GithubConfigService {
@@ -15,10 +15,22 @@ export class GithubConfigService {
       token: this.configService.get<string>("github.token") ?? "",
       firmwareRepositories: this.readRepositories(),
     };
-    githubConfigSchema.parse(this.config);
+
+    try {
+      githubConfigSchema.parse(this.config);
+    } catch (error) {
+      this.logger.error({
+        msg: "Invalid GitHub configuration",
+        operation: "validateConfig",
+        error,
+      });
+      throw new Error(
+        `GitHub configuration validation failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
-  private readRepositories(): Record<string, string> {
+  private readRepositories(): FirmwareRepositories {
     const configured =
       this.configService.get<Record<string, string | undefined>>("github.firmwareRepositories") ??
       {};

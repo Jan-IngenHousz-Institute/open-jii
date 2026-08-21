@@ -1,10 +1,13 @@
 import { z } from "zod";
 
+import type { FirmwareFamily } from "@repo/api/domains/iot/firmware/iot-firmware.schema";
 import { zFirmwareFamily } from "@repo/api/domains/iot/firmware/iot-firmware.schema";
+
+export type FirmwareRepositories = Partial<Record<FirmwareFamily, string>>;
 
 export interface GithubConfig {
   token: string;
-  firmwareRepositories: Record<string, string>;
+  firmwareRepositories: FirmwareRepositories;
 }
 
 const zRepository = z

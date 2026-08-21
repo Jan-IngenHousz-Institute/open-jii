@@ -55,7 +55,7 @@ function mountAll(
             ],
     },
   });
-  server.mount(contract.iot.listIotFirmwareReleases, {
+  return server.mount(contract.iot.listIotFirmwareReleases, {
     body: { releases: options.releases ?? [release()] },
   });
 }
@@ -120,7 +120,7 @@ describe("DeviceFirmwareContent", () => {
   });
 
   it("sends a family with no JII firmware line back to the device", async () => {
-    mountAll({ deviceType: "mobile" });
+    const releases = mountAll({ deviceType: "mobile" });
 
     const { container, router } = render(<DeviceFirmwareContent />);
 
@@ -128,5 +128,7 @@ describe("DeviceFirmwareContent", () => {
       expect(router.replace).toHaveBeenCalledWith(`/en-US/platform/devices/${DEVICE_ID}`);
     });
     expect(container).toBeEmptyDOMElement();
+    // No point asking for releases of a family this device cannot run.
+    expect(releases.called).toBe(false);
   });
 });

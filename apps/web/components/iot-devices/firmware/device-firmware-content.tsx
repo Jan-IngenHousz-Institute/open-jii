@@ -57,11 +57,15 @@ export default function DeviceFirmwarePage() {
 
   const family = device?.deviceType;
   const isManaged = family !== undefined && hasManagedFirmware(family);
+
+  // Only a placeholder to keep the input typed: the query is held until the
+  // device reports a family JII publishes for.
+  const releasesFamily = isManaged ? family : "ambyte";
   const {
     data: releases,
     isLoading,
     isError,
-  } = useIotFirmwareReleases(isManaged ? family : "ambyte");
+  } = useIotFirmwareReleases(releasesFamily, { enabled: isManaged });
 
   // Families without a JII firmware line have no tab; a direct visit leaves.
   const detailPath = `/${locale}/platform/devices/${deviceId}`;
