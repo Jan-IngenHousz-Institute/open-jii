@@ -5,7 +5,7 @@
 Adapted from the `git-guardrails-claude-code` skill in
 [mattpocock/skills](https://github.com/mattpocock/skills) and used under the MIT licence.
 
-```
+```text
 MIT License
 
 Copyright (c) 2026 Matt Pocock
@@ -37,7 +37,7 @@ licence. The upstream repository carries no root licence; `pstack/LICENSE` is th
 Re-vendor by copying the upstream file over ours rather than hand-patching, so the diff against
 upstream stays readable.
 
-```
+```text
 MIT License
 
 Copyright (c) 2026 Lauren Tan

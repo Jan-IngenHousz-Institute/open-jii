@@ -15,8 +15,9 @@ values differ per machine.
 - **JDK 17.** A newer JDK breaks the Android build in a way that hides itself: New-Architecture C++
   modules fail during their CMake configure step with only a vague warning about restricted methods,
   and no CMake error. If you see that, check `java -version` before anything else.
-- **After switching JDKs, kill the Gradle daemon** (`pkill -f GradleDaemon`). A stale daemon started
-  under the wrong JDK gets reused and reproduces the failure.
+- **After switching JDKs, stop the app's Gradle daemons**
+  (`cd apps/mobile/android && ./gradlew --stop`). A stale daemon started under the wrong JDK gets
+  reused and reproduces the failure.
 - **`apps/mobile/android/local.properties` must contain `sdk.dir=<your Android SDK path>`.** It is
   gitignored, and `pnpm clean:workspaces` deletes it — after any clean, recreate it or the build
   fails with "SDK location not found".
@@ -58,8 +59,9 @@ pnpm exec expo run:android      # debug build, installs, starts Metro
 Useful variations:
 
 - `pnpm --filter mobile build:debug` / `build:release` — Gradle directly, skipping lint and tests.
-- The release variant is signed with the debug keystore, so it runs **without Metro** — the right
-  choice for testing offline behaviour or handing a build to someone.
+- A local `build:release` embeds the JavaScript bundle and runs without Metro, but the repository
+  signs it with the debug keystore. Use it only for local testing. For handoff, use an EAS build or
+  configure an explicit release keystore. Prefer a release-signed EAS or Play artifact.
 - Release builds every ABI by default. Pass your device's ABI via
   `ORG_GRADLE_PROJECT_reactNativeArchitectures=<abi>` for a much faster build.
 - **JS-only changes need no rebuild.** Point Metro at the branch and reload the dev client.

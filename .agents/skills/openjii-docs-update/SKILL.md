@@ -50,9 +50,9 @@ Getting a device attached is the `openjii-mobile-device` skill; driving it to th
 
 ### Web
 
-Bring the stack up (`pnpm db:setup`, `pnpm --filter database db:seed`, `pnpm dev:fb`), obtain a
-development session with `pnpm local:login`, and capture the real authenticated UI rather than a
-login wall.
+After the user authorizes resetting local data, bring the stack up (`pnpm db:setup`,
+`pnpm --filter database db:seed`, `pnpm dev:fb`), obtain a development session with
+`pnpm local:login`, and capture the real authenticated UI rather than a login wall.
 
 Same privacy rules apply: seeded data only, no real user content.
 

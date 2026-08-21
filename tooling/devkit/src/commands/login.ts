@@ -5,9 +5,12 @@ interface LoginDependencies {
   root: string;
   env: NodeJS.ProcessEnv;
   request: typeof fetch;
+  requestTimeoutMs: number;
   readOtp: typeof readLatestSignInOtp;
   write: (text: string) => void;
 }
+
+const requestTimeoutMs = 10_000;
 
 function responseCookies(response: Response): string[] {
   return response.headers.getSetCookie();
@@ -26,16 +29,33 @@ async function postJson(
   url: string,
   body: Record<string, string>,
   jar: Map<string, string>,
+  timeoutMs: number,
 ): Promise<Response> {
   const cookie = [...jar].map(([key, value]) => `${key}=${value}`).join("; ");
-  const response = await request(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) },
-    body: JSON.stringify(body),
-  });
-  storeCookies(jar, response);
-  if (!response.ok) throw new Error(`${url} returned ${response.status}: ${await response.text()}`);
-  return response;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await request(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    storeCookies(jar, response);
+    if (!response.ok) {
+      throw new Error(`${url} returned ${response.status}: ${await response.text()}`);
+    }
+    return response;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`Authentication request timed out after ${timeoutMs} ms: ${url}`, {
+        cause: error,
+      });
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function loginLocal(
@@ -46,6 +66,7 @@ export async function loginLocal(
     root: repositoryRoot(),
     env: process.env,
     request: fetch,
+    requestTimeoutMs,
     readOtp: readLatestSignInOtp,
     write: (text) => process.stdout.write(text),
     ...dependencies,
@@ -61,9 +82,16 @@ export async function loginLocal(
     `${authUrl}/email-otp/send-verification-otp`,
     { email, type: "sign-in" },
     jar,
+    deps.requestTimeoutMs,
   );
   const otp = await deps.readOtp(databaseUrl, email);
-  await postJson(deps.request, `${authUrl}/sign-in/email-otp`, { email, otp }, jar);
+  await postJson(
+    deps.request,
+    `${authUrl}/sign-in/email-otp`,
+    { email, otp },
+    jar,
+    deps.requestTimeoutMs,
+  );
   const session = [...jar].find(([key]) => key.endsWith("session_token"));
   if (!session) throw new Error("Sign-in succeeded without returning a session cookie");
   const cookie = `${session[0]}=${session[1]}`;
