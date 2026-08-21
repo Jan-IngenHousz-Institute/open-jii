@@ -24,7 +24,10 @@ interface FirmwareReleaseListProps {
 }
 
 function formatBytes(sizeBytes: number): string {
-  return `${String(Math.max(1, Math.round(sizeBytes / 1024)))} KB`;
+  if (sizeBytes < 1024) {
+    return `${String(sizeBytes)} B`;
+  }
+  return `${String(Math.round(sizeBytes / 1024))} KB`;
 }
 
 export function FirmwareReleaseList({ releases, installedVersion }: FirmwareReleaseListProps) {

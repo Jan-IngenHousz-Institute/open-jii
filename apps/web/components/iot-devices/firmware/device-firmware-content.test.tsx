@@ -40,7 +40,7 @@ function mountAll(
   server.mount(contract.iot.getIotDevice, {
     body: createIotDeviceDetail({ id: DEVICE_ID, deviceType: options.deviceType ?? "ambyte" }),
   });
-  server.mount(contract.iot.getDeviceFirmwareHistory, {
+  const history = server.mount(contract.iot.getDeviceFirmwareHistory, {
     body: {
       versions:
         options.reportedVersion === undefined || options.reportedVersion === null
@@ -55,9 +55,11 @@ function mountAll(
             ],
     },
   });
-  return server.mount(contract.iot.listIotFirmwareReleases, {
+  const releases = server.mount(contract.iot.listIotFirmwareReleases, {
     body: { releases: options.releases ?? [release()] },
   });
+
+  return { releases, history };
 }
 
 beforeEach(() => {
@@ -120,7 +122,7 @@ describe("DeviceFirmwareContent", () => {
   });
 
   it("sends a family with no JII firmware line back to the device", async () => {
-    const releases = mountAll({ deviceType: "mobile" });
+    const { releases, history } = mountAll({ deviceType: "mobile" });
 
     const { container, router } = render(<DeviceFirmwareContent />);
 
@@ -128,7 +130,9 @@ describe("DeviceFirmwareContent", () => {
       expect(router.replace).toHaveBeenCalledWith(`/en-US/platform/devices/${DEVICE_ID}`);
     });
     expect(container).toBeEmptyDOMElement();
-    // No point asking for releases of a family this device cannot run.
+    // Neither the release read nor the warehouse scan is worth paying for a
+    // family this device cannot run.
     expect(releases.called).toBe(false);
+    expect(history.called).toBe(false);
   });
 });
