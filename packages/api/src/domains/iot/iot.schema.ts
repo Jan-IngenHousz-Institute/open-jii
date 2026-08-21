@@ -369,6 +369,10 @@ export const zDeviceMeasurement = z.object({
 });
 
 // The monitoring dashboard's one-range response; queries run in parallel server-side.
+export const zDeviceFirmwareHistory = z.object({
+  versions: z.array(zDeviceFirmwareVersion),
+});
+
 export const zDeviceMonitoring = z.object({
   bucket: zMonitoringBucket,
   events: z.array(zDeviceLifecycleEvent),
@@ -405,6 +409,7 @@ export type DeviceThroughputBucket = z.infer<typeof zDeviceThroughputBucket>;
 export type DeviceBatteryPoint = z.infer<typeof zDeviceBatteryPoint>;
 export type DevicePayloadStats = z.infer<typeof zDevicePayloadStats>;
 export type DeviceFirmwareVersion = z.infer<typeof zDeviceFirmwareVersion>;
+export type DeviceFirmwareHistory = z.infer<typeof zDeviceFirmwareHistory>;
 export type DeviceMeasurement = z.infer<typeof zDeviceMeasurement>;
 export type DeviceMonitoring = z.infer<typeof zDeviceMonitoring>;
 export type IotDeviceWithConnectivity = z.infer<typeof zIotDeviceWithConnectivity>;

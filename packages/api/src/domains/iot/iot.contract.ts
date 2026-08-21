@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   zDeviceExperimentList,
+  zDeviceFirmwareHistory,
   zDeviceMonitoring,
   zDeviceOnboardingConfig,
   zDeviceRegistryWebhookPayload,
@@ -72,6 +73,14 @@ export const iotContract = {
   // Monitoring dashboard data (warehouse-backed, range-scoped): one call per
   // range change. Unlike the tile endpoints this fails loudly; the dashboard
   // owns the error state.
+  getDeviceFirmwareHistory: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/devices/{deviceId}/firmware-history",
+      successStatus: 200,
+    })
+    .input(zMonitoringRangeQuery)
+    .output(zDeviceFirmwareHistory),
   getDeviceMonitoring: oc
     .route({
       method: "GET",

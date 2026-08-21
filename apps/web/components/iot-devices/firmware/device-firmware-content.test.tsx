@@ -5,33 +5,10 @@ import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 
 import DeviceFirmwareContent from "./device-firmware-content";
 
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
-
-const EMPTY_MONITORING: DeviceMonitoring = {
-  bucket: "day",
-  events: [],
-  sessions: [],
-  uptimePercent: null,
-  truncated: false,
-  throughput: [],
-  battery: [],
-  payload: {
-    totalMeasurements: 0,
-    withGps: 0,
-    withBattery: 0,
-    workbookRuns: 0,
-    firmwareMix: [],
-    protocolMix: [],
-    workbookMix: [],
-    macroMix: [],
-  },
-  firmwareHistory: [],
-  recentMeasurements: [],
-};
 
 function release(overrides: Record<string, unknown> = {}) {
   return {
@@ -63,10 +40,9 @@ function mountAll(
   server.mount(contract.iot.getIotDevice, {
     body: createIotDeviceDetail({ id: DEVICE_ID, deviceType: options.deviceType ?? "ambyte" }),
   });
-  server.mount(contract.iot.getDeviceMonitoring, {
+  server.mount(contract.iot.getDeviceFirmwareHistory, {
     body: {
-      ...EMPTY_MONITORING,
-      firmwareHistory:
+      versions:
         options.reportedVersion === undefined || options.reportedVersion === null
           ? []
           : [
