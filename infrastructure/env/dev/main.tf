@@ -186,6 +186,27 @@ module "iot_firehose" {
   }
 }
 
+module "firmware_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-firmware-${var.environment}"
+
+  # Versioned: a released artifact is immutable evidence of what a device was
+  # told to install, and AWS IoT presigns a specific object at delivery.
+  enable_versioning = true
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot-firmware"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
 module "iot_core" {
   source      = "../../modules/iot-core"
   environment = var.environment
@@ -211,6 +232,8 @@ module "iot_core" {
 
   enable_fleet_indexing            = true
   enable_databricks_lifecycle_read = true
+
+  firmware_bucket_arn = module.firmware_s3.bucket_arn
 }
 
 module "cognito" {
@@ -1972,6 +1995,10 @@ module "backend_ecs" {
     {
       name  = "AWS_IOT_POLICY_NAMES"
       value = join(",", module.iot_core.iot_policy_names)
+    },
+    {
+      name  = "AWS_IOT_JOBS_POLICY_NAME"
+      value = module.iot_core.jobs_policy_name
     },
     {
       name  = "AWS_IOT_DEVICE_THING_TYPE_NAME"

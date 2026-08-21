@@ -97,3 +97,9 @@ variable "enable_databricks_lifecycle_read" {
   type        = bool
   default     = false
 }
+
+variable "firmware_bucket_arn" {
+  description = "ARN of the firmware artifact bucket; when set, creates the IAM role AWS IoT Jobs assumes to presign firmware objects at delivery"
+  type        = string
+  default     = ""
+}

@@ -14,6 +14,7 @@ export default registerAs("aws", () => ({
   },
   iot: {
     policyNames: process.env.AWS_IOT_POLICY_NAMES,
+    jobsPolicyName: process.env.AWS_IOT_JOBS_POLICY_NAME,
     deviceThingTypeName: process.env.AWS_IOT_DEVICE_THING_TYPE_NAME,
     deviceThingGroupName: process.env.AWS_IOT_DEVICE_THING_GROUP_NAME,
   },
