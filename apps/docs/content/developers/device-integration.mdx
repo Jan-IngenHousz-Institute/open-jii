@@ -201,8 +201,50 @@ void loop() {
 }
 ```
 
+## Firmware updates
+
+Firmware for JII-managed families (ambyte, ambit, miniPAR) is delivered with
+[AWS IoT Jobs](https://docs.aws.amazon.com/iot/latest/developerguide/key-concepts-jobs.html).
+JII starts a rollout from a reviewed workflow; a device is never updated from the platform UI, and the device does not poll for releases.
+
+### What the device subscribes to
+
+The [Jobs device MQTT API](https://docs.aws.amazon.com/iot/latest/developerguide/jobs-mqtt-api.html) uses AWS's reserved topics, all scoped to the device's own thing name:
+
+| Topic                                                                      | Direction          | Purpose                                 |
+| -------------------------------------------------------------------------- | ------------------ | --------------------------------------- |
+| `$aws/things/{thingName}/jobs/notify-next`                                 | subscribe          | the next queued job execution           |
+| `$aws/things/{thingName}/jobs/$next/get` (+ `/accepted`, `/rejected`)      | publish, subscribe | ask for pending work, typically on boot |
+| `$aws/things/{thingName}/jobs/{jobId}/update` (+ `/accepted`, `/rejected`) | publish, subscribe | report progress                         |
+
+The device certificate carries a policy granting exactly these topics for its own thing, so no extra credentials are involved. A job queued while a device is offline is delivered when it next connects.
+
+### The job document
+
+```json
+{
+  "operation": "firmware-update",
+  "family": "ambyte",
+  "version": "v1.3.0",
+  "sha256": "<hex digest of the image>",
+  "url": "<short-lived presigned download URL>"
+}
+```
+
+`url` is a presigned link that AWS substitutes per device at delivery and which expires within the hour, so it must be fetched promptly and never cached.
+
+### What the device must do
+
+1. Verify `sha256` against the downloaded image before applying it; a mismatch is a `FAILED` report, not an install.
+2. Report `IN_PROGRESS` when the download starts, then `SUCCEEDED` or `FAILED` with a short `statusDetails` reason.
+3. Report `SUCCEEDED` without re-flashing when `version` already matches the running firmware.
+4. Keep a rollback path: apply into a spare slot and self-confirm after reboot, so a bad image cannot strand the device.
+
+Rollouts are paced and will stop automatically if too many devices report `FAILED`, so an honest failure report protects the rest of the fleet.
+
 ## Lifecycle notes
 
 - **Re-issue over patch**: whenever bindings or workbooks change, re-issue the file from the Onboarding tab and replace the device's stored copy wholesale.
 - **Archived experiments** disappear from re-issued files; the device stops serving them by applying the newest file.
 - **Certificate rotation** does not change the configuration file; only the key material on the device changes.
+- **Firmware updates** are independent of the configuration file: a device keeps its bindings across an update.
