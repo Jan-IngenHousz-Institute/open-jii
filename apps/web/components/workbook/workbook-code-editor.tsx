@@ -2,9 +2,8 @@
 
 import type { Diagnostic } from "@codemirror/lint";
 import type { Extension } from "@codemirror/state";
-import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { ComponentProps } from "react";
 import { CodeEditor } from "~/components/shared/code-editor";
 import type { CodeLanguage, LintSource } from "~/components/shared/code-editor";
@@ -44,30 +43,17 @@ export function WorkbookCodeEditor({
   extraExtensions: callerExtensions,
   basicSetup,
 }: WorkbookCodeEditorProps) {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    setIsDark(root.classList.contains("dark"));
-    const observer = new MutationObserver(() => {
-      setIsDark(root.classList.contains("dark"));
-    });
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
-
+  // The dark token palette and the surface tokens live in `CodeEditor`, so
+  // every editor and read-only viewer gets them, not just this one.
   const extraExtensions = useMemo(() => {
     const exts: Extension[] = [compactTheme];
-    if (isDark) exts.push(oneDark);
     if (callerExtensions) exts.push(...callerExtensions);
     return exts;
-  }, [isDark, callerExtensions]);
+  }, [callerExtensions]);
 
   return (
     <div
-      className={`rounded-md border ${
-        isDark ? "border-border bg-card" : "border-border bg-card"
-      } ${className}`}
+      className={`border-border bg-card rounded-md border ${className}`}
       style={{ minHeight, maxHeight }}
     >
       <CodeEditor

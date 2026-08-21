@@ -259,10 +259,7 @@ export function WorkbookHeader({
   const hasOutputs = cells.some((c) => c.type === "output");
 
   return (
-    <div
-      className="sticky top-16 z-30 flex items-center gap-2 border-b px-4 py-2 xl:gap-3 xl:py-3"
-      style={{ background: "#FFFFFF", borderColor: "#EDF2F6" }}
-    >
+    <div className="bg-card border-border sticky top-16 z-30 flex items-center gap-2 border-b px-4 py-2 xl:gap-3 xl:py-3">
       <div className="flex items-center gap-1.5 xl:gap-2.5">
         {onSensorFamilyChange && (
           <Select
@@ -276,10 +273,7 @@ export function WorkbookHeader({
             }}
             disabled={isConnected || isConnecting}
           >
-            <SelectTrigger
-              className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
-              style={{ borderColor: "#CDD5DB", borderRadius: 12, color: "#011111" }}
-            >
+            <SelectTrigger className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -298,10 +292,7 @@ export function WorkbookHeader({
             onValueChange={(v) => onConnectionTypeChange(v as WorkbookConnectionType)}
             disabled={isConnecting}
           >
-            <SelectTrigger
-              className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
-              style={{ borderColor: "#CDD5DB", borderRadius: 12, color: "#011111" }}
-            >
+            <SelectTrigger className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

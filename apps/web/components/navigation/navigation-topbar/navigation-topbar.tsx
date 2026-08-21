@@ -110,8 +110,8 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
             {/* Language Switcher */}
             <LanguageSwitcher locale={locale} />
 
-            {/* Light / dark / system */}
-            <ThemeToggle />
+            {/* Light / dark / system, in the bell's own treatment. */}
+            <ThemeToggle className="text-foreground/70 hover:text-foreground" />
 
             {/* User Dropdown */}
             <NavUser
