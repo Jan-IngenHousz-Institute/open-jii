@@ -174,6 +174,13 @@ components:
             description: >
               Platform id of the workbook version this measurement was
               produced under. Absent outside workbook runs.
+          workbook_id:
+            type: string
+            description: >
+              Platform id of the workbook the producing version belongs to.
+              Mobile-local replay aid (re-running the stored macro resolves
+              the producing workbook even if the experiment is re-linked);
+              the pipeline keys on workbook_version_id.
           workbook_run_id:
             type: string
             description: >

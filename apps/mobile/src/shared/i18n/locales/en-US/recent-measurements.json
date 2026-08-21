@@ -60,6 +60,16 @@
     "questionsHeading": "Questions & Answers",
     "noQuestionsAnswered": "No questions answered for this measurement"
   },
+  "macroPreview": {
+    "heading": "Macro result",
+    "no-workbook-version": "This measurement was saved before macro versions were recorded, so its macro cannot be re-run.",
+    "unknown-experiment": "This measurement is not linked to an experiment, so its macro cannot be re-run.",
+    "decode-failed": "This measurement's stored data could not be read, so its macro cannot be re-run.",
+    "experiment-unavailable": "The experiment this measurement belongs to is no longer available on this device, so its macro cannot be re-run.",
+    "version-unavailable": "The workbook version that produced this measurement could not be found, so its macro cannot be re-run.",
+    "macro-not-found": "The macro that produced this measurement is no longer part of its workbook version.",
+    "offline": "Could not load the macro. Connect to the internet and open this measurement again."
+  },
   "alerts": {
     "uploadMeasurementTitle": "Upload Measurement",
     "uploadMeasurementMessage": "Are you sure you want to upload \"{{name}}\"?",

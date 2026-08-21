@@ -54,8 +54,9 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
       edges,
       cells,
       workbookVersionId,
+      workbookId,
     );
-  }, [versionData, workbookVersionId, setFlowGraph]);
+  }, [versionData, workbookVersionId, workbookId, setFlowGraph]);
 
   // The list resolved but the experiment has no workbook: every experiment is
   // workbook-backed, so surface an error rather than hang.

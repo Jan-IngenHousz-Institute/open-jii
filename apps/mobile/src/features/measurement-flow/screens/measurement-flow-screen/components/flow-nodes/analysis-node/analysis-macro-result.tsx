@@ -1,11 +1,12 @@
 import { clsx } from "clsx";
 import React from "react";
 import { View, Text } from "react-native";
-import { MeasurementResult } from "~/features/measurement-flow/components/measurement-result/measurement-result";
-import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
+import { useMacroOutputs } from "~/features/measurement-flow/hooks/use-macro-outputs";
 import { useTranslation } from "~/shared/i18n";
 import type { ResolvedMacro } from "~/shared/measurements/flow-node";
+import type { MacroOutput } from "~/shared/measurements/macro-output";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
+import { MeasurementResult } from "~/shared/ui/measurement/measurement-result";
 
 interface AnalysisMacroResultProps {
   macro: ResolvedMacro | undefined;
@@ -33,6 +34,17 @@ export function AnalysisMacroResult({
 }: AnalysisMacroResultProps) {
   const { classes } = useTheme();
   const { t } = useTranslation("measurementFlow");
+  const {
+    outputs,
+    isLoading: isRunning,
+    error,
+  } = useMacroOutputs({
+    rawMeasurement: scanResult,
+    macro,
+    ctx,
+    inputError,
+    onProcessed,
+  });
 
   if (!scanResult) {
     return (
@@ -73,10 +85,9 @@ export function AnalysisMacroResult({
   return (
     <MeasurementResult
       rawMeasurement={scanResult}
-      macro={macro}
-      ctx={ctx}
-      inputError={inputError}
-      onProcessed={onProcessed}
+      outputs={outputs}
+      isLoading={isRunning}
+      error={error}
       onCommentPress={onCommentPress}
     />
   );

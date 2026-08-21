@@ -44,6 +44,7 @@ interface MeasurementFlowStore extends FlowState {
     edges: FlowEdge[],
     cells: WorkbookCell[],
     workbookVersionId?: string,
+    workbookId?: string,
   ) => void;
   setLastMatchedPath: (path: MatchedPath | undefined) => void;
   incrementBranchVisit: (nodeId: string) => void;
@@ -117,12 +118,13 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           branchReturnStack: [],
         }),
 
-      setFlowGraph: (nodes, edges, cells, workbookVersionId) =>
+      setFlowGraph: (nodes, edges, cells, workbookVersionId, workbookId) =>
         set({
           flowNodes: nodes,
           edges,
           cells,
           workbookVersionId,
+          workbookId,
           currentFlowStep: 0,
           branchVisitCounts: {},
           lastMatchedPath: undefined,
@@ -190,6 +192,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
         workbookVersionId: state.workbookVersionId,
+        workbookId: state.workbookId,
         workbookRunId: state.workbookRunId,
         currentStep: state.currentStep,
         flowNodes: state.flowNodes,

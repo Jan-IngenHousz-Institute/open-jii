@@ -11,12 +11,14 @@ import { orpc } from "~/shared/api/orpc";
 export function useWorkbookVersionQuery(
   workbookId: string | undefined,
   workbookVersionId: string | undefined,
+  opts?: { suppressToast?: boolean },
 ) {
   return useQuery(
     orpc.workbooks.getWorkbookVersion.queryOptions({
       input: { id: workbookId ?? "", versionId: workbookVersionId ?? "" },
       enabled: !!workbookId && !!workbookVersionId,
       networkMode: "offlineFirst",
+      ...(opts?.suppressToast ? { meta: { suppressToast: true } } : {}),
     }),
   );
 }

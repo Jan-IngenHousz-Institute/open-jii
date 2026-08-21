@@ -366,4 +366,25 @@ describe("applyMacro: ctx namespace", () => {
     registerPythonMacroRunner(null);
     expect(receivedCtx).toEqual({ baseline: { value: 7 } });
   });
+
+  it("clones ctx for the Python runner so it cannot mutate upstream state", async () => {
+    const ctx = { baseline: { value: 10 } };
+    let receivedCtx: unknown = null;
+    registerPythonMacroRunner((_code, _json, runnerCtx) => {
+      receivedCtx = runnerCtx;
+      (runnerCtx as { baseline: { value: number } }).baseline.value = 999;
+      return Promise.resolve({ ok: true });
+    });
+
+    await applyMacro(
+      { sample: { phi2: 0.5 } },
+      { code: encode("# irrelevant"), language: "python" },
+      ctx,
+    );
+    registerPythonMacroRunner(null);
+
+    // The runner received an equal copy, not the caller's reference.
+    expect(receivedCtx).not.toBe(ctx);
+    expect(ctx).toEqual({ baseline: { value: 10 } });
+  });
 });
