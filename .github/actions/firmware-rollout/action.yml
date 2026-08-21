@@ -53,6 +53,19 @@ runs:
   using: composite
   steps:
     # Seeded first so a crash still uploads evidence of what was attempted.
+    - name: Validate inputs
+      shell: bash
+      env:
+        MAX_PER_MINUTE: ${{ inputs.max-per-minute }}
+        ABORT_THRESHOLD: ${{ inputs.abort-threshold-percent }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+      run: |
+        set -euo pipefail
+        fail() { echo "::error::$1"; exit 1; }
+        printf '%s' "$MAX_PER_MINUTE" | grep -qE '^[1-9][0-9]*$' || fail "max_per_minute must be a positive integer"
+        printf '%s' "$ABORT_THRESHOLD" | grep -qE '^[1-9][0-9]?$|^100$' || fail "abort_threshold_percent must be 1-100"
+        printf '%s' "$TIMEOUT_MINUTES" | grep -qE '^[1-9][0-9]*$' || fail "timeout_minutes must be a positive integer"
+
     - name: Initialize result artifact
       shell: bash
       run: |
@@ -114,18 +127,21 @@ runs:
     - name: Resolve target
       id: target
       shell: bash
+      env:
+        REGION: ${{ inputs.aws-region }}
+        THINGS: ${{ inputs.things }}
+        ENVIRONMENT: ${{ inputs.environment }}
       run: |
         set -euo pipefail
         ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
-        REGION="${{ inputs.aws-region }}"
 
-        if [ -n "${{ inputs.things }}" ]; then
-          TARGETS="$(echo "${{ inputs.things }}" | tr ',' '\n' | sed '/^$/d' \
+        if [ -n "$THINGS" ]; then
+          TARGETS="$(printf '%s' "$THINGS" | tr ',' '\n' | sed '/^$/d' \
             | while read -r THING; do echo "arn:aws:iot:$REGION:$ACCOUNT:thing/$(echo "$THING" | xargs)"; done \
             | jq -R . | jq -sc .)"
           COUNT="$(jq 'length' <<<"$TARGETS")"
         else
-          GROUP="open_jii_${{ inputs.environment }}_managed_devices"
+          GROUP="open_jii_${ENVIRONMENT}_managed_devices"
           TARGETS="$(jq -nc --arg arn "arn:aws:iot:$REGION:$ACCOUNT:thinggroup/$GROUP" '[$arn]')"
           COUNT="$(aws iot list-things-in-thing-group --thing-group-name "$GROUP" \
             --query 'length(things)' --output text)"
@@ -189,24 +205,37 @@ runs:
       id: create
       if: inputs.dry-run != 'true'
       shell: bash
+      env:
+        FAMILY: ${{ inputs.family }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        RUN_ID: ${{ github.run_id }}
+        TARGETS: ${{ steps.target.outputs.targets }}
+        MAX_PER_MINUTE: ${{ inputs.max-per-minute }}
+        ABORT_THRESHOLD: ${{ inputs.abort-threshold-percent }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
       run: |
         set -euo pipefail
-        JOB_ID="fw-${{ inputs.family }}-${{ steps.release.outputs.tag }}-${{ github.run_id }}"
-        PRESIGN_ROLE="arn:aws:iam::${{ steps.target.outputs.account }}:role/open_jii_${{ inputs.environment }}_iot_jobs_presign"
+        # jobId accepts [a-zA-Z0-9_-] only (max 64), so the tag's dots must go:
+        # https://docs.aws.amazon.com/iot/latest/apireference/API_CreateJob.html
+        SAFE_TAG="$(printf '%s' "$RELEASE_TAG" | tr -c 'a-zA-Z0-9_-' '-')"
+        JOB_ID="$(printf 'fw-%s-%s-%s' "$FAMILY" "$SAFE_TAG" "$RUN_ID" | cut -c1-64)"
+        PRESIGN_ROLE="arn:aws:iam::${{ steps.target.outputs.account }}:role/open_jii_${ENVIRONMENT}_iot_jobs_presign"
 
         # Rollout, abort and timeout configuration replace what a bespoke runner
         # would otherwise implement by hand.
         # https://docs.aws.amazon.com/iot/latest/developerguide/jobs-configurations-details.html
         aws iot create-job \
           --job-id "$JOB_ID" \
-          --targets '${{ steps.target.outputs.targets }}' \
+          --targets "$TARGETS" \
           --document file://job-document.json \
-          --description "openJII firmware rollout ${{ inputs.family }} ${{ steps.release.outputs.tag }}" \
+          --description "openJII firmware rollout $FAMILY $RELEASE_TAG" \
           --target-selection SNAPSHOT \
-          --presigned-url-config "{\"roleArn\":\"$PRESIGN_ROLE\",\"expiresInSec\":3600}" \
-          --job-executions-rollout-config "{\"maximumPerMinute\":${{ inputs.max-per-minute }}}" \
-          --abort-config "{\"criteriaList\":[{\"failureType\":\"FAILED\",\"action\":\"CANCEL\",\"thresholdPercentage\":${{ inputs.abort-threshold-percent }},\"minNumberOfExecutedThings\":5}]}" \
-          --timeout-config "{\"inProgressTimeoutInMinutes\":${{ inputs.timeout-minutes }}}" > /dev/null
+          --presigned-url-config "$(jq -nc --arg role "$PRESIGN_ROLE" '{roleArn: $role, expiresInSec: 3600}')" \
+          --job-executions-rollout-config "$(jq -nc --argjson max "$MAX_PER_MINUTE" '{maximumPerMinute: $max}')" \
+          --abort-config "$(jq -nc --argjson pct "$ABORT_THRESHOLD" \
+            '{criteriaList: [{failureType: "FAILED", action: "CANCEL", thresholdPercentage: $pct, minNumberOfExecutedThings: 5}]}')" \
+          --timeout-config "$(jq -nc --argjson mins "$TIMEOUT_MINUTES" '{inProgressTimeoutInMinutes: $mins}')" > /dev/null
 
         echo "job-id=$JOB_ID" >> "$GITHUB_OUTPUT"
         echo "Created job \`$JOB_ID\`" >> "$GITHUB_STEP_SUMMARY"

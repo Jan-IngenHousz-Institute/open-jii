@@ -8,7 +8,7 @@ import { useDeviceMonitoring } from "@/hooks/iot/useDeviceMonitoring/useDeviceMo
 import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
 import { useIotFirmwareReleases } from "@/hooks/iot/useIotFirmwareReleases/useIotFirmwareReleases";
 import { useLocale } from "@/hooks/useLocale";
-import { hasManagedFirmware } from "@/util/firmware-family";
+import { hasManagedFirmware, isSameFirmwareVersion } from "@/util/firmware-family";
 import { AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
@@ -95,7 +95,7 @@ export default function DeviceFirmwarePage() {
         <p className="text-sm">{t("iot.devices.firmware.reported", { version: installed })}</p>
       );
     }
-    if (installed === latest.version) {
+    if (isSameFirmwareVersion(installed, latest.version)) {
       return (
         <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
           <CheckCircle2 className="h-4 w-4" aria-hidden />
