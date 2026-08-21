@@ -37,6 +37,19 @@ describe("useDeviceFirmwareHistory", () => {
     expect(spy.calls[0].query.bucket).toBe("day");
   });
 
+  it("stays put while disabled", async () => {
+    const spy = server.mount(contract.iot.getDeviceFirmwareHistory, { body: { versions: [] } });
+
+    const { result } = renderHook(() =>
+      useDeviceFirmwareHistory(DEVICE_ID, RANGE, { enabled: false }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.fetchStatus).toBe("idle");
+    });
+    expect(spy.called).toBe(false);
+  });
+
   it("surfaces a failure", async () => {
     server.mount(contract.iot.getDeviceFirmwareHistory, { status: 500 });
 

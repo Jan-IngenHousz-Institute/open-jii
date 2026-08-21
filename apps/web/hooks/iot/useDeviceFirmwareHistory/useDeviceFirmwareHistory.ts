@@ -7,9 +7,14 @@ import { useQuery } from "@tanstack/react-query";
  * monitoring dashboard's fan-out, so a caller that only needs the version does
  * not pay for sessions, throughput, battery and measurements too.
  */
-export const useDeviceFirmwareHistory = (deviceId: string, range: MonitoringRange) =>
-  useQuery(
-    orpc.iot.getDeviceFirmwareHistory.queryOptions({
+export const useDeviceFirmwareHistory = (
+  deviceId: string,
+  range: MonitoringRange,
+  options?: { enabled?: boolean },
+) =>
+  useQuery({
+    ...orpc.iot.getDeviceFirmwareHistory.queryOptions({
       input: { deviceId, from: range.from, to: range.to, bucket: range.bucket },
     }),
-  );
+    enabled: options?.enabled ?? true,
+  });

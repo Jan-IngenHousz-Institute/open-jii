@@ -68,8 +68,11 @@ runs:
 
     - name: Initialize result artifact
       shell: bash
+      env:
+        FAMILY: ${{ inputs.family }}
+        ENVIRONMENT: ${{ inputs.environment }}
       run: |
-        jq -n --arg family "${{ inputs.family }}" --arg env "${{ inputs.environment }}" \
+        jq -n --arg family "$FAMILY" --arg env "$ENVIRONMENT" \
           '{family: $family, environment: $env, error: "rollout did not start"}' > results.json
 
     # Deliberately before AWS credentials are configured: release validation
@@ -79,17 +82,19 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
+        FAMILY: ${{ inputs.family }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
       run: |
         set -euo pipefail
-        REPO="$(jq -r --arg f "${{ inputs.family }}" '.[$f].repository' .github/firmware/families.json)"
-        ASSET="$(jq -r --arg f "${{ inputs.family }}" '.[$f].asset' .github/firmware/families.json)"
+        REPO="$(jq -r --arg f "$FAMILY" '.[$f].repository' .github/firmware/families.json)"
+        ASSET="$(jq -r --arg f "$FAMILY" '.[$f].asset' .github/firmware/families.json)"
 
-        if [ "${{ inputs.release-tag }}" = "latest" ]; then
+        if [ "$RELEASE_TAG" = "latest" ]; then
           TAG="$(gh release list --repo "$REPO" --limit 100 --json tagName,isDraft,isPrerelease \
             | jq -r '[.[] | select(.isDraft == false and .isPrerelease == false)][0].tagName')"
           [ -n "$TAG" ] && [ "$TAG" != "null" ] || { echo "::error::no stable release found in $REPO"; exit 1; }
         else
-          TAG="${{ inputs.release-tag }}"
+          TAG="$RELEASE_TAG"
         fi
 
         RELEASE="$(gh api "/repos/$REPO/releases/tags/$TAG")"
@@ -101,19 +106,21 @@ runs:
         echo "tag=$TAG" >> "$GITHUB_OUTPUT"
         echo "repo=$REPO" >> "$GITHUB_OUTPUT"
         echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
-        echo "### Firmware rollout: \`${{ inputs.family }}\` \`$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+        echo "### Firmware rollout: \`$FAMILY\` \`$TAG\`" >> "$GITHUB_STEP_SUMMARY"
         echo "Source: \`$REPO\`" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Download release asset
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ steps.release.outputs.tag }}
+        REPO: ${{ steps.release.outputs.repo }}
+        ASSET: ${{ steps.release.outputs.asset }}
       run: |
         set -euo pipefail
-        gh release download "${{ steps.release.outputs.tag }}" \
-          --repo "${{ steps.release.outputs.repo }}" \
-          --pattern "${{ steps.release.outputs.asset }}" --dir artifact --clobber
-        sha256sum "artifact/${{ steps.release.outputs.asset }}" | cut -d' ' -f1 > artifact/sha256
+        gh release download "$TAG" --repo "$REPO" \
+          --pattern "$ASSET" --dir artifact --clobber
+        sha256sum "artifact/$ASSET" | cut -d' ' -f1 > artifact/sha256
         echo "SHA-256: \`$(cat artifact/sha256)\`" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Configure AWS credentials
@@ -134,14 +141,25 @@ runs:
       run: |
         set -euo pipefail
         ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+        GROUP="open_jii_${ENVIRONMENT}_managed_devices"
 
         if [ -n "$THINGS" ]; then
-          TARGETS="$(printf '%s' "$THINGS" | tr ',' '\n' | sed '/^$/d' \
-            | while read -r THING; do echo "arn:aws:iot:$REGION:$ACCOUNT:thing/$(echo "$THING" | xargs)"; done \
-            | jq -R . | jq -sc .)"
+          # An explicit list still has to be platform-managed: a typo would
+          # otherwise create a job against a thing this platform does not own,
+          # and the mistake only surfaces as an execution that never reports.
+          aws iot list-things-in-thing-group --thing-group-name "$GROUP" \
+            --query 'things' --output json | jq -r '.[]' | sort > managed.txt
+          printf '%s' "$THINGS" | tr ',' '\n' \
+            | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | sed '/^$/d' | sort -u > requested.txt
+
+          UNKNOWN="$(comm -23 requested.txt managed.txt | tr '\n' ' ')"
+          [ -z "${UNKNOWN// /}" ] || { echo "::error::not registered in $GROUP: $UNKNOWN"; exit 1; }
+
+          TARGETS="$(while read -r THING; do
+            echo "arn:aws:iot:$REGION:$ACCOUNT:thing/$THING"
+          done < requested.txt | jq -R . | jq -sc .)"
           COUNT="$(jq 'length' <<<"$TARGETS")"
         else
-          GROUP="open_jii_${ENVIRONMENT}_managed_devices"
           TARGETS="$(jq -nc --arg arn "arn:aws:iot:$REGION:$ACCOUNT:thinggroup/$GROUP" '[$arn]')"
           COUNT="$(aws iot list-things-in-thing-group --thing-group-name "$GROUP" \
             --query 'length(things)' --output text)"
@@ -157,19 +175,30 @@ runs:
     - name: Render job document
       id: document
       shell: bash
+      env:
+        FAMILY: ${{ inputs.family }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        REGION: ${{ inputs.aws-region }}
+        TAG: ${{ steps.release.outputs.tag }}
+        ASSET: ${{ steps.release.outputs.asset }}
       run: |
         set -euo pipefail
-        BUCKET="open-jii-firmware-${{ inputs.environment }}"
-        KEY="${{ inputs.family }}/${{ steps.release.outputs.tag }}/${{ steps.release.outputs.asset }}"
+        SHA256="$(cat artifact/sha256)"
+        BUCKET="open-jii-firmware-${ENVIRONMENT}"
+        # The digest is part of the key so an artifact is immutable by address:
+        # a tag that gets deleted and re-cut with different bytes lands on a new
+        # key, and a job still QUEUED for an offline device keeps resolving the
+        # exact object whose sha256 its document recorded.
+        KEY="$FAMILY/$TAG/$SHA256/$ASSET"
         # AWS substitutes this placeholder with a short-lived presigned URL when
         # it hands the document to each device.
         # https://docs.aws.amazon.com/iot/latest/developerguide/manage-job-cli.html
-        URL="\${aws:iot:s3-presigned-url:https://s3.${{ inputs.aws-region }}.amazonaws.com/$BUCKET/$KEY}"
+        URL="\${aws:iot:s3-presigned-url:https://s3.${REGION}.amazonaws.com/$BUCKET/$KEY}"
 
         jq -n \
-          --arg family "${{ inputs.family }}" \
-          --arg version "${{ steps.release.outputs.tag }}" \
-          --arg sha256 "$(cat artifact/sha256)" \
+          --arg family "$FAMILY" \
+          --arg version "$TAG" \
+          --arg sha256 "$SHA256" \
           --arg url "$URL" \
           '{operation: "firmware-update", family: $family, version: $version, sha256: $sha256, url: $url}' \
           > job-document.json
@@ -184,22 +213,29 @@ runs:
     - name: Stop here on a dry run
       if: inputs.dry-run == 'true'
       shell: bash
+      env:
+        TAG: ${{ steps.release.outputs.tag }}
+        COUNT: ${{ steps.target.outputs.count }}
       run: |
-        jq -n --arg tag "${{ steps.release.outputs.tag }}" --arg count "${{ steps.target.outputs.count }}" \
+        jq -n --arg tag "$TAG" --arg count "$COUNT" \
           '{dryRun: true, tag: $tag, targetCount: ($count | tonumber), error: null}' > results.json
         echo "> Dry run: no artifact uploaded and no job created." >> "$GITHUB_STEP_SUMMARY"
 
     - name: Mirror artifact to S3
       if: inputs.dry-run != 'true'
       shell: bash
+      env:
+        BUCKET: ${{ steps.document.outputs.bucket }}
+        KEY: ${{ steps.document.outputs.key }}
+        ASSET: ${{ steps.release.outputs.asset }}
       run: |
         set -euo pipefail
         aws s3api put-object \
-          --bucket "${{ steps.document.outputs.bucket }}" \
-          --key "${{ steps.document.outputs.key }}" \
-          --body "artifact/${{ steps.release.outputs.asset }}" \
+          --bucket "$BUCKET" \
+          --key "$KEY" \
+          --body "artifact/$ASSET" \
           --checksum-algorithm SHA256 > /dev/null
-        echo "Mirrored to \`s3://${{ steps.document.outputs.bucket }}/${{ steps.document.outputs.key }}\`" >> "$GITHUB_STEP_SUMMARY"
+        echo "Mirrored to \`s3://$BUCKET/$KEY\`" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Create job
       id: create
@@ -211,6 +247,7 @@ runs:
         RELEASE_TAG: ${{ steps.release.outputs.tag }}
         RUN_ID: ${{ github.run_id }}
         TARGETS: ${{ steps.target.outputs.targets }}
+        ACCOUNT: ${{ steps.target.outputs.account }}
         MAX_PER_MINUTE: ${{ inputs.max-per-minute }}
         ABORT_THRESHOLD: ${{ inputs.abort-threshold-percent }}
         TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
@@ -222,7 +259,7 @@ runs:
         JOB_ID="$(printf 'fw-%s-%s-%s' "$FAMILY" "$SAFE_TAG" "$RUN_ID" | cut -c1-64)"
         # Mirrors aws_iam_role.jobs_presign in infrastructure/modules/iot-core;
         # renaming it there without changing this line breaks create-job.
-        PRESIGN_ROLE="arn:aws:iam::${{ steps.target.outputs.account }}:role/open_jii_${ENVIRONMENT}_iot_jobs_presign"
+        PRESIGN_ROLE="arn:aws:iam::${ACCOUNT}:role/open_jii_${ENVIRONMENT}_iot_jobs_presign"
 
         # Rollout, abort and timeout configuration replace what a bespoke runner
         # would otherwise implement by hand. The abort criteria only arm once 5
@@ -247,10 +284,12 @@ runs:
     - name: Track executions
       if: inputs.dry-run != 'true'
       shell: bash
+      env:
+        JOB_ID: ${{ steps.create.outputs.job-id }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
       run: |
         set -euo pipefail
-        JOB_ID="${{ steps.create.outputs.job-id }}"
-        DEADLINE=$(( $(date +%s) + ${{ inputs.timeout-minutes }} * 60 ))
+        DEADLINE=$(( $(date +%s) + $TIMEOUT_MINUTES * 60 ))
 
         while :; do
           STATUS="$(aws iot describe-job --job-id "$JOB_ID" --query 'job.status' --output text)"

@@ -52,11 +52,15 @@ export default function DeviceFirmwarePage() {
   const router = useRouter();
 
   const { data: device } = useIotDevice(deviceId);
-  const range = useMemo(() => resolveMonitoringPreset(FIRMWARE_LOOKBACK), []);
-  const { data: firmwareHistory } = useDeviceFirmwareHistory(deviceId, range);
-
   const family = device?.deviceType;
   const isManaged = family !== undefined && hasManagedFirmware(family);
+
+  // Both queries wait for the family: a device with no JII firmware line shows
+  // no tab, so neither the warehouse scan nor the release read is worth paying.
+  const range = useMemo(() => resolveMonitoringPreset(FIRMWARE_LOOKBACK), []);
+  const { data: firmwareHistory } = useDeviceFirmwareHistory(deviceId, range, {
+    enabled: isManaged,
+  });
 
   // Only a placeholder to keep the input typed: the query is held until the
   // device reports a family JII publishes for.

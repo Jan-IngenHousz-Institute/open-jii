@@ -65,6 +65,29 @@ describe("FirmwareReleaseList", () => {
     expect(source).toHaveAttribute("rel", "noopener noreferrer");
   });
 
+  it("shows sub-kilobyte assets in bytes rather than rounding them up to 1 KB", () => {
+    render(
+      <FirmwareReleaseList
+        releases={[
+          release({
+            assets: [
+              { name: "empty.sig", sizeBytes: 0, downloadUrl: "https://example.test/empty.sig" },
+              { name: "one.txt", sizeBytes: 1, downloadUrl: "https://example.test/one.txt" },
+              { name: "just-under.bin", sizeBytes: 1023, downloadUrl: "https://example.test/u" },
+              { name: "exactly.bin", sizeBytes: 1024, downloadUrl: "https://example.test/e" },
+            ],
+          }),
+        ]}
+        installedVersion={null}
+      />,
+    );
+
+    expect(screen.getByText("(0 B)")).toBeInTheDocument();
+    expect(screen.getByText("(1 B)")).toBeInTheDocument();
+    expect(screen.getByText("(1023 B)")).toBeInTheDocument();
+    expect(screen.getByText("(1 KB)")).toBeInTheDocument();
+  });
+
   it("says when a release carries no notes", () => {
     render(<FirmwareReleaseList releases={[release({ notes: null })]} installedVersion={null} />);
 
