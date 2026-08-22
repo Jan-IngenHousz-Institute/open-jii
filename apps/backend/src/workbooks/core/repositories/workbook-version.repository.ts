@@ -1,12 +1,13 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, desc, eq, workbookVersions } from "@repo/database";
+import { and, desc, eq, inArray, workbookVersions } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import type {
   CreateWorkbookVersionDto,
   WorkbookVersionDto,
+  WorkbookVersionRef,
 } from "../models/workbook-version.model";
 
 @Injectable()
@@ -44,6 +45,31 @@ export class WorkbookVersionRepository {
         .limit(1);
       if (result.length === 0) return null;
       return result[0] as WorkbookVersionDto;
+    });
+  }
+
+  /**
+   * Maps version ids to the workbook they belong to, and deliberately nothing
+   * else. Unlike `findById` there is no workbook-level authorization behind
+   * this, so it must never return cells, metadata or entity snapshots; the
+   * caller still has to resolve `workbookId` against what it may actually see.
+   * Callers hold version ids their own devices reported and need to attribute
+   * them to a workbook.
+   */
+  async findWorkbookRefsByIds(ids: string[]): Promise<Result<WorkbookVersionRef[]>> {
+    return tryCatch(async () => {
+      if (ids.length === 0) {
+        return [];
+      }
+
+      return await this.database
+        .select({
+          id: workbookVersions.id,
+          workbookId: workbookVersions.workbookId,
+          version: workbookVersions.version,
+        })
+        .from(workbookVersions)
+        .where(inArray(workbookVersions.id, ids));
     });
   }
 
