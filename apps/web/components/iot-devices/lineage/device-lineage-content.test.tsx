@@ -154,7 +154,14 @@ describe("DeviceLineageContent", () => {
           protocolId: `4444444${String(index)}-4444-4444-8444-444444444444`,
           count: 10 - index,
         })),
-        workbookMix: [{ workbookVersionId: "55555555-5555-4555-8555-555555555555", count: 2 }],
+        workbookMix: [
+          {
+            workbookVersionId: "99999999-9999-4999-8999-999999999999",
+            workbookId: "55555555-5555-4555-8555-555555555555",
+            workbookVersion: 1,
+            count: 2,
+          },
+        ],
         macroMix: [{ macroId: "66666666-6666-4666-8666-666666666666", count: 1 }],
       },
     });

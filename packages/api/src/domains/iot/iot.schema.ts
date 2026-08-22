@@ -339,8 +339,16 @@ export const zDevicePayloadStats = z.object({
   workbookRuns: z.number().int(),
   firmwareMix: z.array(z.object({ version: z.string().nullable(), count: z.number().int() })),
   protocolMix: z.array(z.object({ protocolId: z.string().nullable(), count: z.number().int() })),
+  // Devices report the workbook VERSION they ran, which is not a workbook id.
+  // The owning workbook is resolved server-side so a caller can attribute and
+  // link the run; both stay null when the version is unknown to the registry.
   workbookMix: z.array(
-    z.object({ workbookVersionId: z.string().nullable(), count: z.number().int() }),
+    z.object({
+      workbookVersionId: z.string().nullable(),
+      workbookId: z.string().nullable(),
+      workbookVersion: z.number().int().nullable(),
+      count: z.number().int(),
+    }),
   ),
   // Per macro run: a measurement can run several, so counts exceed totals.
   macroMix: z.array(z.object({ macroId: z.string().nullable(), count: z.number().int() })),
