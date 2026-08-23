@@ -11,6 +11,7 @@ import type {
   IotDeviceGroupMonitoring,
 } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import {
   Table,
   TableBody,
@@ -59,11 +60,7 @@ export function GroupDevicesTable({
   const showVersions = versionByDeviceId.size > 0;
 
   if (members.length === 0) {
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("iot.groups.monitoring.filter.noMatches")}
-      </p>
-    );
+    return <EmptyState size="inline" description={t("iot.groups.monitoring.filter.noMatches")} />;
   }
 
   function renderDeviceRow(member: IotDeviceGroupMemberHealth) {

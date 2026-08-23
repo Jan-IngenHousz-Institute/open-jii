@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { IotDeviceGroupThroughputBucket } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
+import { EmptyState } from "@repo/ui/components/empty-state";
 
 import { ChartTableToggle } from "../monitoring/chart-table-toggle";
 import type { PanelView } from "../monitoring/chart-table-toggle";
@@ -84,9 +85,7 @@ export function GroupThroughputPanel({
       </div>
 
       {total === 0 ? (
-        <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-          {t("iot.devices.monitoring.noMeasurements")}
-        </p>
+        <EmptyState size="inline" description={t("iot.devices.monitoring.noMeasurements")} />
       ) : view === "chart" ? (
         <div className="h-64 w-full">
           <BarChart

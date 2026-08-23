@@ -23,6 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { Label } from "@repo/ui/components/label";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { Switch } from "@repo/ui/components/switch";
@@ -148,9 +149,7 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
           )}
 
           {!isLoadingBound && !isBoundError && !hasBindings && (
-            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              {t("iot.onboarding.currentEmpty")}
-            </p>
+            <EmptyState size="inline" description={t("iot.onboarding.currentEmpty")} />
           )}
 
           {!isLoadingBound && !isBoundError && hasBindings && (

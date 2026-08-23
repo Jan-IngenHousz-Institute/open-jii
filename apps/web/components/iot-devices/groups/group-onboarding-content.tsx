@@ -29,6 +29,7 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import { Checkbox } from "@repo/ui/components/checkbox";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { Label } from "@repo/ui/components/label";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { Switch } from "@repo/ui/components/switch";
@@ -203,9 +204,7 @@ export function GroupOnboardingContent() {
         </CardHeader>
         <CardContent className="space-y-2">
           {experiments.length === 0 ? (
-            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              {t("iot.groups.onboarding.noExperiments")}
-            </p>
+            <EmptyState size="inline" description={t("iot.groups.onboarding.noExperiments")} />
           ) : (
             <ul className="divide-y rounded-lg border">
               {experiments.map((experiment) => (
@@ -237,9 +236,7 @@ export function GroupOnboardingContent() {
         </CardHeader>
         <CardContent className="space-y-4">
           {members.length === 0 ? (
-            <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              {t("iot.groups.noMembers")}
-            </p>
+            <EmptyState size="inline" description={t("iot.groups.noMembers")} />
           ) : (
             <ul className="divide-y rounded-lg border">{members.map(renderMemberRow)}</ul>
           )}
