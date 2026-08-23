@@ -12,8 +12,6 @@ interface MixEntry {
   count: number;
 }
 
-type WorkbookMixEntry = DevicePayloadStats["workbookMix"][number];
-
 /**
  * Payload profile of a range. Everything but the macros folds from one
  * grouped scan; macros need their own, being an array column that only
@@ -66,15 +64,28 @@ export class GetDevicePayloadStatsUseCase {
       ),
     ).map((entry) => ({ protocolId: entry.key, count: entry.count }));
 
-    // Null kept: "sent outside any workbook" is a real answer here.
+    // Null kept: "sent outside any workbook" is a real answer here. The device
+    // reports the version it ran, so the owning workbook is a registry lookup.
     const versionMix = this.sumMix(
       rows.map((row) => ({ key: row.workbookVersionId, count: row.count })),
     );
-    const workbookMixResult = await this.attributeWorkbooks(versionMix);
-    if (workbookMixResult.isFailure()) {
-      return failure(workbookMixResult.error);
+    const refs = await this.workbookVersionRepository.findWorkbookRefsByIds(
+      versionMix.flatMap((entry) => (entry.key === null ? [] : [entry.key])),
+    );
+    if (refs.isFailure()) {
+      return failure(refs.error);
     }
-    const workbookMix = workbookMixResult.value;
+
+    const byVersionId = new Map(refs.value.map((ref) => [ref.id, ref]));
+    const workbookMix = versionMix.map((entry) => {
+      const ref = entry.key === null ? undefined : byVersionId.get(entry.key);
+      return {
+        workbookVersionId: entry.key,
+        workbookId: ref?.workbookId ?? null,
+        workbookVersion: ref?.version ?? null,
+        count: entry.count,
+      };
+    });
 
     // Already grouped in SQL; the fold only orders it, busiest first.
     const macroMix = this.sumMix(
@@ -82,33 +93,6 @@ export class GetDevicePayloadStatsUseCase {
     ).map((entry) => ({ macroId: entry.key, count: entry.count }));
 
     return success({ ...totals, workbookRuns, firmwareMix, protocolMix, workbookMix, macroMix });
-  }
-
-  /**
-   * A device reports the workbook VERSION it ran. Attributing that to its
-   * workbook is a registry lookup, not something the warehouse can answer, and
-   * without it a caller has an id that matches no workbook it can list.
-   */
-  private async attributeWorkbooks(entries: MixEntry[]): Promise<Result<WorkbookMixEntry[]>> {
-    const versionIds = entries.flatMap((entry) => (entry.key === null ? [] : [entry.key]));
-    const refsResult = await this.workbookVersionRepository.findWorkbookRefsByIds(versionIds);
-    if (refsResult.isFailure()) {
-      return failure(refsResult.error);
-    }
-
-    const byVersionId = new Map(refsResult.value.map((ref) => [ref.id, ref]));
-
-    return success(
-      entries.map((entry) => {
-        const ref = entry.key === null ? undefined : byVersionId.get(entry.key);
-        return {
-          workbookVersionId: entry.key,
-          workbookId: ref?.workbookId ?? null,
-          workbookVersion: ref?.version ?? null,
-          count: entry.count,
-        };
-      }),
-    );
   }
 
   private sumMix(entries: MixEntry[]): MixEntry[] {

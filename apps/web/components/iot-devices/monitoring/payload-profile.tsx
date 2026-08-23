@@ -1,6 +1,6 @@
 "use client";
 
-import type { DevicePayloadStats } from "@repo/api/domains/iot/iot.schema";
+import type { DevicePayloadStats, WorkbookMixEntry } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Progress } from "@repo/ui/components/progress";
 
@@ -62,7 +62,7 @@ export function PayloadProfile({
   );
 
   /** The version is part of the identity: one workbook can appear twice here. */
-  function renderWorkbookLabel(entry: DevicePayloadStats["workbookMix"][number]) {
+  function renderWorkbookLabel(entry: WorkbookMixEntry) {
     if (entry.workbookVersionId === null) {
       return (
         <span className="text-muted-foreground italic">

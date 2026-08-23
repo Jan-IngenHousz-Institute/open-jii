@@ -48,14 +48,7 @@ export class WorkbookVersionRepository {
     });
   }
 
-  /**
-   * Maps version ids to the workbook they belong to, and deliberately nothing
-   * else. Unlike `findById` there is no workbook-level authorization behind
-   * this, so it must never return cells, metadata or entity snapshots; the
-   * caller still has to resolve `workbookId` against what it may actually see.
-   * Callers hold version ids their own devices reported and need to attribute
-   * them to a workbook.
-   */
+  /** Identity only: nothing authorizes the workbook here, so no cells or snapshots. */
   async findWorkbookRefsByIds(ids: string[]): Promise<Result<WorkbookVersionRef[]>> {
     return tryCatch(async () => {
       if (ids.length === 0) {
