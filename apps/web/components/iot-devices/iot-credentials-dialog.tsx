@@ -26,7 +26,7 @@ import {
 const AMAZON_CA_DOCS =
   "https://docs.aws.amazon.com/iot/latest/developerguide/server-authentication.html";
 
-const CARD = "divide-y divide-[#EDF2F6] rounded-lg border border-[#CDD5DB] px-3";
+const CARD = "divide-y divide-surface rounded-lg border border-border px-3";
 
 interface IotCredentialsDialogProps {
   thingName: string;
@@ -60,7 +60,7 @@ export function IotCredentialsDialog({
         {credentials !== null && (
           <div className="min-w-0 space-y-6">
             <section className="space-y-1.5">
-              <h3 className="text-sm font-semibold text-[#011111]">
+              <h3 className="text-foreground text-sm font-semibold">
                 {t("iot.devices.credentials.sectionCertificate")}
               </h3>
               <div className={CARD}>
@@ -77,7 +77,7 @@ export function IotCredentialsDialog({
 
             <section className="space-y-2">
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-[#011111]">
+                <h3 className="text-foreground text-sm font-semibold">
                   {t("iot.devices.credentials.sectionKeys")}
                 </h3>
                 <p className="text-muted-foreground text-xs">
@@ -109,7 +109,7 @@ export function IotCredentialsDialog({
 
             <section className="space-y-2">
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-[#011111]">
+                <h3 className="text-foreground text-sm font-semibold">
                   {t("iot.devices.credentials.sectionRootCa")}
                 </h3>
                 <p className="text-muted-foreground text-xs">

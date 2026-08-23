@@ -10,7 +10,7 @@ import {
   resolveDeviceRoleLabels,
 } from "@/util/device-presentation";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { Eye, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { Eye, KeyRound, Loader2, MoreHorizontal, Rocket, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -36,11 +36,9 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 import { TableCell, TableRow } from "@repo/ui/components/table";
 import { toast } from "@repo/ui/hooks/use-toast";
-import { cn } from "@repo/ui/lib/utils";
 
 import { useFormatLastSeen } from "./device-connectivity";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
-import { LIST_TABLE_BORDER, LIST_TEXT_MUTED, LIST_TEXT_STRONG } from "./iot-devices-list-tokens";
 
 export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivity }) {
   const { t } = useTranslation("iot");
@@ -63,6 +61,12 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
   const displayName = resolveDevicePrimaryLabel(present, t);
   const roleLabels = resolveDeviceRoleLabels(present, t);
 
+  // The menu's first entry is the computed next step. Phones self-manage, so
+  // they get neither; a device without live credentials is pointed at them,
+  // everything else at onboarding.
+  const isMobileFamily = device.deviceType === "mobile";
+  const needsCredentials = device.status === "pending" || device.status === "revoked";
+
   const handleDelete = () => {
     deleteDevice(
       { deviceId: device.id },
@@ -75,13 +79,34 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
     );
   };
 
+  function renderNextActionItem() {
+    if (isMobileFamily) {
+      return null;
+    }
+    if (needsCredentials) {
+      return (
+        <DropdownMenuItem asChild>
+          <Link href={`${viewHref}/credentials`}>
+            <KeyRound className="mr-2 size-4" />
+            {t("iot.devices.nextAction.issueCredentials")}
+          </Link>
+        </DropdownMenuItem>
+      );
+    }
+    return (
+      <DropdownMenuItem asChild>
+        <Link href={`${viewHref}/onboarding`}>
+          <Rocket className="mr-2 size-4" />
+          {t("iot.devices.nextAction.onboard")}
+        </Link>
+      </DropdownMenuItem>
+    );
+  }
+
   return (
     <>
       <TableRow
-        className={cn(
-          "group cursor-pointer bg-white hover:bg-[#F6F8FA] has-[[data-state=open]]:bg-[#F6F8FA]",
-          LIST_TABLE_BORDER,
-        )}
+        className="bg-background hover:bg-muted/50 has-data-[state=open]:bg-muted/50 group cursor-pointer"
         onClick={() => router.push(viewHref)}
       >
         <TableCell className="px-6 py-3">
@@ -90,10 +115,7 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
               <Link
                 href={viewHref}
                 onClick={(e) => e.stopPropagation()}
-                className={cn(
-                  "focus-visible:ring-primary/40 focus-visible:outline-hidden text-[13px] font-semibold hover:underline focus-visible:ring-2",
-                  LIST_TEXT_STRONG,
-                )}
+                className="focus-visible:ring-primary/40 focus-visible:outline-hidden text-foreground text-[13px] font-semibold hover:underline focus-visible:ring-2"
               >
                 {displayName}
               </Link>
@@ -101,61 +123,58 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
               <VisibilityBadge visibility={device.visibility} privateOnly />
             </div>
             {roleLabels.length > 0 && (
-              <span className={cn("text-[11px]", LIST_TEXT_MUTED)}>{roleLabels.join(" · ")}</span>
+              <span className="text-muted-foreground text-[11px]">{roleLabels.join(" · ")}</span>
             )}
           </div>
         </TableCell>
         <TableCell className="px-6 py-3">
           <IotDeviceStatusBadge status={device.status} />
         </TableCell>
-        <TableCell className={cn("px-6 py-3 text-[13px]", LIST_TEXT_MUTED)}>
+        <TableCell className="text-muted-foreground px-6 py-3 text-[13px]">
           {getSensorFamilyLabel(device.deviceType)}
         </TableCell>
-        <TableCell className={cn("px-6 py-3 font-mono text-xs", LIST_TEXT_MUTED)}>
+        <TableCell className="text-muted-foreground px-6 py-3 font-mono text-xs">
           {device.serialNumber}
         </TableCell>
-        <TableCell className={cn("px-6 py-3 text-[13px]", LIST_TEXT_MUTED)}>
+        <TableCell className="text-muted-foreground px-6 py-3 text-[13px]">
           {formatLastSeen(device.connectivity)}
         </TableCell>
-        <TableCell className={cn("px-6 py-3 text-[13px] tabular-nums", LIST_TEXT_MUTED)}>
+        <TableCell className="text-muted-foreground px-6 py-3 text-[13px] tabular-nums">
           {formatDate(device.createdAt)}
         </TableCell>
         <TableCell className="w-12 px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-          <div className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 has-[[data-state=open]]:opacity-100">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={t("iot.devices.actions.more")}
-                  className={cn(
-                    "inline-flex size-8 items-center justify-center rounded-md hover:bg-[#EDF2F6] hover:text-[#011111] data-[state=open]:bg-[#EDF2F6] data-[state=open]:text-[#011111]",
-                    LIST_TEXT_MUTED,
-                  )}
-                >
-                  <MoreHorizontal className="size-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem asChild>
-                  <Link href={viewHref}>
-                    <Eye className="mr-2 size-4" />
-                    {t("iot.devices.actions.view")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setConfirmingDelete(true);
-                  }}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 size-4" />
-                  {t("iot.devices.actions.delete")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          {/* Persistently visible: no hover-only affordances anywhere in the domain. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("iot.devices.actions.more")}
+                className="text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground inline-flex size-8 items-center justify-center rounded-md"
+              >
+                <MoreHorizontal className="size-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {renderNextActionItem()}
+              <DropdownMenuItem asChild>
+                <Link href={viewHref}>
+                  <Eye className="mr-2 size-4" />
+                  {t("iot.devices.actions.view")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setConfirmingDelete(true);
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 size-4" />
+                {t("iot.devices.actions.delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </TableCell>
       </TableRow>
 

@@ -334,6 +334,21 @@
           "title": "Gevarenzone",
           "deleteLabel": "Dit apparaat verwijderen",
           "deleteDescription": "Verwijdert het apparaat en zijn cloud-record permanent. Dit kan niet ongedaan worden gemaakt."
+        },
+        "cards": {
+          "credentialsTitle": "Certificaten",
+          "manageLink": "Beheren",
+          "experimentsTitle": "Experimenten",
+          "onboardLink": "Instellen",
+          "streaming": "Streamt",
+          "experimentsEmpty": "Streamt nog naar geen enkel experiment. Stel het in om te starten.",
+          "experimentsError": "De experimenten van dit apparaat konden niet worden geladen.",
+          "credentialHint": {
+            "pending": "Nog geen certificaat. Het apparaat kan pas verbinden nadat er een is uitgegeven.",
+            "active": "Certificaat actief. Het apparaat kan verbinden en streamen.",
+            "rotating": "Er is een nieuw certificaat uitgegeven; laad de nieuwe bundel op het apparaat.",
+            "revoked": "Certificaat ingetrokken. Het apparaat kan pas weer verbinden na een nieuwe uitgifte."
+          }
         }
       },
       "credentials": {
@@ -372,6 +387,10 @@
         "copy": "Kopiëren",
         "download": "Downloaden",
         "downloadAll": "Alles downloaden"
+      },
+      "nextAction": {
+        "issueCredentials": "Certificaat uitgeven",
+        "onboard": "Instellen voor een experiment"
       }
     },
     "onboarding": {

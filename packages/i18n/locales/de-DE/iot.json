@@ -334,6 +334,21 @@
           "title": "Gefahrenzone",
           "deleteLabel": "Dieses Gerät löschen",
           "deleteDescription": "Entfernt das Gerät und seinen Cloud-Datensatz endgültig. Dies kann nicht rückgängig gemacht werden."
+        },
+        "cards": {
+          "credentialsTitle": "Zugangsdaten",
+          "manageLink": "Verwalten",
+          "experimentsTitle": "Experimente",
+          "onboardLink": "Einrichten",
+          "streaming": "Sendet",
+          "experimentsEmpty": "Sendet noch in kein Experiment. Richten Sie es ein, um zu starten.",
+          "experimentsError": "Die Experimente dieses Geräts konnten nicht geladen werden.",
+          "credentialHint": {
+            "pending": "Noch kein Zertifikat. Das Gerät kann sich erst nach der Ausstellung verbinden.",
+            "active": "Zertifikat aktiv. Das Gerät kann sich verbinden und senden.",
+            "rotating": "Ein neues Zertifikat wurde ausgestellt; laden Sie das neue Paket auf das Gerät.",
+            "revoked": "Zertifikat widerrufen. Das Gerät kann sich erst nach einer Neuausstellung wieder verbinden."
+          }
         }
       },
       "credentials": {
@@ -372,6 +387,10 @@
         "copy": "Kopieren",
         "download": "Herunterladen",
         "downloadAll": "Alle herunterladen"
+      },
+      "nextAction": {
+        "issueCredentials": "Zertifikat ausstellen",
+        "onboard": "Für ein Experiment einrichten"
       }
     },
     "onboarding": {

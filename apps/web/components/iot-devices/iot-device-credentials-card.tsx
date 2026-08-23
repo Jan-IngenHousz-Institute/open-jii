@@ -87,7 +87,7 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConn
         {device.status === "active" && (
           <div className="flex flex-col gap-3">
             <div>
-              <p className="text-sm font-medium text-[#011111]">
+              <p className="text-foreground text-sm font-medium">
                 {t("iot.devices.credentials.activeLabel")}
               </p>
               {device.certificateId !== null && (

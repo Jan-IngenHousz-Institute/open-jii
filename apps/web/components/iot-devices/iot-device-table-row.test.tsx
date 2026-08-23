@@ -114,6 +114,40 @@ describe("IotDeviceTableRow", () => {
     expect(router.push).not.toHaveBeenCalled();
   });
 
+  it("leads the menu with issue-certificate for a pending device", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ status: "pending" }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    expect(
+      await screen.findByRole("menuitem", { name: /iot.devices.nextAction.issueCredentials/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("leads the menu with onboarding for an active device", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ status: "active" }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    expect(
+      await screen.findByRole("menuitem", { name: /iot.devices.nextAction.onboard/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no next step for a phone, which sets itself up", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ deviceType: "mobile" }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    await screen.findByRole("menuitem", { name: /iot.devices.actions.view/ });
+    expect(
+      screen.queryByRole("menuitem", { name: /iot.devices.nextAction/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("deletes the device and toasts on confirm", async () => {
     const device = createIotDevice({ name: "Sensor A" });
     const spy = server.mount(contract.iot.deleteIotDevice);

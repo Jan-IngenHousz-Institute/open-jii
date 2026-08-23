@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeleteIotDevice } from "@/hooks/iot/useDeleteIotDevice/useDeleteIotDevice";
+import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import {
@@ -31,14 +32,22 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { MetaField } from "../experiment-dashboards/meta-field";
 import { useFormatLastSeen } from "./device-connectivity";
+import { deviceNextAction } from "./device-next-action";
+import { DeviceNextActionChip } from "./device-next-action-chip";
+import { DeviceOverviewCards } from "./device-overview-cards";
 
-/** Device registry metadata and its manage-gated danger zone. */
+/** The stitched hub: metadata, summary cards into the neighbouring tabs, and
+ * the manage-gated danger zone. */
 export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
   const router = useRouter();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const { data: boundExperiments } = useDeviceExperiments(device.id);
+  const isMobileFamily = device.deviceType === "mobile";
+  const nextAction = deviceNextAction(device, (boundExperiments ?? []).length);
 
   const { mutate: deleteDevice, isPending: isDeleting } = useDeleteIotDevice({
     onSuccess: () => {
@@ -67,6 +76,8 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
 
   return (
     <div className="space-y-8">
+      {nextAction !== null && <DeviceNextActionChip deviceId={device.id} action={nextAction} />}
+
       <div className="flex flex-wrap items-start gap-10">
         <MetaField label={t("iot.devices.detail.meta.serial")} value={device.serialNumber} />
         <MetaField
@@ -94,6 +105,8 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
           value={formatLastSeen(device.connectivity)}
         />
       </div>
+
+      {!isMobileFamily && <DeviceOverviewCards device={device} />}
 
       {device.capabilities.canManage && (
         <Card className="border-destructive/30 max-w-3xl shadow-none">

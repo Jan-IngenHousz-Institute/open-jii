@@ -20,10 +20,10 @@ export function ConnectivityDot({ connectivity, className }: ConnectivityDotProp
   if (connectivity === null) {
     return (
       <span
-        className={cn("inline-flex items-center gap-1.5 text-xs text-[#68737B]", className)}
+        className={cn("text-muted-foreground inline-flex items-center gap-1.5 text-xs", className)}
         title={t("iot.devices.connectivity.unknown")}
       >
-        <span className="h-2 w-2 rounded-full border border-dashed border-[#CDD5DB]" />
+        <span className="border-border h-2 w-2 rounded-full border border-dashed" />
         {t("iot.devices.connectivity.unknown")}
       </span>
     );
@@ -44,8 +44,10 @@ export function ConnectivityDot({ connectivity, className }: ConnectivityDotProp
   }
 
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-xs text-[#68737B]", className)}>
-      <span className="h-2 w-2 shrink-0 rounded-full bg-[#CDD5DB]" />
+    <span
+      className={cn("text-muted-foreground inline-flex items-center gap-1.5 text-xs", className)}
+    >
+      <span className="bg-border h-2 w-2 shrink-0 rounded-full" />
       {t("iot.devices.connectivity.disconnected")}
     </span>
   );

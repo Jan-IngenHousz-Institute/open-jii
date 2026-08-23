@@ -334,6 +334,21 @@
           "title": "Danger zone",
           "deleteLabel": "Delete this device",
           "deleteDescription": "Permanently removes the device and its cloud record. This cannot be undone."
+        },
+        "cards": {
+          "credentialsTitle": "Credentials",
+          "manageLink": "Manage",
+          "experimentsTitle": "Experiments",
+          "onboardLink": "Onboard",
+          "streaming": "Streaming",
+          "experimentsEmpty": "Not streaming into any experiment yet. Onboard it to start.",
+          "experimentsError": "Could not load this device's experiments.",
+          "credentialHint": {
+            "pending": "No certificate yet. The device cannot connect until one is issued.",
+            "active": "Certificate active. The device can connect and stream.",
+            "rotating": "A new certificate was issued; load the new bundle onto the device.",
+            "revoked": "Certificate revoked. The device cannot reconnect until a new one is issued."
+          }
         }
       },
       "credentials": {
@@ -372,6 +387,10 @@
         "copy": "Copy",
         "download": "Download",
         "downloadAll": "Download all"
+      },
+      "nextAction": {
+        "issueCredentials": "Issue certificate",
+        "onboard": "Onboard to an experiment"
       }
     },
     "onboarding": {
