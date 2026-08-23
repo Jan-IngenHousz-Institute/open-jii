@@ -68,11 +68,7 @@
         "all": "All"
       },
       "sections": {
-        "overview": "Overview",
-        "devices": "Devices",
-        "groups": "Groups",
-        "onboarding": "Onboarding",
-        "monitoring": "Monitoring"
+        "groups": "Groups"
       },
       "detailTabs": {
         "overview": "Overview",
@@ -81,14 +77,6 @@
         "collaborators": "Collaborators",
         "lineage": "Lineage",
         "monitoring": "Monitoring"
-      },
-      "overview": {
-        "total": "Total devices"
-      },
-      "comingSoon": {
-        "title": "Coming soon",
-        "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
-        "onboarding": "Onboard each device from its detail page (Onboarding tab). Bulk onboarding from this view is coming soon."
       },
       "connectivity": {
         "connected": "Connected",

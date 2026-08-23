@@ -68,11 +68,7 @@
         "all": "Alle"
       },
       "sections": {
-        "overview": "Overzicht",
-        "devices": "Apparaten",
-        "groups": "Groepen",
-        "onboarding": "Onboarding",
-        "monitoring": "Monitoring"
+        "groups": "Groepen"
       },
       "detailTabs": {
         "overview": "Overzicht",
@@ -81,14 +77,6 @@
         "collaborators": "Medewerkers",
         "lineage": "Herkomst",
         "monitoring": "Monitoring"
-      },
-      "overview": {
-        "total": "Totaal aantal apparaten"
-      },
-      "comingSoon": {
-        "title": "Binnenkort beschikbaar",
-        "monitoring": "Volg apparaatconnectiviteit, laatst gezien en de gezondheid van de vloot in één oogopslag.",
-        "onboarding": "Onboard elk apparaat via zijn detailpagina (tabblad Onboarding). Bulk-onboarding vanuit dit overzicht volgt binnenkort."
       },
       "connectivity": {
         "connected": "Verbonden",

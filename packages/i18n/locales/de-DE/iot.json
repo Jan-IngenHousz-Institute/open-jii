@@ -68,11 +68,7 @@
         "all": "Alle"
       },
       "sections": {
-        "overview": "Übersicht",
-        "devices": "Geräte",
-        "groups": "Gruppen",
-        "onboarding": "Einrichtung",
-        "monitoring": "Überwachung"
+        "groups": "Gruppen"
       },
       "detailTabs": {
         "overview": "Übersicht",
@@ -81,14 +77,6 @@
         "collaborators": "Mitwirkende",
         "lineage": "Herkunft",
         "monitoring": "Überwachung"
-      },
-      "overview": {
-        "total": "Geräte insgesamt"
-      },
-      "comingSoon": {
-        "title": "Demnächst verfügbar",
-        "monitoring": "Verfolgen Sie Gerätekonnektivität, letzte Aktivität und den Zustand der Flotte auf einen Blick.",
-        "onboarding": "Onboarden Sie jedes Gerät über seine Detailseite (Tab „Einrichtung“). Bulk-Onboarding aus dieser Ansicht folgt in Kürze."
       },
       "connectivity": {
         "connected": "Verbunden",
