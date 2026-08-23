@@ -11,7 +11,7 @@ import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useIotDeviceGroupMonitoring } from "@/hooks/iot/useIotDeviceGroupMonitoring/useIotDeviceGroupMonitoring";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
-import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { resolveDeviceLabel } from "@/util/device-presentation";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -78,10 +78,7 @@ export function GroupMonitoringContent() {
   const now = Date.now();
 
   function labelFor(member: IotDeviceGroupMemberHealth): string {
-    return resolveDevicePrimaryLabel(
-      presentDevice({ name: member.name, family: member.deviceType, id: member.serialNumber }),
-      t,
-    );
+    return resolveDeviceLabel(member, t);
   }
 
   const labels =

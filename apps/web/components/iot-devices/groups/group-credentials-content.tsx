@@ -8,7 +8,7 @@ import { useIssueIotDeviceGroupCredentials } from "@/hooks/iot/useIssueIotDevice
 import { useRevokeIotDeviceGroupCredentials } from "@/hooks/iot/useRevokeIotDeviceGroupCredentials/useRevokeIotDeviceGroupCredentials";
 import { useRotateIotDeviceGroupCredentials } from "@/hooks/iot/useRotateIotDeviceGroupCredentials/useRotateIotDeviceGroupCredentials";
 import { useLocale } from "@/hooks/useLocale";
-import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { resolveDeviceLabel } from "@/util/device-presentation";
 import { KeyRound, Loader2, RefreshCw, ShieldOff } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -24,13 +24,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Checkbox } from "@repo/ui/components/checkbox";
 import { EmptyState } from "@repo/ui/components/empty-state";
-import { Label } from "@repo/ui/components/label";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { DeviceRow } from "../device-row";
 import { GroupCredentialResults } from "./group-credential-results";
 import type { GroupCredentialBatch } from "./group-credential-results";
 
@@ -94,10 +93,7 @@ export function GroupCredentialsContent() {
   const isOverCap = selectedIds.length > MAX_BATCH;
 
   function labelFor(member: IotDeviceGroupMember): string {
-    return resolveDevicePrimaryLabel(
-      presentDevice({ name: member.name, family: member.deviceType, id: member.serialNumber }),
-      t,
-    );
+    return resolveDeviceLabel(member, t);
   }
   const labels = new Map(members.map((member) => [member.deviceId, labelFor(member)]));
 
@@ -209,27 +205,34 @@ export function GroupCredentialsContent() {
 
     return (
       <li key={member.deviceId}>
-        <Label className="hover:bg-muted/30 flex cursor-pointer items-center gap-3 px-3 py-2.5 font-normal">
-          <Checkbox
-            checked={eligibleMember && !deselectedIds.has(member.deviceId)}
-            disabled={!eligibleMember}
-            onCheckedChange={(checked) => {
-              handleDeviceToggle(member.deviceId, checked === true);
-            }}
-          />
-          <span className="min-w-0 flex-1 truncate text-sm">{labelFor(member)}</span>
-          {eligibleMember ? (
-            <ConnectivityDot
-              connectivity={
-                member.connected === null ? null : { connected: member.connected, lastSeenAt: null }
-              }
-            />
-          ) : (
-            <Badge variant="outline" className="text-muted-foreground font-normal">
-              {ineligibleReason(member)}
-            </Badge>
-          )}
-        </Label>
+        <DeviceRow
+          device={{ ...member, id: member.deviceId }}
+          selection={{
+            checked: eligibleMember && !deselectedIds.has(member.deviceId),
+            disabled: !eligibleMember,
+            onCheckedChange: (checked) => {
+              handleDeviceToggle(member.deviceId, checked);
+            },
+          }}
+          status={
+            eligibleMember ? (
+              <ConnectivityDot
+                connectivity={
+                  member.connected === null
+                    ? null
+                    : { connected: member.connected, lastSeenAt: null }
+                }
+              />
+            ) : undefined
+          }
+          trailing={
+            eligibleMember ? undefined : (
+              <Badge variant="outline" className="text-muted-foreground font-normal">
+                {ineligibleReason(member)}
+              </Badge>
+            )
+          }
+        />
       </li>
     );
   }

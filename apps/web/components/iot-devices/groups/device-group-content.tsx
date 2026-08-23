@@ -7,7 +7,7 @@ import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/u
 import { useRemoveIotDeviceGroupMember } from "@/hooks/iot/useRemoveIotDeviceGroupMember/useRemoveIotDeviceGroupMember";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
-import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { resolveDeviceLabel } from "@/util/device-presentation";
 import { Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -107,16 +107,7 @@ export function DeviceGroupContent() {
             <TableBody>
               {(members ?? []).map((member) => (
                 <TableRow key={member.deviceId}>
-                  <TableCell>
-                    {resolveDevicePrimaryLabel(
-                      presentDevice({
-                        name: member.name,
-                        family: member.deviceType,
-                        id: member.serialNumber,
-                      }),
-                      t,
-                    )}
-                  </TableCell>
+                  <TableCell>{resolveDeviceLabel(member, t)}</TableCell>
                   <TableCell className="font-mono text-xs">{member.deviceType}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="font-normal">

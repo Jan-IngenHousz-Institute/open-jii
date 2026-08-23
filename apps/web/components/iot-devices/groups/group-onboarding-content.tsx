@@ -7,7 +7,7 @@ import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGro
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
 import { useOnboardIotDeviceGroup } from "@/hooks/iot/useOnboardIotDeviceGroup/useOnboardIotDeviceGroup";
 import { orpc } from "@/lib/orpc";
-import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { resolveDeviceLabel } from "@/util/device-presentation";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Rocket } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -28,13 +28,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Checkbox } from "@repo/ui/components/checkbox";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Label } from "@repo/ui/components/label";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { Switch } from "@repo/ui/components/switch";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { DeviceRow } from "../device-row";
 import { GroupOnboardResults } from "./group-onboard-results";
 
 /** Mirrors the contract's cap on an explicit `deviceIds` selection. */
@@ -78,10 +78,7 @@ export function GroupOnboardingContent() {
   const isOverCap = selectedIds.length > MAX_BATCH;
 
   function labelFor(member: IotDeviceGroupMember): string {
-    return resolveDevicePrimaryLabel(
-      presentDevice({ name: member.name, family: member.deviceType, id: member.serialNumber }),
-      t,
-    );
+    return resolveDeviceLabel(member, t);
   }
   const labels = new Map(members.map((member) => [member.deviceId, labelFor(member)]));
 
@@ -165,23 +162,23 @@ export function GroupOnboardingContent() {
 
     return (
       <li key={member.deviceId}>
-        <Label className="hover:bg-muted/30 flex cursor-pointer items-center gap-3 px-3 py-2.5 font-normal">
-          <Checkbox
-            checked={eligibleMember && !deselectedIds.has(member.deviceId)}
-            disabled={!eligibleMember}
-            onCheckedChange={(checked) => {
-              handleDeviceToggle(member.deviceId, checked === true);
-            }}
-          />
-          <span className="min-w-0 flex-1 truncate text-sm">{labelFor(member)}</span>
-          {eligibleMember ? (
-            <span className="text-muted-foreground font-mono text-xs">{member.deviceType}</span>
-          ) : (
-            <Badge variant="outline" className="text-muted-foreground font-normal">
-              {ineligibleReason}
-            </Badge>
-          )}
-        </Label>
+        <DeviceRow
+          device={{ ...member, id: member.deviceId }}
+          selection={{
+            checked: eligibleMember && !deselectedIds.has(member.deviceId),
+            disabled: !eligibleMember,
+            onCheckedChange: (checked) => {
+              handleDeviceToggle(member.deviceId, checked);
+            },
+          }}
+          trailing={
+            eligibleMember ? undefined : (
+              <Badge variant="outline" className="text-muted-foreground font-normal">
+                {ineligibleReason}
+              </Badge>
+            )
+          }
+        />
       </li>
     );
   }
