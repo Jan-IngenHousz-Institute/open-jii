@@ -41,7 +41,10 @@ describe("DeviceGroupContent", () => {
     render(<DeviceGroupContent />);
 
     // Unnamed devices lead with their identifier, like everywhere else.
-    expect(await screen.findByText(/E8:F6:0A/)).toBeInTheDocument();
+    // Name resolves to the serial for an unnamed device AND the serial renders as
+    // its own second line, so the value legitimately appears twice.
+    expect((await screen.findAllByText(/E8:F6:0A/)).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /E8:F6:0A/ })).toBeInTheDocument();
     expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
   });
 
@@ -68,7 +71,7 @@ describe("DeviceGroupContent", () => {
 
     render(<DeviceGroupContent />);
 
-    expect(await screen.findByText(/AA:BB:CC:DD/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/AA:BB:CC:DD/)).length).toBeGreaterThan(0);
     expect(screen.queryByText("iot.groups.addDevices")).not.toBeInTheDocument();
     expect(screen.queryByText("iot.groups.remove")).not.toBeInTheDocument();
     expect(screen.queryByText("iot.groups.dangerZone.title")).not.toBeInTheDocument();

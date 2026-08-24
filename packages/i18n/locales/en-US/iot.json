@@ -634,6 +634,10 @@
       "overview": {
         "title": "Overview",
         "description": "What this group contains, and how its devices are doing."
+      },
+      "nextAction": {
+        "credentials": "{{count}} device needs a certificate",
+        "credentials_other": "{{count}} devices need a certificate"
       }
     },
     "workbookBar": {

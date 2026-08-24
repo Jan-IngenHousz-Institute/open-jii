@@ -8,14 +8,15 @@ import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/u
 import { useRemoveIotDeviceGroupMember } from "@/hooks/iot/useRemoveIotDeviceGroupMember/useRemoveIotDeviceGroupMember";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
-import { resolveDeviceLabel } from "@/util/device-presentation";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
+import { ArrowRight } from "lucide-react";
 import { Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { IotDeviceGroupMember } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -29,6 +30,8 @@ import {
 } from "@repo/ui/components/table";
 
 import { MetaField } from "../../experiment-dashboards/meta-field";
+import { DeviceIdentity } from "../device-row";
+import { IotDeviceStatusBadge } from "../iot-device-status-badge";
 import { AddGroupMembersDialog } from "./add-group-members-dialog";
 import { DeleteDeviceGroupDialog } from "./delete-device-group-dialog";
 
@@ -41,6 +44,13 @@ export function DeviceGroupContent() {
 
   const { data: group, isLoading, isError, error } = useIotDeviceGroup(groupId);
   const { data: members } = useIotDeviceGroupMembers(groupId);
+  // The chip aggregates over members: certificates are the one blocked step
+  // this page can see without fanning out per-device reads.
+  const credentialsNeededCount = (members ?? []).filter(
+    (member) =>
+      member.deviceType !== "mobile" &&
+      (member.status === "pending" || member.status === "revoked"),
+  ).length;
   const removeMember = useRemoveIotDeviceGroupMember();
   const [addOpen, setAddOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -71,10 +81,21 @@ export function DeviceGroupContent() {
 
   return (
     <div className="space-y-8">
-      <TabBodyHeader
-        title={t("iot.groups.overview.title")}
-        description={t("iot.groups.overview.description")}
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <TabBodyHeader
+          title={t("iot.groups.overview.title")}
+          description={t("iot.groups.overview.description")}
+        />
+        {credentialsNeededCount > 0 && (
+          <Link
+            href={`/${locale}/platform/devices/groups/${groupId}/credentials`}
+            className="bg-secondary text-secondary-foreground focus-visible:ring-primary/40 focus-visible:outline-hidden inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium hover:opacity-90 focus-visible:ring-2"
+          >
+            {t("iot.groups.nextAction.credentials", { count: credentialsNeededCount })}
+            <ArrowRight className="size-3.5" aria-hidden />
+          </Link>
+        )}
+      </div>
       <div className="flex flex-wrap items-start gap-10">
         <MetaField label={t("iot.groups.meta.members")} value={String(group.memberCount)} />
         <MetaField label={t("iot.groups.meta.created")} value={formatDate(group.createdAt)} />
@@ -112,12 +133,18 @@ export function DeviceGroupContent() {
             <TableBody>
               {(members ?? []).map((member) => (
                 <TableRow key={member.deviceId}>
-                  <TableCell>{resolveDeviceLabel(member, t)}</TableCell>
-                  <TableCell className="font-mono text-xs">{member.deviceType}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="font-normal">
-                      {t(`iot.devices.status.${member.status}`)}
-                    </Badge>
+                    <DeviceIdentity
+                      device={{ ...member, id: member.deviceId }}
+                      href={`/${locale}/platform/devices/${member.deviceId}`}
+                      showSerial
+                    />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-[13px]">
+                    {getSensorFamilyLabel(member.deviceType)}
+                  </TableCell>
+                  <TableCell>
+                    <IotDeviceStatusBadge status={member.status} />
                   </TableCell>
                   {canContribute && (
                     <TableCell>

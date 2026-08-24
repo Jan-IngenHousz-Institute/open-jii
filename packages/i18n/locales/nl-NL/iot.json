@@ -634,6 +634,10 @@
       "overview": {
         "title": "Overzicht",
         "description": "Wat deze groep bevat en hoe het met de apparaten gaat."
+      },
+      "nextAction": {
+        "credentials": "{{count}} apparaat heeft een certificaat nodig",
+        "credentials_other": "{{count}} apparaten hebben een certificaat nodig"
       }
     },
     "workbookBar": {

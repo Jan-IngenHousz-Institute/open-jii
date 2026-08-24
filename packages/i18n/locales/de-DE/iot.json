@@ -634,6 +634,10 @@
       "overview": {
         "title": "Übersicht",
         "description": "Was diese Gruppe enthält und wie es ihren Geräten geht."
+      },
+      "nextAction": {
+        "credentials": "{{count}} Gerät braucht ein Zertifikat",
+        "credentials_other": "{{count}} Geräte brauchen ein Zertifikat"
       }
     },
     "workbookBar": {
