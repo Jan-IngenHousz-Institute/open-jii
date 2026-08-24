@@ -15,7 +15,7 @@ def _strict_loads(payload: str | None):
     return json.loads(payload, parse_constant=reject)
 
 
-class TestRepairNonFiniteJsonValue:
+class TestScrubNonFiniteJsonValue:
     def test_none_passes_through(self) -> None:
         assert scrub_non_finite_json_value(None) is None
 
@@ -58,3 +58,15 @@ class TestRepairNonFiniteJsonValue:
     def test_unparseable_payload_passes_through(self) -> None:
         truncated = '{"detail": "NaN", "cal": [1.0,'
         assert scrub_non_finite_json_value(truncated) == truncated
+
+    def test_high_precision_numbers_preserved_exactly(self) -> None:
+        payload = (
+            '{"a": 0.12345678901234567890123456789012345, "b": 123456789012345678901234567890, "t": NaN}'
+        )
+        assert scrub_non_finite_json_value(payload) == (
+            '{"a": 0.12345678901234567890123456789012345, "b": 123456789012345678901234567890, "t": null}'
+        )
+
+    def test_escaped_quotes_keep_string_state(self) -> None:
+        payload = '{"detail": "say \\"NaN\\" now", "t": NaN}'
+        assert scrub_non_finite_json_value(payload) == '{"detail": "say \\"NaN\\" now", "t": null}'
