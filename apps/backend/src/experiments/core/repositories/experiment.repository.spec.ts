@@ -235,6 +235,98 @@ describe("ExperimentRepository", () => {
       expect(experiments[0].name).toBe("My Experiment");
     });
 
+    it("returns experiments reached through the owning organization under the 'member' filter", async () => {
+      const org = await testApp.createOrganization();
+      const author = await testApp.createTestUser({ email: "org-author@example.com" });
+      const orgMember = await testApp.createTestUser({ email: "org-member@example.com" });
+      await testApp.addOrganizationMember(org, author, "admin");
+      await testApp.addOrganizationMember(org, orgMember, "member");
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Org Experiment",
+        userId: author,
+        visibility: "private",
+        organizationId: org,
+      });
+
+      const result = await repository.findAll(orgMember, "member");
+
+      assertSuccess(result);
+      expect(result.value.map((e) => e.id)).toEqual([experiment.id]);
+    });
+
+    it("returns experiments reached through a team grant under the 'member' filter", async () => {
+      const org = await testApp.createOrganization();
+      const author = await testApp.createTestUser({ email: "team-author@example.com" });
+      const teammate = await testApp.createTestUser({ email: "teammate@example.com" });
+      await testApp.addOrganizationMember(org, author, "admin");
+      const team = await testApp.createTeam(org);
+      await testApp.addTeamMember(team, teammate);
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Team Experiment",
+        userId: author,
+        visibility: "private",
+        organizationId: org,
+      });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "team",
+        granteeId: team,
+        role: "viewer",
+      });
+
+      const result = await repository.findAll(teammate, "member");
+
+      assertSuccess(result);
+      expect(result.value.map((e) => e.id)).toEqual([experiment.id]);
+    });
+
+    it("returns experiments reached through an organization grant under the 'member' filter", async () => {
+      const author = await testApp.createTestUser({ email: "org-grant-author@example.com" });
+      const outsider = await testApp.createTestUser({ email: "org-grantee@example.com" });
+      // The grantee's own org holds the grant; they are not in the owning org.
+      const granteeOrg = await testApp.createOrganization();
+      await testApp.addOrganizationMember(granteeOrg, outsider, "member");
+
+      const { experiment } = await testApp.createExperiment({
+        name: "Org Granted Experiment",
+        userId: author,
+        visibility: "private",
+      });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "organization",
+        granteeId: granteeOrg,
+        role: "viewer",
+      });
+
+      const result = await repository.findAll(outsider, "member");
+
+      assertSuccess(result);
+      expect(result.value.map((e) => e.id)).toEqual([experiment.id]);
+    });
+
+    it("still excludes public experiments the caller is unrelated to under the 'member' filter", async () => {
+      const mainUserId = await testApp.createTestUser({ email: "member-public@example.com" });
+      const otherUserId = await testApp.createTestUser({
+        email: "member-public-other@example.com",
+      });
+
+      await testApp.createExperiment({
+        name: "Public Experiment",
+        userId: otherUserId,
+        visibility: "public",
+      });
+
+      const result = await repository.findAll(mainUserId, "member");
+
+      assertSuccess(result);
+      expect(result.value).toHaveLength(0);
+    });
+
     it("should not return duplicate experiments when user has access to multiple experiments", async () => {
       // Arrange - Test case where a user is a member of multiple experiments
       // Ensures the CTE-based code doesn't cause duplicates
