@@ -645,7 +645,8 @@
       "deviceCount_other": "{{count}} apparaten",
       "disconnectDevice": "{{name}} loskoppelen",
       "disconnectAll": "Alles loskoppelen",
-      "flow": "Stroom"
+      "flow": "Stroom",
+      "deviceOrdinal": "Apparaat #{{ordinal}}"
     }
   }
 }

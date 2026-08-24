@@ -4,8 +4,9 @@ import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicat
 import { orpcClient } from "@/lib/orpc";
 import { decodeBase64 } from "@/util/base64";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
-import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
+import { ChevronDown, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { ConnectionStatusCluster } from "~/components/iot/connection-status-cluster";
 import { sensorFamilyToDeviceType } from "~/hooks/iot/device-type-mapping";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
@@ -140,7 +141,10 @@ export function WorkbookHeader({
       id: device.stableId,
     });
     const primary = resolveDevicePrimaryLabel(presentation, t);
-    const ordinal = device.ordinal != null ? `Device #${device.ordinal}` : null;
+    const ordinal =
+      device.ordinal != null
+        ? t("iot.workbookBar.deviceOrdinal", { ordinal: device.ordinal })
+        : null;
     const identitySecondary =
       presentation.id ?? ordinal ?? (device.label !== primary ? device.label : null);
     const secondaryParts = [
@@ -351,71 +355,13 @@ export function WorkbookHeader({
         </Tooltip>
       </TooltipProvider>
 
-      <div className="flex min-w-0 items-center gap-1.5">
-        <Circle
-          className={cn(
-            "size-2 shrink-0",
-            isConnected
-              ? "fill-emerald-500 text-emerald-500"
-              : isConnecting
-                ? "animate-pulse fill-amber-400 text-amber-400"
-                : "fill-gray-300 text-gray-300",
-          )}
-        />
-        {isConnected ? (
-          // One compact trigger regardless of device count; the dropdown
-          // lists every connected device with per-device disconnect.
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1 text-[12px] leading-[18px] xl:text-[13px] xl:leading-[21px]"
-                data-testid="device-menu-trigger"
-              >
-                <span className="truncate">
-                  {presentedDevices.length > 1
-                    ? t("iot.workbookBar.deviceCount", { count: presentedDevices.length })
-                    : (presentedDevices[0]?.primary ?? t("iot.protocolRunner.connected"))}
-                </span>
-                {presentedDevices.length === 1 && presentedDevices[0]?.secondary && (
-                  <span className="text-muted-foreground hidden truncate text-[11px] xl:inline">
-                    · {presentedDevices[0].secondary}
-                  </span>
-                )}
-                <ChevronDown className="size-3 shrink-0" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {presentedDevices.map((device) => (
-                <DropdownMenuItem
-                  key={device.id}
-                  data-testid="device-menu-item"
-                  aria-label={t("iot.workbookBar.disconnectDevice", { name: device.primary })}
-                  className="flex items-center justify-between gap-4"
-                  onSelect={() => onDisconnectDevice?.(device.id)}
-                >
-                  <span className="flex flex-col">
-                    <span>{device.primary}</span>
-                    {device.secondary && device.secondary !== device.primary && (
-                      <span className="text-muted-foreground text-[10px]">{device.secondary}</span>
-                    )}
-                  </span>
-                  <span className="text-muted-foreground text-[11px]">
-                    {t("iot.protocolRunner.disconnect")}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem data-testid="disconnect-all" onSelect={onDisconnect}>
-                {t("iot.workbookBar.disconnectAll")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <span className="text-muted-foreground hidden text-[12px] leading-[18px] xl:inline xl:text-[13px] xl:leading-[21px]">
-            {isConnecting ? t("iot.protocolRunner.connecting") : t("iot.workbookBar.disconnected")}
-          </span>
-        )}
-      </div>
+      <ConnectionStatusCluster
+        isConnected={isConnected}
+        isConnecting={isConnecting}
+        devices={presentedDevices}
+        onDisconnectDevice={onDisconnectDevice}
+        onDisconnectAll={onDisconnect}
+      />
 
       <div className="flex-1" />
 

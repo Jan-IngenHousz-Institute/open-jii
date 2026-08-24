@@ -645,7 +645,8 @@
       "deviceCount_other": "{{count}} Geräte",
       "disconnectDevice": "{{name}} trennen",
       "disconnectAll": "Alle trennen",
-      "flow": "Ablauf"
+      "flow": "Ablauf",
+      "deviceOrdinal": "Gerät Nr. {{ordinal}}"
     }
   }
 }

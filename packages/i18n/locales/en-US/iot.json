@@ -645,7 +645,8 @@
       "deviceCount_other": "{{count}} devices",
       "disconnectDevice": "Disconnect {{name}}",
       "disconnectAll": "Disconnect all",
-      "flow": "Flow"
+      "flow": "Flow",
+      "deviceOrdinal": "Device #{{ordinal}}"
     }
   }
 }
