@@ -3,7 +3,8 @@
 How the engineering skills should consume this repo's domain documentation when exploring the
 codebase.
 
-This repo is **single-context**: one `CONTEXT.md` at the root, one `docs/adr/`.
+This repo has one shared context at the root, with `apps/mobile/CONTEXT.md` as a scoped exception
+for mobile-only vocabulary. System-wide ADRs live in `docs/adr/`.
 
 ## Before exploring, read these
 
@@ -36,15 +37,16 @@ suggest creating them upfront. The `/domain-modeling` skill, reached through `/g
 └── packages/
 ```
 
-Should the repo ever outgrow one glossary, the multi-context layout is a root `CONTEXT-MAP.md`
-pointing at one `CONTEXT.md` per context, with context-scoped ADRs under each. The presence of
-`CONTEXT-MAP.md` at the root is the signal that the repo has switched.
+Beyond the existing mobile-only glossary, should the repo ever outgrow one shared glossary, the
+multi-context layout is a root `CONTEXT-MAP.md` pointing at one `CONTEXT.md` per context, with
+context-scoped ADRs under each. The presence of `CONTEXT-MAP.md` at the root is the signal that the
+repo has switched.
 
 ## Use the glossary's vocabulary
 
-When your output names a domain concept, in a ticket title, a refactor proposal, a hypothesis or a
-test name, use the term as defined in `CONTEXT.md`. Do not drift to synonyms the glossary explicitly
-avoids.
+When your output names a domain concept, use the glossary for its scope: shared concepts use root
+`CONTEXT.md`, and mobile-only concepts use `apps/mobile/CONTEXT.md`. Do not drift to synonyms the
+applicable glossary explicitly avoids.
 
 If the concept you need is not in the glossary yet, that is a signal. Either you are inventing
 language the project does not use, which is worth reconsidering, or there is a real gap, which is
