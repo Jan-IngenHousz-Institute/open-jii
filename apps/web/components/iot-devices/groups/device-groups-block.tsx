@@ -5,7 +5,6 @@ import { useIotDeviceGroups } from "@/hooks/iot/useIotDeviceGroups/useIotDeviceG
 import { useLocale } from "@/hooks/useLocale";
 import { useState } from "react";
 
-import type { IotDeviceGroupListItem } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";

@@ -79,7 +79,7 @@ export function ResourceCollaborators({
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder={t("sharing.filterCollaboratorsPlaceholder")}
-            className="bg-card pl-9"
+            className="pl-9"
           />
         </div>
         <Button onClick={() => setIsInviteOpen(true)} disabled={readOnly}>

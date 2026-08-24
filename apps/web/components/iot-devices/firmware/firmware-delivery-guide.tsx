@@ -36,7 +36,7 @@ export function FirmwareDeliveryGuide({ defaultOpen = false }: FirmwareDeliveryG
   const { t: tCommon } = useTranslation("common");
 
   return (
-    <Collapsible defaultOpen={defaultOpen} className="rounded-lg border">
+    <Collapsible defaultOpen={defaultOpen} className="bg-card rounded-lg border">
       <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium">
         <BookOpen className="h-4 w-4" aria-hidden />
         {t("iot.devices.firmware.guide.title")}

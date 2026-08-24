@@ -17,7 +17,7 @@ const emptyStateVariants = cva("flex flex-col items-center text-center", {
     size: {
       page: "bg-card rounded-xl border py-12 px-6",
       panel: "bg-card rounded-lg border border-dashed p-8",
-      inline: "rounded-lg border border-dashed p-4 flex-row items-start text-left gap-2",
+      inline: "bg-card rounded-lg border border-dashed p-4 flex-row items-start text-left gap-2",
     },
     variant: {
       default: "",
