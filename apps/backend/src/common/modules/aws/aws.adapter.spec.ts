@@ -456,10 +456,34 @@ describe("AwsAdapter", () => {
       const result = await awsAdapter.attachDevicePolicies("arn:cert");
 
       assertSuccess(result);
-      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length);
       for (const policyName of awsConfigService.iotPolicyNames) {
         expect(attachSpy).toHaveBeenCalledWith(policyName, "arn:cert");
       }
+    });
+
+    it("also attaches the Jobs policy, which Cognito identities never receive", async () => {
+      const attachSpy = vi
+        .spyOn(awsIotService, "attachPolicy")
+        .mockResolvedValue(success(undefined));
+      vi.spyOn(awsConfigService, "iotJobsPolicyName", "get").mockReturnValue("jobs-policy");
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertSuccess(result);
+      expect(attachSpy).toHaveBeenCalledWith("jobs-policy", "arn:cert");
+      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length + 1);
+    });
+
+    it("skips the Jobs policy until an environment configures one", async () => {
+      const attachSpy = vi
+        .spyOn(awsIotService, "attachPolicy")
+        .mockResolvedValue(success(undefined));
+      vi.spyOn(awsConfigService, "iotJobsPolicyName", "get").mockReturnValue("");
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertSuccess(result);
+      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length);
     });
 
     it("stops and propagates the first policy attachment failure", async () => {

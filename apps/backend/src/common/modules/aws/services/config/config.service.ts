@@ -34,6 +34,7 @@ export class AwsConfigService {
         .split(",")
         .map((name) => name.trim())
         .filter(Boolean),
+      iotJobsPolicyName: (this.configService.get<string>("aws.iot.jobsPolicyName") ?? "").trim(),
       deviceThingTypeName: this.configService.getOrThrow<string>("aws.iot.deviceThingTypeName"),
       deviceThingGroupName: this.configService.getOrThrow<string>("aws.iot.deviceThingGroupName"),
       lambda: {
@@ -108,6 +109,15 @@ export class AwsConfigService {
 
   get iotPolicyNames(): string[] {
     return this.config.iotPolicyNames;
+  }
+
+  /**
+   * Policy granting a device its own AWS IoT Jobs topics. Attached to device
+   * certificates only, never to the Cognito identities that share
+   * {@link iotPolicyNames}: phones and browsers run no firmware jobs.
+   */
+  get iotJobsPolicyName(): string {
+    return this.config.iotJobsPolicyName;
   }
 
   get deviceThingTypeName(): string {

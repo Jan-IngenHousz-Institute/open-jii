@@ -15,6 +15,7 @@ const DEVICE_TABS = [
   { value: "overview", segment: "" },
   { value: "credentials", segment: "credentials" },
   { value: "onboarding", segment: "onboarding" },
+  { value: "firmware", segment: "firmware" },
   { value: "collaborators", segment: "collaborators" },
   { value: "lineage", segment: "lineage" },
   { value: "monitoring", segment: "monitoring" },
@@ -24,6 +25,8 @@ interface IotDeviceDetailTabsProps {
   deviceId: string;
   /** Phones have no certificate lifecycle and no config to deliver. */
   isMobileFamily: boolean;
+  /** Only families whose firmware JII builds have a release line to show. */
+  hasManagedFirmware: boolean;
   /** Hides a Collaborators route that would immediately redirect without share/leave access. */
   canShare: boolean;
   /** `capabilities.canLeave`: the caller holds a direct grant they could give up. */
@@ -40,6 +43,7 @@ interface IotDeviceDetailTabsProps {
 export function IotDeviceDetailTabs({
   deviceId,
   isMobileFamily,
+  hasManagedFirmware,
   canShare,
   canLeave,
   canManage,
@@ -54,6 +58,7 @@ export function IotDeviceDetailTabs({
     if (tab.value === "collaborators") return canShare || canLeave;
     if (tab.value === "credentials") return canManage && !isMobileFamily;
     if (tab.value === "onboarding") return !isMobileFamily;
+    if (tab.value === "firmware") return hasManagedFirmware;
     return true;
   });
   // Match all routes first so a filtered-out tab does not highlight Overview.
