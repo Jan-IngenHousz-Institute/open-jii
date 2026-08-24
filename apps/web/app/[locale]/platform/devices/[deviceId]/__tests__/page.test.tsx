@@ -34,6 +34,11 @@ describe("generateMetadata", () => {
 describe("DeviceOverviewPage", () => {
   beforeEach(() => {
     vi.mocked(use).mockReturnValue({ deviceId: DEVICE_ID });
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.iot.getIotDeviceActivity, {
+      body: { lastDataAt: null, pipelineUnavailable: false },
+    });
+    server.mount(contract.iot.getDeviceFirmwareHistory, { body: { versions: [] } });
   });
 
   it("renders the device's registry metadata", async () => {
@@ -61,7 +66,7 @@ describe("DeviceOverviewPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("iot.devices.connectivity.connected")).toBeInTheDocument();
+    expect(await screen.findAllByText("iot.devices.connectivity.connected")).not.toHaveLength(0);
     expect(screen.getByText("iot.devices.connectivity.onlineSince")).toBeInTheDocument();
   });
 
@@ -75,7 +80,7 @@ describe("DeviceOverviewPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("iot.devices.connectivity.disconnected")).toBeInTheDocument();
+    expect(await screen.findAllByText("iot.devices.connectivity.disconnected")).not.toHaveLength(0);
   });
 
   it("deletes from the danger zone and navigates back to the registry", async () => {
