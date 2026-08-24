@@ -126,35 +126,40 @@ export function GroupMonitoringContent() {
 
   return (
     <div className="max-w-5xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-medium">{t("iot.devices.monitoring.title")}</h2>
-          <p className="text-muted-foreground text-sm">{t("iot.groups.monitoring.description")}</p>
+      <div className="space-y-4 rounded-xl bg-gradient-to-l from-[#F5FFF8] to-[#F4F9FF] p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium">{t("iot.devices.monitoring.title")}</h2>
+            <p className="text-muted-foreground text-sm">
+              {t("iot.groups.monitoring.description")}
+            </p>
+          </div>
+          <MonitoringRangeControl
+            range={selection.range}
+            activePreset={selection.preset}
+            onRangeChange={handleRangeChange}
+            isUpdating={isFetching && !isLoading}
+          />
         </div>
-        <MonitoringRangeControl
+
+        {monitoring !== undefined && monitoring.members.length > 0 && (
+          <GroupMonitoringFilter
+            filter={filter}
+            onFilterChange={setFilter}
+            summary={summarizeGroupHealth(monitoring.members, monitoring.pipelineUnavailable, now)}
+          />
+        )}
+
+        <GroupMonitoringTiles
+          monitoring={monitoring}
+          members={filteredMembers}
+          throughput={filteredThroughput}
           range={selection.range}
-          activePreset={selection.preset}
-          onRangeChange={handleRangeChange}
-          isUpdating={isFetching && !isLoading}
+          locale={locale}
+          now={now}
+          tileClassName="bg-background/70"
         />
       </div>
-
-      {monitoring !== undefined && monitoring.members.length > 0 && (
-        <GroupMonitoringFilter
-          filter={filter}
-          onFilterChange={setFilter}
-          summary={summarizeGroupHealth(monitoring.members, monitoring.pipelineUnavailable, now)}
-        />
-      )}
-
-      <GroupMonitoringTiles
-        monitoring={monitoring}
-        members={filteredMembers}
-        throughput={filteredThroughput}
-        range={selection.range}
-        locale={locale}
-        now={now}
-      />
 
       {isError ? (
         <Card className="shadow-none">

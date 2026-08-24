@@ -25,8 +25,10 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { buildGroupActivity } from "../groups/group-activity";
 import { summarizeGroupHealth } from "../groups/group-health";
 import { GroupThroughputPanel } from "../groups/group-throughput-panel";
+import { bucketAxis } from "../monitoring/monitoring-buckets";
 import { FleetAttentionList } from "./fleet-attention-list";
-import { fleetAttention, toFleetHealth } from "./fleet-health";
+import { fleetAttention, foldSparkValues, toFleetHealth } from "./fleet-health";
+import { FleetSparkline } from "./fleet-sparkline";
 
 const DEFAULT_PRESET: MonitoringPresetId = "last24h";
 
@@ -98,6 +100,14 @@ export function FleetOverviewDashboard() {
   const windowHours = Math.max(1, windowMs / 3_600_000);
   const perHour = total === undefined ? undefined : total / windowHours;
 
+  const sparkValues =
+    monitoring === undefined
+      ? []
+      : foldSparkValues(
+          monitoring.throughput,
+          bucketAxis(selection.range.from, selection.range.to, selection.range.bucket),
+        );
+
   const labels = new Map(devices.map((device) => [device.id, resolveDeviceLabel(device, t)]));
 
   const handleRangeChange = (range: MonitoringRange, preset: MonitoringPresetId | null) => {
@@ -160,6 +170,7 @@ export function FleetOverviewDashboard() {
                   }),
                 })}
               </p>
+              <FleetSparkline values={sparkValues} />
             </div>
           )}
         </Tile>

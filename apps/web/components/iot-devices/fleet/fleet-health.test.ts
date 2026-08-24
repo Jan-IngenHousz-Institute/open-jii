@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 
-import { fleetAttention, toFleetHealth } from "./fleet-health";
+import { fleetAttention, foldSparkValues, toFleetHealth } from "./fleet-health";
 
 const NOW = new Date("2026-08-24T12:00:00.000Z").getTime();
 const FRESH = "2026-08-24T11:30:00.000Z";
@@ -83,5 +83,23 @@ describe("fleetAttention", () => {
     expect(
       fleetAttention([offline], [{ deviceId: offline.id, lastDataAt: STALE }], false, NOW),
     ).toEqual([]);
+  });
+});
+
+describe("foldSparkValues", () => {
+  it("zero-fills the axis and drops rows the warehouse could not bucket", () => {
+    const axis = ["t1", "t2", "t3"];
+
+    const values = foldSparkValues(
+      [
+        { bucketStart: "t1", deviceId: null, count: 3 },
+        { bucketStart: "t1", deviceId: null, count: 2 },
+        { bucketStart: "t3", deviceId: null, count: 7 },
+        { bucketStart: null, deviceId: null, count: 99 },
+      ],
+      axis,
+    );
+
+    expect(values).toEqual([5, 0, 7]);
   });
 });

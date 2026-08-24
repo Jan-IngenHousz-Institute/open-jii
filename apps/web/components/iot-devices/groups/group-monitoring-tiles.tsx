@@ -16,6 +16,8 @@ import { Tile } from "../monitoring/tile";
 import { summarizeGroupHealth } from "./group-health";
 
 interface GroupMonitoringTilesProps {
+  /** Extra classes per tile, e.g. a translucent ground on the wash hero. */
+  tileClassName?: string;
   monitoring: IotDeviceGroupMonitoring | undefined;
   /** The filtered member subset the whole dashboard is scoped to. */
   members: IotDeviceGroupMemberHealth[];
@@ -33,6 +35,7 @@ export function GroupMonitoringTiles({
   range,
   locale,
   now,
+  tileClassName,
 }: GroupMonitoringTilesProps) {
   const { t } = useTranslation("iot");
 
@@ -60,7 +63,7 @@ export function GroupMonitoringTiles({
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <Tile label={t("iot.groups.monitoring.onlineLabel")}>
+      <Tile className={tileClassName} label={t("iot.groups.monitoring.onlineLabel")}>
         {summary === undefined ? (
           <Skeleton className="h-4 w-24" />
         ) : (
@@ -81,7 +84,7 @@ export function GroupMonitoringTiles({
         )}
       </Tile>
 
-      <Tile label={t("iot.devices.monitoring.lastData")}>
+      <Tile className={tileClassName} label={t("iot.devices.monitoring.lastData")}>
         {monitoring === undefined ? (
           <Skeleton className="h-4 w-24" />
         ) : (
@@ -95,7 +98,7 @@ export function GroupMonitoringTiles({
         )}
       </Tile>
 
-      <Tile label={t("iot.devices.monitoring.measurements")}>
+      <Tile className={tileClassName} label={t("iot.devices.monitoring.measurements")}>
         {total === undefined || perHour === undefined ? (
           <Skeleton className="h-4 w-16" />
         ) : (
@@ -113,7 +116,7 @@ export function GroupMonitoringTiles({
         )}
       </Tile>
 
-      <Tile label={t("iot.groups.monitoring.unknownLabel")}>
+      <Tile className={tileClassName} label={t("iot.groups.monitoring.unknownLabel")}>
         {summary === undefined ? (
           <Skeleton className="h-4 w-16" />
         ) : (
