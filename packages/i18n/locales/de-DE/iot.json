@@ -243,6 +243,7 @@
         },
         "unknownProtocolId": "Unbekanntes Protokoll",
         "unknownWorkbookId": "Unbekanntes Workbook",
+        "workbookVersionShort": "v{{version}}",
         "macros": "Makros",
         "unknownMacroId": "Unbekanntes Makro",
         "macroRunHint": "Pro Makrolauf gezählt"

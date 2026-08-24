@@ -9,6 +9,7 @@ import { DatabricksModule } from "../common/modules/databricks/databricks.module
 import { GithubAdapter } from "../common/modules/github/github.adapter";
 import { GithubModule } from "../common/modules/github/github.module";
 import { ExperimentModule } from "../experiments/experiment.module";
+import { WorkbookModule } from "../workbooks/workbook.module";
 import { AddIotDeviceGroupMembersUseCase } from "./application/use-cases/add-iot-device-group-members/add-iot-device-group-members";
 import { BulkRegisterIotDevicesUseCase } from "./application/use-cases/bulk-register-iot-devices/bulk-register-iot-devices";
 import { CreateIotDeviceGroupUseCase } from "./application/use-cases/create-iot-device-group/create-iot-device-group";
@@ -63,7 +64,14 @@ import { IotFirmwareController } from "./presentation/iot-firmware.controller";
 import { IotController } from "./presentation/iot.controller";
 
 @Module({
-  imports: [AwsModule, AnalyticsModule, DatabricksModule, ExperimentModule, GithubModule],
+  imports: [
+    AwsModule,
+    AnalyticsModule,
+    DatabricksModule,
+    ExperimentModule,
+    WorkbookModule,
+    GithubModule,
+  ],
   controllers: [
     IotController,
     IotDeviceController,

@@ -243,6 +243,7 @@
         },
         "unknownProtocolId": "Onbekend protocol",
         "unknownWorkbookId": "Onbekend workbook",
+        "workbookVersionShort": "v{{version}}",
         "macros": "Macro's",
         "unknownMacroId": "Onbekende macro",
         "macroRunHint": "Geteld per macro-uitvoering"

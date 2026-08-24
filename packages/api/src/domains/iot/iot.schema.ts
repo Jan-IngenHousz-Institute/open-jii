@@ -331,6 +331,18 @@ export const zDeviceBatteryPoint = z.object({
   averageBattery: z.number().nullable(),
 });
 
+// A device reports the workbook VERSION it ran, not a workbook id, so the
+// owning workbook is resolved server-side; both fields are null when the
+// registry does not know the version.
+export const zWorkbookMixEntry = z.object({
+  workbookVersionId: z.string().nullable(),
+  workbookId: z.string().nullable(),
+  workbookVersion: z.number().int().nullable(),
+  count: z.number().int(),
+});
+
+export type WorkbookMixEntry = z.infer<typeof zWorkbookMixEntry>;
+
 // Payload profile of a range. Protocol attribution only exists on legacy-topic rows.
 export const zDevicePayloadStats = z.object({
   totalMeasurements: z.number().int(),
@@ -339,9 +351,7 @@ export const zDevicePayloadStats = z.object({
   workbookRuns: z.number().int(),
   firmwareMix: z.array(z.object({ version: z.string().nullable(), count: z.number().int() })),
   protocolMix: z.array(z.object({ protocolId: z.string().nullable(), count: z.number().int() })),
-  workbookMix: z.array(
-    z.object({ workbookVersionId: z.string().nullable(), count: z.number().int() }),
-  ),
+  workbookMix: z.array(zWorkbookMixEntry),
   // Per macro run: a measurement can run several, so counts exceed totals.
   macroMix: z.array(z.object({ macroId: z.string().nullable(), count: z.number().int() })),
 });

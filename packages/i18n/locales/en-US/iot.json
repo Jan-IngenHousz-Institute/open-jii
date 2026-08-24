@@ -243,6 +243,7 @@
         },
         "unknownProtocolId": "Unknown protocol",
         "unknownWorkbookId": "Unknown workbook",
+        "workbookVersionShort": "v{{version}}",
         "macros": "Macros",
         "unknownMacroId": "Unknown macro",
         "macroRunHint": "Counted per macro run"

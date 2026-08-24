@@ -1,6 +1,6 @@
 "use client";
 
-import type { DevicePayloadStats } from "@repo/api/domains/iot/iot.schema";
+import type { DevicePayloadStats, WorkbookMixEntry } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Progress } from "@repo/ui/components/progress";
 
@@ -45,10 +45,10 @@ export function PayloadProfile({
     (id) => `/${locale}/platform/protocols/${id}`,
     () => t("iot.devices.monitoring.unknownProtocolId"),
   );
+  // Keyed by the OWNING workbook: a device reports the version it ran, and a
+  // version id matches nothing in the viewer's workbook list.
   const workbookEntities = resolveEntities(
-    payload.workbookMix.flatMap((entry) =>
-      entry.workbookVersionId === null ? [] : [entry.workbookVersionId],
-    ),
+    payload.workbookMix.flatMap((entry) => (entry.workbookId === null ? [] : [entry.workbookId])),
     visibleWorkbooks,
     (id) => `/${locale}/platform/workbooks/${id}`,
     () => t("iot.devices.monitoring.unknownWorkbookId"),
@@ -60,6 +60,39 @@ export function PayloadProfile({
     (id) => `/${locale}/platform/macros/${id}`,
     () => t("iot.devices.monitoring.unknownMacroId"),
   );
+
+  /** The version is part of the identity: one workbook can appear twice here. */
+  function renderWorkbookLabel(entry: WorkbookMixEntry) {
+    if (entry.workbookVersionId === null) {
+      return (
+        <span className="text-muted-foreground italic">
+          {t("iot.devices.monitoring.noWorkbook")}
+        </span>
+      );
+    }
+    if (entry.workbookId === null) {
+      return (
+        <span className="text-muted-foreground italic">
+          {t("iot.devices.monitoring.unknownWorkbookId")}
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-baseline gap-1.5">
+        <UnresolvedAware
+          id={entry.workbookId}
+          resolved={workbookEntities}
+          fallback={t("iot.devices.monitoring.unknownWorkbookId")}
+        />
+        {entry.workbookVersion !== null && (
+          <span className="text-muted-foreground text-xs">
+            {t("iot.devices.monitoring.workbookVersionShort", { version: entry.workbookVersion })}
+          </span>
+        )}
+      </span>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -120,18 +153,7 @@ export function PayloadProfile({
           rows={payload.workbookMix.map((entry) => ({
             key: entry.workbookVersionId ?? "none",
             count: entry.count,
-            node:
-              entry.workbookVersionId === null ? (
-                <span className="text-muted-foreground italic">
-                  {t("iot.devices.monitoring.noWorkbook")}
-                </span>
-              ) : (
-                <UnresolvedAware
-                  id={entry.workbookVersionId}
-                  resolved={workbookEntities}
-                  fallback={t("iot.devices.monitoring.unknownWorkbookId")}
-                />
-              ),
+            node: renderWorkbookLabel(entry),
           }))}
         />
 
