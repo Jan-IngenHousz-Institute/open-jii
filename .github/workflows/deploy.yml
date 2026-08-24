@@ -104,7 +104,9 @@ jobs:
   deploy-infrastructure:
     name: Deploy Infrastructure
     needs: [detect, approval-gate]
-    if: inputs.deploy_infrastructure || needs.detect.outputs.infra_changed == 'true'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.deploy_infrastructure) ||
+      (github.event_name != 'workflow_dispatch' && needs.detect.outputs.infra_changed == 'true')
     permissions:
       id-token: write
       contents: read
