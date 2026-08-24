@@ -40,6 +40,7 @@ const shared = {
   userId: "user-1",
   questions: [],
   workbookRunId: "run-1",
+  workbookVersionId: "version-1",
 };
 
 describe("useQuestionsUpload", () => {

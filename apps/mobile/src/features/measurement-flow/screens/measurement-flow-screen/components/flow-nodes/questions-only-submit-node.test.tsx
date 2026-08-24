@@ -207,6 +207,23 @@ describe("QuestionsOnlySubmitNode", () => {
     expect(dismissQuestionsSubmit).not.toHaveBeenCalled();
   });
 
+  it("does not upload or continue when the workbook version id is missing", async () => {
+    const dismissQuestionsSubmit = vi.fn();
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      workbookRunId: "run-1",
+      workbookVersionId: undefined,
+      flowNodes: [makeQuestion("q1")],
+      dismissQuestionsSubmit,
+    });
+
+    render(<QuestionsOnlySubmitNode />);
+    fireEvent.press(screen.getByText("Submit & Continue"));
+
+    await waitFor(() => expect(uploadQuestions).not.toHaveBeenCalled());
+    expect(dismissQuestionsSubmit).not.toHaveBeenCalled();
+  });
+
   it("'Finish' uploads then exits the flow to Recent Measurements", async () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",

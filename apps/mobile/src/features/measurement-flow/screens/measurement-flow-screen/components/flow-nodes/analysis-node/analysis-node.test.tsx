@@ -398,6 +398,31 @@ describe("AnalysisNode upload with a command in the flow", () => {
     });
   });
 
+  it("does not upload when the workbook version id is missing", async () => {
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      experimentLabel: "Trial",
+      workbookRunId: "run-1",
+      workbookVersionId: undefined,
+      flowNodes: commandProtocolMacroNodes,
+      currentFlowStep: 2,
+      scanResult: { sample: [{ phi2: 0.8 }] },
+    });
+
+    render(<AnalysisNode content={withMacro} nodeId="m1" />);
+
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    await act(async () => {
+      await props?.onUpload();
+    });
+
+    expect(uploadMeasurements).not.toHaveBeenCalled();
+  });
+
   it("does not upload when the workbook run id is missing", async () => {
     const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
     useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
