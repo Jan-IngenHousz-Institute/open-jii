@@ -4,41 +4,29 @@ import { FirmwareDeliveryGuide } from "@/components/iot-devices/firmware/firmwar
 import { FirmwareReleaseList } from "@/components/iot-devices/firmware/firmware-release-list";
 import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
+import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
 import { useDeviceFirmwareHistory } from "@/hooks/iot/useDeviceFirmwareHistory/useDeviceFirmwareHistory";
 import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
 import { useIotFirmwareReleases } from "@/hooks/iot/useIotFirmwareReleases/useIotFirmwareReleases";
 import { useLocale } from "@/hooks/useLocale";
 import { getOrpcError } from "@/lib/orpc";
-import { hasManagedFirmware, isSameFirmwareVersion } from "@/util/firmware-family";
+import {
+  hasManagedFirmware,
+  isSameFirmwareVersion,
+  latestReportedVersion,
+} from "@/util/firmware-family";
 import { AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
-import type { DeviceFirmwareHistory } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardContent } from "@repo/ui/components/card";
+import { Button } from "@repo/ui/components/button";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 // Firmware is reported with measurements, so the window has to be wide enough
 // that a daily-reporting device still tells us what it runs.
 const FIRMWARE_LOOKBACK = "last30d" as const;
-
-/** Latest reported version in the window; null when the device never said. */
-function reportedVersion(history: DeviceFirmwareHistory | undefined): string | null {
-  if (history === undefined) {
-    return null;
-  }
-  let current: { version: string; lastSeen: string } | null = null;
-  for (const entry of history.versions) {
-    if (entry.version === null) {
-      continue;
-    }
-    if (current === null || entry.lastSeen > current.lastSeen) {
-      current = { version: entry.version, lastSeen: entry.lastSeen };
-    }
-  }
-  return current === null ? null : current.version;
-}
 
 /**
  * Read-only firmware surface: what this device runs, what JII has published,
@@ -73,6 +61,7 @@ export default function DeviceFirmwarePage() {
     isLoading,
     isError,
     error,
+    refetch: refetchReleases,
   } = useIotFirmwareReleases(releasesFamily, { enabled: isManaged });
 
   // A family with no repository configured yet is a gap, not a fault: the
@@ -95,25 +84,32 @@ export default function DeviceFirmwarePage() {
     return null;
   }
 
-  const installed = reportedVersion(firmwareHistory);
+  const installed = latestReportedVersion(firmwareHistory?.versions ?? []);
   const latest = (releases?.releases ?? []).find((release) => release.latest) ?? null;
-
-  function renderNotice(message: string) {
-    return (
-      <Card className="shadow-none">
-        <CardContent className="text-muted-foreground py-6 text-center text-sm">
-          {message}
-        </CardContent>
-      </Card>
-    );
-  }
 
   function renderReleases() {
     if (hasNoFirmwareLine) {
-      return renderNotice(t("iot.devices.firmware.noFirmwareLine"));
+      return <EmptyState size="inline" description={t("iot.devices.firmware.noFirmwareLine")} />;
     }
     if (isError) {
-      return renderNotice(t("iot.devices.firmware.loadError"));
+      return (
+        <EmptyState
+          size="inline"
+          variant="error"
+          description={t("iot.devices.firmware.loadError")}
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void refetchReleases();
+              }}
+            >
+              {t("iot.onboarding.retry")}
+            </Button>
+          }
+        />
+      );
     }
     if (isLoading) {
       return <Skeleton className="h-48 w-full rounded-lg" />;
@@ -170,10 +166,10 @@ export default function DeviceFirmwarePage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div>
-        <h2 className="text-lg font-medium">{t("iot.devices.firmware.title")}</h2>
-        <p className="text-muted-foreground text-sm">{t("iot.devices.firmware.description")}</p>
-      </div>
+      <TabBodyHeader
+        title={t("iot.devices.firmware.title")}
+        description={t("iot.devices.firmware.description")}
+      />
 
       <PanelCard title={t("iot.devices.firmware.currentTitle")}>{renderStatus()}</PanelCard>
 

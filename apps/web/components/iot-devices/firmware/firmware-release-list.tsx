@@ -14,6 +14,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@repo/ui/components/collapsible";
+import { EmptyState } from "@repo/ui/components/empty-state";
 
 /** Beyond this, notes collapse behind a toggle rather than flooding the tab. */
 const NOTES_PREVIEW_LINES = 8;
@@ -103,11 +104,7 @@ export function FirmwareReleaseList({ releases, installedVersion }: FirmwareRele
   }
 
   if (releases.length === 0) {
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("iot.devices.firmware.noReleases")}
-      </p>
-    );
+    return <EmptyState size="inline" description={t("iot.devices.firmware.noReleases")} />;
   }
 
   return <ul className="divide-y rounded-lg border">{releases.map(renderRelease)}</ul>;

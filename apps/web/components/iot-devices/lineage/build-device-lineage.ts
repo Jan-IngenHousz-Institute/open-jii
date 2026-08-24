@@ -1,3 +1,5 @@
+import { latestReportedVersion } from "@/util/firmware-family";
+
 import type {
   DeviceExperiment,
   DeviceMonitoring,
@@ -128,7 +130,7 @@ export function buildDeviceLineage(input: BuildDeviceLineageInput): DeviceLineag
     label: input.deviceLabel,
     family: device.deviceType,
     status: device.status,
-    firmwareVersion: currentFirmwareVersion(monitoring),
+    firmwareVersion: latestReportedVersion(monitoring.firmwareHistory),
   });
   nodes.push({
     id: "broker",
@@ -168,21 +170,6 @@ export function buildDeviceLineage(input: BuildDeviceLineageInput): DeviceLineag
   appendMacros(input, nodes, edges);
 
   return { nodes, edges };
-}
-
-/** Newest non-null report wins by `lastSeen`, not array order; versions can
- * reappear on rollback, so recency is the only truthful tiebreak. */
-function currentFirmwareVersion(monitoring: DeviceMonitoring): string | null {
-  let current: { version: string; lastSeen: string } | null = null;
-  for (const entry of monitoring.firmwareHistory) {
-    if (entry.version === null) {
-      continue;
-    }
-    if (current === null || entry.lastSeen > current.lastSeen) {
-      current = { version: entry.version, lastSeen: entry.lastSeen };
-    }
-  }
-  return current === null ? null : current.version;
 }
 
 function appendExperiments(
