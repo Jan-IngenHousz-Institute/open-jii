@@ -466,18 +466,28 @@
         "answeredCount": "{{answered}} of {{required}} required answered",
         "missing": "Missing: {{fields}}",
         "memoryOnly": "Issued configurations exist in this browser session only. Re-issue any time; the file is always regenerated from current state."
-      }
+      },
+      "boundRowActions": "Experiment actions",
+      "removeMenuItem": "Remove from experiment",
+      "removeTitle": "Remove {{name}}?",
+      "removeBody": "The device stops streaming into it, and its procedures leave the next issued configuration.",
+      "removeSuccess": "Removed from the experiment",
+      "removeError": "Could not remove the device from the experiment"
     },
     "experimentDevices": {
       "tabLabel": "Devices",
       "title": "Devices",
       "description": "Devices onboarded to this experiment. An onboarded device can stream its measurements into it.",
       "loading": "Loading devices...",
-      "empty": "No devices are onboarded to this experiment yet.",
+      "empty": "Devices are onboarded from their own Onboarding tab, where credentials and configuration live.",
       "detach": "Detach",
       "detachSuccess": "Device detached from the experiment",
       "detachError": "Could not detach the device",
-      "loadError": "Could not load the devices. Try again."
+      "loadError": "Could not load the devices. Try again.",
+      "emptyTitle": "No devices stream into this experiment yet",
+      "openRegistry": "Open device registry",
+      "detachTitle": "Remove {{name}}?",
+      "detachConfirmBody": "It stops streaming into this experiment, and its procedures leave the next issued configuration."
     },
     "groups": {
       "addDevices": "Add devices",

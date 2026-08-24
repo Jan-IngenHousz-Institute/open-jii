@@ -4,12 +4,13 @@ import { DeviceExperimentRow } from "@/components/iot-devices/device-experiment-
 import type { DeviceExperimentRowItem } from "@/components/iot-devices/device-experiment-row";
 import { DevicePlanQuestions } from "@/components/iot-devices/device-plan-questions";
 import type { PlanQuestionEntry } from "@/components/iot-devices/device-plan-questions";
+import { useExperimentDeviceRemove } from "@/hooks/experiment/useExperimentDeviceRemove/useExperimentDeviceRemove";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useOnboardDevice } from "@/hooks/iot/useOnboardDevice/useOnboardDevice";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Loader2, Rocket } from "lucide-react";
+import { AlertTriangle, Loader2, MoreHorizontal, Rocket, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 
@@ -21,6 +22,16 @@ import type {
 import { applyPlanAnswers } from "@repo/api/transforms/workbook-device-plan";
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@repo/ui/components/alert-dialog";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -29,6 +40,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/ui/components/dropdown-menu";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Label } from "@repo/ui/components/label";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -48,6 +65,7 @@ import type { RailState } from "./device-configuration-rail";
  */
 export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
   const { t } = useTranslation("iot");
+  const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -79,6 +97,30 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
   );
 
   const { mutate: onboard, isPending: isOnboarding } = useOnboardDevice();
+
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
+  const { mutate: removeBinding, isPending: isRemoving } = useExperimentDeviceRemove({
+    onSuccess: () => {
+      toast({ title: t("iot.onboarding.removeSuccess") });
+    },
+  });
+
+  const confirmRemove = () => {
+    if (removing === null) {
+      return;
+    }
+    removeBinding(
+      { id: removing.id, deviceId: device.id },
+      {
+        onError: () => {
+          toast({ title: t("iot.onboarding.removeError"), variant: "destructive" });
+        },
+        onSettled: () => {
+          setRemoving(null);
+        },
+      },
+    );
+  };
 
   // One list, one grammar: bound rows are locked facts, the rest are choices.
   const rows: DeviceExperimentRowItem[] = useMemo(
@@ -231,6 +273,32 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
               experiment={experiment}
               selected={selectedIds.includes(experiment.id)}
               onToggle={handleToggle}
+              trailing={
+                experiment.bound ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={t("iot.onboarding.boundRowActions")}
+                        className="text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted inline-flex size-8 items-center justify-center rounded-md"
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          setRemoving({ id: experiment.id, name: experiment.name });
+                        }}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        {t("iot.onboarding.removeMenuItem")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : undefined
+              }
             />
           ))}
         </ul>
@@ -310,6 +378,41 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
           <DevicePlanQuestions questions={questions} onAnswersChange={handleAnswersChange} />
         )}
       </div>
+
+      <AlertDialog
+        open={removing !== null}
+        onOpenChange={(open) => {
+          if (!open && !isRemoving) {
+            setRemoving(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("iot.onboarding.removeTitle", { name: removing?.name ?? "" })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{t("iot.onboarding.removeBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>{tCommon("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isRemoving}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmRemove();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isRemoving ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                t("iot.onboarding.removeMenuItem")
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="lg:sticky lg:top-6 lg:self-start">
         <DeviceConfigurationRail

@@ -466,18 +466,28 @@
         "answeredCount": "{{answered}} van {{required}} verplichte vragen beantwoord",
         "missing": "Ontbreekt: {{fields}}",
         "memoryOnly": "Uitgegeven configuraties bestaan alleen in deze browsersessie. U kunt altijd opnieuw uitgeven; het bestand wordt altijd uit de huidige staat gegenereerd."
-      }
+      },
+      "boundRowActions": "Experimentacties",
+      "removeMenuItem": "Uit experiment verwijderen",
+      "removeTitle": "{{name}} verwijderen?",
+      "removeBody": "Het apparaat streamt er niet meer naartoe, en zijn procedures verdwijnen uit de volgende uitgegeven configuratie.",
+      "removeSuccess": "Uit het experiment verwijderd",
+      "removeError": "Het apparaat kon niet uit het experiment worden verwijderd"
     },
     "experimentDevices": {
       "tabLabel": "Apparaten",
       "title": "Apparaten",
       "description": "Apparaten die aan dit experiment zijn gekoppeld. Een gekoppeld apparaat kan zijn metingen hiernaartoe sturen.",
       "loading": "Apparaten laden...",
-      "empty": "Er zijn nog geen apparaten aan dit experiment gekoppeld.",
+      "empty": "Apparaten worden ingesteld via hun eigen tabblad Instellen, waar certificaten en configuratie staan.",
       "detach": "Ontkoppelen",
       "detachSuccess": "Apparaat ontkoppeld van het experiment",
       "detachError": "Kon het apparaat niet ontkoppelen",
-      "loadError": "Kon de apparaten niet laden. Probeer het opnieuw."
+      "loadError": "Kon de apparaten niet laden. Probeer het opnieuw.",
+      "emptyTitle": "Nog geen apparaten streamen naar dit experiment",
+      "openRegistry": "Apparaatregister openen",
+      "detachTitle": "{{name}} verwijderen?",
+      "detachConfirmBody": "Het streamt niet meer naar dit experiment, en zijn procedures verdwijnen uit de volgende uitgegeven configuratie."
     },
     "groups": {
       "addDevices": "Apparaten toevoegen",

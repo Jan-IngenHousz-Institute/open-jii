@@ -1,6 +1,6 @@
 import { createExperiment, createIotDevice } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
+import { render, screen, waitFor, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -246,5 +246,33 @@ describe("DeviceOnboardingPanel", () => {
     render(<DeviceOnboardingPanel device={device} />);
 
     expect(await screen.findByText("iot.onboarding.noMemberships")).toBeInTheDocument();
+  });
+
+  it("removes a bound experiment through the row menu, after a confirm", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.iot.listDeviceExperiments, { body: [boundExperiment] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
+    const spy = server.mount(contract.experiments.removeExperimentDevice, {
+      status: 204,
+      body: undefined,
+    });
+
+    render(<DeviceOnboardingPanel device={device} />);
+
+    await user.click(await screen.findByRole("button", { name: "iot.onboarding.boundRowActions" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /iot.onboarding.removeMenuItem/ }),
+    );
+    // Nothing fires until the confirm names the consequence.
+    expect(spy.called).toBe(false);
+    await screen.findByText("iot.onboarding.removeBody");
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: /iot.onboarding.removeMenuItem/,
+      }),
+    );
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.params.deviceId).toBe(device.id);
   });
 });

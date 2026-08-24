@@ -466,18 +466,28 @@
         "answeredCount": "{{answered}} von {{required}} Pflichtfragen beantwortet",
         "missing": "Fehlt: {{fields}}",
         "memoryOnly": "Ausgegebene Konfigurationen existieren nur in dieser Browser-Sitzung. Sie können jederzeit erneut ausgeben; die Datei wird immer aus dem aktuellen Stand erzeugt."
-      }
+      },
+      "boundRowActions": "Experiment-Aktionen",
+      "removeMenuItem": "Aus Experiment entfernen",
+      "removeTitle": "{{name}} entfernen?",
+      "removeBody": "Das Gerät sendet nicht mehr hinein, und seine Prozeduren fehlen in der nächsten ausgegebenen Konfiguration.",
+      "removeSuccess": "Aus dem Experiment entfernt",
+      "removeError": "Das Gerät konnte nicht aus dem Experiment entfernt werden"
     },
     "experimentDevices": {
       "tabLabel": "Geräte",
       "title": "Geräte",
       "description": "Geräte, die diesem Experiment zugeordnet sind. Ein zugeordnetes Gerät kann seine Messungen dorthin senden.",
       "loading": "Geräte werden geladen...",
-      "empty": "Diesem Experiment sind noch keine Geräte zugeordnet.",
+      "empty": "Geräte werden über ihren eigenen Einrichtungs-Tab eingerichtet, wo Zertifikate und Konfiguration liegen.",
       "detach": "Entfernen",
       "detachSuccess": "Gerät vom Experiment entfernt",
       "detachError": "Gerät konnte nicht entfernt werden",
-      "loadError": "Die Geräte konnten nicht geladen werden. Bitte erneut versuchen."
+      "loadError": "Die Geräte konnten nicht geladen werden. Bitte erneut versuchen.",
+      "emptyTitle": "Noch keine Geräte senden in dieses Experiment",
+      "openRegistry": "Geräteregister öffnen",
+      "detachTitle": "{{name}} entfernen?",
+      "detachConfirmBody": "Es sendet nicht mehr in dieses Experiment, und seine Prozeduren fehlen in der nächsten ausgegebenen Konfiguration."
     },
     "groups": {
       "addDevices": "Geräte hinzufügen",
