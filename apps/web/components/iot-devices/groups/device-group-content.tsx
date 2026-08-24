@@ -10,6 +10,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -47,6 +48,10 @@ export function DeviceGroupContent() {
   // The chip aggregates over members: certificates are the one blocked step
   // this page can see without fanning out per-device reads.
   const credentialsNeededCount = (members ?? []).filter(deviceNeedsCredentials).length;
+  const onlineCount = (members ?? []).filter((member) => member.connected === true).length;
+  const connectivityUnknownCount = (members ?? []).filter(
+    (member) => member.connected === null,
+  ).length;
   const removeMember = useRemoveIotDeviceGroupMember();
   const [addOpen, setAddOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -92,6 +97,35 @@ export function DeviceGroupContent() {
         <MetaField label={t("iot.groups.meta.members")} value={String(group.memberCount)} />
         <MetaField label={t("iot.groups.meta.created")} value={formatDate(group.createdAt)} />
       </div>
+
+      {(members ?? []).length > 0 && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="shadow-none">
+            <CardHeader className="flex-row items-baseline justify-between space-y-0">
+              <CardTitle className="text-base">{t("iot.groups.overview.healthTitle")}</CardTitle>
+              <Link
+                href={`/${locale}/platform/devices/groups/${groupId}/monitoring`}
+                className="text-primary text-sm font-medium hover:underline"
+              >
+                {t("iot.groups.overview.monitoringLink")}
+              </Link>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <p className="text-lg font-semibold">
+                {t("iot.groups.monitoring.onlineValue", {
+                  online: onlineCount,
+                  total: (members ?? []).length,
+                })}
+              </p>
+              {connectivityUnknownCount > 0 && (
+                <p className="text-muted-foreground text-xs">
+                  {t("iot.groups.overview.healthUnknown", { count: connectivityUnknownCount })}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {canContribute && (
         <div className="flex justify-end">

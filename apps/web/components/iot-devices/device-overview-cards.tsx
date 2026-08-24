@@ -1,8 +1,14 @@
 "use client";
 
+import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
+import { useDeviceFirmwareHistory } from "@/hooks/iot/useDeviceFirmwareHistory/useDeviceFirmwareHistory";
+import { useIotDeviceActivity } from "@/hooks/iot/useIotDeviceActivity/useIotDeviceActivity";
 import { useLocale } from "@/hooks/useLocale";
+import { formatRelativeTime } from "@/util/date";
+import { hasManagedFirmware, latestReportedVersion } from "@/util/firmware-family";
 import Link from "next/link";
+import { useMemo } from "react";
 
 import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -18,6 +24,7 @@ import {
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import { ConnectivityDot } from "./device-connectivity";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 
 interface DeviceOverviewCardsProps {
@@ -40,6 +47,18 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     refetch: refetchBound,
   } = useDeviceExperiments(device.id);
   const bound = boundData ?? [];
+
+  const { data: activity } = useIotDeviceActivity(device.id);
+
+  const isMobileFamily = device.deviceType === "mobile";
+  const isManagedFirmware = hasManagedFirmware(device.deviceType);
+  // Firmware is reported with measurements; 30 days covers a daily reporter.
+  const firmwareRange = useMemo(() => resolveMonitoringPreset("last30d"), []);
+  const { data: firmwareHistory, isLoading: isLoadingFirmware } = useDeviceFirmwareHistory(
+    device.id,
+    firmwareRange,
+    { enabled: isManagedFirmware },
+  );
 
   const basePath = `/${locale}/platform/devices/${device.id}`;
 
@@ -96,44 +115,118 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     return <ul className="divide-y rounded-lg border">{bound.map(renderBoundExperiment)}</ul>;
   }
 
+  function activityLine(): string {
+    if (activity === undefined) {
+      return t("iot.devices.detail.cards.activityLoading");
+    }
+    if (activity.pipelineUnavailable) {
+      return t("iot.devices.monitoring.lastDataUnavailable");
+    }
+    if (activity.lastDataAt === null) {
+      return t("iot.devices.detail.cards.activityNoData");
+    }
+    return t("iot.devices.detail.cards.activityLastData", {
+      time: formatRelativeTime(activity.lastDataAt, locale),
+    });
+  }
+
+  function renderActivityBody() {
+    return (
+      <div className="space-y-2">
+        <ConnectivityDot connectivity={device.connectivity} />
+        <CardDescription>{activityLine()}</CardDescription>
+      </div>
+    );
+  }
+
+  function renderFirmwareBody() {
+    if (isLoadingFirmware) {
+      return <Skeleton className="h-5 w-40" />;
+    }
+    const reported = latestReportedVersion(firmwareHistory?.versions ?? []);
+    return (
+      <CardDescription>
+        {reported === null ? (
+          t("iot.devices.detail.cards.firmwareUnknown")
+        ) : (
+          <span className="text-foreground font-mono text-sm">{reported}</span>
+        )}
+      </CardDescription>
+    );
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card className="shadow-none">
-        <CardHeader className="flex-row items-baseline justify-between space-y-0">
-          <CardTitle className="text-base">
-            {t("iot.devices.detail.cards.credentialsTitle")}
-          </CardTitle>
-          {device.capabilities.canManage && (
+      {!isMobileFamily && (
+        <Card className="shadow-none">
+          <CardHeader className="flex-row items-baseline justify-between space-y-0">
+            <CardTitle className="text-base">
+              {t("iot.devices.detail.cards.credentialsTitle")}
+            </CardTitle>
+            {device.capabilities.canManage && (
+              <Link
+                href={`${basePath}/credentials`}
+                className="text-primary text-sm font-medium hover:underline"
+              >
+                {t("iot.devices.detail.cards.manageLink")}
+              </Link>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <IotDeviceStatusBadge status={device.status} />
+            <CardDescription>
+              {t(`iot.devices.detail.cards.credentialHint.${device.status}`)}
+            </CardDescription>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isMobileFamily && (
+        <Card className="shadow-none">
+          <CardHeader className="flex-row items-baseline justify-between space-y-0">
+            <CardTitle className="text-base">
+              {t("iot.devices.detail.cards.experimentsTitle")}
+            </CardTitle>
             <Link
-              href={`${basePath}/credentials`}
+              href={`${basePath}/onboarding`}
               className="text-primary text-sm font-medium hover:underline"
             >
-              {t("iot.devices.detail.cards.manageLink")}
+              {t("iot.devices.detail.cards.onboardLink")}
             </Link>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <IotDeviceStatusBadge status={device.status} />
-          <CardDescription>
-            {t(`iot.devices.detail.cards.credentialHint.${device.status}`)}
-          </CardDescription>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>{renderExperimentsBody()}</CardContent>
+        </Card>
+      )}
 
       <Card className="shadow-none">
         <CardHeader className="flex-row items-baseline justify-between space-y-0">
-          <CardTitle className="text-base">
-            {t("iot.devices.detail.cards.experimentsTitle")}
-          </CardTitle>
+          <CardTitle className="text-base">{t("iot.devices.detail.cards.activityTitle")}</CardTitle>
           <Link
-            href={`${basePath}/onboarding`}
+            href={`${basePath}/monitoring`}
             className="text-primary text-sm font-medium hover:underline"
           >
-            {t("iot.devices.detail.cards.onboardLink")}
+            {t("iot.devices.detail.cards.monitoringLink")}
           </Link>
         </CardHeader>
-        <CardContent>{renderExperimentsBody()}</CardContent>
+        <CardContent>{renderActivityBody()}</CardContent>
       </Card>
+
+      {isManagedFirmware && (
+        <Card className="shadow-none">
+          <CardHeader className="flex-row items-baseline justify-between space-y-0">
+            <CardTitle className="text-base">
+              {t("iot.devices.detail.cards.firmwareTitle")}
+            </CardTitle>
+            <Link
+              href={`${basePath}/firmware`}
+              className="text-primary text-sm font-medium hover:underline"
+            >
+              {t("iot.devices.detail.cards.firmwareLink")}
+            </Link>
+          </CardHeader>
+          <CardContent>{renderFirmwareBody()}</CardContent>
+        </Card>
+      )}
     </div>
   );
 }

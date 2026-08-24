@@ -352,7 +352,15 @@
             "active": "Certificate active. The device can connect and stream.",
             "rotating": "A new certificate was issued; load the new bundle onto the device.",
             "revoked": "Certificate revoked. The device cannot reconnect until a new one is issued."
-          }
+          },
+          "activityTitle": "Activity",
+          "monitoringLink": "Open monitoring",
+          "activityLoading": "Checking the last data arrival...",
+          "activityNoData": "No data has arrived from this device yet.",
+          "activityLastData": "Last data arrived {{time}}.",
+          "firmwareTitle": "Firmware",
+          "firmwareLink": "Open firmware",
+          "firmwareUnknown": "No firmware version reported in the last 30 days."
         },
         "overview": {
           "title": "Overview",
@@ -436,6 +444,23 @@
           "step3": "The device receives an update job, downloads the image over a short-lived link, and verifies its checksum.",
           "step4": "The device applies the update, reboots, and reports the outcome; a failed update rolls back."
         }
+      },
+      "fleet": {
+        "title": "Fleet pulse",
+        "description": "How your devices are doing right now, and what flowed in the selected window.",
+        "onlineLabel": "Online now",
+        "attentionLabel": "Need attention",
+        "throughputTitle": "Data flow",
+        "attentionTitle": "Needs attention",
+        "attentionHint": "Devices whose setup or delivery is stuck, most actionable first.",
+        "attentionEmpty": "Every device is set up and reporting.",
+        "attentionMore_one": "and {{count}} more device",
+        "attentionMore_other": "and {{count}} more devices",
+        "eventsTitle": "Recent broker events",
+        "loadError": "Fleet activity could not be loaded.",
+        "reasonCredentials": "Needs a certificate",
+        "reasonNeverConnected": "Never connected",
+        "reasonSilent": "Connected, no data"
       }
     },
     "onboarding": {
@@ -656,11 +681,16 @@
         "downloadAll_one": "Download {{count}} bundle (zip)",
         "downloadAll_other": "Download {{count}} bundles (zip)",
         "actionTitle": "Action",
-        "actionDescription": "Eligibility differs per action; the device list below follows the choice."
+        "actionDescription": "Eligibility differs per action; the device list below follows the choice.",
+        "railEmpty": "Run an action to see per-device results and downloads here."
       },
       "overview": {
         "title": "Overview",
-        "description": "What this group contains, and how its devices are doing."
+        "description": "What this group contains, and how its devices are doing.",
+        "healthTitle": "Health",
+        "monitoringLink": "Open monitoring",
+        "healthUnknown_one": "Connectivity is unknown for {{count}} device.",
+        "healthUnknown_other": "Connectivity is unknown for {{count}} devices."
       },
       "nextAction": {
         "credentials": "{{count}} device needs a certificate",

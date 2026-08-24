@@ -26,12 +26,17 @@ const STEP_KEYS = ["step1", "step2", "step3", "step4"] as const;
  * reviewed workflow, never from this page, so this panel documents rather than
  * offers controls.
  */
-export function FirmwareDeliveryGuide() {
+interface FirmwareDeliveryGuideProps {
+  /** Open from the start where the guide is the surface's whole right rail. */
+  defaultOpen?: boolean;
+}
+
+export function FirmwareDeliveryGuide({ defaultOpen = false }: FirmwareDeliveryGuideProps) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
 
   return (
-    <Collapsible className="rounded-lg border">
+    <Collapsible defaultOpen={defaultOpen} className="rounded-lg border">
       <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium">
         <BookOpen className="h-4 w-4" aria-hidden />
         {t("iot.devices.firmware.guide.title")}

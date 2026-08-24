@@ -48,7 +48,6 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const { data: boundExperiments } = useDeviceExperiments(device.id);
-  const isMobileFamily = device.deviceType === "mobile";
   const nextAction = deviceNextAction(device, boundExperiments?.length ?? null);
 
   const { mutate: deleteDevice, isPending: isDeleting } = useDeleteIotDevice({
@@ -120,7 +119,9 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
         />
       </div>
 
-      {!isMobileFamily && <DeviceOverviewCards device={device} />}
+      {/* The component hides the certificate and onboarding cards for phones
+          itself; activity applies to every family. */}
+      <DeviceOverviewCards device={device} />
 
       {device.capabilities.canManage && (
         <Card className="border-destructive/30 max-w-3xl shadow-none">

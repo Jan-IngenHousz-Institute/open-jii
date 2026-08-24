@@ -1,7 +1,7 @@
 import { createIotDeviceDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -21,6 +21,13 @@ function makeDevice(overrides: Parameters<typeof createIotDeviceDetail>[0] = {})
 }
 
 describe("DeviceOverviewCards", () => {
+  beforeEach(() => {
+    server.mount(contract.iot.getIotDeviceActivity, {
+      body: { lastDataAt: null, pipelineUnavailable: false },
+    });
+    server.mount(contract.iot.getDeviceFirmwareHistory, { body: { versions: [] } });
+  });
+
   it("links each card into the tab it summarises", async () => {
     server.mount(contract.iot.listDeviceExperiments, { body: [boundExperiment] });
 
@@ -88,5 +95,48 @@ describe("DeviceOverviewCards", () => {
       await screen.findByText("iot.devices.detail.cards.experimentsError"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "iot.onboarding.retry" })).toBeInTheDocument();
+  });
+
+  it("gives a phone an activity card and none of the certificate machinery", async () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.iot.getIotDeviceActivity, {
+      body: { lastDataAt: "2026-08-24T09:00:00.000Z", pipelineUnavailable: false },
+    });
+
+    render(<DeviceOverviewCards device={makeDevice({ deviceType: "mobile" })} />);
+
+    expect(
+      await screen.findByText("iot.devices.detail.cards.activityLastData"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.detail.cards.credentialsTitle")).not.toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.detail.cards.experimentsTitle")).not.toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.detail.cards.firmwareTitle")).not.toBeInTheDocument();
+  });
+
+  it("says plainly when no data has arrived yet", async () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+
+    render(<DeviceOverviewCards device={makeDevice()} />);
+
+    expect(await screen.findByText("iot.devices.detail.cards.activityNoData")).toBeInTheDocument();
+  });
+
+  it("shows the reported firmware version for a managed family, linking its tab", async () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.iot.getDeviceFirmwareHistory, {
+      body: {
+        versions: [
+          { version: "1.2.0", firstSeen: "a", lastSeen: "2026-08-20T00:00:00.000Z", count: 5 },
+          { version: "1.3.0", firstSeen: "b", lastSeen: "2026-08-23T00:00:00.000Z", count: 9 },
+        ],
+      },
+    });
+
+    render(<DeviceOverviewCards device={makeDevice()} />);
+
+    expect(await screen.findByText("1.3.0")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "iot.devices.detail.cards.firmwareLink" }),
+    ).toHaveAttribute("href", `/en-US/platform/devices/${DEVICE_ID}/firmware`);
   });
 });

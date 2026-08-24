@@ -30,6 +30,7 @@ import { GetIotDeviceFirmwareHistoryUseCase } from "./application/use-cases/get-
 import { GetIotDeviceGroupMonitoringUseCase } from "./application/use-cases/get-iot-device-group-monitoring/get-iot-device-group-monitoring";
 import { GetIotDeviceGroupUseCase } from "./application/use-cases/get-iot-device-group/get-iot-device-group";
 import { GetIotDeviceUseCase } from "./application/use-cases/get-iot-device/get-iot-device";
+import { GetIotFleetMonitoringUseCase } from "./application/use-cases/get-iot-fleet-monitoring/get-iot-fleet-monitoring";
 import { GetIotUploadUrlUseCase } from "./application/use-cases/get-upload-url/get-upload-url";
 import { IssueIotCredentialsUseCase } from "./application/use-cases/issue-iot-credentials/issue-iot-credentials";
 import { IssueIotDeviceGroupCredentialsUseCase } from "./application/use-cases/issue-iot-device-group-credentials/issue-iot-device-group-credentials";
@@ -91,6 +92,7 @@ import { IotController } from "./presentation/iot.controller";
     GetIotDeviceUseCase,
     GetIotDeviceActivityUseCase,
     GetDeviceMonitoringUseCase,
+    GetIotFleetMonitoringUseCase,
     GetDeviceMeasurementsUseCase,
     GetDeviceFirmwareHistoryUseCase,
     GetDeviceSessionsUseCase,

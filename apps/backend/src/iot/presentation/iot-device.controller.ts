@@ -20,6 +20,7 @@ import { GetDeviceMonitoringUseCase } from "../application/use-cases/get-device-
 import { GetIotDeviceActivityUseCase } from "../application/use-cases/get-iot-device-activity/get-iot-device-activity";
 import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { GetIotDeviceUseCase } from "../application/use-cases/get-iot-device/get-iot-device";
+import { GetIotFleetMonitoringUseCase } from "../application/use-cases/get-iot-fleet-monitoring/get-iot-fleet-monitoring";
 import { IssueIotCredentialsUseCase } from "../application/use-cases/issue-iot-credentials/issue-iot-credentials";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
 import { RegisterIotDeviceUseCase } from "../application/use-cases/register-iot-device/register-iot-device";
@@ -42,6 +43,7 @@ export class IotDeviceController {
     private readonly getIotDeviceUseCase: GetIotDeviceUseCase,
     private readonly getIotDeviceActivityUseCase: GetIotDeviceActivityUseCase,
     private readonly getDeviceMonitoringUseCase: GetDeviceMonitoringUseCase,
+    private readonly getIotFleetMonitoringUseCase: GetIotFleetMonitoringUseCase,
     private readonly getIotDeviceFirmwareHistoryUseCase: GetIotDeviceFirmwareHistoryUseCase,
     private readonly deleteIotDeviceUseCase: DeleteIotDeviceUseCase,
     private readonly issueIotCredentialsUseCase: IssueIotCredentialsUseCase,
@@ -77,6 +79,27 @@ export class IotDeviceController {
       }
 
       return throwOrpcFailure(result, this.logger, "listIotDevices");
+    });
+  }
+
+  // Declared before the {deviceId} routes: the static "monitoring" segment
+  // must never be read as a device id.
+  @Implement(iotContract.getIotFleetMonitoring)
+  getIotFleetMonitoring(@Session() session: UserSession) {
+    return implement(iotContract.getIotFleetMonitoring).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("getIotFleetMonitoring");
+
+      const result = await this.getIotFleetMonitoringUseCase.execute(session.user.id, {
+        from: input.from,
+        to: input.to,
+        bucket: input.bucket,
+      });
+
+      if (result.isSuccess()) {
+        return result.value;
+      }
+
+      return throwOrpcFailure(result, this.logger, "getIotFleetMonitoring");
     });
   }
 

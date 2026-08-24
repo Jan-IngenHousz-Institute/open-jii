@@ -1,9 +1,19 @@
 "use client";
 
-/** One triage-row cell, shared by the device and group monitoring dashboards. */
-export function Tile({ label, children }: { label: string; children: React.ReactNode }) {
+import { cn } from "@repo/ui/lib/utils";
+
+/** One triage-row cell, shared by the device, group and fleet dashboards. */
+export function Tile({
+  label,
+  className,
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="rounded-lg border p-3">
+    <div className={cn("rounded-lg border p-3", className)}>
       <p className="text-muted-foreground text-xs">{label}</p>
       <div className="mt-1.5 text-sm font-medium">{children}</div>
     </div>

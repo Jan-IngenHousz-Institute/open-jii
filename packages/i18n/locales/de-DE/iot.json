@@ -352,7 +352,15 @@
             "active": "Zertifikat aktiv. Das Gerät kann sich verbinden und senden.",
             "rotating": "Ein neues Zertifikat wurde ausgestellt; laden Sie das neue Paket auf das Gerät.",
             "revoked": "Zertifikat widerrufen. Das Gerät kann sich erst nach einer Neuausstellung wieder verbinden."
-          }
+          },
+          "activityTitle": "Aktivität",
+          "monitoringLink": "Monitoring öffnen",
+          "activityLoading": "Letzter Dateneingang wird geprüft...",
+          "activityNoData": "Von diesem Gerät sind noch keine Daten eingegangen.",
+          "activityLastData": "Letzte Daten eingegangen {{time}}.",
+          "firmwareTitle": "Firmware",
+          "firmwareLink": "Firmware öffnen",
+          "firmwareUnknown": "In den letzten 30 Tagen wurde keine Firmware-Version gemeldet."
         },
         "overview": {
           "title": "Übersicht",
@@ -436,6 +444,23 @@
           "step3": "Das Gerät erhält einen Update-Auftrag, lädt das Abbild über einen kurzlebigen Link und prüft die Prüfsumme.",
           "step4": "Das Gerät wendet das Update an, startet neu und meldet das Ergebnis; ein fehlgeschlagenes Update wird zurückgerollt."
         }
+      },
+      "fleet": {
+        "title": "Flottenpuls",
+        "description": "Wie es Ihren Geräten gerade geht und was im gewählten Zeitraum eingegangen ist.",
+        "onlineLabel": "Jetzt online",
+        "attentionLabel": "Brauchen Aufmerksamkeit",
+        "throughputTitle": "Datenfluss",
+        "attentionTitle": "Braucht Aufmerksamkeit",
+        "attentionHint": "Geräte, deren Einrichtung oder Datenlieferung stockt, das Dringendste zuerst.",
+        "attentionEmpty": "Alle Geräte sind eingerichtet und liefern Daten.",
+        "attentionMore_one": "und {{count}} weiteres Gerät",
+        "attentionMore_other": "und {{count}} weitere Geräte",
+        "eventsTitle": "Letzte Broker-Ereignisse",
+        "loadError": "Die Flottenaktivität konnte nicht geladen werden.",
+        "reasonCredentials": "Braucht ein Zertifikat",
+        "reasonNeverConnected": "Nie verbunden",
+        "reasonSilent": "Verbunden, keine Daten"
       }
     },
     "onboarding": {
@@ -656,11 +681,16 @@
         "downloadAll_one": "{{count}} Paket herunterladen (ZIP)",
         "downloadAll_other": "{{count}} Pakete herunterladen (ZIP)",
         "actionTitle": "Aktion",
-        "actionDescription": "Die Berechtigung unterscheidet sich je Aktion; die Geräteliste unten folgt der Auswahl."
+        "actionDescription": "Die Berechtigung unterscheidet sich je Aktion; die Geräteliste unten folgt der Auswahl.",
+        "railEmpty": "Führen Sie eine Aktion aus, um hier Ergebnisse und Downloads pro Gerät zu sehen."
       },
       "overview": {
         "title": "Übersicht",
-        "description": "Was diese Gruppe enthält und wie es ihren Geräten geht."
+        "description": "Was diese Gruppe enthält und wie es ihren Geräten geht.",
+        "healthTitle": "Zustand",
+        "monitoringLink": "Monitoring öffnen",
+        "healthUnknown_one": "Die Konnektivität von {{count}} Gerät ist unbekannt.",
+        "healthUnknown_other": "Die Konnektivität von {{count}} Geräten ist unbekannt."
       },
       "nextAction": {
         "credentials": "{{count}} Gerät braucht ein Zertifikat",

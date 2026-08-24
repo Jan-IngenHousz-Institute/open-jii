@@ -352,7 +352,15 @@
             "active": "Certificaat actief. Het apparaat kan verbinden en streamen.",
             "rotating": "Er is een nieuw certificaat uitgegeven; laad de nieuwe bundel op het apparaat.",
             "revoked": "Certificaat ingetrokken. Het apparaat kan pas weer verbinden na een nieuwe uitgifte."
-          }
+          },
+          "activityTitle": "Activiteit",
+          "monitoringLink": "Monitoring openen",
+          "activityLoading": "Laatste data-aankomst wordt gecontroleerd...",
+          "activityNoData": "Er is nog geen data van dit apparaat binnengekomen.",
+          "activityLastData": "Laatste data binnengekomen {{time}}.",
+          "firmwareTitle": "Firmware",
+          "firmwareLink": "Firmware openen",
+          "firmwareUnknown": "In de afgelopen 30 dagen is geen firmwareversie gemeld."
         },
         "overview": {
           "title": "Overzicht",
@@ -436,6 +444,23 @@
           "step3": "Het apparaat ontvangt een update-taak, downloadt het image via een kortlevende link en verifieert de checksum.",
           "step4": "Het apparaat past de update toe, herstart en meldt het resultaat; een mislukte update wordt teruggedraaid."
         }
+      },
+      "fleet": {
+        "title": "Vlootpols",
+        "description": "Hoe uw apparaten er nu voor staan en wat er in het gekozen venster is binnengekomen.",
+        "onlineLabel": "Nu online",
+        "attentionLabel": "Aandacht nodig",
+        "throughputTitle": "Datastroom",
+        "attentionTitle": "Aandacht nodig",
+        "attentionHint": "Apparaten waarvan de installatie of levering vastzit, het meest urgente eerst.",
+        "attentionEmpty": "Alle apparaten zijn ingesteld en leveren data.",
+        "attentionMore_one": "en {{count}} ander apparaat",
+        "attentionMore_other": "en {{count}} andere apparaten",
+        "eventsTitle": "Recente broker-gebeurtenissen",
+        "loadError": "De vlootactiviteit kon niet worden geladen.",
+        "reasonCredentials": "Certificaat nodig",
+        "reasonNeverConnected": "Nooit verbonden",
+        "reasonSilent": "Verbonden, geen data"
       }
     },
     "onboarding": {
@@ -656,11 +681,16 @@
         "downloadAll_one": "{{count}} pakket downloaden (zip)",
         "downloadAll_other": "{{count}} pakketten downloaden (zip)",
         "actionTitle": "Actie",
-        "actionDescription": "De geschiktheid verschilt per actie; de apparaatlijst hieronder volgt de keuze."
+        "actionDescription": "De geschiktheid verschilt per actie; de apparaatlijst hieronder volgt de keuze.",
+        "railEmpty": "Voer een actie uit om hier resultaten en downloads per apparaat te zien."
       },
       "overview": {
         "title": "Overzicht",
-        "description": "Wat deze groep bevat en hoe het met de apparaten gaat."
+        "description": "Wat deze groep bevat en hoe het met de apparaten gaat.",
+        "healthTitle": "Gezondheid",
+        "monitoringLink": "Monitoring openen",
+        "healthUnknown_one": "De connectiviteit van {{count}} apparaat is onbekend.",
+        "healthUnknown_other": "De connectiviteit van {{count}} apparaten is onbekend."
       },
       "nextAction": {
         "credentials": "{{count}} apparaat heeft een certificaat nodig",

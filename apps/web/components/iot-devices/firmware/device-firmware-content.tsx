@@ -165,22 +165,28 @@ export default function DeviceFirmwarePage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div>
       <TabBodyHeader
         title={t("iot.devices.firmware.title")}
         description={t("iot.devices.firmware.description")}
       />
 
-      <PanelCard title={t("iot.devices.firmware.currentTitle")}>{renderStatus()}</PanelCard>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="space-y-6">
+          <PanelCard title={t("iot.devices.firmware.currentTitle")}>{renderStatus()}</PanelCard>
 
-      <PanelCard
-        title={t("iot.devices.firmware.releasesTitle")}
-        description={t("iot.devices.firmware.releasesHint")}
-      >
-        {renderReleases()}
-      </PanelCard>
+          <PanelCard
+            title={t("iot.devices.firmware.releasesTitle")}
+            description={t("iot.devices.firmware.releasesHint")}
+          >
+            {renderReleases()}
+          </PanelCard>
+        </div>
 
-      <FirmwareDeliveryGuide />
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          <FirmwareDeliveryGuide defaultOpen />
+        </div>
+      </div>
     </div>
   );
 }

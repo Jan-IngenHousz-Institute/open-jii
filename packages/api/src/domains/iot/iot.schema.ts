@@ -399,6 +399,57 @@ export const zDeviceMonitoring = z.object({
   recentMeasurements: z.array(zDeviceMeasurement),
 });
 
+// The fleet overview's window input: the device dashboard's range contract
+// without a device address, since the scope is everything the caller can read.
+export const zIotFleetMonitoringQuery = z
+  .object({
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+    bucket: zMonitoringBucket,
+  })
+  .refine((range) => new Date(range.from).getTime() < new Date(range.to).getTime(), {
+    message: "from must be before to",
+    path: ["from"],
+  })
+  // The UI presets top out at 30 days; an unbounded span would let one request
+  // scan and return an arbitrarily large slice of the warehouse.
+  .refine(
+    (range) => new Date(range.to).getTime() - new Date(range.from).getTime() <= 31 * 86_400_000,
+    { message: "range must not exceed 31 days", path: ["to"] },
+  );
+
+/** A device's all-time last data arrival, fleet-addressed. */
+export const zIotFleetDeviceActivity = z.object({
+  deviceId: z.string().uuid(),
+  lastDataAt: z.string().datetime().nullable(),
+});
+
+/** One (bucket, device) measurement count aggregated across the fleet. */
+export const zIotFleetThroughputBucket = z.object({
+  bucketStart: z.string().datetime().nullable(),
+  deviceId: z.string().uuid().nullable(),
+  count: z.number().int(),
+});
+
+/** A fleet device's broker lifecycle event inside the window. */
+export const zIotFleetLifecycleEvent = z.object({
+  deviceId: z.string().uuid().nullable(),
+  eventType: z.string().nullable(),
+  eventTimestamp: z.string().datetime().nullable(),
+  disconnectReason: z.string().nullable(),
+});
+
+// The devices overview's one orchestrated read. Identity and live connectivity
+// stay on the list endpoint the page already holds; this carries only the
+// warehouse facts, joined client-side by deviceId.
+export const zIotFleetMonitoring = z.object({
+  devices: z.array(zIotFleetDeviceActivity),
+  throughput: z.array(zIotFleetThroughputBucket),
+  events: z.array(zIotFleetLifecycleEvent),
+  // Warehouse lookups failed: facts degrade to unknown, never to "silent".
+  pipelineUnavailable: z.boolean(),
+});
+
 // --- Inferred types ---
 export type OnboardDeviceBody = z.infer<typeof zOnboardDeviceBody>;
 export type DeviceProcedure = z.infer<typeof zDeviceProcedure>;
@@ -423,6 +474,11 @@ export type DeviceFirmwareVersion = z.infer<typeof zDeviceFirmwareVersion>;
 export type DeviceFirmwareHistory = z.infer<typeof zDeviceFirmwareHistory>;
 export type DeviceMeasurement = z.infer<typeof zDeviceMeasurement>;
 export type DeviceMonitoring = z.infer<typeof zDeviceMonitoring>;
+export type IotFleetMonitoringQuery = z.infer<typeof zIotFleetMonitoringQuery>;
+export type IotFleetDeviceActivity = z.infer<typeof zIotFleetDeviceActivity>;
+export type IotFleetThroughputBucket = z.infer<typeof zIotFleetThroughputBucket>;
+export type IotFleetLifecycleEvent = z.infer<typeof zIotFleetLifecycleEvent>;
+export type IotFleetMonitoring = z.infer<typeof zIotFleetMonitoring>;
 export type IotDeviceWithConnectivity = z.infer<typeof zIotDeviceWithConnectivity>;
 export type IotDeviceActivity = z.infer<typeof zIotDeviceActivity>;
 export type IotDeviceDetail = z.infer<typeof zIotDeviceDetail>;
