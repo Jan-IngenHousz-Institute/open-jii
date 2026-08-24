@@ -13,6 +13,7 @@ from .helpers import (
     load_experiment_table,
     read_table,
 )
+from .json_scrub import scrub_non_finite_json, scrub_non_finite_json_value
 
 __all__ = [
     "decompress_sample",
@@ -22,5 +23,7 @@ __all__ = [
     "get_table_metadata",
     "load_experiment_table",
     "read_table",
+    "scrub_non_finite_json",
+    "scrub_non_finite_json_value",
 ]
 __version__ = "0.1.0"
