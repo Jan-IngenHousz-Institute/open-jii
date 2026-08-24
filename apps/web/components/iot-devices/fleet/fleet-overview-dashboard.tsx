@@ -38,12 +38,14 @@ interface RangeSelection {
 }
 
 /**
- * The registry's pulse, above the table: is the fleet online, is data flowing,
+ * The overview's frame: pulse tiles up top, the registry (as children) in
+ * the middle, and the warehouse panels below, all driven by one range. Is the
+ * fleet online, is data flowing,
  * and which devices are stuck. Live facts come from the device list the page
  * already holds; the warehouse facts ride one fleet-scoped read. The hero
  * sits directly on the workspace band, its tiles floating as cards.
  */
-export function FleetOverviewDashboard() {
+export function FleetOverviewDashboard({ children }: { children?: React.ReactNode }) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
 
@@ -65,7 +67,7 @@ export function FleetOverviewDashboard() {
   // An empty registry is the table's full-page empty state; a pulse over
   // nothing would just restate it.
   if (devicesData !== undefined && devices.length === 0) {
-    return null;
+    return <>{children}</>;
   }
 
   const now = Date.now();
@@ -211,8 +213,12 @@ export function FleetOverviewDashboard() {
     }
     return (
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="min-w-0 lg:col-span-2">
-          <PanelCard title={t("iot.devices.fleet.throughputTitle")}>
+        <div className="flex min-w-0 lg:col-span-2">
+          <PanelCard
+            title={t("iot.devices.fleet.throughputTitle")}
+            className="flex w-full flex-col"
+            contentClassName="flex flex-1 flex-col"
+          >
             <GroupThroughputPanel
               throughput={monitoring.throughput}
               labelByDeviceId={labels}
@@ -243,7 +249,7 @@ export function FleetOverviewDashboard() {
   }
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-10">
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -259,6 +265,8 @@ export function FleetOverviewDashboard() {
         </div>
         {renderTiles()}
       </div>
+
+      {children}
 
       {renderWarehousePanels()}
     </section>

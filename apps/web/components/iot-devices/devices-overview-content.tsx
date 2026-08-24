@@ -18,11 +18,12 @@ import { IotDevicesTableView } from "./iot-devices-table-view";
 export function DevicesOverviewContent() {
   return (
     <WorkspaceBand>
-      <div className="space-y-10">
-        <FleetOverviewDashboard />
-        <IotDevicesTableView />
-        <DeviceGroupsBlock />
-      </div>
+      <FleetOverviewDashboard>
+        <div className="space-y-10">
+          <IotDevicesTableView />
+          <DeviceGroupsBlock />
+        </div>
+      </FleetOverviewDashboard>
     </WorkspaceBand>
   );
 }
