@@ -53,6 +53,8 @@ interface IotCredentialFileProps {
   filename: string;
   content: string;
   copyable?: boolean;
+  /** Lets the show-once dialog know something reached disk before closing. */
+  onDownload?: () => void;
 }
 
 export function IotCredentialFile({
@@ -62,6 +64,7 @@ export function IotCredentialFile({
   filename,
   content,
   copyable = false,
+  onDownload,
 }: IotCredentialFileProps) {
   const { t } = useTranslation("iot");
   const { copy, copied } = useCopyToClipboard();
@@ -93,7 +96,10 @@ export function IotCredentialFile({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => downloadText(filename, content)}
+          onClick={() => {
+            downloadText(filename, content);
+            onDownload?.();
+          }}
         >
           <Download className="mr-1.5 h-3.5 w-3.5" />
           {t("iot.devices.credentials.download")}

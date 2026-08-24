@@ -306,8 +306,8 @@
         "namePlaceholder": "Greenhouse sensor 1",
         "submit": "Register",
         "createSuccess": "Device registered",
-        "createSuccessDetail": "A certificate will be issued to activate it.",
-        "createError": "Failed to register device"
+        "createError": "Failed to register device",
+        "createSuccessNext": "Next: activate it with a certificate."
       },
       "remove": {
         "title": "Delete device",
@@ -361,7 +361,7 @@
         "rotateTitle": "Rotate certificate",
         "rotateConfirm": "The device gets a new certificate and the current one stops working immediately. It keeps publishing only after the new credentials are installed.",
         "disconnectWarning": "This device is currently connected and will be disconnected.",
-        "rotatingDescription": "A certificate rotation is in progress.",
+        "rotatingDescription": "You issued a new certificate and the old one is being retired. The device keeps streaming on whichever it holds until you load the new bundle; this usually settles within a minute.",
         "revokedDescription": "The certificate was revoked, so this device can no longer authenticate to AWS IoT. Issue a new certificate to restore credential access.",
         "revoke": "Revoke certificate",
         "revokeTitle": "Revoke certificate",
@@ -386,7 +386,13 @@
         "rootCa3Sub": "ECC 256 bit key",
         "copy": "Copy",
         "download": "Download",
-        "downloadAll": "Download all"
+        "downloadAll": "Download all",
+        "continueToOnboarding": "Continue to onboarding",
+        "closeUnsavedTitle": "Close without downloading?",
+        "closeUnsavedDescription": "The private key is shown once and is not stored. Closing now means issuing a new certificate to get one.",
+        "closeUnsavedBack": "Go back",
+        "closeUnsavedConfirm": "Close anyway",
+        "refreshStatus": "Refresh status"
       },
       "nextAction": {
         "issueCredentials": "Issue certificate",

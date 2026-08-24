@@ -306,8 +306,8 @@
         "namePlaceholder": "Gewächshaus-Sensor 1",
         "submit": "Registrieren",
         "createSuccess": "Gerät registriert",
-        "createSuccessDetail": "Ein Zertifikat wird ausgestellt, um es zu aktivieren.",
-        "createError": "Gerät konnte nicht registriert werden"
+        "createError": "Gerät konnte nicht registriert werden",
+        "createSuccessNext": "Nächster Schritt: mit einem Zertifikat aktivieren."
       },
       "remove": {
         "title": "Gerät löschen",
@@ -361,7 +361,7 @@
         "rotateTitle": "Zertifikat rotieren",
         "rotateConfirm": "Das Gerät erhält ein neues Zertifikat, das aktuelle funktioniert sofort nicht mehr. Es sendet erst weiter, wenn die neuen Zugangsdaten installiert sind.",
         "disconnectWarning": "Dieses Gerät ist derzeit verbunden und wird getrennt.",
-        "rotatingDescription": "Eine Zertifikatsrotation läuft gerade.",
+        "rotatingDescription": "Sie haben ein neues Zertifikat ausgestellt und das alte wird zurückgezogen. Das Gerät sendet mit dem vorhandenen weiter, bis Sie das neue Paket aufspielen; das dauert in der Regel unter einer Minute.",
         "revokedDescription": "Das Zertifikat wurde widerrufen, sodass sich dieses Gerät nicht mehr bei AWS IoT authentifizieren kann. Stellen Sie ein neues Zertifikat aus, um den Zugang wiederherzustellen.",
         "revoke": "Zertifikat widerrufen",
         "revokeTitle": "Zertifikat widerrufen",
@@ -386,7 +386,13 @@
         "rootCa3Sub": "ECC-256-Bit-Schlüssel",
         "copy": "Kopieren",
         "download": "Herunterladen",
-        "downloadAll": "Alle herunterladen"
+        "downloadAll": "Alle herunterladen",
+        "continueToOnboarding": "Weiter zur Einrichtung",
+        "closeUnsavedTitle": "Ohne Download schließen?",
+        "closeUnsavedDescription": "Der private Schlüssel wird nur einmal angezeigt und nicht gespeichert. Wer jetzt schließt, muss für einen neuen Schlüssel ein neues Zertifikat ausstellen.",
+        "closeUnsavedBack": "Zurück",
+        "closeUnsavedConfirm": "Trotzdem schließen",
+        "refreshStatus": "Status aktualisieren"
       },
       "nextAction": {
         "issueCredentials": "Zertifikat ausstellen",

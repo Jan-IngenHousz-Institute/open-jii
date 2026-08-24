@@ -306,8 +306,8 @@
         "namePlaceholder": "Kassensensor 1",
         "submit": "Registreren",
         "createSuccess": "Apparaat geregistreerd",
-        "createSuccessDetail": "Er wordt een certificaat uitgegeven om het te activeren.",
-        "createError": "Apparaat registreren mislukt"
+        "createError": "Apparaat registreren mislukt",
+        "createSuccessNext": "Volgende stap: activeren met een certificaat."
       },
       "remove": {
         "title": "Apparaat verwijderen",
@@ -361,7 +361,7 @@
         "rotateTitle": "Certificaat roteren",
         "rotateConfirm": "Het apparaat krijgt een nieuw certificaat en het huidige werkt direct niet meer. Het publiceert pas weer zodra de nieuwe inloggegevens zijn geïnstalleerd.",
         "disconnectWarning": "Dit apparaat is momenteel verbonden en wordt losgekoppeld.",
-        "rotatingDescription": "Een certificaatrotatie is bezig.",
+        "rotatingDescription": "U heeft een nieuw certificaat uitgegeven en het oude wordt ingetrokken. Het apparaat blijft streamen met wat het heeft totdat u de nieuwe bundel laadt; dit duurt meestal minder dan een minuut.",
         "revokedDescription": "Het certificaat is ingetrokken, waardoor dit apparaat zich niet meer bij AWS IoT kan authenticeren. Geef een nieuw certificaat uit om de toegang te herstellen.",
         "revoke": "Certificaat intrekken",
         "revokeTitle": "Certificaat intrekken",
@@ -386,7 +386,13 @@
         "rootCa3Sub": "ECC 256-bits sleutel",
         "copy": "Kopiëren",
         "download": "Downloaden",
-        "downloadAll": "Alles downloaden"
+        "downloadAll": "Alles downloaden",
+        "continueToOnboarding": "Door naar instellen",
+        "closeUnsavedTitle": "Sluiten zonder te downloaden?",
+        "closeUnsavedDescription": "De privésleutel wordt één keer getoond en niet opgeslagen. Wie nu sluit, moet voor een nieuwe sleutel een nieuw certificaat uitgeven.",
+        "closeUnsavedBack": "Terug",
+        "closeUnsavedConfirm": "Toch sluiten",
+        "refreshStatus": "Status vernieuwen"
       },
       "nextAction": {
         "issueCredentials": "Certificaat uitgeven",
