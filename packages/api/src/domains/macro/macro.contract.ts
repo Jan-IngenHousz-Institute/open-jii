@@ -16,6 +16,8 @@ import {
   zMacroList,
   zMacroProtocolList,
   zMacroProtocolPathParams,
+  zMacroPaginatedList,
+  zMacroPaginatedQuery,
   zUpdateMacroRequestBody,
 } from "./macro.schema";
 
@@ -24,6 +26,10 @@ export const macroContract = {
     .route({ method: "GET", path: "/api/v1/macros", successStatus: 200 })
     .input(zMacroFilterQuery)
     .output(zMacroList),
+  listMacrosPaginated: oc
+    .route({ method: "GET", path: "/api/v1/macros/paginated", successStatus: 200 })
+    .input(zMacroPaginatedQuery)
+    .output(zMacroPaginatedList),
   getMacro: oc
     .route({ method: "GET", path: "/api/v1/macros/{id}", successStatus: 200 })
     .input(zMacroIdPathParam)

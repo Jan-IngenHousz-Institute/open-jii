@@ -74,3 +74,27 @@ export function ftsMatch(vector: SQLWrapper, name: SQLWrapper, raw: string): SQL
 export function ftsRank(vector: SQLWrapper, name: SQLWrapper, raw: string): SQL<number> {
   return sql<number>`(ts_rank(${vector}, ${tsQuery(raw)}) + 0.3 * similarity(${name}, ${raw}))`;
 }
+
+/** Score added per relationship tier. Relevance dominates; tier breaks near-ties. */
+export const TIER_WEIGHT = 0.15;
+
+/** Per-match increment and the uniform ceiling on the summed cross-table bonus. */
+const CROSS_TABLE_BONUS_STEP = 0.05;
+export const CROSS_TABLE_BONUS_CAP = 0.1;
+
+/**
+ * Capped bonus for matches on related tables (creator, members, linked entities). One shared
+ * ceiling across every entity keeps scores comparable in cross-type global search, where entities
+ * differ in how many related tables they can match.
+ */
+export function crossTableBonus(...matches: SQL[]): SQL<number> {
+  const terms = matches.map(
+    (match) => sql`(CASE WHEN ${match} THEN ${sql.raw(String(CROSS_TABLE_BONUS_STEP))} ELSE 0 END)`,
+  );
+  return sql<number>`LEAST(${sql.join(terms, sql` + `)}, ${sql.raw(String(CROSS_TABLE_BONUS_CAP))})`;
+}
+
+/** Lexical relevance plus the tier bonus: the single key both browse and search order by. */
+export function searchScore(rank: SQL<number>, tier: SQL<number>): SQL<number> {
+  return sql<number>`(${rank} + ${sql.raw(String(TIER_WEIGHT))} * ${tier})`;
+}

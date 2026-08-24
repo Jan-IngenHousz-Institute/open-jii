@@ -174,6 +174,23 @@ describe("ExperimentController", () => {
     });
   });
 
+  describe("listExperimentsPaginated", () => {
+    // Guards the route-ordering trap: the literal path must resolve before `{id}`.
+    it("returns the page envelope rather than falling through to the detail route", async () => {
+      await testApp.createExperiment({ name: "Paged one", userId: testUserId });
+
+      const response: SuperTestResponse<{ items: { id: string }[]; totalCount: number }> =
+        await testApp
+          .get(testApp.resolveOrpcPath(contract.experiments.listExperimentsPaginated))
+          .query({ page: 1, pageSize: 10 })
+          .withAuth(testUserId)
+          .expect(StatusCodes.OK);
+
+      expect(response.body.totalCount).toBe(1);
+      expect(response.body.items).toHaveLength(1);
+    });
+  });
+
   describe("listExperiments", () => {
     it("should return an empty array if no experiments exist", async () => {
       const response = await testApp

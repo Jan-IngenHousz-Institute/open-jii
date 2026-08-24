@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zExperimentData } from "./data/experiment-data.schema";
@@ -424,10 +425,16 @@ export const embargoSchema = zUpdateExperimentBody
   });
 
 export const zExperimentFilterQuery = z.object({
-  filter: z.enum(["member"]).optional().describe("Filter experiments by relationship to the user"),
+  /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
+  filter: z.enum(["member"]).optional().describe("Deprecated alias for scope=related"),
+  scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
   status: zExperimentStatus.optional().describe("Filter experiments by their status"),
   search: z.string().optional().describe("Search term for experiment name"),
 });
+
+export const zExperimentPaginatedQuery = zExperimentFilterQuery.merge(zPaginationQuery);
+
+export const zExperimentPaginatedList = zPaginated(zExperiment);
 
 export const zExperimentIdPathParam = z.object({
   id: z.string().uuid().describe("ID of the experiment"),
@@ -440,6 +447,8 @@ export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
+export type ExperimentPaginatedQuery = z.infer<typeof zExperimentPaginatedQuery>;
+export type ExperimentPaginatedList = z.infer<typeof zExperimentPaginatedList>;
 export type ExperimentAccess = z.infer<typeof zExperimentAccess>;
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentIdPathParam = z.infer<typeof zExperimentIdPathParam>;

@@ -8,6 +8,7 @@ import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-valida
 import { protocolContract } from "@repo/api/domains/protocol/protocol.contract";
 import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
+import { resolveListScope } from "@repo/api/shared/listing";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
@@ -17,6 +18,7 @@ import { formatDates, formatDatesList } from "../../common/utils/date-formatter"
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { toPage } from "../../common/utils/pagination";
 import { SetVisibilityUseCase } from "../../visibility/application/use-cases/set-visibility/set-visibility";
 import { AddCompatibleMacrosUseCase } from "../application/use-cases/add-compatible-macros/add-compatible-macros";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
@@ -124,7 +126,7 @@ export class ProtocolController {
     return implement(protocolContract.listProtocols).handler(async ({ input }) => {
       const result = await this.listProtocolsUseCase.execute(
         input.search,
-        input.filter,
+        resolveListScope(input),
         session.user.id,
       );
 
@@ -132,6 +134,25 @@ export class ProtocolController {
         // The list contract deliberately treats code as unknown so large protocol
         // documents are not recursively validated on the synchronous request path.
         return formatDatesList(result.value);
+      }
+
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  @Implement(protocolContract.listProtocolsPaginated)
+  listProtocolsPaginated(@Session() session: UserSession) {
+    return implement(protocolContract.listProtocolsPaginated).handler(async ({ input }) => {
+      const result = await this.listProtocolsUseCase.executePaginated(
+        input.page,
+        input.pageSize,
+        input.search,
+        resolveListScope(input),
+        session.user.id,
+      );
+
+      if (result.isSuccess()) {
+        return toPage(result.value, input.page, input.pageSize, formatDatesList);
       }
 
       return throwOrpcFailure(result, this.logger);

@@ -19,4 +19,20 @@ export class ListMacrosUseCase {
     });
     return await this.macroRepository.findAll(filter);
   }
+
+  async executePaginated(
+    page: number,
+    pageSize: number,
+    filter?: MacroFilter,
+  ): Promise<Result<{ items: MacroDto[]; totalCount: number }>> {
+    this.logger.log({
+      msg: "Listing macros",
+      operation: "listMacrosPaginated",
+      page,
+      pageSize,
+      language: filter?.language,
+      hasSearch: !!filter?.search,
+    });
+    return await this.macroRepository.findPage(page, pageSize, filter);
+  }
 }

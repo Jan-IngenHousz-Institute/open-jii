@@ -171,7 +171,7 @@ describe("MacroRepository", () => {
         .where(eq(macrosTable.id, macro.id));
 
       // They can still see it while they belong to the organization...
-      const before = await repository.findAll({ filter: "my", userId: author });
+      const before = await repository.findAll({ scope: "related", userId: author });
       assertSuccess(before);
       expect(before.value.map((m) => m.id)).toContain(macro.id);
 
@@ -182,7 +182,7 @@ describe("MacroRepository", () => {
           and(eq(organizationMembers.organizationId, org), eq(organizationMembers.userId, author)),
         );
 
-      const after = await repository.findAll({ filter: "my", userId: author });
+      const after = await repository.findAll({ scope: "related", userId: author });
       assertSuccess(after);
       // Authorship is not an access path: "My macros" must narrow what the caller
       // can already read, never hand back a body `can(read)` would refuse.
@@ -1560,7 +1560,7 @@ describe("MacroRepository — list access scoping", () => {
       visibility: "public",
     });
 
-    const result = await repository.findAll({ filter: "my", userId: owner });
+    const result = await repository.findAll({ scope: "related", userId: owner });
     assertSuccess(result);
     const ids = result.value.map((m) => m.id);
 

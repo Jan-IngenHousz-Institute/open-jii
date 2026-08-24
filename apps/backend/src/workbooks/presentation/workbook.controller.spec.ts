@@ -6,6 +6,7 @@ import { contract } from "@repo/api/contract";
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { assertSuccess, success, failure, AppError } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
+import type { SuperTestResponse } from "../../test/test-harness";
 import { CreateWorkbookUseCase } from "../application/use-cases/create-workbook/create-workbook";
 import { DeleteWorkbookUseCase } from "../application/use-cases/delete-workbook/delete-workbook";
 import { GetWorkbookVersionUseCase } from "../application/use-cases/get-workbook-version/get-workbook-version";
@@ -16,6 +17,14 @@ import { UpdateWorkbookUseCase } from "../application/use-cases/update-workbook/
 import type { WorkbookVersionDto } from "../core/models/workbook-version.model";
 import type { WorkbookDto } from "../core/models/workbook.model";
 import { WorkbookVersionRepository } from "../core/repositories/workbook-version.repository";
+
+interface WorkbookPage {
+  items: { id: string }[];
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalCount: number;
+}
 
 describe("WorkbookController", () => {
   const testApp = TestHarness.App;
@@ -162,7 +171,7 @@ describe("WorkbookController", () => {
       expect(response.body).toHaveLength(2);
     });
 
-    it("should pass search and filter to use case", async () => {
+    it("maps the deprecated filter=my alias to scope=related", async () => {
       const executeSpy = vi.spyOn(listWorkbooksUseCase, "execute").mockResolvedValue(success([]));
 
       await testApp
@@ -173,9 +182,88 @@ describe("WorkbookController", () => {
 
       expect(executeSpy).toHaveBeenCalledWith({
         search: "test",
-        filter: "my",
+        scope: "related",
         userId: testUserId,
       });
+    });
+
+    it("lets an explicit scope win over the deprecated filter alias", async () => {
+      const executeSpy = vi.spyOn(listWorkbooksUseCase, "execute").mockResolvedValue(success([]));
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
+        .query({ filter: "my", scope: "all" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(executeSpy).toHaveBeenCalledWith({
+        search: undefined,
+        scope: "all",
+        userId: testUserId,
+      });
+    });
+  });
+
+  describe("listWorkbooksPaginated", () => {
+    it("returns the page envelope with totals", async () => {
+      for (const name of ["Alpha", "Bravo", "Charlie"]) {
+        await testApp.createWorkbook({ name, createdBy: testUserId, visibility: "public" });
+      }
+
+      const response: SuperTestResponse<WorkbookPage> = await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooksPaginated))
+        .query({ page: 1, pageSize: 2 })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.items).toHaveLength(2);
+      expect(response.body.page).toBe(1);
+      expect(response.body.pageSize).toBe(2);
+      expect(response.body.totalPages).toBe(2);
+      expect(response.body.totalCount).toBe(3);
+    });
+
+    it("defaults to the first page when no page params are sent", async () => {
+      await testApp.createWorkbook({
+        name: "Solo",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+
+      const response: SuperTestResponse<WorkbookPage> = await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooksPaginated))
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.page).toBe(1);
+      expect(response.body.pageSize).toBe(20);
+      expect(response.body.totalCount).toBe(1);
+    });
+
+    it("returns an empty page with real totals past the end", async () => {
+      await testApp.createWorkbook({
+        name: "Only one",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+
+      const response: SuperTestResponse<WorkbookPage> = await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooksPaginated))
+        .query({ page: 5, pageSize: 10 })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.items).toEqual([]);
+      expect(response.body.totalCount).toBe(1);
+      expect(response.body.totalPages).toBe(1);
+    });
+
+    it("rejects a page below one", async () => {
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooksPaginated))
+        .query({ page: 0 })
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST);
     });
 
     it("should return 500 when use case fails", async () => {

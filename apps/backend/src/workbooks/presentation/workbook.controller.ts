@@ -4,6 +4,7 @@ import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { workbookContract } from "@repo/api/domains/workbook/workbook.contract";
+import { resolveListScope } from "@repo/api/shared/listing";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
@@ -12,6 +13,7 @@ import { resolveResourceCapabilities } from "../../authorization/resource-capabi
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { isSuccess } from "../../common/utils/fp-utils";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { toPage } from "../../common/utils/pagination";
 import { SetVisibilityUseCase } from "../../visibility/application/use-cases/set-visibility/set-visibility";
 import { CreateWorkbookUseCase } from "../application/use-cases/create-workbook/create-workbook";
 import { DeleteWorkbookUseCase } from "../application/use-cases/delete-workbook/delete-workbook";
@@ -56,6 +58,42 @@ export class WorkbookController {
     });
   }
 
+  @Implement(workbookContract.listWorkbooks)
+  listWorkbooks(@Session() session: UserSession) {
+    return implement(workbookContract.listWorkbooks).handler(async ({ input }) => {
+      const result = await this.listWorkbooksUseCase.execute({
+        search: input.search,
+        scope: resolveListScope(input),
+        userId: session.user.id,
+      });
+
+      if (result.isSuccess()) {
+        return formatDatesList(result.value);
+      }
+
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  // Declared above `getWorkbook`: routes resolve in declaration order, so the literal
+  // path has to win before `{id}` claims it and rejects "paginated" as a uuid.
+  @Implement(workbookContract.listWorkbooksPaginated)
+  listWorkbooksPaginated(@Session() session: UserSession) {
+    return implement(workbookContract.listWorkbooksPaginated).handler(async ({ input }) => {
+      const result = await this.listWorkbooksUseCase.executePaginated(input.page, input.pageSize, {
+        search: input.search,
+        scope: resolveListScope(input),
+        userId: session.user.id,
+      });
+
+      if (result.isSuccess()) {
+        return toPage(result.value, input.page, input.pageSize, formatDatesList);
+      }
+
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
   @CanAccess({ resource: "workbook", action: "read" })
   @Implement(workbookContract.getWorkbook)
   getWorkbook(@Session() session: UserSession) {
@@ -71,23 +109,6 @@ export class WorkbookController {
           input.id,
         );
         return { ...formatDates(result.value), capabilities };
-      }
-
-      return throwOrpcFailure(result, this.logger);
-    });
-  }
-
-  @Implement(workbookContract.listWorkbooks)
-  listWorkbooks(@Session() session: UserSession) {
-    return implement(workbookContract.listWorkbooks).handler(async ({ input }) => {
-      const result = await this.listWorkbooksUseCase.execute({
-        search: input.search,
-        filter: input.filter,
-        userId: session.user.id,
-      });
-
-      if (result.isSuccess()) {
-        return formatDatesList(result.value);
       }
 
       return throwOrpcFailure(result, this.logger);

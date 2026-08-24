@@ -1,8 +1,10 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
-import { ExperimentFilter, ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import type { ResourceScope } from "@repo/api/shared/listing";
 import {
+  asc,
   desc,
   eq,
   and,
@@ -28,7 +30,13 @@ import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
-import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
+import {
+  crossTableBonus,
+  escapeLike,
+  ftsMatch,
+  ftsRank,
+  searchScore,
+} from "../../../common/utils/fts";
 import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedAvatarUrl,
@@ -38,6 +46,7 @@ import {
 import {
   accessibleResourceCondition,
   relatedResourceCondition,
+  resourceTierExpression,
 } from "../../../common/utils/resource-access-scope";
 import { userIsSelectableGrantee } from "../../../sharing/core/grantee-selectability";
 import {
@@ -50,6 +59,9 @@ import {
   UpdateExperimentDto,
   ExperimentDto,
 } from "../models/experiment.model";
+
+/** A listing row plus its relevance score, which global search merges on across types. */
+export type ExperimentSearchRow = ExperimentDto & { score: number };
 
 /**
  * Contributors plus the experiment's anonymization setting, so no caller can publish
@@ -242,17 +254,20 @@ export class ExperimentRepository {
     });
   }
 
-  async findAll(
+  /**
+   * Shared shape behind the array and paginated listings, so both apply identical
+   * scoping, ranking and ordering and the count matches the rows exactly.
+   */
+  private buildListing(
     userId: string,
-    filter?: ExperimentFilter,
+    scope?: ResourceScope,
     status?: ExperimentStatus,
     search?: string,
-    limit?: number,
     options?: {
       organizationId?: string;
       includeArchived?: boolean;
     },
-  ): Promise<Result<ExperimentDto[]>> {
+  ) {
     const { organizationId, includeArchived = false } = options ?? {};
 
     const experimentFields = {
@@ -271,7 +286,7 @@ export class ExperimentRepository {
       updatedAt: experiments.updatedAt,
     };
 
-    return tryCatch(async () => {
+    {
       const conditions: (SQL | undefined)[] = [];
 
       // Archived rows are hidden unless asked for, either by filtering to them or by
@@ -280,10 +295,10 @@ export class ExperimentRepository {
         conditions.push(ne(experiments.status, "archived"));
       }
 
-      // Unconditional, "member" included: a view may narrow what the caller sees but
+      // Unconditional, `related` included: a view may narrow what the caller sees but
       // never widen it. Authorship is not an access path, so a creator since removed
       // from the owning org must not get the body back through a listing.
-      const scope = accessibleResourceCondition({
+      const accessScope = accessibleResourceCondition({
         database: this.database,
         resourceType: "experiment",
         resourceIdColumn: experiments.id,
@@ -291,8 +306,8 @@ export class ExperimentRepository {
         visibilityColumn: experiments.visibility,
         userId,
       });
-      if (scope) {
-        conditions.push(scope);
+      if (accessScope) {
+        conditions.push(accessScope);
       }
 
       // Narrow to one owning organization (the org profile's resources showcase).
@@ -302,7 +317,7 @@ export class ExperimentRepository {
         conditions.push(eq(experiments.organizationId, organizationId));
       }
 
-      if (filter === "member") {
+      if (scope === "related") {
         // "Mine": every path tying me to the experiment personally, so only rows I
         // reach purely by their being public drop out. Access held through an org or
         // team counts, it is how most members reach anything; so does authorship,
@@ -379,25 +394,108 @@ export class ExperimentRepository {
 
       // Relevance: vector/name rank dominates; cross-table matches add a small capped bonus, so a
       // name match always outranks one matched only by a related field.
-      const rank = sql<number>`(${ftsRank(experiments.searchVector, experiments.name, search ?? "")} + 0.05 * (CASE WHEN ${creatorMatch(search ?? "")} THEN 1 ELSE 0 END) + 0.05 * (CASE WHEN (${memberMatch(search ?? "")} OR ${locationMatch(search ?? "")}) THEN 1 ELSE 0 END))`;
+      const rank = sql<number>`(${ftsRank(experiments.searchVector, experiments.name, search ?? "")} + ${crossTableBonus(
+        creatorMatch(search ?? ""),
+        sql`(${memberMatch(search ?? "")} OR ${locationMatch(search ?? "")})`,
+      )})`;
+
+      const tier = resourceTierExpression({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        createdByColumn: experiments.createdBy,
+        userId,
+      });
+      const score = searchScore(rank, tier);
+
+      // Browse keeps tiers strict and recency within them; search folds tier into one
+      // score so a strong public match can still beat a weak owned one. Both end on
+      // `id` so paging never drops or repeats a row on ties.
+      const orderBy = search
+        ? [desc(score), asc(experiments.id)]
+        : [desc(tier), desc(experiments.updatedAt), asc(experiments.id)];
+
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+      return { where, orderBy, score, fields: { ...experimentFields, score } };
+    }
+  }
+
+  async findAll(
+    userId: string,
+    scope?: ResourceScope,
+    status?: ExperimentStatus,
+    search?: string,
+    limit?: number,
+    options?: {
+      organizationId?: string;
+      includeArchived?: boolean;
+    },
+  ): Promise<Result<ExperimentSearchRow[]>> {
+    return tryCatch(async () => {
+      const { where, orderBy, fields } = this.buildListing(userId, scope, status, search, options);
 
       let query = this.database
-        .select(experimentFields)
+        .select(fields)
         .from(experiments)
         .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .$dynamic();
 
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+      if (where) {
+        query = query.where(where);
       }
-
-      query = query.orderBy(search ? desc(rank) : desc(experiments.updatedAt));
+      query = query.orderBy(...orderBy);
 
       if (limit !== undefined) {
         query = query.limit(limit);
       }
 
       return query;
+    });
+  }
+
+  /** One page plus the total, counted separately so an out-of-range page still reports it. */
+  async findPage(
+    userId: string,
+    page: number,
+    pageSize: number,
+    scope?: ResourceScope,
+    status?: ExperimentStatus,
+    search?: string,
+    options?: {
+      organizationId?: string;
+      includeArchived?: boolean;
+    },
+  ): Promise<Result<{ items: ExperimentSearchRow[]; totalCount: number }>> {
+    return tryCatch(async () => {
+      const { where, orderBy, fields } = this.buildListing(userId, scope, status, search, options);
+
+      let rows = this.database
+        .select(fields)
+        .from(experiments)
+        .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
+        .$dynamic();
+      let total = this.database
+        .select({ count: sql<number>`count(*)::int` })
+        .from(experiments)
+        .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
+        .$dynamic();
+
+      if (where) {
+        rows = rows.where(where);
+        total = total.where(where);
+      }
+
+      const [items, [{ count }]] = await Promise.all([
+        rows
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset((page - 1) * pageSize),
+        total,
+      ]);
+
+      return { items, totalCount: count };
     });
   }
 

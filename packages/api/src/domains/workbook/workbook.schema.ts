@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zVisibility } from "../visibility/visibility.schema";
 import { zWorkbookCellArray, zWorkbookCellArrayInput } from "./workbook-cells.schema";
@@ -47,8 +48,14 @@ export const zWorkbookDetail = zWorkbook.extend({
 
 export const zWorkbookFilterQuery = z.object({
   search: z.string().optional(),
-  filter: z.enum(["my"]).optional(),
+  /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
+  filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
+  scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
 });
+
+export const zWorkbookPaginatedQuery = zWorkbookFilterQuery.merge(zPaginationQuery);
+
+export const zWorkbookPaginatedList = zPaginated(zWorkbookListItem);
 
 export const zWorkbookIdPathParam = z.object({
   id: z.string().uuid(),
@@ -96,6 +103,8 @@ export type WorkbookDetail = z.infer<typeof zWorkbookDetail>;
 export type WorkbookListItem = z.infer<typeof zWorkbookListItem>;
 export type WorkbookList = z.infer<typeof zWorkbookList>;
 export type WorkbookFilterQuery = z.infer<typeof zWorkbookFilterQuery>;
+export type WorkbookPaginatedQuery = z.infer<typeof zWorkbookPaginatedQuery>;
+export type WorkbookPaginatedList = z.infer<typeof zWorkbookPaginatedList>;
 export type WorkbookIdPathParam = z.infer<typeof zWorkbookIdPathParam>;
 export type CreateWorkbookRequestBody = z.infer<typeof zCreateWorkbookRequestBody>;
 export type UpdateWorkbookRequestBody = z.infer<typeof zUpdateWorkbookRequestBody>;

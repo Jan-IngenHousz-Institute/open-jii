@@ -254,6 +254,19 @@ describe("MacroController", () => {
     });
   });
 
+  describe("listMacrosPaginated", () => {
+    // Guards the route-ordering trap: the literal path must resolve before `{id}`.
+    it("returns the page envelope rather than falling through to the detail route", async () => {
+      const response = await testApp
+        .get(testApp.resolveOrpcPath(contract.macros.listMacrosPaginated))
+        .query({ page: 1, pageSize: 10 })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({ page: 1, pageSize: 10, items: [] });
+    });
+  });
+
   describe("listMacros", () => {
     it("should successfully list macros", async () => {
       // Arrange
@@ -326,7 +339,7 @@ describe("MacroController", () => {
       expect(listMacrosUseCase.execute).toHaveBeenCalledWith({
         search: "test",
         language: "python",
-        filter: undefined,
+        scope: "all",
         userId: testUserId,
       });
     });

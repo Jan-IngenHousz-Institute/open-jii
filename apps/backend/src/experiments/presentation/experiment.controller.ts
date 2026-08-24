@@ -5,12 +5,14 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { experimentContract } from "@repo/api/domains/experiment/experiment.contract";
+import { resolveListScope } from "@repo/api/shared/listing";
 
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { toPage } from "../../common/utils/pagination";
 import { SetVisibilityUseCase } from "../../visibility/application/use-cases/set-visibility/set-visibility";
 import { CreateExperimentUseCase } from "../application/use-cases/create-experiment/create-experiment";
 import { DeleteExperimentUseCase } from "../application/use-cases/delete-experiment/delete-experiment";
@@ -65,12 +67,30 @@ export class ExperimentController {
     return implement(experimentContract.listExperiments).handler(async ({ input }) => {
       const result = await this.listExperimentsUseCase.execute(
         session.user.id,
-        input.filter,
+        resolveListScope(input),
         input.status,
         input.search,
       );
       if (result.isSuccess()) {
         return formatDatesList(result.value);
+      }
+      return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  @Implement(experimentContract.listExperimentsPaginated)
+  listExperimentsPaginated(@Session() session: UserSession) {
+    return implement(experimentContract.listExperimentsPaginated).handler(async ({ input }) => {
+      const result = await this.listExperimentsUseCase.executePaginated(
+        session.user.id,
+        input.page,
+        input.pageSize,
+        resolveListScope(input),
+        input.status,
+        input.search,
+      );
+      if (result.isSuccess()) {
+        return toPage(result.value, input.page, input.pageSize, formatDatesList);
       }
       return throwOrpcFailure(result, this.logger);
     });

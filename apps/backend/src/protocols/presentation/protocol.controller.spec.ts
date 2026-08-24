@@ -143,6 +143,25 @@ describe("ProtocolController - read and update endpoints", () => {
     expect(response.body.some((p) => p.id === protocol.id)).toBe(true);
   });
 
+  // Guards the route-ordering trap: the literal path must resolve before `{id}`.
+  it("listProtocolsPaginated returns the page envelope, not the detail route", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Paged Protocol",
+      createdBy: testUserId,
+    });
+
+    const path = testApp.resolveOrpcPath(contract.protocols.listProtocolsPaginated);
+    const response: SuperTestResponse<{ items: { id: string }[]; totalCount: number }> =
+      await testApp
+        .get(path)
+        .query({ page: 1, pageSize: 10 })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+    expect(response.body.items.some((p) => p.id === protocol.id)).toBe(true);
+    expect(response.body.totalCount).toBeGreaterThan(0);
+  });
+
   it("updateProtocol returns 403 when a non-creator tries to update", async () => {
     const protocol = await testApp.createProtocol({
       name: "Owned Protocol",

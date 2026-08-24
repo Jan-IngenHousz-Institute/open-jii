@@ -11,6 +11,8 @@ import {
   zProtocolIdPathParam,
   zProtocolList,
   zProtocolMacroList,
+  zProtocolPaginatedList,
+  zProtocolPaginatedQuery,
   zProtocolMacroPathParams,
   zUpdateProtocolRequestBody,
 } from "./protocol.schema";
@@ -20,6 +22,10 @@ export const protocolContract = {
     .route({ method: "GET", path: "/api/v1/protocols", successStatus: 200 })
     .input(zProtocolFilterQuery)
     .output(zProtocolList),
+  listProtocolsPaginated: oc
+    .route({ method: "GET", path: "/api/v1/protocols/paginated", successStatus: 200 })
+    .input(zProtocolPaginatedQuery)
+    .output(zProtocolPaginatedList),
   getProtocol: oc
     .route({ method: "GET", path: "/api/v1/protocols/{id}", successStatus: 200 })
     .input(zProtocolIdPathParam)
