@@ -160,7 +160,9 @@ describe("WorkbookEditor — empty state", () => {
 describe("WorkbookEditor — header gating", () => {
   it("does not render the header when onConnect/onRunAll are missing", () => {
     renderEditor({ cells: [createMarkdownCell()] });
-    expect(screen.queryByRole("button", { name: "iot.workbookBar.runAll" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "iot.workbookBar.runAll" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders the header when onConnect and onRunAll are provided", () => {
