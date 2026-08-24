@@ -1,10 +1,13 @@
 "use client";
 
 import { IotDeviceCredentialsCard } from "@/components/iot-devices/iot-device-credentials-card";
+import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
 import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
 import { useLocale } from "@/hooks/useLocale";
 import { useRouter } from "next/navigation";
 import { use, useEffect } from "react";
+
+import { useTranslation } from "@repo/i18n";
 
 interface DeviceCredentialsPageProps {
   params: Promise<{ deviceId: string }>;
@@ -13,6 +16,7 @@ interface DeviceCredentialsPageProps {
 /** Manage-gated device certificate controls; unauthorized direct visits redirect. */
 export default function DeviceCredentialsPage({ params }: DeviceCredentialsPageProps) {
   const { deviceId } = use(params);
+  const { t } = useTranslation("iot");
   const { data } = useIotDevice(deviceId);
   const router = useRouter();
   const locale = useLocale();
@@ -31,6 +35,10 @@ export default function DeviceCredentialsPage({ params }: DeviceCredentialsPageP
 
   return (
     <div className="max-w-3xl">
+      <TabBodyHeader
+        title={t("iot.devices.credentials.tabTitle")}
+        description={t("iot.devices.credentials.tabDescription")}
+      />
       <IotDeviceCredentialsCard device={data} />
     </div>
   );

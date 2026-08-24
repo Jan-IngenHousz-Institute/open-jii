@@ -3,6 +3,7 @@
 import { DevicePlanQuestions } from "@/components/iot-devices/device-plan-questions";
 import type { PlanQuestionEntry } from "@/components/iot-devices/device-plan-questions";
 import { DeviceSelectableExperimentRow } from "@/components/iot-devices/device-selectable-experiment-row";
+import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
 import { useOnboardIotDeviceGroup } from "@/hooks/iot/useOnboardIotDeviceGroup/useOnboardIotDeviceGroup";
@@ -194,10 +195,14 @@ export function GroupOnboardingContent() {
 
   return (
     <div className="max-w-3xl space-y-6">
+      <TabBodyHeader
+        title={t("iot.groups.onboarding.title")}
+        description={t("iot.groups.onboarding.description")}
+      />
       <Card className="shadow-none">
         <CardHeader>
-          <CardTitle className="text-base">{t("iot.groups.onboarding.title")}</CardTitle>
-          <CardDescription>{t("iot.groups.onboarding.description")}</CardDescription>
+          <CardTitle className="text-base">{t("iot.groups.onboarding.experimentsTitle")}</CardTitle>
+          <CardDescription>{t("iot.groups.onboarding.experimentsDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {experiments.length === 0 ? (

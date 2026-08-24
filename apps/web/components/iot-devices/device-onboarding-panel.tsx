@@ -4,6 +4,7 @@ import { DeviceExperimentRow } from "@/components/iot-devices/device-experiment-
 import type { DeviceExperimentRowItem } from "@/components/iot-devices/device-experiment-row";
 import { DevicePlanQuestions } from "@/components/iot-devices/device-plan-questions";
 import type { PlanQuestionEntry } from "@/components/iot-devices/device-plan-questions";
+import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
 import { useExperimentDeviceRemove } from "@/hooks/experiment/useExperimentDeviceRemove/useExperimentDeviceRemove";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useOnboardDevice } from "@/hooks/iot/useOnboardDevice/useOnboardDevice";
@@ -310,127 +311,135 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
-      <div className="space-y-6">
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="text-base">{t("iot.onboarding.experimentsTitle")}</CardTitle>
-            <CardDescription>{t("iot.onboarding.experimentsDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">{renderExperimentList()}</CardContent>
-        </Card>
+    <div>
+      <TabBodyHeader
+        title={t("iot.onboarding.title")}
+        description={t("iot.onboarding.description")}
+      />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="space-y-6">
+          <Card className="shadow-none">
+            <CardHeader>
+              <CardTitle className="text-base">{t("iot.onboarding.experimentsTitle")}</CardTitle>
+              <CardDescription>{t("iot.onboarding.experimentsDescription")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">{renderExperimentList()}</CardContent>
+          </Card>
 
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="text-base">{t("iot.onboarding.optionsTitle")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-start gap-3">
-              <Switch
-                id="include-workbook"
-                checked={includeWorkbook}
-                onCheckedChange={setIncludeWorkbook}
-              />
-              <div className="space-y-1">
-                <Label htmlFor="include-workbook" className="text-sm font-medium">
-                  {t("iot.onboarding.includeWorkbook")}
-                </Label>
-                <p className="text-muted-foreground text-sm">
-                  {t("iot.onboarding.includeWorkbookHint")}
-                </p>
+          <Card className="shadow-none">
+            <CardHeader>
+              <CardTitle className="text-base">{t("iot.onboarding.optionsTitle")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-start gap-3">
+                <Switch
+                  id="include-workbook"
+                  checked={includeWorkbook}
+                  onCheckedChange={setIncludeWorkbook}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="include-workbook" className="text-sm font-medium">
+                    {t("iot.onboarding.includeWorkbook")}
+                  </Label>
+                  <p className="text-muted-foreground text-sm">
+                    {t("iot.onboarding.includeWorkbookHint")}
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {renderBlockedNotice()}
+          {renderBlockedNotice()}
 
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-muted-foreground text-sm">
-            {t("iot.onboarding.selectedCount", { count: selectedIds.length })}
-          </p>
-          <div className="text-right">
-            <Button
-              onClick={() => {
-                issue(selectedIds);
-              }}
-              disabled={!canOnboard}
-            >
-              {isOnboarding ? (
-                <Loader2 className="mr-1.5 size-4 animate-spin" />
-              ) : (
-                <Rocket className="mr-1.5 size-4" />
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-muted-foreground text-sm">
+              {t("iot.onboarding.selectedCount", { count: selectedIds.length })}
+            </p>
+            <div className="text-right">
+              <Button
+                onClick={() => {
+                  issue(selectedIds);
+                }}
+                disabled={!canOnboard}
+              >
+                {isOnboarding ? (
+                  <Loader2 className="mr-1.5 size-4 animate-spin" />
+                ) : (
+                  <Rocket className="mr-1.5 size-4" />
+                )}
+                {hasSelection
+                  ? t("iot.onboarding.onboardCount", { count: selectedIds.length })
+                  : t("iot.onboarding.onboard")}
+              </Button>
+              {/* The reason sits under the control it disables, not three blocks away. */}
+              {isDeviceActive && !hasSelection && (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {t("iot.onboarding.selectAtLeastOne")}
+                </p>
               )}
-              {hasSelection
-                ? t("iot.onboarding.onboardCount", { count: selectedIds.length })
-                : t("iot.onboarding.onboard")}
-            </Button>
-            {/* The reason sits under the control it disables, not three blocks away. */}
-            {isDeviceActive && !hasSelection && (
-              <p className="text-muted-foreground mt-1 text-xs">
-                {t("iot.onboarding.selectAtLeastOne")}
-              </p>
-            )}
+            </div>
           </div>
+
+          {questions.length > 0 && (
+            <DevicePlanQuestions questions={questions} onAnswersChange={handleAnswersChange} />
+          )}
         </div>
 
-        {questions.length > 0 && (
-          <DevicePlanQuestions questions={questions} onAnswersChange={handleAnswersChange} />
-        )}
-      </div>
-
-      <AlertDialog
-        open={removing !== null}
-        onOpenChange={(open) => {
-          if (!open && !isRemoving) {
-            setRemoving(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("iot.onboarding.removeTitle", { name: removing?.name ?? "" })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>{t("iot.onboarding.removeBody")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRemoving}>{tCommon("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isRemoving}
-              onClick={(e) => {
-                e.preventDefault();
-                confirmRemove();
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isRemoving ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                t("iot.onboarding.removeMenuItem")
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <div className="lg:sticky lg:top-6 lg:self-start">
-        <DeviceConfigurationRail
-          device={device}
-          state={railState}
-          config={deliveredConfig}
-          issuedAt={issuedAt}
-          previewExperiments={previewExperiments}
-          includeWorkbook={includeWorkbook}
-          answered={answeredRequired}
-          requiredCount={requiredQuestions.length}
-          missingAnswers={missingAnswers}
-          canReissue={canReissue}
-          onReissue={() => {
-            issue([]);
+        <AlertDialog
+          open={removing !== null}
+          onOpenChange={(open) => {
+            if (!open && !isRemoving) {
+              setRemoving(null);
+            }
           }}
-          blockedNotice={renderBlockedNotice()}
-        />
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t("iot.onboarding.removeTitle", { name: removing?.name ?? "" })}
+              </AlertDialogTitle>
+              <AlertDialogDescription>{t("iot.onboarding.removeBody")}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isRemoving}>
+                {tCommon("common.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                disabled={isRemoving}
+                onClick={(e) => {
+                  e.preventDefault();
+                  confirmRemove();
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isRemoving ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  t("iot.onboarding.removeMenuItem")
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          <DeviceConfigurationRail
+            device={device}
+            state={railState}
+            config={deliveredConfig}
+            issuedAt={issuedAt}
+            previewExperiments={previewExperiments}
+            includeWorkbook={includeWorkbook}
+            answered={answeredRequired}
+            requiredCount={requiredQuestions.length}
+            missingAnswers={missingAnswers}
+            canReissue={canReissue}
+            onReissue={() => {
+              issue([]);
+            }}
+            blockedNotice={renderBlockedNotice()}
+          />
+        </div>
       </div>
     </div>
   );

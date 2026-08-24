@@ -349,6 +349,10 @@
             "rotating": "Ein neues Zertifikat wurde ausgestellt; laden Sie das neue Paket auf das Gerät.",
             "revoked": "Zertifikat widerrufen. Das Gerät kann sich erst nach einer Neuausstellung wieder verbinden."
           }
+        },
+        "overview": {
+          "title": "Übersicht",
+          "description": "Was dieses Gerät ist und wo seine Einrichtung steht."
         }
       },
       "credentials": {
@@ -392,7 +396,9 @@
         "closeUnsavedDescription": "Der private Schlüssel wird nur einmal angezeigt und nicht gespeichert. Wer jetzt schließt, muss für einen neuen Schlüssel ein neues Zertifikat ausstellen.",
         "closeUnsavedBack": "Zurück",
         "closeUnsavedConfirm": "Trotzdem schließen",
-        "refreshStatus": "Status aktualisieren"
+        "refreshStatus": "Status aktualisieren",
+        "tabTitle": "Zugangsdaten",
+        "tabDescription": "Das Zertifikat, mit dem sich dieses Gerät authentifiziert, und sein Lebenszyklus."
       },
       "nextAction": {
         "issueCredentials": "Zertifikat ausstellen",
@@ -472,7 +478,9 @@
       "removeTitle": "{{name}} entfernen?",
       "removeBody": "Das Gerät sendet nicht mehr hinein, und seine Prozeduren fehlen in der nächsten ausgegebenen Konfiguration.",
       "removeSuccess": "Aus dem Experiment entfernt",
-      "removeError": "Das Gerät konnte nicht aus dem Experiment entfernt werden"
+      "removeError": "Das Gerät konnte nicht aus dem Experiment entfernt werden",
+      "title": "Einrichtung",
+      "description": "Wählen Sie die Experimente, in die dieses Gerät sendet, und übergeben Sie ihm dann die ausgegebene Konfiguration."
     },
     "experimentDevices": {
       "tabLabel": "Geräte",
@@ -576,7 +584,9 @@
         "resultsTitle": "Ergebnisse und Konfigurationen",
         "downloadOne": "Konfiguration für {{device}} herunterladen",
         "downloadAll_one": "{{count}} Konfiguration herunterladen (ZIP)",
-        "downloadAll_other": "{{count}} Konfigurationen herunterladen (ZIP)"
+        "downloadAll_other": "{{count}} Konfigurationen herunterladen (ZIP)",
+        "experimentsTitle": "Experimente",
+        "experimentsDescription": "Jedes ausgewählte Gerät wird für jedes ausgewählte Experiment eingerichtet."
       },
       "pageTitle": "Gerätegruppe",
       "credentials": {
@@ -616,7 +626,13 @@
         "resultsTitle": "Ergebnisse",
         "downloadOne": "Zugangsdaten für {{device}} herunterladen",
         "downloadAll_one": "{{count}} Paket herunterladen (ZIP)",
-        "downloadAll_other": "{{count}} Pakete herunterladen (ZIP)"
+        "downloadAll_other": "{{count}} Pakete herunterladen (ZIP)",
+        "actionTitle": "Aktion",
+        "actionDescription": "Die Berechtigung unterscheidet sich je Aktion; die Geräteliste unten folgt der Auswahl."
+      },
+      "overview": {
+        "title": "Übersicht",
+        "description": "Was diese Gruppe enthält und wie es ihren Geräten geht."
       }
     }
   }

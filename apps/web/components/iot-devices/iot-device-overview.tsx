@@ -1,5 +1,6 @@
 "use client";
 
+import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
 import { useDeleteIotDevice } from "@/hooks/iot/useDeleteIotDevice/useDeleteIotDevice";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useLocale } from "@/hooks/useLocale";
@@ -76,7 +77,13 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
 
   return (
     <div className="space-y-8">
-      {nextAction !== null && <DeviceNextActionChip deviceId={device.id} action={nextAction} />}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <TabBodyHeader
+          title={t("iot.devices.detail.overview.title")}
+          description={t("iot.devices.detail.overview.description")}
+        />
+        {nextAction !== null && <DeviceNextActionChip deviceId={device.id} action={nextAction} />}
+      </div>
 
       <div className="flex flex-wrap items-start gap-10">
         <MetaField label={t("iot.devices.detail.meta.serial")} value={device.serialNumber} />

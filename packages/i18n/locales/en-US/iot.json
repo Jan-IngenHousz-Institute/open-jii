@@ -349,6 +349,10 @@
             "rotating": "A new certificate was issued; load the new bundle onto the device.",
             "revoked": "Certificate revoked. The device cannot reconnect until a new one is issued."
           }
+        },
+        "overview": {
+          "title": "Overview",
+          "description": "What this device is, and where its setup stands."
         }
       },
       "credentials": {
@@ -392,7 +396,9 @@
         "closeUnsavedDescription": "The private key is shown once and is not stored. Closing now means issuing a new certificate to get one.",
         "closeUnsavedBack": "Go back",
         "closeUnsavedConfirm": "Close anyway",
-        "refreshStatus": "Refresh status"
+        "refreshStatus": "Refresh status",
+        "tabTitle": "Credentials",
+        "tabDescription": "The certificate this device authenticates with, and its lifecycle."
       },
       "nextAction": {
         "issueCredentials": "Issue certificate",
@@ -472,7 +478,9 @@
       "removeTitle": "Remove {{name}}?",
       "removeBody": "The device stops streaming into it, and its procedures leave the next issued configuration.",
       "removeSuccess": "Removed from the experiment",
-      "removeError": "Could not remove the device from the experiment"
+      "removeError": "Could not remove the device from the experiment",
+      "title": "Onboarding",
+      "description": "Choose the experiments this device streams into, then hand it the issued configuration."
     },
     "experimentDevices": {
       "tabLabel": "Devices",
@@ -576,7 +584,9 @@
         "resultsTitle": "Results and configs",
         "downloadOne": "Download the config for {{device}}",
         "downloadAll_one": "Download {{count}} config (zip)",
-        "downloadAll_other": "Download {{count}} configs (zip)"
+        "downloadAll_other": "Download {{count}} configs (zip)",
+        "experimentsTitle": "Experiments",
+        "experimentsDescription": "Every selected device is onboarded to every selected experiment."
       },
       "pageTitle": "Device group",
       "credentials": {
@@ -616,7 +626,13 @@
         "resultsTitle": "Results",
         "downloadOne": "Download credentials for {{device}}",
         "downloadAll_one": "Download {{count}} bundle (zip)",
-        "downloadAll_other": "Download {{count}} bundles (zip)"
+        "downloadAll_other": "Download {{count}} bundles (zip)",
+        "actionTitle": "Action",
+        "actionDescription": "Eligibility differs per action; the device list below follows the choice."
+      },
+      "overview": {
+        "title": "Overview",
+        "description": "What this group contains, and how its devices are doing."
       }
     }
   }

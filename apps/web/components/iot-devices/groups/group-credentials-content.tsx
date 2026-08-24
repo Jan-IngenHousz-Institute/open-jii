@@ -2,6 +2,7 @@
 
 import { CredentialConfirmDialog } from "@/components/iot-devices/credential-confirm-dialog";
 import { ConnectivityDot } from "@/components/iot-devices/device-connectivity";
+import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
 import { useIssueIotDeviceGroupCredentials } from "@/hooks/iot/useIssueIotDeviceGroupCredentials/useIssueIotDeviceGroupCredentials";
@@ -252,10 +253,14 @@ export function GroupCredentialsContent() {
 
   return (
     <div className="max-w-3xl space-y-6">
+      <TabBodyHeader
+        title={t("iot.groups.credentials.title")}
+        description={t("iot.groups.credentials.description")}
+      />
       <Card className="shadow-none">
         <CardHeader>
-          <CardTitle className="text-base">{t("iot.groups.credentials.title")}</CardTitle>
-          <CardDescription>{t("iot.groups.credentials.description")}</CardDescription>
+          <CardTitle className="text-base">{t("iot.groups.credentials.actionTitle")}</CardTitle>
+          <CardDescription>{t("iot.groups.credentials.actionDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           <ToggleGroup

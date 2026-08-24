@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
 import { useDeleteIotDeviceGroup } from "@/hooks/iot/useDeleteIotDeviceGroup/useDeleteIotDeviceGroup";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
@@ -70,6 +71,10 @@ export function DeviceGroupContent() {
 
   return (
     <div className="space-y-8">
+      <TabBodyHeader
+        title={t("iot.groups.overview.title")}
+        description={t("iot.groups.overview.description")}
+      />
       <div className="flex flex-wrap items-start gap-10">
         <MetaField label={t("iot.groups.meta.members")} value={String(group.memberCount)} />
         <MetaField label={t("iot.groups.meta.created")} value={formatDate(group.createdAt)} />

@@ -349,6 +349,10 @@
             "rotating": "Er is een nieuw certificaat uitgegeven; laad de nieuwe bundel op het apparaat.",
             "revoked": "Certificaat ingetrokken. Het apparaat kan pas weer verbinden na een nieuwe uitgifte."
           }
+        },
+        "overview": {
+          "title": "Overzicht",
+          "description": "Wat dit apparaat is en hoe ver de installatie is."
         }
       },
       "credentials": {
@@ -392,7 +396,9 @@
         "closeUnsavedDescription": "De privésleutel wordt één keer getoond en niet opgeslagen. Wie nu sluit, moet voor een nieuwe sleutel een nieuw certificaat uitgeven.",
         "closeUnsavedBack": "Terug",
         "closeUnsavedConfirm": "Toch sluiten",
-        "refreshStatus": "Status vernieuwen"
+        "refreshStatus": "Status vernieuwen",
+        "tabTitle": "Certificaten",
+        "tabDescription": "Het certificaat waarmee dit apparaat zich authenticeert, en de levenscyclus ervan."
       },
       "nextAction": {
         "issueCredentials": "Certificaat uitgeven",
@@ -472,7 +478,9 @@
       "removeTitle": "{{name}} verwijderen?",
       "removeBody": "Het apparaat streamt er niet meer naartoe, en zijn procedures verdwijnen uit de volgende uitgegeven configuratie.",
       "removeSuccess": "Uit het experiment verwijderd",
-      "removeError": "Het apparaat kon niet uit het experiment worden verwijderd"
+      "removeError": "Het apparaat kon niet uit het experiment worden verwijderd",
+      "title": "Instellen",
+      "description": "Kies de experimenten waar dit apparaat naartoe streamt en geef het daarna de uitgegeven configuratie."
     },
     "experimentDevices": {
       "tabLabel": "Apparaten",
@@ -576,7 +584,9 @@
         "resultsTitle": "Resultaten en configuraties",
         "downloadOne": "Configuratie voor {{device}} downloaden",
         "downloadAll_one": "{{count}} configuratie downloaden (zip)",
-        "downloadAll_other": "{{count}} configuraties downloaden (zip)"
+        "downloadAll_other": "{{count}} configuraties downloaden (zip)",
+        "experimentsTitle": "Experimenten",
+        "experimentsDescription": "Elk geselecteerd apparaat wordt ingesteld voor elk geselecteerd experiment."
       },
       "pageTitle": "Apparaatgroep",
       "credentials": {
@@ -616,7 +626,13 @@
         "resultsTitle": "Resultaten",
         "downloadOne": "Inloggegevens voor {{device}} downloaden",
         "downloadAll_one": "{{count}} pakket downloaden (zip)",
-        "downloadAll_other": "{{count}} pakketten downloaden (zip)"
+        "downloadAll_other": "{{count}} pakketten downloaden (zip)",
+        "actionTitle": "Actie",
+        "actionDescription": "De geschiktheid verschilt per actie; de apparaatlijst hieronder volgt de keuze."
+      },
+      "overview": {
+        "title": "Overzicht",
+        "description": "Wat deze groep bevat en hoe het met de apparaten gaat."
       }
     }
   }
