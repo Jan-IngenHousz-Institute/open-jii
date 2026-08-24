@@ -1,5 +1,6 @@
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
 
@@ -36,6 +37,9 @@ vi.mock("@repo/ui/components/wizard-form", async (importOriginal) => {
           });
         }}
       >
+        <input aria-label="Experiment name" />
+        <a href="#zoom-in">Zoom in</a>
+        <Link href="/en-US/platform/experiments">Experiments</Link>
         <button type="submit" disabled={isSubmitting}>
           Submit
         </button>
@@ -50,6 +54,21 @@ describe("NewExperimentForm", () => {
     expect(screen.getByRole("form", { name: "wizard form" })).toBeInTheDocument();
     // Dialog starts closed (open={false}), so Radix Dialog content is not in the DOM
     expect(screen.queryByText("experiments.unsavedChangesTitle")).not.toBeInTheDocument();
+  });
+
+  it("allows same-document controls while guarding internal navigation", async () => {
+    const user = userEvent.setup();
+
+    render(<NewExperimentForm />);
+
+    await user.type(screen.getByRole("textbox", { name: "Experiment name" }), "Dirty form");
+    await user.click(screen.getByRole("link", { name: "Zoom in" }));
+
+    expect(screen.queryByText("experiments.unsavedChangesTitle")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Experiments" }));
+
+    expect(screen.getByText("experiments.unsavedChangesTitle")).toBeInTheDocument();
   });
 
   it("submits experiment and navigates on success", async () => {

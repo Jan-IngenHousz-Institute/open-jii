@@ -133,8 +133,16 @@ export function NewExperimentForm() {
     const handleLinkClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const link = target.closest("a");
+      // Same-document controls such as Leaflet's zoom anchors do not leave the form.
+      const staysOnCurrentDocument =
+        link?.pathname === window.location.pathname && link.search === window.location.search;
 
-      if (link?.href && !link.target && link.origin === window.location.origin) {
+      if (
+        link?.href &&
+        !link.target &&
+        link.origin === window.location.origin &&
+        !staysOnCurrentDocument
+      ) {
         e.preventDefault();
         e.stopPropagation();
 
