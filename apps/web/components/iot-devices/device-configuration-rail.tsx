@@ -2,13 +2,19 @@
 
 import { DeviceConfigDelivery } from "@/components/iot-devices/device-config-delivery";
 import { formatHm } from "@/util/date";
-import { RefreshCw } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
+import { env } from "~/env";
 
 import type { DeviceOnboardingConfig, IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@repo/ui/components/collapsible";
 import { CopyButton } from "@repo/ui/components/copy-button";
 import { Progress } from "@repo/ui/components/progress";
 import { cn } from "@repo/ui/lib/utils";
@@ -243,12 +249,35 @@ export function DeviceConfigurationRail({
           </div>
         )}
 
+        {config !== null && (
+          <Collapsible>
+            <CollapsibleTrigger className="text-muted-foreground flex items-center gap-1 text-xs underline underline-offset-4">
+              {t("iot.onboarding.rail.viewJson")}
+              <ChevronDown className="size-3" aria-hidden />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              {/* Inspectable before download: the file is no longer a mystery payload. */}
+              <pre className="bg-muted/30 mt-2 max-h-64 overflow-auto rounded border p-2 font-mono text-xs">
+                {JSON.stringify(config, null, 2)}
+              </pre>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
         <div className="space-y-2 border-t pt-3">
           <Button variant="outline" size="sm" onClick={onReissue} disabled={!canReissue}>
             <RefreshCw className="mr-1.5 size-4" />
             {t("iot.onboarding.reissue")}
           </Button>
           <p className="text-muted-foreground text-xs">{t("iot.onboarding.rail.memoryOnly")}</p>
+          <a
+            href={`${env.NEXT_PUBLIC_DOCS_URL}/developers/device-integration`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground text-xs underline underline-offset-4"
+          >
+            {t("iot.onboarding.rail.integrationGuide")}
+          </a>
         </div>
       </CardContent>
     </Card>

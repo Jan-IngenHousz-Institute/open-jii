@@ -53,7 +53,8 @@ export function IotDeviceDetailTabs({
   const tabs = DEVICE_TABS.filter((tab) => {
     if (tab.value === "collaborators") return canShare || canLeave;
     if (tab.value === "credentials") return canManage && !isMobileFamily;
-    if (tab.value === "onboarding") return !isMobileFamily;
+    // Hidden, not shown-then-redirected: gating parity with Credentials.
+    if (tab.value === "onboarding") return canManage && !isMobileFamily;
     return true;
   });
   // Match all routes first so a filtered-out tab does not highlight Overview.

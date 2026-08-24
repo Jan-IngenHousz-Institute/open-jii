@@ -326,7 +326,8 @@
           "registered": "Registriert",
           "thingName": "Gerätekennung",
           "connectivity": "Konnektivität",
-          "lastSeen": "Zuletzt gesehen"
+          "lastSeen": "Zuletzt gesehen",
+          "visibility": "Sichtbarkeit"
         },
         "credentials": {
           "title": "Anmeldedaten"
@@ -429,16 +430,6 @@
       "answerYes": "Ja",
       "answerNo": "Nein",
       "answerRequiredHint": "Beantworten Sie alle Pflichtfragen, bevor Sie die Konfiguration übergeben.",
-      "guide": {
-        "title": "So verbinden Sie Ihr Gerät",
-        "step1": "Holen Sie das Zertifikatspaket und das Amazon-Root-CA aus dem Tab Anmeldedaten.",
-        "step2": "Verbinden Sie sich per MQTT über TLS mit dem unten stehenden Broker-Endpunkt; Client-ID ist der Gerätename.",
-        "step3": "Übertragen Sie diese Konfiguration auf das Gerät: JSON herunterladen oder über eine Direktverbindung übertragen.",
-        "step4": "Führen Sie die Prozeduren jedes Experiments der Reihe nach aus.",
-        "step5": "Veröffentlichen Sie jede Messung unter dem Topic-Präfix des Experiments plus /{{sensorVersion}}/{{sensorId}}.",
-        "step6": "Hängen Sie die vorbelegten Antworten an jede veröffentlichte Messung an.",
-        "docsLink": "Vollständigen Geräteintegrations-Leitfaden lesen"
-      },
       "experimentsTitle": "Experimente",
       "experimentsDescription": "Experimente, in die dieses Gerät sendet, und Experimente, für die Sie es einrichten können.",
       "optionsTitle": "Konfigurationsoptionen",
@@ -472,7 +463,9 @@
         "topicRule": "Geräte publizieren nach {prefix}/{sensorVersion}/{sensorId}.",
         "answeredCount": "{{answered}} von {{required}} Pflichtfragen beantwortet",
         "missing": "Fehlt: {{fields}}",
-        "memoryOnly": "Ausgegebene Konfigurationen existieren nur in dieser Browser-Sitzung. Sie können jederzeit erneut ausgeben; die Datei wird immer aus dem aktuellen Stand erzeugt."
+        "memoryOnly": "Ausgegebene Konfigurationen existieren nur in dieser Browser-Sitzung. Sie können jederzeit erneut ausgeben; die Datei wird immer aus dem aktuellen Stand erzeugt.",
+        "integrationGuide": "Integrationsleitfaden",
+        "viewJson": "JSON anzeigen"
       },
       "boundRowActions": "Experiment-Aktionen",
       "removeMenuItem": "Aus Experiment entfernen",
@@ -481,7 +474,10 @@
       "removeSuccess": "Aus dem Experiment entfernt",
       "removeError": "Das Gerät konnte nicht aus dem Experiment entfernt werden",
       "title": "Einrichtung",
-      "description": "Wählen Sie die Experimente, in die dieses Gerät sendet, und übergeben Sie ihm dann die ausgegebene Konfiguration."
+      "description": "Wählen Sie die Experimente, in die dieses Gerät sendet, und übergeben Sie ihm dann die ausgegebene Konfiguration.",
+      "filterExperiments": "Experimente filtern",
+      "filterNoMatches": "Keine Experimente passen zu diesem Filter.",
+      "answeredOfRequired": "{{answered}} von {{required}} Pflichtfeldern"
     },
     "experimentDevices": {
       "tabLabel": "Geräte",

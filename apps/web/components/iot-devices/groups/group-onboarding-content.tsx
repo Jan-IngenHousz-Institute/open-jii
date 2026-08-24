@@ -7,10 +7,12 @@ import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
 import { useOnboardIotDeviceGroup } from "@/hooks/iot/useOnboardIotDeviceGroup/useOnboardIotDeviceGroup";
+import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
 import { resolveDeviceLabel } from "@/util/device-presentation";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Rocket } from "lucide-react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
@@ -49,6 +51,7 @@ function isEligible(member: IotDeviceGroupMember): boolean {
 export function GroupOnboardingContent() {
   const { t } = useTranslation("iot");
   const params = useParams<{ groupId: string }>();
+  const locale = useLocale();
   const groupId = params.groupId;
 
   const { data: group } = useIotDeviceGroup(groupId);
@@ -174,9 +177,21 @@ export function GroupOnboardingContent() {
           }}
           trailing={
             eligibleMember ? undefined : (
-              <Badge variant="outline" className="text-muted-foreground font-normal">
-                {ineligibleReason}
-              </Badge>
+              <span className="flex items-center gap-2">
+                <Badge variant="outline" className="text-muted-foreground font-normal">
+                  {ineligibleReason}
+                </Badge>
+                {/* The reason carries the fix: phones need nothing, an inactive
+                    device needs its credentials. */}
+                {member.deviceType !== "mobile" && (
+                  <Link
+                    href={`/${locale}/platform/devices/${member.deviceId}/credentials`}
+                    className="text-primary text-xs font-medium hover:underline"
+                  >
+                    {t("iot.devices.nextAction.issueCredentials")}
+                  </Link>
+                )}
+              </span>
             )
           }
         />

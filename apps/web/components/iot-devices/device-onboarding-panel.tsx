@@ -49,6 +49,8 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Label } from "@repo/ui/components/label";
+import { ScrollArea } from "@repo/ui/components/scroll-area";
+import { SearchInput } from "@repo/ui/components/search-input";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { Switch } from "@repo/ui/components/switch";
 import { toast } from "@repo/ui/hooks/use-toast";
@@ -70,6 +72,7 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
   const locale = useLocale();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [experimentFilter, setExperimentFilter] = useState("");
   const [includeWorkbook, setIncludeWorkbook] = useState(true);
   const [answers, setAnswers] = useState<Record<string, DeviceAnswer>>({});
   // Held in state, not read from the mutation: a failed retry resets mutation
@@ -132,6 +135,17 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
     [bound, selectable],
   );
 
+  // Search and a scroll cap appear only once the list is long enough to need
+  // them; a filter over four rows is chrome.
+  const isLongList = rows.length > 8;
+  const visibleRows = useMemo(() => {
+    const query = experimentFilter.trim().toLowerCase();
+    if (query === "") {
+      return rows;
+    }
+    return rows.filter((experiment) => experiment.name.toLowerCase().includes(query));
+  }, [rows, experimentFilter]);
+
   const questions = useMemo<PlanQuestionEntry[]>(
     () =>
       (config?.experiments ?? []).flatMap((experiment) =>
@@ -178,6 +192,10 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
     ],
     [bound, selectable, selectedIds],
   );
+
+  const scrollToRail = () => {
+    document.getElementById("device-configuration-rail")?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleToggle = (experimentId: string, checked: boolean) => {
     setSelectedIds((ids) =>
@@ -265,44 +283,52 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
       return <EmptyState size="inline" description={t("iot.onboarding.noMemberships")} />;
     }
 
+    if (visibleRows.length === 0) {
+      return <EmptyState size="inline" description={t("iot.onboarding.filterNoMatches")} />;
+    }
+
+    const list = (
+      <ul className="divide-y rounded-lg border">
+        {visibleRows.map((experiment) => (
+          <DeviceExperimentRow
+            key={experiment.id}
+            experiment={experiment}
+            selected={selectedIds.includes(experiment.id)}
+            onToggle={handleToggle}
+            trailing={
+              experiment.bound ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={t("iot.onboarding.boundRowActions")}
+                      className="text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted inline-flex size-8 items-center justify-center rounded-md"
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setRemoving({ id: experiment.id, name: experiment.name });
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 size-4" />
+                      {t("iot.onboarding.removeMenuItem")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : undefined
+            }
+          />
+        ))}
+      </ul>
+    );
+
     return (
       <>
-        <ul className="divide-y rounded-lg border">
-          {rows.map((experiment) => (
-            <DeviceExperimentRow
-              key={experiment.id}
-              experiment={experiment}
-              selected={selectedIds.includes(experiment.id)}
-              onToggle={handleToggle}
-              trailing={
-                experiment.bound ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label={t("iot.onboarding.boundRowActions")}
-                        className="text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted inline-flex size-8 items-center justify-center rounded-md"
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onSelect={() => {
-                          setRemoving({ id: experiment.id, name: experiment.name });
-                        }}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 size-4" />
-                        {t("iot.onboarding.removeMenuItem")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : undefined
-              }
-            />
-          ))}
-        </ul>
+        {isLongList ? <ScrollArea className="max-h-96 overflow-y-auto">{list}</ScrollArea> : list}
         {selectable.length === 0 && hasBindings && (
           <p className="text-muted-foreground text-xs">{t("iot.onboarding.allOnboarded")}</p>
         )}
@@ -320,7 +346,17 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
         <div className="space-y-6">
           <Card className="shadow-none">
             <CardHeader>
-              <CardTitle className="text-base">{t("iot.onboarding.experimentsTitle")}</CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-base">{t("iot.onboarding.experimentsTitle")}</CardTitle>
+                {isLongList && (
+                  <SearchInput
+                    value={experimentFilter}
+                    onChange={setExperimentFilter}
+                    placeholder={t("iot.onboarding.filterExperiments")}
+                    className="h-8 w-56"
+                  />
+                )}
+              </div>
               <CardDescription>{t("iot.onboarding.experimentsDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">{renderExperimentList()}</CardContent>
@@ -441,6 +477,19 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
           />
         </div>
       </div>
+
+      {config !== null && (
+        <div className="sticky bottom-6 z-10 flex justify-center lg:hidden">
+          <Button
+            variant="outline"
+            className="bg-card/90 rounded-full shadow-lg backdrop-blur-sm"
+            onClick={scrollToRail}
+          >
+            <span className="bg-primary mr-2 size-2 rounded-full" aria-hidden />
+            {t("iot.onboarding.rail.title")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

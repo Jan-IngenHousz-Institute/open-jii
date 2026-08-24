@@ -326,7 +326,8 @@
           "registered": "Registered",
           "thingName": "Device identifier",
           "connectivity": "Connectivity",
-          "lastSeen": "Last seen"
+          "lastSeen": "Last seen",
+          "visibility": "Visibility"
         },
         "credentials": {
           "title": "Credentials"
@@ -429,16 +430,6 @@
       "answerYes": "Yes",
       "answerNo": "No",
       "answerRequiredHint": "Answer all required questions before delivering the configuration.",
-      "guide": {
-        "title": "How to connect your device",
-        "step1": "Get the device certificate bundle and the Amazon root CA from the Credentials tab.",
-        "step2": "Connect to the broker endpoint below via MQTT over TLS, with the thing name as client id.",
-        "step3": "Load this configuration onto the device: download the JSON or push it over a direct connection.",
-        "step4": "Run the procedures of each experiment in order.",
-        "step5": "Publish each measurement to the experiment's topic prefix plus /{{sensorVersion}}/{{sensorId}}.",
-        "step6": "Attach the prefilled answers to every published measurement.",
-        "docsLink": "Read the full device integration guide"
-      },
       "experimentsTitle": "Experiments",
       "experimentsDescription": "Experiments this device streams into, and experiments you can onboard it to.",
       "optionsTitle": "Configuration options",
@@ -472,7 +463,9 @@
         "topicRule": "Devices publish to {prefix}/{sensorVersion}/{sensorId}.",
         "answeredCount": "{{answered}} of {{required}} required answered",
         "missing": "Missing: {{fields}}",
-        "memoryOnly": "Issued configurations exist in this browser session only. Re-issue any time; the file is always regenerated from current state."
+        "memoryOnly": "Issued configurations exist in this browser session only. Re-issue any time; the file is always regenerated from current state.",
+        "integrationGuide": "Integration guide",
+        "viewJson": "View JSON"
       },
       "boundRowActions": "Experiment actions",
       "removeMenuItem": "Remove from experiment",
@@ -481,7 +474,10 @@
       "removeSuccess": "Removed from the experiment",
       "removeError": "Could not remove the device from the experiment",
       "title": "Onboarding",
-      "description": "Choose the experiments this device streams into, then hand it the issued configuration."
+      "description": "Choose the experiments this device streams into, then hand it the issued configuration.",
+      "filterExperiments": "Filter experiments",
+      "filterNoMatches": "No experiments match that filter.",
+      "answeredOfRequired": "{{answered}} of {{required}} required"
     },
     "experimentDevices": {
       "tabLabel": "Devices",

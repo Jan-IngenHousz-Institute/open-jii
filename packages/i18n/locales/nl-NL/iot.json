@@ -326,7 +326,8 @@
           "registered": "Geregistreerd",
           "thingName": "Apparaat-identificatie",
           "connectivity": "Connectiviteit",
-          "lastSeen": "Laatst gezien"
+          "lastSeen": "Laatst gezien",
+          "visibility": "Zichtbaarheid"
         },
         "credentials": {
           "title": "Inloggegevens"
@@ -429,16 +430,6 @@
       "answerYes": "Ja",
       "answerNo": "Nee",
       "answerRequiredHint": "Beantwoord alle verplichte vragen voordat u de configuratie aflevert.",
-      "guide": {
-        "title": "Zo verbindt u uw apparaat",
-        "step1": "Haal de certificaatbundel en het Amazon-root-CA op via het tabblad Inloggegevens.",
-        "step2": "Maak verbinding met het onderstaande broker-eindpunt via MQTT over TLS, met de apparaatnaam als client-id.",
-        "step3": "Zet deze configuratie op het apparaat: download de JSON of push hem via een directe verbinding.",
-        "step4": "Voer de procedures van elk experiment op volgorde uit.",
-        "step5": "Publiceer elke meting naar het topic-prefix van het experiment plus /{{sensorVersion}}/{{sensorId}}.",
-        "step6": "Voeg de vooraf ingevulde antwoorden toe aan elke gepubliceerde meting.",
-        "docsLink": "Lees de volledige handleiding voor apparaatintegratie"
-      },
       "experimentsTitle": "Experimenten",
       "experimentsDescription": "Experimenten waar dit apparaat naartoe stuurt, en experimenten waarvoor u het kunt instellen.",
       "optionsTitle": "Configuratieopties",
@@ -472,7 +463,9 @@
         "topicRule": "Apparaten publiceren naar {prefix}/{sensorVersion}/{sensorId}.",
         "answeredCount": "{{answered}} van {{required}} verplichte vragen beantwoord",
         "missing": "Ontbreekt: {{fields}}",
-        "memoryOnly": "Uitgegeven configuraties bestaan alleen in deze browsersessie. U kunt altijd opnieuw uitgeven; het bestand wordt altijd uit de huidige staat gegenereerd."
+        "memoryOnly": "Uitgegeven configuraties bestaan alleen in deze browsersessie. U kunt altijd opnieuw uitgeven; het bestand wordt altijd uit de huidige staat gegenereerd.",
+        "integrationGuide": "Integratiegids",
+        "viewJson": "JSON bekijken"
       },
       "boundRowActions": "Experimentacties",
       "removeMenuItem": "Uit experiment verwijderen",
@@ -481,7 +474,10 @@
       "removeSuccess": "Uit het experiment verwijderd",
       "removeError": "Het apparaat kon niet uit het experiment worden verwijderd",
       "title": "Instellen",
-      "description": "Kies de experimenten waar dit apparaat naartoe streamt en geef het daarna de uitgegeven configuratie."
+      "description": "Kies de experimenten waar dit apparaat naartoe streamt en geef het daarna de uitgegeven configuratie.",
+      "filterExperiments": "Experimenten filteren",
+      "filterNoMatches": "Geen experimenten passen bij dit filter.",
+      "answeredOfRequired": "{{answered}} van {{required}} verplicht"
     },
     "experimentDevices": {
       "tabLabel": "Apparaten",

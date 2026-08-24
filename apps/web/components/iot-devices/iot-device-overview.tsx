@@ -1,6 +1,7 @@
 "use client";
 
 import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
+import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { useDeleteIotDevice } from "@/hooks/iot/useDeleteIotDevice/useDeleteIotDevice";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useLocale } from "@/hooks/useLocale";
@@ -103,6 +104,12 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
           value={formatDate(device.createdAt)}
         />
         <MetaField label={t("iot.devices.detail.meta.thingName")} value={device.thingName} />
+        <div className="flex flex-col gap-1">
+          <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
+            {t("iot.devices.detail.meta.visibility")}
+          </span>
+          <VisibilityBadge visibility={device.visibility} />
+        </div>
         <MetaField
           label={t("iot.devices.detail.meta.connectivity")}
           value={connectivityLabel(device.connectivity)}
