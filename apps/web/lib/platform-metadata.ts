@@ -383,6 +383,7 @@ type DeviceSection =
   | "overview"
   | "collaborators"
   | "credentials"
+  | "firmware"
   | "lineage"
   | "monitoring"
   | "onboarding";
@@ -390,6 +391,7 @@ type DeviceSection =
 const DEVICE_SECTION_KEY: Record<Exclude<DeviceSection, "overview">, string> = {
   collaborators: "iot:iot.devices.detailTabs.collaborators",
   credentials: "iot:iot.devices.detailTabs.credentials",
+  firmware: "iot:iot.devices.detailTabs.firmware",
   lineage: "iot:iot.devices.detailTabs.lineage",
   monitoring: "iot:iot.devices.detailTabs.monitoring",
   onboarding: "iot:iot.devices.detailTabs.onboarding",

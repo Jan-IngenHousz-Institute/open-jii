@@ -203,7 +203,13 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
    * ingest channel, so a device cert carries all of them.
    */
   async attachDevicePolicies(certificateArn: string): Promise<Result<void>> {
-    for (const policyName of this.awsConfigService.iotPolicyNames) {
+    const jobsPolicyName = this.awsConfigService.iotJobsPolicyName;
+    const policyNames =
+      jobsPolicyName === ""
+        ? this.awsConfigService.iotPolicyNames
+        : [...this.awsConfigService.iotPolicyNames, jobsPolicyName];
+
+    for (const policyName of policyNames) {
       const result = await this.awsIotService.attachPolicy(policyName, certificateArn);
       if (result.isFailure()) {
         return result;

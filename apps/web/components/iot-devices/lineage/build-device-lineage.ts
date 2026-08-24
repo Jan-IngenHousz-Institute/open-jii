@@ -286,7 +286,9 @@ function appendExecutionInputs(
   });
   appendAttributionKind(nodes, edges, {
     kind: "workbook",
-    mix: payload.workbookMix.map((entry) => ({ id: entry.workbookVersionId, count: entry.count })),
+    // Attribute by the owning workbook, not the version the device reported:
+    // a version id matches nothing in the viewer's workbook list.
+    mix: payload.workbookMix.map((entry) => ({ id: entry.workbookId, count: entry.count })),
     accessible: input.visibleWorkbooks,
     buildHref: (id) => `/${input.locale}/platform/workbooks/${id}`,
     privateLabel: input.labels.privateWorkbook,

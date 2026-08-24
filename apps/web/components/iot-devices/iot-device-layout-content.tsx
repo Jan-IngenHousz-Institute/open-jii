@@ -2,6 +2,7 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { hasManagedFirmware } from "@/util/firmware-family";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -57,6 +58,7 @@ export function IotDeviceLayoutContent({
         canLeave={device.capabilities.canLeave}
         canManage={device.capabilities.canManage}
         isMobileFamily={device.deviceType === "mobile"}
+        hasManagedFirmware={hasManagedFirmware(device.deviceType)}
       >
         {children}
       </IotDeviceDetailTabs>

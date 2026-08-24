@@ -77,7 +77,8 @@
         "onboarding": "Onboarding",
         "collaborators": "Medewerkers",
         "lineage": "Herkomst",
-        "monitoring": "Monitoring"
+        "monitoring": "Monitoring",
+        "firmware": "Firmware"
       },
       "connectivity": {
         "connected": "Verbonden",
@@ -233,7 +234,8 @@
         "unknownWorkbookId": "Onbekend workbook",
         "macros": "Macro's",
         "unknownMacroId": "Onbekende macro",
-        "macroRunHint": "Geteld per macro-uitvoering"
+        "macroRunHint": "Geteld per macro-uitvoering",
+        "workbookVersionShort": "v{{version}}"
       },
       "pageOf": "Pagina {{page}} van {{total}}",
       "actions": {
@@ -405,6 +407,35 @@
       "nextAction": {
         "issueCredentials": "Certificaat uitgeven",
         "onboard": "Instellen voor een experiment"
+      },
+      "firmware": {
+        "title": "Firmware",
+        "description": "Wat dit apparaat draait, wat JII heeft gepubliceerd en hoe updates het bereiken.",
+        "currentTitle": "Op dit apparaat",
+        "unknownVersion": "Dit apparaat heeft recent geen firmwareversie gemeld.",
+        "upToDate": "Draait {{version}}, de nieuwste gepubliceerde versie.",
+        "updateAvailable": "Draait {{installed}}; {{latest}} is beschikbaar.",
+        "reported": "Draait {{version}}.",
+        "releasesTitle": "Versies",
+        "releasesHint": "Gepubliceerd door JII; de nieuwste stabiele versie wordt bij een uitrol standaard geïnstalleerd.",
+        "latest": "Nieuwste",
+        "prerelease": "Pre-release",
+        "installed": "Op dit apparaat",
+        "noNotes": "Geen release-opmerkingen.",
+        "showAllNotes": "Alle opmerkingen tonen",
+        "viewOnGitHub": "Bekijk op GitHub",
+        "noReleases": "Voor deze familie zijn nog geen versies gepubliceerd.",
+        "loadError": "Versies konden niet worden geladen.",
+        "versionUnavailable": "De gemelde firmwareversie kon niet worden gelezen.",
+        "noFirmwareLine": "JII publiceert nog geen firmware voor deze apparaatfamilie.",
+        "guide": {
+          "title": "Hoe updates dit apparaat bereiken",
+          "intro": "JII start uitrollen via een beoordeelde workflow; apparaten worden nooit vanaf deze pagina bijgewerkt.",
+          "step1": "Een versie wordt gepubliceerd in de firmware-repository.",
+          "step2": "Een operator start een uitrol, die gefaseerd wordt uitgeleverd en automatisch stopt bij te veel fouten.",
+          "step3": "Het apparaat ontvangt een update-taak, downloadt het image via een kortlevende link en verifieert de checksum.",
+          "step4": "Het apparaat past de update toe, herstart en meldt het resultaat; een mislukte update wordt teruggedraaid."
+        }
       }
     },
     "onboarding": {

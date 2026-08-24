@@ -51,6 +51,10 @@ describe("AwsConfigService", () => {
       );
     });
 
+    it("should return the correct iotJobsPolicyName", () => {
+      expect(service.iotJobsPolicyName).toBe(process.env.AWS_IOT_JOBS_POLICY_NAME);
+    });
+
     it("should return the correct deviceThingTypeName", () => {
       expect(service.deviceThingTypeName).toBe(process.env.AWS_IOT_DEVICE_THING_TYPE_NAME);
     });
