@@ -10,40 +10,25 @@ import {
 import type { AnyColumn, DatabaseInstance, ResourceType, SQL } from "@repo/database";
 
 /**
- * Build the list-scoping predicate for an org-owned, shareable resource, matching
- * `can()`'s read precedence: a row is visible when it is public, the caller is a
- * member of the owning organization, or the caller holds a grant on it (direct,
- * team or org).
+ * Every path that ties a caller to a row personally: membership of the owning
+ * organization, or a grant on it (direct, team or org). Visibility is deliberately
+ * not part of it, so this is the access scope minus rows reachable by anyone.
  *
- * Shared by every type's `findAll`, so listing **and** global search — which
- * delegates to the same `findAll`s — enforce undiscoverability identically: a
- * private row the caller cannot reach is never revealed, not even by name.
- *
- * With no authenticated caller only public rows match: membership and grants cannot
- * be resolved without a user.
+ * Returned separately from {@link accessibleResourceCondition} so a "mine" listing
+ * can narrow to these paths without re-deriving them, and so the two can never
+ * drift apart. Undefined with no authenticated caller: none of it resolves.
  */
-export function accessibleResourceCondition(params: {
+export function relatedResourceCondition(params: {
   database: DatabaseInstance;
   resourceType: ResourceType;
   resourceIdColumn: AnyColumn;
   organizationIdColumn: AnyColumn;
-  visibilityColumn: AnyColumn;
   userId: string | undefined;
 }): SQL | undefined {
-  const {
-    database,
-    resourceType,
-    resourceIdColumn,
-    organizationIdColumn,
-    visibilityColumn,
-    userId,
-  } = params;
+  const { database, resourceType, resourceIdColumn, organizationIdColumn, userId } = params;
 
-  const isPublic = eq(visibilityColumn, "public");
-
-  // Without a caller we can only reason about public visibility.
   if (!userId) {
-    return isPublic;
+    return undefined;
   }
 
   const userGrantExists = exists(
@@ -102,5 +87,32 @@ export function accessibleResourceCondition(params: {
       ),
   );
 
-  return or(isPublic, userGrantExists, teamGrantExists, orgGrantExists, owningOrgMemberExists);
+  return or(userGrantExists, teamGrantExists, orgGrantExists, owningOrgMemberExists);
+}
+
+/**
+ * Build the list-scoping predicate for an org-owned, shareable resource, matching
+ * `can()`'s read precedence: a row is visible when it is public, the caller is a
+ * member of the owning organization, or the caller holds a grant on it (direct,
+ * team or org).
+ *
+ * Shared by every type's `findAll`, so listing **and** global search, which
+ * delegates to the same `findAll`s, enforce undiscoverability identically: a
+ * private row the caller cannot reach is never revealed, not even by name.
+ *
+ * With no authenticated caller only public rows match: membership and grants cannot
+ * be resolved without a user.
+ */
+export function accessibleResourceCondition(params: {
+  database: DatabaseInstance;
+  resourceType: ResourceType;
+  resourceIdColumn: AnyColumn;
+  organizationIdColumn: AnyColumn;
+  visibilityColumn: AnyColumn;
+  userId: string | undefined;
+}): SQL | undefined {
+  const isPublic = eq(params.visibilityColumn, "public");
+  const related = relatedResourceCondition(params);
+
+  return related ? or(isPublic, related) : isPublic;
 }
