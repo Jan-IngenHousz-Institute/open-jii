@@ -1,6 +1,6 @@
 "use client";
 
-import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { resolveDeviceLabel } from "@/util/device-presentation";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -38,10 +38,7 @@ interface DeviceIdentityProps {
  */
 export function DeviceIdentity({ device, href, showSerial, className }: DeviceIdentityProps) {
   const { t } = useTranslation("iot");
-  const label = resolveDevicePrimaryLabel(
-    presentDevice({ name: device.name, family: device.deviceType, id: device.serialNumber }),
-    t,
-  );
+  const label = resolveDeviceLabel(device, t);
 
   return (
     <div className={cn("flex min-w-0 flex-col", className)}>

@@ -1,11 +1,10 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
-import { ArrowRight } from "lucide-react";
-import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
 
+import { ActionChipLink } from "./action-chip-link";
 import type { DeviceNextAction } from "./device-next-action";
 
 interface DeviceNextActionChipProps {
@@ -34,12 +33,8 @@ export function DeviceNextActionChip({ deviceId, action }: DeviceNextActionChipP
   const target = ACTION_TARGET[action];
 
   return (
-    <Link
-      href={`/${locale}/platform/devices/${deviceId}/${target.tab}`}
-      className="bg-secondary text-secondary-foreground focus-visible:ring-primary/40 focus-visible:outline-hidden inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium hover:opacity-90 focus-visible:ring-2"
-    >
+    <ActionChipLink href={`/${locale}/platform/devices/${deviceId}/${target.tab}`}>
       {t(target.labelKey)}
-      <ArrowRight className="size-3.5" aria-hidden />
-    </Link>
+    </ActionChipLink>
   );
 }

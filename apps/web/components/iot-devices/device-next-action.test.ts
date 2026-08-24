@@ -21,6 +21,14 @@ describe("deviceNextAction", () => {
     expect(deviceNextAction({ status: "active", deviceType: "ambyte" }, 2)).toBeNull();
   });
 
+  it("claims nothing while the binding count is still unknown", () => {
+    expect(deviceNextAction({ status: "active", deviceType: "ambyte" }, null)).toBeNull();
+    // Credentials do not depend on the count, so that step still shows.
+    expect(deviceNextAction({ status: "pending", deviceType: "ambyte" }, null)).toBe(
+      "issueCredentials",
+    );
+  });
+
   it("never suggests anything for a phone, which sets itself up", () => {
     expect(deviceNextAction({ status: "pending", deviceType: "mobile" }, 0)).toBeNull();
     expect(deviceNextAction({ status: "active", deviceType: "mobile" }, 0)).toBeNull();

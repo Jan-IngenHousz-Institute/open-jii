@@ -40,7 +40,7 @@ export function BulkRegisterPreview({ batch }: BulkRegisterPreviewProps) {
         <TableCell className="px-4 py-2 font-mono text-xs">
           {row.status === "invalid" ? row.line : row.serialNumber}
         </TableCell>
-        <TableCell className={"text-muted-foreground px-4 py-2 text-[13px]"}>{row.name}</TableCell>
+        <TableCell className="text-muted-foreground px-4 py-2 text-[13px]">{row.name}</TableCell>
         <TableCell className="px-4 py-2">
           <Badge variant="outline" className={cn("font-normal", STATUS_CLASS[row.status])}>
             {t(`iot.devices.bulkDialog.status.${row.status}`)}
@@ -51,10 +51,10 @@ export function BulkRegisterPreview({ batch }: BulkRegisterPreviewProps) {
   }
 
   return (
-    <div className={"border-border max-h-64 overflow-y-auto rounded-lg border"}>
+    <div className="border-border max-h-64 overflow-y-auto rounded-lg border">
       <Table>
         <TableHeader>
-          <TableRow className={"bg-surface-light border-border hover:bg-transparent"}>
+          <TableRow className="bg-surface-light border-border hover:bg-transparent">
             <ColumnHead>{t("iot.devices.bulkDialog.serialColumn")}</ColumnHead>
             <ColumnHead>{t("iot.devices.bulkDialog.nameColumn")}</ColumnHead>
             <ColumnHead>{t("iot.devices.bulkDialog.statusColumn")}</ColumnHead>
@@ -68,11 +68,7 @@ export function BulkRegisterPreview({ batch }: BulkRegisterPreviewProps) {
 
 function ColumnHead({ children }: { children: React.ReactNode }) {
   return (
-    <TableHead
-      className={cn(
-        "text-muted-foreground h-9 px-4 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
-      )}
-    >
+    <TableHead className="text-muted-foreground h-9 px-4 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]">
       {children}
     </TableHead>
   );

@@ -217,7 +217,10 @@ export function IotProtocolRunner({
         <ProtocolResultsDisplay testResult={testResult} />
       </div>
 
+      {/* Keyed by serial: the form captures its defaults at mount, so a device
+          connecting after first render must remount the dialog to be prefilled. */}
       <RegisterIotDeviceDialog
+        key={serialInHand}
         open={registerOpen}
         onOpenChange={setRegisterOpen}
         defaultSerialNumber={serialInHand}

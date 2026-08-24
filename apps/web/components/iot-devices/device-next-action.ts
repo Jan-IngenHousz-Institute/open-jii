@@ -10,14 +10,22 @@ import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
  */
 export type DeviceNextAction = "issueCredentials" | "onboard" | null;
 
+/** No live certificate, so nothing else about the device can proceed. */
+export function deviceNeedsCredentials(device: Pick<IotDevice, "status" | "deviceType">): boolean {
+  return (
+    device.deviceType !== "mobile" && (device.status === "pending" || device.status === "revoked")
+  );
+}
+
+/** `boundExperimentCount` is null while unknown; the chip claims nothing then. */
 export function deviceNextAction(
   device: Pick<IotDevice, "status" | "deviceType">,
-  boundExperimentCount: number,
+  boundExperimentCount: number | null,
 ): DeviceNextAction {
   if (device.deviceType === "mobile") {
     return null;
   }
-  if (device.status === "pending" || device.status === "revoked") {
+  if (deviceNeedsCredentials(device)) {
     return "issueCredentials";
   }
   if (boundExperimentCount === 0) {

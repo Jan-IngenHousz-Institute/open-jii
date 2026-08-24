@@ -211,7 +211,7 @@ export function DeviceConfigurationRail({
 
         <div className="space-y-3">{renderExperiments()}</div>
 
-        {config !== null && (
+        {isIssued && (
           <p className="text-muted-foreground text-xs">{t("iot.onboarding.rail.topicRule")}</p>
         )}
 
@@ -249,7 +249,7 @@ export function DeviceConfigurationRail({
           </div>
         )}
 
-        {config !== null && (
+        {isIssued && (
           <Collapsible>
             <CollapsibleTrigger className="text-muted-foreground flex items-center gap-1 text-xs underline underline-offset-4">
               {t("iot.onboarding.rail.viewJson")}

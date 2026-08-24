@@ -11,7 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui/components/table";
-import { cn } from "@repo/ui/lib/utils";
 
 import { IotDeviceTableRow } from "./iot-device-table-row";
 
@@ -24,10 +23,10 @@ export function IotDevicesTable({ devices, isLoading }: IotDevicesTableProps) {
   const { t } = useTranslation("iot");
 
   return (
-    <div className={"border-border overflow-hidden rounded-lg border"}>
+    <div className="border-border overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
-          <TableRow className={"bg-surface-light border-border hover:bg-transparent"}>
+          <TableRow className="bg-surface-light border-border hover:bg-transparent">
             <ColumnHead>{t("iot.devices.columns.name")}</ColumnHead>
             <ColumnHead>{t("iot.devices.columns.status")}</ColumnHead>
             <ColumnHead>{t("iot.devices.columns.type")}</ColumnHead>
@@ -49,11 +48,7 @@ export function IotDevicesTable({ devices, isLoading }: IotDevicesTableProps) {
 
 function ColumnHead({ children }: { children: React.ReactNode }) {
   return (
-    <TableHead
-      className={cn(
-        "text-muted-foreground h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
-      )}
-    >
+    <TableHead className="text-muted-foreground h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]">
       {children}
     </TableHead>
   );
@@ -61,7 +56,7 @@ function ColumnHead({ children }: { children: React.ReactNode }) {
 
 function SkeletonRow() {
   return (
-    <TableRow className={"border-border hover:bg-transparent"}>
+    <TableRow className="border-border hover:bg-transparent">
       <TableCell className="px-6 py-3">
         <Skeleton className="h-4 w-40" />
       </TableCell>

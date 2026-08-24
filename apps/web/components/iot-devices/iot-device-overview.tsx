@@ -49,7 +49,7 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
 
   const { data: boundExperiments } = useDeviceExperiments(device.id);
   const isMobileFamily = device.deviceType === "mobile";
-  const nextAction = deviceNextAction(device, (boundExperiments ?? []).length);
+  const nextAction = deviceNextAction(device, boundExperiments?.length ?? null);
 
   const { mutate: deleteDevice, isPending: isDeleting } = useDeleteIotDevice({
     onSuccess: () => {

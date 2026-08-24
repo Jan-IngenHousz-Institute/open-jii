@@ -49,7 +49,7 @@ describe("EmptyState", () => {
     const { rerender } = render(<EmptyState variant="error" description="Could not load." />);
     expect(screen.getByText("Could not load.")).toHaveClass("text-destructive");
 
-    rerender(<EmptyState variant="planned" description="Calibration will appear here." />);
+    rerender(<EmptyState description="Calibration will appear here." />);
     expect(screen.getByText("Calibration will appear here.")).toHaveClass("text-muted-foreground");
   });
 

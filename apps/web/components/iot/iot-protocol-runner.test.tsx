@@ -1,6 +1,10 @@
+import { createIotDevice } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+
+import { contract } from "@repo/api/contract";
 
 import { IotProtocolRunner } from "./iot-protocol-runner";
 
@@ -608,6 +612,43 @@ describe("IotProtocolRunner", () => {
       render(<IotProtocolRunner {...defaultProps} protocolCode={GATED_PROTOCOL} />);
 
       expect(screen.queryByText("iot.protocolRunner.interactionTitle")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("register stitch", () => {
+    it("offers registration for an unregistered serial and prefills the dialog with it", async () => {
+      const user = userEvent.setup();
+      mockIsConnected = true;
+      mockDeviceInfo = { device_id: "SN-IN-HAND" };
+      server.mount(contract.iot.listIotDevices, { body: [] });
+
+      render(<IotProtocolRunner {...defaultProps} />);
+
+      await user.click(
+        await screen.findByRole("button", { name: "iot.protocolRunner.registerDevice" }),
+      );
+
+      // The dialog mounts before the serial is known, so the prefill only
+      // lands if the connect remounts it.
+      expect(screen.getByLabelText("iot.devices.dialog.serialLabel")).toHaveValue("SN-IN-HAND");
+    });
+
+    it("stays quiet when the serial is already registered", async () => {
+      mockIsConnected = true;
+      mockDeviceInfo = { device_id: "SN-KNOWN" };
+      const spy = server.mount(contract.iot.listIotDevices, {
+        body: [createIotDevice({ serialNumber: "SN-KNOWN" })],
+      });
+
+      render(<IotProtocolRunner {...defaultProps} />);
+
+      // Absence only means anything once the registry read has resolved.
+      await waitFor(() => {
+        expect(spy.calls.length).toBeGreaterThan(0);
+      });
+      expect(
+        screen.queryByRole("button", { name: "iot.protocolRunner.registerDevice" }),
+      ).not.toBeInTheDocument();
     });
   });
 });

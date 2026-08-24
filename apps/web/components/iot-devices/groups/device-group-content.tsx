@@ -9,9 +9,7 @@ import { useRemoveIotDeviceGroupMember } from "@/hooks/iot/useRemoveIotDeviceGro
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { ArrowRight } from "lucide-react";
 import { Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -30,6 +28,8 @@ import {
 } from "@repo/ui/components/table";
 
 import { MetaField } from "../../experiment-dashboards/meta-field";
+import { ActionChipLink } from "../action-chip-link";
+import { deviceNeedsCredentials } from "../device-next-action";
 import { DeviceIdentity } from "../device-row";
 import { IotDeviceStatusBadge } from "../iot-device-status-badge";
 import { AddGroupMembersDialog } from "./add-group-members-dialog";
@@ -46,11 +46,7 @@ export function DeviceGroupContent() {
   const { data: members } = useIotDeviceGroupMembers(groupId);
   // The chip aggregates over members: certificates are the one blocked step
   // this page can see without fanning out per-device reads.
-  const credentialsNeededCount = (members ?? []).filter(
-    (member) =>
-      member.deviceType !== "mobile" &&
-      (member.status === "pending" || member.status === "revoked"),
-  ).length;
+  const credentialsNeededCount = (members ?? []).filter(deviceNeedsCredentials).length;
   const removeMember = useRemoveIotDeviceGroupMember();
   const [addOpen, setAddOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -87,13 +83,9 @@ export function DeviceGroupContent() {
           description={t("iot.groups.overview.description")}
         />
         {credentialsNeededCount > 0 && (
-          <Link
-            href={`/${locale}/platform/devices/groups/${groupId}/credentials`}
-            className="bg-secondary text-secondary-foreground focus-visible:ring-primary/40 focus-visible:outline-hidden inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium hover:opacity-90 focus-visible:ring-2"
-          >
+          <ActionChipLink href={`/${locale}/platform/devices/groups/${groupId}/credentials`}>
             {t("iot.groups.nextAction.credentials", { count: credentialsNeededCount })}
-            <ArrowRight className="size-3.5" aria-hidden />
-          </Link>
+          </ActionChipLink>
         )}
       </div>
       <div className="flex flex-wrap items-start gap-10">

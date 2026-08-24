@@ -436,7 +436,7 @@
       "includeWorkbookHint": "Bundelt het workbook van elk experiment (protocollen, commando's en voorbereide vragen) in de configuratie. Zet uit om alleen verbindingsinstellingen en topics uit te geven.",
       "selectedCount": "{{count}} experiment geselecteerd",
       "selectedCount_other": "{{count}} experimenten geselecteerd",
-      "onboardCount": "Instellen voor {{count}} experiment",
+      "onboardCount_one": "Instellen voor {{count}} experiment",
       "onboardCount_other": "Instellen voor {{count}} experimenten",
       "selectAtLeastOne": "Selecteer minstens één experiment.",
       "noMemberships": "U bent nog geen lid van een experiment. Maak er een aan of word lid om dit apparaat in te stellen.",
@@ -646,7 +646,15 @@
       "disconnectDevice": "{{name}} loskoppelen",
       "disconnectAll": "Alles loskoppelen",
       "flow": "Stroom",
-      "deviceOrdinal": "Apparaat #{{ordinal}}"
+      "deviceOrdinal": "Apparaat #{{ordinal}}",
+      "export": "Exporteren",
+      "exportJson": "Exporteren als JSON",
+      "exportProtocol": "Alleen protocol exporteren",
+      "exportMacro": "Alleen macro exporteren",
+      "downloadWorkbook": "Workbook downloaden (.jii)",
+      "clearAll": "Alles wissen",
+      "stop": "Stoppen",
+      "runAll": "Alles uitvoeren"
     }
   }
 }

@@ -24,6 +24,7 @@ import {
 import { TableCell, TableRow } from "@repo/ui/components/table";
 
 import { useFormatLastSeen } from "./device-connectivity";
+import { deviceNeedsCredentials } from "./device-next-action";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 
 export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivity }) {
@@ -48,13 +49,12 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
   // they get neither; a device without live credentials is pointed at them,
   // everything else at onboarding.
   const isMobileFamily = device.deviceType === "mobile";
-  const needsCredentials = device.status === "pending" || device.status === "revoked";
 
   function renderNextActionItem() {
     if (isMobileFamily) {
       return null;
     }
-    if (needsCredentials) {
+    if (deviceNeedsCredentials(device)) {
       return (
         <DropdownMenuItem asChild>
           <Link href={`${viewHref}/credentials`}>

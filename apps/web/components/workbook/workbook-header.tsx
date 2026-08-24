@@ -400,21 +400,23 @@ export function WorkbookHeader({
               background: "var(--background)",
             }}
           >
-            <span className="hidden xl:inline">Export</span>
+            <span className="hidden xl:inline">{t("iot.workbookBar.export")}</span>
             <ChevronDown className="size-3 xl:size-4" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuItem onClick={handleExportJSON}>Export as JSON</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportJSON}>
+            {t("iot.workbookBar.exportJson")}
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => void handleExportProtocol()} disabled={!hasProtocols}>
-            Export Protocol Only
+            {t("iot.workbookBar.exportProtocol")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => void handleExportMacro()} disabled={!hasMacros}>
-            Export Macro Only
+            {t("iot.workbookBar.exportMacro")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleDownloadWorkbook}>
-            Download Workbook (.jii)
+            {t("iot.workbookBar.downloadWorkbook")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -429,7 +431,7 @@ export function WorkbookHeader({
         disabled={!hasOutputs}
       >
         <Trash2 className="size-4" />
-        <span className="hidden xl:inline">Clear all</span>
+        <span className="hidden xl:inline">{t("iot.workbookBar.clearAll")}</span>
       </button>
 
       {/* Only the workbook creator can run cells; the backend rejects updates
@@ -446,7 +448,7 @@ export function WorkbookHeader({
             onClick={onStopExecution}
           >
             <Square className="size-4 fill-current" />
-            <span className="hidden xl:inline">Stop</span>
+            <span className="hidden xl:inline">{t("iot.workbookBar.stop")}</span>
           </button>
         ) : (
           <button
@@ -463,7 +465,7 @@ export function WorkbookHeader({
             disabled={cells.length === 0}
           >
             <Play className="size-4 fill-current" />
-            <span className="hidden xl:inline">Run all</span>
+            <span className="hidden xl:inline">{t("iot.workbookBar.runAll")}</span>
           </button>
         ))}
     </div>

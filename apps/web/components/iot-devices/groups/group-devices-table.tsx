@@ -20,7 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui/components/table";
-import { cn } from "@repo/ui/lib/utils";
 
 import { isMemberSilent } from "./group-health";
 
@@ -64,16 +63,14 @@ export function GroupDevicesTable({
     return (
       <TableRow
         key={member.deviceId}
-        className={"bg-background hover:bg-muted/50 border-border group cursor-pointer"}
+        className="bg-background hover:bg-muted/50 border-border group cursor-pointer"
         onClick={() => router.push(monitoringHref)}
       >
         <TableCell className="px-6 py-3">
           <Link
             href={monitoringHref}
             onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "focus-visible:ring-primary/40 focus-visible:outline-hidden text-foreground text-[13px] font-semibold hover:underline focus-visible:ring-2",
-            )}
+            className="focus-visible:ring-primary/40 focus-visible:outline-hidden text-foreground text-[13px] font-semibold hover:underline focus-visible:ring-2"
           >
             {labelByDeviceId.get(member.deviceId) ?? member.serialNumber}
           </Link>
@@ -89,10 +86,10 @@ export function GroupDevicesTable({
             )}
           </div>
         </TableCell>
-        <TableCell className={"text-muted-foreground px-6 py-3 text-[13px]"}>
+        <TableCell className="text-muted-foreground px-6 py-3 text-[13px]">
           {formatLastSeen(member.connectivity)}
         </TableCell>
-        <TableCell className={"text-muted-foreground px-6 py-3 text-[13px]"}>
+        <TableCell className="text-muted-foreground px-6 py-3 text-[13px]">
           {monitoring.pipelineUnavailable
             ? t("iot.devices.monitoring.lastDataUnavailable")
             : member.lastDataAt === null
@@ -100,7 +97,7 @@ export function GroupDevicesTable({
               : formatRelativeTime(member.lastDataAt, locale)}
         </TableCell>
         {showVersions && (
-          <TableCell className={"text-muted-foreground px-6 py-3 font-mono text-xs"}>
+          <TableCell className="text-muted-foreground px-6 py-3 font-mono text-xs">
             {versionByDeviceId.get(member.deviceId)}
           </TableCell>
         )}
@@ -109,10 +106,10 @@ export function GroupDevicesTable({
   }
 
   return (
-    <div className={"border-border overflow-hidden rounded-lg border"}>
+    <div className="border-border overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
-          <TableRow className={"bg-surface-light border-border hover:bg-transparent"}>
+          <TableRow className="bg-surface-light border-border hover:bg-transparent">
             <ColumnHead>{t("iot.groups.deviceColumn")}</ColumnHead>
             <ColumnHead>{t("iot.groups.monitoring.stateColumn")}</ColumnHead>
             <ColumnHead>{t("iot.groups.monitoring.lastSeenColumn")}</ColumnHead>
@@ -128,11 +125,7 @@ export function GroupDevicesTable({
 
 function ColumnHead({ children }: { children: React.ReactNode }) {
   return (
-    <TableHead
-      className={cn(
-        "text-muted-foreground h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
-      )}
-    >
+    <TableHead className="text-muted-foreground h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]">
       {children}
     </TableHead>
   );

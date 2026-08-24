@@ -436,7 +436,7 @@
       "includeWorkbookHint": "Bundles each experiment's workbook (protocols, commands, and prefill questions) into the configuration. Turn off to issue connection settings and topics only.",
       "selectedCount": "{{count}} experiment selected",
       "selectedCount_other": "{{count}} experiments selected",
-      "onboardCount": "Onboard to {{count}} experiment",
+      "onboardCount_one": "Onboard to {{count}} experiment",
       "onboardCount_other": "Onboard to {{count}} experiments",
       "selectAtLeastOne": "Select at least one experiment.",
       "noMemberships": "You are not a member of any experiment yet. Create or join one to onboard this device.",
@@ -646,7 +646,15 @@
       "disconnectDevice": "Disconnect {{name}}",
       "disconnectAll": "Disconnect all",
       "flow": "Flow",
-      "deviceOrdinal": "Device #{{ordinal}}"
+      "deviceOrdinal": "Device #{{ordinal}}",
+      "export": "Export",
+      "exportJson": "Export as JSON",
+      "exportProtocol": "Export Protocol Only",
+      "exportMacro": "Export Macro Only",
+      "downloadWorkbook": "Download Workbook (.jii)",
+      "clearAll": "Clear all",
+      "stop": "Stop",
+      "runAll": "Run all"
     }
   }
 }

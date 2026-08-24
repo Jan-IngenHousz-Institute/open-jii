@@ -21,7 +21,6 @@ const emptyStateVariants = cva("flex flex-col items-center text-center", {
     },
     variant: {
       default: "",
-      planned: "",
       error: "border-solid border-destructive/40",
     },
   },
@@ -37,7 +36,6 @@ const wellVariants = cva("flex items-center justify-center rounded-full [&_svg]:
     },
     variant: {
       default: "bg-muted text-muted-foreground",
-      planned: "bg-muted text-muted-foreground",
       error: "bg-destructive/10 text-destructive",
     },
   },

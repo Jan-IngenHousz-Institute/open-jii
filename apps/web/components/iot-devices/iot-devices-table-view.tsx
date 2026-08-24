@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import type { IotDeviceStatus, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { Input } from "@repo/ui/components/input";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import {
@@ -116,13 +117,15 @@ export function IotDevicesTableView() {
       </div>
 
       {!isLoading && filtered.length === 0 ? (
-        <div className="border-border text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">
-          <p className="text-foreground font-medium">{t("iot.devices.zeroResults.title")}</p>
-          <p className="mt-1">{t("iot.devices.zeroResults.description")}</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
-            {t("iot.devices.zeroResults.clear")}
-          </Button>
-        </div>
+        <EmptyState
+          title={t("iot.devices.zeroResults.title")}
+          description={t("iot.devices.zeroResults.description")}
+          action={
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              {t("iot.devices.zeroResults.clear")}
+            </Button>
+          }
+        />
       ) : (
         <>
           <IotDevicesTable devices={pageRows} isLoading={isLoading} />

@@ -248,6 +248,45 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
     );
   }
 
+  function renderBoundRowMenu(experiment: DeviceExperimentRowItem) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={t("iot.onboarding.boundRowActions")}
+            className="text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted inline-flex size-8 items-center justify-center rounded-md"
+          >
+            <MoreHorizontal className="size-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onSelect={() => {
+              setRemoving({ id: experiment.id, name: experiment.name });
+            }}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="mr-2 size-4" />
+            {t("iot.onboarding.removeMenuItem")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  function renderRow(experiment: DeviceExperimentRowItem) {
+    return (
+      <DeviceExperimentRow
+        key={experiment.id}
+        experiment={experiment}
+        selected={selectedIds.includes(experiment.id)}
+        onToggle={handleToggle}
+        trailing={experiment.bound ? renderBoundRowMenu(experiment) : undefined}
+      />
+    );
+  }
+
   function renderExperimentList() {
     if (isLoadingBound) {
       return (
@@ -287,44 +326,7 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
       return <EmptyState size="inline" description={t("iot.onboarding.filterNoMatches")} />;
     }
 
-    const list = (
-      <ul className="divide-y rounded-lg border">
-        {visibleRows.map((experiment) => (
-          <DeviceExperimentRow
-            key={experiment.id}
-            experiment={experiment}
-            selected={selectedIds.includes(experiment.id)}
-            onToggle={handleToggle}
-            trailing={
-              experiment.bound ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label={t("iot.onboarding.boundRowActions")}
-                      className="text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted inline-flex size-8 items-center justify-center rounded-md"
-                    >
-                      <MoreHorizontal className="size-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        setRemoving({ id: experiment.id, name: experiment.name });
-                      }}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="mr-2 size-4" />
-                      {t("iot.onboarding.removeMenuItem")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : undefined
-            }
-          />
-        ))}
-      </ul>
-    );
+    const list = <ul className="divide-y rounded-lg border">{visibleRows.map(renderRow)}</ul>;
 
     return (
       <>
