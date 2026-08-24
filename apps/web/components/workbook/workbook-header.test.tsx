@@ -128,16 +128,19 @@ describe("WorkbookHeader", () => {
       onDisconnectDevice,
     });
 
-    expect(screen.getByText("2 devices")).toBeInTheDocument();
+    expect(screen.getByText("iot.workbookBar.deviceCount")).toBeInTheDocument();
     await user.click(screen.getByTestId("device-menu-trigger"));
     expect(screen.getAllByTestId("device-menu-item")).toHaveLength(2);
-    await user.click(screen.getByRole("menuitem", { name: "Disconnect Mock MultispeQ 2" }));
+    // Raw-key rendering collapses the interpolated labels; pick by position.
+    await user.click(
+      screen.getAllByRole("menuitem", { name: "iot.workbookBar.disconnectDevice" })[1],
+    );
     expect(onDisconnectDevice).toHaveBeenCalledWith("d2");
   });
 
   it("shows 'Disconnected' status when not connected", () => {
     renderHeader();
-    expect(screen.getByText("Disconnected")).toBeInTheDocument();
+    expect(screen.getByText("iot.workbookBar.disconnected")).toBeInTheDocument();
   });
 
   it("shows device name when connected", () => {
@@ -189,7 +192,9 @@ describe("WorkbookHeader", () => {
     renderHeader();
 
     await user.click(screen.getAllByRole("combobox")[1]);
-    expect(screen.getByRole("option", { name: "Bluetooth Low Energy (BLE)" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "iot.protocolRunner.bluetooth" }),
+    ).toBeInTheDocument();
   });
 
   it("disables Web Bluetooth for a Bluetooth-Classic-only device", () => {
@@ -222,7 +227,7 @@ describe("WorkbookHeader", () => {
 
   it("shows 'Connecting...' while connecting", () => {
     renderHeader({ isConnecting: true });
-    expect(screen.getByText("Connecting...")).toBeInTheDocument();
+    expect(screen.getByText("iot.protocolRunner.connecting")).toBeInTheDocument();
   });
 
   it("calls onRunAll when user clicks Run all", async () => {

@@ -2,10 +2,12 @@
 
 import { Hand, Loader2, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { RegisterIotDeviceDialog } from "~/components/iot-devices/register-iot-device-dialog";
 import { sensorFamilyToDeviceType } from "~/hooks/iot/device-type-mapping";
 import { useAutoConnectionType } from "~/hooks/iot/useAutoConnectionType";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import { useIotCommunication } from "~/hooks/iot/useIotCommunication/useIotCommunication";
+import { useIotDevices } from "~/hooks/iot/useIotDevices/useIotDevices";
 import { useIotProtocolExecution } from "~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
@@ -14,8 +16,7 @@ import { DEVICE_TRANSPORT_SUPPORT, protocolRequiresInteraction } from "@repo/iot
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
-import { ConnectionTypeSelector } from "./iot-connection-type-selector";
-import { DeviceStatusCard } from "./iot-device-status-card";
+import { ConnectionModule } from "./connection-module";
 import { ProtocolResultsDisplay } from "./iot-protocol-results-display";
 
 interface IotProtocolRunnerProps {
@@ -52,11 +53,17 @@ export function IotProtocolRunner({
   const browserSupport = useIotBrowserSupport(sensorFamily);
   const runnableProtocolCode = isRunnableCode(protocolCode) ? protocolCode : [];
 
+  // The register stitch: hardware just tested here can enter the registry
+  // without retyping its serial. Only offered when the serial is readable and
+  // matches nothing already registered; a failed registry read hides the
+  // stitch rather than guessing.
+
   // A Bluetooth Classic-only device is BLE-incapable, so Web Bluetooth cannot
   // reach it and the user must be directed to USB/serial. This is derived from
   // the IoT transport capability flags, not a hard-coded family.
   const transportCaps = DEVICE_TRANSPORT_SUPPORT[sensorFamilyToDeviceType(sensorFamily)];
   const bluetoothClassicOnly = transportCaps.supportsBluetoothClassic && !transportCaps.supportsBLE;
+  const [registerOpen, setRegisterOpen] = useState(false);
 
   // Protocols with a physical open/close clamp gate (par_led_start_on_*) pause
   // with the device silent until the user acts; warn so they know to follow the
@@ -67,6 +74,34 @@ export function IotProtocolRunner({
 
   const { isConnected, isConnecting, error, deviceInfo, driver, connect, disconnect } =
     useIotCommunication(sensorFamily, connectionType);
+
+  const serialInHand = deviceInfo?.device_id?.trim() ?? "";
+  const { data: registeredDevices, isSuccess: registryLoaded } = useIotDevices({
+    enabled: isConnected && serialInHand !== "",
+  });
+  const isUnregistered =
+    registryLoaded &&
+    serialInHand !== "" &&
+    !(registeredDevices ?? []).some((registered) => registered.serialNumber === serialInHand);
+
+  function renderRegisterStitch() {
+    if (!isUnregistered) {
+      return undefined;
+    }
+    return (
+      <Button
+        type="button"
+        variant="buttonLink"
+        size="sm"
+        className="w-full"
+        onClick={() => {
+          setRegisterOpen(true);
+        }}
+      >
+        {t("iot.protocolRunner.registerDevice")}
+      </Button>
+    );
+  }
   const { executeProtocol } = useIotProtocolExecution(driver, isConnected, sensorFamily);
 
   // Disconnect when sensor family changes
@@ -126,50 +161,41 @@ export function IotProtocolRunner({
             layout === "horizontal" && "md:w-80 md:space-y-6",
           )}
         >
-          {/* Connection Type */}
-          {!isConnected && (
-            <ConnectionTypeSelector
-              connectionType={connectionType}
-              onConnectionTypeChange={setConnectionType}
-              browserSupport={browserSupport}
-              bluetoothClassicOnly={bluetoothClassicOnly}
-            />
-          )}
-
-          {/* Device Status */}
-          <DeviceStatusCard
+          <ConnectionModule
+            connectionType={connectionType}
+            onConnectionTypeChange={setConnectionType}
+            browserSupport={browserSupport}
+            bluetoothClassicOnly={bluetoothClassicOnly}
             isConnected={isConnected}
             isConnecting={isConnecting}
             error={error}
             deviceInfo={deviceInfo}
-            connectionType={connectionType}
             sensorFamily={sensorFamily}
             onConnect={connect}
             onDisconnect={disconnect}
+            registerAction={renderRegisterStitch()}
+            action={
+              <Button
+                type="button"
+                onClick={handleRunProtocol}
+                disabled={isRunning}
+                size="sm"
+                className="w-full"
+              >
+                {isRunning ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin" />
+                    <span className="truncate">{t("iot.protocolRunner.running")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{t("iot.protocolRunner.runProtocol")}</span>
+                  </>
+                )}
+              </Button>
+            }
           />
-
-          {/* Run Protocol Button */}
-          {isConnected && (
-            <Button
-              type="button"
-              onClick={handleRunProtocol}
-              disabled={isRunning}
-              size="sm"
-              className="w-full"
-            >
-              {isRunning ? (
-                <>
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin" />
-                  <span className="truncate">{t("iot.protocolRunner.running")}</span>
-                </>
-              ) : (
-                <>
-                  <Play className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{t("iot.protocolRunner.runProtocol")}</span>
-                </>
-              )}
-            </Button>
-          )}
 
           {/* Interactive protocols pause for the user to open/close the clamp.
               The device gives no signal while it waits, so prompt the user to
@@ -190,6 +216,13 @@ export function IotProtocolRunner({
         {/* Right Column - Results */}
         <ProtocolResultsDisplay testResult={testResult} />
       </div>
+
+      <RegisterIotDeviceDialog
+        open={registerOpen}
+        onOpenChange={setRegisterOpen}
+        defaultSerialNumber={serialInHand}
+        defaultDeviceType={sensorFamily === "mobile" ? undefined : sensorFamily}
+      />
     </div>
   );
 }

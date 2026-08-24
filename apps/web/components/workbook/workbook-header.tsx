@@ -168,13 +168,13 @@ export function WorkbookHeader({
     ? null
     : connectionType === "serial"
       ? browserSupport.serialReason === "browser"
-        ? "Your browser does not support Web Serial. Use Chrome or Edge."
-        : "This device does not support serial."
+        ? t("iot.protocolRunner.webSerialNotSupported")
+        : t("iot.protocolRunner.deviceNoSerial")
       : browserSupport.bluetoothReason === "browser"
-        ? "Your browser does not support Web Bluetooth. Use Chrome or Edge."
+        ? t("iot.protocolRunner.webBluetoothNotSupported")
         : bluetoothClassicOnly
-          ? "This device uses Bluetooth Classic, which Web Bluetooth cannot access. Connect over USB/serial instead."
-          : "This device does not support Bluetooth Low Energy (BLE).";
+          ? t("iot.protocolRunner.bluetoothClassicHint")
+          : t("iot.protocolRunner.deviceNoBLE");
 
   const handleExportJSON = useCallback(() => {
     const workbook = {
@@ -260,7 +260,7 @@ export function WorkbookHeader({
   return (
     <div
       className="sticky top-16 z-30 flex items-center gap-2 border-b px-4 py-2 xl:gap-3 xl:py-3"
-      style={{ background: "#FFFFFF", borderColor: "#EDF2F6" }}
+      style={{ background: "var(--background)", borderColor: "var(--muted)" }}
     >
       <div className="flex items-center gap-1.5 xl:gap-2.5">
         {onSensorFamilyChange && (
@@ -277,7 +277,7 @@ export function WorkbookHeader({
           >
             <SelectTrigger
               className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
-              style={{ borderColor: "#CDD5DB", borderRadius: 12, color: "#011111" }}
+              style={{ borderColor: "var(--border)", borderRadius: 12, color: "var(--foreground)" }}
             >
               <SelectValue />
             </SelectTrigger>
@@ -299,16 +299,16 @@ export function WorkbookHeader({
           >
             <SelectTrigger
               className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
-              style={{ borderColor: "#CDD5DB", borderRadius: 12, color: "#011111" }}
+              style={{ borderColor: "var(--border)", borderRadius: 12, color: "var(--foreground)" }}
             >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="serial">USB/serial</SelectItem>
+              <SelectItem value="serial">{t("iot.protocolRunner.serial")}</SelectItem>
               <SelectItem value="bluetooth" disabled={sensorFamily === "multispeq"}>
-                Bluetooth Low Energy (BLE)
+                {t("iot.protocolRunner.bluetooth")}
               </SelectItem>
-              {showMockDevices && <SelectItem value="mock">Mock</SelectItem>}
+              {showMockDevices && <SelectItem value="mock">{t("iot.workbookBar.mock")}</SelectItem>}
             </SelectContent>
           </Select>
         )}
@@ -326,15 +326,21 @@ export function WorkbookHeader({
               )}
               style={
                 isConnected
-                  ? { background: "#EDF2F6", borderRadius: 8, color: "#011111" }
-                  : { background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }
+                  ? { background: "var(--muted)", borderRadius: 8, color: "var(--foreground)" }
+                  : {
+                      background: "var(--primary)",
+                      borderRadius: 8,
+                      color: "var(--primary-foreground)",
+                    }
               }
               onClick={onConnect}
               disabled={isConnecting || !transportSupported}
               data-testid="connect-device"
             >
               <Usb className="size-4" />
-              <span className="hidden xl:inline">{isConnected ? "Add device" : "Connect"}</span>
+              <span className="hidden xl:inline">
+                {isConnected ? t("iot.workbookBar.addDevice") : t("iot.workbookBar.connect")}
+              </span>
             </button>
           </TooltipTrigger>
           {transportTooltip && (
@@ -362,16 +368,16 @@ export function WorkbookHeader({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex min-w-0 items-center gap-1 text-[12px] leading-[18px] text-[#68737B] hover:text-[#011111] xl:text-[13px] xl:leading-[21px]"
+                className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1 text-[12px] leading-[18px] xl:text-[13px] xl:leading-[21px]"
                 data-testid="device-menu-trigger"
               >
                 <span className="truncate">
                   {presentedDevices.length > 1
-                    ? `${presentedDevices.length} devices`
-                    : (presentedDevices[0]?.primary ?? "Connected")}
+                    ? t("iot.workbookBar.deviceCount", { count: presentedDevices.length })
+                    : (presentedDevices[0]?.primary ?? t("iot.protocolRunner.connected"))}
                 </span>
                 {presentedDevices.length === 1 && presentedDevices[0]?.secondary && (
-                  <span className="hidden truncate text-[11px] text-[#68737B] xl:inline">
+                  <span className="text-muted-foreground hidden truncate text-[11px] xl:inline">
                     · {presentedDevices[0].secondary}
                   </span>
                 )}
@@ -383,28 +389,30 @@ export function WorkbookHeader({
                 <DropdownMenuItem
                   key={device.id}
                   data-testid="device-menu-item"
-                  aria-label={`Disconnect ${device.primary}`}
+                  aria-label={t("iot.workbookBar.disconnectDevice", { name: device.primary })}
                   className="flex items-center justify-between gap-4"
                   onSelect={() => onDisconnectDevice?.(device.id)}
                 >
                   <span className="flex flex-col">
                     <span>{device.primary}</span>
                     {device.secondary && device.secondary !== device.primary && (
-                      <span className="text-[10px] text-[#68737B]">{device.secondary}</span>
+                      <span className="text-muted-foreground text-[10px]">{device.secondary}</span>
                     )}
                   </span>
-                  <span className="text-[11px] text-[#68737B]">Disconnect</span>
+                  <span className="text-muted-foreground text-[11px]">
+                    {t("iot.protocolRunner.disconnect")}
+                  </span>
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem data-testid="disconnect-all" onSelect={onDisconnect}>
-                Disconnect all
+                {t("iot.workbookBar.disconnectAll")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <span className="hidden text-[12px] leading-[18px] text-[#68737B] xl:inline xl:text-[13px] xl:leading-[21px]">
-            {isConnecting ? "Connecting..." : "Disconnected"}
+          <span className="text-muted-foreground hidden text-[12px] leading-[18px] xl:inline xl:text-[13px] xl:leading-[21px]">
+            {isConnecting ? t("iot.protocolRunner.connecting") : t("iot.workbookBar.disconnected")}
           </span>
         )}
       </div>
@@ -416,13 +424,13 @@ export function WorkbookHeader({
           className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
           style={
             flowchartOpen
-              ? { background: "rgba(0, 94, 94, 0.1)", borderRadius: 8, color: "#005E5E" }
-              : { background: "#EDF2F6", borderRadius: 8, color: "#011111" }
+              ? { background: "var(--secondary)", borderRadius: 8, color: "var(--primary)" }
+              : { background: "var(--muted)", borderRadius: 8, color: "var(--foreground)" }
           }
           onClick={onToggleFlowchart}
         >
           <GitBranch className="size-4" />
-          <span className="hidden xl:inline">Flow</span>
+          <span className="hidden xl:inline">{t("iot.workbookBar.flow")}</span>
         </button>
       )}
 
@@ -438,12 +446,12 @@ export function WorkbookHeader({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 border px-2.5 text-[12px] font-normal leading-[18px] hover:bg-[#EDF2F6] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
+            className="hover:bg-muted inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
             style={{
-              borderColor: "#CDD5DB",
+              borderColor: "var(--border)",
               borderRadius: 12,
-              color: "#011111",
-              background: "#FFFFFF",
+              color: "var(--foreground)",
+              background: "var(--background)",
             }}
           >
             <span className="hidden xl:inline">Export</span>
@@ -470,7 +478,7 @@ export function WorkbookHeader({
           "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
           !hasOutputs && "cursor-not-allowed opacity-50",
         )}
-        style={{ background: "#EDF2F6", borderRadius: 8, color: "#011111" }}
+        style={{ background: "var(--muted)", borderRadius: 8, color: "var(--foreground)" }}
         onClick={onClearOutputs}
         disabled={!hasOutputs}
       >
@@ -484,7 +492,11 @@ export function WorkbookHeader({
         (isRunningAll ? (
           <button
             className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
-            style={{ background: "#DC2626", borderRadius: 8, color: "#FFFFFF" }}
+            style={{
+              background: "var(--destructive)",
+              borderRadius: 8,
+              color: "var(--destructive-foreground)",
+            }}
             onClick={onStopExecution}
           >
             <Square className="size-4 fill-current" />
@@ -496,7 +508,11 @@ export function WorkbookHeader({
               "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
               cells.length === 0 && "cursor-not-allowed opacity-50",
             )}
-            style={{ background: "#005E5E", borderRadius: 8, color: "#FFFFFF" }}
+            style={{
+              background: "var(--primary)",
+              borderRadius: 8,
+              color: "var(--primary-foreground)",
+            }}
             onClick={onRunAll}
             disabled={cells.length === 0}
           >

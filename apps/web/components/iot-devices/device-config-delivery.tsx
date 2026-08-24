@@ -109,11 +109,12 @@ export function DeviceConfigDelivery({
 
   return (
     <div className="space-y-3">
-      {supportsPush && !isConnected && (
+      {supportsPush && (
         <ConnectionTypeSelector
           connectionType={connectionType}
           onConnectionTypeChange={handleConnectionTypeChange}
           browserSupport={browserSupport}
+          disabled={isConnected || isConnecting}
         />
       )}
 

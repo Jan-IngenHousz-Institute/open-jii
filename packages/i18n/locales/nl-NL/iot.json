@@ -34,7 +34,8 @@
       "testProtocol": "Protocol testen",
       "connectToDeviceDescription": "Verbind met een apparaat en test uw protocol voordat u het opslaat",
       "browserNotSupported": "Uw browser ondersteunt geen Web Bluetooth of Web Serial APIs.",
-      "tryDifferentBrowser": "Probeer Chrome, Edge of Opera op desktop."
+      "tryDifferentBrowser": "Probeer Chrome, Edge of Opera op desktop.",
+      "registerDevice": "Dit apparaat registreren"
     },
     "deviceIdentity": {
       "unknown": "Onbekend apparaat",
@@ -634,6 +635,17 @@
         "title": "Overzicht",
         "description": "Wat deze groep bevat en hoe het met de apparaten gaat."
       }
+    },
+    "workbookBar": {
+      "mock": "Mock",
+      "addDevice": "Apparaat toevoegen",
+      "connect": "Verbinden",
+      "disconnected": "Niet verbonden",
+      "deviceCount": "{{count}} apparaat",
+      "deviceCount_other": "{{count}} apparaten",
+      "disconnectDevice": "{{name}} loskoppelen",
+      "disconnectAll": "Alles loskoppelen",
+      "flow": "Stroom"
     }
   }
 }

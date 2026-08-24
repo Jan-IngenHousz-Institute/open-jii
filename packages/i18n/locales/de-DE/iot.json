@@ -34,7 +34,8 @@
       "testProtocol": "Protokoll testen",
       "connectToDeviceDescription": "Verbinden Sie sich mit einem Gerät und testen Sie Ihr Protokoll vor dem Speichern",
       "browserNotSupported": "Ihr Browser unterstützt weder Web Bluetooth noch Web Serial APIs.",
-      "tryDifferentBrowser": "Versuchen Sie Chrome, Edge oder Opera auf dem Desktop."
+      "tryDifferentBrowser": "Versuchen Sie Chrome, Edge oder Opera auf dem Desktop.",
+      "registerDevice": "Dieses Gerät registrieren"
     },
     "deviceIdentity": {
       "unknown": "Unbekanntes Gerät",
@@ -634,6 +635,17 @@
         "title": "Übersicht",
         "description": "Was diese Gruppe enthält und wie es ihren Geräten geht."
       }
+    },
+    "workbookBar": {
+      "mock": "Mock",
+      "addDevice": "Gerät hinzufügen",
+      "connect": "Verbinden",
+      "disconnected": "Getrennt",
+      "deviceCount": "{{count}} Gerät",
+      "deviceCount_other": "{{count}} Geräte",
+      "disconnectDevice": "{{name}} trennen",
+      "disconnectAll": "Alle trennen",
+      "flow": "Ablauf"
     }
   }
 }

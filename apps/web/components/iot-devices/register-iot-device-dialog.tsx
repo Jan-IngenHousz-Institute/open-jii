@@ -55,9 +55,17 @@ type RegisterIotDeviceFormValues = z.infer<typeof registerIotDeviceFormSchema>;
 interface RegisterIotDeviceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Prefill for the register stitch: hardware just seen over a local connection. */
+  defaultSerialNumber?: string;
+  defaultDeviceType?: RegisterIotDeviceFormValues["deviceType"];
 }
 
-export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDeviceDialogProps) {
+export function RegisterIotDeviceDialog({
+  open,
+  onOpenChange,
+  defaultSerialNumber,
+  defaultDeviceType,
+}: RegisterIotDeviceDialogProps) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
@@ -65,7 +73,11 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
 
   const form = useForm<RegisterIotDeviceFormValues>({
     resolver: zodResolver(registerIotDeviceFormSchema),
-    defaultValues: { serialNumber: "", deviceType: undefined, name: "" },
+    defaultValues: {
+      serialNumber: defaultSerialNumber ?? "",
+      deviceType: defaultDeviceType,
+      name: "",
+    },
   });
 
   const { mutate: registerIotDevice, isPending } = useRegisterIotDevice({
