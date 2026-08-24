@@ -211,6 +211,7 @@ describe("QuestionsOnlySubmitNode", () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       workbookRunId: "run-1",
+      workbookVersionId: "version-1",
       flowNodes: [makeQuestion("q1")],
     });
     uploadQuestions.mockResolvedValueOnce(undefined);
@@ -227,6 +228,7 @@ describe("QuestionsOnlySubmitNode", () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-missing",
       workbookRunId: "run-1",
+      workbookVersionId: "version-1",
       flowNodes: [makeQuestion("q1")],
     });
     useFlowAnswersStore.setState({
@@ -248,6 +250,7 @@ describe("QuestionsOnlySubmitNode", () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       workbookRunId: "run-1",
+      workbookVersionId: "version-1",
       flowNodes: [makeQuestion("q1")],
     });
     const err = new Error("boom");

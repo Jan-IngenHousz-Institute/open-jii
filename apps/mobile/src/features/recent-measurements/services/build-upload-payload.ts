@@ -12,7 +12,7 @@ export interface MacroInfo {
 export interface BuildUploadPayloadArgs {
   rawMeasurement: any;
   userId: string;
-  /** Real protocol uuid, or the "questions" sentinel for question-only rows. */
+  /** Real protocol uuid. */
   protocolId: string;
   macro: MacroInfo | null;
   timestamp: string;
@@ -22,7 +22,7 @@ export interface BuildUploadPayloadArgs {
   /** Stable UUID for the complete workbook attempt (see CONTEXT.md: Workbook run). */
   workbookRunId: string;
   /** Immutable workbook version that owns the macro snapshot. */
-  workbookVersionId?: string;
+  workbookVersionId: string;
   /** The workbook that version belongs to, so a stored measurement's macro can
    * be re-run against the producing workbook even after the experiment is
    * detached or re-attached elsewhere. */
@@ -72,7 +72,7 @@ export function buildUploadPayload({
     ...rawMeasurement,
     // After the spread: device-native output can carry its own protocol_id
     // (device-defined, not a platform id) and must not clobber the platform
-    // attribution, including the "questions" sentinel.
+    // attribution.
     protocol_id: protocolId,
     ...(hasInjectableSample ? { sample: injectedSample } : {}),
     annotations: buildAnnotations(commentText),
@@ -82,7 +82,7 @@ export function buildUploadPayload({
       ? { device_id: fallbackDeviceId }
       : {}),
     workbook_run_id: workbookRunId,
-    ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
+    workbook_version_id: workbookVersionId,
     ...(workbookId ? { workbook_id: workbookId } : {}),
     ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),

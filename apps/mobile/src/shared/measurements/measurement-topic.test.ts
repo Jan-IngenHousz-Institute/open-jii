@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  getMeasurementMqttTopic,
-  parseMeasurementTopic,
-  QUESTIONS_PROTOCOL_ID,
-} from "./measurement-topic";
+import { getMeasurementMqttTopic, parseMeasurementTopic } from "./measurement-topic";
 
 vi.mock("~/shared/stores/device-identity-store", () => ({
   getLocalThingName: () => "mobile_9f2c1a2e-1111-4111-8111-111111111111",
@@ -40,12 +36,6 @@ describe("getMeasurementMqttTopic", () => {
     appVersion = "2.4.1(beta)";
 
     expect(getMeasurementMqttTopic({ experimentId: "experiment-42" })).toContain("/2.4.1-beta-/");
-  });
-
-  it("keeps the questions sentinel exported for payload attribution", () => {
-    // The lean topic carries no protocol segment; question-only uploads mark
-    // themselves in the payload instead.
-    expect(QUESTIONS_PROTOCOL_ID).toBe("questions");
   });
 });
 

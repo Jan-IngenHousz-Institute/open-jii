@@ -497,6 +497,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
       experimentId: "exp-1",
       experimentLabel: "Trial",
       workbookRunId: "run-1",
+      workbookVersionId: "version-1",
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },
