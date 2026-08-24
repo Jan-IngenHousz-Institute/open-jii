@@ -3,6 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { DevicePayloadStats } from "@repo/api/domains/iot/iot.schema";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
+import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
 import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 
@@ -21,6 +22,7 @@ export class GetDevicePayloadStatsUseCase {
   constructor(
     @Inject(IOT_DATABRICKS_PORT)
     private readonly databricksPort: DatabricksPort,
+    private readonly workbookVersionRepository: WorkbookVersionRepository,
   ) {}
 
   async execute(thingName: string, from: string, to: string): Promise<Result<DevicePayloadStats>> {
@@ -62,10 +64,28 @@ export class GetDevicePayloadStatsUseCase {
       ),
     ).map((entry) => ({ protocolId: entry.key, count: entry.count }));
 
-    // Null kept: "sent outside any workbook" is a real answer here.
-    const workbookMix = this.sumMix(
+    // Null kept: "sent outside any workbook" is a real answer here. The device
+    // reports the version it ran, so the owning workbook is a registry lookup.
+    const versionMix = this.sumMix(
       rows.map((row) => ({ key: row.workbookVersionId, count: row.count })),
-    ).map((entry) => ({ workbookVersionId: entry.key, count: entry.count }));
+    );
+    const refs = await this.workbookVersionRepository.findWorkbookRefsByIds(
+      versionMix.flatMap((entry) => (entry.key === null ? [] : [entry.key])),
+    );
+    if (refs.isFailure()) {
+      return failure(refs.error);
+    }
+
+    const byVersionId = new Map(refs.value.map((ref) => [ref.id, ref]));
+    const workbookMix = versionMix.map((entry) => {
+      const ref = entry.key === null ? undefined : byVersionId.get(entry.key);
+      return {
+        workbookVersionId: entry.key,
+        workbookId: ref?.workbookId ?? null,
+        workbookVersion: ref?.version ?? null,
+        count: entry.count,
+      };
+    });
 
     // Already grouped in SQL; the fold only orders it, busiest first.
     const macroMix = this.sumMix(

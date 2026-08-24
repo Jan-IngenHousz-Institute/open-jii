@@ -14509,12 +14509,34 @@
                                   }
                                 ]
                               },
+                              "workbookId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "workbookVersion": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "count": {
                                 "type": "integer"
                               }
                             },
                             "required": [
                               "workbookVersionId",
+                              "workbookId",
+                              "workbookVersion",
                               "count"
                             ]
                           }
