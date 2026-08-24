@@ -1,9 +1,15 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # AI artifacts
+# Tracked deliberately: AGENTS.md, CLAUDE.md, .claude/settings.json, .claude/hooks/,
+# and .claude/skills/ (symlinks into .agents/skills/). Everything else under .claude/
+# stays local and ignored.
 .wolf/
-.claude/rules/openwolf.md
 **/ssr
+.claude/*
+!.claude/settings.json
+!.claude/skills/
+!.claude/hooks/
 
 # Dependencies
 node_modules
@@ -12,23 +18,6 @@ vrn
 .pnp
 .pnpm-store
 .pnp.js
-
-# AI Generated Files
-.wolf/
-.claude/*
-!.claude/skills/
-.claude/skills/*
-!.claude/skills/openjii-docs-update
-!.claude/skills/openjii-local-stack
-!.claude/skills/openjii-mobile-control
-!.claude/skills/openjii-mobile-device
-!.claude/skills/unslop
-!.claude/hooks/
-.claude/hooks/*
-!.claude/hooks/docs-reminder.sh
-!.claude/hooks/protect-main.sh
-!.claude/settings.json
-.claude/settings.local.json
 
 # Local env files
 .env
