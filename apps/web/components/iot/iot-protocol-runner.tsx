@@ -82,7 +82,7 @@ export function IotProtocolRunner({
   const isUnregistered =
     registryLoaded &&
     serialInHand !== "" &&
-    !(registeredDevices ?? []).some((registered) => registered.serialNumber === serialInHand);
+    !registeredDevices.some((registered) => registered.serialNumber === serialInHand);
 
   function renderRegisterStitch() {
     if (!isUnregistered) {
