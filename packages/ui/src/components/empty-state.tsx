@@ -15,8 +15,8 @@ import { cn } from "../lib/utils";
 const emptyStateVariants = cva("flex flex-col items-center text-center", {
   variants: {
     size: {
-      page: "rounded-xl border py-12 px-6",
-      panel: "rounded-lg border border-dashed p-8",
+      page: "bg-card rounded-xl border py-12 px-6",
+      panel: "bg-card rounded-lg border border-dashed p-8",
       inline: "rounded-lg border border-dashed p-4 flex-row items-start text-left gap-2",
     },
     variant: {

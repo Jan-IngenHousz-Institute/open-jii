@@ -128,7 +128,7 @@ export function DeviceGroupContent() {
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-lg border">
+        <div className="bg-card rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>

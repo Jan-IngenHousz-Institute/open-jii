@@ -3,7 +3,6 @@
 import { ErrorDisplay } from "@/components/error-display";
 import { useIotDeviceGroups } from "@/hooks/iot/useIotDeviceGroups/useIotDeviceGroups";
 import { useLocale } from "@/hooks/useLocale";
-import Link from "next/link";
 import { useState } from "react";
 
 import type { IotDeviceGroupListItem } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
@@ -13,6 +12,7 @@ import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { CreateDeviceGroupDialog } from "./create-device-group-dialog";
+import { GroupOverviewCard } from "./group-overview-card";
 
 /**
  * Groups on the devices overview: a block, not a tab and not a card grid. The
@@ -30,27 +30,6 @@ export function DeviceGroupsBlock() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const groups = data ?? [];
-
-  function renderGroupRow(group: IotDeviceGroupListItem) {
-    return (
-      <li key={group.id}>
-        <Link
-          href={`/${locale}/platform/devices/groups/${group.id}`}
-          className="hover:bg-muted/30 focus-visible:ring-primary/40 focus-visible:outline-hidden flex items-center gap-3 px-3 py-2.5 focus-visible:ring-2"
-        >
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{group.name}</p>
-            {group.description !== null && (
-              <p className="text-muted-foreground truncate text-xs">{group.description}</p>
-            )}
-          </div>
-          <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-            {t("iot.groups.memberCount", { count: group.memberCount })}
-          </span>
-        </Link>
-      </li>
-    );
-  }
 
   function renderBody() {
     if (isError) {
@@ -85,7 +64,13 @@ export function DeviceGroupsBlock() {
       );
     }
 
-    return <ul className="divide-y rounded-lg border">{groups.map(renderGroupRow)}</ul>;
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {groups.map((group) => (
+          <GroupOverviewCard key={group.id} group={group} locale={locale} />
+        ))}
+      </div>
+    );
   }
 
   return (

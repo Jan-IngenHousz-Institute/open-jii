@@ -73,7 +73,7 @@ export function GroupMonitoringFilter({
             onFilterChange({ ...filter, search: event.target.value });
           }}
           placeholder={t("iot.groups.monitoring.filter.searchPlaceholder")}
-          className="h-8 w-56 pl-8"
+          className="bg-card h-8 w-56 pl-8"
         />
       </div>
       <div className="flex flex-wrap gap-1.5">{chips.map(renderChip)}</div>

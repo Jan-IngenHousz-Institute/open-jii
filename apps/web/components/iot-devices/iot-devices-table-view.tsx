@@ -111,7 +111,7 @@ export function IotDevicesTableView() {
             value={search}
             onChange={(e) => changeSearch(e.target.value)}
             placeholder={t("iot.devices.searchPlaceholder")}
-            className="pl-9"
+            className="bg-card pl-9"
           />
         </div>
       </div>
