@@ -66,6 +66,7 @@ export const envManifest: readonly EnvVar[] = [
   ),
   env("AWS_COGNITO_DEVELOPER_PROVIDER_NAME", set, "local.openjii", backend),
   env("AWS_IOT_POLICY_NAMES", set, "local-disabled", backend),
+  env("AWS_IOT_JOBS_POLICY_NAME", set, "local-disabled", backend),
   env("AWS_IOT_DEVICE_THING_TYPE_NAME", set, "local-disabled", backend),
   env("AWS_IOT_DEVICE_THING_GROUP_NAME", set, "local-disabled", backend),
   env("AWS_LAMBDA_MACRO_SANDBOX_PYTHON_FUNCTION_NAME", set, "local-disabled-python", backend),
@@ -81,6 +82,13 @@ export const envManifest: readonly EnvVar[] = [
   env("AWS_SESSION_TOKEN", set, undefined, web),
   // Keep unset: any truthy value enables Lambda secrets-extension retries.
   env("AWS_LAMBDA_FUNCTION_NAME", unset, undefined, web),
+
+  // Firmware rollout reads public GitHub repositories; the token only raises the
+  // anonymous rate limit, so it stays optional and out of the generated example.
+  env("GITHUB_TOKEN", set, undefined, backend),
+  env("FIRMWARE_REPO_AMBYTE", set, "local-disabled", backend),
+  env("FIRMWARE_REPO_AMBIT", set, "local-disabled", backend),
+  env("FIRMWARE_REPO_MINIPAR", set, "local-disabled", backend),
 
   env("EMAIL_BASE_URL", set, "http://localhost:3000", backend),
   // The sentinel is intentionally closed; no local SMTP service listens on port 9.
