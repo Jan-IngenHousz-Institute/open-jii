@@ -10,6 +10,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import ArrayType, StringType, StructField, StructType
 
 from data_repair import apply_inline_repairs
+from openjii import scrub_non_finite_json
 from openjii.centrum import EXPERIMENT_RAW_DATA_TABLE
 from openjii.centrum.runtime import SILVER_TABLE
 
@@ -112,7 +113,12 @@ def experiment_raw_data():
     return (
         dlt.read_stream(SILVER_TABLE)
         .filter("experiment_id IS NOT NULL")
-        .withColumn("data", F.expr("parse_json(sample)"))
+        # Firmware serializes floats permissively, so calibration samples can
+        # carry bare NaN/Infinity tokens that strict parse_json rejects,
+        # poisoning the stream. The scrub UDF rewrites them to null and is a
+        # cheap passthrough for clean payloads.
+        .withColumn("sample_scrubbed", scrub_non_finite_json(F.col("sample")))
+        .withColumn("data", F.expr("try_parse_json(sample_scrubbed)"))
         .withColumn("output_data", F.expr("try_parse_json(output)"))
         .withColumn(
             "questions_sanitized",
