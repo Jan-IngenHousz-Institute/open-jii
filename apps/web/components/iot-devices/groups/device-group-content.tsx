@@ -2,16 +2,14 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
-import { useDeleteIotDeviceGroup } from "@/hooks/iot/useDeleteIotDeviceGroup/useDeleteIotDeviceGroup";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
 import { useRemoveIotDeviceGroupMember } from "@/hooks/iot/useRemoveIotDeviceGroupMember/useRemoveIotDeviceGroupMember";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 
 import type { IotDeviceGroupMember } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
@@ -34,12 +32,10 @@ import { deviceNeedsCredentials } from "../device-next-action";
 import { DeviceIdentity } from "../device-row";
 import { IotDeviceStatusBadge } from "../iot-device-status-badge";
 import { AddGroupMembersDialog } from "./add-group-members-dialog";
-import { DeleteDeviceGroupDialog } from "./delete-device-group-dialog";
 
 export function DeviceGroupContent() {
   const { t } = useTranslation("iot");
   const locale = useLocale();
-  const router = useRouter();
   const params = useParams<{ groupId: string }>();
   const groupId = params.groupId;
 
@@ -54,13 +50,6 @@ export function DeviceGroupContent() {
   ).length;
   const removeMember = useRemoveIotDeviceGroupMember();
   const [addOpen, setAddOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-
-  const deleteGroup = useDeleteIotDeviceGroup({
-    onSuccess: () => {
-      router.push(`/${locale}/platform/devices`);
-    },
-  });
 
   if (isError) {
     return <ErrorDisplay error={error} title={t("iot.groups.loadError")} />;
@@ -192,48 +181,11 @@ export function DeviceGroupContent() {
         </div>
       )}
 
-      {group.capabilities.canManage && (
-        <Card className="border-destructive/30 max-w-3xl shadow-none">
-          <CardHeader>
-            <CardTitle className="text-destructive text-base">
-              {t("iot.groups.dangerZone.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">{t("iot.groups.dangerZone.deleteLabel")}</p>
-              <p className="text-muted-foreground text-sm">
-                {t("iot.groups.dangerZone.deleteDescription")}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 shrink-0"
-              onClick={() => {
-                setDeleteOpen(true);
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t("iot.groups.delete")}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       <AddGroupMembersDialog
         groupId={groupId}
         memberIds={(members ?? []).map((member) => member.deviceId)}
         open={addOpen}
         onOpenChange={setAddOpen}
-      />
-      <DeleteDeviceGroupDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        groupName={group.name}
-        isPending={deleteGroup.isPending}
-        onConfirm={() => {
-          deleteGroup.mutate({ groupId });
-        }}
       />
     </div>
   );

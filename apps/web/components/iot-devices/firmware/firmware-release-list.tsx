@@ -9,15 +9,9 @@ import { Download, ExternalLink } from "lucide-react";
 import type { FirmwareRelease } from "@repo/api/domains/iot/firmware/iot-firmware.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@repo/ui/components/collapsible";
 import { EmptyState } from "@repo/ui/components/empty-state";
 
-/** Beyond this, notes collapse behind a toggle rather than flooding the tab. */
-const NOTES_PREVIEW_LINES = 8;
+import { FirmwareReleaseNotes } from "./firmware-release-notes";
 
 interface FirmwareReleaseListProps {
   releases: FirmwareRelease[];
@@ -28,33 +22,6 @@ interface FirmwareReleaseListProps {
 export function FirmwareReleaseList({ releases, installedVersion }: FirmwareReleaseListProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
-
-  function renderNotes(release: FirmwareRelease) {
-    if (release.notes === null || release.notes.trim() === "") {
-      return <p className="text-muted-foreground text-xs">{t("iot.devices.firmware.noNotes")}</p>;
-    }
-
-    const lines = release.notes.split("\n");
-    if (lines.length <= NOTES_PREVIEW_LINES) {
-      return <pre className="whitespace-pre-wrap font-sans text-xs">{release.notes}</pre>;
-    }
-
-    return (
-      <Collapsible>
-        <pre className="whitespace-pre-wrap font-sans text-xs">
-          {lines.slice(0, NOTES_PREVIEW_LINES).join("\n")}
-        </pre>
-        <CollapsibleContent>
-          <pre className="whitespace-pre-wrap font-sans text-xs">
-            {lines.slice(NOTES_PREVIEW_LINES).join("\n")}
-          </pre>
-        </CollapsibleContent>
-        <CollapsibleTrigger className="text-muted-foreground pt-1 text-xs underline">
-          {t("iot.devices.firmware.showAllNotes")}
-        </CollapsibleTrigger>
-      </Collapsible>
-    );
-  }
 
   function renderRelease(release: FirmwareRelease) {
     const isInstalled =
@@ -74,8 +41,10 @@ export function FirmwareReleaseList({ releases, installedVersion }: FirmwareRele
           </span>
         </div>
 
-        {release.name !== null && <p className="text-sm">{release.name}</p>}
-        {renderNotes(release)}
+        {release.name !== null && release.name !== release.version && (
+          <p className="text-sm">{release.name}</p>
+        )}
+        <FirmwareReleaseNotes notesHtml={release.notesHtml} />
 
         <div className="flex flex-wrap items-center gap-3">
           {release.assets.map((asset) => (

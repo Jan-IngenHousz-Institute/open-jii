@@ -334,11 +334,6 @@
         "credentials": {
           "title": "Credentials"
         },
-        "dangerZone": {
-          "title": "Danger zone",
-          "deleteLabel": "Delete this device",
-          "deleteDescription": "Permanently removes the device and its cloud record. This cannot be undone."
-        },
         "cards": {
           "credentialsTitle": "Credentials",
           "manageLink": "Manage",
@@ -410,7 +405,14 @@
         "closeUnsavedConfirm": "Close anyway",
         "refreshStatus": "Refresh status",
         "tabTitle": "Credentials",
-        "tabDescription": "The certificate this device authenticates with, and its lifecycle."
+        "tabDescription": "The certificate this device authenticates with, and its lifecycle.",
+        "guide": {
+          "title": "How credentials work",
+          "step1": "Issue a certificate here. The private key is shown exactly once and the platform never stores it.",
+          "step2": "Download the bundle and store all three files on the device; the key never leaves it.",
+          "step3": "Rotate to hand the device a fresh certificate, or when it changes hands. Revoke to cut access immediately.",
+          "step4": "A revoked device cannot reconnect until a new certificate is issued."
+        }
       },
       "nextAction": {
         "issueCredentials": "Issue certificate",
@@ -443,7 +445,8 @@
           "step2": "An operator starts a rollout, which stages it across devices and stops automatically if too many fail.",
           "step3": "The device receives an update job, downloads the image over a short-lived link, and verifies its checksum.",
           "step4": "The device applies the update, reboots, and reports the outcome; a failed update rolls back."
-        }
+        },
+        "showLessNotes": "Show fewer notes"
       },
       "fleet": {
         "title": "Fleet pulse",
@@ -560,11 +563,6 @@
       "create": "Create group",
       "createDescription": "Groups organize your devices; membership changes nothing on the devices themselves.",
       "createTitle": "Create a device group",
-      "dangerZone": {
-        "title": "Danger zone",
-        "deleteLabel": "Delete this group",
-        "deleteDescription": "Permanently removes the group. The devices themselves are not affected. This cannot be undone."
-      },
       "delete": "Delete group",
       "deleteHint": "\"{{name}}\" will be deleted. The devices themselves are not affected.",
       "deleteTitle": "Delete this group?",

@@ -57,15 +57,6 @@ describe("DeviceGroupContent", () => {
     expect(screen.getByText("iot.groups.remove")).toBeInTheDocument();
   });
 
-  it("shows the danger zone to managers", async () => {
-    mountGroup();
-
-    render(<DeviceGroupContent />);
-
-    expect(await screen.findByText("iot.groups.dangerZone.title")).toBeInTheDocument();
-    expect(screen.getByText("iot.groups.delete")).toBeInTheDocument();
-  });
-
   it("hides membership controls from read-only viewers", async () => {
     mountGroup({ capabilities: { ...readOnlyCapabilities } });
 
@@ -74,23 +65,6 @@ describe("DeviceGroupContent", () => {
     expect((await screen.findAllByText(/AA:BB:CC:DD/)).length).toBeGreaterThan(0);
     expect(screen.queryByText("iot.groups.addDevices")).not.toBeInTheDocument();
     expect(screen.queryByText("iot.groups.remove")).not.toBeInTheDocument();
-    expect(screen.queryByText("iot.groups.dangerZone.title")).not.toBeInTheDocument();
-  });
-
-  it("deletes the group from the danger zone", async () => {
-    const user = userEvent.setup();
-    mountGroup();
-    const remove = server.mount(contract.iot.deleteIotDeviceGroup, { status: 204 });
-
-    render(<DeviceGroupContent />);
-
-    await user.click(await screen.findByText("iot.groups.delete"));
-    const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByText("iot.groups.delete"));
-
-    await vi.waitFor(() => {
-      expect(remove.calls).toHaveLength(1);
-    });
   });
 
   it("removes a member", async () => {

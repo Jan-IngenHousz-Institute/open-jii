@@ -334,11 +334,6 @@
         "credentials": {
           "title": "Anmeldedaten"
         },
-        "dangerZone": {
-          "title": "Gefahrenzone",
-          "deleteLabel": "Dieses Gerät löschen",
-          "deleteDescription": "Entfernt das Gerät und seinen Cloud-Datensatz endgültig. Dies kann nicht rückgängig gemacht werden."
-        },
         "cards": {
           "credentialsTitle": "Zugangsdaten",
           "manageLink": "Verwalten",
@@ -410,7 +405,14 @@
         "closeUnsavedConfirm": "Trotzdem schließen",
         "refreshStatus": "Status aktualisieren",
         "tabTitle": "Zugangsdaten",
-        "tabDescription": "Das Zertifikat, mit dem sich dieses Gerät authentifiziert, und sein Lebenszyklus."
+        "tabDescription": "Das Zertifikat, mit dem sich dieses Gerät authentifiziert, und sein Lebenszyklus.",
+        "guide": {
+          "title": "So funktionieren Zertifikate",
+          "step1": "Stellen Sie hier ein Zertifikat aus. Der private Schlüssel wird genau einmal angezeigt und nie von der Plattform gespeichert.",
+          "step2": "Laden Sie das Paket herunter und legen Sie alle drei Dateien auf dem Gerät ab; der Schlüssel verlässt es nie.",
+          "step3": "Rotieren Sie, um dem Gerät ein frisches Zertifikat zu geben, oder wenn es den Besitzer wechselt. Widerrufen kappt den Zugang sofort.",
+          "step4": "Ein widerrufenes Gerät kann sich erst wieder verbinden, wenn ein neues Zertifikat ausgestellt ist."
+        }
       },
       "nextAction": {
         "issueCredentials": "Zertifikat ausstellen",
@@ -443,7 +445,8 @@
           "step2": "Eine Bedienperson startet ein Rollout, das gestaffelt ausgeliefert und bei zu vielen Fehlern automatisch gestoppt wird.",
           "step3": "Das Gerät erhält einen Update-Auftrag, lädt das Abbild über einen kurzlebigen Link und prüft die Prüfsumme.",
           "step4": "Das Gerät wendet das Update an, startet neu und meldet das Ergebnis; ein fehlgeschlagenes Update wird zurückgerollt."
-        }
+        },
+        "showLessNotes": "Weniger Notizen anzeigen"
       },
       "fleet": {
         "title": "Flottenpuls",
@@ -560,11 +563,6 @@
       "create": "Gruppe erstellen",
       "createDescription": "Gruppen organisieren Geräte; die Mitgliedschaft ändert nichts an den Geräten selbst.",
       "createTitle": "Gerätegruppe erstellen",
-      "dangerZone": {
-        "title": "Gefahrenzone",
-        "deleteLabel": "Diese Gruppe löschen",
-        "deleteDescription": "Entfernt die Gruppe endgültig. Die Geräte selbst sind nicht betroffen. Dies kann nicht rückgängig gemacht werden."
-      },
       "delete": "Gruppe löschen",
       "deleteHint": "\"{{name}}\" wird gelöscht. Die Geräte selbst sind nicht betroffen.",
       "deleteTitle": "Diese Gruppe löschen?",

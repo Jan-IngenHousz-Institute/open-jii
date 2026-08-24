@@ -17,7 +17,7 @@ function release(overrides: Record<string, unknown> = {}) {
     publishedAt: "2026-08-01T10:00:00.000Z",
     prerelease: false,
     latest: true,
-    notes: "- fixes a thing",
+    notesHtml: "<ul><li>fixes a thing</li></ul>",
     releaseUrl: "https://github.com/org/repo/releases/tag/v1.3.0",
     assets: [
       {
@@ -98,7 +98,7 @@ describe("DeviceFirmwareContent", () => {
 
     render(<DeviceFirmwareContent />);
 
-    expect(await screen.findByText("- fixes a thing")).toBeInTheDocument();
+    expect(await screen.findByText("fixes a thing")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /firmware.bin/ })).toBeInTheDocument();
     expect(screen.getByText("iot.devices.firmware.guide.title")).toBeInTheDocument();
   });

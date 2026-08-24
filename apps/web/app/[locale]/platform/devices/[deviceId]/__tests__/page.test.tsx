@@ -1,4 +1,4 @@
-import { createIotDeviceDetail, readOnlyCapabilities } from "@/test/factories";
+import { createIotDeviceDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { use } from "react";
@@ -83,36 +83,13 @@ describe("DeviceOverviewPage", () => {
     expect(await screen.findAllByText("iot.devices.connectivity.disconnected")).not.toHaveLength(0);
   });
 
-  it("deletes from the danger zone and navigates back to the registry", async () => {
+  it("offers no delete affordance on the tab body; that action lives in the header menu", async () => {
     server.mount(contract.iot.getIotDevice, {
-      body: createIotDeviceDetail({ id: DEVICE_ID, name: "Doomed" }),
-    });
-    const deleteSpy = server.mount(contract.iot.deleteIotDevice);
-    const user = userEvent.setup();
-
-    const { router } = renderPage();
-
-    await user.click(await screen.findByRole("button", { name: "iot.devices.actions.delete" }));
-    const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "iot.devices.actions.delete" }));
-
-    await waitFor(() => expect(deleteSpy.called).toBe(true));
-    expect(deleteSpy.params.deviceId).toBe(DEVICE_ID);
-    await waitFor(() => expect(router.push).toHaveBeenCalled());
-  });
-
-  it("offers no danger zone below manage — deleting a device tears down real AWS hardware", async () => {
-    server.mount(contract.iot.getIotDevice, {
-      body: createIotDeviceDetail({
-        id: DEVICE_ID,
-        serialNumber: "SN-9",
-        capabilities: { ...readOnlyCapabilities, canLeave: true },
-      }),
+      body: createIotDeviceDetail({ id: DEVICE_ID, serialNumber: "SN-9" }),
     });
 
     renderPage();
 
-    // The metadata is still theirs to read; the teardown affordance is not.
     expect(await screen.findByText("SN-9")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "iot.devices.actions.delete" }),

@@ -334,11 +334,6 @@
         "credentials": {
           "title": "Inloggegevens"
         },
-        "dangerZone": {
-          "title": "Gevarenzone",
-          "deleteLabel": "Dit apparaat verwijderen",
-          "deleteDescription": "Verwijdert het apparaat en zijn cloud-record permanent. Dit kan niet ongedaan worden gemaakt."
-        },
         "cards": {
           "credentialsTitle": "Certificaten",
           "manageLink": "Beheren",
@@ -410,7 +405,14 @@
         "closeUnsavedConfirm": "Toch sluiten",
         "refreshStatus": "Status vernieuwen",
         "tabTitle": "Certificaten",
-        "tabDescription": "Het certificaat waarmee dit apparaat zich authenticeert, en de levenscyclus ervan."
+        "tabDescription": "Het certificaat waarmee dit apparaat zich authenticeert, en de levenscyclus ervan.",
+        "guide": {
+          "title": "Zo werken certificaten",
+          "step1": "Geef hier een certificaat uit. De privésleutel wordt precies één keer getoond en nooit door het platform opgeslagen.",
+          "step2": "Download de bundel en zet alle drie de bestanden op het apparaat; de sleutel verlaat het nooit.",
+          "step3": "Roteer om het apparaat een vers certificaat te geven, of wanneer het van eigenaar wisselt. Intrekken sluit de toegang direct af.",
+          "step4": "Een ingetrokken apparaat kan pas weer verbinden zodra een nieuw certificaat is uitgegeven."
+        }
       },
       "nextAction": {
         "issueCredentials": "Certificaat uitgeven",
@@ -443,7 +445,8 @@
           "step2": "Een operator start een uitrol, die gefaseerd wordt uitgeleverd en automatisch stopt bij te veel fouten.",
           "step3": "Het apparaat ontvangt een update-taak, downloadt het image via een kortlevende link en verifieert de checksum.",
           "step4": "Het apparaat past de update toe, herstart en meldt het resultaat; een mislukte update wordt teruggedraaid."
-        }
+        },
+        "showLessNotes": "Minder notities tonen"
       },
       "fleet": {
         "title": "Vlootpols",
@@ -560,11 +563,6 @@
       "create": "Groep aanmaken",
       "createDescription": "Groepen organiseren apparaten; lidmaatschap verandert niets aan de apparaten zelf.",
       "createTitle": "Apparaatgroep aanmaken",
-      "dangerZone": {
-        "title": "Gevarenzone",
-        "deleteLabel": "Deze groep verwijderen",
-        "deleteDescription": "Verwijdert de groep permanent. De apparaten zelf blijven behouden. Dit kan niet ongedaan worden gemaakt."
-      },
       "delete": "Groep verwijderen",
       "deleteHint": "\"{{name}}\" wordt verwijderd. De apparaten zelf blijven bestaan.",
       "deleteTitle": "Deze groep verwijderen?",

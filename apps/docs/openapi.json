@@ -17316,7 +17316,7 @@
                           "latest": {
                             "type": "boolean"
                           },
-                          "notes": {
+                          "notesHtml": {
                             "anyOf": [
                               {
                                 "type": "string"
@@ -17360,7 +17360,7 @@
                           "publishedAt",
                           "prerelease",
                           "latest",
-                          "notes",
+                          "notesHtml",
                           "releaseUrl",
                           "assets"
                         ]
