@@ -41,7 +41,7 @@ interface RangeSelection {
  * The registry's pulse, above the table: is the fleet online, is data flowing,
  * and which devices are stuck. Live facts come from the device list the page
  * already holds; the warehouse facts ride one fleet-scoped read. The hero
- * carries the platform dashboard's wash so the overview reads as kin to it.
+ * sits directly on the workspace band, its tiles floating as cards.
  */
 export function FleetOverviewDashboard() {
   const { t } = useTranslation("iot");
@@ -127,7 +127,7 @@ export function FleetOverviewDashboard() {
   function renderTiles() {
     return (
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label={t("iot.devices.fleet.onlineLabel")} className="bg-background/70">
+        <Tile label={t("iot.devices.fleet.onlineLabel")} className="bg-card">
           {summary === undefined ? (
             <Skeleton className="h-4 w-24" />
           ) : (
@@ -148,7 +148,7 @@ export function FleetOverviewDashboard() {
           )}
         </Tile>
 
-        <Tile label={t("iot.devices.monitoring.lastData")} className="bg-background/70">
+        <Tile label={t("iot.devices.monitoring.lastData")} className="bg-card">
           {monitoring === undefined ? (
             <Skeleton className="h-4 w-24" />
           ) : (
@@ -156,7 +156,7 @@ export function FleetOverviewDashboard() {
           )}
         </Tile>
 
-        <Tile label={t("iot.devices.monitoring.measurements")} className="bg-background/70">
+        <Tile label={t("iot.devices.monitoring.measurements")} className="bg-card">
           {total === undefined || perHour === undefined ? (
             <Skeleton className="h-4 w-16" />
           ) : (
@@ -175,7 +175,7 @@ export function FleetOverviewDashboard() {
           )}
         </Tile>
 
-        <Tile label={t("iot.devices.fleet.attentionLabel")} className="bg-background/70">
+        <Tile label={t("iot.devices.fleet.attentionLabel")} className="bg-card">
           {attention === undefined ? (
             <Skeleton className="h-4 w-16" />
           ) : (
@@ -244,7 +244,7 @@ export function FleetOverviewDashboard() {
 
   return (
     <section className="space-y-4">
-      <div className="space-y-4 rounded-xl bg-gradient-to-l from-[#F5FFF8] to-[#F4F9FF] p-4">
+      <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-medium">{t("iot.devices.fleet.title")}</h2>

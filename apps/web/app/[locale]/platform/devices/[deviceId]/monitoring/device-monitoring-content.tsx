@@ -93,7 +93,7 @@ export default function DeviceMonitoringPage() {
 
   return (
     <div className="max-w-5xl space-y-6">
-      <div className="space-y-4 rounded-xl bg-gradient-to-l from-[#F5FFF8] to-[#F4F9FF] p-4">
+      <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-medium">{t("iot.devices.monitoring.title")}</h2>
@@ -114,7 +114,7 @@ export default function DeviceMonitoringPage() {
           activity={activity}
           monitoring={monitoring}
           range={selection.range}
-          tileClassName="bg-background/70"
+          tileClassName="bg-card"
         />
       </div>
 

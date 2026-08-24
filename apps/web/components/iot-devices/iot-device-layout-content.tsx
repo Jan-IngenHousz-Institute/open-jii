@@ -11,6 +11,7 @@ import { useTranslation } from "@repo/i18n";
 
 import { ConnectivityDot } from "./device-connectivity";
 import { DeviceHeaderActions } from "./device-header-actions";
+import { DeviceMetaStrip } from "./device-meta-strip";
 import { IotDeviceDetailTabs } from "./iot-device-detail-tabs";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 
@@ -54,6 +55,8 @@ export function IotDeviceLayoutContent({
             <DeviceHeaderActions device={device} />
           </div>
         </div>
+
+        <DeviceMetaStrip device={device} />
       </div>
 
       <IotDeviceDetailTabs

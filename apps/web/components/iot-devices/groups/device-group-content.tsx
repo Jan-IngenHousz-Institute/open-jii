@@ -6,7 +6,6 @@ import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGro
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
 import { useRemoveIotDeviceGroupMember } from "@/hooks/iot/useRemoveIotDeviceGroupMember/useRemoveIotDeviceGroupMember";
 import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -26,7 +25,6 @@ import {
   TableRow,
 } from "@repo/ui/components/table";
 
-import { MetaField } from "../../experiment-dashboards/meta-field";
 import { ActionChipLink } from "../action-chip-link";
 import { deviceNeedsCredentials } from "../device-next-action";
 import { DeviceIdentity } from "../device-row";
@@ -82,11 +80,6 @@ export function DeviceGroupContent() {
           </ActionChipLink>
         )}
       </div>
-      <div className="flex flex-wrap items-start gap-10">
-        <MetaField label={t("iot.groups.meta.members")} value={String(group.memberCount)} />
-        <MetaField label={t("iot.groups.meta.created")} value={formatDate(group.createdAt)} />
-      </div>
-
       {(members ?? []).length > 0 && (
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="shadow-none">

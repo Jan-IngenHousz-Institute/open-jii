@@ -2,6 +2,7 @@
 
 import { FleetOverviewDashboard } from "@/components/iot-devices/fleet/fleet-overview-dashboard";
 import { DeviceGroupsBlock } from "@/components/iot-devices/groups/device-groups-block";
+import { WorkspaceBand } from "@/components/workspace-band";
 
 import { IotDevicesTableView } from "./iot-devices-table-view";
 
@@ -16,10 +17,12 @@ import { IotDevicesTableView } from "./iot-devices-table-view";
  */
 export function DevicesOverviewContent() {
   return (
-    <div className="space-y-10">
-      <FleetOverviewDashboard />
-      <IotDevicesTableView />
-      <DeviceGroupsBlock />
-    </div>
+    <WorkspaceBand>
+      <div className="space-y-10">
+        <FleetOverviewDashboard />
+        <IotDevicesTableView />
+        <DeviceGroupsBlock />
+      </div>
+    </WorkspaceBand>
   );
 }

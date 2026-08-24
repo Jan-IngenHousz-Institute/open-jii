@@ -4,7 +4,7 @@ import {
   readOnlyCapabilities,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, within } from "@/test/test-utils";
+import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
