@@ -703,7 +703,9 @@
       "nextAction": {
         "credentials": "{{count}} apparaat heeft een certificaat nodig",
         "credentials_other": "{{count}} apparaten hebben een certificaat nodig"
-      }
+      },
+      "showAll": "Nog {{count}} groepen tonen",
+      "showFewer": "Minder groepen tonen"
     },
     "workbookBar": {
       "mock": "Mock",

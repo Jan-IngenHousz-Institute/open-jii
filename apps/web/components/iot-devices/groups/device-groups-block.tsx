@@ -3,10 +3,11 @@
 import { ErrorDisplay } from "@/components/error-display";
 import { useIotDeviceGroups } from "@/hooks/iot/useIotDeviceGroups/useIotDeviceGroups";
 import { useLocale } from "@/hooks/useLocale";
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { CreateDeviceGroupDialog } from "./create-device-group-dialog";
@@ -19,13 +20,21 @@ import { GroupOverviewCard } from "./group-overview-card";
  * groups yet, the tile alone is the section's whole grid and the hint above
  * explains it.
  */
+/** Four full rows at the 3-column breakpoint, counting the create tile. */
+const VISIBLE_GROUPS = 11;
+
 export function DeviceGroupsBlock() {
   const { t } = useTranslation("iot");
   const locale = useLocale();
   const { data, isLoading, isError, error } = useIotDeviceGroups();
   const [createOpen, setCreateOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const groups = data ?? [];
+  // Eleven groups plus the tile fill four rows at the widest breakpoint; a
+  // larger estate folds behind the toggle instead of drowning the overview.
+  const visibleGroups = showAll ? groups : groups.slice(0, VISIBLE_GROUPS);
+  const hiddenCount = groups.length - visibleGroups.length;
 
   function renderCreateTile() {
     return (
@@ -58,11 +67,35 @@ export function DeviceGroupsBlock() {
     }
 
     return (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {groups.map((group) => (
-          <GroupOverviewCard key={group.id} group={group} locale={locale} />
-        ))}
-        {renderCreateTile()}
+      <div className="space-y-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {renderCreateTile()}
+          {visibleGroups.map((group) => (
+            <GroupOverviewCard key={group.id} group={group} locale={locale} />
+          ))}
+        </div>
+        {(hiddenCount > 0 || showAll) && groups.length > VISIBLE_GROUPS && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => {
+              setShowAll((value) => !value);
+            }}
+          >
+            {showAll ? (
+              <>
+                {t("iot.groups.showFewer")}
+                <ChevronUp className="ml-1 size-4" aria-hidden />
+              </>
+            ) : (
+              <>
+                {t("iot.groups.showAll", { count: hiddenCount })}
+                <ChevronDown className="ml-1 size-4" aria-hidden />
+              </>
+            )}
+          </Button>
+        )}
       </div>
     );
   }

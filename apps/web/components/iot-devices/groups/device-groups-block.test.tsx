@@ -63,4 +63,29 @@ describe("DeviceGroupsBlock", () => {
 
     expect(await screen.findByText("iot.groups.loadError")).toBeInTheDocument();
   });
+
+  it("caps a large estate behind a toggle, create tile always first and visible", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.iot.listIotDeviceGroups, {
+      body: Array.from({ length: 14 }, (_, index) => ({
+        id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        name: `Group ${String(index)}`,
+        description: null,
+        memberCount: 0,
+        createdAt: "2026-08-01T00:00:00.000Z",
+        updatedAt: "2026-08-01T00:00:00.000Z",
+      })),
+    });
+
+    render(<DeviceGroupsBlock />);
+
+    expect(await screen.findByText("Group 0")).toBeInTheDocument();
+    expect(screen.queryByText("Group 12")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "iot.groups.create" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /iot\.groups\.showAll/ }));
+
+    expect(screen.getByText("Group 13")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /iot\.groups\.showFewer/ })).toBeInTheDocument();
+  });
 });

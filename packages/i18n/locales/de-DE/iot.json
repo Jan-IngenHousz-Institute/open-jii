@@ -703,7 +703,9 @@
       "nextAction": {
         "credentials": "{{count}} Gerät braucht ein Zertifikat",
         "credentials_other": "{{count}} Geräte brauchen ein Zertifikat"
-      }
+      },
+      "showAll": "{{count}} weitere Gruppen anzeigen",
+      "showFewer": "Weniger Gruppen anzeigen"
     },
     "workbookBar": {
       "mock": "Mock",

@@ -703,7 +703,9 @@
       "nextAction": {
         "credentials": "{{count}} device needs a certificate",
         "credentials_other": "{{count}} devices need a certificate"
-      }
+      },
+      "showAll": "Show {{count}} more groups",
+      "showFewer": "Show fewer groups"
     },
     "workbookBar": {
       "mock": "Mock",
