@@ -1,52 +1,42 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { useLocale } from "@/hooks/useLocale";
+import { ChevronRight, Cpu } from "lucide-react";
 import Link from "next/link";
 
 import type { IotDeviceGroupListItem } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 
-interface GroupOverviewCardProps {
-  group: IotDeviceGroupListItem;
-  locale: string;
-}
-
 /**
- * One group on the devices overview: a card, not a text row, so a group reads
- * as a place you enter rather than a line you scan. The list payload carries
- * name, description and a member count; everything richer lives on the
- * group's own dashboard behind the click.
+ * One group on the devices overview, in the card idiom the organizations,
+ * experiments, macros and protocols listings share: the whole card is the
+ * link, the description clamps under the title, and the counts ride as pills
+ * on the footer line.
  */
-export function GroupOverviewCard({ group, locale }: GroupOverviewCardProps) {
+export function GroupOverviewCard({ group }: { group: IotDeviceGroupListItem }) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
 
   return (
-    <Link
-      href={`/${locale}/platform/devices/groups/${group.id}`}
-      className="bg-card hover:border-primary/40 hover:shadow-xs focus-visible:ring-primary/40 focus-visible:outline-hidden group flex flex-col gap-3 rounded-xl border p-4 transition focus-visible:ring-2"
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className="bg-secondary text-primary flex size-10 shrink-0 items-center justify-center rounded-lg text-sm font-semibold uppercase"
-          aria-hidden
-        >
-          {group.name.trim().slice(0, 2)}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{group.name}</p>
+    <Link href={`/${locale}/platform/devices/groups/${group.id}`}>
+      <div className="relative flex h-full min-h-32 flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
+        <div className="mb-auto">
+          <h3 className="line-clamp-2 break-words text-base font-semibold text-gray-900">
+            {group.name}
+          </h3>
           {group.description !== null && (
-            <p className="text-muted-foreground line-clamp-1 text-xs">{group.description}</p>
+            <p className="mt-1 line-clamp-2 text-sm text-gray-500">{group.description}</p>
           )}
         </div>
-        <ArrowRight
-          className="text-muted-foreground group-hover:text-foreground size-4 shrink-0 transition"
-          aria-hidden
-        />
+        <div className="flex flex-wrap items-center gap-1">
+          <Badge variant="secondary" className="gap-1 font-normal">
+            <Cpu className="h-3 w-3" aria-hidden />
+            {t("iot.groups.memberCount", { count: group.memberCount })}
+          </Badge>
+        </div>
+        <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
       </div>
-      <Badge variant="secondary" className="w-fit">
-        {t("iot.groups.memberCount", { count: group.memberCount })}
-      </Badge>
     </Link>
   );
 }

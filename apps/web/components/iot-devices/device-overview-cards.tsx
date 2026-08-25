@@ -190,9 +190,9 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
             {formatRelativeTime(entry.lastAt, locale)}
           </span>
         )}
-        <Badge variant="outline" className="shrink-0 tabular-nums">
-          {entry.count.toLocaleString(locale)}
-        </Badge>
+        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+          {t("iot.devices.detail.cards.measurementCount", { count: entry.count })}
+        </span>
       </li>
     );
   }

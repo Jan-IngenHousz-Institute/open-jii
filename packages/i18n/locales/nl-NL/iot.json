@@ -359,7 +359,9 @@
           "firmwareReportedCaption": "In de afgelopen 30 dagen door het apparaat gemeld.",
           "onboarded": "Ingesteld",
           "activityFigureCaption": "Laatste data-aankomst",
-          "observedShortCaption": "Naar geüpload, laatste 30 dagen"
+          "observedShortCaption": "Naar geüpload, laatste 30 dagen",
+          "measurementCount_one": "{{count}} meting",
+          "measurementCount_other": "{{count}} metingen"
         },
         "overview": {
           "title": "Overzicht",
@@ -706,7 +708,9 @@
         "credentials_other": "{{count}} apparaten hebben een certificaat nodig"
       },
       "showAll": "Nog {{count}} groepen tonen",
-      "showFewer": "Minder groepen tonen"
+      "showFewer": "Minder groepen tonen",
+      "searchPlaceholder": "Groepen zoeken",
+      "searchNoMatches": "Geen groepen voldoen aan de zoekopdracht."
     },
     "workbookBar": {
       "mock": "Mock",

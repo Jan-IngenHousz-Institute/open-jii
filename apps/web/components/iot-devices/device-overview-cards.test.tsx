@@ -129,7 +129,7 @@ describe("DeviceOverviewCards", () => {
     );
     expect(screen.getByText("iot.devices.monitoring.privateExperiment")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.detail.cards.observedUnattributed")).toBeInTheDocument();
-    expect(screen.getByText("42")).toBeInTheDocument();
+    expect(screen.getAllByText("iot.devices.detail.cards.measurementCount")).toHaveLength(3);
   });
 
   it("says plainly when no data has arrived yet", async () => {

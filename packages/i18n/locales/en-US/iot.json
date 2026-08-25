@@ -359,7 +359,9 @@
           "firmwareReportedCaption": "Reported by the device in the last 30 days.",
           "onboarded": "Onboarded",
           "activityFigureCaption": "Last data arrival",
-          "observedShortCaption": "Uploaded to, last 30 days"
+          "observedShortCaption": "Uploaded to, last 30 days",
+          "measurementCount_one": "{{count}} measurement",
+          "measurementCount_other": "{{count}} measurements"
         },
         "overview": {
           "title": "Overview",
@@ -706,7 +708,9 @@
         "credentials_other": "{{count}} devices need a certificate"
       },
       "showAll": "Show {{count}} more groups",
-      "showFewer": "Show fewer groups"
+      "showFewer": "Show fewer groups",
+      "searchPlaceholder": "Search groups",
+      "searchNoMatches": "No groups match that search."
     },
     "workbookBar": {
       "mock": "Mock",

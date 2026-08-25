@@ -359,7 +359,9 @@
           "firmwareReportedCaption": "Vom Gerät in den letzten 30 Tagen gemeldet.",
           "onboarded": "Eingerichtet",
           "activityFigureCaption": "Letzter Dateneingang",
-          "observedShortCaption": "Beliefert, letzte 30 Tage"
+          "observedShortCaption": "Beliefert, letzte 30 Tage",
+          "measurementCount_one": "{{count}} Messung",
+          "measurementCount_other": "{{count}} Messungen"
         },
         "overview": {
           "title": "Übersicht",
@@ -706,7 +708,9 @@
         "credentials_other": "{{count}} Geräte brauchen ein Zertifikat"
       },
       "showAll": "{{count}} weitere Gruppen anzeigen",
-      "showFewer": "Weniger Gruppen anzeigen"
+      "showFewer": "Weniger Gruppen anzeigen",
+      "searchPlaceholder": "Gruppen durchsuchen",
+      "searchNoMatches": "Keine Gruppen entsprechen der Suche."
     },
     "workbookBar": {
       "mock": "Mock",
