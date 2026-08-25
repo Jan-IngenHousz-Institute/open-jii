@@ -8,24 +8,33 @@ import { contract } from "@repo/api/contract";
 import { ListProtocols } from "./list-protocols";
 
 vi.mock("~/components/protocol-overview-cards", () => ({
-  ProtocolOverviewCards: (props: { protocols?: unknown[]; isLoading: boolean }) => (
-    <div data-testid="protocol-overview-cards" data-loading={props.isLoading}>
+  ProtocolOverviewCards: (props: { protocols?: unknown[] }) => (
+    <div data-testid="protocol-overview-cards">
       {props.protocols === undefined ? "Loading..." : `${props.protocols.length} protocols`}
     </div>
   ),
 }));
 
+const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
+  items,
+  page,
+  pageSize: 20,
+  totalPages,
+  totalCount: items.length,
+});
+
 describe("ListProtocols", () => {
-  it("renders search input and filter", () => {
-    server.mount(contract.protocols.listProtocols, { body: [] });
+  it("renders the search input without a my/all filter toggle", () => {
+    server.mount(contract.protocols.listProtocolsPaginated, { body: envelope([]) });
     render(<ListProtocols />);
 
     expect(screen.getByPlaceholderText("protocols.searchProtocols")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
   it("passes data to ProtocolOverviewCards", async () => {
-    server.mount(contract.protocols.listProtocols, {
-      body: [createProtocol({ id: "1", name: "P1" })],
+    server.mount(contract.protocols.listProtocolsPaginated, {
+      body: envelope([createProtocol({ id: "1", name: "P1" })]),
     });
     render(<ListProtocols />);
 
@@ -35,7 +44,7 @@ describe("ListProtocols", () => {
   });
 
   it("sends search query to the API", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, { body: [] });
+    const spy = server.mount(contract.protocols.listProtocolsPaginated, { body: envelope([]) });
     const user = userEvent.setup();
     render(<ListProtocols />);
 
@@ -44,6 +53,22 @@ describe("ListProtocols", () => {
     await waitFor(() => {
       const lastCall = spy.calls[spy.calls.length - 1];
       expect(lastCall.query.search).toBe("test");
+    });
+  });
+
+  it("navigates pages via the pagination controls", async () => {
+    const spy = server.mount(contract.protocols.listProtocolsPaginated, {
+      body: (call: { query: Record<string, string> }) =>
+        envelope([createProtocol({ id: "1" })], Number(call.query.page), 2),
+    });
+    const user = userEvent.setup();
+    render(<ListProtocols />);
+
+    const next = await screen.findByRole("button", { name: "pagination.next" });
+    await user.click(next);
+
+    await waitFor(() => {
+      expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("2");
     });
   });
 });

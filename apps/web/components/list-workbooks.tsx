@@ -5,6 +5,7 @@ import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkboo
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { ListPagination } from "~/components/list-pagination";
 import { OrganizationPicker } from "~/components/organizations/organization-picker";
 import { WorkbookList } from "~/components/workbook-list";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
@@ -30,7 +31,7 @@ import {
 } from "@repo/ui/components/select";
 
 export function ListWorkbooks() {
-  const { data: workbooks, isLoading, filter, setFilter, search, setSearch } = useWorkbooks({});
+  const { data: workbooks, isLoading, search, setSearch, page, setPage } = useWorkbooks({});
   const { t } = useTranslation("workbook");
   const router = useRouter();
   const locale = useLocale();
@@ -75,20 +76,15 @@ export function ListWorkbooks() {
           )}
         </div>
         <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-4">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-full md:w-[160px]">
-              <SelectValue placeholder={t("workbooks.filterWorkbooks")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="my">{t("workbooks.filterMy")}</SelectItem>
-              <SelectItem value="all">{t("workbooks.filterAll")}</SelectItem>
-            </SelectContent>
-          </Select>
           <Button onClick={() => setCreateOpen(true)}>{t("workbooks.create")}</Button>
         </div>
       </div>
 
-      <WorkbookList workbooks={workbooks} isLoading={isLoading} showEmptyHelp={!search} />
+      <WorkbookList workbooks={workbooks?.items} isLoading={isLoading} showEmptyHelp={!search} />
+
+      {workbooks && (
+        <ListPagination page={page} totalPages={workbooks.totalPages} onPageChange={setPage} />
+      )}
 
       <Dialog
         open={createOpen}

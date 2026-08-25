@@ -18,11 +18,17 @@ describe("WorkbookPage (list)", () => {
   });
 
   it("renders the workbook list once data resolves", async () => {
-    server.mount(contract.workbooks.listWorkbooks, {
-      body: [
-        createWorkbook({ id: "wb-1", name: "Photosynthesis" }),
-        createWorkbook({ id: "wb-2", name: "Respiration" }),
-      ],
+    server.mount(contract.workbooks.listWorkbooksPaginated, {
+      body: {
+        items: [
+          createWorkbook({ id: "wb-1", name: "Photosynthesis" }),
+          createWorkbook({ id: "wb-2", name: "Respiration" }),
+        ],
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+        totalCount: 2,
+      },
     });
 
     render(await WorkbookPage({ params: Promise.resolve({ locale: "en-US" }) }));

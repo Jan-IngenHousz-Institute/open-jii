@@ -85,11 +85,6 @@
     "faq": null
   },
   "experiments": {
-    "filterMy": null,
-    "filterMember": null,
-    "filterRelated": null,
-    "filterAll": null,
-    "filterStatusAll": null,
     "clearSearch": null,
     "title": "Experimenten",
     "archiveTitle": null,
@@ -1197,9 +1192,6 @@
     "notFoundDescription": "Het gevraagde protocol kon niet worden gevonden",
     "family": "Sensorfamilie",
     "onlyCreatorCanEdit": "Alleen de protocolmaker kan de instellingen benaderen",
-    "filterMy": "Mijn protocollen",
-    "filterAll": "Alle protocollen",
-    "filterProtocols": "Protocollen filteren",
     "clearSearch": "Zoekopdracht wissen",
     "searchProtocols": "Protocollen zoeken...",
     "descriptionPlaceholder": "Beschrijving toevoegen...",
@@ -1401,5 +1393,10 @@
     "pageOf": "van",
     "previous": "Vorige",
     "next": "Volgende"
+  },
+  "pagination": {
+    "previous": "Vorige",
+    "next": "Volgende",
+    "pageOf": "Pagina {{page}} van {{totalPages}}"
   }
 }

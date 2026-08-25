@@ -1,8 +1,10 @@
 "use client";
 
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
-import { useProtocols } from "@/hooks/protocol/useProtocols/useProtocols";
+import { useDebounce } from "@/hooks/useDebounce";
+import { orpc } from "@/lib/orpc";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, Microscope, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -37,9 +39,13 @@ export function ProtocolPicker({
   children,
 }: ProtocolPickerProps) {
   const [open, setOpen] = useState(false);
-  // Drive search from the hook's own state so the input actually filters the
-  // query (passing it as `initialSearch` is read only once).
-  const { protocols, search, setSearch } = useProtocols({ initialFilter: "all" });
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 300);
+  const { data: protocols } = useQuery(
+    orpc.protocols.listProtocols.queryOptions({
+      input: { search: debouncedSearch.trim() !== "" ? debouncedSearch : undefined },
+    }),
+  );
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");

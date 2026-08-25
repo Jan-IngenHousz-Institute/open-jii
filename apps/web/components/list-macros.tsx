@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import React from "react";
+import { ListPagination } from "~/components/list-pagination";
 import { MacroOverviewCards } from "~/components/macro-overview-cards";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
 
@@ -20,13 +21,13 @@ export function ListMacros() {
   const {
     data: macros,
     isLoading,
-    filter,
-    setFilter,
     search,
     setSearch,
     language,
     setLanguage,
-  } = useMacros({});
+    page,
+    setPage,
+  } = useMacros();
   const { t } = useTranslation("macro");
 
   return (
@@ -68,19 +69,14 @@ export function ListMacros() {
               <SelectItem value="javascript">JavaScript</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-full md:w-[160px]">
-              <SelectValue placeholder={t("macros.filterMacros")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="my">{t("macros.filterMy")}</SelectItem>
-              <SelectItem value="all">{t("macros.filterAll")}</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
-      <MacroOverviewCards macros={macros} isLoading={isLoading} />
+      <MacroOverviewCards macros={macros?.items} isLoading={isLoading} />
+
+      {macros && (
+        <ListPagination page={page} totalPages={macros.totalPages} onPageChange={setPage} />
+      )}
     </div>
   );
 }

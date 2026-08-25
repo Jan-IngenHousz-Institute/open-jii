@@ -95,7 +95,7 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
     data: experimentsData,
     isError: isExperimentsError,
     refetch: refetchExperiments,
-  } = useQuery(orpc.experiments.listExperiments.queryOptions({ input: { filter: "member" } }));
+  } = useQuery(orpc.experiments.listExperiments.queryOptions({ input: { scope: "related" } }));
   const selectable = useMemo(
     () => listItems(experimentsData).filter((experiment) => !boundIds.has(experiment.id)),
     [experimentsData, boundIds],

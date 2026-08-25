@@ -1,8 +1,10 @@
 "use client";
 
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
-import { useMacros } from "@/hooks/macro/useMacros/useMacros";
+import { useDebounce } from "@/hooks/useDebounce";
+import { orpc } from "@/lib/orpc";
 import { encodeBase64 } from "@/util/base64";
+import { useQuery } from "@tanstack/react-query";
 import { Code, Loader2, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -57,15 +59,17 @@ function getDefaultCode(language: MacroLanguage, username: string): string {
 export function MacroPicker({ onSelect, children }: MacroPickerProps) {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
-  // Drive search/language from the hook's own state so the inputs actually
-  // filter the query (passing them as `initial*` props is read only once).
-  const {
-    data: macros,
-    search,
-    setSearch,
-    language,
-    setLanguage,
-  } = useMacros({ initialFilter: "all" });
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 300);
+  const [language, setLanguage] = useState<MacroLanguage | undefined>(undefined);
+  const { data: macros } = useQuery(
+    orpc.macros.listMacros.queryOptions({
+      input: {
+        search: debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
+        language,
+      },
+    }),
+  );
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");

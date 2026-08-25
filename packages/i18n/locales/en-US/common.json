@@ -85,11 +85,6 @@
     "faq": "FAQ"
   },
   "experiments": {
-    "filterMy": "My Experiments",
-    "filterMember": "Member Experiments",
-    "filterRelated": "All Related Experiments",
-    "filterAll": "All Experiments",
-    "filterStatusAll": "All Statuses",
     "clearSearch": "Clear search",
     "title": "Experiments",
     "archiveTitle": "Experiments Archive",
@@ -1197,9 +1192,6 @@
     "notFoundDescription": "The requested protocol could not be found",
     "family": "Sensor Family",
     "onlyCreatorCanEdit": "Only the protocol creator can access settings",
-    "filterMy": "My Protocols",
-    "filterAll": "All Protocols",
-    "filterProtocols": "Filter protocols",
     "clearSearch": "Clear search",
     "searchProtocols": "Search protocols...",
     "descriptionPlaceholder": "Add a description...",
@@ -1401,5 +1393,10 @@
     "pageOf": "of",
     "previous": "Previous",
     "next": "Next"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{page}} of {{totalPages}}"
   }
 }

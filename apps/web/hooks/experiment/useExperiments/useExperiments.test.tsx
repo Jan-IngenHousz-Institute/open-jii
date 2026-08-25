@@ -1,7 +1,6 @@
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, act, waitFor } from "@/test/test-utils";
-import { useSearchParams, usePathname } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -12,26 +11,25 @@ vi.mock("../../useDebounce", () => ({
   useDebounce: vi.fn((v: string) => [v]),
 }));
 
-const mockSearchParams = {
-  get: vi.fn().mockReturnValue(null),
-  toString: vi.fn().mockReturnValue(""),
-};
+const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
+  items,
+  page,
+  pageSize: 20,
+  totalPages,
+  totalCount: items.length,
+});
 
 describe("useExperiments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useSearchParams).mockReturnValue(mockSearchParams as never);
-    vi.mocked(usePathname).mockReturnValue("/platform/experiments");
-    mockSearchParams.get.mockReturnValue(null);
-    mockSearchParams.toString.mockReturnValue("");
-    server.mount(contract.experiments.listExperiments, { body: [] });
+    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([]) });
   });
 
   it("initializes with defaults and fetches experiments", async () => {
     const { result } = renderHook(() => useExperiments({}));
-    expect(result.current.filter).toBe("member");
     expect(result.current.status).toBeUndefined();
     expect(result.current.search).toBe("");
+    expect(result.current.page).toBe(1);
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -41,19 +39,29 @@ describe("useExperiments", () => {
   it("initializes with custom values", () => {
     const { result } = renderHook(() =>
       useExperiments({
-        initialFilter: "all",
         initialStatus: "active",
         initialSearch: "test search",
       }),
     );
-    expect(result.current.filter).toBe("all");
     expect(result.current.status).toBe("active");
     expect(result.current.search).toBe("test search");
   });
 
-  it("returns experiment data from API", async () => {
-    server.mount(contract.experiments.listExperiments, {
-      body: [createExperiment({ id: "exp-1" }), createExperiment({ id: "exp-2" })],
+  it("returns experiment items from API", async () => {
+    server.mount(contract.experiments.listExperimentsPaginated, {
+      body: envelope([createExperiment({ id: "exp-1" }), createExperiment({ id: "exp-2" })]),
+    });
+
+    const { result } = renderHook(() => useExperiments({}));
+
+    await waitFor(() => {
+      expect(result.current.data?.items).toHaveLength(2);
+    });
+  });
+
+  it("sends the current page as a query parameter", async () => {
+    const spy = server.mount(contract.experiments.listExperimentsPaginated, {
+      body: envelope([], 1, 3),
     });
 
     const { result } = renderHook(() => useExperiments({}));
@@ -61,67 +69,81 @@ describe("useExperiments", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    expect(result.current.data).toHaveLength(2);
-  });
+    expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("1");
 
-  it("updates filter and URL", () => {
-    const { result, router } = renderHook(() => useExperiments({}));
+    act(() => result.current.setPage(2));
 
-    act(() => result.current.setFilter("all"));
-    expect(result.current.filter).toBe("all");
-    expect(router.push).toHaveBeenCalledWith("/platform/experiments?filter=all", {
-      scroll: false,
-    });
-
-    act(() => result.current.setFilter("member"));
-    expect(result.current.filter).toBe("member");
-    expect(router.push).toHaveBeenCalledWith("/platform/experiments", {
-      scroll: false,
+    await waitFor(() => {
+      expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("2");
     });
   });
 
-  it("updates search state", () => {
+  it("resets to page 1 when search changes", () => {
+    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([], 1, 3) });
+
     const { result } = renderHook(() => useExperiments({}));
-    act(() => result.current.setSearch("new search"));
-    expect(result.current.search).toBe("new search");
+
+    act(() => result.current.setPage(2));
+    expect(result.current.page).toBe(2);
+
+    act(() => result.current.setSearch("wheat"));
+    expect(result.current.page).toBe(1);
   });
 
-  it("reads filter from URL params", () => {
-    mockSearchParams.get.mockReturnValue("all");
+  it("resets to page 1 when status changes", () => {
+    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([], 1, 3) });
+
     const { result } = renderHook(() => useExperiments({}));
-    expect(result.current.filter).toBe("all");
+
+    act(() => result.current.setPage(3));
+    expect(result.current.page).toBe(3);
+
+    act(() => result.current.setStatus("active"));
+    expect(result.current.page).toBe(1);
   });
 
-  it("cleans up invalid URL filter", () => {
-    mockSearchParams.get.mockReturnValue("invalid");
-    mockSearchParams.toString.mockReturnValue("filter=invalid");
-    const { router } = renderHook(() => useExperiments({}));
-    expect(router.push).toHaveBeenCalledWith("/platform/experiments", {
-      scroll: false,
+  it("requests scope=related and status=archived for the archive view", async () => {
+    const spy = server.mount(contract.experiments.listExperimentsPaginated, {
+      body: envelope([]),
     });
+
+    const { result } = renderHook(() => useExperiments({ archived: true }));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    const lastCall = spy.calls[spy.calls.length - 1];
+    expect(lastCall.query.scope).toBe("related");
+    expect(lastCall.query.status).toBe("archived");
   });
 
-  it("does not clean up valid 'all' filter in URL", () => {
-    mockSearchParams.get.mockReturnValue("all");
-    mockSearchParams.toString.mockReturnValue("filter=all");
-    const { router } = renderHook(() => useExperiments({}));
-    expect(router.push).not.toHaveBeenCalled();
+  it("omits scope and sends no legacy filter param otherwise", async () => {
+    const spy = server.mount(contract.experiments.listExperimentsPaginated, {
+      body: envelope([]),
+    });
+
+    const { result } = renderHook(() => useExperiments({}));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    const lastCall = spy.calls[spy.calls.length - 1];
+    expect(lastCall.query.scope).toBeUndefined();
+    expect(lastCall.query.filter).toBeUndefined();
   });
 
   it("handles API error gracefully", async () => {
-    server.mount(contract.experiments.listExperiments, { status: 500 });
+    server.mount(contract.experiments.listExperimentsPaginated, { status: 500 });
 
-    // The hook should not throw even when the API returns 500.
-    // ts-rest puts non-2xx responses in the query error state,
-    // so `data` remains undefined — the important thing is no crash.
     const { result } = renderHook(() => useExperiments({}));
 
     await waitFor(() => {
       expect(result.current.data).toBeUndefined();
     });
 
-    // Hook still exposes filter / search controls (not broken)
-    expect(result.current.filter).toBe("member");
     expect(result.current.search).toBe("");
+    expect(result.current.page).toBe(1);
   });
 });

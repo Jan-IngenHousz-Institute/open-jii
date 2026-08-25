@@ -11,7 +11,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { GitFork, MoreHorizontal, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
 
 import type { WorkbookListItem } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
@@ -48,15 +47,7 @@ const TEXT_MUTED = "text-[#68737B]";
 export function WorkbookList({ workbooks, isLoading, showEmptyHelp = false }: WorkbookListProps) {
   const { t } = useTranslation("workbook");
 
-  const sorted = useMemo(
-    () =>
-      [...(workbooks ?? [])].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      ),
-    [workbooks],
-  );
-
-  if (!isLoading && sorted.length === 0) {
+  if (!isLoading && (workbooks ?? []).length === 0) {
     return (
       <div
         className={cn(
@@ -90,7 +81,9 @@ export function WorkbookList({ workbooks, isLoading, showEmptyHelp = false }: Wo
         <TableBody>
           {isLoading
             ? Array.from({ length: 4 }).map((_, index) => <SkeletonRow key={index} />)
-            : sorted.map((workbook) => <WorkbookTableRow key={workbook.id} workbook={workbook} />)}
+            : (workbooks ?? []).map((workbook) => (
+                <WorkbookTableRow key={workbook.id} workbook={workbook} />
+              ))}
         </TableBody>
       </Table>
     </div>
