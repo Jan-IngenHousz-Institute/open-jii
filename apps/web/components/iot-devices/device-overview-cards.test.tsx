@@ -28,19 +28,25 @@ describe("DeviceOverviewCards", () => {
     server.mount(contract.iot.getDeviceFirmwareHistory, { body: { versions: [] } });
     server.mount(contract.iot.listDeviceObservedExperiments, { body: { experiments: [] } });
     server.mount(contract.experiments.listExperiments, { body: [] });
+    server.mount(contract.iot.listIotFirmwareReleases, { body: { releases: [] } });
   });
 
-  it("links each card into the tab it summarises", async () => {
+  it("gives each card one distinct destination, none of them repeated", async () => {
     server.mount(contract.iot.listDeviceExperiments, { body: [boundExperiment] });
 
     render(<DeviceOverviewCards device={makeDevice()} />);
 
     expect(
-      await screen.findByRole("link", { name: "iot.devices.detail.cards.manageLink" }),
-    ).toHaveAttribute("href", `/en-US/platform/devices/${DEVICE_ID}/credentials`);
-    expect(
-      screen.getByRole("link", { name: "iot.devices.detail.cards.onboardLink" }),
+      await screen.findByRole("link", { name: "iot.devices.detail.cards.onboardLink" }),
     ).toHaveAttribute("href", `/en-US/platform/devices/${DEVICE_ID}/onboarding`);
+    expect(
+      screen.getByRole("link", { name: "iot.devices.detail.cards.monitoringLink" }),
+    ).toHaveAttribute("href", `/en-US/platform/devices/${DEVICE_ID}/monitoring`);
+    expect(
+      screen.getByRole("link", { name: "iot.devices.detail.cards.firmwareLink" }),
+    ).toHaveAttribute("href", `/en-US/platform/devices/${DEVICE_ID}/firmware`);
+    // Credential state lives in the page header and its own tab, not here.
+    expect(screen.queryByText("iot.devices.detail.cards.credentialsTitle")).not.toBeInTheDocument();
   });
 
   it("lists bound experiments as links under the count figure", async () => {
@@ -51,31 +57,6 @@ describe("DeviceOverviewCards", () => {
     const link = await screen.findByRole("link", { name: "Soil Health" });
     expect(link).toHaveAttribute("href", `/en-US/platform/experiments/${boundExperiment.id}`);
     expect(screen.getByText("iot.devices.detail.cards.onboarded")).toBeInTheDocument();
-  });
-
-  it("describes the credential state in plain words", async () => {
-    server.mount(contract.iot.listDeviceExperiments, { body: [] });
-
-    render(<DeviceOverviewCards device={makeDevice({ status: "revoked" })} />);
-
-    expect(
-      await screen.findByText("iot.devices.detail.cards.credentialHint.revoked"),
-    ).toBeInTheDocument();
-  });
-
-  it("hides the manage link from a viewer who cannot manage", async () => {
-    server.mount(contract.iot.listDeviceExperiments, { body: [] });
-    const device = makeDevice();
-    device.capabilities = { ...device.capabilities, canManage: false };
-
-    render(<DeviceOverviewCards device={device} />);
-
-    expect(
-      await screen.findByText("iot.devices.detail.cards.credentialsTitle"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "iot.devices.detail.cards.manageLink" }),
-    ).not.toBeInTheDocument();
   });
 
   it("says so when the device streams nowhere yet", async () => {
@@ -99,10 +80,15 @@ describe("DeviceOverviewCards", () => {
     expect(screen.getByRole("button", { name: "iot.onboarding.retry" })).toBeInTheDocument();
   });
 
-  it("gives a phone activity and observed experiments, and none of the certificate machinery", async () => {
+  it("gives a phone one card carrying uploads and recency together", async () => {
     server.mount(contract.iot.listDeviceExperiments, { body: [] });
     server.mount(contract.iot.getIotDeviceActivity, {
       body: { lastDataAt: "2026-08-24T09:00:00.000Z", pipelineUnavailable: false },
+    });
+    server.mount(contract.iot.listDeviceObservedExperiments, {
+      body: {
+        experiments: [{ experimentId: null, count: 3, lastAt: "2026-08-24T00:00:00.000Z" }],
+      },
     });
 
     render(<DeviceOverviewCards device={makeDevice({ deviceType: "mobile" })} />);
@@ -110,9 +96,12 @@ describe("DeviceOverviewCards", () => {
     expect(
       await screen.findByText("iot.devices.detail.cards.activityFigureCaption"),
     ).toBeInTheDocument();
-    expect(await screen.findByText("iot.devices.detail.cards.observedEmpty")).toBeInTheDocument();
-    expect(screen.queryByText("iot.devices.detail.cards.credentialsTitle")).not.toBeInTheDocument();
-    expect(screen.queryByText("iot.devices.detail.cards.firmwareTitle")).not.toBeInTheDocument();
+    expect(screen.getByText("iot.devices.detail.cards.observedHint")).toBeInTheDocument();
+    // One card, one destination: no separate Activity card doubling the link.
+    expect(screen.queryByText("iot.devices.detail.cards.activityTitle")).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: "iot.devices.detail.cards.monitoringLink" }),
+    ).toHaveLength(1);
   });
 
   it("reads a phone's experiments from the warehouse: named when the viewer is a member, opaque otherwise", async () => {

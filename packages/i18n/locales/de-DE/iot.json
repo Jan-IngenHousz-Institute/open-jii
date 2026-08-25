@@ -335,8 +335,6 @@
           "title": "Anmeldedaten"
         },
         "cards": {
-          "credentialsTitle": "Zugangsdaten",
-          "manageLink": "Verwalten",
           "experimentsTitle": "Experimente",
           "onboardLink": "Einrichten",
           "experimentsEmpty": "Sendet noch in kein Experiment. Richten Sie es ein, um zu starten.",

@@ -335,8 +335,6 @@
           "title": "Inloggegevens"
         },
         "cards": {
-          "credentialsTitle": "Certificaten",
-          "manageLink": "Beheren",
           "experimentsTitle": "Experimenten",
           "onboardLink": "Instellen",
           "experimentsEmpty": "Streamt nog naar geen enkel experiment. Stel het in om te starten.",

@@ -5,12 +5,17 @@ import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDevice
 import { useDeviceFirmwareHistory } from "@/hooks/iot/useDeviceFirmwareHistory/useDeviceFirmwareHistory";
 import { useDeviceObservedExperiments } from "@/hooks/iot/useDeviceObservedExperiments/useDeviceObservedExperiments";
 import { useIotDeviceActivity } from "@/hooks/iot/useIotDeviceActivity/useIotDeviceActivity";
+import { useIotFirmwareReleases } from "@/hooks/iot/useIotFirmwareReleases/useIotFirmwareReleases";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
 import { formatRelativeTime } from "@/util/date";
-import { hasManagedFirmware, latestReportedVersion } from "@/util/firmware-family";
+import {
+  hasManagedFirmware,
+  isSameFirmwareVersion,
+  latestReportedVersion,
+} from "@/util/firmware-family";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Cpu, FlaskConical, KeyRound } from "lucide-react";
+import { Activity, Cpu, FlaskConical } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -22,8 +27,6 @@ import { CardDescription } from "@repo/ui/components/card";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
-import { ConnectivityDot, useFormatLastSeen } from "./device-connectivity";
-import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 import { EntityLink } from "./monitoring/entity-link";
 import { resolveEntities } from "./monitoring/resolve-entity-label";
 import { OverviewCard } from "./overview-card";
@@ -41,7 +44,6 @@ interface DeviceOverviewCardsProps {
 export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
-  const formatLastSeen = useFormatLastSeen();
 
   const isMobileFamily = device.deviceType === "mobile";
   const isManagedFirmware = hasManagedFirmware(device.deviceType);
@@ -61,6 +63,13 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
   const { data: firmwareHistory, isLoading: isLoadingFirmware } = useDeviceFirmwareHistory(
     device.id,
     lookback,
+    { enabled: isManagedFirmware },
+  );
+
+  // The verdict needs the release line; a version alone is just a string.
+  // The guard call narrows inline where the derived boolean cannot.
+  const { data: releasesData } = useIotFirmwareReleases(
+    hasManagedFirmware(device.deviceType) ? device.deviceType : "ambyte",
     { enabled: isManagedFirmware },
   );
 
@@ -221,7 +230,13 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     }
     return (
       <div className="space-y-2">
-        {renderFigure(observed.length, t("iot.devices.detail.cards.observedHint"))}
+        <div className="grid grid-cols-2 gap-4">
+          {renderFigure(observed.length, t("iot.devices.detail.cards.observedHint"))}
+          {renderFigure(
+            lastDataRelative ?? "\u2014",
+            t("iot.devices.detail.cards.activityFigureCaption"),
+          )}
+        </div>
         <ul className="-mx-6 -mb-3 divide-y">{observed.map(renderObservedRow)}</ul>
       </div>
     );
@@ -242,23 +257,19 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     });
   }
 
-  function renderActivityBody() {
-    const lastData =
-      activity !== undefined && !activity.pipelineUnavailable && activity.lastDataAt !== null
-        ? formatRelativeTime(activity.lastDataAt, locale)
-        : null;
+  const lastDataRelative =
+    activity !== undefined && !activity.pipelineUnavailable && activity.lastDataAt !== null
+      ? formatRelativeTime(activity.lastDataAt, locale)
+      : null;
 
-    return (
-      <div>
-        {renderFigure(
-          lastData ?? "\u2014",
-          lastData === null ? activityLine() : t("iot.devices.detail.cards.activityFigureCaption"),
-        )}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <ConnectivityDot connectivity={device.connectivity} />
-          <CardDescription>{formatLastSeen(device.connectivity)}</CardDescription>
-        </div>
-      </div>
+  // Just its one unique fact: the header's dot and the About sidebar already
+  // carry connectivity and last-seen.
+  function renderActivityBody() {
+    return renderFigure(
+      lastDataRelative ?? "\u2014",
+      lastDataRelative === null
+        ? activityLine()
+        : t("iot.devices.detail.cards.activityFigureCaption"),
     );
   }
 
@@ -270,39 +281,29 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     if (reported === null) {
       return <CardDescription>{t("iot.devices.detail.cards.firmwareUnknown")}</CardDescription>;
     }
+    const latest = (releasesData?.releases ?? []).find((release) => release.latest) ?? null;
+    const isCurrent = latest !== null && isSameFirmwareVersion(reported, latest.version);
+
     return renderFigure(
-      <span className="font-mono">{reported}</span>,
+      <span className="inline-flex flex-wrap items-center gap-2">
+        <span className="font-mono">{reported}</span>
+        {latest !== null &&
+          (isCurrent ? (
+            <Badge className="border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              {t("iot.devices.firmware.upToDateShort")}
+            </Badge>
+          ) : (
+            <Badge className="border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              {t("iot.devices.firmware.updateAvailableShort")}
+            </Badge>
+          ))}
+      </span>,
       t("iot.devices.detail.cards.firmwareReportedCaption"),
     );
   }
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      {!isMobileFamily && (
-        <OverviewCard
-          icon={<KeyRound aria-hidden />}
-          wellClassName="bg-secondary text-primary"
-          title={t("iot.devices.detail.cards.credentialsTitle")}
-          link={
-            device.capabilities.canManage
-              ? { href: `${basePath}/credentials`, label: t("iot.devices.detail.cards.manageLink") }
-              : undefined
-          }
-        >
-          <div className="space-y-2">
-            <IotDeviceStatusBadge status={device.status} />
-            <CardDescription>
-              {t(`iot.devices.detail.cards.credentialHint.${device.status}`)}
-            </CardDescription>
-            {device.certificateId !== null && (
-              <p className="text-muted-foreground truncate font-mono text-xs">
-                {device.certificateId}
-              </p>
-            )}
-          </div>
-        </OverviewCard>
-      )}
-
       {!isMobileFamily && (
         <OverviewCard
           icon={<FlaskConical aria-hidden />}
@@ -331,17 +332,19 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
         </OverviewCard>
       )}
 
-      <OverviewCard
-        icon={<Activity aria-hidden />}
-        wellClassName="bg-primary/10 text-primary"
-        title={t("iot.devices.detail.cards.activityTitle")}
-        link={{
-          href: `${basePath}/monitoring`,
-          label: t("iot.devices.detail.cards.monitoringLink"),
-        }}
-      >
-        {renderActivityBody()}
-      </OverviewCard>
+      {!isMobileFamily && (
+        <OverviewCard
+          icon={<Activity aria-hidden />}
+          wellClassName="bg-primary/10 text-primary"
+          title={t("iot.devices.detail.cards.activityTitle")}
+          link={{
+            href: `${basePath}/monitoring`,
+            label: t("iot.devices.detail.cards.monitoringLink"),
+          }}
+        >
+          {renderActivityBody()}
+        </OverviewCard>
+      )}
 
       {isManagedFirmware && (
         <OverviewCard

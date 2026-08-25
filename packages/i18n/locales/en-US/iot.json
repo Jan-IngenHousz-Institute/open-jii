@@ -335,8 +335,6 @@
           "title": "Credentials"
         },
         "cards": {
-          "credentialsTitle": "Credentials",
-          "manageLink": "Manage",
           "experimentsTitle": "Experiments",
           "onboardLink": "Onboard",
           "experimentsEmpty": "Not streaming into any experiment yet. Onboard it to start.",

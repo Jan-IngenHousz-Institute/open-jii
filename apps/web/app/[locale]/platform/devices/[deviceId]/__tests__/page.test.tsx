@@ -54,9 +54,8 @@ describe("DeviceOverviewPage", () => {
     renderPage();
 
     expect(
-      await screen.findByText("iot.devices.detail.cards.credentialsTitle"),
+      await screen.findByText("iot.devices.detail.cards.experimentsTitle"),
     ).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.detail.cards.experimentsTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.detail.cards.activityTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.detail.about.title")).toBeInTheDocument();
     expect(screen.getByText("SN-42")).toBeInTheDocument();
