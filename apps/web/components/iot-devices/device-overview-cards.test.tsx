@@ -50,7 +50,7 @@ describe("DeviceOverviewCards", () => {
 
     const link = await screen.findByRole("link", { name: "Soil Health" });
     expect(link).toHaveAttribute("href", `/en-US/platform/experiments/${boundExperiment.id}`);
-    expect(screen.getByText("iot.devices.detail.cards.streaming")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.detail.cards.onboarded")).toBeInTheDocument();
   });
 
   it("describes the credential state in plain words", async () => {

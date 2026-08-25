@@ -339,7 +339,6 @@
           "manageLink": "Manage",
           "experimentsTitle": "Experiments",
           "onboardLink": "Onboard",
-          "streaming": "Streaming",
           "experimentsEmpty": "Not streaming into any experiment yet. Onboard it to start.",
           "experimentsError": "Could not load this device's experiments.",
           "credentialHint": {
@@ -359,7 +358,8 @@
           "observedHint": "What this phone uploaded to in the last 30 days, as the data reports it.",
           "observedEmpty": "No uploads in the last 30 days.",
           "observedUnattributed": "Unattributed uploads",
-          "firmwareReportedCaption": "Reported by the device in the last 30 days."
+          "firmwareReportedCaption": "Reported by the device in the last 30 days.",
+          "onboarded": "Onboarded"
         },
         "overview": {
           "title": "Overview",

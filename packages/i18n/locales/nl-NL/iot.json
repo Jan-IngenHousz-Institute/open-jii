@@ -339,7 +339,6 @@
           "manageLink": "Beheren",
           "experimentsTitle": "Experimenten",
           "onboardLink": "Instellen",
-          "streaming": "Streamt",
           "experimentsEmpty": "Streamt nog naar geen enkel experiment. Stel het in om te starten.",
           "experimentsError": "De experimenten van dit apparaat konden niet worden geladen.",
           "credentialHint": {
@@ -359,7 +358,8 @@
           "observedHint": "Waar deze telefoon de afgelopen 30 dagen naartoe heeft geüpload, zoals de data het aangeeft.",
           "observedEmpty": "Geen uploads in de afgelopen 30 dagen.",
           "observedUnattributed": "Niet-toegewezen uploads",
-          "firmwareReportedCaption": "In de afgelopen 30 dagen door het apparaat gemeld."
+          "firmwareReportedCaption": "In de afgelopen 30 dagen door het apparaat gemeld.",
+          "onboarded": "Ingesteld"
         },
         "overview": {
           "title": "Overzicht",

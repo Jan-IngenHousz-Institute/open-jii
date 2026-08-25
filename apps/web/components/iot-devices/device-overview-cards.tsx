@@ -101,7 +101,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
           {experiment.name}
         </Link>
         <Badge variant="secondary" className="shrink-0">
-          {t("iot.devices.detail.cards.streaming")}
+          {t("iot.devices.detail.cards.onboarded")}
         </Badge>
       </li>
     );
