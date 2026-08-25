@@ -8,7 +8,7 @@ import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-valida
 import { protocolContract } from "@repo/api/domains/protocol/protocol.contract";
 import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
-import { resolveListScope } from "@repo/api/shared/listing";
+import { DEFAULT_PAGE_SIZE, resolveListScope } from "@repo/api/shared/listing";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
@@ -121,38 +121,34 @@ export class ProtocolController {
     private readonly authz: AuthorizationService,
   ) {}
 
+  // One listing, two shapes: `page` presence is the only thing that switches it from a
+  // bare array to the paged envelope, so a caller that sends no page is untouched.
   @Implement(protocolContract.listProtocols)
   listProtocols(@Session() session: UserSession) {
     return implement(protocolContract.listProtocols).handler(async ({ input }) => {
-      const result = await this.listProtocolsUseCase.execute(
-        input.search,
-        resolveListScope(input),
-        session.user.id,
-      );
+      const scope = resolveListScope(input);
+
+      if (input.page !== undefined) {
+        const pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
+        const paged = await this.listProtocolsUseCase.executePaginated(
+          input.page,
+          pageSize,
+          input.search,
+          scope,
+          session.user.id,
+        );
+        if (paged.isSuccess()) {
+          return toPage(paged.value, input.page, pageSize, formatDatesList);
+        }
+        return throwOrpcFailure(paged, this.logger);
+      }
+
+      const result = await this.listProtocolsUseCase.execute(input.search, scope, session.user.id);
 
       if (result.isSuccess()) {
         // The list contract deliberately treats code as unknown so large protocol
         // documents are not recursively validated on the synchronous request path.
         return formatDatesList(result.value);
-      }
-
-      return throwOrpcFailure(result, this.logger);
-    });
-  }
-
-  @Implement(protocolContract.listProtocolsPaginated)
-  listProtocolsPaginated(@Session() session: UserSession) {
-    return implement(protocolContract.listProtocolsPaginated).handler(async ({ input }) => {
-      const result = await this.listProtocolsUseCase.executePaginated(
-        input.page,
-        input.pageSize,
-        input.search,
-        resolveListScope(input),
-        session.user.id,
-      );
-
-      if (result.isSuccess()) {
-        return toPage(result.value, input.page, input.pageSize, formatDatesList);
       }
 
       return throwOrpcFailure(result, this.logger);

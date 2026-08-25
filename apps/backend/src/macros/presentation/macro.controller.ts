@@ -5,7 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { macroContract } from "@repo/api/domains/macro/macro.contract";
-import { resolveListScope } from "@repo/api/shared/listing";
+import { DEFAULT_PAGE_SIZE, resolveListScope } from "@repo/api/shared/listing";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
@@ -65,35 +65,30 @@ export class MacroController {
     });
   }
 
+  // One listing, two shapes: `page` presence is the only thing that switches it from a
+  // bare array to the paged envelope, so a caller that sends no page is untouched.
   @Implement(macroContract.listMacros)
   listMacros(@Session() session: UserSession) {
     return implement(macroContract.listMacros).handler(async ({ input }) => {
-      const result = await this.listMacrosUseCase.execute({
+      const filter = {
         search: input.search,
         language: input.language,
         scope: resolveListScope(input),
         userId: session.user.id,
-      });
+      };
+
+      if (input.page !== undefined) {
+        const pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
+        const paged = await this.listMacrosUseCase.executePaginated(input.page, pageSize, filter);
+        if (paged.isSuccess()) {
+          return toPage(paged.value, input.page, pageSize, formatDatesList);
+        }
+        return throwOrpcFailure(paged, this.logger);
+      }
+
+      const result = await this.listMacrosUseCase.execute(filter);
       if (result.isSuccess()) {
         return formatDatesList(result.value);
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
-  }
-
-  // Declared above `getMacro`: routes resolve in declaration order, so the literal
-  // path has to win before `{id}` claims it and rejects "paginated" as a uuid.
-  @Implement(macroContract.listMacrosPaginated)
-  listMacrosPaginated(@Session() session: UserSession) {
-    return implement(macroContract.listMacrosPaginated).handler(async ({ input }) => {
-      const result = await this.listMacrosUseCase.executePaginated(input.page, input.pageSize, {
-        search: input.search,
-        language: input.language,
-        scope: resolveListScope(input),
-        userId: session.user.id,
-      });
-      if (result.isSuccess()) {
-        return toPage(result.value, input.page, input.pageSize, formatDatesList);
       }
       return throwOrpcFailure(result, this.logger);
     });

@@ -144,14 +144,13 @@ describe("ProtocolController - read and update endpoints", () => {
     expect(response.body.some((p) => p.id === protocol.id)).toBe(true);
   });
 
-  // Guards the route-ordering trap: the literal path must resolve before `{id}`.
-  it("listProtocolsPaginated returns the page envelope, not the detail route", async () => {
+  it("listProtocols returns the page envelope when a page is requested", async () => {
     const protocol = await testApp.createProtocol({
       name: "Paged Protocol",
       createdBy: testUserId,
     });
 
-    const path = testApp.resolveOrpcPath(contract.protocols.listProtocolsPaginated);
+    const path = testApp.resolveOrpcPath(contract.protocols.listProtocols);
     const response: SuperTestResponse<{ items: { id: string }[]; totalCount: number }> =
       await testApp
         .get(path)
@@ -163,13 +162,14 @@ describe("ProtocolController - read and update endpoints", () => {
     expect(response.body.totalCount).toBeGreaterThan(0);
   });
 
-  it("listProtocolsPaginated returns 500 when the paginated use case fails", async () => {
+  it("listProtocols paginated returns 500 when the paginated use case fails", async () => {
     vi.spyOn(testApp.module.get(ListProtocolsUseCase), "executePaginated").mockResolvedValue(
       failure(AppError.internal("Database error")),
     );
 
     await testApp
-      .get(testApp.resolveOrpcPath(contract.protocols.listProtocolsPaginated))
+      .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))
+      .query({ page: 1 })
       .withAuth(testUserId)
       .expect(StatusCodes.INTERNAL_SERVER_ERROR);
   });

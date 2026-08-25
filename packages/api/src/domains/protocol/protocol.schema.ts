@@ -77,16 +77,19 @@ export const zProtocolDetail = zProtocol.extend({
 });
 
 // Query parameters
-export const zProtocolFilterQuery = z.object({
-  search: z.string().optional(),
-  /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
-  filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
-  scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
-});
-
-export const zProtocolPaginatedQuery = zProtocolFilterQuery.merge(zPaginationQuery);
+export const zProtocolFilterQuery = z
+  .object({
+    search: z.string().optional(),
+    /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
+    filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
+    scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
+  })
+  .merge(zPaginationQuery);
 
 export const zProtocolPaginatedList = zPaginated(zProtocol.extend({ code: z.unknown() }));
+
+/** Array when the caller sent no `page`, envelope when they did. */
+export const zProtocolListResponse = z.union([zProtocolList, zProtocolPaginatedList]);
 
 // Path parameters
 export const zProtocolIdPathParam = z.object({
@@ -169,8 +172,8 @@ export type ProtocolList = z.infer<typeof zProtocolList>;
 export type ProtocolListItem = ProtocolList[number];
 export type ProtocolFilterQuery = z.infer<typeof zProtocolFilterQuery>;
 export type ProtocolFilter = ProtocolFilterQuery["search"];
-export type ProtocolPaginatedQuery = z.infer<typeof zProtocolPaginatedQuery>;
 export type ProtocolPaginatedList = z.infer<typeof zProtocolPaginatedList>;
+export type ProtocolListResponse = z.infer<typeof zProtocolListResponse>;
 export type ProtocolIdPathParam = z.infer<typeof zProtocolIdPathParam>;
 export type CreateProtocolRequestBody = z.infer<typeof zCreateProtocolRequestBody>;
 export type UpdateProtocolRequestBody = z.infer<typeof zUpdateProtocolRequestBody>;

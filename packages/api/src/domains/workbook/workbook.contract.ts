@@ -14,20 +14,14 @@ import {
   zWorkbookDetail,
   zWorkbookFilterQuery,
   zWorkbookIdPathParam,
-  zWorkbookList,
-  zWorkbookPaginatedList,
-  zWorkbookPaginatedQuery,
+  zWorkbookListResponse,
 } from "./workbook.schema";
 
 export const workbookContract = {
   listWorkbooks: oc
     .route({ method: "GET", path: "/api/v1/workbooks", successStatus: 200 })
     .input(zWorkbookFilterQuery)
-    .output(zWorkbookList),
-  listWorkbooksPaginated: oc
-    .route({ method: "GET", path: "/api/v1/workbooks/paginated", successStatus: 200 })
-    .input(zWorkbookPaginatedQuery)
-    .output(zWorkbookPaginatedList),
+    .output(zWorkbookListResponse),
   getWorkbook: oc
     .route({ method: "GET", path: "/api/v1/workbooks/{id}", successStatus: 200 })
     .input(zWorkbookIdPathParam)

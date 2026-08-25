@@ -18,6 +18,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 
 import type { IotDeviceGroupMemberHealth } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
@@ -228,7 +229,7 @@ export function GroupMonitoringContent() {
           >
             <GroupDataByExperimentPanel
               dataByExperiment={monitoring.dataByExperiment}
-              visibleExperiments={visibleExperiments ?? []}
+              visibleExperiments={listItems(visibleExperiments)}
               locale={locale}
             />
           </PanelCard>

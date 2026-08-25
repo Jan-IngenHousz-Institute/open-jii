@@ -176,14 +176,13 @@ describe("ExperimentController", () => {
     });
   });
 
-  describe("listExperimentsPaginated", () => {
-    // Guards the route-ordering trap: the literal path must resolve before `{id}`.
-    it("returns the page envelope rather than falling through to the detail route", async () => {
+  describe("listExperiments paginated", () => {
+    it("returns the page envelope when a page is requested", async () => {
       await testApp.createExperiment({ name: "Paged one", userId: testUserId });
 
       const response: SuperTestResponse<{ items: { id: string }[]; totalCount: number }> =
         await testApp
-          .get(testApp.resolveOrpcPath(contract.experiments.listExperimentsPaginated))
+          .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
           .query({ page: 1, pageSize: 10 })
           .withAuth(testUserId)
           .expect(StatusCodes.OK);
@@ -198,7 +197,8 @@ describe("ExperimentController", () => {
       );
 
       await testApp
-        .get(testApp.resolveOrpcPath(contract.experiments.listExperimentsPaginated))
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
+        .query({ page: 1 })
         .withAuth(testUserId)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });

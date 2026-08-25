@@ -254,11 +254,10 @@ describe("MacroController", () => {
     });
   });
 
-  describe("listMacrosPaginated", () => {
-    // Guards the route-ordering trap: the literal path must resolve before `{id}`.
-    it("returns the page envelope rather than falling through to the detail route", async () => {
+  describe("listMacros paginated", () => {
+    it("returns the page envelope when a page is requested", async () => {
       const response = await testApp
-        .get(testApp.resolveOrpcPath(contract.macros.listMacrosPaginated))
+        .get(testApp.resolveOrpcPath(contract.macros.listMacros))
         .query({ page: 1, pageSize: 10 })
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -272,7 +271,8 @@ describe("MacroController", () => {
       );
 
       await testApp
-        .get(testApp.resolveOrpcPath(contract.macros.listMacrosPaginated))
+        .get(testApp.resolveOrpcPath(contract.macros.listMacros))
+        .query({ page: 1 })
         .withAuth(testUserId)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });

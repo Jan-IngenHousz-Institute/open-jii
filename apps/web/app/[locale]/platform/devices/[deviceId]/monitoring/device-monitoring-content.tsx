@@ -27,6 +27,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
@@ -160,8 +161,8 @@ export default function DeviceMonitoringPage() {
             <ThroughputPanel
               monitoring={monitoring}
               boundExperiments={boundExperiments ?? []}
-              visibleExperiments={visibleExperiments ?? []}
-              visibleProtocols={visibleProtocols ?? []}
+              visibleExperiments={listItems(visibleExperiments)}
+              visibleProtocols={listItems(visibleProtocols)}
               locale={locale}
               from={selection.range.from}
               to={selection.range.to}
@@ -175,7 +176,7 @@ export default function DeviceMonitoringPage() {
             <DataByExperiment
               monitoring={monitoring}
               boundExperiments={boundExperiments ?? []}
-              visibleExperiments={visibleExperiments ?? []}
+              visibleExperiments={listItems(visibleExperiments)}
               locale={locale}
             />
           </PanelCard>
@@ -183,9 +184,9 @@ export default function DeviceMonitoringPage() {
           <PanelCard title={t("iot.devices.monitoring.payloadTitle")}>
             <PayloadProfile
               payload={monitoring.payload}
-              visibleProtocols={visibleProtocols ?? []}
-              visibleWorkbooks={visibleWorkbooks ?? []}
-              visibleMacros={visibleMacros ?? []}
+              visibleProtocols={listItems(visibleProtocols)}
+              visibleWorkbooks={listItems(visibleWorkbooks)}
+              visibleMacros={listItems(visibleMacros)}
               locale={locale}
             />
           </PanelCard>

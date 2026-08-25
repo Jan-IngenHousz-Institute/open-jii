@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import type { IotDeviceDetail, ObservedExperiment } from "@repo/api/domains/iot/iot.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -91,7 +92,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
   );
   const observedEntities = resolveEntities(
     observed.flatMap((entry) => (entry.experimentId === null ? [] : [entry.experimentId])),
-    (visibleExperiments ?? []).map((experiment) => ({
+    listItems(visibleExperiments).map((experiment) => ({
       id: experiment.id,
       name: experiment.name,
     })),

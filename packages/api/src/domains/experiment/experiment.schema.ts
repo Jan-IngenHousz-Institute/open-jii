@@ -422,17 +422,20 @@ export const embargoSchema = zUpdateExperimentBody
     validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
   });
 
-export const zExperimentFilterQuery = z.object({
-  /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
-  filter: z.enum(["member"]).optional().describe("Deprecated alias for scope=related"),
-  scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
-  status: zExperimentStatus.optional().describe("Filter experiments by their status"),
-  search: z.string().optional().describe("Search term for experiment name"),
-});
-
-export const zExperimentPaginatedQuery = zExperimentFilterQuery.merge(zPaginationQuery);
+export const zExperimentFilterQuery = z
+  .object({
+    /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
+    filter: z.enum(["member"]).optional().describe("Deprecated alias for scope=related"),
+    scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
+    status: zExperimentStatus.optional().describe("Filter experiments by their status"),
+    search: z.string().optional().describe("Search term for experiment name"),
+  })
+  .merge(zPaginationQuery);
 
 export const zExperimentPaginatedList = zPaginated(zExperiment);
+
+/** Array when the caller sent no `page`, envelope when they did. */
+export const zExperimentListResponse = z.union([zExperimentList, zExperimentPaginatedList]);
 
 export const zExperimentIdPathParam = z.object({
   id: z.string().uuid().describe("ID of the experiment"),
@@ -445,8 +448,8 @@ export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
-export type ExperimentPaginatedQuery = z.infer<typeof zExperimentPaginatedQuery>;
 export type ExperimentPaginatedList = z.infer<typeof zExperimentPaginatedList>;
+export type ExperimentListResponse = z.infer<typeof zExperimentListResponse>;
 export type ExperimentAccess = z.infer<typeof zExperimentAccess>;
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentIdPathParam = z.infer<typeof zExperimentIdPathParam>;

@@ -200,14 +200,14 @@ describe("WorkbookController", () => {
     });
   });
 
-  describe("listWorkbooksPaginated", () => {
+  describe("listWorkbooks paginated", () => {
     it("returns the page envelope with totals", async () => {
       for (const name of ["Alpha", "Bravo", "Charlie"]) {
         await testApp.createWorkbook({ name, createdBy: testUserId, visibility: "public" });
       }
 
       const response: SuperTestResponse<WorkbookPage> = await testApp
-        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooksPaginated))
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
         .query({ page: 1, pageSize: 2 })
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -219,7 +219,23 @@ describe("WorkbookController", () => {
       expect(response.body.totalCount).toBe(3);
     });
 
-    it("defaults to the first page when no page params are sent", async () => {
+    it("returns a bare array when no page is sent, not a defaulted envelope", async () => {
+      await testApp.createWorkbook({
+        name: "Solo",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+
+      const response: SuperTestResponse<unknown> = await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(1);
+    });
+
+    it("defaults pageSize once a page is requested without one", async () => {
       await testApp.createWorkbook({
         name: "Solo",
         createdBy: testUserId,
@@ -227,7 +243,8 @@ describe("WorkbookController", () => {
       });
 
       const response: SuperTestResponse<WorkbookPage> = await testApp
-        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooksPaginated))
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
+        .query({ page: 1 })
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
@@ -244,7 +261,7 @@ describe("WorkbookController", () => {
       });
 
       const response: SuperTestResponse<WorkbookPage> = await testApp
-        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooksPaginated))
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
         .query({ page: 5, pageSize: 10 })
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
@@ -256,7 +273,7 @@ describe("WorkbookController", () => {
 
     it("rejects a page below one", async () => {
       await testApp
-        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooksPaginated))
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
         .query({ page: 0 })
         .withAuth(testUserId)
         .expect(StatusCodes.BAD_REQUEST);
@@ -268,7 +285,8 @@ describe("WorkbookController", () => {
       );
 
       await testApp
-        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooksPaginated))
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
+        .query({ page: 1 })
         .withAuth(testUserId)
         .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });

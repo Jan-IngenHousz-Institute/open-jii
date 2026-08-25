@@ -5,6 +5,7 @@ import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-
 import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow-nodes";
 import { orpc } from "~/shared/api/orpc";
 
+import { listItems } from "@repo/api/shared/listing";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 // Loads an experiment's workbook flow into the store: fetch the workbook version
@@ -31,7 +32,7 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
     }),
   );
 
-  const selected = experimentsData?.find((e) => e.id === experimentId);
+  const selected = listItems(experimentsData).find((e) => e.id === experimentId);
   const workbookId = selected?.workbookId ?? undefined;
   const workbookVersionId = selected?.workbookVersionId ?? undefined;
   const hasWorkbook = !!workbookId && !!workbookVersionId;

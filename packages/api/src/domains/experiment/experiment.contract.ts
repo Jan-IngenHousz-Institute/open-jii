@@ -8,9 +8,7 @@ import {
   zExperimentAccess,
   zExperimentFilterQuery,
   zExperimentIdPathParam,
-  zExperimentList,
-  zExperimentPaginatedList,
-  zExperimentPaginatedQuery,
+  zExperimentListResponse,
   zUpdateExperimentBody,
 } from "./experiment.schema";
 
@@ -22,11 +20,7 @@ export const experimentContract = {
   listExperiments: oc
     .route({ method: "GET", path: "/api/v1/experiments", successStatus: 200 })
     .input(zExperimentFilterQuery)
-    .output(zExperimentList),
-  listExperimentsPaginated: oc
-    .route({ method: "GET", path: "/api/v1/experiments/paginated", successStatus: 200 })
-    .input(zExperimentPaginatedQuery)
-    .output(zExperimentPaginatedList),
+    .output(zExperimentListResponse),
   getExperiment: oc
     .route({ method: "GET", path: "/api/v1/experiments/{id}", successStatus: 200 })
     .input(zExperimentIdPathParam)

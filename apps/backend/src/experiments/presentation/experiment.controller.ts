@@ -5,7 +5,7 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { experimentContract } from "@repo/api/domains/experiment/experiment.contract";
-import { resolveListScope } from "@repo/api/shared/listing";
+import { DEFAULT_PAGE_SIZE, resolveListScope } from "@repo/api/shared/listing";
 
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
@@ -62,35 +62,37 @@ export class ExperimentController {
     });
   }
 
+  // One listing, two shapes: `page` presence is the only thing that switches it from a
+  // bare array to the paged envelope, so a caller that sends no page is untouched.
   @Implement(experimentContract.listExperiments)
   listExperiments(@Session() session: UserSession) {
     return implement(experimentContract.listExperiments).handler(async ({ input }) => {
+      const scope = resolveListScope(input);
+
+      if (input.page !== undefined) {
+        const pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
+        const paged = await this.listExperimentsUseCase.executePaginated(
+          session.user.id,
+          input.page,
+          pageSize,
+          scope,
+          input.status,
+          input.search,
+        );
+        if (paged.isSuccess()) {
+          return toPage(paged.value, input.page, pageSize, formatDatesList);
+        }
+        return throwOrpcFailure(paged, this.logger);
+      }
+
       const result = await this.listExperimentsUseCase.execute(
         session.user.id,
-        resolveListScope(input),
+        scope,
         input.status,
         input.search,
       );
       if (result.isSuccess()) {
         return formatDatesList(result.value);
-      }
-      return throwOrpcFailure(result, this.logger);
-    });
-  }
-
-  @Implement(experimentContract.listExperimentsPaginated)
-  listExperimentsPaginated(@Session() session: UserSession) {
-    return implement(experimentContract.listExperimentsPaginated).handler(async ({ input }) => {
-      const result = await this.listExperimentsUseCase.executePaginated(
-        session.user.id,
-        input.page,
-        input.pageSize,
-        resolveListScope(input),
-        input.status,
-        input.search,
-      );
-      if (result.isSuccess()) {
-        return toPage(result.value, input.page, input.pageSize, formatDatesList);
       }
       return throwOrpcFailure(result, this.logger);
     });

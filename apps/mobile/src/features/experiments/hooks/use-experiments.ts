@@ -3,6 +3,8 @@ import { orpc } from "~/shared/api/orpc";
 import { ellipsize } from "~/shared/utils/ellipsize";
 import { extractTextFromHTML } from "~/shared/utils/extract-text-from-html";
 
+import { listItems } from "@repo/api/shared/listing";
+
 export function useExperiments() {
   const { data, isLoading, error, refetch, isRefetching } = useQuery(
     orpc.experiments.listExperiments.queryOptions({
@@ -20,15 +22,14 @@ export function useExperiments() {
     }),
   );
 
-  const options =
-    data?.map((item) => ({
-      value: item.id,
-      label: item.name,
-      description: item.description
-        ? ellipsize(extractTextFromHTML(item.description), 100)
-        : undefined,
-      fullDescription: item.description,
-    })) ?? [];
+  const options = listItems(data).map((item) => ({
+    value: item.id,
+    label: item.name,
+    description: item.description
+      ? ellipsize(extractTextFromHTML(item.description), 100)
+      : undefined,
+    fullDescription: item.description,
+  }));
 
   return { experiments: options, isLoading, error, refetch, isRefetching };
 }
