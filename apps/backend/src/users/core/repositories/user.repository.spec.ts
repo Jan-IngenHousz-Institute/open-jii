@@ -263,24 +263,25 @@ describe("UserRepository", () => {
 
     it("should search users with partial name match", async () => {
       // Arrange
+      const firstName = `Alice${faker.string.alphanumeric(8)}`;
       await testApp.createTestUser({
-        name: "Alice Smith",
-        email: "alice@example.com",
+        name: `${firstName} Smith`,
+        email: `${firstName.toLowerCase()}@example.com`,
       });
       await testApp.createTestUser({
-        name: "Alice Johnson",
-        email: "alice.johnson@example.com",
+        name: `${firstName} Johnson`,
+        email: `${firstName.toLowerCase()}.johnson@example.com`,
       });
 
       // Act
-      const result = await repository.search({ query: "Alice" });
+      const result = await repository.search({ query: firstName });
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       const foundUsers = result.value;
       expect(foundUsers.length).toBe(2);
-      expect(foundUsers.every((u) => u.firstName.includes("Alice"))).toBe(true);
+      expect(foundUsers.every((u) => u.firstName === firstName)).toBe(true);
     });
 
     it("should apply limit and offset for pagination", async () => {
