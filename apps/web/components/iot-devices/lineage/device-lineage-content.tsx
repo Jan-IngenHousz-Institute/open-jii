@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
@@ -112,10 +113,10 @@ export default function DeviceLineagePage() {
       monitoring,
       lastDataAt: activity?.lastDataAt ?? null,
       boundExperiments: boundExperiments ?? [],
-      visibleExperiments: visibleExperiments ?? [],
-      visibleProtocols: visibleProtocols ?? [],
-      visibleWorkbooks: visibleWorkbooks ?? [],
-      visibleMacros: visibleMacros ?? [],
+      visibleExperiments: listItems(visibleExperiments),
+      visibleProtocols: listItems(visibleProtocols),
+      visibleWorkbooks: listItems(visibleWorkbooks),
+      visibleMacros: listItems(visibleMacros),
       locale,
       labels: {
         privateExperiment: (index) => t("iot.devices.monitoring.privateExperiment", { index }),

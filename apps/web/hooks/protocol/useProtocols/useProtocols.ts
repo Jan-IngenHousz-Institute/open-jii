@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
 
+import { listItems } from "@repo/api/shared/listing";
+
 import { useDebounce } from "../../useDebounce";
 
 export type ProtocolFilter = "my" | "all";
@@ -58,17 +60,21 @@ export const useProtocols = ({
     }),
   );
 
+  // Narrowed to the array shape: this hook sends no `page`, so the response is
+  // always the bare list. Deletable once the caller migrates to the envelope.
+  const items = data ? listItems(data) : undefined;
+
   // Auto-switch to "all" if user has no protocols of their own on initial load
   const hasAutoSwitched = useRef(false);
   useEffect(() => {
-    if (!hasAutoSwitched.current && filter === "my" && data?.length === 0 && !debouncedSearch) {
+    if (!hasAutoSwitched.current && filter === "my" && items?.length === 0 && !debouncedSearch) {
       hasAutoSwitched.current = true;
       setFilter("all");
     }
-  }, [filter, data, setFilter, debouncedSearch]);
+  }, [filter, items, setFilter, debouncedSearch]);
 
   return {
-    protocols: data,
+    protocols: items,
     filter,
     setFilter,
     search,

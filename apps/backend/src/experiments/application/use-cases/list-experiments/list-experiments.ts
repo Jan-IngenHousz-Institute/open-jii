@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { ExperimentFilter, ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import type { ResourceScope } from "@repo/api/shared/listing";
 
 import { AppError, Result } from "../../../../common/utils/fp-utils";
 import { ExperimentDto } from "../../../core/models/experiment.model";
@@ -14,7 +15,7 @@ export class ListExperimentsUseCase {
 
   async execute(
     userId: string,
-    filter?: ExperimentFilter,
+    scope?: ResourceScope,
     status?: ExperimentStatus,
     search?: string,
   ): Promise<Result<ExperimentDto[]>> {
@@ -22,12 +23,12 @@ export class ListExperimentsUseCase {
       msg: "Listing experiments",
       operation: "list",
       userId,
-      filter,
+      scope,
       status,
       search,
     });
 
-    const result = await this.experimentRepository.findAll(userId, filter, status, search);
+    const result = await this.experimentRepository.findAll(userId, scope, status, search);
 
     result.fold(
       (experiments: ExperimentDto[]) => {
@@ -50,5 +51,27 @@ export class ListExperimentsUseCase {
     );
 
     return result;
+  }
+
+  async executePaginated(
+    userId: string,
+    page: number,
+    pageSize: number,
+    scope?: ResourceScope,
+    status?: ExperimentStatus,
+    search?: string,
+  ): Promise<Result<{ items: ExperimentDto[]; totalCount: number }>> {
+    this.logger.log({
+      msg: "Listing experiments",
+      operation: "listPaginated",
+      userId,
+      page,
+      pageSize,
+      scope,
+      status,
+      search,
+    });
+
+    return this.experimentRepository.findPage(userId, page, pageSize, scope, status, search);
   }
 }

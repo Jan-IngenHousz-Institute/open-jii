@@ -22,6 +22,7 @@ import type {
   IotDeviceGroupOnboardRow,
 } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import type { DeviceAnswer } from "@repo/api/domains/iot/iot.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -62,7 +63,7 @@ export function GroupOnboardingContent() {
   const { data: experimentsData } = useQuery(
     orpc.experiments.listExperiments.queryOptions({ input: { filter: "member" } }),
   );
-  const experiments = experimentsData ?? [];
+  const experiments = listItems(experimentsData);
 
   const [experimentIds, setExperimentIds] = useState<string[]>([]);
   const [deselectedIds, setDeselectedIds] = useState<Set<string>>(new Set());

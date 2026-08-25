@@ -10,9 +10,11 @@ import { eq, experiments } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
+import { AppError, failure } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import { ListExperimentsUseCase } from "../application/use-cases/list-experiments/list-experiments";
 
 describe("ExperimentController", () => {
   const testApp = TestHarness.App;
@@ -171,6 +173,34 @@ describe("ExperimentController", () => {
           embargoUntil: futureDate.toISOString(),
         })
         .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
+  describe("listExperiments paginated", () => {
+    it("returns the page envelope when a page is requested", async () => {
+      await testApp.createExperiment({ name: "Paged one", userId: testUserId });
+
+      const response: SuperTestResponse<{ items: { id: string }[]; totalCount: number }> =
+        await testApp
+          .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
+          .query({ page: 1, pageSize: 10 })
+          .withAuth(testUserId)
+          .expect(StatusCodes.OK);
+
+      expect(response.body.totalCount).toBe(1);
+      expect(response.body.items).toHaveLength(1);
+    });
+
+    it("returns 500 when the paginated use case fails", async () => {
+      vi.spyOn(testApp.module.get(ListExperimentsUseCase), "executePaginated").mockResolvedValue(
+        failure(AppError.internal("Database error")),
+      );
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
+        .query({ page: 1 })
+        .withAuth(testUserId)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
   });
 
