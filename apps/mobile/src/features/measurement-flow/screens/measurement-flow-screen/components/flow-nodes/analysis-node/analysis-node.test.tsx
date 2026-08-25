@@ -416,8 +416,15 @@ describe("AnalysisNode upload with a command in the flow", () => {
     const props = actionBarProps.mock.calls.at(-1)?.[0] as
       | { onUpload: () => Promise<void> }
       | undefined;
+    // Assert the action bar rendered before invoking: with optional chaining a
+    // missing bar would no-op and the negative assertion below would pass
+    // vacuously.
+    expect(props).toBeDefined();
+    if (!props) {
+      throw new Error("AnalysisActionBar did not render");
+    }
     await act(async () => {
-      await props?.onUpload();
+      await props.onUpload();
     });
 
     expect(uploadMeasurements).not.toHaveBeenCalled();
