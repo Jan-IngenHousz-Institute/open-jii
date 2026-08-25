@@ -68,12 +68,12 @@ export function DeviceAboutCard({ device }: { device: IotDeviceDetail }) {
   );
 }
 
-/** Stacked label over value: nothing competes for width in a narrow column. */
+/** The organization About card's row: label prominent, value muted under it. */
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="mt-0.5 text-sm">{children}</dd>
+    <div className="space-y-1">
+      <dt className="text-sm font-medium">{label}</dt>
+      <dd className="text-muted-foreground min-w-0 text-sm">{children}</dd>
     </div>
   );
 }

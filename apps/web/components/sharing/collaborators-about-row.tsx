@@ -24,8 +24,8 @@ interface CollaboratorsAboutRowProps {
 /**
  * The people with access, as one About-card row: an avatar trail plus a count
  * in words, the organization card's members grammar applied to any shareable
- * resource. Absent rather than empty when the viewer cannot read grants or
- * nobody holds one.
+ * resource. Skeleton bubbles while the grants load, org-card style; absent
+ * rather than empty when the viewer cannot read grants or nobody holds one.
  */
 export function CollaboratorsAboutRow({
   resourceType,
@@ -38,23 +38,24 @@ export function CollaboratorsAboutRow({
     enabled,
   });
 
-  if (!enabled || isError || isPending) {
+  if (!enabled || isError) {
     return null;
   }
 
-  const faces = data.filter(isGranteeRow).map(granteeAsFace);
-  if (faces.length === 0) {
+  const faces = (data ?? []).filter(isGranteeRow).map(granteeAsFace);
+  if (!isPending && faces.length === 0) {
     return null;
   }
 
   return (
-    <div>
-      <dt className="text-muted-foreground text-xs">{t("sharing.cardTitle")}</dt>
-      <dd className="mt-0.5">
+    <div className="space-y-1">
+      <dt className="text-sm font-medium">{t("sharing.cardTitle")}</dt>
+      <dd className="text-muted-foreground min-w-0 text-sm">
         <OrganizationAvatarTrail
           faces={faces}
           href={href}
-          label={t("sharing.collaboratorCount", { count: faces.length })}
+          label={isPending ? "" : t("sharing.collaboratorCount", { count: faces.length })}
+          isPending={isPending}
         />
       </dd>
     </div>
