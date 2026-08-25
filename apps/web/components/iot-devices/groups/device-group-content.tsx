@@ -76,8 +76,8 @@ export function DeviceGroupContent() {
           </ActionChipLink>
         )}
       </div>
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-        <div className="min-w-0 space-y-6 lg:col-span-2">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0 space-y-6">
           {canContribute && (
             <div className="flex justify-end">
               <Button

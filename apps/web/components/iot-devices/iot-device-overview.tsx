@@ -30,8 +30,8 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
         {nextAction !== null && <DeviceNextActionChip deviceId={device.id} action={nextAction} />}
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-        <div className="min-w-0 lg:col-span-2">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0">
           {/* The component hides the certificate and onboarding cards for phones
               itself; activity applies to every family. */}
           <DeviceOverviewCards device={device} />
