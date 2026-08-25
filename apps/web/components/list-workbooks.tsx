@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { ListPagination } from "~/components/list-pagination";
 import { OrganizationPicker } from "~/components/organizations/organization-picker";
-import { WorkbookList } from "~/components/workbook-list";
+import { OverviewTable } from "~/components/overview-table/overview-table";
+import { getWorkbookColumns } from "~/components/overview-table/workbook-columns";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
 import { useTranslation } from "@repo/i18n";
@@ -31,7 +32,15 @@ import {
 } from "@repo/ui/components/select";
 
 export function ListWorkbooks() {
-  const { data: workbooks, isLoading, search, setSearch, page, setPage } = useWorkbooks({});
+  const {
+    data: workbooks,
+    isLoading,
+    isPlaceholderData,
+    search,
+    setSearch,
+    page,
+    setPage,
+  } = useWorkbooks({});
   const { t } = useTranslation("workbook");
   const router = useRouter();
   const locale = useLocale();
@@ -80,11 +89,24 @@ export function ListWorkbooks() {
         </div>
       </div>
 
-      <WorkbookList workbooks={workbooks?.items} isLoading={isLoading} showEmptyHelp={!search} />
+      <div
+        aria-busy={isPlaceholderData}
+        className={`space-y-4 transition-opacity${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+      >
+        <OverviewTable
+          columns={getWorkbookColumns(t)}
+          items={workbooks?.items}
+          isLoading={isLoading}
+          getRowKey={(workbook) => workbook.id}
+          getRowHref={(workbook) => `/${locale}/platform/workbooks/${workbook.id}`}
+          emptyMessage={t("workbooks.noWorkbooks")}
+          emptyHelpPath={!search ? "/guide/experiments/workbooks" : undefined}
+        />
 
-      {workbooks && (
-        <ListPagination page={page} totalPages={workbooks.totalPages} onPageChange={setPage} />
-      )}
+        {workbooks && (
+          <ListPagination page={page} totalPages={workbooks.totalPages} onPageChange={setPage} />
+        )}
+      </div>
 
       <Dialog
         open={createOpen}

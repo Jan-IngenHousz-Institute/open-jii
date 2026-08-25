@@ -1197,7 +1197,13 @@
     "descriptionPlaceholder": "Beschreibung hinzufügen...",
     "detailsTitle": "Details",
     "codePlaceholder": "Protokollcode als JSON eingeben",
-    "lastUpdate": "Letzte Aktualisierung"
+    "lastUpdate": "Letzte Aktualisierung",
+    "columns": {
+      "name": "Name",
+      "family": "Familie",
+      "macros": "Makros",
+      "updated": "Aktualisiert"
+    }
   },
   "newProtocol": {
     "description": "Richten Sie ein neues Protokoll ein.",

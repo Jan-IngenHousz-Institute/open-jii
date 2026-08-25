@@ -1,19 +1,11 @@
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import { ListProtocols } from "./list-protocols";
-
-vi.mock("~/components/protocol-overview-cards", () => ({
-  ProtocolOverviewCards: (props: { protocols?: unknown[] }) => (
-    <div data-testid="protocol-overview-cards">
-      {props.protocols === undefined ? "Loading..." : `${props.protocols.length} protocols`}
-    </div>
-  ),
-}));
 
 const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
   items,
@@ -24,23 +16,23 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 });
 
 describe("ListProtocols", () => {
-  it("renders the search input without a my/all filter toggle", () => {
+  it("renders the search input without a my/all filter toggle", async () => {
     server.mount(contract.protocols.listProtocolsPaginated, { body: envelope([]) });
     render(<ListProtocols />);
 
     expect(screen.getByPlaceholderText("protocols.searchProtocols")).toBeInTheDocument();
+    await screen.findByText("protocols.noProtocols");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
-  it("passes data to ProtocolOverviewCards", async () => {
+  it("renders protocols as table rows linking to their detail pages", async () => {
     server.mount(contract.protocols.listProtocolsPaginated, {
       body: envelope([createProtocol({ id: "1", name: "P1" })]),
     });
     render(<ListProtocols />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("protocol-overview-cards")).toHaveTextContent("1 protocols");
-    });
+    const link = await screen.findByRole("link", { name: "P1" });
+    expect(link.getAttribute("href")).toContain("/platform/protocols/1");
   });
 
   it("sends search query to the API", async () => {

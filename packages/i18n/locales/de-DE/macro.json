@@ -44,7 +44,13 @@
     "descriptionPlaceholder": "Beschreibung hinzufügen...",
     "codeNotAvailable": "Kein Code verfügbar",
     "detailsTitle": "Details",
-    "lastUpdate": "Letzte Aktualisierung"
+    "lastUpdate": "Letzte Aktualisierung",
+    "columns": {
+      "name": "Name",
+      "language": "Sprache",
+      "protocols": "Protokolle",
+      "updated": "Aktualisiert"
+    }
   },
   "newMacro": {
     "description": "Beschreibung",

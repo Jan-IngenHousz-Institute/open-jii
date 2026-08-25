@@ -21,6 +21,10 @@
     "stale": "Veraltet"
   },
   "lastUpdate": "Letzte Aktualisierung",
+  "columns": {
+    "name": "Name",
+    "updated": "Aktualisiert"
+  },
   "visibility": {
     "private": "Privat",
     "public": "Publik"

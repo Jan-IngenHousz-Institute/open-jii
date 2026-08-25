@@ -1197,7 +1197,13 @@
     "descriptionPlaceholder": "Beschrijving toevoegen...",
     "detailsTitle": "Details",
     "codePlaceholder": "Voer protocol code in als JSON",
-    "lastUpdate": "Laatste update"
+    "lastUpdate": "Laatste update",
+    "columns": {
+      "name": "Naam",
+      "family": "Familie",
+      "macros": "Macro's",
+      "updated": "Bijgewerkt"
+    }
   },
   "newProtocol": {
     "description": "Stel een nieuw protocol in.",

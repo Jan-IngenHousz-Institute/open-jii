@@ -1,27 +1,11 @@
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import { ListWorkbooks } from "./list-workbooks";
-
-// Mock WorkbookList to keep test focused
-vi.mock("~/components/workbook-list", () => ({
-  WorkbookList: ({
-    workbooks,
-    isLoading,
-  }: {
-    workbooks: { id: string; name: string }[] | undefined;
-    isLoading: boolean;
-  }) => (
-    <div data-testid="workbook-list">
-      {isLoading && <span>Loading...</span>}
-      {workbooks?.map((w) => <span key={w.id}>{w.name}</span>)}
-    </div>
-  ),
-}));
 
 const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
   items,
@@ -41,15 +25,14 @@ describe("ListWorkbooks", () => {
     expect(screen.queryByText("workbooks.filterWorkbooks")).not.toBeInTheDocument();
   });
 
-  it("passes workbooks data to cards", async () => {
+  it("renders workbooks as table rows linking to their detail pages", async () => {
     const workbooks = [createWorkbook({ id: "wb-1", name: "Test WB" })];
     server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope(workbooks) });
 
     render(<ListWorkbooks />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Test WB")).toBeInTheDocument();
-    });
+    const link = await screen.findByRole("link", { name: "Test WB" });
+    expect(link.getAttribute("href")).toContain("/platform/workbooks/wb-1");
   });
 
   it("shows clear button when search has value", async () => {

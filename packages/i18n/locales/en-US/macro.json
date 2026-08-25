@@ -44,7 +44,13 @@
     "descriptionPlaceholder": "Add a description...",
     "codeNotAvailable": "No code available",
     "detailsTitle": "Details",
-    "lastUpdate": "Last update"
+    "lastUpdate": "Last update",
+    "columns": {
+      "name": "Name",
+      "language": "Language",
+      "protocols": "Protocols",
+      "updated": "Updated"
+    }
   },
   "newMacro": {
     "description": "Description",

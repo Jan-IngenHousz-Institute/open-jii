@@ -1197,7 +1197,13 @@
     "descriptionPlaceholder": "Add a description...",
     "detailsTitle": "Details",
     "codePlaceholder": "Enter protocol code as JSON",
-    "lastUpdate": "Last update"
+    "lastUpdate": "Last update",
+    "columns": {
+      "name": "Name",
+      "family": "Family",
+      "macros": "Macros",
+      "updated": "Updated"
+    }
   },
   "newProtocol": {
     "description": "Set up a new protocol.",

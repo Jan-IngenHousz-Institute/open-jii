@@ -3,8 +3,10 @@
 import { X } from "lucide-react";
 import React from "react";
 import { ListPagination } from "~/components/list-pagination";
-import { MacroOverviewCards } from "~/components/macro-overview-cards";
+import { getMacroColumns } from "~/components/overview-table/macro-columns";
+import { OverviewTable } from "~/components/overview-table/overview-table";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
+import { useLocale } from "~/hooks/useLocale";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
@@ -21,6 +23,7 @@ export function ListMacros() {
   const {
     data: macros,
     isLoading,
+    isPlaceholderData,
     search,
     setSearch,
     language,
@@ -29,6 +32,7 @@ export function ListMacros() {
     setPage,
   } = useMacros();
   const { t } = useTranslation("macro");
+  const locale = useLocale();
 
   return (
     <div className="space-y-4">
@@ -72,11 +76,23 @@ export function ListMacros() {
         </div>
       </div>
 
-      <MacroOverviewCards macros={macros?.items} isLoading={isLoading} />
+      <div
+        aria-busy={isPlaceholderData}
+        className={`space-y-4 transition-opacity${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+      >
+        <OverviewTable
+          columns={getMacroColumns(t)}
+          items={macros?.items}
+          isLoading={isLoading}
+          getRowKey={(macro) => macro.id}
+          getRowHref={(macro) => `/${locale}/platform/macros/${macro.id}`}
+          emptyMessage={t("macros.noMacros")}
+        />
 
-      {macros && (
-        <ListPagination page={page} totalPages={macros.totalPages} onPageChange={setPage} />
-      )}
+        {macros && (
+          <ListPagination page={page} totalPages={macros.totalPages} onPageChange={setPage} />
+        )}
+      </div>
     </div>
   );
 }

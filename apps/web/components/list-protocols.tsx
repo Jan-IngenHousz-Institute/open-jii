@@ -3,15 +3,18 @@
 import { X } from "lucide-react";
 import React from "react";
 import { ListPagination } from "~/components/list-pagination";
-import { ProtocolOverviewCards } from "~/components/protocol-overview-cards";
+import { OverviewTable } from "~/components/overview-table/overview-table";
+import { getProtocolColumns } from "~/components/overview-table/protocol-columns";
 import { useProtocols } from "~/hooks/protocol/useProtocols/useProtocols";
+import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
 import { Input } from "@repo/ui/components/input";
 
 export function ListProtocols() {
-  const { data, search, setSearch, page, setPage } = useProtocols();
-  const { t } = useTranslation();
+  const { data, isPlaceholderData, search, setSearch, page, setPage } = useProtocols();
+  const { t } = useTranslation("common");
+  const locale = useLocale();
 
   return (
     <div className="space-y-4">
@@ -35,9 +38,20 @@ export function ListProtocols() {
         )}
       </div>
 
-      <ProtocolOverviewCards protocols={data?.items} />
+      <div
+        aria-busy={isPlaceholderData}
+        className={`space-y-4 transition-opacity${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+      >
+        <OverviewTable
+          columns={getProtocolColumns(t)}
+          items={data?.items}
+          getRowKey={(protocol) => protocol.id}
+          getRowHref={(protocol) => `/${locale}/platform/protocols/${protocol.id}`}
+          emptyMessage={t("protocols.noProtocols")}
+        />
 
-      {data && <ListPagination page={page} totalPages={data.totalPages} onPageChange={setPage} />}
+        {data && <ListPagination page={page} totalPages={data.totalPages} onPageChange={setPage} />}
+      </div>
     </div>
   );
 }

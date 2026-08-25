@@ -23,6 +23,10 @@
     "published": "Published"
   },
   "lastUpdate": "Last update",
+  "columns": {
+    "name": "Name",
+    "updated": "Updated"
+  },
   "visibility": {
     "private": "Private",
     "public": "Public"

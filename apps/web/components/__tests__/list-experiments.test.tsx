@@ -1,17 +1,11 @@
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import { ListExperiments } from "../list-experiments";
-
-vi.mock("~/components/experiment-overview-cards", () => ({
-  ExperimentOverviewCards: ({ experiments }: { experiments?: unknown[] }) => (
-    <div data-testid="experiment-cards">{JSON.stringify(experiments)}</div>
-  ),
-}));
 
 const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
   items,
@@ -22,26 +16,39 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 });
 
 describe("ListExperiments", () => {
-  it("renders experiments via ExperimentOverviewCards", async () => {
+  it("renders experiments as table rows linking to their detail pages", async () => {
     server.mount(contract.experiments.listExperimentsPaginated, {
       body: envelope([createExperiment({ id: "1", name: "Exp 1" })]),
     });
 
     render(<ListExperiments />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("experiment-cards")).toHaveTextContent("Exp 1");
-    });
+    const link = await screen.findByRole("link", { name: "Exp 1" });
+    expect(link.getAttribute("href")).toBe("/platform/experiments/1");
   });
 
-  it("renders empty state when no experiments", async () => {
+  it("links to the archive detail page when archived", async () => {
+    server.mount(contract.experiments.listExperimentsPaginated, {
+      body: envelope([createExperiment({ id: "1", name: "Old Exp" })]),
+    });
+
+    render(<ListExperiments archived />);
+
+    const link = await screen.findByRole("link", { name: "Old Exp" });
+    expect(link.getAttribute("href")).toBe("/platform/experiments-archive/1");
+  });
+
+  it("renders the empty state with a docs help link when no experiments", async () => {
     server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([]) });
 
     render(<ListExperiments />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("experiment-cards")).toHaveTextContent("[]");
+      expect(screen.getByText("experiments.noExperiments")).toBeInTheDocument();
     });
+    expect(screen.getByRole("link").getAttribute("href")).toContain(
+      "/guide/get-started/quick-start",
+    );
   });
 
   it("does not render a my/all filter toggle", async () => {
@@ -49,9 +56,7 @@ describe("ListExperiments", () => {
 
     render(<ListExperiments />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("experiment-cards")).toBeInTheDocument();
-    });
+    await screen.findByText("experiments.noExperiments");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
@@ -103,9 +108,7 @@ describe("ListExperiments", () => {
 
     render(<ListExperiments />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("experiment-cards")).toBeInTheDocument();
-    });
+    await screen.findByText("experiments.noExperiments");
     expect(screen.queryByRole("button", { name: "pagination.next" })).not.toBeInTheDocument();
   });
 });

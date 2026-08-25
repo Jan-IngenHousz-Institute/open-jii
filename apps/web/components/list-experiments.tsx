@@ -1,8 +1,9 @@
 "use client";
 
 import { X } from "lucide-react";
-import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
 import { ListPagination } from "~/components/list-pagination";
+import { getExperimentColumns } from "~/components/overview-table/experiment-columns";
+import { OverviewTable } from "~/components/overview-table/overview-table";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 
 import { useTranslation } from "@repo/i18n";
@@ -13,10 +14,10 @@ interface ListExperimentsProps {
 }
 
 export function ListExperiments({ archived = false }: ListExperimentsProps) {
-  const { data, search, setSearch, page, setPage } = useExperiments({
+  const { data, isPlaceholderData, search, setSearch, page, setPage } = useExperiments({
     archived,
   });
-  const { t } = useTranslation();
+  const { t } = useTranslation("experiments");
 
   return (
     <div className="space-y-4">
@@ -40,13 +41,25 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
         )}
       </div>
 
-      <ExperimentOverviewCards
-        experiments={data?.items}
-        archived={archived}
-        showGetStartedHelp={!archived && !search}
-      />
+      <div
+        aria-busy={isPlaceholderData}
+        className={`space-y-4 transition-opacity${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+      >
+        <OverviewTable
+          columns={getExperimentColumns(t)}
+          items={data?.items}
+          getRowKey={(experiment) => experiment.id}
+          getRowHref={(experiment) =>
+            archived
+              ? `/platform/experiments-archive/${experiment.id}`
+              : `/platform/experiments/${experiment.id}`
+          }
+          emptyMessage={t("experiments.noExperiments")}
+          emptyHelpPath={!archived && !search ? "/guide/get-started/quick-start" : undefined}
+        />
 
-      {data && <ListPagination page={page} totalPages={data.totalPages} onPageChange={setPage} />}
+        {data && <ListPagination page={page} totalPages={data.totalPages} onPageChange={setPage} />}
+      </div>
     </div>
   );
 }

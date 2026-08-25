@@ -20,6 +20,10 @@
     "archived": "Gearchiveerd",
     "stale": "Verlopen"
   },
+  "columns": {
+    "name": "Naam",
+    "updated": "Bijgewerkt"
+  },
   "visibility": {
     "private": "Privé",
     "public": "Publiek"
