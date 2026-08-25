@@ -32,7 +32,7 @@ export function DeviceAboutCard({ device }: { device: IotDeviceDetail }) {
   const roleLabels = resolveDeviceRoleLabels(present, t);
 
   return (
-    <Card className="p-5">
+    <Card className="shadow-xs rounded-xl p-5">
       <h2 className="text-lg font-semibold tracking-tight">
         {t("iot.devices.detail.about.title")}
       </h2>

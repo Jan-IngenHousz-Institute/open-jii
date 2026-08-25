@@ -93,7 +93,10 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
 
   function renderBoundExperiment(experiment: (typeof bound)[number]) {
     return (
-      <li key={experiment.id} className="flex items-center gap-3 px-3 py-2">
+      <li
+        key={experiment.id}
+        className="hover:bg-muted/40 flex items-center gap-3 px-6 py-2.5 transition-colors"
+      >
         <Link
           href={`/${locale}/platform/experiments/${experiment.id}`}
           className="focus-visible:ring-primary/40 focus-visible:outline-hidden min-w-0 flex-1 truncate text-sm font-medium hover:underline focus-visible:ring-2"
@@ -141,14 +144,17 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
         <EmptyState size="inline" description={t("iot.devices.detail.cards.experimentsEmpty")} />
       );
     }
-    return <ul className="divide-y rounded-lg border">{bound.map(renderBoundExperiment)}</ul>;
+    return <ul className="-mx-6 -mb-3 divide-y">{bound.map(renderBoundExperiment)}</ul>;
   }
 
   function renderObservedRow(entry: ObservedExperiment) {
     const entity = entry.experimentId === null ? null : observedEntities.get(entry.experimentId);
 
     return (
-      <li key={entry.experimentId ?? "unattributed"} className="flex items-center gap-3 px-3 py-2">
+      <li
+        key={entry.experimentId ?? "unattributed"}
+        className="hover:bg-muted/40 flex items-center gap-3 px-6 py-2.5 transition-colors"
+      >
         <span className="min-w-0 flex-1 truncate text-sm">
           {entity === null || entity === undefined ? (
             <span className="text-muted-foreground italic">
@@ -205,7 +211,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     return (
       <div className="space-y-2">
         <CardDescription>{t("iot.devices.detail.cards.observedHint")}</CardDescription>
-        <ul className="divide-y rounded-lg border">{observed.map(renderObservedRow)}</ul>
+        <ul className="-mx-6 -mb-3 divide-y">{observed.map(renderObservedRow)}</ul>
       </div>
     );
   }
