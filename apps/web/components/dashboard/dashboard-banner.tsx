@@ -26,7 +26,7 @@ export function DashboardBanner({
   locale,
 }: DashboardBannerProps) {
   return (
-    <div className="from-accent to-secondary flex flex-col gap-3 rounded-xl bg-gradient-to-l p-4 sm:flex-row sm:items-start">
+    <div className="bg-canvas flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-start">
       <div className="flex flex-1 flex-col gap-1">
         <h2 className="text-foreground text-[0.9125rem] font-semibold leading-[1.3125rem]">
           {title}

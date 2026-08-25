@@ -12,6 +12,7 @@ import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader } from "@repo/ui/components/card";
+import { Separator } from "@repo/ui/components/separator";
 import { cn, cva } from "@repo/ui/lib/utils";
 
 import { ExperimentRequestToJoin } from "../../experiment-settings/collaborators/experiment-request-to-join";
@@ -218,11 +219,7 @@ export function ExperimentDetailsCard({
                 </div>
               </CardContent>
 
-              <div
-                role="separator"
-                aria-orientation="horizontal"
-                className="text-muted-foreground mx-4 border-t"
-              />
+              <Separator decorative={false} className="mx-4 my-4 w-auto" />
 
               {canManage ? (
                 <ExperimentVisibilityCard

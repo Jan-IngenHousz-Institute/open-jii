@@ -143,7 +143,7 @@ export function RadarPlot({
         rangemode: rangeMode,
         tickfont: { size: fontSizes.tick },
         gridcolor: chartGridColor(),
-        linecolor: "#444",
+        linecolor: chartGridColor(),
         showgrid: config.showGrid !== false,
       },
       angularaxis: {
@@ -161,7 +161,7 @@ export function RadarPlot({
         direction: "clockwise",
         period: 360,
         gridcolor: chartGridColor(),
-        linecolor: "#444",
+        linecolor: chartGridColor(),
         showticklabels: showTickLabels,
       },
       gridshape: gridShape,

@@ -100,12 +100,7 @@ export function VisualizationLayoutContent({
         </div>
       </div>
 
-      <div
-        className="border-border -mx-6 -mb-6 flex-1 border-t px-6 pb-6"
-        style={{
-          background: "linear-gradient(270.03deg, var(--accent) 0%, var(--secondary) 100%)",
-        }}
-      >
+      <div className="border-border bg-canvas -mx-6 -mb-6 flex-1 border-t px-6 pb-6">
         <div className="w-full pt-6">{children}</div>
       </div>
     </div>

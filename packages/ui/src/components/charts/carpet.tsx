@@ -13,6 +13,7 @@ import {
   responsiveChrome,
   tierAxisFontSizes,
   chartGridColor,
+  readThemeColor,
 } from "./utils";
 
 export interface CarpetSeriesData extends BaseSeries {
@@ -136,7 +137,7 @@ export function CarpetPlot({
                 tickvals: series.aaxis.tickvals,
                 ticktext: series.aaxis.ticktext,
                 gridcolor: series.aaxis.gridcolor || chartGridColor(),
-                linecolor: series.aaxis.linecolor || "#444",
+                linecolor: series.aaxis.linecolor || chartGridColor(),
                 showgrid: series.aaxis.showgrid !== false,
                 showline: series.aaxis.showline !== false,
               }
@@ -144,7 +145,7 @@ export function CarpetPlot({
                 title: "A",
                 tickfont: { size: fontSizes.tick },
                 gridcolor: chartGridColor(),
-                linecolor: "#444",
+                linecolor: chartGridColor(),
               },
 
           baxis: series.baxis
@@ -157,7 +158,7 @@ export function CarpetPlot({
                 tickvals: series.baxis.tickvals,
                 ticktext: series.baxis.ticktext,
                 gridcolor: series.baxis.gridcolor || chartGridColor(),
-                linecolor: series.baxis.linecolor || "#444",
+                linecolor: series.baxis.linecolor || chartGridColor(),
                 showgrid: series.baxis.showgrid !== false,
                 showline: series.baxis.showline !== false,
               }
@@ -165,7 +166,7 @@ export function CarpetPlot({
                 title: "B",
                 tickfont: { size: fontSizes.tick },
                 gridcolor: chartGridColor(),
-                linecolor: "#444",
+                linecolor: chartGridColor(),
               },
 
           visible: series.visible,
@@ -195,7 +196,8 @@ export function CarpetPlot({
                 line: series.marker.line
                   ? {
                       width: series.marker.line.width || 1,
-                      color: series.marker.line.color || "#444",
+                      color:
+                        series.marker.line.color ?? readThemeColor("--muted-foreground") ?? "#444",
                     }
                   : undefined,
               }

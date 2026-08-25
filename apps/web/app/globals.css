@@ -6,58 +6,72 @@
 /* @import "leaflet/dist/leaflet.css"; */
 
 :root {
-  --background: oklch(0.9884 0.0093 113.1546);
-  --foreground: oklch(0.2719 0.0191 190.5697);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2719 0.0191 190.5697);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2719 0.0191 190.5697);
-  --primary: oklch(0.5551 0.0516 190.6334);
-  --primary-foreground: oklch(0.9884 0.0093 113.1546);
-  --secondary: oklch(0.9194 0.0161 102.8442);
-  --secondary-foreground: oklch(0.2719 0.0191 190.5697);
-  --muted: oklch(0.9527 0.0119 106.6239);
-  --muted-foreground: oklch(0.5722 0.0201 192.2673);
-  --accent: oklch(0.868 0.0112 167.7571);
-  --accent-foreground: oklch(0.2719 0.0191 190.5697);
-  --destructive: oklch(0.6032 0.163 16.5549);
+  --background: oklch(0.9888 0.0055 195);
+  --foreground: oklch(0.245 0.03 195);
+  --card: oklch(0.9985 0.0015 195);
+  --card-foreground: oklch(0.245 0.03 195);
+  --popover: oklch(0.9985 0.0015 195);
+  --popover-foreground: oklch(0.245 0.03 195);
+  --primary: oklch(0.4363 0.0745 194.7689);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.03 196.7158);
+  --secondary-foreground: oklch(0.3938 0.0672 194.7689);
+  --muted: oklch(0.96 0.01 195);
+  --muted-foreground: oklch(0.53 0.027 195);
+  /* A hover wash: it changes the fill and leaves the text alone, which is why
+     --accent-foreground is the same value as --foreground rather than a tint of
+     it. Don't re-differentiate them — a row that recolours its own text on
+     hover reads as a state change rather than a pointer. */
+  --accent: oklch(0.935 0.018 195);
+  --accent-foreground: oklch(0.245 0.03 195);
+  --destructive: oklch(0.59 0.225 28.0171);
   --destructive-foreground: oklch(1 0 0);
-  /* The export shipped `--input: oklch(1 0 0)` — pure white, which is the
-     border colour `border-input` paints on a white card, i.e. no border at all.
-     Both values are taken down Bamboo's own warm-neutral hue so a field reads as
-     a field now that nothing casts a shadow (Vlad, visual pass). `--input` sits
-     darker than `--border`: a form control should announce itself more than a
-     card edge. Note `--input` is also the Switch's off-track fill and the
-     `bg-input/30` wash on dark-mode fields, so it cannot go arbitrarily dark. */
-  --border: oklch(0.885 0.0098 106.5838);
-  --input: oklch(0.83 0.0125 106.5838);
-  --ring: oklch(0.5551 0.0516 190.6334);
-  --chart-1: oklch(0.5551 0.0516 190.6334);
-  --chart-2: oklch(0.7037 0.0304 168.3872);
-  --chart-3: oklch(0.868 0.0112 167.7571);
-  --chart-4: oklch(0.6131 0.0629 48.2122);
-  --chart-5: oklch(0.9194 0.0161 102.8442);
+  /* `--input` sits darker than `--border`: a form control should announce
+     itself more than a card edge, now that nothing casts a shadow. Note
+     `--input` is also the Switch's off-track fill and the `bg-input/30` wash on
+     dark-mode fields, so it cannot go arbitrarily dark. */
+  --border: oklch(0.895 0.012 195);
+  --input: oklch(0.835 0.017 195);
+  --ring: oklch(0.4363 0.0745 194.7689);
+  /* The five series are drawn from the brand's own spread — dark teal, bright
+     green, light blue and yellow — each taken to a lightness that reads as a
+     data mark on a light page rather than at its poster value. */
+  --chart-1: oklch(0.4363 0.0745 194.7689);
+  --chart-2: oklch(0.66 0.19 148);
+  --chart-3: oklch(0.63 0.115 240);
+  --chart-4: oklch(0.75 0.14 95);
+  --chart-5: oklch(0.71 0.115 135);
   /* The sidebar reads as a dark slab in both modes rather than following the
-     page. The platform nav carries the product logo, which is a light mark on
-     transparency, and it has to separate from the content it sits beside.
-     Bamboo's own primary hue, taken down in lightness — a theme swap still
-     carries it. */
-  --sidebar: oklch(0.323 0.033 190.6334);
-  --sidebar-foreground: oklch(0.9527 0.0119 106.6239);
-  /* The export shipped chroma 0.0112 here — a gray that read as a dimmer
-     --sidebar-foreground on the slab, not an accent. Raised at the export's own
-     hue; every consumer is a foreground or a dot, so no paired change. */
-  --sidebar-primary: oklch(0.845 0.115 168);
-  --sidebar-primary-foreground: oklch(0.2719 0.0191 190.5697);
-  --sidebar-accent: oklch(0.403 0.038 190.6334);
-  --sidebar-accent-foreground: oklch(0.9884 0.0093 113.1546);
-  --sidebar-border: oklch(0.403 0.038 190.6334);
-  --sidebar-ring: oklch(0.845 0.115 168);
+     page. `#002F2F` and its `#1A4444` active row are the original openJII
+     sidebar restored exactly; `#49e06d` is the brand's bright green, which is
+     what made the active row unmistakable before the redesign. The slab is
+     lighter than the dark-mode page (L 0.276 vs 0.175), so it still separates
+     when everything around it is dark — one value serves both modes. */
+  --sidebar: oklch(0.2763 0.0472 194.7689);
+  --sidebar-foreground: oklch(0.98 0.005 195);
+  --sidebar-primary: oklch(0.8022 0.2017 147.7498);
+  --sidebar-primary-foreground: oklch(0.21 0.03 195);
+  --sidebar-accent: oklch(0.3573 0.0464 195.276);
+  --sidebar-accent-foreground: oklch(0.98 0.005 195);
+  --sidebar-border: oklch(0.3573 0.0464 195.276);
+  --sidebar-ring: oklch(0.8022 0.2017 147.7498);
+  /* The desktop sidebar's vertical fade. Identical to --primary in light, which
+     is the pair the pre-redesign sidebar faded between (#002F2F → #005E5E); a
+     separate token because --primary inverts to a light tint in dark mode and
+     would turn the slab's bottom edge into a glow. */
+  --sidebar-gradient: oklch(0.4363 0.0745 194.7689);
+  /* The editor canvas: workbook, dashboard and visualization surfaces share it,
+     and cells float on it as cards. Near-white with a wide hue sweep rather than
+     a lightness change, so it reads as a gradient without carrying weight — the
+     relationship the pre-redesign canvas had. Deliberately not --accent/--secondary,
+     which are saturated enough to turn the canvas into a coloured slab. */
+  --canvas-from: oklch(0.984 0.013 148);
+  --canvas-to: oklch(0.977 0.01 240);
   --font-sans: var(--font-inter), Inter, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Georgia, serif;
   --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
   --radius: 0.4rem;
-  --shadow-color: #1c2a29;
+  --shadow-color: #15262a;
   --shadow-opacity: 0.05;
   --shadow-blur: 4px;
   --shadow-spread: 0px;
@@ -72,39 +86,38 @@
   --shadow-xs: none;
   --shadow-sm: none;
   --shadow:
-    0px 8px 4px 0px hsl(175.7143 20% 13.7255% / 0.05),
-    0px 1px 2px -1px hsl(175.7143 20% 13.7255% / 0.05);
+    0px 8px 4px 0px hsl(194.7689 25% 11% / 0.05), 0px 1px 2px -1px hsl(194.7689 25% 11% / 0.05);
   --shadow-md:
-    0px 8px 4px 0px hsl(175.7143 20% 13.7255% / 0.05),
-    0px 2px 4px -1px hsl(175.7143 20% 13.7255% / 0.05);
+    0px 8px 4px 0px hsl(194.7689 25% 11% / 0.05), 0px 2px 4px -1px hsl(194.7689 25% 11% / 0.05);
   --shadow-lg:
-    0px 8px 4px 0px hsl(175.7143 20% 13.7255% / 0.05),
-    0px 4px 6px -1px hsl(175.7143 20% 13.7255% / 0.05);
+    0px 8px 4px 0px hsl(194.7689 25% 11% / 0.05), 0px 4px 6px -1px hsl(194.7689 25% 11% / 0.05);
   --shadow-xl:
-    0px 8px 4px 0px hsl(175.7143 20% 13.7255% / 0.05),
-    0px 8px 10px -1px hsl(175.7143 20% 13.7255% / 0.05);
-  --shadow-2xl: 0px 8px 4px 0px hsl(175.7143 20% 13.7255% / 0.13);
+    0px 8px 4px 0px hsl(194.7689 25% 11% / 0.05), 0px 8px 10px -1px hsl(194.7689 25% 11% / 0.05);
+  --shadow-2xl: 0px 8px 4px 0px hsl(194.7689 25% 11% / 0.13);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
-  --status-active: oklch(0.928 0.042 165);
-  --status-active-foreground: oklch(0.42 0.062 165);
-  --status-stale: oklch(0.935 0.048 85);
-  --status-stale-foreground: oklch(0.46 0.07 60);
-  --status-archived: oklch(0.9527 0.0119 106.6239);
-  --status-archived-foreground: oklch(0.5722 0.0201 192.2673);
-  --status-published: oklch(0.927 0.033 215);
-  --status-published-foreground: oklch(0.44 0.062 215);
-  --status-featured: oklch(0.926 0.033 190.6334);
-  --status-featured-foreground: oklch(0.43 0.056 190.6334);
+  /* The five original `badge.*` fills, unchanged: #CCFCD8 #FFE0B2 #E7EDF2
+     #D8F2FC #E2FCFC. Foregrounds are derived to clear AA on each fill. */
+  --status-active: oklch(0.9481 0.0688 152.5705);
+  --status-active-foreground: oklch(0.43 0.09 152);
+  --status-stale: oklch(0.9213 0.0687 77.4932);
+  --status-stale-foreground: oklch(0.47 0.085 65);
+  --status-archived: oklch(0.943 0.0093 242.841);
+  --status-archived-foreground: oklch(0.51 0.027 195);
+  --status-published: oklch(0.9452 0.0305 222.8809);
+  --status-published-foreground: oklch(0.45 0.08 226);
+  --status-featured: oklch(0.9723 0.027 196.7158);
+  --status-featured-foreground: oklch(0.4363 0.0745 194.7689);
 
   /* Identity accents for the six flow-node / workbook-cell types. A second
      hand-maintained extension block, for the same reason as --status-*: the
      contract has no slot for a categorical palette. --chart-1..5 cannot serve
-     here — it is five slots for six categories, and three of Bamboo's five are
-     neighbouring sage hues, so two node types would be indistinguishable at a
-     glance, which is the entire job of an identity accent. Hues are spread at
-     least 50 degrees apart and chroma is held low enough to sit with Bamboo. */
+     here — it is five slots for six categories, and the chart ramp carries two
+     greens, so two node types would be indistinguishable at a glance, which is
+     the entire job of an identity accent. Hues are spread at least 50 degrees
+     apart; unlike every other block here they are deliberately NOT pulled onto
+     the brand hue, because mutual distinguishability is their whole purpose. */
   --node-instruction: oklch(0.55 0.09 245);
   --node-question: oklch(0.58 0.095 350);
   --node-measurement: oklch(0.53 0.09 120);
@@ -114,47 +127,48 @@
 }
 
 .dark {
-  --background: oklch(0.181 0.008 181.9193);
-  --foreground: oklch(0.9408 0.0032 197.102);
-  --card: oklch(0.2156 0.0092 184.3011);
-  --card-foreground: oklch(0.9408 0.0032 197.102);
-  --popover: oklch(0.2156 0.0092 184.3011);
-  --popover-foreground: oklch(0.9408 0.0032 197.102);
-  --primary: oklch(0.6902 0.061 188.9839);
-  --primary-foreground: oklch(0 0 0);
-  --secondary: oklch(0.2853 0.0168 183.8263);
-  --secondary-foreground: oklch(0.9408 0.0032 197.102);
-  --muted: oklch(0.2537 0.0155 189.3113);
-  --muted-foreground: oklch(0.7076 0.0203 192.6364);
-  --accent: oklch(0.4615 0.0237 184.6712);
-  --accent-foreground: oklch(0.9408 0.0032 197.102);
-  --destructive: oklch(0.7178 0.1487 15.8971);
-  --destructive-foreground: oklch(0.181 0.008 181.9193);
-  /* Same problem in dark: the export set `--input` to the card colour, so a
-     field's border vanished into the card it sat on. `--border` was already
-     legible here and is left alone. */
-  --border: oklch(0.3387 0.0197 191.2008);
-  --input: oklch(0.405 0.021 191.2008);
-  --ring: oklch(0.6902 0.061 188.9839);
-  --chart-1: oklch(0.6902 0.061 188.9839);
-  --chart-2: oklch(0.8014 0.0405 167.7355);
-  --chart-3: oklch(0.6873 0.0215 192.7975);
-  --chart-4: oklch(0.753 0.0346 49.219);
-  --chart-5: oklch(0.5551 0.0516 190.6334);
-  /* Lighter than both the page and a card, so the slab still separates when
-     everything around it is dark. */
-  --sidebar: oklch(0.238 0.021 187.5);
-  --sidebar-foreground: oklch(0.9408 0.0032 197.102);
-  --sidebar-primary: oklch(0.6902 0.061 188.9839);
-  --sidebar-primary-foreground: oklch(0.181 0.008 181.9193);
-  --sidebar-accent: oklch(0.3234 0.029 188);
-  --sidebar-accent-foreground: oklch(0.9408 0.0032 197.102);
-  --sidebar-border: oklch(0.3387 0.0197 191.2008);
-  --sidebar-ring: oklch(0.6902 0.061 188.9839);
+  --background: oklch(0.175 0.019 195);
+  --foreground: oklch(0.945 0.006 195);
+  --card: oklch(0.215 0.022 195);
+  --card-foreground: oklch(0.945 0.006 195);
+  --popover: oklch(0.215 0.022 195);
+  --popover-foreground: oklch(0.945 0.006 195);
+  --primary: oklch(0.755 0.115 192);
+  --primary-foreground: oklch(0.16 0.026 195);
+  --secondary: oklch(0.285 0.026 195);
+  --secondary-foreground: oklch(0.945 0.006 195);
+  --muted: oklch(0.255 0.023 195);
+  --muted-foreground: oklch(0.715 0.026 195);
+  /* Same rule as light: the fill lifts off --card, the text is --foreground. */
+  --accent: oklch(0.32 0.026 195);
+  --accent-foreground: oklch(0.945 0.006 195);
+  --destructive: oklch(0.71 0.175 22);
+  --destructive-foreground: oklch(0.175 0.019 195);
+  /* Same rule as light: `--input` sits above `--border` so a field's edge does
+     not vanish into the card it sits on. */
+  --border: oklch(0.34 0.029 195);
+  --input: oklch(0.405 0.033 195);
+  --ring: oklch(0.755 0.115 192);
+  --chart-1: oklch(0.755 0.115 192);
+  --chart-2: oklch(0.79 0.19 148);
+  --chart-3: oklch(0.72 0.11 240);
+  --chart-4: oklch(0.85 0.14 98);
+  --chart-5: oklch(0.78 0.11 135);
+  --sidebar: oklch(0.2763 0.0472 194.7689);
+  --sidebar-foreground: oklch(0.98 0.005 195);
+  --sidebar-primary: oklch(0.8022 0.2017 147.7498);
+  --sidebar-primary-foreground: oklch(0.21 0.03 195);
+  --sidebar-accent: oklch(0.3573 0.0464 195.276);
+  --sidebar-accent-foreground: oklch(0.98 0.005 195);
+  --sidebar-border: oklch(0.3573 0.0464 195.276);
+  --sidebar-ring: oklch(0.8022 0.2017 147.7498);
+  /* Same delta from --sidebar as light (~0.15 L), so the fade reads the same. */
+  --sidebar-gradient: oklch(0.42 0.055 194.7689);
+  --canvas-from: oklch(0.168 0.016 148);
+  --canvas-to: oklch(0.162 0.013 240);
   --font-sans: var(--font-inter), Inter, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Georgia, serif;
   --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
-  /* The export ships 0.625rem here; equalized with light on purpose. */
   --radius: 0.4rem;
   --shadow-color: #000000;
   --shadow-opacity: 0.4;
@@ -173,16 +187,16 @@
   --shadow-xl: 0px 8px 8px 0px hsl(0 0% 0% / 0.4), 0px 8px 10px -1px hsl(0 0% 0% / 0.4);
   --shadow-2xl: 0px 8px 8px 0px hsl(0 0% 0% / 1);
 
-  --status-active: oklch(0.308 0.042 165);
-  --status-active-foreground: oklch(0.84 0.06 165);
-  --status-stale: oklch(0.318 0.048 70);
-  --status-stale-foreground: oklch(0.86 0.064 80);
-  --status-archived: oklch(0.2537 0.0155 189.3113);
-  --status-archived-foreground: oklch(0.7076 0.0203 192.6364);
-  --status-published: oklch(0.302 0.04 215);
-  --status-published-foreground: oklch(0.835 0.056 215);
-  --status-featured: oklch(0.306 0.043 190.9839);
-  --status-featured-foreground: oklch(0.845 0.06 189);
+  --status-active: oklch(0.31 0.055 152);
+  --status-active-foreground: oklch(0.85 0.11 152);
+  --status-stale: oklch(0.32 0.052 70);
+  --status-stale-foreground: oklch(0.865 0.08 80);
+  --status-archived: oklch(0.255 0.023 195);
+  --status-archived-foreground: oklch(0.715 0.026 195);
+  --status-published: oklch(0.305 0.045 226);
+  --status-published-foreground: oklch(0.84 0.07 224);
+  --status-featured: oklch(0.308 0.048 196);
+  --status-featured-foreground: oklch(0.85 0.075 194);
 
   /* Same six hues, lifted in lightness so they carry on a dark card. */
   --node-instruction: oklch(0.74 0.09 245);
@@ -226,6 +240,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-gradient: var(--sidebar-gradient);
 
   --color-status-active: var(--status-active);
   --color-status-active-foreground: var(--status-active-foreground);
@@ -269,6 +284,12 @@
   --tracking-wide: calc(var(--tracking-normal) + 0.025em);
   --tracking-wider: calc(var(--tracking-normal) + 0.05em);
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
+}
+
+/* Painted as a utility rather than a --color-* mapping: it is a gradient, not a
+   flat colour, so there is no single value for bg-canvas to resolve to. */
+@utility bg-canvas {
+  background-image: linear-gradient(270.03deg, var(--canvas-from) 0%, var(--canvas-to) 100%);
 }
 
 @layer base {

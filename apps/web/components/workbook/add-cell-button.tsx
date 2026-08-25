@@ -98,13 +98,7 @@ export function AddCellButton({
 
   if (variant === "bottom") {
     return (
-      <div
-        className="border-border flex flex-col items-center justify-center gap-3 rounded-lg border p-4"
-        style={{
-          background: "linear-gradient(270.03deg, var(--accent) 0.02%, var(--secondary) 100.24%)",
-          boxShadow: "inset 0px 2px 16px rgba(0, 94, 94, 0.08)",
-        }}
-      >
+      <div className="border-border bg-canvas flex flex-col items-center justify-center gap-3 rounded-lg border p-4">
         {showEmptyState ? (
           <div className="flex flex-col items-center pb-2 pt-4">
             <BookOpen className="text-muted-foreground/60 mb-4 size-12" />

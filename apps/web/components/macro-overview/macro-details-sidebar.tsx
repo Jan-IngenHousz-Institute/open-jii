@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { Separator } from "@repo/ui/components/separator";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
@@ -156,11 +157,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       />
 
       {/* Compatible Protocols Section */}
-      <div
-        role="separator"
-        aria-orientation="horizontal"
-        className="text-muted-foreground border-t"
-      />
+      <Separator decorative={false} />
 
       {canUpdate ? (
         <MacroCompatibleProtocolsCard macroId={macroId} embedded />
@@ -178,11 +175,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       {/* Danger Zone */}
       {canManage && isDeletionEnabled && (
         <>
-          <div
-            role="separator"
-            aria-orientation="horizontal"
-            className="text-muted-foreground border-t"
-          />
+          <Separator decorative={false} />
           <div>
             <h5 className="text-destructive mb-2 text-base font-medium">
               {t("macroSettings.dangerZone")}
