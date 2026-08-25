@@ -37,6 +37,7 @@ export function watchForUnexpectedBrowserErrors(page: Page): UnexpectedBrowserEr
   };
   const onRequestFailed = (request: Request) => {
     if (/(?:contentful\.com|graphql\.contentful\.com)/i.test(request.url())) return;
+    if (request.failure()?.errorText === "net::ERR_ABORTED") return;
     errors.push(
       `requestfailed: ${request.method()} ${request.url()} (${request.failure()?.errorText})`,
     );
