@@ -5,7 +5,7 @@ import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { orpc } from "@/lib/orpc";
-import { formatDate } from "@/util/date";
+import { formatShortDate } from "@/util/date";
 import { useQueryClient } from "@tanstack/react-query";
 import { GitFork, MoreHorizontal, Pencil } from "lucide-react";
 import Link from "next/link";
@@ -113,6 +113,7 @@ function initialsOf(name: string): string {
 
 export function getWorkbookColumns(
   t: (key: string, options?: Record<string, unknown>) => string,
+  locale: string,
 ): OverviewTableColumn<WorkbookListItem>[] {
   return [
     {
@@ -173,7 +174,7 @@ export function getWorkbookColumns(
       className: "w-40",
       cell: (workbook) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatDate(workbook.updatedAt)}
+          {formatShortDate(workbook.updatedAt, locale)}
         </span>
       ),
     },

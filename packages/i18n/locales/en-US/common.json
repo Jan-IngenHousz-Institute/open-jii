@@ -1197,7 +1197,6 @@
     "descriptionPlaceholder": "Add a description...",
     "detailsTitle": "Details",
     "codePlaceholder": "Enter protocol code as JSON",
-    "lastUpdate": "Last update",
     "columns": {
       "name": "Name",
       "family": "Family",

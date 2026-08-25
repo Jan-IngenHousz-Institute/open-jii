@@ -1,6 +1,6 @@
 import { CompatibleMacrosCell } from "@/components/overview-table/protocol-macros-cell";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { formatDate } from "@/util/date";
+import { formatShortDate } from "@/util/date";
 import { getSensorFamilyBadgeColor } from "@/util/sensor-family";
 import Link from "next/link";
 
@@ -14,6 +14,7 @@ import { overviewTableText } from "./overview-table";
 
 export function getProtocolColumns(
   t: (key: string) => string,
+  locale: string,
 ): OverviewTableColumn<ProtocolListItem>[] {
   return [
     {
@@ -59,7 +60,7 @@ export function getProtocolColumns(
       className: "w-40",
       cell: (protocol) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatDate(protocol.updatedAt)}
+          {formatShortDate(protocol.updatedAt, locale)}
         </span>
       ),
     },

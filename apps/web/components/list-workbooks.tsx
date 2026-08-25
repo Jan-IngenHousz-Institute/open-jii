@@ -91,10 +91,11 @@ export function ListWorkbooks() {
 
       <div
         aria-busy={isPlaceholderData}
-        className={`space-y-4 transition-opacity${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+        inert={isPlaceholderData}
+        className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
       >
         <OverviewTable
-          columns={getWorkbookColumns(t)}
+          columns={getWorkbookColumns(t, locale)}
           items={workbooks?.items}
           isLoading={isLoading}
           getRowKey={(workbook) => workbook.id}

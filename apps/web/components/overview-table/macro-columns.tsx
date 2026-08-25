@@ -1,6 +1,6 @@
 import { CompatibleProtocolsCell } from "@/components/overview-table/macro-protocols-cell";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { formatDate } from "@/util/date";
+import { formatShortDate } from "@/util/date";
 import { getMacroLanguageBadgeColor, getMacroLanguageLabel } from "@/util/macro-language";
 import Link from "next/link";
 
@@ -12,7 +12,10 @@ import { cn } from "@repo/ui/lib/utils";
 import type { OverviewTableColumn } from "./overview-table";
 import { overviewTableText } from "./overview-table";
 
-export function getMacroColumns(t: (key: string) => string): OverviewTableColumn<Macro>[] {
+export function getMacroColumns(
+  t: (key: string) => string,
+  locale: string,
+): OverviewTableColumn<Macro>[] {
   return [
     {
       header: t("macros.columns.name"),
@@ -57,7 +60,7 @@ export function getMacroColumns(t: (key: string) => string): OverviewTableColumn
       className: "w-40",
       cell: (macro) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatDate(macro.updatedAt)}
+          {formatShortDate(macro.updatedAt, locale)}
         </span>
       ),
     },

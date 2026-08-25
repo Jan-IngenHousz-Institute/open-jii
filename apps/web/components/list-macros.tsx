@@ -78,10 +78,11 @@ export function ListMacros() {
 
       <div
         aria-busy={isPlaceholderData}
-        className={`space-y-4 transition-opacity${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+        inert={isPlaceholderData}
+        className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
       >
         <OverviewTable
-          columns={getMacroColumns(t)}
+          columns={getMacroColumns(t, locale)}
           items={macros?.items}
           isLoading={isLoading}
           getRowKey={(macro) => macro.id}

@@ -1,5 +1,5 @@
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { formatDate } from "@/util/date";
+import { formatShortDate } from "@/util/date";
 import Link from "next/link";
 
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
@@ -11,6 +11,7 @@ import { overviewTableText } from "./overview-table";
 
 export function getExperimentColumns(
   t: (key: string) => string,
+  locale: string,
 ): OverviewTableColumn<Experiment>[] {
   return [
     {
@@ -40,7 +41,7 @@ export function getExperimentColumns(
       className: "w-40",
       cell: (experiment) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatDate(experiment.updatedAt)}
+          {formatShortDate(experiment.updatedAt, locale)}
         </span>
       ),
     },

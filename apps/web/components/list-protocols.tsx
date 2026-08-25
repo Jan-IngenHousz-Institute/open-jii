@@ -40,10 +40,11 @@ export function ListProtocols() {
 
       <div
         aria-busy={isPlaceholderData}
-        className={`space-y-4 transition-opacity${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+        inert={isPlaceholderData}
+        className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
       >
         <OverviewTable
-          columns={getProtocolColumns(t)}
+          columns={getProtocolColumns(t, locale)}
           items={data?.items}
           getRowKey={(protocol) => protocol.id}
           getRowHref={(protocol) => `/${locale}/platform/protocols/${protocol.id}`}

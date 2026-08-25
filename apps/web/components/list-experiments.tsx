@@ -5,6 +5,7 @@ import { ListPagination } from "~/components/list-pagination";
 import { getExperimentColumns } from "~/components/overview-table/experiment-columns";
 import { OverviewTable } from "~/components/overview-table/overview-table";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
+import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
 import { Input } from "@repo/ui/components/input";
@@ -18,6 +19,7 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
     archived,
   });
   const { t } = useTranslation("experiments");
+  const locale = useLocale();
 
   return (
     <div className="space-y-4">
@@ -43,16 +45,17 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
 
       <div
         aria-busy={isPlaceholderData}
-        className={`space-y-4 transition-opacity${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+        inert={isPlaceholderData}
+        className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
       >
         <OverviewTable
-          columns={getExperimentColumns(t)}
+          columns={getExperimentColumns(t, locale)}
           items={data?.items}
           getRowKey={(experiment) => experiment.id}
           getRowHref={(experiment) =>
             archived
-              ? `/platform/experiments-archive/${experiment.id}`
-              : `/platform/experiments/${experiment.id}`
+              ? `/${locale}/platform/experiments-archive/${experiment.id}`
+              : `/${locale}/platform/experiments/${experiment.id}`
           }
           emptyMessage={t("experiments.noExperiments")}
           emptyHelpPath={!archived && !search ? "/guide/get-started/quick-start" : undefined}

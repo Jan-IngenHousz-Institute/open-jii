@@ -1197,7 +1197,6 @@
     "descriptionPlaceholder": "Beschreibung hinzufügen...",
     "detailsTitle": "Details",
     "codePlaceholder": "Protokollcode als JSON eingeben",
-    "lastUpdate": "Letzte Aktualisierung",
     "columns": {
       "name": "Name",
       "family": "Familie",

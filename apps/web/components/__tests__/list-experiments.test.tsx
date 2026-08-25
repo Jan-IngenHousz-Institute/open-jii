@@ -24,7 +24,7 @@ describe("ListExperiments", () => {
     render(<ListExperiments />);
 
     const link = await screen.findByRole("link", { name: "Exp 1" });
-    expect(link.getAttribute("href")).toBe("/platform/experiments/1");
+    expect(link.getAttribute("href")).toBe("/en-US/platform/experiments/1");
   });
 
   it("links to the archive detail page when archived", async () => {
@@ -35,7 +35,7 @@ describe("ListExperiments", () => {
     render(<ListExperiments archived />);
 
     const link = await screen.findByRole("link", { name: "Old Exp" });
-    expect(link.getAttribute("href")).toBe("/platform/experiments-archive/1");
+    expect(link.getAttribute("href")).toBe("/en-US/platform/experiments-archive/1");
   });
 
   it("renders the empty state with a docs help link when no experiments", async () => {
@@ -110,5 +110,43 @@ describe("ListExperiments", () => {
 
     await screen.findByText("experiments.noExperiments");
     expect(screen.queryByRole("button", { name: "pagination.next" })).not.toBeInTheDocument();
+  });
+
+  it("makes the stale page non-interactive while the next page loads", async () => {
+    server.mount(contract.experiments.listExperimentsPaginated, {
+      body: (call: { query: Record<string, string> }) =>
+        envelope([createExperiment({ id: "1", name: "Exp 1" })], Number(call.query.page), 3),
+    });
+
+    const user = userEvent.setup();
+    const { container } = render(<ListExperiments />);
+
+    const link = await screen.findByRole("link", { name: "Exp 1" });
+
+    let releasePage2!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      releasePage2 = resolve;
+    });
+    server.mount(contract.experiments.listExperimentsPaginated, {
+      body: envelope([createExperiment({ id: "2", name: "Exp 2" })], 2, 3),
+      unblock: gate,
+    });
+
+    await user.click(screen.getByRole("button", { name: "pagination.next" }));
+
+    const busy = await waitFor(() => {
+      const el = container.querySelector('[aria-busy="true"]');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    expect(busy).toHaveAttribute("inert");
+    expect(busy.className).toContain("pointer-events-none");
+    expect(busy.className).not.toContain("transition-opacitypointer-events-none");
+    expect(busy).toContainElement(link);
+
+    releasePage2();
+    await waitFor(() => {
+      expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    });
   });
 });
