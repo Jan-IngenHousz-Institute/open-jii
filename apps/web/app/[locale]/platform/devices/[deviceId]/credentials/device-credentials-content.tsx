@@ -42,7 +42,7 @@ export default function DeviceCredentialsPage({ params }: DeviceCredentialsPageP
       />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         <IotDeviceCredentialsCard device={data} />
-        <div className="lg:sticky lg:top-6 lg:self-start">
+        <div className="lg:sticky lg:top-20 lg:self-start">
           <DeviceCredentialsGuide />
         </div>
       </div>

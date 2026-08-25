@@ -533,7 +533,8 @@
         "missing": "Ontbreekt: {{fields}}",
         "memoryOnly": "Uitgegeven configuraties bestaan alleen in deze browsersessie. U kunt altijd opnieuw uitgeven; het bestand wordt altijd uit de huidige staat gegenereerd.",
         "integrationGuide": "Integratiegids",
-        "viewJson": "JSON bekijken"
+        "viewJson": "JSON bekijken",
+        "reissueHint": "Opnieuw uitgeven genereert het bestand opnieuw voor alles wat nu gebonden is; er komt niets nieuws bij."
       },
       "boundRowActions": "Experimentacties",
       "removeMenuItem": "Uit experiment verwijderen",

@@ -269,6 +269,7 @@ export function DeviceConfigurationRail({
             <RefreshCw className="mr-1.5 size-4" />
             {t("iot.onboarding.reissue")}
           </Button>
+          <p className="text-muted-foreground text-xs">{t("iot.onboarding.rail.reissueHint")}</p>
           <p className="text-muted-foreground text-xs">{t("iot.onboarding.rail.memoryOnly")}</p>
           <a
             href={`${env.NEXT_PUBLIC_DOCS_URL}/developers/device-integration`}

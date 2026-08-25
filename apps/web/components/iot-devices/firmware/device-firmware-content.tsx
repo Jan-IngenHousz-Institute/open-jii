@@ -196,7 +196,7 @@ export default function DeviceFirmwarePage() {
           </PanelCard>
         </div>
 
-        <div className="lg:sticky lg:top-6 lg:self-start">
+        <div className="lg:sticky lg:top-20 lg:self-start">
           <FirmwareDeliveryGuide defaultOpen />
         </div>
       </div>

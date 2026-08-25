@@ -533,7 +533,8 @@
         "missing": "Missing: {{fields}}",
         "memoryOnly": "Issued configurations exist in this browser session only. Re-issue any time; the file is always regenerated from current state.",
         "integrationGuide": "Integration guide",
-        "viewJson": "View JSON"
+        "viewJson": "View JSON",
+        "reissueHint": "Re-issuing regenerates the file for everything currently bound; it adds nothing new."
       },
       "boundRowActions": "Experiment actions",
       "removeMenuItem": "Remove from experiment",

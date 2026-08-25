@@ -306,7 +306,7 @@ export function GroupOnboardingContent() {
           )}
         </div>
 
-        <div className="lg:sticky lg:top-6 lg:self-start">
+        <div className="lg:sticky lg:top-20 lg:self-start">
           <Card className="shadow-none">
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base">{t("iot.onboarding.rail.title")}</CardTitle>

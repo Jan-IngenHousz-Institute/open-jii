@@ -533,7 +533,8 @@
         "missing": "Fehlt: {{fields}}",
         "memoryOnly": "Ausgegebene Konfigurationen existieren nur in dieser Browser-Sitzung. Sie können jederzeit erneut ausgeben; die Datei wird immer aus dem aktuellen Stand erzeugt.",
         "integrationGuide": "Integrationsleitfaden",
-        "viewJson": "JSON anzeigen"
+        "viewJson": "JSON anzeigen",
+        "reissueHint": "Neu ausstellen erzeugt die Datei für alles derzeit Gebundene neu; es kommt nichts Neues hinzu."
       },
       "boundRowActions": "Experiment-Aktionen",
       "removeMenuItem": "Aus Experiment entfernen",
