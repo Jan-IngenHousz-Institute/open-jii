@@ -64,9 +64,7 @@ describe("GroupOnboardingContent", () => {
     expect(screen.getAllByText("iot.groups.onboarding.devicesSelected").length).toBeGreaterThan(0);
     expect(screen.getByText("iot.groups.onboarding.inactiveIneligible")).toBeInTheDocument();
     expect(screen.getByText("iot.groups.onboarding.mobileIneligible")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /iot.onboarding.reissue/ })).toBeInTheDocument();
   });
 
   it("onboards the selection and offers the config zip", async () => {
@@ -122,7 +120,7 @@ describe("GroupOnboardingContent", () => {
     render(<GroupOnboardingContent />);
 
     await user.click(await screen.findByText("Spare"));
-    await user.click(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ }));
+    await user.click(screen.getByRole("button", { name: /iot.onboarding.reissue/ }));
 
     await vi.waitFor(() => {
       expect(onboard.calls).toHaveLength(1);
@@ -244,7 +242,7 @@ describe("GroupOnboardingContent", () => {
 
     expect(await screen.findByText("Node 0")).toBeInTheDocument();
     expect(screen.getByText("iot.groups.onboarding.overCap")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /iot.onboarding.reissue/ })).toBeDisabled();
   });
 
   it("allows exactly the batch cap", async () => {
@@ -258,7 +256,7 @@ describe("GroupOnboardingContent", () => {
 
     expect(await screen.findByText("Node 0")).toBeInTheDocument();
     expect(screen.queryByText("iot.groups.onboarding.overCap")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /iot.onboarding.reissue/ })).toBeEnabled();
   });
 
   it("supports reselecting a previously deselected device", async () => {
@@ -274,7 +272,7 @@ describe("GroupOnboardingContent", () => {
     // Off, then back on: the selection round-trips.
     await user.click(await screen.findByText("Gateway"));
     await user.click(screen.getByText("Gateway"));
-    await user.click(screen.getByRole("button", { name: /iot.groups.onboarding.onboard/ }));
+    await user.click(screen.getByRole("button", { name: /iot.onboarding.reissue/ }));
 
     await vi.waitFor(() => {
       expect(onboard.calls).toHaveLength(1);

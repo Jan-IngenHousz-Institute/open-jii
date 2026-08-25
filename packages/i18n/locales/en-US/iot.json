@@ -422,8 +422,7 @@
           "step3": "Rotate to hand the device a fresh certificate, or when it changes hands. Revoke to cut access immediately.",
           "step4": "A revoked device cannot reconnect until a new certificate is issued."
         },
-        "certificateIdLabel": "Certificate ID",
-        "certificateArnLabel": "Certificate ARN"
+        "certificateIdLabel": "Certificate ID"
       },
       "nextAction": {
         "issueCredentials": "Issue certificate",
@@ -503,8 +502,6 @@
       "answerRequiredHint": "Answer all required questions before delivering the configuration.",
       "experimentsTitle": "Experiments",
       "experimentsDescription": "Experiments this device streams into, and experiments you can onboard it to.",
-      "optionsTitle": "Configuration options",
-      "includeWorkbookHint": "Bundles each experiment's workbook (protocols, commands, and prefill questions) into the configuration. Turn off to issue connection settings and topics only.",
       "selectedCount": "{{count}} experiment selected",
       "selectedCount_other": "{{count}} experiments selected",
       "onboardCount_one": "Onboard to {{count}} experiment",
@@ -536,8 +533,7 @@
         "missing": "Missing: {{fields}}",
         "memoryOnly": "Issued configurations exist in this browser session only. Re-issue any time; the file is always regenerated from current state.",
         "integrationGuide": "Integration guide",
-        "viewJson": "View JSON",
-        "reissueHint": "Re-issuing regenerates the file for everything currently bound; it adds nothing new."
+        "viewJson": "View JSON"
       },
       "boundRowActions": "Experiment actions",
       "removeMenuItem": "Remove from experiment",
@@ -549,7 +545,8 @@
       "description": "Choose the experiments this device streams into, then hand it the issued configuration.",
       "filterExperiments": "Filter experiments",
       "filterNoMatches": "No experiments match that filter.",
-      "answeredOfRequired": "{{answered}} of {{required}} required"
+      "answeredOfRequired": "{{answered}} of {{required}} required",
+      "reissueHint": "Re-issuing regenerates the file for everything currently bound; it adds nothing new."
     },
     "experimentDevices": {
       "tabLabel": "Devices",

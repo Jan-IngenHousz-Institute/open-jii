@@ -11,7 +11,7 @@ import { useOnboardDevice } from "@/hooks/iot/useOnboardDevice/useOnboardDevice"
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Loader2, MoreHorizontal, Rocket, Trash2 } from "lucide-react";
+import { AlertTriangle, Loader2, MoreHorizontal, RefreshCw, Rocket, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -172,8 +172,10 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
   const isDeviceActive = device.status === "active";
   const hasBindings = bound.length > 0;
   const hasSelection = selectedIds.length > 0;
-  const canOnboard = isDeviceActive && hasSelection && !isOnboarding;
-  const canReissue = isDeviceActive && hasBindings && !isOnboarding;
+  // One button, two jobs: with a selection it onboards, without one it
+  // re-issues for everything currently bound.
+  const isReissueMode = !hasSelection && hasBindings;
+  const canIssue = isDeviceActive && (hasSelection || hasBindings) && !isOnboarding;
 
   const railState: RailState = isOnboarding
     ? "updating"
@@ -237,6 +239,37 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
       },
     );
   };
+
+  function issueLabel(): string {
+    if (hasSelection) {
+      return t("iot.onboarding.onboardCount", { count: selectedIds.length });
+    }
+    if (isReissueMode) {
+      return t("iot.onboarding.reissue");
+    }
+    return t("iot.onboarding.onboard");
+  }
+
+  function renderIssueIcon() {
+    if (isOnboarding) {
+      return <Loader2 className="mr-1.5 size-4 animate-spin" />;
+    }
+    if (isReissueMode) {
+      return <RefreshCw className="mr-1.5 size-4" />;
+    }
+    return <Rocket className="mr-1.5 size-4" />;
+  }
+
+  function renderIssueHelper() {
+    if (!isDeviceActive || hasSelection) {
+      return null;
+    }
+    return (
+      <p className="text-muted-foreground mt-1 text-xs">
+        {isReissueMode ? t("iot.onboarding.reissueHint") : t("iot.onboarding.selectAtLeastOne")}
+      </p>
+    );
+  }
 
   function renderBlockedNotice() {
     if (isDeviceActive) {
@@ -371,62 +404,38 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
               </div>
               <CardDescription>{t("iot.onboarding.experimentsDescription")}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">{renderExperimentList()}</CardContent>
-          </Card>
+            <CardContent className="space-y-4">
+              {renderExperimentList()}
 
-          <Card className="shadow-none">
-            <CardHeader>
-              <CardTitle className="text-base">{t("iot.onboarding.optionsTitle")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-start gap-3">
-                <Switch
-                  id="include-workbook"
-                  checked={includeWorkbook}
-                  onCheckedChange={setIncludeWorkbook}
-                />
-                <div className="space-y-1">
-                  <Label htmlFor="include-workbook" className="text-sm font-medium">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="include-workbook"
+                    checked={includeWorkbook}
+                    onCheckedChange={setIncludeWorkbook}
+                  />
+                  <Label htmlFor="include-workbook" className="text-sm font-normal">
                     {t("iot.onboarding.includeWorkbook")}
                   </Label>
-                  <p className="text-muted-foreground text-sm">
-                    {t("iot.onboarding.includeWorkbookHint")}
-                  </p>
+                </div>
+                <div className="text-right">
+                  <Button
+                    onClick={() => {
+                      issue(selectedIds);
+                    }}
+                    disabled={!canIssue}
+                  >
+                    {renderIssueIcon()}
+                    {issueLabel()}
+                  </Button>
+                  {/* The reason sits under the control it disables, not three blocks away. */}
+                  {renderIssueHelper()}
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {renderBlockedNotice()}
-
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-muted-foreground text-sm">
-              {t("iot.onboarding.selectedCount", { count: selectedIds.length })}
-            </p>
-            <div className="text-right">
-              <Button
-                onClick={() => {
-                  issue(selectedIds);
-                }}
-                disabled={!canOnboard}
-              >
-                {isOnboarding ? (
-                  <Loader2 className="mr-1.5 size-4 animate-spin" />
-                ) : (
-                  <Rocket className="mr-1.5 size-4" />
-                )}
-                {hasSelection
-                  ? t("iot.onboarding.onboardCount", { count: selectedIds.length })
-                  : t("iot.onboarding.onboard")}
-              </Button>
-              {/* The reason sits under the control it disables, not three blocks away. */}
-              {isDeviceActive && !hasSelection && (
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {t("iot.onboarding.selectAtLeastOne")}
-                </p>
-              )}
-            </div>
-          </div>
 
           <div ref={questionsAnchorRef} className="scroll-mt-6">
             {questions.length > 0 && (
@@ -483,10 +492,6 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
             answered={answeredRequired}
             requiredCount={requiredQuestions.length}
             missingAnswers={missingAnswers}
-            canReissue={canReissue}
-            onReissue={() => {
-              issue([]);
-            }}
             blockedNotice={renderBlockedNotice()}
           />
         </div>

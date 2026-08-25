@@ -422,8 +422,7 @@
           "step3": "Roteer om het apparaat een vers certificaat te geven, of wanneer het van eigenaar wisselt. Intrekken sluit de toegang direct af.",
           "step4": "Een ingetrokken apparaat kan pas weer verbinden zodra een nieuw certificaat is uitgegeven."
         },
-        "certificateIdLabel": "Certificaat-ID",
-        "certificateArnLabel": "Certificaat-ARN"
+        "certificateIdLabel": "Certificaat-ID"
       },
       "nextAction": {
         "issueCredentials": "Certificaat uitgeven",
@@ -503,8 +502,6 @@
       "answerRequiredHint": "Beantwoord alle verplichte vragen voordat u de configuratie aflevert.",
       "experimentsTitle": "Experimenten",
       "experimentsDescription": "Experimenten waar dit apparaat naartoe stuurt, en experimenten waarvoor u het kunt instellen.",
-      "optionsTitle": "Configuratieopties",
-      "includeWorkbookHint": "Bundelt het workbook van elk experiment (protocollen, commando's en voorbereide vragen) in de configuratie. Zet uit om alleen verbindingsinstellingen en topics uit te geven.",
       "selectedCount": "{{count}} experiment geselecteerd",
       "selectedCount_other": "{{count}} experimenten geselecteerd",
       "onboardCount_one": "Instellen voor {{count}} experiment",
@@ -536,8 +533,7 @@
         "missing": "Ontbreekt: {{fields}}",
         "memoryOnly": "Uitgegeven configuraties bestaan alleen in deze browsersessie. U kunt altijd opnieuw uitgeven; het bestand wordt altijd uit de huidige staat gegenereerd.",
         "integrationGuide": "Integratiegids",
-        "viewJson": "JSON bekijken",
-        "reissueHint": "Opnieuw uitgeven genereert het bestand opnieuw voor alles wat nu gebonden is; er komt niets nieuws bij."
+        "viewJson": "JSON bekijken"
       },
       "boundRowActions": "Experimentacties",
       "removeMenuItem": "Uit experiment verwijderen",
@@ -549,7 +545,8 @@
       "description": "Kies de experimenten waar dit apparaat naartoe streamt en geef het daarna de uitgegeven configuratie.",
       "filterExperiments": "Experimenten filteren",
       "filterNoMatches": "Geen experimenten passen bij dit filter.",
-      "answeredOfRequired": "{{answered}} van {{required}} verplicht"
+      "answeredOfRequired": "{{answered}} van {{required}} verplicht",
+      "reissueHint": "Opnieuw uitgeven genereert het bestand opnieuw voor alles wat nu gebonden is; er komt niets nieuws bij."
     },
     "experimentDevices": {
       "tabLabel": "Apparaten",

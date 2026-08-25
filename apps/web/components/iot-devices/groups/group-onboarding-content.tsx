@@ -12,7 +12,7 @@ import { orpc } from "@/lib/orpc";
 import { formatHm } from "@/util/date";
 import { resolveDeviceLabel } from "@/util/device-presentation";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Rocket } from "lucide-react";
+import { Loader2, RefreshCw, Rocket } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -82,6 +82,9 @@ export function GroupOnboardingContent() {
   // The contract rejects an oversized selection outright, so the page has to
   // ask for a smaller one instead of letting the submit die on a generic 400.
   const isOverCap = selectedIds.length > MAX_BATCH;
+  // Same grammar as the device tab: with experiments selected the run binds
+  // them, without any it re-issues every selected device's current config.
+  const isReissueRun = experimentIds.length === 0;
 
   function labelFor(member: IotDeviceGroupMember): string {
     return resolveDeviceLabel(member, t);
@@ -159,6 +162,16 @@ export function GroupOnboardingContent() {
   const hasUnansweredRequired = questions.some(
     (entry) => entry.question.required && !(answers[entry.question.id] ?? entry.question.answer),
   );
+
+  function renderOnboardIcon() {
+    if (onboardGroup.isPending) {
+      return <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />;
+    }
+    if (isReissueRun) {
+      return <RefreshCw className="mr-2 h-4 w-4" aria-hidden />;
+    }
+    return <Rocket className="mr-2 h-4 w-4" aria-hidden />;
+  }
 
   function renderMemberRow(member: IotDeviceGroupMember) {
     const eligibleMember = isEligible(member);
@@ -242,9 +255,6 @@ export function GroupOnboardingContent() {
                   ))}
                 </ul>
               )}
-              <p className="text-muted-foreground text-xs">
-                {t("iot.groups.onboarding.reissueHint")}
-              </p>
             </CardContent>
           </Card>
 
@@ -285,18 +295,23 @@ export function GroupOnboardingContent() {
                     {t("iot.groups.onboarding.overCap", { max: MAX_BATCH })}
                   </p>
                 )}
-                <Button
-                  className="w-fit"
-                  onClick={handleOnboard}
-                  disabled={selectedIds.length === 0 || isOverCap || onboardGroup.isPending}
-                >
-                  {onboardGroup.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Rocket className="mr-2 h-4 w-4" aria-hidden />
+                <div className="text-right">
+                  <Button
+                    className="w-fit"
+                    onClick={handleOnboard}
+                    disabled={selectedIds.length === 0 || isOverCap || onboardGroup.isPending}
+                  >
+                    {renderOnboardIcon()}
+                    {isReissueRun
+                      ? t("iot.onboarding.reissue")
+                      : t("iot.groups.onboarding.onboard", { count: selectedIds.length })}
+                  </Button>
+                  {isReissueRun && (
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t("iot.groups.onboarding.reissueHint")}
+                    </p>
                   )}
-                  {t("iot.groups.onboarding.onboard", { count: selectedIds.length })}
-                </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -422,8 +422,7 @@
           "step3": "Rotieren Sie, um dem Gerät ein frisches Zertifikat zu geben, oder wenn es den Besitzer wechselt. Widerrufen kappt den Zugang sofort.",
           "step4": "Ein widerrufenes Gerät kann sich erst wieder verbinden, wenn ein neues Zertifikat ausgestellt ist."
         },
-        "certificateIdLabel": "Zertifikat-ID",
-        "certificateArnLabel": "Zertifikat-ARN"
+        "certificateIdLabel": "Zertifikat-ID"
       },
       "nextAction": {
         "issueCredentials": "Zertifikat ausstellen",
@@ -503,8 +502,6 @@
       "answerRequiredHint": "Beantworten Sie alle Pflichtfragen, bevor Sie die Konfiguration übergeben.",
       "experimentsTitle": "Experimente",
       "experimentsDescription": "Experimente, in die dieses Gerät sendet, und Experimente, für die Sie es einrichten können.",
-      "optionsTitle": "Konfigurationsoptionen",
-      "includeWorkbookHint": "Bündelt das Workbook jedes Experiments (Protokolle, Befehle und vorausgefüllte Fragen) in die Konfiguration. Ausschalten, um nur Verbindungseinstellungen und Topics auszugeben.",
       "selectedCount": "{{count}} Experiment ausgewählt",
       "selectedCount_other": "{{count}} Experimente ausgewählt",
       "onboardCount_one": "Für {{count}} Experiment einrichten",
@@ -536,8 +533,7 @@
         "missing": "Fehlt: {{fields}}",
         "memoryOnly": "Ausgegebene Konfigurationen existieren nur in dieser Browser-Sitzung. Sie können jederzeit erneut ausgeben; die Datei wird immer aus dem aktuellen Stand erzeugt.",
         "integrationGuide": "Integrationsleitfaden",
-        "viewJson": "JSON anzeigen",
-        "reissueHint": "Neu ausstellen erzeugt die Datei für alles derzeit Gebundene neu; es kommt nichts Neues hinzu."
+        "viewJson": "JSON anzeigen"
       },
       "boundRowActions": "Experiment-Aktionen",
       "removeMenuItem": "Aus Experiment entfernen",
@@ -549,7 +545,8 @@
       "description": "Wählen Sie die Experimente, in die dieses Gerät sendet, und übergeben Sie ihm dann die ausgegebene Konfiguration.",
       "filterExperiments": "Experimente filtern",
       "filterNoMatches": "Keine Experimente passen zu diesem Filter.",
-      "answeredOfRequired": "{{answered}} von {{required}} Pflichtfeldern"
+      "answeredOfRequired": "{{answered}} von {{required}} Pflichtfeldern",
+      "reissueHint": "Neu ausstellen erzeugt die Datei für alles derzeit Gebundene neu; es kommt nichts Neues hinzu."
     },
     "experimentDevices": {
       "tabLabel": "Geräte",

@@ -2,13 +2,12 @@
 
 import { DeviceConfigDelivery } from "@/components/iot-devices/device-config-delivery";
 import { formatHm } from "@/util/date";
-import { ChevronDown, RefreshCw } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { env } from "~/env";
 
 import type { DeviceOnboardingConfig, IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import {
   Collapsible,
@@ -41,8 +40,6 @@ interface DeviceConfigurationRailProps {
   answered: number;
   requiredCount: number;
   missingAnswers: string[];
-  canReissue: boolean;
-  onReissue: () => void;
   blockedNotice?: React.ReactNode;
 }
 
@@ -64,8 +61,6 @@ export function DeviceConfigurationRail({
   answered,
   requiredCount,
   missingAnswers,
-  canReissue,
-  onReissue,
   blockedNotice,
 }: DeviceConfigurationRailProps) {
   const { t } = useTranslation("iot");
@@ -265,11 +260,6 @@ export function DeviceConfigurationRail({
         )}
 
         <div className="space-y-2 border-t pt-3">
-          <Button variant="outline" size="sm" onClick={onReissue} disabled={!canReissue}>
-            <RefreshCw className="mr-1.5 size-4" />
-            {t("iot.onboarding.reissue")}
-          </Button>
-          <p className="text-muted-foreground text-xs">{t("iot.onboarding.rail.reissueHint")}</p>
           <p className="text-muted-foreground text-xs">{t("iot.onboarding.rail.memoryOnly")}</p>
           <a
             href={`${env.NEXT_PUBLIC_DOCS_URL}/developers/device-integration`}

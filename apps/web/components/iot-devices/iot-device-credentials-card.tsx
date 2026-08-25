@@ -117,23 +117,6 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConn
                   </dd>
                 </div>
               )}
-              {device.certificateArn !== null && (
-                <div>
-                  <dt className="text-xs font-medium">
-                    {t("iot.devices.credentials.certificateArnLabel")}
-                  </dt>
-                  <dd className="flex items-start gap-1">
-                    <span className="text-muted-foreground min-w-0 flex-1 break-all font-mono text-xs">
-                      {device.certificateArn}
-                    </span>
-                    <CopyButton
-                      value={device.certificateArn}
-                      label={t("iot.onboarding.rail.copy")}
-                      copiedLabel={t("iot.onboarding.rail.copied")}
-                    />
-                  </dd>
-                </div>
-              )}
             </dl>
 
             <div className="flex flex-wrap gap-2">
