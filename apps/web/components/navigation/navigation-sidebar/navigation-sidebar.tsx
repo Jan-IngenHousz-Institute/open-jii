@@ -97,7 +97,13 @@ export function AppSidebar({
   const processedNavLibrary = navigationData.navLibrary.map(mapItem);
 
   return (
-    <Sidebar collapsible="hidden" className="hidden md:flex" {...props}>
+    // The fade is deliberately desktop-only; the mobile sidebar and the public
+    // navbar stay flat.
+    <Sidebar
+      collapsible="hidden"
+      className="[&_[data-sidebar=sidebar]]:from-sidebar [&_[data-sidebar=sidebar]]:to-sidebar-gradient hidden md:flex [&_[data-sidebar=sidebar]]:bg-gradient-to-b"
+      {...props}
+    >
       <div className="flex h-full flex-col">
         <div className="flex h-16 items-center justify-between px-4">
           <Link href={`/${locale}/platform`} className="flex items-center gap-2">

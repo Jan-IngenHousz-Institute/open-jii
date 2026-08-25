@@ -1,12 +1,12 @@
 "use client";
 
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Building2, Link2, Mail } from "lucide-react";
 
 import type { CreateUserProfileBody } from "@repo/api/domains/user/user.schema";
 import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Card, CardContent } from "@repo/ui/components/card";
 
 import { UserAvatar } from "../user-avatar";
@@ -85,13 +85,11 @@ export function AccountIdentityCard({
                   <span className="truncate">{activeOrg.name}</span>
                 </span>
               )}
-              <Badge
-                className={profile.activated === false ? "bg-status-archived" : "bg-status-active"}
-              >
+              <StatusBadge tone={profile.activated === false ? "archived" : "active"}>
                 {profile.activated === false
                   ? t("settings.status.deactivated")
                   : t("settings.status.active")}
-              </Badge>
+              </StatusBadge>
             </div>
           </div>
         </div>
