@@ -174,9 +174,6 @@ export class MacroRepository {
         );
       }
 
-      const rank = sql<number>`(${ftsRank(macros.searchVector, macros.name, search ?? "")} + ${crossTableBonus(
-        sql`(${creatorMatch(search ?? "")} OR ${ilike(languageText, `%${escapeLike(search ?? "")}%`)})`,
-      )})`;
       const tier = resourceTierExpression({
         database: this.database,
         resourceType: "macro",
@@ -185,7 +182,15 @@ export class MacroRepository {
         createdByColumn: macros.createdBy,
         userId: filter?.userId,
       });
-      const score = searchScore(rank, tier);
+      // Browsing has no term to rank against, so it skips the scoring probes entirely.
+      const score = search
+        ? searchScore(
+            sql<number>`(${ftsRank(macros.searchVector, macros.name, search)} + ${crossTableBonus(
+              sql`(${creatorMatch(search)} OR ${ilike(languageText, `%${escapeLike(search)}%`)})`,
+            )})`,
+            tier,
+          )
+        : sql<number>`0::int`;
 
       // Browse keeps tiers strict, with the curated `sortOrder` surviving as a
       // within-tier tiebreak. Both orderings end on `id` so paging is stable.

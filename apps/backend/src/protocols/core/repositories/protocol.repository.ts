@@ -151,9 +151,6 @@ export class ProtocolRepository {
         conditions.push(userId ? or(related, eq(protocols.createdBy, userId)) : sql`false`);
       }
 
-      const rank = sql<number>`(${ftsRank(protocols.searchVector, protocols.name, search ?? "")} + ${crossTableBonus(
-        sql`(${creatorMatch(search ?? "")} OR ${ilike(familyText, `%${escapeLike(search ?? "")}%`)})`,
-      )})`;
       const tier = resourceTierExpression({
         database: this.database,
         resourceType: "protocol",
@@ -162,7 +159,15 @@ export class ProtocolRepository {
         createdByColumn: protocols.createdBy,
         userId,
       });
-      const score = searchScore(rank, tier);
+      // Browsing has no term to rank against, so it skips the scoring probes entirely.
+      const score = search
+        ? searchScore(
+            sql<number>`(${ftsRank(protocols.searchVector, protocols.name, search)} + ${crossTableBonus(
+              sql`(${creatorMatch(search)} OR ${ilike(familyText, `%${escapeLike(search)}%`)})`,
+            )})`,
+            tier,
+          )
+        : sql<number>`0::int`;
 
       // Browse keeps tiers strict, with the curated `sortOrder` surviving as a
       // within-tier tiebreak. Both orderings end on `id` so paging is stable.

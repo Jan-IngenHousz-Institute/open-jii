@@ -282,12 +282,6 @@ export class WorkbookRepository {
         );
       }
 
-      const rank = sql<number>`(${ftsRank(workbooks.searchVector, workbooks.name, search ?? "")} + ${crossTableBonus(
-        creatorMatch(search ?? ""),
-        linkedExperimentMatch(search ?? ""),
-        linkedProtocolMatch(search ?? ""),
-        linkedMacroMatch(search ?? ""),
-      )})`;
       const tier = resourceTierExpression({
         database: this.database,
         resourceType: "workbook",
@@ -296,7 +290,19 @@ export class WorkbookRepository {
         createdByColumn: workbooks.createdBy,
         userId: filter?.userId,
       });
-      const score = searchScore(rank, tier);
+      // Browsing has no term to rank against. Skipping the score here matters most for
+      // workbooks: its rank re-runs four correlated linked-entity probes per row.
+      const score = search
+        ? searchScore(
+            sql<number>`(${ftsRank(workbooks.searchVector, workbooks.name, search)} + ${crossTableBonus(
+              creatorMatch(search),
+              linkedExperimentMatch(search),
+              linkedProtocolMatch(search),
+              linkedMacroMatch(search),
+            )})`,
+            tier,
+          )
+        : sql<number>`0::int`;
 
       // Both orderings end on `id` so paging never drops or repeats a row on ties.
       const orderBy = search

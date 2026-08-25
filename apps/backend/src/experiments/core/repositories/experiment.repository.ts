@@ -322,6 +322,7 @@ export class ExperimentRepository {
         // reach purely by their being public drop out. Access held through an org or
         // team counts, it is how most members reach anything; so does authorship,
         // because a creator holds no grant on their own work.
+        // Without a caller nothing resolves, so the scope admits nothing.
         const related = relatedResourceCondition({
           database: this.database,
           resourceType: "experiment",
@@ -329,7 +330,7 @@ export class ExperimentRepository {
           organizationIdColumn: experiments.organizationId,
           userId,
         });
-        conditions.push(or(related, eq(experiments.createdBy, userId)));
+        conditions.push(userId ? or(related, eq(experiments.createdBy, userId)) : sql`false`);
       }
 
       if (status) {
@@ -392,13 +393,6 @@ export class ExperimentRepository {
         );
       }
 
-      // Relevance: vector/name rank dominates; cross-table matches add a small capped bonus, so a
-      // name match always outranks one matched only by a related field.
-      const rank = sql<number>`(${ftsRank(experiments.searchVector, experiments.name, search ?? "")} + ${crossTableBonus(
-        creatorMatch(search ?? ""),
-        sql`(${memberMatch(search ?? "")} OR ${locationMatch(search ?? "")})`,
-      )})`;
-
       const tier = resourceTierExpression({
         database: this.database,
         resourceType: "experiment",
@@ -407,7 +401,19 @@ export class ExperimentRepository {
         createdByColumn: experiments.createdBy,
         userId,
       });
-      const score = searchScore(rank, tier);
+
+      // Relevance: vector/name rank dominates; cross-table matches add a small capped bonus, so a
+      // name match always outranks one matched only by a related field. Browsing has no term to
+      // rank against, so it selects a constant rather than paying for empty-term probes per row.
+      const score = search
+        ? searchScore(
+            sql<number>`(${ftsRank(experiments.searchVector, experiments.name, search)} + ${crossTableBonus(
+              creatorMatch(search),
+              sql`(${memberMatch(search)} OR ${locationMatch(search)})`,
+            )})`,
+            tier,
+          )
+        : sql<number>`0::int`;
 
       // Browse keeps tiers strict and recency within them; search folds tier into one
       // score so a strong public match can still beat a weak owned one. Both end on

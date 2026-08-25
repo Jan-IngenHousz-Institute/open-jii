@@ -664,7 +664,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Act - scope to "related" with "active" status
-      const result = await repository.findAll(mainUserId, "member", "active");
+      const result = await repository.findAll(mainUserId, "related", "active");
 
       // Assert
       expect(result.isSuccess()).toBe(true);

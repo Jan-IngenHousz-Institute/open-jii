@@ -96,6 +96,19 @@ describe("ExperimentRepository relationship-tier ordering", () => {
     expect(ids).toEqual([newer.id, older.id]);
   });
 
+  it("admits nothing for scope=related without a caller, rather than matching on undefined", async () => {
+    await testApp.createExperiment({
+      name: "Anonprobe public",
+      userId: author,
+      visibility: "public",
+    });
+
+    const result = await repository.findAll(undefined as unknown as string, "related");
+
+    assertSuccess(result);
+    expect(result.value).toEqual([]);
+  });
+
   it("lets a strong public match outrank a weak owned one when searching", async () => {
     await testApp.createExperiment({
       name: "Quorndalf",

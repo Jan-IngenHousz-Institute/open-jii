@@ -85,7 +85,10 @@ export const CROSS_TABLE_BONUS_CAP = 0.1;
 /**
  * Capped bonus for matches on related tables (creator, members, linked entities). One shared
  * ceiling across every entity keeps scores comparable in cross-type global search, where entities
- * differ in how many related tables they can match.
+ * differ in how many related tables they can match. The ceiling bounds the skew rather than
+ * erasing it: protocols and macros have a single probe so they top out at one step (0.05), while
+ * experiments and workbooks can reach the full cap. Bounded was preferred over identical because
+ * a flat any-match bonus would flatten within-entity ordering.
  */
 export function crossTableBonus(...matches: SQL[]): SQL<number> {
   const terms = matches.map(
