@@ -1,6 +1,6 @@
 import { createIotDeviceDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { render, screen } from "@/test/test-utils";
 import { use } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

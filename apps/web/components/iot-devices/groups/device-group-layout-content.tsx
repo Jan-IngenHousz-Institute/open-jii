@@ -7,7 +7,6 @@ import Link from "next/link";
 import type { IotDeviceGroupDetail } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 
-import { MetaField } from "../../experiment-dashboards/meta-field";
 import { DeviceGroupDetailTabs } from "./device-group-detail-tabs";
 import { GroupHeaderActions } from "./group-header-actions";
 
