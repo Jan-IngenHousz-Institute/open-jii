@@ -92,7 +92,7 @@ export default function DeviceMonitoringPage() {
   };
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="space-y-6">
       <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
