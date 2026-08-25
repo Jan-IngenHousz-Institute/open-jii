@@ -154,14 +154,14 @@ export default function DeviceFirmwarePage() {
     }
     if (isSameFirmwareVersion(installed, latest.version)) {
       return (
-        <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+        <p className="text-status-active-foreground flex items-center gap-2 text-sm">
           <CheckCircle2 className="h-4 w-4" aria-hidden />
           {t("iot.devices.firmware.upToDate", { version: installed })}
         </p>
       );
     }
     return (
-      <p className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-500">
+      <p className="text-status-stale-foreground flex items-center gap-2 text-sm">
         <AlertTriangle className="h-4 w-4" aria-hidden />
         {t("iot.devices.firmware.updateAvailable", { installed, latest: latest.version })}
       </p>

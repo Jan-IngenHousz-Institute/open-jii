@@ -55,14 +55,18 @@ export function FirmwareDeliveryGuide() {
           </pre>
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="icon"
             className="bg-background hover:bg-accent shadow-xs absolute right-2 top-2 h-7 w-7 border"
             aria-label={copied ? tCommon("common.copied") : tCommon("common.copy")}
             title={copied ? tCommon("common.copied") : tCommon("common.copy")}
             onClick={() => copy(JOB_DOCUMENT_EXAMPLE)}
           >
-            {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+            {copied ? (
+              <Check className="text-status-active-foreground h-3.5 w-3.5" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
           </Button>
         </div>
 
