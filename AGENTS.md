@@ -37,6 +37,7 @@ The platform UI is auth-gated, so a real check needs Postgres and the backend, n
 - `pnpm --filter database db:seed` — seeds the local user and development data.
 - `pnpm local:login` — a session cookie with no browser and no email; reads the OTP from Postgres.
 - `pnpm dev:fb` — runs backend and web together.
+- `pnpm e2e` — the browser end-to-end suite, against an already-running stack.
 - `pnpm lint`, `pnpm test`, `pnpm format:check` — validation.
 
 Copy `apps/backend/.env.example` to `apps/backend/.env` before first boot. It is generated and

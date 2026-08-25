@@ -3,6 +3,12 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "exports": {
+    "./otp": {
+      "types": "./src/lib/otp.ts",
+      "default": "./src/lib/otp.ts"
+    }
+  },
   "scripts": {
     "build": "tsc --build tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
