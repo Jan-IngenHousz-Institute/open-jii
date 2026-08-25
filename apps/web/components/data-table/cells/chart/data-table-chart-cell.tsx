@@ -89,7 +89,7 @@ export function DataTableChartCell({
         <path
           d={svgPath}
           fill="none"
-          stroke="#0a4d4d"
+          className="stroke-chart-1"
           strokeWidth="1"
           strokeLinecap="round"
           strokeLinejoin="round"

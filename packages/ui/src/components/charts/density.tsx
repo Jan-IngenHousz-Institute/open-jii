@@ -47,7 +47,7 @@ export function DensityPlot({
   x,
   y,
   name = "data",
-  color = "rgb(102,0,0)",
+  color = readThemeColor("--chart-1") ?? "rgb(102,0,0)",
   showScatter = false,
   showContours = true,
   showMarginalHistograms = false,

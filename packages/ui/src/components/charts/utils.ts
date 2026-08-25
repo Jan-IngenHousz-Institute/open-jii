@@ -127,6 +127,14 @@ export function chartGridColor(): string {
 }
 
 /**
+ * The default colour for a reference line. One definition so the renderer, the
+ * picker's fallback swatch and anything else agree.
+ */
+export function referenceLineColor(): string {
+  return readThemeColor("--muted-foreground") ?? "#9ca3af";
+}
+
+/**
  * The series palette. Charts get their colours from the same `--chart-1..5`
  * block every other surface reads, so swapping the theme re-colours them too.
  * Falls back to Plotly's own palette when the properties are not readable.
@@ -468,6 +476,10 @@ export function createBaseLayout(
   const bgColor = backgroundColor || "rgba(0,0,0,0)";
   const paperBgColor =
     backgroundColor || readThemeColor("--card") || colorScheme[theme ?? "auto"].bg;
+  // Legend and annotation plates are a popover surface. `cc` is 0.8 alpha as an
+  // 8-digit hex: Plotly parses that, and silently substitutes its own default
+  // for a color-mix() it cannot read. isDark still supplies the SSR fallback.
+  const plateBgColor = `${readThemeColor("--popover") ?? (isDark ? "#000000" : "#ffffff")}cc`;
   const colorway = resolveChartColorway();
 
   // Tier-aware typography. Axis chrome (tick fonts, axis title font,
@@ -538,7 +550,7 @@ export function createBaseLayout(
     showlegend: showLegend,
     legend: {
       ...legendAnchor,
-      bgcolor: isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)",
+      bgcolor: plateBgColor,
       bordercolor: gridColor,
       borderwidth: 1,
       // Keep emit order across stack modes; Plotly's default reverses it
@@ -606,7 +618,7 @@ export function createBaseLayout(
         size: ann.font?.size || 12,
         family: ann.font?.family || "var(--font-sans)",
       },
-      bgcolor: ann.bgcolor || (isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)"),
+      bgcolor: ann.bgcolor || plateBgColor,
       bordercolor: gridColor,
       borderwidth: 1,
     })),
@@ -1121,7 +1133,7 @@ export function applyReferenceLines(
 
   for (const line of referenceLines) {
     if (!Number.isFinite(line.value)) continue;
-    const color = line.color ?? readThemeColor("--muted-foreground") ?? "#9ca3af";
+    const color = line.color ?? referenceLineColor();
     const dash = line.dash ?? "dash";
     const width = line.width ?? 1.5;
 
