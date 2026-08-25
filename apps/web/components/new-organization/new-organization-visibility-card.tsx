@@ -84,7 +84,7 @@ function VisibilityOption({
       aria-checked={isSelected}
       onClick={onSelect}
       className={cn(
-        "h-auto flex-col items-stretch p-3.5 text-left font-normal",
+        "h-auto min-w-0 flex-col items-stretch whitespace-normal p-3.5 text-left font-normal",
         isSelected ? "border-primary bg-primary/5" : "hover:border-primary/60",
       )}
     >
