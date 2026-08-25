@@ -1,9 +1,9 @@
 {
-  "total": 4,
+  "total": 12,
   "counts": {
     "apps/web": {
       "arbitrary-color": 0,
-      "palette-literal": 0,
+      "palette-literal": 2,
       "dissolved-family": 0
     },
     "packages/ui": {
@@ -13,7 +13,7 @@
     },
     "packages/cms": {
       "arbitrary-color": 0,
-      "palette-literal": 0,
+      "palette-literal": 6,
       "dissolved-family": 0
     }
   }

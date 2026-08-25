@@ -23,11 +23,15 @@
  *   node ratchet.mjs            check against the floor
  *   node ratchet.mjs --write    re-record, only ever downward
  *
- * The floor is 4: the dialog, alert-dialog, drawer and sheet scrims in
- * packages/ui, which upstream shadcn ships as a fixed translucent dark wash
- * rather than a token. A scrim is theme-independent by design — it dims
- * whatever is behind it, identically in light and dark — and the contract has
- * no slot for one. Each carries an inline disable saying so.
+ * The floor is 12, and every one of them is a scrim or a foreground paired with
+ * one. Four are the dialog, alert-dialog, drawer and sheet scrims in packages/ui,
+ * which upstream shadcn ships as a fixed translucent dark wash rather than a
+ * token. Two are the public navbar's topbar fade and its foreground; six are the
+ * home hero's fade and the four foregrounds over it. A scrim is theme-independent
+ * by design — it dims whatever is behind it, identically in light and dark — and
+ * the contract has no slot for one. A fixed scrim also has to carry its own
+ * foreground, or the pairing drifts the next time a token moves. Each carries an
+ * inline disable saying so.
  *
  * Imported by relative path rather than as a workspace dependency: this is a
  * standalone script, and the eslint config is plain ESM with no build step.

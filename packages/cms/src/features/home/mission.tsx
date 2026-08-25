@@ -40,7 +40,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
   const images = currentMission.imagesCollection?.items?.filter((img) => !!img?.url) ?? [];
 
   return (
-    <div className="bg-card py-16">
+    <div className="py-16">
       <div className="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
         {/* --- TOP TITLE SECTION --- */}
         <div className="max-w-4xl">

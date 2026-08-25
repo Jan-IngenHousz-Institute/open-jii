@@ -74,9 +74,9 @@ const selectorRegex = (source) => `/${source}/`;
  * config.
  *
  * An error, not a warning: the sweep is finished and the inventory is at its
- * floor, so any new occurrence is a regression rather than a leftover. The four
- * surviving cases are the scrims described above, each carrying an inline
- * disable with that justification.
+ * floor, so any new occurrence is a regression rather than a leftover. The
+ * surviving cases are fixed scrims and the foregrounds paired with them, each
+ * carrying an inline disable with that justification.
  *
  * @type {Awaited<import('typescript-eslint').Config>}
  */

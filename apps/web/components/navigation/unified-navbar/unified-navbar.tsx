@@ -83,7 +83,7 @@ function UserMenu({
             <User className="group-hover:text-sidebar-primary h-4 w-4 transition-all duration-200 group-hover:drop-shadow-[0_0_10px_var(--sidebar-primary)]" />
           )}
           <ChevronDown
-            className={`group-hover:text-sidebar-primary text-sidebar-foreground h-4 w-4 transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
+            className={`group-hover:text-sidebar-primary h-4 w-4 transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
           />
         </Button>
       </DropdownMenuTrigger>
@@ -245,24 +245,32 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
   // The yellow logo reads well everywhere, including over the home hero.
   const logoSrc = "/openJII_logo_RGB_horizontal_yellow_transparentBG.png";
 
+  // The scrim darkens the photo identically in both themes, so it and the
+  // foreground it pairs with are fixed literals rather than theme tokens.
+  // eslint-disable-next-line no-restricted-syntax -- fixed neutral photo scrim
+  const heroScrim = "bg-linear-to-b from-black/80 to-transparent";
+  // eslint-disable-next-line no-restricted-syntax -- pairs with heroScrim
+  const heroForeground = "text-white";
+
   return (
     <header
       className="pointer-events-auto sticky left-0 z-50 w-full"
       style={{ top: "var(--banner-offset, 0px)" }}
     >
-      {/* Gradient layer - hero/dark mode. A translucent wash of the same slab
-          the solid layer uses, so the two states share one colour and the nav's
-          light foreground stays legible over the hero image in both themes. */}
+      {/* Gradient layer - hero/dark mode */}
       <div
         aria-hidden="true"
-        className={`bg-linear-to-b from-sidebar/80 absolute inset-0 -z-10 to-transparent transition-opacity duration-300 ${showSolid ? "opacity-0" : "opacity-100"}`}
+        className={`${heroScrim} absolute inset-0 -z-10 transition-opacity duration-300 ${showSolid ? "opacity-0" : "opacity-100"}`}
       />
       {/* Solid layer - green/nav mode */}
       <div
         aria-hidden="true"
         className={`bg-sidebar border-sidebar-border absolute inset-0 -z-10 border-b shadow-lg transition-opacity duration-300 ${showSolid ? "opacity-100" : "opacity-0"}`}
       />
-      <nav className="text-sidebar-foreground mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6">
+      {/* One base colour for the whole bar; the controls below inherit it. */}
+      <nav
+        className={`mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 ${showSolid ? "text-sidebar-foreground" : heroForeground}`}
+      >
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
           <Image
@@ -282,11 +290,11 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
             // Remove hover effect for selected (active) nav item
             const linkClass = item.isActive
               ? "flex items-center space-x-2 text-sm font-medium text-sidebar-primary font-bold"
-              : "flex items-center space-x-2 text-sm font-medium transition-colors text-sidebar-foreground hover:text-sidebar-primary";
+              : "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-sidebar-primary";
 
             const iconClass = item.isActive
               ? "h-4 w-4 text-sidebar-primary"
-              : "h-4 w-4 text-sidebar-foreground group-hover:text-sidebar-primary";
+              : "h-4 w-4 group-hover:text-sidebar-primary";
 
             return (
               <Link
@@ -319,7 +327,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
               accent. `dark:hover:bg-transparent` is needed alongside the
               unprefixed class because stock ghost declares the dark fill as its
               own variant. */}
-          <ThemeToggle className="text-sidebar-foreground hover:text-sidebar-primary hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent" />
+          <ThemeToggle className="hover:text-sidebar-primary hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent" />
 
           {/* Mobile Navigation Menu */}
           <div className="md:hidden">
@@ -331,7 +339,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                   aria-label={t("navigation.menu", "Navigation menu")}
                   className="group hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent"
                 >
-                  <Menu className="group-hover:text-sidebar-primary text-sidebar-foreground h-4 w-4 transition-colors duration-200" />
+                  <Menu className="group-hover:text-sidebar-primary h-4 w-4 transition-colors duration-200" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
