@@ -91,6 +91,12 @@ export const CROSS_TABLE_BONUS_CAP = 0.1;
  * a flat any-match bonus would flatten within-entity ordering.
  */
 export function crossTableBonus(...matches: SQL[]): SQL<number> {
+  // No probes means no bonus. Falling through would join an empty term list into
+  // `LEAST(, 0.1)`, which Postgres rejects at parse time.
+  if (matches.length === 0) {
+    return sql<number>`0::numeric`;
+  }
+
   const terms = matches.map(
     (match) => sql`(CASE WHEN ${match} THEN ${sql.raw(String(CROSS_TABLE_BONUS_STEP))} ELSE 0 END)`,
   );

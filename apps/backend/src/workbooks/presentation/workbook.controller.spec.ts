@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
+import type { WorkbookPaginatedList } from "@repo/api/domains/workbook/workbook.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { assertSuccess, success, failure, AppError } from "../../common/utils/fp-utils";
@@ -18,13 +19,8 @@ import type { WorkbookVersionDto } from "../core/models/workbook-version.model";
 import type { WorkbookDto } from "../core/models/workbook.model";
 import { WorkbookVersionRepository } from "../core/repositories/workbook-version.repository";
 
-interface WorkbookPage {
-  items: { id: string }[];
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  totalCount: number;
-}
+// Inferred from the contract's output schema, so any drift in the envelope fails here.
+type WorkbookPage = WorkbookPaginatedList;
 
 describe("WorkbookController", () => {
   const testApp = TestHarness.App;

@@ -1552,7 +1552,7 @@ describe("MacroRepository — list access scoping", () => {
       .expect(StatusCodes.FORBIDDEN);
   });
 
-  it('keeps the "my" filter as an ownership view, unaffected by visibility', async () => {
+  it("keeps scope=related as a relationship view, unaffected by visibility", async () => {
     const other = await testApp.createTestUser({ name: "Other Author" });
     const othersMacro = await testApp.createMacro({
       name: "Someone else's macro",

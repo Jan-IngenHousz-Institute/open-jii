@@ -146,4 +146,59 @@ describe("WorkbookRepository listing scope and pagination", () => {
       expect(result.value.totalCount).toBe(0);
     });
   });
+
+  /**
+   * Search orders by `score DESC, id ASC`, and identically-worded rows score
+   * identically, so it is the ordering most exposed to ties. Without the `id`
+   * tiebreak the pages below could overlap or skip rows.
+   */
+  describe("findPage over the search ordering", () => {
+    const TIED = 6;
+
+    beforeEach(async () => {
+      for (let i = 0; i < TIED; i++) {
+        await testApp.createWorkbook({
+          name: `Tiebreak probe ${i}`,
+          description: "identical scoring text",
+          createdBy: owner,
+          visibility: "public",
+        });
+      }
+    });
+
+    it("walks tied rows without dropping or repeating any", async () => {
+      const filter = { search: "tiebreak", userId: owner };
+
+      const [first, second, third] = await Promise.all([
+        repository.findPage(1, 2, filter),
+        repository.findPage(2, 2, filter),
+        repository.findPage(3, 2, filter),
+      ]);
+
+      assertSuccess(first);
+      assertSuccess(second);
+      assertSuccess(third);
+
+      const ids = [...first.value.items, ...second.value.items, ...third.value.items].map(
+        (w) => w.id,
+      );
+      expect(ids).toHaveLength(TIED);
+      expect(new Set(ids).size).toBe(TIED);
+      expect(first.value.totalCount).toBe(TIED);
+
+      // The rows tie on score, so `id ASC` is the only thing making the walk stable.
+      expect(ids).toEqual([...ids].sort());
+    });
+
+    it("returns the same page on a repeated identical query", async () => {
+      const filter = { search: "tiebreak", userId: owner };
+
+      const once = await repository.findPage(2, 2, filter);
+      const twice = await repository.findPage(2, 2, filter);
+
+      assertSuccess(once);
+      assertSuccess(twice);
+      expect(twice.value.items.map((w) => w.id)).toEqual(once.value.items.map((w) => w.id));
+    });
+  });
 });
