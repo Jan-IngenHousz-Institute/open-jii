@@ -8,17 +8,18 @@ import { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { CreateDeviceGroupDialog } from "./create-device-group-dialog";
 import { GroupOverviewCard } from "./group-overview-card";
 
 /**
- * Groups on the devices overview. Creation is a dashed tile in the grid
- * itself rather than a button floating in the header: the affordance lives
- * where its result will appear, sized like the thing it creates. With no
- * groups yet, the tile alone is the section's whole grid and the hint above
- * explains it.
+ * Groups on the devices overview. Creation follows the platform's one
+ * grammar for it: a primary Plus-button in the section header, the same
+ * anatomy as the Devices header above and the organizations listing. A large
+ * estate folds behind a toggle; an empty one gets the empty state with the
+ * same primary CTA.
  */
 /** Four full rows at the 3-column breakpoint, counting the create tile. */
 const VISIBLE_GROUPS = 11;
@@ -36,23 +37,6 @@ export function DeviceGroupsBlock() {
   const visibleGroups = showAll ? groups : groups.slice(0, VISIBLE_GROUPS);
   const hiddenCount = groups.length - visibleGroups.length;
 
-  function renderCreateTile() {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          setCreateOpen(true);
-        }}
-        className="text-muted-foreground hover:border-primary/40 hover:text-foreground focus-visible:ring-primary/40 focus-visible:outline-hidden flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 transition-colors focus-visible:ring-2"
-      >
-        <span className="bg-muted flex size-10 items-center justify-center rounded-lg">
-          <Plus className="size-5" aria-hidden />
-        </span>
-        <span className="text-sm font-medium">{t("iot.groups.create")}</span>
-      </button>
-    );
-  }
-
   function renderBody() {
     if (isError) {
       return <ErrorDisplay error={error} title={t("iot.groups.loadError")} />;
@@ -66,10 +50,27 @@ export function DeviceGroupsBlock() {
       );
     }
 
+    if (groups.length === 0) {
+      return (
+        <EmptyState
+          description={t("iot.groups.emptyHint")}
+          action={
+            <Button
+              onClick={() => {
+                setCreateOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {t("iot.groups.create")}
+            </Button>
+          }
+        />
+      );
+    }
+
     return (
       <div className="space-y-3">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {renderCreateTile()}
           {visibleGroups.map((group) => (
             <GroupOverviewCard key={group.id} group={group} locale={locale} />
           ))}
@@ -102,9 +103,21 @@ export function DeviceGroupsBlock() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <h2 className="text-lg font-medium">{t("iot.devices.sections.groups")}</h2>
-        <p className="text-muted-foreground text-sm">{t("iot.groups.sectionHint")}</p>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-lg font-medium">{t("iot.devices.sections.groups")}</h2>
+          <p className="text-muted-foreground text-sm">{t("iot.groups.sectionHint")}</p>
+        </div>
+        {groups.length > 0 && (
+          <Button
+            onClick={() => {
+              setCreateOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            {t("iot.groups.create")}
+          </Button>
+        )}
       </div>
 
       {renderBody()}
