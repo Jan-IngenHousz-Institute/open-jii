@@ -25,7 +25,11 @@ export function useExperimentsFlowMeta(
 ): Record<string, ExperimentFlowMeta> {
   const results = useQueries({
     queries: experimentIds.map((id) =>
-      orpc.experiments.getFlow.queryOptions({ input: { id }, enabled: !!id }),
+      orpc.experiments.getFlow.queryOptions({
+        input: { id },
+        enabled: !!id,
+        meta: { suppressToast: true },
+      }),
     ),
   });
 
