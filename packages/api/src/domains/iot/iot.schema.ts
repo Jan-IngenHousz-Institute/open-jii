@@ -331,6 +331,18 @@ export const zDeviceBatteryPoint = z.object({
   averageBattery: z.number().nullable(),
 });
 
+// A device reports the workbook VERSION it ran, not a workbook id, so the
+// owning workbook is resolved server-side; both fields are null when the
+// registry does not know the version.
+export const zWorkbookMixEntry = z.object({
+  workbookVersionId: z.string().nullable(),
+  workbookId: z.string().nullable(),
+  workbookVersion: z.number().int().nullable(),
+  count: z.number().int(),
+});
+
+export type WorkbookMixEntry = z.infer<typeof zWorkbookMixEntry>;
+
 // Payload profile of a range. Protocol attribution only exists on legacy-topic rows.
 export const zDevicePayloadStats = z.object({
   totalMeasurements: z.number().int(),
@@ -339,9 +351,7 @@ export const zDevicePayloadStats = z.object({
   workbookRuns: z.number().int(),
   firmwareMix: z.array(z.object({ version: z.string().nullable(), count: z.number().int() })),
   protocolMix: z.array(z.object({ protocolId: z.string().nullable(), count: z.number().int() })),
-  workbookMix: z.array(
-    z.object({ workbookVersionId: z.string().nullable(), count: z.number().int() }),
-  ),
+  workbookMix: z.array(zWorkbookMixEntry),
   // Per macro run: a measurement can run several, so counts exceed totals.
   macroMix: z.array(z.object({ macroId: z.string().nullable(), count: z.number().int() })),
 });
@@ -366,6 +376,11 @@ export const zDeviceMeasurement = z.object({
   longitude: z.number().nullable(),
   /** The reading itself, as stored JSON; its shape is device-defined. */
   sample: z.string().nullable(),
+});
+
+// Firmware versions reported across the range, one row per distinct version.
+export const zDeviceFirmwareHistory = z.object({
+  versions: z.array(zDeviceFirmwareVersion),
 });
 
 // The monitoring dashboard's one-range response; queries run in parallel server-side.
@@ -405,6 +420,7 @@ export type DeviceThroughputBucket = z.infer<typeof zDeviceThroughputBucket>;
 export type DeviceBatteryPoint = z.infer<typeof zDeviceBatteryPoint>;
 export type DevicePayloadStats = z.infer<typeof zDevicePayloadStats>;
 export type DeviceFirmwareVersion = z.infer<typeof zDeviceFirmwareVersion>;
+export type DeviceFirmwareHistory = z.infer<typeof zDeviceFirmwareHistory>;
 export type DeviceMeasurement = z.infer<typeof zDeviceMeasurement>;
 export type DeviceMonitoring = z.infer<typeof zDeviceMonitoring>;
 export type IotDeviceWithConnectivity = z.infer<typeof zIotDeviceWithConnectivity>;

@@ -35,7 +35,10 @@ import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import {
+  accessibleResourceCondition,
+  relatedResourceCondition,
+} from "../../../common/utils/resource-access-scope";
 import { userIsSelectableGrantee } from "../../../sharing/core/grantee-selectability";
 import {
   findOwningOrgOwnerIds,
@@ -277,20 +280,6 @@ export class ExperimentRepository {
         conditions.push(ne(experiments.status, "archived"));
       }
 
-      const userGrantExists = exists(
-        this.database
-          .select()
-          .from(resourceGrants)
-          .where(
-            and(
-              eq(resourceGrants.resourceType, "experiment"),
-              eq(resourceGrants.resourceId, experiments.id),
-              eq(resourceGrants.granteeType, "user"),
-              eq(resourceGrants.granteeId, userId),
-            ),
-          ),
-      );
-
       // Unconditional, "member" included: a view may narrow what the caller sees but
       // never widen it. Authorship is not an access path, so a creator since removed
       // from the owning org must not get the body back through a listing.
@@ -314,9 +303,18 @@ export class ExperimentRepository {
       }
 
       if (filter === "member") {
-        // "Mine": made or explicitly given, narrowed out of what I can already see.
-        // Authorship counts because a creator holds no grant on their own work.
-        conditions.push(or(userGrantExists, eq(experiments.createdBy, userId)));
+        // "Mine": every path tying me to the experiment personally, so only rows I
+        // reach purely by their being public drop out. Access held through an org or
+        // team counts, it is how most members reach anything; so does authorship,
+        // because a creator holds no grant on their own work.
+        const related = relatedResourceCondition({
+          database: this.database,
+          resourceType: "experiment",
+          resourceIdColumn: experiments.id,
+          organizationIdColumn: experiments.organizationId,
+          userId,
+        });
+        conditions.push(or(related, eq(experiments.createdBy, userId)));
       }
 
       if (status) {

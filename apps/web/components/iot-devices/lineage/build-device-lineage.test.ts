@@ -176,8 +176,15 @@ describe("buildDeviceLineage", () => {
             ...EMPTY_MONITORING.payload,
             protocolMix: [...protocolMix, { protocolId: null, count: 99 }],
             workbookMix: [
-              { workbookVersionId: null, count: 3 },
-              { workbookVersionId: "cccccccc-1111-4111-8111-111111111111", count: 4 },
+              { workbookVersionId: null, workbookId: null, workbookVersion: null, count: 3 },
+              {
+                // Version id and workbook id deliberately differ: attribution
+                // runs through the workbook, never the version.
+                workbookVersionId: "dddddddd-1111-4111-8111-111111111111",
+                workbookId: "cccccccc-1111-4111-8111-111111111111",
+                workbookVersion: 2,
+                count: 4,
+              },
             ],
             macroMix: [{ macroId: "bbbbbbbb-1111-4111-8111-111111111111", count: 2 }],
           },

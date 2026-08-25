@@ -18,6 +18,7 @@ import { DeleteIotDeviceUseCase } from "../application/use-cases/delete-iot-devi
 import { EnsureMobileDeviceUseCase } from "../application/use-cases/ensure-mobile-device/ensure-mobile-device";
 import { GetDeviceMonitoringUseCase } from "../application/use-cases/get-device-monitoring/get-device-monitoring";
 import { GetIotDeviceActivityUseCase } from "../application/use-cases/get-iot-device-activity/get-iot-device-activity";
+import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { GetIotDeviceUseCase } from "../application/use-cases/get-iot-device/get-iot-device";
 import { IssueIotCredentialsUseCase } from "../application/use-cases/issue-iot-credentials/issue-iot-credentials";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
@@ -41,6 +42,7 @@ export class IotDeviceController {
     private readonly getIotDeviceUseCase: GetIotDeviceUseCase,
     private readonly getIotDeviceActivityUseCase: GetIotDeviceActivityUseCase,
     private readonly getDeviceMonitoringUseCase: GetDeviceMonitoringUseCase,
+    private readonly getIotDeviceFirmwareHistoryUseCase: GetIotDeviceFirmwareHistoryUseCase,
     private readonly deleteIotDeviceUseCase: DeleteIotDeviceUseCase,
     private readonly issueIotCredentialsUseCase: IssueIotCredentialsUseCase,
     private readonly revokeIotCredentialsUseCase: RevokeIotCredentialsUseCase,
@@ -178,6 +180,27 @@ export class IotDeviceController {
       }
 
       return throwOrpcFailure(result, this.logger, "getIotDeviceActivity");
+    });
+  }
+
+  @CanAccess({ resource: "device", action: "read", param: "deviceId" })
+  @Implement(iotContract.getDeviceFirmwareHistory)
+  getDeviceFirmwareHistory(@Session() session: UserSession) {
+    return implement(iotContract.getDeviceFirmwareHistory).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("getDeviceFirmwareHistory");
+
+      const result = await this.getIotDeviceFirmwareHistoryUseCase.execute(
+        input.deviceId,
+        input.from,
+        input.to,
+        input.bucket,
+      );
+
+      if (result.isSuccess()) {
+        return { versions: result.value };
+      }
+
+      return throwOrpcFailure(result, this.logger, "getDeviceFirmwareHistory");
     });
   }
 

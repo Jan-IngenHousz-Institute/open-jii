@@ -18,6 +18,7 @@ import { AppError, failure, success } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
 
 const RETURNED_THING = {
@@ -498,6 +499,52 @@ describe("IotDeviceController", () => {
       });
 
       await testApp.get(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("getDeviceFirmwareHistory", () => {
+    const RANGE = {
+      from: "2026-07-15T00:00:00.000Z",
+      to: "2026-08-14T00:00:00.000Z",
+      bucket: "day",
+    };
+
+    it("returns the reported versions (200)", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const useCase = testApp.module.get(GetIotDeviceFirmwareHistoryUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(
+        success([
+          {
+            version: "1.3.0",
+            firstSeen: "2026-08-01T00:00:00.000Z",
+            lastSeen: "2026-08-14T00:00:00.000Z",
+            count: 5,
+          },
+        ]),
+      );
+
+      const response: SuperTestResponse<{ versions: { version: string | null }[] }> = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.iot.getDeviceFirmwareHistory, { deviceId: device.id }),
+        )
+        .withAuth(userId)
+        .query(RANGE)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.versions[0].version).toBe("1.3.0");
+    });
+
+    it("returns 403 for a viewer without device access", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.iot.getDeviceFirmwareHistory, { deviceId: device.id }),
+        )
+        .withAuth(stranger)
+        .query(RANGE)
+        .expect(StatusCodes.FORBIDDEN);
     });
   });
 
