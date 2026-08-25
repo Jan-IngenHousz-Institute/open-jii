@@ -274,6 +274,9 @@
                         }
                       ]
                     },
+                    "membersCount": {
+                      "type": "integer"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -588,6 +591,9 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "membersCount": {
+                        "type": "integer"
                       },
                       "createdAt": {
                         "type": "string",
@@ -935,6 +941,9 @@
                               }
                             ]
                           },
+                          "membersCount": {
+                            "type": "integer"
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time"
@@ -1228,6 +1237,9 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "membersCount": {
+                      "type": "integer"
                     },
                     "createdAt": {
                       "type": "string",
@@ -1584,6 +1596,9 @@
                         }
                       ]
                     },
+                    "membersCount": {
+                      "type": "integer"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -1892,6 +1907,9 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "membersCount": {
+                          "type": "integer"
                         },
                         "createdAt": {
                           "type": "string",
@@ -6586,6 +6604,9 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "membersCount": {
+                      "type": "integer"
                     },
                     "createdAt": {
                       "type": "string",

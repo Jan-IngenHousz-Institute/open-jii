@@ -90,7 +90,7 @@ export class ExperimentRepository {
 
   /**
    * Insert, seed creator control, and grant the picked collaborators in one
-   * transaction — a failure anywhere leaves no experiment at all. An unselectable
+   * transaction; a failure anywhere leaves no experiment at all. An unselectable
    * `collaboratorUserIds` entry fails the whole create with a 400.
    */
   async create(
@@ -125,7 +125,7 @@ export class ExperimentRepository {
   /**
    * Direct `viewer` grants for collaborators picked at create time. Grantees are
    * validated first: `resource_grants` has no FK on `grantee_id`, so an unchecked
-   * write would store a row for a uuid naming nobody. Non-destructive — an existing
+   * write would store a row for a uuid naming nobody. Non-destructive: an existing
    * grant is left alone, so it never lowers access and needs no staffing guard.
    */
   private async grantCollaborators(
@@ -183,7 +183,7 @@ export class ExperimentRepository {
           createdBy: experiments.createdBy,
           userId: resourceGrants.granteeId,
           // Whether the profile join matched. The name columns below can't answer
-          // that — they fall back to "Unknown"/"User" for a NULL row.
+          // that; they fall back to "Unknown"/"User" for a NULL row.
           profileUserId: profiles.userId,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
@@ -284,6 +284,14 @@ export class ExperimentRepository {
       createdAt: experiments.createdAt,
       createdBy: experiments.createdBy,
       updatedAt: experiments.updatedAt,
+      ownerFirstName: getAnonymizedFirstName(),
+      ownerLastName: getAnonymizedLastName(),
+      organizationName: owningOrganizationNameSql("experiments"),
+      // Direct collaborator grants only; org/team reach is unbounded and not a count.
+      membersCount: sql<number>`(select count(*)::int from ${resourceGrants}
+        where ${resourceGrants.resourceType} = 'experiment'
+        and ${resourceGrants.resourceId} = ${experiments.id}
+        and ${resourceGrants.granteeType} = 'user')`,
     };
 
     {
@@ -318,11 +326,8 @@ export class ExperimentRepository {
       }
 
       if (scope === "related") {
-        // "Mine": every path tying me to the experiment personally, so only rows I
-        // reach purely by their being public drop out. Access held through an org or
-        // team counts, it is how most members reach anything; so does authorship,
-        // because a creator holds no grant on their own work.
-        // Without a caller nothing resolves, so the scope admits nothing.
+        // Every personal path counts (grants, org/team access, authorship); only
+        // purely-public rows drop out. No caller: the scope admits nothing.
         const related = relatedResourceCondition({
           database: this.database,
           resourceType: "experiment",
@@ -558,7 +563,7 @@ export class ExperimentRepository {
       await this.database.transaction(async (tx) => {
         await lockStaffedResource(tx, "experiment", id, "update");
 
-        // Referential only — the roster carries no access, but the FK still blocks.
+        // Referential only: the roster carries no access, but the FK still blocks.
         await tx.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
 
         await deleteResourceGrants(tx, "experiment", id);
