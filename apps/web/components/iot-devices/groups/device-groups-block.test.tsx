@@ -33,17 +33,17 @@ describe("DeviceGroupsBlock", () => {
     expect(screen.getByText("iot.groups.memberCount")).toBeInTheDocument();
   });
 
-  it("offers the create tile as the whole grid when there are no groups", async () => {
+  it("offers the empty state's create button when there are no groups", async () => {
     server.mount(contract.iot.listIotDeviceGroups, { body: [] });
 
     render(<DeviceGroupsBlock />);
 
-    // One affordance, in the grid where its result will appear.
+    // One affordance: the header button yields to the empty state's CTA.
     expect(await screen.findByRole("button", { name: "iot.groups.create" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "iot.groups.create" })).toHaveLength(1);
   });
 
-  it("opens the create dialog from the create tile", async () => {
+  it("opens the create dialog from the create button", async () => {
     server.mount(contract.iot.listIotDeviceGroups, { body: [] });
     const user = userEvent.setup();
 
@@ -64,7 +64,7 @@ describe("DeviceGroupsBlock", () => {
     expect(await screen.findByText("iot.groups.loadError")).toBeInTheDocument();
   });
 
-  it("caps a large estate behind a toggle, create tile always first and visible", async () => {
+  it("caps a large estate behind a toggle, with search filtering across the fold", async () => {
     const user = userEvent.setup();
     server.mount(contract.iot.listIotDeviceGroups, {
       body: Array.from({ length: 14 }, (_, index) => ({
@@ -87,5 +87,15 @@ describe("DeviceGroupsBlock", () => {
 
     expect(screen.getByText("Group 13")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /iot\.groups\.showFewer/ })).toBeInTheDocument();
+
+    // Search reaches past the fold and reports a miss in words.
+    const searchInput = screen.getByPlaceholderText("iot.groups.searchPlaceholder");
+    await user.type(searchInput, "Group 12");
+    expect(screen.getByText("Group 12")).toBeInTheDocument();
+    expect(screen.queryByText("Group 0")).not.toBeInTheDocument();
+
+    await user.clear(searchInput);
+    await user.type(searchInput, "zzz");
+    expect(screen.getByText("iot.groups.searchNoMatches")).toBeInTheDocument();
   });
 });

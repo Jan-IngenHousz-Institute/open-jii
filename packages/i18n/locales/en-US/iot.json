@@ -341,10 +341,7 @@
           "experimentsEmpty": "Not streaming into any experiment yet. Onboard it to start.",
           "experimentsError": "Could not load this device's experiments.",
           "credentialHint": {
-            "pending": "No certificate yet. The device cannot connect until one is issued.",
-            "active": "Certificate active. The device can connect and stream.",
-            "rotating": "A new certificate was issued; load the new bundle onto the device.",
-            "revoked": "Certificate revoked. The device cannot reconnect until a new one is issued."
+            "active": "Certificate active. The device can connect and stream."
           },
           "activityTitle": "Activity",
           "monitoringLink": "Open monitoring",

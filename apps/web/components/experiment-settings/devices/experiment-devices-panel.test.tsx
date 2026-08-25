@@ -58,6 +58,13 @@ describe("ExperimentDevicesPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("iot.experimentDevices.loadError")).toBeInTheDocument();
     });
+
+    // The retry refetches; a recovered read replaces the error with the rows.
+    server.mount(contract.experiments.listExperimentDevices, { body: [binding] });
+    await userEvent.click(screen.getByRole("button", { name: "iot.onboarding.retry" }));
+    await waitFor(() => {
+      expect(screen.getByText("Bench sensor")).toBeInTheDocument();
+    });
   });
 
   it("detaches a device", async () => {

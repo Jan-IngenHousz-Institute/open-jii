@@ -22,7 +22,7 @@ import { GroupOverviewCard } from "./group-overview-card";
  * estate folds behind a toggle; an empty one gets the empty state with the
  * same primary CTA.
  */
-/** Four full rows at the 3-column breakpoint, counting the create tile. */
+/** Keeps the unfiltered browse under four rows at the 3-column breakpoint. */
 const VISIBLE_GROUPS = 11;
 
 export function DeviceGroupsBlock() {
@@ -45,8 +45,6 @@ export function DeviceGroupsBlock() {
         );
   // Search shows every match; the fold only paces the unfiltered browse.
   const isSearching = query !== "";
-  // Eleven groups plus the tile fill four rows at the widest breakpoint; a
-  // larger estate folds behind the toggle instead of drowning the overview.
   const visibleGroups = isSearching || showAll ? matching : matching.slice(0, VISIBLE_GROUPS);
   const hiddenCount = matching.length - visibleGroups.length;
 

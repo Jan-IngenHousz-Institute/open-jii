@@ -56,7 +56,7 @@ export function DeviceHeaderActions({ device }: { device: IotDeviceDetail }) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" aria-label={t("iot.devices.actions.title")}>
+          <Button variant="outline" size="sm">
             {t("iot.devices.actions.title")}
             <ChevronDown className="ml-2 h-4 w-4" />
           </Button>

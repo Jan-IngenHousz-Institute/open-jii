@@ -52,6 +52,20 @@ describe("IotDevicesTableView", () => {
     expect(screen.getByRole("link", { name: "Beta" })).toBeInTheDocument();
   });
 
+  it("offers to clear filters when the search matches nothing", async () => {
+    server.mount(contract.iot.listIotDevices, { body: [createIotDevice({ name: "Alpha" })] });
+    const user = userEvent.setup();
+
+    render(<IotDevicesTableView />);
+    await screen.findByRole("link", { name: "Alpha" });
+
+    await user.type(screen.getByPlaceholderText("iot.devices.searchPlaceholder"), "zzz");
+    expect(await screen.findByText("iot.devices.zeroResults.title")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.zeroResults.clear" }));
+    expect(await screen.findByRole("link", { name: "Alpha" })).toBeInTheDocument();
+  });
+
   it("filters the table by status chip", async () => {
     server.mount(contract.iot.listIotDevices, {
       body: [

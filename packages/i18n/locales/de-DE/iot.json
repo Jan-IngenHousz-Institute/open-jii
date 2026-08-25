@@ -341,10 +341,7 @@
           "experimentsEmpty": "Sendet noch in kein Experiment. Richten Sie es ein, um zu starten.",
           "experimentsError": "Die Experimente dieses Geräts konnten nicht geladen werden.",
           "credentialHint": {
-            "pending": "Noch kein Zertifikat. Das Gerät kann sich erst nach der Ausstellung verbinden.",
-            "active": "Zertifikat aktiv. Das Gerät kann sich verbinden und senden.",
-            "rotating": "Ein neues Zertifikat wurde ausgestellt; laden Sie das neue Paket auf das Gerät.",
-            "revoked": "Zertifikat widerrufen. Das Gerät kann sich erst nach einer Neuausstellung wieder verbinden."
+            "active": "Zertifikat aktiv. Das Gerät kann sich verbinden und senden."
           },
           "activityTitle": "Aktivität",
           "monitoringLink": "Monitoring öffnen",

@@ -43,6 +43,12 @@ const configWithQuestion = {
       workbookVersion: 1,
       procedures: [
         {
+          type: "protocol" as const,
+          protocolId: "55555555-5555-4555-8555-555555555555",
+          name: "spad",
+          code: {},
+        },
+        {
           type: "question" as const,
           id: "c-q",
           name: "plot",
@@ -246,6 +252,60 @@ describe("DeviceOnboardingPanel", () => {
     render(<DeviceOnboardingPanel device={device} />);
 
     expect(await screen.findByText("iot.onboarding.noMemberships")).toBeInTheDocument();
+  });
+
+  it("filters a long experiment list and says when nothing matches", async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 9 }, (_, index) =>
+      createExperiment({
+        id: `44444444-4444-4444-8444-44444444444${String(index)}`,
+        name: `Trial ${String(index)}`,
+      }),
+    );
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: many });
+
+    render(<DeviceOnboardingPanel device={device} />);
+
+    const filter = await screen.findByPlaceholderText("iot.onboarding.filterExperiments");
+    await user.type(filter, "Trial 3");
+    expect(screen.getByText("Trial 3")).toBeInTheDocument();
+    expect(screen.queryByText("Trial 4")).not.toBeInTheDocument();
+
+    await user.clear(filter);
+    await user.type(filter, "zzz");
+    expect(screen.getByText("iot.onboarding.filterNoMatches")).toBeInTheDocument();
+  });
+
+  it("toasts a failed removal and closes the confirm either way", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.iot.listDeviceExperiments, { body: [boundExperiment] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
+    server.mount(contract.experiments.removeExperimentDevice, {
+      status: 500,
+      body: { message: "boom" },
+    });
+
+    render(<DeviceOnboardingPanel device={device} />);
+
+    await user.click(await screen.findByRole("button", { name: "iot.onboarding.boundRowActions" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /iot.onboarding.removeMenuItem/ }),
+    );
+    await user.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: /iot.onboarding.removeMenuItem/,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "iot.onboarding.removeError", variant: "destructive" }),
+      );
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    });
   });
 
   it("removes a bound experiment through the row menu, after a confirm", async () => {

@@ -341,10 +341,7 @@
           "experimentsEmpty": "Streamt nog naar geen enkel experiment. Stel het in om te starten.",
           "experimentsError": "De experimenten van dit apparaat konden niet worden geladen.",
           "credentialHint": {
-            "pending": "Nog geen certificaat. Het apparaat kan pas verbinden nadat er een is uitgegeven.",
-            "active": "Certificaat actief. Het apparaat kan verbinden en streamen.",
-            "rotating": "Er is een nieuw certificaat uitgegeven; laad de nieuwe bundel op het apparaat.",
-            "revoked": "Certificaat ingetrokken. Het apparaat kan pas weer verbinden na een nieuwe uitgifte."
+            "active": "Certificaat actief. Het apparaat kan verbinden en streamen."
           },
           "activityTitle": "Activiteit",
           "monitoringLink": "Monitoring openen",
