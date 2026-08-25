@@ -113,8 +113,23 @@ describe("Experiment Schema", () => {
     });
 
     it("zExperimentList valid array", () => {
-      const list = [{ ...baseExperiment }, { ...baseExperiment, id: uuidC, name: "Exp 2" }];
+      const list = [
+        {
+          ...baseExperiment,
+          flowMeta: {
+            requiresDevice: true,
+            questionsOnly: false,
+            nodeCount: 3,
+            durationMin: 3,
+          },
+        },
+        { ...baseExperiment, id: uuidC, name: "Exp 2", flowMeta: null },
+      ];
       expect(zExperimentList.parse(list)).toEqual(list);
+    });
+
+    it("zExperimentList defaults missing metadata for rolling deploy compatibility", () => {
+      expect(zExperimentList.parse([baseExperiment])[0].flowMeta).toBeNull();
     });
 
     it("zErrorResponse valid", () => {

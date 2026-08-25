@@ -1,5 +1,6 @@
 import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { AttachWorkbookUseCase } from "../attach-workbook/attach-workbook";
 import { ListExperimentsUseCase } from "./list-experiments";
 
 describe("ListExperimentsUseCase", () => {
@@ -49,8 +50,60 @@ describe("ListExperimentsUseCase", () => {
     expect(experiments.length).toBeLessThanOrEqual(2);
     expect(experiments).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: experiment1.id, name: "Experiment 1" }),
-        expect.objectContaining({ id: experiment2.id, name: "Experiment 2" }),
+        expect.objectContaining({ id: experiment1.id, name: "Experiment 1", flowMeta: null }),
+        expect.objectContaining({ id: experiment2.id, name: "Experiment 2", flowMeta: null }),
+      ]),
+    );
+  });
+
+  it("should derive picker metadata from the attached workbook version", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Mobile experiment",
+      userId: testUserId,
+    });
+    const workbook = await testApp.createWorkbook({
+      name: "Mobile workbook",
+      createdBy: testUserId,
+      cells: [
+        {
+          id: "prepare",
+          type: "markdown",
+          content: "Prepare the leaf",
+          isCollapsed: false,
+        },
+        {
+          id: "leaf-age",
+          type: "question",
+          name: "Leaf age",
+          question: { kind: "number", text: "Leaf age?", required: true },
+          isCollapsed: false,
+        },
+        {
+          id: "battery",
+          type: "command",
+          payload: { format: "string", content: "battery", name: "Battery" },
+          isCollapsed: false,
+        },
+      ],
+    });
+    const attachWorkbook = testApp.module.get(AttachWorkbookUseCase);
+    const attachResult = await attachWorkbook.execute(experiment.id, workbook.id, testUserId);
+    assertSuccess(attachResult);
+
+    const result = await useCase.execute(testUserId);
+
+    assertSuccess(result);
+    expect(result.value).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: experiment.id,
+          flowMeta: {
+            requiresDevice: true,
+            questionsOnly: false,
+            nodeCount: 3,
+            durationMin: 1,
+          },
+        }),
       ]),
     );
   });

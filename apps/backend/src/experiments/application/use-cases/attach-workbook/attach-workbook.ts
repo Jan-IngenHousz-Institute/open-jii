@@ -102,7 +102,7 @@ export class AttachWorkbookUseCase {
         return updateResult;
       }
 
-      // Materialise a flow row from the version's cells; mobile still reads from `flows`.
+      // Keep a materialised flow row for older mobile releases that predate workbook-backed flows.
       const flowGraph = cellsToFlowGraph(version.cells);
       const flowResult = await this.flowRepository.upsert(experimentId, flowGraph);
       if (flowResult.isFailure()) {
