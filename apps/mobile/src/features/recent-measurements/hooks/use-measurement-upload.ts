@@ -56,7 +56,7 @@ interface SharedUploadArgs {
   macro: { id: string; name: string; filename: string } | null;
   questions: AnswerData[];
   commentText?: string;
-  workbookVersionId?: string;
+  workbookVersionId: string;
   /** The workbook that version belongs to; stored so re-runs survive re-linking. */
   workbookId?: string;
   /** Stable UUID for the complete workbook attempt, across sequential nodes. */

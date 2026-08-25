@@ -3,11 +3,6 @@ import { getLocalThingName } from "~/shared/stores/device-identity-store";
 
 import { buildIngestTopicPrefix } from "@repo/api/transforms/iot-topic";
 
-// Sentinel protocol_id for question-only uploads (no device sample). Carried
-// in the payload since the lean topic has no protocol segment; the pipeline
-// treats it like any other protocol_id value.
-export const QUESTIONS_PROTOCOL_ID = "questions";
-
 const SENSOR_TYPE = "mobile";
 
 function appVersionSegment(): string {
