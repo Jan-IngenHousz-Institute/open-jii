@@ -8,7 +8,12 @@ const expectedHttpFailures = [
   },
   {
     // The example environment deliberately points Databricks at an unreachable endpoint.
-    url: /\/api\/v1\/experiments\/[^/]+\/data(?:\/|$)/,
+    url: /\/api\/v1\/experiments\/[^/]+\/(?:data|metadata|tables)(?:[/?#]|$)/,
+    statuses: new Set([500]),
+  },
+  {
+    // Mailchimp is deliberately unconfigured in the example environment.
+    url: /\/api\/v1\/newsletter\/status(?:[?#]|$)/,
     statuses: new Set([500]),
   },
 ];
