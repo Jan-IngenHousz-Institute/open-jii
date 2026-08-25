@@ -10,9 +10,11 @@ import { eq, experiments } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
+import { AppError, failure } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import { ListExperimentsUseCase } from "../application/use-cases/list-experiments/list-experiments";
 
 describe("ExperimentController", () => {
   const testApp = TestHarness.App;
@@ -188,6 +190,17 @@ describe("ExperimentController", () => {
 
       expect(response.body.totalCount).toBe(1);
       expect(response.body.items).toHaveLength(1);
+    });
+
+    it("returns 500 when the paginated use case fails", async () => {
+      vi.spyOn(testApp.module.get(ListExperimentsUseCase), "executePaginated").mockResolvedValue(
+        failure(AppError.internal("Database error")),
+      );
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperimentsPaginated))
+        .withAuth(testUserId)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
   });
 

@@ -265,6 +265,17 @@ describe("MacroController", () => {
 
       expect(response.body).toMatchObject({ page: 1, pageSize: 10, items: [] });
     });
+
+    it("returns 500 when the paginated use case fails", async () => {
+      vi.spyOn(listMacrosUseCase, "executePaginated").mockResolvedValue(
+        failure(AppError.internal("Database error")),
+      );
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.macros.listMacrosPaginated))
+        .withAuth(testUserId)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
   });
 
   describe("listMacros", () => {

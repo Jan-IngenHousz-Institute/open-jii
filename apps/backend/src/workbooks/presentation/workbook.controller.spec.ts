@@ -266,6 +266,17 @@ describe("WorkbookController", () => {
         .expect(StatusCodes.BAD_REQUEST);
     });
 
+    it("returns 500 when the paginated use case fails", async () => {
+      vi.spyOn(listWorkbooksUseCase, "executePaginated").mockResolvedValue(
+        failure(AppError.internal("Database error")),
+      );
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooksPaginated))
+        .withAuth(testUserId)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+
     it("should return 500 when use case fails", async () => {
       vi.spyOn(listWorkbooksUseCase, "execute").mockResolvedValue(
         failure(AppError.internal("Database error")),
