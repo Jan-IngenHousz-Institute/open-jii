@@ -241,7 +241,8 @@
       "actions": {
         "more": "Apparaatacties",
         "view": "Details bekijken",
-        "delete": "Verwijderen"
+        "delete": "Verwijderen",
+        "title": "Acties"
       },
       "empty": {
         "title": "Nog geen apparaten",

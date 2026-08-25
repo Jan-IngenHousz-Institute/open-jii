@@ -17,7 +17,7 @@ describe("DeviceHeaderActions", () => {
 
     const { router } = render(<DeviceHeaderActions device={device} />);
 
-    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+    await user.click(screen.getByRole("button", { name: /iot\.devices\.actions\.title/ }));
     await user.click(await screen.findByText("iot.devices.remove.title"));
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "iot.devices.actions.delete" }));

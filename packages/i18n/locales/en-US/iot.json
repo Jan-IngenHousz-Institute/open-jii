@@ -241,7 +241,8 @@
       "actions": {
         "more": "Device actions",
         "view": "View details",
-        "delete": "Delete"
+        "delete": "Delete",
+        "title": "Actions"
       },
       "empty": {
         "title": "No devices yet",

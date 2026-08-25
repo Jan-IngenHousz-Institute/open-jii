@@ -3,7 +3,7 @@
 import { useDeleteIotDevice } from "@/hooks/iot/useDeleteIotDevice/useDeleteIotDevice";
 import { useLocale } from "@/hooks/useLocale";
 import { resolveDeviceLabel } from "@/util/device-presentation";
-import { Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { Loader2, ChevronDown, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@repo/ui/components/alert-dialog";
+import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,22 +56,19 @@ export function DeviceHeaderActions({ device }: { device: IotDeviceDetail }) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label={t("iot.devices.actions.more")}
-            className="text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted inline-flex size-8 items-center justify-center rounded-md"
-          >
-            <MoreHorizontal className="size-4" />
-          </button>
+          <Button variant="outline" size="sm" aria-label={t("iot.devices.actions.title")}>
+            {t("iot.devices.actions.title")}
+            <ChevronDown className="ml-2 h-4 w-4" />
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem
             onSelect={() => {
               setConfirmingDelete(true);
             }}
-            className="text-destructive focus:text-destructive"
+            className="focus:text-destructive focus:bg-destructive/10 group"
           >
-            <Trash2 className="mr-2 size-4" />
+            <Trash2 className="text-muted-foreground group-focus:text-destructive mr-2 size-4" />
             {t("iot.devices.remove.title")}
           </DropdownMenuItem>
         </DropdownMenuContent>

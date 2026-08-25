@@ -241,7 +241,8 @@
       "actions": {
         "more": "Geräteaktionen",
         "view": "Details anzeigen",
-        "delete": "Löschen"
+        "delete": "Löschen",
+        "title": "Aktionen"
       },
       "empty": {
         "title": "Noch keine Geräte",

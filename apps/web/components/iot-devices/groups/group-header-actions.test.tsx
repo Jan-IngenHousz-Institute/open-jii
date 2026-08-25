@@ -15,7 +15,7 @@ describe("GroupHeaderActions", () => {
 
     const { router } = render(<GroupHeaderActions group={group} />);
 
-    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+    await user.click(screen.getByRole("button", { name: /iot\.devices\.actions\.title/ }));
     await user.click(await screen.findByText("iot.groups.deleteTitle"));
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByText("iot.groups.delete"));
