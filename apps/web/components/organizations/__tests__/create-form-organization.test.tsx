@@ -3,7 +3,12 @@ import { ListWorkbooks } from "@/components/list-workbooks";
 import { NewExperimentForm } from "@/components/new-experiment/new-experiment";
 import { NewMacroForm } from "@/components/new-macro/new-macro";
 import { NewProtocolForm } from "@/components/new-protocol/new-protocol";
-import { createMyOrganization, createProtocol, createWorkbook } from "@/test/factories";
+import {
+  createMyOrganization,
+  createProtocol,
+  createUserProfile,
+  createWorkbook,
+} from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { fireEvent, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -58,6 +63,11 @@ describe("the owning organization a create form submits", () => {
       isPending: false,
     } as ReturnType<typeof useSession>);
     server.mount(contract.organizations.listMyOrganizations, { body: [PERSONAL, LAB] });
+    // The forms seed their code editor from the user profile once it loads; without a
+    // handler the query burns through its retries and submit validation loses the race.
+    server.mount(contract.users.getUserProfile, {
+      body: createUserProfile({ firstName: "Ada", lastName: "Lovelace" }),
+    });
   });
 
   describe("experiment", () => {
