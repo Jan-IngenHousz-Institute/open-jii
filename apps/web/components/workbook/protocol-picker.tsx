@@ -12,6 +12,7 @@ import { useState } from "react";
 import type { ProtocolFamily, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -41,11 +42,13 @@ export function ProtocolPicker({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 300);
-  const { data: protocols } = useQuery(
+  const { data: protocolsData } = useQuery(
     orpc.protocols.listProtocols.queryOptions({
       input: { search: debouncedSearch.trim() !== "" ? debouncedSearch : undefined },
     }),
   );
+  // No `page` is sent, so the response is the bare list.
+  const protocols = protocolsData ? listItems(protocolsData) : undefined;
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");

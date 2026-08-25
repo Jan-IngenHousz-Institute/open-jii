@@ -17,7 +17,7 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 
 describe("useMacros", () => {
   it("returns empty envelope by default", async () => {
-    server.mount(contract.macros.listMacrosPaginated, { body: envelope([]) });
+    server.mount(contract.macros.listMacros, { body: envelope([]) });
 
     const { result } = renderHook(() => useMacros());
 
@@ -31,7 +31,7 @@ describe("useMacros", () => {
   });
 
   it("returns macros list", async () => {
-    server.mount(contract.macros.listMacrosPaginated, {
+    server.mount(contract.macros.listMacros, {
       body: envelope([
         createMacro({ id: "1", name: "M1" }),
         createMacro({ id: "2", name: "M2", language: "javascript" }),
@@ -51,7 +51,7 @@ describe("useMacros", () => {
   });
 
   it("passes search and language as query parameters", async () => {
-    const spy = server.mount(contract.macros.listMacrosPaginated, { body: envelope([]) });
+    const spy = server.mount(contract.macros.listMacros, { body: envelope([]) });
 
     const { result } = renderHook(() =>
       useMacros({ initialSearch: "test", initialLanguage: "python" }),
@@ -66,7 +66,7 @@ describe("useMacros", () => {
   });
 
   it("sends the current page as a query parameter", async () => {
-    const spy = server.mount(contract.macros.listMacrosPaginated, { body: envelope([], 1, 3) });
+    const spy = server.mount(contract.macros.listMacros, { body: envelope([], 1, 3) });
 
     const { result } = renderHook(() => useMacros());
 
@@ -83,7 +83,7 @@ describe("useMacros", () => {
   });
 
   it("resets to page 1 when language changes", () => {
-    server.mount(contract.macros.listMacrosPaginated, { body: envelope([], 1, 3) });
+    server.mount(contract.macros.listMacros, { body: envelope([], 1, 3) });
 
     const { result } = renderHook(() => useMacros());
 
@@ -95,7 +95,7 @@ describe("useMacros", () => {
   });
 
   it("clamps the page when the result set shrinks below it", async () => {
-    const spy = server.mount(contract.macros.listMacrosPaginated, {
+    const spy = server.mount(contract.macros.listMacros, {
       body: envelope([], 1, 2),
     });
 

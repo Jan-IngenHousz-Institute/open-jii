@@ -17,7 +17,7 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 
 describe("useProtocols", () => {
   it("returns protocols list", async () => {
-    server.mount(contract.protocols.listProtocolsPaginated, {
+    server.mount(contract.protocols.listProtocols, {
       body: envelope([
         createProtocol({ id: "p-1", name: "P1" }),
         createProtocol({ id: "p-2", name: "P2" }),
@@ -35,7 +35,7 @@ describe("useProtocols", () => {
   });
 
   it("passes search as a query parameter", async () => {
-    const spy = server.mount(contract.protocols.listProtocolsPaginated, {
+    const spy = server.mount(contract.protocols.listProtocols, {
       body: envelope([createProtocol({ id: "p-1" })]),
     });
 
@@ -49,7 +49,7 @@ describe("useProtocols", () => {
   });
 
   it("sends the current page as a query parameter", async () => {
-    const spy = server.mount(contract.protocols.listProtocolsPaginated, {
+    const spy = server.mount(contract.protocols.listProtocols, {
       body: envelope([], 1, 3),
     });
 
@@ -68,7 +68,7 @@ describe("useProtocols", () => {
   });
 
   it("resets to page 1 when search changes", () => {
-    server.mount(contract.protocols.listProtocolsPaginated, { body: envelope([], 1, 3) });
+    server.mount(contract.protocols.listProtocols, { body: envelope([], 1, 3) });
 
     const { result } = renderHook(() => useProtocols());
 
@@ -80,7 +80,7 @@ describe("useProtocols", () => {
   });
 
   it("clamps the page when the result set shrinks below it", async () => {
-    const spy = server.mount(contract.protocols.listProtocolsPaginated, {
+    const spy = server.mount(contract.protocols.listProtocols, {
       body: envelope([], 1, 2),
     });
 
@@ -98,7 +98,7 @@ describe("useProtocols", () => {
   });
 
   it("does not pass empty search to query", async () => {
-    const spy = server.mount(contract.protocols.listProtocolsPaginated, {
+    const spy = server.mount(contract.protocols.listProtocols, {
       body: envelope([createProtocol({ id: "p-1" })]),
     });
 
@@ -112,7 +112,7 @@ describe("useProtocols", () => {
   });
 
   it("does not pass whitespace-only search to query", async () => {
-    const spy = server.mount(contract.protocols.listProtocolsPaginated, {
+    const spy = server.mount(contract.protocols.listProtocols, {
       body: envelope([createProtocol({ id: "p-1" })]),
     });
 

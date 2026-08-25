@@ -22,7 +22,7 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 describe("useExperiments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([]) });
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
   });
 
   it("initializes with defaults and fetches experiments", async () => {
@@ -48,7 +48,7 @@ describe("useExperiments", () => {
   });
 
   it("returns experiment items from API", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, {
+    server.mount(contract.experiments.listExperiments, {
       body: envelope([createExperiment({ id: "exp-1" }), createExperiment({ id: "exp-2" })]),
     });
 
@@ -60,7 +60,7 @@ describe("useExperiments", () => {
   });
 
   it("sends the current page as a query parameter", async () => {
-    const spy = server.mount(contract.experiments.listExperimentsPaginated, {
+    const spy = server.mount(contract.experiments.listExperiments, {
       body: envelope([], 1, 3),
     });
 
@@ -79,7 +79,7 @@ describe("useExperiments", () => {
   });
 
   it("resets to page 1 when search changes", () => {
-    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([], 1, 3) });
+    server.mount(contract.experiments.listExperiments, { body: envelope([], 1, 3) });
 
     const { result } = renderHook(() => useExperiments({}));
 
@@ -91,7 +91,7 @@ describe("useExperiments", () => {
   });
 
   it("resets to page 1 when status changes", () => {
-    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([], 1, 3) });
+    server.mount(contract.experiments.listExperiments, { body: envelope([], 1, 3) });
 
     const { result } = renderHook(() => useExperiments({}));
 
@@ -103,7 +103,7 @@ describe("useExperiments", () => {
   });
 
   it("clamps the page when the result set shrinks below it", async () => {
-    const spy = server.mount(contract.experiments.listExperimentsPaginated, {
+    const spy = server.mount(contract.experiments.listExperiments, {
       body: envelope([], 1, 2),
     });
 
@@ -121,7 +121,7 @@ describe("useExperiments", () => {
   });
 
   it("clamps the page to 1 when the result set shrinks to a single page", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([]) });
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
 
     const { result } = renderHook(() => useExperiments({}));
     await waitFor(() => {
@@ -136,7 +136,7 @@ describe("useExperiments", () => {
   });
 
   it("requests scope=related and status=archived for the archive view", async () => {
-    const spy = server.mount(contract.experiments.listExperimentsPaginated, {
+    const spy = server.mount(contract.experiments.listExperiments, {
       body: envelope([]),
     });
 
@@ -152,7 +152,7 @@ describe("useExperiments", () => {
   });
 
   it("omits scope and sends no legacy filter param otherwise", async () => {
-    const spy = server.mount(contract.experiments.listExperimentsPaginated, {
+    const spy = server.mount(contract.experiments.listExperiments, {
       body: envelope([]),
     });
 
@@ -168,7 +168,7 @@ describe("useExperiments", () => {
   });
 
   it("handles API error gracefully", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, { status: 500 });
+    server.mount(contract.experiments.listExperiments, { status: 500 });
 
     const { result } = renderHook(() => useExperiments({}));
 

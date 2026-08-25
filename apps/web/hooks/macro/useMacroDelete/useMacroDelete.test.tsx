@@ -75,9 +75,6 @@ describe("useMacroDelete", () => {
       expect(invalidate).toHaveBeenCalledWith({
         queryKey: orpc.macros.listMacros.key(),
       });
-      expect(invalidate).toHaveBeenCalledWith({
-        queryKey: orpc.macros.listMacrosPaginated.key(),
-      });
     });
   });
 });

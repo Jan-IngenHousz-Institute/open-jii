@@ -18,7 +18,7 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 describe("useWorkbooks", () => {
   it("returns workbooks from the API", async () => {
     const workbooks = [createWorkbook({ id: "wb-1", name: "Mine" })];
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope(workbooks) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope(workbooks) });
 
     const { result } = renderHook(() => useWorkbooks());
 
@@ -29,7 +29,7 @@ describe("useWorkbooks", () => {
   });
 
   it("shows loading state initially", () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const { result } = renderHook(() => useWorkbooks());
 
@@ -37,7 +37,7 @@ describe("useWorkbooks", () => {
   });
 
   it("sends the current page as a query parameter", async () => {
-    const spy = server.mount(contract.workbooks.listWorkbooksPaginated, {
+    const spy = server.mount(contract.workbooks.listWorkbooks, {
       body: envelope([], 1, 3),
     });
 
@@ -56,7 +56,7 @@ describe("useWorkbooks", () => {
   });
 
   it("resets to page 1 when search changes", () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([], 1, 3) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([], 1, 3) });
 
     const { result } = renderHook(() => useWorkbooks());
 
@@ -68,7 +68,7 @@ describe("useWorkbooks", () => {
   });
 
   it("clamps the page when the result set shrinks below it", async () => {
-    const spy = server.mount(contract.workbooks.listWorkbooksPaginated, {
+    const spy = server.mount(contract.workbooks.listWorkbooks, {
       body: envelope([], 1, 2),
     });
 
@@ -86,7 +86,7 @@ describe("useWorkbooks", () => {
   });
 
   it("provides search and setSearch", () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const { result } = renderHook(() => useWorkbooks());
 
@@ -95,7 +95,7 @@ describe("useWorkbooks", () => {
   });
 
   it("returns error state on API failure", async () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { status: 400 });
+    server.mount(contract.workbooks.listWorkbooks, { status: 400 });
 
     const { result } = renderHook(() => useWorkbooks());
 

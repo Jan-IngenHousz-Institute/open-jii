@@ -4,6 +4,7 @@ import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
 
+import { listItems } from "@repo/api/shared/listing";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 export function UserExperimentsSection() {
@@ -12,7 +13,7 @@ export function UserExperimentsSection() {
   );
 
   // Show only first 3 experiments for dashboard
-  const limitedExperiments = data ? data.slice(0, 3) : undefined;
+  const limitedExperiments = data ? listItems(data).slice(0, 3) : undefined;
 
   return (
     <div className="space-y-4">

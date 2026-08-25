@@ -11,6 +11,7 @@ import { useState } from "react";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import type { MacroCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { useSession } from "@repo/auth/client";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -62,7 +63,7 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 300);
   const [language, setLanguage] = useState<MacroLanguage | undefined>(undefined);
-  const { data: macros } = useQuery(
+  const { data: macrosData } = useQuery(
     orpc.macros.listMacros.queryOptions({
       input: {
         search: debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
@@ -70,6 +71,8 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
       },
     }),
   );
+  // No `page` is sent, so the response is the bare list.
+  const macros = macrosData ? listItems(macrosData) : undefined;
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");

@@ -17,7 +17,7 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 
 describe("ListWorkbooks", () => {
   it("renders the search input without a my/all filter toggle", () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     render(<ListWorkbooks />);
 
@@ -27,7 +27,7 @@ describe("ListWorkbooks", () => {
 
   it("renders workbooks as table rows linking to their detail pages", async () => {
     const workbooks = [createWorkbook({ id: "wb-1", name: "Test WB" })];
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope(workbooks) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope(workbooks) });
 
     render(<ListWorkbooks />);
 
@@ -36,7 +36,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("shows clear button when search has value", async () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListWorkbooks />);
@@ -48,7 +48,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("clears the search via the clear button", async () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListWorkbooks />);
@@ -61,7 +61,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("closes the create dialog via the Cancel button", async () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListWorkbooks />);
@@ -76,7 +76,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("resets the name field when the dialog is dismissed", async () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListWorkbooks />);
@@ -90,7 +90,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("creates a workbook with the entered name from the dialog", async () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
     const spy = server.mount(contract.workbooks.createWorkbook, {
       status: 201,
       body: createWorkbook({ id: "wb-new", name: "My New WB" }),
@@ -108,7 +108,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("gives the visibility select an accessible name", async () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListWorkbooks />);
@@ -123,7 +123,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("creates a private workbook when private is picked", async () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
     const spy = server.mount(contract.workbooks.createWorkbook, {
       status: 201,
       body: createWorkbook({ id: "wb-new", name: "Private WB", visibility: "private" }),
@@ -144,7 +144,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("does not create a workbook when the name is blank", async () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
     const spy = server.mount(contract.workbooks.createWorkbook, {
       status: 201,
       body: createWorkbook({ id: "x" }),

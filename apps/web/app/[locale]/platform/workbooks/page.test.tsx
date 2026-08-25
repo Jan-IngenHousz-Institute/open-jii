@@ -18,7 +18,7 @@ describe("WorkbookPage (list)", () => {
   });
 
   it("renders the workbook list once data resolves", async () => {
-    server.mount(contract.workbooks.listWorkbooksPaginated, {
+    server.mount(contract.workbooks.listWorkbooks, {
       body: {
         items: [
           createWorkbook({ id: "wb-1", name: "Photosynthesis" }),

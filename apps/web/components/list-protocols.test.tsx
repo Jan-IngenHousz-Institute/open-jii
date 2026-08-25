@@ -17,7 +17,7 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 
 describe("ListProtocols", () => {
   it("renders the search input without a my/all filter toggle", async () => {
-    server.mount(contract.protocols.listProtocolsPaginated, { body: envelope([]) });
+    server.mount(contract.protocols.listProtocols, { body: envelope([]) });
     render(<ListProtocols />);
 
     expect(screen.getByPlaceholderText("protocols.searchProtocols")).toBeInTheDocument();
@@ -26,7 +26,7 @@ describe("ListProtocols", () => {
   });
 
   it("renders protocols as table rows linking to their detail pages", async () => {
-    server.mount(contract.protocols.listProtocolsPaginated, {
+    server.mount(contract.protocols.listProtocols, {
       body: envelope([createProtocol({ id: "1", name: "P1" })]),
     });
     render(<ListProtocols />);
@@ -36,7 +36,7 @@ describe("ListProtocols", () => {
   });
 
   it("sends search query to the API", async () => {
-    const spy = server.mount(contract.protocols.listProtocolsPaginated, { body: envelope([]) });
+    const spy = server.mount(contract.protocols.listProtocols, { body: envelope([]) });
     const user = userEvent.setup();
     render(<ListProtocols />);
 
@@ -49,7 +49,7 @@ describe("ListProtocols", () => {
   });
 
   it("navigates pages via the pagination controls", async () => {
-    const spy = server.mount(contract.protocols.listProtocolsPaginated, {
+    const spy = server.mount(contract.protocols.listProtocols, {
       body: (call: { query: Record<string, string> }) =>
         envelope([createProtocol({ id: "1" })], Number(call.query.page), 2),
     });

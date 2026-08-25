@@ -100,14 +100,10 @@ describe("useSignOut", () => {
     ];
     const listKeys = [
       orpc.macros.listMacros.key(),
-      orpc.macros.listMacrosPaginated.key(),
       orpc.protocols.listProtocols.key(),
-      orpc.protocols.listProtocolsPaginated.key(),
       orpc.workbooks.listWorkbooks.key(),
-      orpc.workbooks.listWorkbooksPaginated.key(),
       orpc.iot.listIotDevices.key(),
       orpc.experiments.listExperiments.key(),
-      orpc.experiments.listExperimentsPaginated.key(),
     ];
     for (const key of [...detailKeys, ...listKeys]) {
       queryClient.setQueryData(key, { secret: "user-a only" });

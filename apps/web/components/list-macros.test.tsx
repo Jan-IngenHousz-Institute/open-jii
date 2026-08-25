@@ -17,7 +17,7 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 
 describe("ListMacros", () => {
   it("renders search input and language filter, but no my/all toggle", async () => {
-    server.mount(contract.macros.listMacrosPaginated, { body: envelope([]) });
+    server.mount(contract.macros.listMacros, { body: envelope([]) });
     render(<ListMacros />);
 
     expect(screen.getByPlaceholderText("macros.searchPlaceholder")).toBeInTheDocument();
@@ -27,7 +27,7 @@ describe("ListMacros", () => {
   });
 
   it("renders macros as table rows linking to their detail pages", async () => {
-    server.mount(contract.macros.listMacrosPaginated, {
+    server.mount(contract.macros.listMacros, {
       body: envelope([createMacro({ id: "1", name: "M1" })]),
     });
     render(<ListMacros />);
@@ -37,7 +37,7 @@ describe("ListMacros", () => {
   });
 
   it("sends search query to the API", async () => {
-    const spy = server.mount(contract.macros.listMacrosPaginated, { body: envelope([]) });
+    const spy = server.mount(contract.macros.listMacros, { body: envelope([]) });
     const user = userEvent.setup();
     render(<ListMacros />);
 
@@ -50,7 +50,7 @@ describe("ListMacros", () => {
   });
 
   it("navigates pages via the pagination controls", async () => {
-    const spy = server.mount(contract.macros.listMacrosPaginated, {
+    const spy = server.mount(contract.macros.listMacros, {
       body: (call: { query: Record<string, string> }) =>
         envelope([createMacro({ id: "1" })], Number(call.query.page), 2),
     });

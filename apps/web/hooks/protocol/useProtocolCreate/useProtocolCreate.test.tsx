@@ -182,9 +182,6 @@ describe("useProtocolCreate", () => {
       expect(invalidate).toHaveBeenCalledWith({
         queryKey: orpc.protocols.listProtocols.key(),
       });
-      expect(invalidate).toHaveBeenCalledWith({
-        queryKey: orpc.protocols.listProtocolsPaginated.key(),
-      });
     });
   });
 

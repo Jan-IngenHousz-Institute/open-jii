@@ -17,7 +17,7 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 
 describe("ListExperiments", () => {
   it("renders experiments as table rows linking to their detail pages", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, {
+    server.mount(contract.experiments.listExperiments, {
       body: envelope([createExperiment({ id: "1", name: "Exp 1" })]),
     });
 
@@ -28,7 +28,7 @@ describe("ListExperiments", () => {
   });
 
   it("links to the archive detail page when archived", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, {
+    server.mount(contract.experiments.listExperiments, {
       body: envelope([createExperiment({ id: "1", name: "Old Exp" })]),
     });
 
@@ -39,7 +39,7 @@ describe("ListExperiments", () => {
   });
 
   it("renders the empty state with a docs help link when no experiments", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([]) });
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
 
     render(<ListExperiments />);
 
@@ -52,7 +52,7 @@ describe("ListExperiments", () => {
   });
 
   it("does not render a my/all filter toggle", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([]) });
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
 
     render(<ListExperiments />);
 
@@ -61,7 +61,7 @@ describe("ListExperiments", () => {
   });
 
   it("updates search on input change", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([]) });
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListExperiments />);
@@ -73,7 +73,7 @@ describe("ListExperiments", () => {
   });
 
   it("shows clear button when search is active and clears on click", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([]) });
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListExperiments />);
@@ -87,7 +87,7 @@ describe("ListExperiments", () => {
   });
 
   it("shows pagination when there is more than one page and navigates", async () => {
-    const spy = server.mount(contract.experiments.listExperimentsPaginated, {
+    const spy = server.mount(contract.experiments.listExperiments, {
       body: (call: { query: Record<string, string> }) =>
         envelope([createExperiment({ id: "1", name: "Exp 1" })], Number(call.query.page), 3),
     });
@@ -104,7 +104,7 @@ describe("ListExperiments", () => {
   });
 
   it("hides pagination when everything fits on one page", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, { body: envelope([]) });
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
 
     render(<ListExperiments />);
 
@@ -113,7 +113,7 @@ describe("ListExperiments", () => {
   });
 
   it("makes the stale page non-interactive while the next page loads", async () => {
-    server.mount(contract.experiments.listExperimentsPaginated, {
+    server.mount(contract.experiments.listExperiments, {
       body: (call: { query: Record<string, string> }) =>
         envelope([createExperiment({ id: "1", name: "Exp 1" })], Number(call.query.page), 3),
     });
@@ -127,7 +127,7 @@ describe("ListExperiments", () => {
     const gate = new Promise<void>((resolve) => {
       releasePage2 = resolve;
     });
-    server.mount(contract.experiments.listExperimentsPaginated, {
+    server.mount(contract.experiments.listExperiments, {
       body: envelope([createExperiment({ id: "2", name: "Exp 2" })], 2, 3),
       unblock: gate,
     });
