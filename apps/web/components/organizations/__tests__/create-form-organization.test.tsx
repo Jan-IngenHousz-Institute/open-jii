@@ -68,6 +68,9 @@ describe("the owning organization a create form submits", () => {
     server.mount(contract.users.getUserProfile, {
       body: createUserProfile({ firstName: "Ada", lastName: "Lovelace" }),
     });
+    // The experiment wizard's linked-workbook step queries workbooks; keep it off the
+    // unhandled-request path so a slow bypass can never bleed into the submit.
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
   });
 
   describe("experiment", () => {
@@ -281,6 +284,8 @@ describe("the owning organization a wizard review step shows", () => {
       isPending: false,
     } as ReturnType<typeof useSession>);
     server.mount(contract.organizations.listMyOrganizations, { body: [PERSONAL, LAB] });
+    // The review step renders the linked-workbook section, which queries workbooks.
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
   });
 
   it("names the chosen organization on the experiment review", async () => {
