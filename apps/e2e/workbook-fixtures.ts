@@ -1,6 +1,6 @@
 import postgres from "postgres";
 
-import { databaseUrl, seedEmail } from "./helpers.js";
+import { assertSafeFixtureDatabase, databaseUrl, seedEmail } from "./helpers.js";
 
 const tag = "workbook-search";
 const experimentName = "[E2E] Photosynthesis Workbook Search";
@@ -23,6 +23,7 @@ function connect() {
 }
 
 export async function cleanupWorkbookSearchFixtures(): Promise<void> {
+  assertSafeFixtureDatabase();
   const sql = connect();
   try {
     await sql.begin(async (transaction) => {
@@ -31,7 +32,6 @@ export async function cleanupWorkbookSearchFixtures(): Promise<void> {
       `;
       const experimentIds = experiments.map(({ id }) => id);
       if (experimentIds.length > 0) {
-        await transaction`delete from experiment_members where experiment_id in ${transaction(experimentIds)}`;
         await transaction`
           delete from resource_grants
           where resource_type = 'experiment'

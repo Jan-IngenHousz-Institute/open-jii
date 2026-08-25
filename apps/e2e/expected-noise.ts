@@ -1,14 +1,22 @@
 import type { ConsoleMessage, Page, Request } from "@playwright/test";
 
-const expectedFailureUrls = [
-  // Local runs deliberately have no Contentful credentials.
-  /(?:contentful\.com|graphql\.contentful\.com)/i,
-  // Local runs deliberately have no Databricks connectivity.
-  /\/api\/v1\/experiments\/[^/]+\/data(?:\/|$)/,
+const expectedHttpFailures = [
+  {
+    // Local runs deliberately have no Contentful credentials.
+    url: /(?:contentful\.com|graphql\.contentful\.com)/i,
+    statuses: new Set([404, 500]),
+  },
+  {
+    // The example environment deliberately points Databricks at an unreachable endpoint.
+    url: /\/api\/v1\/experiments\/[^/]+\/data(?:\/|$)/,
+    statuses: new Set([500]),
+  },
 ];
 
-function isExpectedFailureUrl(url: string): boolean {
-  return expectedFailureUrls.some((pattern) => pattern.test(url));
+function isExpectedHttpFailure(url: string, status: number): boolean {
+  return expectedHttpFailures.some(
+    (failure) => failure.statuses.has(status) && failure.url.test(url),
+  );
 }
 
 export interface UnexpectedBrowserErrors {
@@ -22,14 +30,13 @@ export function watchForUnexpectedBrowserErrors(page: Page): UnexpectedBrowserEr
   const onConsole = (message: ConsoleMessage) => {
     if (message.type() !== "error") return;
     const failedResource =
-      /^Failed to load resource: the server responded with a status of (404|500)/.test(
-        message.text(),
-      );
-    if (failedResource && isExpectedFailureUrl(message.location().url)) return;
+      /^Failed to load resource: the server responded with a status of (\d+)/.exec(message.text());
+    if (failedResource && isExpectedHttpFailure(message.location().url, Number(failedResource[1])))
+      return;
     errors.push(`console.error: ${message.text()}`);
   };
   const onRequestFailed = (request: Request) => {
-    if (isExpectedFailureUrl(request.url())) return;
+    if (/(?:contentful\.com|graphql\.contentful\.com)/i.test(request.url())) return;
     errors.push(
       `requestfailed: ${request.method()} ${request.url()} (${request.failure()?.errorText})`,
     );

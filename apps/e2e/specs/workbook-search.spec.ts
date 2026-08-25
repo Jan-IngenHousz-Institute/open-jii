@@ -25,6 +25,13 @@ async function openPicker(page: Page): Promise<void> {
   await expect(page.getByPlaceholder(/Search workbook/i)).toBeVisible();
 }
 
+async function openFixturePicker(page: Page): Promise<void> {
+  await page.goto(designUrl(fixtures.experimentId), { waitUntil: "networkidle" });
+  await dismissCookieBanner(page);
+  await openPicker(page);
+  await expect.poll(() => optionLabels(page)).toContain(workbookSearchNames.chlorophyll);
+}
+
 async function optionLabels(page: Page): Promise<string[]> {
   return page.getByRole("option").allTextContents();
 }
@@ -63,22 +70,26 @@ test.afterAll(async () => {
   await cleanupWorkbookSearchFixtures();
 });
 
-test("workbook search stays server-backed through search and attach flows", async ({ page }) => {
+test("searches fixture workbooks through every supported field", async ({ page }) => {
   const searchUrls: string[] = [];
   page.on("request", (request) => {
     if (workbookListUrl.test(request.url())) searchUrls.push(request.url());
   });
 
-  await page.goto(designUrl(fixtures.experimentId), { waitUntil: "networkidle" });
-  await dismissCookieBanner(page);
-  await openPicker(page);
-  await expect.poll(() => optionLabels(page)).toContain(workbookSearchNames.chlorophyll);
-
+  await openFixturePicker(page);
   await expectTaggedMatches(page, "chloro", [workbookSearchNames.chlorophyll]);
   expect(searchUrls.some((url) => new URL(url).searchParams.get("search") === "chloro")).toBe(true);
   await expectTaggedMatches(page, "2", [workbookSearchNames.drought]);
   await expectTaggedMatches(page, "area", [workbookSearchNames.leafArea]);
   await expectTaggedMatches(page, fixtures.creatorName.toLowerCase(), [workbookSearchNames.zephyr]);
+  await expectTaggedMatches(page, "notebook", [
+    workbookSearchNames.quokka,
+    workbookSearchNames.zephyr,
+  ]);
+});
+
+test("keeps previous results visible while a new search is pending", async ({ page }) => {
+  await openFixturePicker(page);
   await expectTaggedMatches(page, "notebook", [
     workbookSearchNames.quokka,
     workbookSearchNames.zephyr,
@@ -97,7 +108,9 @@ test("workbook search stays server-backed through search and attach flows", asyn
   await staleResponse;
   await page.unroute(workbookListUrl, delayed);
   await page.waitForLoadState("networkidle");
+});
 
+test("shows a loading state when no previous results exist", async ({ page }) => {
   const coldDelay: (route: Route) => Promise<void> = async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 3_000));
     await route.continue();
@@ -105,15 +118,17 @@ test("workbook search stays server-backed through search and attach flows", asyn
   await page.route(workbookListUrl, coldDelay);
   const coldResponse = page.waitForResponse(workbookListUrl);
   await page.goto(designUrl(fixtures.experimentId), { waitUntil: "domcontentloaded" });
+  await dismissCookieBanner(page);
   await openPicker(page);
   await expect(page.getByRole("status")).toHaveText(/Searching workbooks/i);
   await expect(page.getByRole("option", { name: workbookSearchNames.quokka })).not.toBeVisible();
   await coldResponse;
   await page.unroute(workbookListUrl, coldDelay);
   await page.waitForLoadState("networkidle");
+});
 
-  await page.goto(designUrl(fixtures.experimentId), { waitUntil: "networkidle" });
-  await openPicker(page);
+test("attaches, changes, and preselects workbooks", async ({ page }) => {
+  await openFixturePicker(page);
   await expectTaggedMatches(page, "quokka", [workbookSearchNames.quokka]);
   await page.getByRole("option", { name: workbookSearchNames.quokka }).click();
   const attachResponse = page.waitForResponse(

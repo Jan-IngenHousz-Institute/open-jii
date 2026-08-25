@@ -14,11 +14,9 @@ pnpm --filter database db:seed
 pnpm dev:fb
 ```
 
-In another terminal, wait for both applications and run the suite:
+In another terminal, once both applications are ready, run the suite:
 
 ```sh
-until curl -fsS http://127.0.0.1:3020/health >/dev/null && \
-  curl -fsS http://127.0.0.1:3000 >/dev/null; do sleep 1; done
 pnpm --filter @repo/e2e exec playwright install chromium
 pnpm e2e
 ```
@@ -26,11 +24,13 @@ pnpm e2e
 The default web URL is `http://localhost:3000`, the seed identity is `seed@openjii.local`, and the
 database is `postgresql://postgres:postgres@127.0.0.1:5432/openjii_local`. Override them with
 `E2E_BASE_URL`, `E2E_EMAIL`, and `E2E_DATABASE_URL` when needed. Authentication state is recreated
-under `.auth` for every run.
+under `.auth` for every run. Fixture cleanup only accepts the `openjii_local` database on a loopback
+host unless `E2E_ALLOW_UNSAFE_DATABASE=1` is set.
 
-The manual Web E2E workflow does not run on pull requests. It intentionally uses a production build
-and its standalone server while local development uses `next dev`; removing per-route compilation
-makes Playwright timing deterministic in CI.
+The Web E2E workflow runs nightly, on manual dispatch, and on pull requests that change the web E2E
+stack. It uses a production build and its standalone server while local development uses `next dev`.
+Playwright owns the CI server processes and waits for the backend health check and rendered login
+page before authentication starts.
 
 ## Tests and artifacts
 

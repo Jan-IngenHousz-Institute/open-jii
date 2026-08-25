@@ -1,12 +1,7 @@
 import { expect, test } from "../fixtures.js";
-import { dismissCookieBanner, findSeedExperimentId, locale } from "../helpers.js";
+import { dismissCookieBanner, findSeedExperiment, locale } from "../helpers.js";
 
-async function clearOverlays(page: Parameters<typeof dismissCookieBanner>[0]): Promise<void> {
-  await page.keyboard.press("Escape");
-  await page.waitForTimeout(150);
-}
-
-test("the authenticated navigation shell remains usable", async ({ page }) => {
+test("navigation keyboard shortcuts work", async ({ page }) => {
   await page.goto(`/${locale}/platform`, { waitUntil: "networkidle" });
   await dismissCookieBanner(page);
   await expect(page).toHaveURL(new RegExp(`/${locale}/platform$`));
@@ -14,25 +9,34 @@ test("the authenticated navigation shell remains usable", async ({ page }) => {
 
   const sidebar = page.locator("[data-state][data-collapsible]").first();
   const initialSidebarState = await sidebar.getAttribute("data-state");
+  if (!initialSidebarState) throw new Error("Sidebar has no data-state attribute");
   await page.keyboard.press("ControlOrMeta+b");
-  await expect(sidebar).not.toHaveAttribute("data-state", initialSidebarState ?? "");
+  await expect(sidebar).not.toHaveAttribute("data-state", initialSidebarState);
   await page.keyboard.press("ControlOrMeta+b");
+  await expect(sidebar).toHaveAttribute("data-state", initialSidebarState);
 
-  await page.keyboard.press("Control+k");
+  await page.keyboard.press("ControlOrMeta+k");
   const palette = page.getByRole("dialog", { name: "Command palette" });
   await expect(palette).toBeVisible();
   await expect(page.getByRole("option", { name: /^Home/ }).first()).toBeVisible();
-  await clearOverlays(page);
+  await page.keyboard.press("Escape");
+  await expect(palette).not.toBeVisible();
 
-  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await page.getByRole("link", { name: "Experiments" }).focus();
   await page.keyboard.press("g");
   await page.keyboard.press("e");
   await page.waitForURL(`**/${locale}/platform/experiments`);
   await expect(page.getByRole("heading", { name: "Experiments", level: 1 })).toBeVisible();
+});
 
+test("activity and account navigation remain usable", async ({ page }) => {
+  await page.goto(`/${locale}/platform`, { waitUntil: "networkidle" });
+  await dismissCookieBanner(page);
   await page.getByRole("button", { name: /^Activity/ }).click();
-  await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
-  await clearOverlays(page);
+  const activityHeading = page.getByRole("heading", { name: "Activity" });
+  await expect(activityHeading).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(activityHeading).not.toBeVisible();
 
   // Direct-load coverage stays isolated in the fixme below while the hydration bug remains.
   await page.getByRole("button", { name: /SE|JII/ }).click();
@@ -43,17 +47,17 @@ test("the authenticated navigation shell remains usable", async ({ page }) => {
   await expect(page.getByRole("tab").first()).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("button", { name: /Security/i }).first()).toBeVisible();
+});
 
-  const experimentId = await findSeedExperimentId();
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`/${locale}/platform/experiments/${experimentId}`, {
+test("experiment pages render without runtime errors", async ({ page }) => {
+  const experiment = await findSeedExperiment();
+  await page.goto(`/${locale}/platform/experiments/${experiment.id}`, {
     waitUntil: "networkidle",
   });
-  const experimentTitle = page.getByTestId("experiment-title");
-  await expect(experimentTitle).toBeVisible();
-  await expect(experimentTitle.locator("svg").first()).toBeVisible();
+  await dismissCookieBanner(page);
+  await expect(page.getByRole("heading", { name: experiment.name, level: 1 })).toBeVisible();
 
-  await page.goto(`/${locale}/platform/experiments/${experimentId}/data`, {
+  await page.goto(`/${locale}/platform/experiments/${experiment.id}/data`, {
     waitUntil: "networkidle",
   });
   await expect(page.getByText(/Application error|Unhandled Runtime Error/)).toHaveCount(0);

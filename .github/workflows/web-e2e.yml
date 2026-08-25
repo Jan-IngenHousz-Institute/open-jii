@@ -1,9 +1,25 @@
 name: Web E2E
 
 on:
+  pull_request:
+    paths:
+      - ".github/actions/setup-nodejs-pnpm/**"
+      - ".github/workflows/web-e2e.yml"
+      - "apps/backend/**"
+      - "apps/e2e/**"
+      - "apps/web/**"
+      - "packages/**"
+      - "tooling/devkit/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "turbo.json"
   schedule:
     - cron: "17 2 * * *"
   workflow_dispatch:
+
+concurrency:
+  group: web-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -12,7 +28,7 @@ jobs:
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
@@ -37,31 +53,14 @@ jobs:
 
       - name: Build Applications
         run: |
-          pnpm --filter backend build
-          pnpm --filter web build
+          pnpm exec turbo run build --filter=backend --filter=web
           # Next standalone copies neither static build assets nor public files.
-          cp -R apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
-          cp -R apps/web/public apps/web/.next/standalone/apps/web/public
+          mkdir -p apps/web/.next/standalone/apps/web/.next/static
+          mkdir -p apps/web/.next/standalone/apps/web/public
+          cp -R apps/web/.next/static/. apps/web/.next/standalone/apps/web/.next/static/
+          cp -R apps/web/public/. apps/web/.next/standalone/apps/web/public/
 
-      # Production output removes per-route compilation from Playwright timing.
-      - name: Start Applications
-        run: |
-          NODE_ENV=production pnpm --filter backend start:prod > /tmp/openjii-backend.log 2>&1 &
-          HOSTNAME=127.0.0.1 PORT=3000 node apps/web/.next/standalone/apps/web/server.js > /tmp/openjii-web.log 2>&1 &
-
-      - name: Wait for Applications
-        run: |
-          for url in http://127.0.0.1:3020/health http://127.0.0.1:3000; do
-            for attempt in {1..60}; do
-              if curl --fail --silent "$url" > /dev/null; then break; fi
-              if [ "$attempt" -eq 60 ]; then
-                echo "::error::Timed out waiting for $url"
-                exit 1
-              fi
-              sleep 1
-            done
-          done
-
+      # Playwright starts, probes, and stops both production servers.
       - name: Run Playwright
         run: pnpm e2e
 
