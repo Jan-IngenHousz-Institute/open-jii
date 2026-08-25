@@ -15,6 +15,7 @@ import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { usePrecachedExperimentData } from "~/features/experiments/hooks/use-precached-experiment-data";
 import { useRecentExperimentActivity } from "~/features/experiments/hooks/use-recent-experiment-activity";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
+import { useExperimentsFlowMeta } from "~/features/measurement-flow/hooks/use-experiments-flow-meta";
 import { useLoadExperimentFlow } from "~/features/measurement-flow/hooks/use-load-experiment-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
@@ -43,6 +44,8 @@ export function ExperimentSelectionStep() {
   const recentActivity = useRecentExperimentActivity();
 
   const [search, setSearch] = React.useState("");
+  const ids = useMemo(() => experiments.map((e) => e.value), [experiments]);
+  const flowMeta = useExperimentsFlowMeta(ids);
 
   // Surface experiments with measurements in the last 7 days first. Array sort
   // is stable, so experiments with no recent activity keep their original order
@@ -64,7 +67,7 @@ export function ExperimentSelectionStep() {
   }, [sorted, search]);
 
   const selectedExperiment = experiments.find((e) => e.value === selectedExperimentId);
-  const selectedMeta = selectedExperiment?.flowMeta;
+  const selectedMeta = selectedExperimentId ? flowMeta[selectedExperimentId] : undefined;
   const requiresDevice = !!selectedMeta?.requiresDevice;
   const isConnected = !!connectedDevice;
   const showDeviceBanner = !!selectedExperimentId && requiresDevice && !isConnected;
@@ -144,7 +147,7 @@ export function ExperimentSelectionStep() {
               />
             }
             renderItem={({ item }) => {
-              const meta = item.flowMeta;
+              const meta = flowMeta[item.value];
               return (
                 <ExperimentCard
                   id={item.value}

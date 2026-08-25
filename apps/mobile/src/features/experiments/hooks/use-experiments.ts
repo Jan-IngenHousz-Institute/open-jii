@@ -28,7 +28,6 @@ export function useExperiments() {
         ? ellipsize(extractTextFromHTML(item.description), 100)
         : undefined,
       fullDescription: item.description,
-      flowMeta: item.flowMeta,
     })) ?? [];
 
   return { experiments: options, isLoading, error, refetch, isRefetching };

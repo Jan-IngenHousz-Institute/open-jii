@@ -39,20 +39,7 @@ export const zExperiment = z.object({
   locations: zExperimentLocationList.optional(),
 });
 
-export const zExperimentFlowMeta = z.object({
-  requiresDevice: z.boolean(),
-  questionsOnly: z.boolean(),
-  nodeCount: z.number().int().nonnegative(),
-  durationMin: z.number().int().nonnegative(),
-});
-
-export const zExperimentListItem = zExperiment.extend({
-  // Defaulting keeps a new mobile build compatible during a rolling deploy
-  // where it can briefly receive a list response from an older backend.
-  flowMeta: zExperimentFlowMeta.nullable().default(null),
-});
-
-export const zExperimentList = z.array(zExperimentListItem);
+export const zExperimentList = z.array(zExperiment);
 
 export const zExperimentAccess = z.object({
   experiment: zExperiment,
@@ -286,8 +273,6 @@ export const zExperimentFlowGraph = z
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
 export type Experiment = z.infer<typeof zExperiment>;
-export type ExperimentFlowMeta = z.infer<typeof zExperimentFlowMeta>;
-export type ExperimentListItem = z.infer<typeof zExperimentListItem>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentFlowNodeType = z.infer<typeof zExperimentFlowNodeType>;
 export type ExperimentFlowGraph = z.infer<typeof zExperimentFlowGraph>;
