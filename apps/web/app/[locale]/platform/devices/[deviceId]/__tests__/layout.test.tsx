@@ -51,23 +51,6 @@ describe("<DeviceLayout />", () => {
     expect(screen.getByText("Child Content")).toBeInTheDocument();
   });
 
-  it("carries the identity meta strip in the header, present on every tab", async () => {
-    server.mount(contract.iot.getIotDevice, {
-      body: createIotDeviceDetail({
-        id: DEVICE_ID,
-        serialNumber: "SN-42",
-        thingName: "ambyte_SN-42",
-        connectivity: { connected: true, lastSeenAt: "2026-08-13T08:00:00.000Z" },
-      }),
-    });
-
-    renderLayout();
-
-    expect(await screen.findByText("SN-42")).toBeInTheDocument();
-    expect(screen.getByText("ambyte_SN-42")).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.connectivity.onlineSince")).toBeInTheDocument();
-  });
-
   it("titles a nameless device through the shared identity hierarchy", async () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({

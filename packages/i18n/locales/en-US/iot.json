@@ -364,6 +364,9 @@
         "overview": {
           "title": "Overview",
           "description": "What this device is, and where its setup stands."
+        },
+        "about": {
+          "title": "About"
         }
       },
       "credentials": {

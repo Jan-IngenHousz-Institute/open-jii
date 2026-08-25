@@ -41,9 +41,14 @@ describe("DeviceOverviewPage", () => {
     server.mount(contract.iot.getDeviceFirmwareHistory, { body: { versions: [] } });
   });
 
-  it("renders the stitched hub: cards into the neighbouring tabs", async () => {
+  it("renders the stitched hub with the About sidebar carrying the identity facts", async () => {
     server.mount(contract.iot.getIotDevice, {
-      body: createIotDeviceDetail({ id: DEVICE_ID, status: "active" }),
+      body: createIotDeviceDetail({
+        id: DEVICE_ID,
+        status: "active",
+        serialNumber: "SN-42",
+        thingName: "ambyte_SN-42",
+      }),
     });
 
     renderPage();
@@ -53,6 +58,9 @@ describe("DeviceOverviewPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("iot.devices.detail.cards.experimentsTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.detail.cards.activityTitle")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.detail.about.title")).toBeInTheDocument();
+    expect(screen.getByText("SN-42")).toBeInTheDocument();
+    expect(screen.getByText("ambyte_SN-42")).toBeInTheDocument();
   });
 
   it("offers no delete affordance on the tab body; that action lives in the header menu", async () => {

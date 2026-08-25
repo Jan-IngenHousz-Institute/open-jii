@@ -6,6 +6,7 @@ import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDevice
 import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 
+import { DeviceAboutCard } from "./device-about-card";
 import { deviceNextAction } from "./device-next-action";
 import { DeviceNextActionChip } from "./device-next-action-chip";
 import { DeviceOverviewCards } from "./device-overview-cards";
@@ -29,9 +30,14 @@ export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
         {nextAction !== null && <DeviceNextActionChip deviceId={device.id} action={nextAction} />}
       </div>
 
-      {/* The component hides the certificate and onboarding cards for phones
-          itself; activity applies to every family. */}
-      <DeviceOverviewCards device={device} />
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <div className="min-w-0 lg:col-span-2">
+          {/* The component hides the certificate and onboarding cards for phones
+              itself; activity applies to every family. */}
+          <DeviceOverviewCards device={device} />
+        </div>
+        <DeviceAboutCard device={device} />
+      </div>
     </div>
   );
 }

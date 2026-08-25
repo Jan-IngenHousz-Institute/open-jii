@@ -364,6 +364,9 @@
         "overview": {
           "title": "Overzicht",
           "description": "Wat dit apparaat is en hoe ver de installatie is."
+        },
+        "about": {
+          "title": "Over"
         }
       },
       "credentials": {

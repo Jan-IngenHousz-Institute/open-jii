@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Boxes } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import type { IotDeviceGroupListItem } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
@@ -27,8 +27,11 @@ export function GroupOverviewCard({ group, locale }: GroupOverviewCardProps) {
       className="bg-card hover:border-primary/40 hover:shadow-xs focus-visible:ring-primary/40 focus-visible:outline-hidden group flex flex-col gap-3 rounded-xl border p-4 transition focus-visible:ring-2"
     >
       <div className="flex items-start gap-3">
-        <div className="bg-secondary text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
-          <Boxes className="size-5" aria-hidden />
+        <div
+          className="bg-secondary text-primary flex size-10 shrink-0 items-center justify-center rounded-lg text-sm font-semibold uppercase"
+          aria-hidden
+        >
+          {group.name.trim().slice(0, 2)}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{group.name}</p>

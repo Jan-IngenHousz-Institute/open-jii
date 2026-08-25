@@ -1,7 +1,6 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -48,11 +47,6 @@ export function DeviceGroupLayoutContent({
           {group.description !== null && (
             <p className="text-muted-foreground text-sm">{group.description}</p>
           )}
-
-          <div className="flex flex-wrap items-start gap-10 pt-2">
-            <MetaField label={t("iot.groups.meta.members")} value={String(group.memberCount)} />
-            <MetaField label={t("iot.groups.meta.created")} value={formatDate(group.createdAt)} />
-          </div>
         </div>
       </div>
 
