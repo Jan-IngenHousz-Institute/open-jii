@@ -46,6 +46,7 @@ const SHARED = {
   macro: null,
   questions: [],
   workbookRunId: "run-attempt-1",
+  workbookVersionId: "version-1",
 };
 
 type SavedCall = [

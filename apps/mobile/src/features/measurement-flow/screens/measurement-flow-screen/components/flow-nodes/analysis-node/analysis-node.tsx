@@ -215,6 +215,10 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       throw new Error("Missing workbook run id");
     }
 
+    if (!workbookVersionId) {
+      throw new Error("Missing workbook version id");
+    }
+
     if (!session?.data?.user?.id) {
       throw new Error("Missing user id");
     }
