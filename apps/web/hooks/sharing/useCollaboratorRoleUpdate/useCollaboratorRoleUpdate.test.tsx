@@ -66,7 +66,7 @@ describe("useCollaboratorRoleUpdate", () => {
     // "Can edit" → "Can view" drops `share` and `manage`, so the tabs, the invite
     // action and the row controls all have to go — which only happens once the
     // access response is re-read.
-    expect(experimentCachesInvalidated(queryClient)).toEqual([true, true, true]);
+    expect(experimentCachesInvalidated(queryClient)).toEqual([true, true, true, true]);
   });
 
   it("leaves them alone when somebody else's grant is retiered", async () => {
@@ -92,6 +92,6 @@ describe("useCollaboratorRoleUpdate", () => {
 
     // The caller's own access did not move, so the page they are on is still
     // backed by exactly the capabilities it was rendered from.
-    expect(experimentCachesInvalidated(queryClient)).toEqual([false, false, false]);
+    expect(experimentCachesInvalidated(queryClient)).toEqual([false, false, false, false]);
   });
 });

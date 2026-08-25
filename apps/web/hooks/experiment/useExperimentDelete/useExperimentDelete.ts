@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -12,7 +13,9 @@ export const useExperimentDelete = () => {
     orpc.experiments.deleteExperiment.mutationOptions({
       onMutate: async (variables) => {
         // Cancel any outgoing refetches
-        await queryClient.cancelQueries({ queryKey: orpc.experiments.listExperiments.key() });
+        for (const queryKey of listQueryKeys.experiments()) {
+          await queryClient.cancelQueries({ queryKey });
+        }
 
         // Remove the single experiment from cache as well
         queryClient.removeQueries({
@@ -21,9 +24,9 @@ export const useExperimentDelete = () => {
       },
       onSettled: async () => {
         // Always invalidate to ensure cache is in sync with server
-        await queryClient.invalidateQueries({
-          queryKey: orpc.experiments.listExperiments.key(),
-        });
+        for (const queryKey of listQueryKeys.experiments()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
         // Deleting an experiment cascades its device bindings away.
         await queryClient.invalidateQueries({ queryKey: orpc.iot.listDeviceExperiments.key() });
       },

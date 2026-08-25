@@ -67,6 +67,24 @@ describe("useWorkbooks", () => {
     expect(result.current.page).toBe(1);
   });
 
+  it("clamps the page when the result set shrinks below it", async () => {
+    const spy = server.mount(contract.workbooks.listWorkbooksPaginated, {
+      body: envelope([], 1, 2),
+    });
+
+    const { result } = renderHook(() => useWorkbooks());
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    act(() => result.current.setPage(3));
+
+    await waitFor(() => {
+      expect(result.current.page).toBe(2);
+    });
+    expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("2");
+  });
+
   it("provides search and setSearch", () => {
     server.mount(contract.workbooks.listWorkbooksPaginated, { body: envelope([]) });
 

@@ -79,6 +79,9 @@ describe("useWorkbookCreate", () => {
       expect(invalidateSpy).toHaveBeenCalledWith(
         expect.objectContaining({ queryKey: orpc.workbooks.listWorkbooks.key() }),
       );
+      expect(invalidateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ queryKey: orpc.workbooks.listWorkbooksPaginated.key() }),
+      );
     });
   });
 });

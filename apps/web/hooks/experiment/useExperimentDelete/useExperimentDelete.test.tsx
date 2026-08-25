@@ -34,6 +34,9 @@ describe("useExperimentDelete", () => {
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: orpc.experiments.listExperiments.key(),
     });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: orpc.experiments.listExperimentsPaginated.key(),
+    });
     // Deleting an experiment cascades its device bindings away.
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: orpc.iot.listDeviceExperiments.key(),

@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -15,9 +16,9 @@ export const useSetExperimentVisibility = () => {
         await queryClient.invalidateQueries({
           queryKey: orpc.experiments.getExperimentAccess.queryKey({ input: { id: variables.id } }),
         });
-        await queryClient.invalidateQueries({
-          queryKey: orpc.experiments.listExperiments.key(),
-        });
+        for (const queryKey of listQueryKeys.experiments()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
       },
     }),
   );

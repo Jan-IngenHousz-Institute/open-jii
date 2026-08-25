@@ -71,7 +71,7 @@ export default function DeviceMonitoringPage() {
   // unnamed, since a device publishing to an experiment says nothing about the
   // viewer's access to it.
   const { data: visibleExperiments } = useQuery(
-    orpc.experiments.listExperiments.queryOptions({ input: { filter: "member" } }),
+    orpc.experiments.listExperiments.queryOptions({ input: { scope: "related" } }),
   );
   const { data: visibleProtocols } = useQuery(
     orpc.protocols.listProtocols.queryOptions({ input: {} }),
