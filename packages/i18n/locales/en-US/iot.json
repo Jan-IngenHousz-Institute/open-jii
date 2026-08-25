@@ -353,12 +353,12 @@
           "firmwareTitle": "Firmware",
           "firmwareLink": "Open firmware",
           "firmwareUnknown": "No firmware version reported in the last 30 days.",
-          "observedHint": "What this phone uploaded to in the last 30 days, as the data reports it.",
           "observedEmpty": "No uploads in the last 30 days.",
           "observedUnattributed": "Unattributed uploads",
           "firmwareReportedCaption": "Reported by the device in the last 30 days.",
           "onboarded": "Onboarded",
-          "activityFigureCaption": "Last data arrival"
+          "activityFigureCaption": "Last data arrival",
+          "observedShortCaption": "Uploaded to, last 30 days"
         },
         "overview": {
           "title": "Overview",

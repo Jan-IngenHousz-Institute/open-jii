@@ -353,12 +353,12 @@
           "firmwareTitle": "Firmware",
           "firmwareLink": "Firmware öffnen",
           "firmwareUnknown": "In den letzten 30 Tagen wurde keine Firmware-Version gemeldet.",
-          "observedHint": "Wohin dieses Telefon in den letzten 30 Tagen hochgeladen hat, wie die Daten es angeben.",
           "observedEmpty": "Keine Uploads in den letzten 30 Tagen.",
           "observedUnattributed": "Nicht zugeordnete Uploads",
           "firmwareReportedCaption": "Vom Gerät in den letzten 30 Tagen gemeldet.",
           "onboarded": "Eingerichtet",
-          "activityFigureCaption": "Letzter Dateneingang"
+          "activityFigureCaption": "Letzter Dateneingang",
+          "observedShortCaption": "Beliefert, letzte 30 Tage"
         },
         "overview": {
           "title": "Übersicht",

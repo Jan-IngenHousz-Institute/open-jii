@@ -96,7 +96,7 @@ describe("DeviceOverviewCards", () => {
     expect(
       await screen.findByText("iot.devices.detail.cards.activityFigureCaption"),
     ).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.detail.cards.observedHint")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.detail.cards.observedShortCaption")).toBeInTheDocument();
     // One card, one destination: no separate Activity card doubling the link.
     expect(screen.queryByText("iot.devices.detail.cards.activityTitle")).not.toBeInTheDocument();
     expect(

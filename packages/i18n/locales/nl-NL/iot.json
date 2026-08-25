@@ -353,12 +353,12 @@
           "firmwareTitle": "Firmware",
           "firmwareLink": "Firmware openen",
           "firmwareUnknown": "In de afgelopen 30 dagen is geen firmwareversie gemeld.",
-          "observedHint": "Waar deze telefoon de afgelopen 30 dagen naartoe heeft geüpload, zoals de data het aangeeft.",
           "observedEmpty": "Geen uploads in de afgelopen 30 dagen.",
           "observedUnattributed": "Niet-toegewezen uploads",
           "firmwareReportedCaption": "In de afgelopen 30 dagen door het apparaat gemeld.",
           "onboarded": "Ingesteld",
-          "activityFigureCaption": "Laatste data-aankomst"
+          "activityFigureCaption": "Laatste data-aankomst",
+          "observedShortCaption": "Naar geüpload, laatste 30 dagen"
         },
         "overview": {
           "title": "Overzicht",

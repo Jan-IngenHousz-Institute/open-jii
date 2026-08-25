@@ -26,6 +26,7 @@ import { Button } from "@repo/ui/components/button";
 import { CardDescription } from "@repo/ui/components/card";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { cn } from "@repo/ui/lib/utils";
 
 import { EntityLink } from "./monitoring/entity-link";
 import { resolveEntities } from "./monitoring/resolve-entity-label";
@@ -113,7 +114,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     return (
       <li
         key={experiment.id}
-        className="hover:bg-muted/40 flex items-center gap-3 px-6 py-2.5 transition-colors"
+        className="hover:bg-muted/40 flex items-center gap-3 px-6 py-3 transition-colors"
       >
         <Link
           href={`/${locale}/platform/experiments/${experiment.id}`}
@@ -173,7 +174,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     return (
       <li
         key={entry.experimentId ?? "unattributed"}
-        className="hover:bg-muted/40 flex items-center gap-3 px-6 py-2.5 transition-colors"
+        className="hover:bg-muted/40 flex items-center gap-3 px-6 py-3 transition-colors"
       >
         <span className="min-w-0 flex-1 truncate text-sm">
           {entity === null || entity === undefined ? (
@@ -231,13 +232,13 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     return (
       <div className="space-y-2">
         <div className="grid grid-cols-2 gap-4">
-          {renderFigure(observed.length, t("iot.devices.detail.cards.observedHint"))}
+          {renderFigure(observed.length, t("iot.devices.detail.cards.observedShortCaption"))}
           {renderFigure(
             lastDataRelative ?? "\u2014",
             t("iot.devices.detail.cards.activityFigureCaption"),
           )}
         </div>
-        <ul className="-mx-6 -mb-3 divide-y">{observed.map(renderObservedRow)}</ul>
+        <ul className="-mx-6 -mb-3 divide-y border-t">{observed.map(renderObservedRow)}</ul>
       </div>
     );
   }
@@ -303,7 +304,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className={cn("grid gap-4", !isMobileFamily && "xl:grid-cols-2")}>
       {!isMobileFamily && (
         <OverviewCard
           icon={<FlaskConical aria-hidden />}
