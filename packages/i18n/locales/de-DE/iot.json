@@ -419,7 +419,9 @@
           "step2": "Laden Sie das Paket herunter und legen Sie alle drei Dateien auf dem Gerät ab; der Schlüssel verlässt es nie.",
           "step3": "Rotieren Sie, um dem Gerät ein frisches Zertifikat zu geben, oder wenn es den Besitzer wechselt. Widerrufen kappt den Zugang sofort.",
           "step4": "Ein widerrufenes Gerät kann sich erst wieder verbinden, wenn ein neues Zertifikat ausgestellt ist."
-        }
+        },
+        "certificateIdLabel": "Zertifikat-ID",
+        "certificateArnLabel": "Zertifikat-ARN"
       },
       "nextAction": {
         "issueCredentials": "Zertifikat ausstellen",
@@ -430,9 +432,6 @@
         "description": "Was dieses Gerät ausführt, was JII veröffentlicht hat und wie Updates es erreichen.",
         "currentTitle": "Auf diesem Gerät",
         "unknownVersion": "Dieses Gerät hat kürzlich keine Firmware-Version gemeldet.",
-        "upToDate": "Führt {{version}} aus, die neueste veröffentlichte Version.",
-        "updateAvailable": "Führt {{installed}} aus; {{latest}} ist verfügbar.",
-        "reported": "Führt {{version}} aus.",
         "releasesTitle": "Versionen",
         "releasesHint": "Von JII veröffentlicht; die neueste stabile Version wird bei einem Rollout standardmäßig installiert.",
         "latest": "Neueste",
@@ -453,7 +452,11 @@
           "step3": "Das Gerät erhält einen Update-Auftrag, lädt das Abbild über einen kurzlebigen Link und prüft die Prüfsumme.",
           "step4": "Das Gerät wendet das Update an, startet neu und meldet das Ergebnis; ein fehlgeschlagenes Update wird zurückgerollt."
         },
-        "showLessNotes": "Weniger Notizen anzeigen"
+        "showLessNotes": "Weniger Notizen anzeigen",
+        "upToDateShort": "Aktuell",
+        "updateAvailableShort": "Update verfügbar",
+        "reportedCaption": "Vom Gerät in den letzten 30 Tagen gemeldet.",
+        "toolingReleases": "Tooling- und sonstige Releases ({{count}})"
       },
       "fleet": {
         "title": "Flottenpuls",

@@ -419,7 +419,9 @@
           "step2": "Download the bundle and store all three files on the device; the key never leaves it.",
           "step3": "Rotate to hand the device a fresh certificate, or when it changes hands. Revoke to cut access immediately.",
           "step4": "A revoked device cannot reconnect until a new certificate is issued."
-        }
+        },
+        "certificateIdLabel": "Certificate ID",
+        "certificateArnLabel": "Certificate ARN"
       },
       "nextAction": {
         "issueCredentials": "Issue certificate",
@@ -430,9 +432,6 @@
         "description": "What this device runs, what JII has published, and how updates reach it.",
         "currentTitle": "On this device",
         "unknownVersion": "This device has not reported a firmware version recently.",
-        "upToDate": "Running {{version}}, the newest published release.",
-        "updateAvailable": "Running {{installed}}; {{latest}} is available.",
-        "reported": "Running {{version}}.",
         "releasesTitle": "Releases",
         "releasesHint": "Published by JII; the newest stable release is what a rollout installs by default.",
         "latest": "Latest",
@@ -453,7 +452,11 @@
           "step3": "The device receives an update job, downloads the image over a short-lived link, and verifies its checksum.",
           "step4": "The device applies the update, reboots, and reports the outcome; a failed update rolls back."
         },
-        "showLessNotes": "Show fewer notes"
+        "showLessNotes": "Show fewer notes",
+        "upToDateShort": "Up to date",
+        "updateAvailableShort": "Update available",
+        "reportedCaption": "Reported by the device in the last 30 days.",
+        "toolingReleases": "Tooling and other releases ({{count}})"
       },
       "fleet": {
         "title": "Fleet pulse",

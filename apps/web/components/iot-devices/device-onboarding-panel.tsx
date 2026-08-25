@@ -13,7 +13,7 @@ import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, MoreHorizontal, Rocket, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   DeviceAnswer,
@@ -192,6 +192,16 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
     ],
     [bound, selectable, selectedIds],
   );
+
+  // An issuance can surface required questions in the left column while the
+  // user's attention is on the rail's Re-issue button; bring them into view
+  // once they exist, or they gate delivery invisibly below the fold.
+  const questionsAnchorRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (config !== null && questions.length > 0) {
+      questionsAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [config, questions.length]);
 
   const scrollToRail = () => {
     document.getElementById("device-configuration-rail")?.scrollIntoView({ behavior: "smooth" });
@@ -418,9 +428,11 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
             </div>
           </div>
 
-          {questions.length > 0 && (
-            <DevicePlanQuestions questions={questions} onAnswersChange={handleAnswersChange} />
-          )}
+          <div ref={questionsAnchorRef} className="scroll-mt-6">
+            {questions.length > 0 && (
+              <DevicePlanQuestions questions={questions} onAnswersChange={handleAnswersChange} />
+            )}
+          </div>
         </div>
 
         <AlertDialog

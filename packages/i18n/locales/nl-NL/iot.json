@@ -419,7 +419,9 @@
           "step2": "Download de bundel en zet alle drie de bestanden op het apparaat; de sleutel verlaat het nooit.",
           "step3": "Roteer om het apparaat een vers certificaat te geven, of wanneer het van eigenaar wisselt. Intrekken sluit de toegang direct af.",
           "step4": "Een ingetrokken apparaat kan pas weer verbinden zodra een nieuw certificaat is uitgegeven."
-        }
+        },
+        "certificateIdLabel": "Certificaat-ID",
+        "certificateArnLabel": "Certificaat-ARN"
       },
       "nextAction": {
         "issueCredentials": "Certificaat uitgeven",
@@ -430,9 +432,6 @@
         "description": "Wat dit apparaat draait, wat JII heeft gepubliceerd en hoe updates het bereiken.",
         "currentTitle": "Op dit apparaat",
         "unknownVersion": "Dit apparaat heeft recent geen firmwareversie gemeld.",
-        "upToDate": "Draait {{version}}, de nieuwste gepubliceerde versie.",
-        "updateAvailable": "Draait {{installed}}; {{latest}} is beschikbaar.",
-        "reported": "Draait {{version}}.",
         "releasesTitle": "Versies",
         "releasesHint": "Gepubliceerd door JII; de nieuwste stabiele versie wordt bij een uitrol standaard geïnstalleerd.",
         "latest": "Nieuwste",
@@ -453,7 +452,11 @@
           "step3": "Het apparaat ontvangt een update-taak, downloadt het image via een kortlevende link en verifieert de checksum.",
           "step4": "Het apparaat past de update toe, herstart en meldt het resultaat; een mislukte update wordt teruggedraaid."
         },
-        "showLessNotes": "Minder notities tonen"
+        "showLessNotes": "Minder notities tonen",
+        "upToDateShort": "Actueel",
+        "updateAvailableShort": "Update beschikbaar",
+        "reportedCaption": "In de afgelopen 30 dagen door het apparaat gemeld.",
+        "toolingReleases": "Tooling- en overige releases ({{count}})"
       },
       "fleet": {
         "title": "Vlootpols",

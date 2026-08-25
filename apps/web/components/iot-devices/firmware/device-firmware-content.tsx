@@ -15,11 +15,12 @@ import {
   isSameFirmwareVersion,
   latestReportedVersion,
 } from "@/util/firmware-family";
-import { AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, HelpCircle } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
+import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -117,13 +118,17 @@ export default function DeviceFirmwarePage() {
     return <FirmwareReleaseList releases={releases?.releases ?? []} installedVersion={installed} />;
   }
 
+  function renderVersionChip(version: string) {
+    return <span className="bg-muted rounded-md px-2 py-1 font-mono text-sm">{version}</span>;
+  }
+
   // Sequential guards rather than precomputed flags: each arm narrows the two
   // nullable versions it actually reads.
   function renderStatus() {
     // An unfinished scan reads as `installed === null` too, so answer it before
     // the guards below claim the device never reported.
     if (isHistoryLoading) {
-      return <Skeleton className="h-5 w-64" />;
+      return <Skeleton className="h-8 w-64" />;
     }
     // A failed scan is not the same as a device that never reported, and
     // saying "has not reported" for a warehouse error would be a lie.
@@ -143,24 +148,32 @@ export default function DeviceFirmwarePage() {
         </p>
       );
     }
-    if (latest === null) {
-      return (
-        <p className="text-sm">{t("iot.devices.firmware.reported", { version: installed })}</p>
-      );
-    }
-    if (isSameFirmwareVersion(installed, latest.version)) {
-      return (
-        <p className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
-          <CheckCircle2 className="h-4 w-4" aria-hidden />
-          {t("iot.devices.firmware.upToDate", { version: installed })}
-        </p>
-      );
-    }
+
+    const isCurrent = latest !== null && isSameFirmwareVersion(installed, latest.version);
+
     return (
-      <p className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-500">
-        <AlertTriangle className="h-4 w-4" aria-hidden />
-        {t("iot.devices.firmware.updateAvailable", { installed, latest: latest.version })}
-      </p>
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {renderVersionChip(installed)}
+          {latest !== null && !isCurrent && (
+            <>
+              <ArrowRight className="text-muted-foreground size-4" aria-hidden />
+              {renderVersionChip(latest.version)}
+              <Badge className="border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                <AlertTriangle className="mr-1 size-3" aria-hidden />
+                {t("iot.devices.firmware.updateAvailableShort")}
+              </Badge>
+            </>
+          )}
+          {isCurrent && (
+            <Badge className="border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              <CheckCircle2 className="mr-1 size-3" aria-hidden />
+              {t("iot.devices.firmware.upToDateShort")}
+            </Badge>
+          )}
+        </div>
+        <p className="text-muted-foreground text-xs">{t("iot.devices.firmware.reportedCaption")}</p>
+      </div>
     );
   }
 

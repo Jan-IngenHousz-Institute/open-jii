@@ -33,7 +33,12 @@ export function FirmwareReleaseNotes({ notesHtml }: FirmwareReleaseNotesProps) {
   return (
     <div>
       <div className={cn("relative", isClamped && "max-h-44 overflow-hidden")}>
-        <RichTextRenderer content={notesHtml} className="text-sm" />
+        {/* GitHub's changelog headings arrive as h1-h3 and would outrank the row
+            header above; inside a release row they are section labels, not titles. */}
+        <RichTextRenderer
+          content={notesHtml}
+          className="text-sm [&_h1]:mb-1 [&_h1]:text-sm [&_h1]:font-semibold [&_h2]:mb-1 [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold"
+        />
         {isClamped && (
           <div
             className="from-card absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t to-transparent"

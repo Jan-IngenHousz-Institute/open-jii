@@ -72,7 +72,7 @@ describe("DeviceFirmwareContent", () => {
 
     render(<DeviceFirmwareContent />);
 
-    expect(await screen.findByText("iot.devices.firmware.upToDate")).toBeInTheDocument();
+    expect(await screen.findByText("iot.devices.firmware.upToDateShort")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.firmware.latest")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.firmware.installed")).toBeInTheDocument();
   });
@@ -82,7 +82,9 @@ describe("DeviceFirmwareContent", () => {
 
     render(<DeviceFirmwareContent />);
 
-    expect(await screen.findByText("iot.devices.firmware.updateAvailable")).toBeInTheDocument();
+    expect(
+      await screen.findByText("iot.devices.firmware.updateAvailableShort"),
+    ).toBeInTheDocument();
   });
 
   it("admits it does not know the version when the device has not reported", async () => {
