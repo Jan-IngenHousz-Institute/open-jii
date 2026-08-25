@@ -21,9 +21,7 @@ vi.mock("~/shared/stores/device-identity-store", () => ({
   whenDeviceIdentityLoaded: () => Promise.resolve(),
 }));
 vi.mock("~/shared/measurements/measurement-topic", () => ({
-  QUESTIONS_PROTOCOL_ID: "questions",
-  getMeasurementMqttTopic: ({ experimentId, protocolId }: Record<string, string>) =>
-    `topic/${experimentId}/${protocolId}`,
+  getMeasurementMqttTopic: ({ experimentId }: { experimentId: string }) => `topic/${experimentId}`,
 }));
 vi.mock("~/shared/location/measurement-location", () => ({
   getMeasurementLocation: vi.fn(() => Promise.resolve(null)),
@@ -42,6 +40,7 @@ const shared = {
   userId: "user-1",
   questions: [],
   workbookRunId: "run-1",
+  workbookVersionId: "version-1",
 };
 
 describe("useQuestionsUpload", () => {

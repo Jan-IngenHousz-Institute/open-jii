@@ -22,6 +22,7 @@ const baseArgs = {
   timezone: "Europe/Amsterdam",
   questions: QUESTIONS,
   workbookRunId: "run-1",
+  workbookVersionId: "version-1",
   commentText: undefined as string | undefined,
 };
 
@@ -50,6 +51,7 @@ describe("buildUploadPayload payload construction", () => {
       user_id: "user-1",
       protocol_id: "protocol-9",
       workbook_run_id: "run-1",
+      workbook_version_id: "version-1",
       device_id: "d-1",
       sample: 'compressed:[{"v":1,"macros":["macro_one.js"]},{"v":2,"macros":["macro_one.js"]}]',
       _sample_encoding: "gzip+base64",

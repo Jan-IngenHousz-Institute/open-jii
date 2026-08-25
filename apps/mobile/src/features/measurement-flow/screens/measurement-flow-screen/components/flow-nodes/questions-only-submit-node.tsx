@@ -83,6 +83,10 @@ export function QuestionsOnlySubmitNode() {
       log.warn("handleUpload missing workbook run id");
       return false;
     }
+    if (!workbookVersionId) {
+      log.warn("handleUpload missing workbook version id");
+      return false;
+    }
 
     const timestamp = getSyncedUtcISO();
     const timezone = getTimeSyncState().timezone;
