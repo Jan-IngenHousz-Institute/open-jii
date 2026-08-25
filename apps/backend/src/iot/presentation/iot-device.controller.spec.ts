@@ -548,6 +548,68 @@ describe("IotDeviceController", () => {
     });
   });
 
+  describe("getIotFleetMonitoring", () => {
+    const RANGE = {
+      from: "2026-08-13T00:00:00.000Z",
+      to: "2026-08-13T12:00:00.000Z",
+      bucket: "hour",
+    };
+
+    const mockFleetWarehouse = () => {
+      vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
+      vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
+    };
+
+    it("returns the fleet facts for the caller's devices (200)", async () => {
+      mockFleetWarehouse();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotFleetMonitoring, {});
+
+      const response: SuperTestResponse<{
+        devices: { deviceId: string; lastDataAt: string | null }[];
+        pipelineUnavailable: boolean;
+      }> = await testApp.get(path).withAuth(userId).query(RANGE).expect(StatusCodes.OK);
+
+      expect(response.body.devices).toEqual([{ deviceId: device.id, lastDataAt: null }]);
+      expect(response.body.pipelineUnavailable).toBe(false);
+    });
+
+    it("keeps the static path out of the {deviceId} route: both resolve side by side", async () => {
+      mockFleetWarehouse();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+
+      // The literal segment "monitoring" must reach the fleet handler, never
+      // be parsed as a device id by GET /devices/{deviceId}.
+      await testApp
+        .get("/api/v1/devices/monitoring")
+        .withAuth(userId)
+        .query(RANGE)
+        .expect(StatusCodes.OK);
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.iot.getIotDevice, { deviceId: device.id }))
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+    });
+
+    it("rejects a reversed range at the contract (400)", async () => {
+      mockFleetWarehouse();
+      const path = testApp.resolveOrpcPath(contract.iot.getIotFleetMonitoring, {});
+
+      await testApp
+        .get(path)
+        .withAuth(userId)
+        .query({ ...RANGE, from: RANGE.to, to: RANGE.from })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 401 when unauthenticated", async () => {
+      const path = testApp.resolveOrpcPath(contract.iot.getIotFleetMonitoring, {});
+
+      await testApp.get(path).query(RANGE).expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
   describe("getDeviceMonitoring", () => {
     const RANGE = {
       from: "2026-08-13T00:00:00.000Z",

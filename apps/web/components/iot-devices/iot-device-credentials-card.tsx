@@ -3,6 +3,8 @@
 import { useIssueIotCredentials } from "@/hooks/iot/useIssueIotCredentials/useIssueIotCredentials";
 import { useRevokeIotCredentials } from "@/hooks/iot/useRevokeIotCredentials/useRevokeIotCredentials";
 import { useRotateIotCredentials } from "@/hooks/iot/useRotateIotCredentials/useRotateIotCredentials";
+import { orpc } from "@/lib/orpc";
+import { useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Loader2, RefreshCw, ShieldOff } from "lucide-react";
 import { useState } from "react";
 
@@ -13,6 +15,7 @@ import type {
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { CopyButton } from "@repo/ui/components/copy-button";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CredentialConfirmDialog } from "./credential-confirm-dialog";
@@ -20,6 +23,7 @@ import { IotCredentialsDialog } from "./iot-credentials-dialog";
 
 export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConnectivity }) {
   const { t } = useTranslation("iot");
+  const queryClient = useQueryClient();
   const [issued, setIssued] = useState<IssueIotCredentialsResponse | null>(null);
   const [confirmingRotate, setConfirmingRotate] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
@@ -85,17 +89,36 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConn
         )}
 
         {device.status === "active" && (
-          <div className="flex flex-col gap-3">
-            <div>
-              <p className="text-sm font-medium text-[#011111]">
+          <div className="flex flex-col gap-4">
+            <div className="space-y-1">
+              <p className="text-foreground text-sm font-medium">
                 {t("iot.devices.credentials.activeLabel")}
               </p>
-              {device.certificateId !== null && (
-                <p className="text-muted-foreground truncate font-mono text-xs">
-                  {device.certificateId}
-                </p>
-              )}
+              <p className="text-muted-foreground text-sm">
+                {t("iot.devices.detail.cards.credentialHint.active")}
+              </p>
             </div>
+
+            <dl className="bg-muted/50 space-y-3 rounded-lg p-3">
+              {device.certificateId !== null && (
+                <div>
+                  <dt className="text-xs font-medium">
+                    {t("iot.devices.credentials.certificateIdLabel")}
+                  </dt>
+                  <dd className="flex items-start gap-1">
+                    <span className="text-muted-foreground min-w-0 flex-1 break-all font-mono text-xs">
+                      {device.certificateId}
+                    </span>
+                    <CopyButton
+                      value={device.certificateId}
+                      label={t("iot.onboarding.rail.copy")}
+                      copiedLabel={t("iot.onboarding.rail.copied")}
+                    />
+                  </dd>
+                </div>
+              )}
+            </dl>
+
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => setConfirmingRotate(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -114,13 +137,30 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConn
         )}
 
         {device.status === "rotating" && (
-          <p className="text-muted-foreground text-sm">
-            {t("iot.devices.credentials.rotatingDescription")}
-          </p>
+          <div className="flex flex-col gap-3">
+            <p className="text-muted-foreground text-sm">
+              {t("iot.devices.credentials.rotatingDescription")}
+            </p>
+            <Button
+              variant="outline"
+              className="w-fit"
+              onClick={() => {
+                void queryClient.invalidateQueries({
+                  queryKey: orpc.iot.getIotDevice.queryOptions({
+                    input: { deviceId: device.id },
+                  }).queryKey,
+                });
+              }}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {t("iot.devices.credentials.refreshStatus")}
+            </Button>
+          </div>
         )}
       </CardContent>
 
       <IotCredentialsDialog
+        deviceId={device.id}
         thingName={device.thingName}
         credentials={issued}
         onOpenChange={(open) => {

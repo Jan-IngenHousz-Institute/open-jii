@@ -34,7 +34,8 @@
       "testProtocol": "Protokoll testen",
       "connectToDeviceDescription": "Verbinden Sie sich mit einem Gerät und testen Sie Ihr Protokoll vor dem Speichern",
       "browserNotSupported": "Ihr Browser unterstützt weder Web Bluetooth noch Web Serial APIs.",
-      "tryDifferentBrowser": "Versuchen Sie Chrome, Edge oder Opera auf dem Desktop."
+      "tryDifferentBrowser": "Versuchen Sie Chrome, Edge oder Opera auf dem Desktop.",
+      "registerDevice": "Dieses Gerät registrieren"
     },
     "deviceIdentity": {
       "unknown": "Unbekanntes Gerät",
@@ -68,11 +69,7 @@
         "all": "Alle"
       },
       "sections": {
-        "overview": "Übersicht",
-        "devices": "Geräte",
-        "groups": "Gruppen",
-        "onboarding": "Einrichtung",
-        "monitoring": "Überwachung"
+        "groups": "Gruppen"
       },
       "detailTabs": {
         "overview": "Übersicht",
@@ -82,14 +79,6 @@
         "lineage": "Herkunft",
         "monitoring": "Überwachung",
         "firmware": "Firmware"
-      },
-      "overview": {
-        "total": "Geräte insgesamt"
-      },
-      "comingSoon": {
-        "title": "Demnächst verfügbar",
-        "monitoring": "Verfolgen Sie Gerätekonnektivität, letzte Aktivität und den Zustand der Flotte auf einen Blick.",
-        "onboarding": "Onboarden Sie jedes Gerät über seine Detailseite (Tab „Einrichtung“). Bulk-Onboarding aus dieser Ansicht folgt in Kürze."
       },
       "connectivity": {
         "connected": "Verbunden",
@@ -243,16 +232,17 @@
         },
         "unknownProtocolId": "Unbekanntes Protokoll",
         "unknownWorkbookId": "Unbekanntes Workbook",
-        "workbookVersionShort": "v{{version}}",
         "macros": "Makros",
         "unknownMacroId": "Unbekanntes Makro",
-        "macroRunHint": "Pro Makrolauf gezählt"
+        "macroRunHint": "Pro Makrolauf gezählt",
+        "workbookVersionShort": "v{{version}}"
       },
       "pageOf": "Seite {{page}} von {{total}}",
       "actions": {
         "more": "Geräteaktionen",
         "view": "Details anzeigen",
-        "delete": "Löschen"
+        "delete": "Löschen",
+        "title": "Aktionen"
       },
       "empty": {
         "title": "Noch keine Geräte",
@@ -320,8 +310,8 @@
         "namePlaceholder": "Gewächshaus-Sensor 1",
         "submit": "Registrieren",
         "createSuccess": "Gerät registriert",
-        "createSuccessDetail": "Ein Zertifikat wird ausgestellt, um es zu aktivieren.",
-        "createError": "Gerät konnte nicht registriert werden"
+        "createError": "Gerät konnte nicht registriert werden",
+        "createSuccessNext": "Nächster Schritt: mit einem Zertifikat aktivieren."
       },
       "remove": {
         "title": "Gerät löschen",
@@ -339,15 +329,43 @@
           "registered": "Registriert",
           "thingName": "Gerätekennung",
           "connectivity": "Konnektivität",
-          "lastSeen": "Zuletzt gesehen"
+          "lastSeen": "Zuletzt gesehen",
+          "visibility": "Sichtbarkeit"
         },
         "credentials": {
           "title": "Anmeldedaten"
         },
-        "dangerZone": {
-          "title": "Gefahrenzone",
-          "deleteLabel": "Dieses Gerät löschen",
-          "deleteDescription": "Entfernt das Gerät und seinen Cloud-Datensatz endgültig. Dies kann nicht rückgängig gemacht werden."
+        "cards": {
+          "experimentsTitle": "Experimente",
+          "onboardLink": "Einrichten",
+          "experimentsEmpty": "Sendet noch in kein Experiment. Richten Sie es ein, um zu starten.",
+          "experimentsError": "Die Experimente dieses Geräts konnten nicht geladen werden.",
+          "credentialHint": {
+            "active": "Zertifikat aktiv. Das Gerät kann sich verbinden und senden."
+          },
+          "activityTitle": "Aktivität",
+          "monitoringLink": "Monitoring öffnen",
+          "activityLoading": "Letzter Dateneingang wird geprüft...",
+          "activityNoData": "Von diesem Gerät sind noch keine Daten eingegangen.",
+          "activityLastData": "Letzte Daten eingegangen {{time}}.",
+          "firmwareTitle": "Firmware",
+          "firmwareLink": "Firmware öffnen",
+          "firmwareUnknown": "In den letzten 30 Tagen wurde keine Firmware-Version gemeldet.",
+          "observedEmpty": "Keine Uploads in den letzten 30 Tagen.",
+          "observedUnattributed": "Nicht zugeordnete Uploads",
+          "firmwareReportedCaption": "Vom Gerät in den letzten 30 Tagen gemeldet.",
+          "onboarded": "Eingerichtet",
+          "activityFigureCaption": "Letzter Dateneingang",
+          "observedShortCaption": "Beliefert, letzte 30 Tage",
+          "measurementCount_one": "{{count}} Messung",
+          "measurementCount_other": "{{count}} Messungen"
+        },
+        "overview": {
+          "title": "Übersicht",
+          "description": "Was dieses Gerät ist und wo seine Einrichtung steht."
+        },
+        "about": {
+          "title": "Details"
         }
       },
       "credentials": {
@@ -360,7 +378,7 @@
         "rotateTitle": "Zertifikat rotieren",
         "rotateConfirm": "Das Gerät erhält ein neues Zertifikat, das aktuelle funktioniert sofort nicht mehr. Es sendet erst weiter, wenn die neuen Zugangsdaten installiert sind.",
         "disconnectWarning": "Dieses Gerät ist derzeit verbunden und wird getrennt.",
-        "rotatingDescription": "Eine Zertifikatsrotation läuft gerade.",
+        "rotatingDescription": "Sie haben ein neues Zertifikat ausgestellt und das alte wird zurückgezogen. Das Gerät sendet mit dem vorhandenen weiter, bis Sie das neue Paket aufspielen; das dauert in der Regel unter einer Minute.",
         "revokedDescription": "Das Zertifikat wurde widerrufen, sodass sich dieses Gerät nicht mehr bei AWS IoT authentifizieren kann. Stellen Sie ein neues Zertifikat aus, um den Zugang wiederherzustellen.",
         "revoke": "Zertifikat widerrufen",
         "revokeTitle": "Zertifikat widerrufen",
@@ -385,16 +403,33 @@
         "rootCa3Sub": "ECC-256-Bit-Schlüssel",
         "copy": "Kopieren",
         "download": "Herunterladen",
-        "downloadAll": "Alle herunterladen"
+        "downloadAll": "Alle herunterladen",
+        "continueToOnboarding": "Weiter zur Einrichtung",
+        "closeUnsavedTitle": "Ohne Download schließen?",
+        "closeUnsavedDescription": "Der private Schlüssel wird nur einmal angezeigt und nicht gespeichert. Wer jetzt schließt, muss für einen neuen Schlüssel ein neues Zertifikat ausstellen.",
+        "closeUnsavedBack": "Zurück",
+        "closeUnsavedConfirm": "Trotzdem schließen",
+        "refreshStatus": "Status aktualisieren",
+        "tabTitle": "Zugangsdaten",
+        "tabDescription": "Das Zertifikat, mit dem sich dieses Gerät authentifiziert, und sein Lebenszyklus.",
+        "guide": {
+          "title": "So funktionieren Zertifikate",
+          "step1": "Stellen Sie hier ein Zertifikat aus. Der private Schlüssel wird genau einmal angezeigt und nie von der Plattform gespeichert.",
+          "step2": "Laden Sie das Paket herunter und legen Sie alle drei Dateien auf dem Gerät ab; der Schlüssel verlässt es nie.",
+          "step3": "Rotieren Sie, um dem Gerät ein frisches Zertifikat zu geben, oder wenn es den Besitzer wechselt. Widerrufen kappt den Zugang sofort.",
+          "step4": "Ein widerrufenes Gerät kann sich erst wieder verbinden, wenn ein neues Zertifikat ausgestellt ist."
+        },
+        "certificateIdLabel": "Zertifikat-ID"
+      },
+      "nextAction": {
+        "issueCredentials": "Zertifikat ausstellen",
+        "onboard": "Für ein Experiment einrichten"
       },
       "firmware": {
         "title": "Firmware",
         "description": "Was dieses Gerät ausführt, was JII veröffentlicht hat und wie Updates es erreichen.",
         "currentTitle": "Auf diesem Gerät",
         "unknownVersion": "Dieses Gerät hat kürzlich keine Firmware-Version gemeldet.",
-        "upToDate": "Führt {{version}} aus, die neueste veröffentlichte Version.",
-        "updateAvailable": "Führt {{installed}} aus; {{latest}} ist verfügbar.",
-        "reported": "Führt {{version}} aus.",
         "releasesTitle": "Versionen",
         "releasesHint": "Von JII veröffentlicht; die neueste stabile Version wird bei einem Rollout standardmäßig installiert.",
         "latest": "Neueste",
@@ -414,24 +449,36 @@
           "step2": "Eine Bedienperson startet ein Rollout, das gestaffelt ausgeliefert und bei zu vielen Fehlern automatisch gestoppt wird.",
           "step3": "Das Gerät erhält einen Update-Auftrag, lädt das Abbild über einen kurzlebigen Link und prüft die Prüfsumme.",
           "step4": "Das Gerät wendet das Update an, startet neu und meldet das Ergebnis; ein fehlgeschlagenes Update wird zurückgerollt."
-        }
+        },
+        "showLessNotes": "Weniger Notizen anzeigen",
+        "upToDateShort": "Aktuell",
+        "updateAvailableShort": "Update verfügbar",
+        "reportedCaption": "Vom Gerät in den letzten 30 Tagen gemeldet.",
+        "toolingReleases": "Tooling- und sonstige Releases ({{count}})"
+      },
+      "fleet": {
+        "title": "Flottenpuls",
+        "description": "Wie es Ihren Geräten gerade geht und was im gewählten Zeitraum eingegangen ist.",
+        "onlineLabel": "Jetzt online",
+        "attentionLabel": "Brauchen Aufmerksamkeit",
+        "throughputTitle": "Datenfluss",
+        "attentionTitle": "Braucht Aufmerksamkeit",
+        "attentionHint": "Geräte, deren Einrichtung oder Datenlieferung stockt, das Dringendste zuerst.",
+        "attentionEmpty": "Alle Geräte sind eingerichtet und liefern Daten.",
+        "attentionMore_one": "und {{count}} weiteres Gerät",
+        "attentionMore_other": "und {{count}} weitere Geräte",
+        "eventsTitle": "Letzte Broker-Ereignisse",
+        "loadError": "Die Flottenaktivität konnte nicht geladen werden.",
+        "reasonCredentials": "Braucht ein Zertifikat",
+        "reasonNeverConnected": "Nie verbunden",
+        "reasonSilent": "Verbunden, keine Daten"
       }
     },
     "onboarding": {
-      "currentTitle": "Experimente",
-      "currentDescription": "Die Experimente, in die dieses Gerät derzeit sendet.",
-      "currentEmpty": "Dieses Gerät ist noch keinem Experiment zugeordnet.",
-      "addTitle": "Zu Experimenten hinzufügen",
-      "addDescription": "Wählen Sie die Experimente, in die dieses Gerät senden soll. Beim Onboarding wird die Konfiguration für das Gerät erstellt.",
-      "addEmpty": "Keine weiteren Experimente verfügbar. Die aktuelle Konfiguration kann unten erneut ausgestellt werden.",
       "onboard": "Onboarden",
       "reissue": "Konfiguration erneut ausstellen",
       "onboardSuccess": "Gerät onboardet. Konfiguration unten bereit.",
       "onboardError": "Gerät konnte nicht onboardet werden",
-      "deliveryTitle": "Gerätekonfiguration",
-      "deliveryDescription": "Übergeben Sie diese Konfiguration an das Gerät: herunterladen oder über eine direkte Verbindung übertragen.",
-      "endpointLabel": "Broker-Endpunkt",
-      "topicsLabel": "Publish-Topics",
       "download": "JSON herunterladen",
       "connect": "Gerät verbinden",
       "disconnect": "Trennen",
@@ -450,27 +497,68 @@
       "answerYes": "Ja",
       "answerNo": "Nein",
       "answerRequiredHint": "Beantworten Sie alle Pflichtfragen, bevor Sie die Konfiguration übergeben.",
-      "guide": {
-        "title": "So verbinden Sie Ihr Gerät",
-        "step1": "Holen Sie das Zertifikatspaket und das Amazon-Root-CA aus dem Tab Anmeldedaten.",
-        "step2": "Verbinden Sie sich per MQTT über TLS mit dem unten stehenden Broker-Endpunkt; Client-ID ist der Gerätename.",
-        "step3": "Übertragen Sie diese Konfiguration auf das Gerät: JSON herunterladen oder über eine Direktverbindung übertragen.",
-        "step4": "Führen Sie die Prozeduren jedes Experiments der Reihe nach aus.",
-        "step5": "Veröffentlichen Sie jede Messung unter dem Topic-Präfix des Experiments plus /{{sensorVersion}}/{{sensorId}}.",
-        "step6": "Hängen Sie die vorbelegten Antworten an jede veröffentlichte Messung an.",
-        "docsLink": "Vollständigen Geräteintegrations-Leitfaden lesen"
-      }
+      "experimentsTitle": "Experimente",
+      "experimentsDescription": "Experimente, in die dieses Gerät sendet, und Experimente, für die Sie es einrichten können.",
+      "selectedCount": "{{count}} Experiment ausgewählt",
+      "selectedCount_other": "{{count}} Experimente ausgewählt",
+      "onboardCount_one": "Für {{count}} Experiment einrichten",
+      "onboardCount_other": "Für {{count}} Experimente einrichten",
+      "selectAtLeastOne": "Wählen Sie mindestens ein Experiment aus.",
+      "noMemberships": "Sie sind noch in keinem Experiment Mitglied. Erstellen Sie eines oder treten Sie einem bei, um dieses Gerät einzurichten.",
+      "allOnboarded": "Alle Ihre Experimente sind eingerichtet. Geben Sie die Konfiguration rechts erneut aus.",
+      "retry": "Erneut versuchen",
+      "inactiveDeviceAction": "Zertifikat ausstellen",
+      "rail": {
+        "title": "Konfiguration",
+        "preview": "Vorschau",
+        "issuedAt": "Ausgegeben {{time}}",
+        "updating": "Wird aktualisiert…",
+        "stale": "Veraltet",
+        "thingName": "Thing-Name",
+        "endpoint": "Broker-Endpunkt",
+        "resolvedWhenIssued": "Wird bei Ausgabe aufgelöst",
+        "copy": "Kopieren",
+        "copied": "Kopiert",
+        "new": "Neu",
+        "topicsWhenIssued": "Topics und Prozeduren werden bei Ausgabe aufgelöst.",
+        "noExperiments": "Wählen Sie ein Experiment, um zu sehen, was dieses Gerät erhalten würde.",
+        "procedureCounts": "{{protocols}} Protokolle · {{commands}} Befehle · {{questions}} Fragen",
+        "workbookVersion": "wb v{{version}}",
+        "workbookExcluded": "Workbook-Prozeduren ausgeschlossen.",
+        "topicRule": "Geräte publizieren nach {prefix}/{sensorVersion}/{sensorId}.",
+        "answeredCount": "{{answered}} von {{required}} Pflichtfragen beantwortet",
+        "missing": "Fehlt: {{fields}}",
+        "memoryOnly": "Ausgegebene Konfigurationen existieren nur in dieser Browser-Sitzung. Sie können jederzeit erneut ausgeben; die Datei wird immer aus dem aktuellen Stand erzeugt.",
+        "integrationGuide": "Integrationsleitfaden",
+        "viewJson": "JSON anzeigen"
+      },
+      "boundRowActions": "Experiment-Aktionen",
+      "removeMenuItem": "Aus Experiment entfernen",
+      "removeTitle": "{{name}} entfernen?",
+      "removeBody": "Das Gerät sendet nicht mehr hinein, und seine Prozeduren fehlen in der nächsten ausgegebenen Konfiguration.",
+      "removeSuccess": "Aus dem Experiment entfernt",
+      "removeError": "Das Gerät konnte nicht aus dem Experiment entfernt werden",
+      "title": "Einrichtung",
+      "description": "Wählen Sie die Experimente, in die dieses Gerät sendet, und übergeben Sie ihm dann die ausgegebene Konfiguration.",
+      "filterExperiments": "Experimente filtern",
+      "filterNoMatches": "Keine Experimente passen zu diesem Filter.",
+      "answeredOfRequired": "{{answered}} von {{required}} Pflichtfeldern",
+      "reissueHint": "Neu ausstellen erzeugt die Datei für alles derzeit Gebundene neu; es kommt nichts Neues hinzu."
     },
     "experimentDevices": {
       "tabLabel": "Geräte",
       "title": "Geräte",
       "description": "Geräte, die diesem Experiment zugeordnet sind. Ein zugeordnetes Gerät kann seine Messungen dorthin senden.",
       "loading": "Geräte werden geladen...",
-      "empty": "Diesem Experiment sind noch keine Geräte zugeordnet.",
+      "empty": "Geräte werden über ihren eigenen Einrichtungs-Tab eingerichtet, wo Zertifikate und Konfiguration liegen.",
       "detach": "Entfernen",
       "detachSuccess": "Gerät vom Experiment entfernt",
       "detachError": "Gerät konnte nicht entfernt werden",
-      "loadError": "Die Geräte konnten nicht geladen werden. Bitte erneut versuchen."
+      "loadError": "Die Geräte konnten nicht geladen werden. Bitte erneut versuchen.",
+      "emptyTitle": "Noch keine Geräte senden in dieses Experiment",
+      "openRegistry": "Geräteregister öffnen",
+      "detachTitle": "{{name}} entfernen?",
+      "detachConfirmBody": "Es sendet nicht mehr in dieses Experiment, und seine Prozeduren fehlen in der nächsten ausgegebenen Konfiguration."
     },
     "groups": {
       "addDevices": "Geräte hinzufügen",
@@ -482,11 +570,6 @@
       "create": "Gruppe erstellen",
       "createDescription": "Gruppen organisieren Geräte; die Mitgliedschaft ändert nichts an den Geräten selbst.",
       "createTitle": "Gerätegruppe erstellen",
-      "dangerZone": {
-        "title": "Gefahrenzone",
-        "deleteLabel": "Diese Gruppe löschen",
-        "deleteDescription": "Entfernt die Gruppe endgültig. Die Geräte selbst sind nicht betroffen. Dies kann nicht rückgängig gemacht werden."
-      },
       "delete": "Gruppe löschen",
       "deleteHint": "\"{{name}}\" wird gelöscht. Die Geräte selbst sind nicht betroffen.",
       "deleteTitle": "Diese Gruppe löschen?",
@@ -559,7 +642,9 @@
         "resultsTitle": "Ergebnisse und Konfigurationen",
         "downloadOne": "Konfiguration für {{device}} herunterladen",
         "downloadAll_one": "{{count}} Konfiguration herunterladen (ZIP)",
-        "downloadAll_other": "{{count}} Konfigurationen herunterladen (ZIP)"
+        "downloadAll_other": "{{count}} Konfigurationen herunterladen (ZIP)",
+        "experimentsTitle": "Experimente",
+        "experimentsDescription": "Jedes ausgewählte Gerät wird für jedes ausgewählte Experiment eingerichtet."
       },
       "pageTitle": "Gerätegruppe",
       "credentials": {
@@ -599,8 +684,47 @@
         "resultsTitle": "Ergebnisse",
         "downloadOne": "Zugangsdaten für {{device}} herunterladen",
         "downloadAll_one": "{{count}} Paket herunterladen (ZIP)",
-        "downloadAll_other": "{{count}} Pakete herunterladen (ZIP)"
-      }
+        "downloadAll_other": "{{count}} Pakete herunterladen (ZIP)",
+        "actionTitle": "Aktion",
+        "actionDescription": "Die Berechtigung unterscheidet sich je Aktion; die Geräteliste unten folgt der Auswahl.",
+        "railEmpty": "Führen Sie eine Aktion aus, um hier Ergebnisse und Downloads pro Gerät zu sehen."
+      },
+      "overview": {
+        "title": "Übersicht",
+        "description": "Was diese Gruppe enthält und wie es ihren Geräten geht.",
+        "healthTitle": "Zustand",
+        "monitoringLink": "Monitoring öffnen",
+        "healthUnknown_one": "Die Konnektivität von {{count}} Gerät ist unbekannt.",
+        "healthUnknown_other": "Die Konnektivität von {{count}} Geräten ist unbekannt."
+      },
+      "nextAction": {
+        "credentials": "{{count}} Gerät braucht ein Zertifikat",
+        "credentials_other": "{{count}} Geräte brauchen ein Zertifikat"
+      },
+      "showAll": "{{count}} weitere Gruppen anzeigen",
+      "showFewer": "Weniger Gruppen anzeigen",
+      "searchPlaceholder": "Gruppen durchsuchen",
+      "searchNoMatches": "Keine Gruppen entsprechen der Suche."
+    },
+    "workbookBar": {
+      "mock": "Mock",
+      "addDevice": "Gerät hinzufügen",
+      "connect": "Verbinden",
+      "disconnected": "Getrennt",
+      "deviceCount": "{{count}} Gerät",
+      "deviceCount_other": "{{count}} Geräte",
+      "disconnectDevice": "{{name}} trennen",
+      "disconnectAll": "Alle trennen",
+      "flow": "Ablauf",
+      "deviceOrdinal": "Gerät Nr. {{ordinal}}",
+      "export": "Exportieren",
+      "exportJson": "Als JSON exportieren",
+      "exportProtocol": "Nur Protokoll exportieren",
+      "exportMacro": "Nur Makro exportieren",
+      "downloadWorkbook": "Workbook herunterladen (.jii)",
+      "clearAll": "Alle leeren",
+      "stop": "Stopp",
+      "runAll": "Alle ausführen"
     }
   }
 }

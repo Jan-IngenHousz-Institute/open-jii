@@ -92,26 +92,31 @@ export default function DeviceMonitoringPage() {
   };
 
   return (
-    <div className="max-w-5xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-medium">{t("iot.devices.monitoring.title")}</h2>
-          <p className="text-muted-foreground text-sm">{t("iot.devices.monitoring.description")}</p>
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium">{t("iot.devices.monitoring.title")}</h2>
+            <p className="text-muted-foreground text-sm">
+              {t("iot.devices.monitoring.description")}
+            </p>
+          </div>
+          <MonitoringRangeControl
+            range={selection.range}
+            activePreset={selection.preset}
+            onRangeChange={handleRangeChange}
+            isUpdating={isFetching && !isLoading}
+          />
         </div>
-        <MonitoringRangeControl
+
+        <MonitoringTiles
+          device={device}
+          activity={activity}
+          monitoring={monitoring}
           range={selection.range}
-          activePreset={selection.preset}
-          onRangeChange={handleRangeChange}
-          isUpdating={isFetching && !isLoading}
+          tileClassName="bg-card"
         />
       </div>
-
-      <MonitoringTiles
-        device={device}
-        activity={activity}
-        monitoring={monitoring}
-        range={selection.range}
-      />
 
       {isError ? (
         <Card className="shadow-none">

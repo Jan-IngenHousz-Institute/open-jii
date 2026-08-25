@@ -26,14 +26,17 @@ const binding = {
 };
 
 describe("ExperimentDeviceRow", () => {
-  it("shows the device name, serial, and status", () => {
+  it("links the device name to its page and shows serial and status", () => {
     render(
       <ul>
-        <ExperimentDeviceRow binding={binding} onDetach={vi.fn()} />
+        <ExperimentDeviceRow binding={binding} onRequestDetach={vi.fn()} />
       </ul>,
     );
 
-    expect(screen.getByText("Field Gateway")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Field Gateway" })).toHaveAttribute(
+      "href",
+      `/en-US/platform/devices/${device.id}`,
+    );
     expect(screen.getByText("SN-0001")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
   });
@@ -42,24 +45,25 @@ describe("ExperimentDeviceRow", () => {
     const unnamed = { ...binding, device: { ...binding.device, name: null } };
     render(
       <ul>
-        <ExperimentDeviceRow binding={unnamed} onDetach={vi.fn()} />
+        <ExperimentDeviceRow binding={unnamed} onRequestDetach={vi.fn()} />
       </ul>,
     );
 
     expect(screen.getAllByText("SN-0001")).toHaveLength(2);
   });
 
-  it("requests a detach for its device", async () => {
+  it("asks for a detach rather than firing one", async () => {
     const user = userEvent.setup();
-    const onDetach = vi.fn();
+    const onRequestDetach = vi.fn();
     render(
       <ul>
-        <ExperimentDeviceRow binding={binding} onDetach={onDetach} />
+        <ExperimentDeviceRow binding={binding} onRequestDetach={onRequestDetach} />
       </ul>,
     );
 
     await user.click(screen.getByRole("button", { name: "iot.experimentDevices.detach" }));
 
-    expect(onDetach).toHaveBeenCalledWith(device.id);
+    // The row only nominates; the panel owns the confirm and the mutation.
+    expect(onRequestDetach).toHaveBeenCalledWith(binding.device);
   });
 });

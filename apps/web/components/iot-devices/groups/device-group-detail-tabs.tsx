@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceBand } from "@/components/workspace-band";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -67,7 +68,7 @@ export function DeviceGroupDetailTabs({
         ))}
       </NavTabsList>
 
-      <div className="mt-6 flex flex-1 flex-col">{children}</div>
+      <WorkspaceBand className="mt-6">{children}</WorkspaceBand>
     </NavTabs>
   );
 }

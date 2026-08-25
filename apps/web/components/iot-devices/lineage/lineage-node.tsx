@@ -29,12 +29,12 @@ const KIND_STYLE: Record<LineageNodeModel["kind"], { accent: string; icon: Lucid
   device: { accent: "#2D3142", icon: Cpu },
   broker: { accent: "#119DA4", icon: Radio },
   warehouse: { accent: "#6F8596", icon: Database },
-  experiment: { accent: "#005e5e", icon: FlaskConical },
-  unattributed: { accent: "#68737B", icon: HelpCircle },
+  experiment: { accent: "var(--primary)", icon: FlaskConical },
+  unattributed: { accent: "var(--muted-foreground)", icon: HelpCircle },
   protocol: { accent: "#6C5CE7", icon: ScrollText },
   workbook: { accent: "#D08A3C", icon: NotebookText },
   macro: { accent: "#C58AAE", icon: Wand2 },
-  "attribution-other": { accent: "#68737B", icon: Layers },
+  "attribution-other": { accent: "var(--muted-foreground)", icon: Layers },
 };
 
 function nodeHandles(model: LineageNodeModel): { hasInput: boolean; hasOutput: boolean } {
@@ -173,8 +173,8 @@ export function LineageNode(props: NodeProps) {
         props.selected ? "ring-jii-dark-green border-[#005e5e] ring-2" : "border-[#E2E8F0]",
       )}
     >
-      {hasInput && <Handle type="target" position={Position.Left} className="!bg-[#CDD5DB]" />}
-      {hasOutput && <Handle type="source" position={Position.Right} className="!bg-[#CDD5DB]" />}
+      {hasInput && <Handle type="target" position={Position.Left} className="!bg-border" />}
+      {hasOutput && <Handle type="source" position={Position.Right} className="!bg-border" />}
       <div
         className="absolute bottom-0 left-0 top-0 w-1"
         style={{ backgroundColor: style.accent }}

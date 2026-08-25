@@ -9,6 +9,7 @@ import type {
 } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
+import { EmptyState } from "@repo/ui/components/empty-state";
 
 import { ChartTableToggle } from "./chart-table-toggle";
 import type { PanelView } from "./chart-table-toggle";
@@ -86,9 +87,7 @@ export function ThroughputPanel({
       </div>
 
       {total === 0 ? (
-        <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-          {t("iot.devices.monitoring.noMeasurements")}
-        </p>
+        <EmptyState size="inline" description={t("iot.devices.monitoring.noMeasurements")} />
       ) : view === "chart" ? (
         <div className="h-64 w-full">
           <BarChart

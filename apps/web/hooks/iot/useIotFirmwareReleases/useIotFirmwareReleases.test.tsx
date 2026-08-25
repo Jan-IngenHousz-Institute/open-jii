@@ -12,7 +12,7 @@ const RELEASE = {
   publishedAt: "2026-08-01T10:00:00.000Z",
   prerelease: false,
   latest: true,
-  notes: null,
+  notesHtml: null,
   releaseUrl: "https://github.com/org/repo/releases/tag/v1.3.0",
   assets: [],
 };

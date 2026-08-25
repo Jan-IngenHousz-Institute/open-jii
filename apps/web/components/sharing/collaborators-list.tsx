@@ -165,7 +165,7 @@ export function CollaboratorsList({
     return (
       <div
         aria-busy="true"
-        className="border-border divide-border divide-y overflow-hidden rounded-lg border"
+        className="border-border divide-border bg-card divide-y overflow-hidden rounded-lg border"
       >
         {[0, 1, 2].map((row) => (
           <div key={row} className="flex items-center gap-3 px-3 py-2.5">
@@ -203,7 +203,7 @@ export function CollaboratorsList({
     <>
       <div
         role="list"
-        className="border-border divide-border divide-y overflow-hidden rounded-lg border"
+        className="border-border divide-border bg-card divide-y overflow-hidden rounded-lg border"
       >
         {sortedGrants.map((row) => (
           <CollaboratorRow

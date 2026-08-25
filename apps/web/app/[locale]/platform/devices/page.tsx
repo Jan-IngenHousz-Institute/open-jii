@@ -1,4 +1,4 @@
-import { DevicesSectionTabs } from "@/components/iot-devices/devices-section-tabs";
+import { DevicesOverviewContent } from "@/components/iot-devices/devices-overview-content";
 import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";
@@ -15,5 +15,5 @@ export async function generateMetadata({ params }: DevicesPageProps): Promise<Me
 }
 
 export default function DevicesPage() {
-  return <DevicesSectionTabs />;
+  return <DevicesOverviewContent />;
 }

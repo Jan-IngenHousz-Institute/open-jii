@@ -34,7 +34,8 @@
       "testProtocol": "Test Protocol",
       "connectToDeviceDescription": "Connect to a device and test your protocol before saving",
       "browserNotSupported": "Your browser doesn't support Web Bluetooth or Web Serial APIs.",
-      "tryDifferentBrowser": "Try using Chrome, Edge, or Opera on desktop."
+      "tryDifferentBrowser": "Try using Chrome, Edge, or Opera on desktop.",
+      "registerDevice": "Register this device"
     },
     "deviceIdentity": {
       "unknown": "Unknown device",
@@ -68,11 +69,7 @@
         "all": "All"
       },
       "sections": {
-        "overview": "Overview",
-        "devices": "Devices",
-        "groups": "Groups",
-        "onboarding": "Onboarding",
-        "monitoring": "Monitoring"
+        "groups": "Groups"
       },
       "detailTabs": {
         "overview": "Overview",
@@ -82,14 +79,6 @@
         "lineage": "Lineage",
         "monitoring": "Monitoring",
         "firmware": "Firmware"
-      },
-      "overview": {
-        "total": "Total devices"
-      },
-      "comingSoon": {
-        "title": "Coming soon",
-        "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
-        "onboarding": "Onboard each device from its detail page (Onboarding tab). Bulk onboarding from this view is coming soon."
       },
       "connectivity": {
         "connected": "Connected",
@@ -243,16 +232,17 @@
         },
         "unknownProtocolId": "Unknown protocol",
         "unknownWorkbookId": "Unknown workbook",
-        "workbookVersionShort": "v{{version}}",
         "macros": "Macros",
         "unknownMacroId": "Unknown macro",
-        "macroRunHint": "Counted per macro run"
+        "macroRunHint": "Counted per macro run",
+        "workbookVersionShort": "v{{version}}"
       },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {
         "more": "Device actions",
         "view": "View details",
-        "delete": "Delete"
+        "delete": "Delete",
+        "title": "Actions"
       },
       "empty": {
         "title": "No devices yet",
@@ -320,8 +310,8 @@
         "namePlaceholder": "Greenhouse sensor 1",
         "submit": "Register",
         "createSuccess": "Device registered",
-        "createSuccessDetail": "A certificate will be issued to activate it.",
-        "createError": "Failed to register device"
+        "createError": "Failed to register device",
+        "createSuccessNext": "Next: activate it with a certificate."
       },
       "remove": {
         "title": "Delete device",
@@ -339,15 +329,43 @@
           "registered": "Registered",
           "thingName": "Device identifier",
           "connectivity": "Connectivity",
-          "lastSeen": "Last seen"
+          "lastSeen": "Last seen",
+          "visibility": "Visibility"
         },
         "credentials": {
           "title": "Credentials"
         },
-        "dangerZone": {
-          "title": "Danger zone",
-          "deleteLabel": "Delete this device",
-          "deleteDescription": "Permanently removes the device and its cloud record. This cannot be undone."
+        "cards": {
+          "experimentsTitle": "Experiments",
+          "onboardLink": "Onboard",
+          "experimentsEmpty": "Not streaming into any experiment yet. Onboard it to start.",
+          "experimentsError": "Could not load this device's experiments.",
+          "credentialHint": {
+            "active": "Certificate active. The device can connect and stream."
+          },
+          "activityTitle": "Activity",
+          "monitoringLink": "Open monitoring",
+          "activityLoading": "Checking the last data arrival...",
+          "activityNoData": "No data has arrived from this device yet.",
+          "activityLastData": "Last data arrived {{time}}.",
+          "firmwareTitle": "Firmware",
+          "firmwareLink": "Open firmware",
+          "firmwareUnknown": "No firmware version reported in the last 30 days.",
+          "observedEmpty": "No uploads in the last 30 days.",
+          "observedUnattributed": "Unattributed uploads",
+          "firmwareReportedCaption": "Reported by the device in the last 30 days.",
+          "onboarded": "Onboarded",
+          "activityFigureCaption": "Last data arrival",
+          "observedShortCaption": "Uploaded to, last 30 days",
+          "measurementCount_one": "{{count}} measurement",
+          "measurementCount_other": "{{count}} measurements"
+        },
+        "overview": {
+          "title": "Overview",
+          "description": "What this device is, and where its setup stands."
+        },
+        "about": {
+          "title": "About"
         }
       },
       "credentials": {
@@ -360,7 +378,7 @@
         "rotateTitle": "Rotate certificate",
         "rotateConfirm": "The device gets a new certificate and the current one stops working immediately. It keeps publishing only after the new credentials are installed.",
         "disconnectWarning": "This device is currently connected and will be disconnected.",
-        "rotatingDescription": "A certificate rotation is in progress.",
+        "rotatingDescription": "You issued a new certificate and the old one is being retired. The device keeps streaming on whichever it holds until you load the new bundle; this usually settles within a minute.",
         "revokedDescription": "The certificate was revoked, so this device can no longer authenticate to AWS IoT. Issue a new certificate to restore credential access.",
         "revoke": "Revoke certificate",
         "revokeTitle": "Revoke certificate",
@@ -385,16 +403,33 @@
         "rootCa3Sub": "ECC 256 bit key",
         "copy": "Copy",
         "download": "Download",
-        "downloadAll": "Download all"
+        "downloadAll": "Download all",
+        "continueToOnboarding": "Continue to onboarding",
+        "closeUnsavedTitle": "Close without downloading?",
+        "closeUnsavedDescription": "The private key is shown once and is not stored. Closing now means issuing a new certificate to get one.",
+        "closeUnsavedBack": "Go back",
+        "closeUnsavedConfirm": "Close anyway",
+        "refreshStatus": "Refresh status",
+        "tabTitle": "Credentials",
+        "tabDescription": "The certificate this device authenticates with, and its lifecycle.",
+        "guide": {
+          "title": "How credentials work",
+          "step1": "Issue a certificate here. The private key is shown exactly once and the platform never stores it.",
+          "step2": "Download the bundle and store all three files on the device; the key never leaves it.",
+          "step3": "Rotate to hand the device a fresh certificate, or when it changes hands. Revoke to cut access immediately.",
+          "step4": "A revoked device cannot reconnect until a new certificate is issued."
+        },
+        "certificateIdLabel": "Certificate ID"
+      },
+      "nextAction": {
+        "issueCredentials": "Issue certificate",
+        "onboard": "Onboard to an experiment"
       },
       "firmware": {
         "title": "Firmware",
         "description": "What this device runs, what JII has published, and how updates reach it.",
         "currentTitle": "On this device",
         "unknownVersion": "This device has not reported a firmware version recently.",
-        "upToDate": "Running {{version}}, the newest published release.",
-        "updateAvailable": "Running {{installed}}; {{latest}} is available.",
-        "reported": "Running {{version}}.",
         "releasesTitle": "Releases",
         "releasesHint": "Published by JII; the newest stable release is what a rollout installs by default.",
         "latest": "Latest",
@@ -414,24 +449,36 @@
           "step2": "An operator starts a rollout, which stages it across devices and stops automatically if too many fail.",
           "step3": "The device receives an update job, downloads the image over a short-lived link, and verifies its checksum.",
           "step4": "The device applies the update, reboots, and reports the outcome; a failed update rolls back."
-        }
+        },
+        "showLessNotes": "Show fewer notes",
+        "upToDateShort": "Up to date",
+        "updateAvailableShort": "Update available",
+        "reportedCaption": "Reported by the device in the last 30 days.",
+        "toolingReleases": "Tooling and other releases ({{count}})"
+      },
+      "fleet": {
+        "title": "Fleet pulse",
+        "description": "How your devices are doing right now, and what flowed in the selected window.",
+        "onlineLabel": "Online now",
+        "attentionLabel": "Need attention",
+        "throughputTitle": "Data flow",
+        "attentionTitle": "Needs attention",
+        "attentionHint": "Devices whose setup or delivery is stuck, most actionable first.",
+        "attentionEmpty": "Every device is set up and reporting.",
+        "attentionMore_one": "and {{count}} more device",
+        "attentionMore_other": "and {{count}} more devices",
+        "eventsTitle": "Recent broker events",
+        "loadError": "Fleet activity could not be loaded.",
+        "reasonCredentials": "Needs a certificate",
+        "reasonNeverConnected": "Never connected",
+        "reasonSilent": "Connected, no data"
       }
     },
     "onboarding": {
-      "currentTitle": "Experiments",
-      "currentDescription": "The experiments this device currently streams into.",
-      "currentEmpty": "This device is not onboarded to any experiment yet.",
-      "addTitle": "Onboard to experiments",
-      "addDescription": "Pick the experiments this device should stream into. Onboarding issues the configuration to hand to the device.",
-      "addEmpty": "No further experiments available. You can re-issue the current configuration below.",
       "onboard": "Onboard",
       "reissue": "Re-issue configuration",
       "onboardSuccess": "Device onboarded. Configuration ready below.",
       "onboardError": "Could not onboard the device",
-      "deliveryTitle": "Device configuration",
-      "deliveryDescription": "Hand this configuration to the device: download it, or push it over a direct connection.",
-      "endpointLabel": "Broker endpoint",
-      "topicsLabel": "Publish topics",
       "download": "Download JSON",
       "connect": "Connect device",
       "disconnect": "Disconnect",
@@ -450,27 +497,68 @@
       "answerYes": "Yes",
       "answerNo": "No",
       "answerRequiredHint": "Answer all required questions before delivering the configuration.",
-      "guide": {
-        "title": "How to connect your device",
-        "step1": "Get the device certificate bundle and the Amazon root CA from the Credentials tab.",
-        "step2": "Connect to the broker endpoint below via MQTT over TLS, with the thing name as client id.",
-        "step3": "Load this configuration onto the device: download the JSON or push it over a direct connection.",
-        "step4": "Run the procedures of each experiment in order.",
-        "step5": "Publish each measurement to the experiment's topic prefix plus /{{sensorVersion}}/{{sensorId}}.",
-        "step6": "Attach the prefilled answers to every published measurement.",
-        "docsLink": "Read the full device integration guide"
-      }
+      "experimentsTitle": "Experiments",
+      "experimentsDescription": "Experiments this device streams into, and experiments you can onboard it to.",
+      "selectedCount": "{{count}} experiment selected",
+      "selectedCount_other": "{{count}} experiments selected",
+      "onboardCount_one": "Onboard to {{count}} experiment",
+      "onboardCount_other": "Onboard to {{count}} experiments",
+      "selectAtLeastOne": "Select at least one experiment.",
+      "noMemberships": "You are not a member of any experiment yet. Create or join one to onboard this device.",
+      "allOnboarded": "All your experiments are onboarded. Re-issue the configuration from the panel on the right.",
+      "retry": "Try again",
+      "inactiveDeviceAction": "Issue credentials",
+      "rail": {
+        "title": "Configuration",
+        "preview": "Preview",
+        "issuedAt": "Issued {{time}}",
+        "updating": "Updating…",
+        "stale": "Stale",
+        "thingName": "Thing name",
+        "endpoint": "Broker endpoint",
+        "resolvedWhenIssued": "Resolved when issued",
+        "copy": "Copy",
+        "copied": "Copied",
+        "new": "New",
+        "topicsWhenIssued": "Topics and procedures resolved when issued.",
+        "noExperiments": "Select an experiment to see what this device would receive.",
+        "procedureCounts": "{{protocols}} protocols · {{commands}} commands · {{questions}} questions",
+        "workbookVersion": "wb v{{version}}",
+        "workbookExcluded": "Workbook procedures excluded.",
+        "topicRule": "Devices publish to {prefix}/{sensorVersion}/{sensorId}.",
+        "answeredCount": "{{answered}} of {{required}} required answered",
+        "missing": "Missing: {{fields}}",
+        "memoryOnly": "Issued configurations exist in this browser session only. Re-issue any time; the file is always regenerated from current state.",
+        "integrationGuide": "Integration guide",
+        "viewJson": "View JSON"
+      },
+      "boundRowActions": "Experiment actions",
+      "removeMenuItem": "Remove from experiment",
+      "removeTitle": "Remove {{name}}?",
+      "removeBody": "The device stops streaming into it, and its procedures leave the next issued configuration.",
+      "removeSuccess": "Removed from the experiment",
+      "removeError": "Could not remove the device from the experiment",
+      "title": "Onboarding",
+      "description": "Choose the experiments this device streams into, then hand it the issued configuration.",
+      "filterExperiments": "Filter experiments",
+      "filterNoMatches": "No experiments match that filter.",
+      "answeredOfRequired": "{{answered}} of {{required}} required",
+      "reissueHint": "Re-issuing regenerates the file for everything currently bound; it adds nothing new."
     },
     "experimentDevices": {
       "tabLabel": "Devices",
       "title": "Devices",
       "description": "Devices onboarded to this experiment. An onboarded device can stream its measurements into it.",
       "loading": "Loading devices...",
-      "empty": "No devices are onboarded to this experiment yet.",
+      "empty": "Devices are onboarded from their own Onboarding tab, where credentials and configuration live.",
       "detach": "Detach",
       "detachSuccess": "Device detached from the experiment",
       "detachError": "Could not detach the device",
-      "loadError": "Could not load the devices. Try again."
+      "loadError": "Could not load the devices. Try again.",
+      "emptyTitle": "No devices stream into this experiment yet",
+      "openRegistry": "Open device registry",
+      "detachTitle": "Remove {{name}}?",
+      "detachConfirmBody": "It stops streaming into this experiment, and its procedures leave the next issued configuration."
     },
     "groups": {
       "addDevices": "Add devices",
@@ -482,11 +570,6 @@
       "create": "Create group",
       "createDescription": "Groups organize your devices; membership changes nothing on the devices themselves.",
       "createTitle": "Create a device group",
-      "dangerZone": {
-        "title": "Danger zone",
-        "deleteLabel": "Delete this group",
-        "deleteDescription": "Permanently removes the group. The devices themselves are not affected. This cannot be undone."
-      },
       "delete": "Delete group",
       "deleteHint": "\"{{name}}\" will be deleted. The devices themselves are not affected.",
       "deleteTitle": "Delete this group?",
@@ -559,7 +642,9 @@
         "resultsTitle": "Results and configs",
         "downloadOne": "Download the config for {{device}}",
         "downloadAll_one": "Download {{count}} config (zip)",
-        "downloadAll_other": "Download {{count}} configs (zip)"
+        "downloadAll_other": "Download {{count}} configs (zip)",
+        "experimentsTitle": "Experiments",
+        "experimentsDescription": "Every selected device is onboarded to every selected experiment."
       },
       "pageTitle": "Device group",
       "credentials": {
@@ -599,8 +684,47 @@
         "resultsTitle": "Results",
         "downloadOne": "Download credentials for {{device}}",
         "downloadAll_one": "Download {{count}} bundle (zip)",
-        "downloadAll_other": "Download {{count}} bundles (zip)"
-      }
+        "downloadAll_other": "Download {{count}} bundles (zip)",
+        "actionTitle": "Action",
+        "actionDescription": "Eligibility differs per action; the device list below follows the choice.",
+        "railEmpty": "Run an action to see per-device results and downloads here."
+      },
+      "overview": {
+        "title": "Overview",
+        "description": "What this group contains, and how its devices are doing.",
+        "healthTitle": "Health",
+        "monitoringLink": "Open monitoring",
+        "healthUnknown_one": "Connectivity is unknown for {{count}} device.",
+        "healthUnknown_other": "Connectivity is unknown for {{count}} devices."
+      },
+      "nextAction": {
+        "credentials": "{{count}} device needs a certificate",
+        "credentials_other": "{{count}} devices need a certificate"
+      },
+      "showAll": "Show {{count}} more groups",
+      "showFewer": "Show fewer groups",
+      "searchPlaceholder": "Search groups",
+      "searchNoMatches": "No groups match that search."
+    },
+    "workbookBar": {
+      "mock": "Mock",
+      "addDevice": "Add device",
+      "connect": "Connect",
+      "disconnected": "Disconnected",
+      "deviceCount": "{{count}} device",
+      "deviceCount_other": "{{count}} devices",
+      "disconnectDevice": "Disconnect {{name}}",
+      "disconnectAll": "Disconnect all",
+      "flow": "Flow",
+      "deviceOrdinal": "Device #{{ordinal}}",
+      "export": "Export",
+      "exportJson": "Export as JSON",
+      "exportProtocol": "Export Protocol Only",
+      "exportMacro": "Export Macro Only",
+      "downloadWorkbook": "Download Workbook (.jii)",
+      "clearAll": "Clear all",
+      "stop": "Stop",
+      "runAll": "Run all"
     }
   }
 }

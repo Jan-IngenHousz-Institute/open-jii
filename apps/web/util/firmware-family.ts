@@ -1,5 +1,6 @@
 import { zFirmwareFamily } from "@repo/api/domains/iot/firmware/iot-firmware.schema";
 import type { FirmwareFamily } from "@repo/api/domains/iot/firmware/iot-firmware.schema";
+import type { DeviceFirmwareVersion } from "@repo/api/domains/iot/iot.schema";
 
 /**
  * Whether JII builds and publishes firmware for this device family. Reads the
@@ -19,4 +20,21 @@ export function hasManagedFirmware(family: string): family is FirmwareFamily {
 export function isSameFirmwareVersion(reported: string, releaseTag: string): boolean {
   const strip = (value: string) => value.trim().replace(/^v/i, "");
   return strip(reported) === strip(releaseTag);
+}
+
+/**
+ * Newest non-null report wins by `lastSeen`, not array order; versions can
+ * reappear on rollback, so recency is the only truthful tiebreak.
+ */
+export function latestReportedVersion(versions: DeviceFirmwareVersion[]): string | null {
+  let current: { version: string; lastSeen: string } | null = null;
+  for (const entry of versions) {
+    if (entry.version === null) {
+      continue;
+    }
+    if (current === null || entry.lastSeen > current.lastSeen) {
+      current = { version: entry.version, lastSeen: entry.lastSeen };
+    }
+  }
+  return current === null ? null : current.version;
 }

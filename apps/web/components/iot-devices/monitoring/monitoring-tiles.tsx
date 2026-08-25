@@ -18,6 +18,8 @@ import { SILENT_THRESHOLD_MS } from "./silent-threshold";
 import { Tile } from "./tile";
 
 interface MonitoringTilesProps {
+  /** Extra classes per tile, e.g. a translucent ground on the wash hero. */
+  tileClassName?: string;
   device: IotDeviceDetail | undefined;
   activity: IotDeviceActivity | undefined;
   monitoring: DeviceMonitoring | undefined;
@@ -25,7 +27,13 @@ interface MonitoringTilesProps {
 }
 
 /** The triage row: live state, then the window's headline figures. */
-export function MonitoringTiles({ device, activity, monitoring, range }: MonitoringTilesProps) {
+export function MonitoringTiles({
+  device,
+  activity,
+  monitoring,
+  range,
+  tileClassName,
+}: MonitoringTilesProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
   const formatLastSeen = useFormatLastSeen();
@@ -54,7 +62,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <Tile label={t("iot.devices.monitoring.state")}>
+      <Tile className={tileClassName} label={t("iot.devices.monitoring.state")}>
         {device === undefined ? (
           <Skeleton className="h-4 w-24" />
         ) : (
@@ -73,7 +81,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
         )}
       </Tile>
 
-      <Tile label={t("iot.devices.monitoring.lastData")}>
+      <Tile className={tileClassName} label={t("iot.devices.monitoring.lastData")}>
         {activity === undefined ? (
           <Skeleton className="h-4 w-24" />
         ) : (
@@ -92,7 +100,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
         )}
       </Tile>
 
-      <Tile label={t("iot.devices.monitoring.measurements")}>
+      <Tile className={tileClassName} label={t("iot.devices.monitoring.measurements")}>
         {total === undefined || perHour === undefined ? (
           <Skeleton className="h-4 w-16" />
         ) : (
@@ -111,6 +119,7 @@ export function MonitoringTiles({ device, activity, monitoring, range }: Monitor
       </Tile>
 
       <Tile
+        className={tileClassName}
         label={
           isMobileFamily
             ? t("iot.devices.monitoring.sessionsLabel")

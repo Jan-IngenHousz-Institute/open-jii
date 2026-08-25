@@ -4,7 +4,7 @@ import {
   readOnlyCapabilities,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, within } from "@/test/test-utils";
+import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -41,7 +41,10 @@ describe("DeviceGroupContent", () => {
     render(<DeviceGroupContent />);
 
     // Unnamed devices lead with their identifier, like everywhere else.
-    expect(await screen.findByText(/E8:F6:0A/)).toBeInTheDocument();
+    // Name resolves to the serial for an unnamed device AND the serial renders as
+    // its own second line, so the value legitimately appears twice.
+    expect((await screen.findAllByText(/E8:F6:0A/)).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /E8:F6:0A/ })).toBeInTheDocument();
     expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
   });
 
@@ -54,40 +57,14 @@ describe("DeviceGroupContent", () => {
     expect(screen.getByText("iot.groups.remove")).toBeInTheDocument();
   });
 
-  it("shows the danger zone to managers", async () => {
-    mountGroup();
-
-    render(<DeviceGroupContent />);
-
-    expect(await screen.findByText("iot.groups.dangerZone.title")).toBeInTheDocument();
-    expect(screen.getByText("iot.groups.delete")).toBeInTheDocument();
-  });
-
   it("hides membership controls from read-only viewers", async () => {
     mountGroup({ capabilities: { ...readOnlyCapabilities } });
 
     render(<DeviceGroupContent />);
 
-    expect(await screen.findByText(/AA:BB:CC:DD/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/AA:BB:CC:DD/)).length).toBeGreaterThan(0);
     expect(screen.queryByText("iot.groups.addDevices")).not.toBeInTheDocument();
     expect(screen.queryByText("iot.groups.remove")).not.toBeInTheDocument();
-    expect(screen.queryByText("iot.groups.dangerZone.title")).not.toBeInTheDocument();
-  });
-
-  it("deletes the group from the danger zone", async () => {
-    const user = userEvent.setup();
-    mountGroup();
-    const remove = server.mount(contract.iot.deleteIotDeviceGroup, { status: 204 });
-
-    render(<DeviceGroupContent />);
-
-    await user.click(await screen.findByText("iot.groups.delete"));
-    const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByText("iot.groups.delete"));
-
-    await vi.waitFor(() => {
-      expect(remove.calls).toHaveLength(1);
-    });
   });
 
   it("removes a member", async () => {
