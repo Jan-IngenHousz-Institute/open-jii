@@ -45,7 +45,7 @@ export class IotDeviceController {
     private readonly getIotDeviceActivityUseCase: GetIotDeviceActivityUseCase,
     private readonly getDeviceMonitoringUseCase: GetDeviceMonitoringUseCase,
     private readonly getIotFleetMonitoringUseCase: GetIotFleetMonitoringUseCase,
-    private readonly getDeviceObservedExperimentsUseCase: GetDeviceObservedExperimentsUseCase,
+    private readonly listDeviceObservedExperimentsUseCase: GetDeviceObservedExperimentsUseCase,
     private readonly getIotDeviceFirmwareHistoryUseCase: GetIotDeviceFirmwareHistoryUseCase,
     private readonly deleteIotDeviceUseCase: DeleteIotDeviceUseCase,
     private readonly issueIotCredentialsUseCase: IssueIotCredentialsUseCase,
@@ -209,12 +209,12 @@ export class IotDeviceController {
   }
 
   @CanAccess({ resource: "device", action: "read", param: "deviceId" })
-  @Implement(iotContract.getDeviceObservedExperiments)
-  getDeviceObservedExperiments(@Session() session: UserSession) {
-    return implement(iotContract.getDeviceObservedExperiments).handler(async ({ input }) => {
-      if (!(await this.devicesEnabled(session))) this.disabled("getDeviceObservedExperiments");
+  @Implement(iotContract.listDeviceObservedExperiments)
+  listDeviceObservedExperiments(@Session() session: UserSession) {
+    return implement(iotContract.listDeviceObservedExperiments).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("listDeviceObservedExperiments");
 
-      const result = await this.getDeviceObservedExperimentsUseCase.execute(
+      const result = await this.listDeviceObservedExperimentsUseCase.execute(
         input.deviceId,
         input.from,
         input.to,
@@ -224,7 +224,7 @@ export class IotDeviceController {
         return { experiments: result.value };
       }
 
-      return throwOrpcFailure(result, this.logger, "getDeviceObservedExperiments");
+      return throwOrpcFailure(result, this.logger, "listDeviceObservedExperiments");
     });
   }
 

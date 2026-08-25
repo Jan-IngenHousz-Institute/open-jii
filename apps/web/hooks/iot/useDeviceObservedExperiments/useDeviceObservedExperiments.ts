@@ -12,7 +12,7 @@ export const useDeviceObservedExperiments = (
   options?: { enabled?: boolean },
 ) =>
   useQuery(
-    orpc.iot.getDeviceObservedExperiments.queryOptions({
+    orpc.iot.listDeviceObservedExperiments.queryOptions({
       input: { deviceId, from: range.from, to: range.to },
       enabled: options?.enabled ?? true,
     }),

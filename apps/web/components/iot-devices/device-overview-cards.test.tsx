@@ -26,7 +26,7 @@ describe("DeviceOverviewCards", () => {
       body: { lastDataAt: null, pipelineUnavailable: false },
     });
     server.mount(contract.iot.getDeviceFirmwareHistory, { body: { versions: [] } });
-    server.mount(contract.iot.getDeviceObservedExperiments, { body: { experiments: [] } });
+    server.mount(contract.iot.listDeviceObservedExperiments, { body: { experiments: [] } });
     server.mount(contract.experiments.listExperiments, { body: [] });
   });
 
@@ -119,7 +119,7 @@ describe("DeviceOverviewCards", () => {
     const MINE = "33333333-3333-4333-8333-333333333333";
     const THEIRS = "44444444-4444-4444-8444-444444444444";
     server.mount(contract.iot.listDeviceExperiments, { body: [] });
-    server.mount(contract.iot.getDeviceObservedExperiments, {
+    server.mount(contract.iot.listDeviceObservedExperiments, {
       body: {
         experiments: [
           { experimentId: MINE, count: 42, lastAt: "2026-08-24T00:00:00.000Z" },

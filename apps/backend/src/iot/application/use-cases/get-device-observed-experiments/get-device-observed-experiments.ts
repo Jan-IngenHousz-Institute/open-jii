@@ -28,7 +28,7 @@ export class GetDeviceObservedExperimentsUseCase {
   async execute(deviceId: string, from: string, to: string): Promise<Result<ObservedExperiment[]>> {
     this.logger.log({
       msg: "Getting observed experiments",
-      operation: "getDeviceObservedExperiments",
+      operation: "listDeviceObservedExperiments",
       deviceId,
     });
 
