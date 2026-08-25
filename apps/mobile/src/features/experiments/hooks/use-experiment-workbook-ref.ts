@@ -18,7 +18,7 @@ export function useExperimentWorkbookRef(experimentId: string | undefined): {
 } {
   const { data, isLoading, error, isPaused } = useQuery(
     orpc.experiments.listExperiments.queryOptions({
-      input: { filter: "member" },
+      input: { scope: "related" },
       enabled: !!experimentId,
       networkMode: "offlineFirst",
     }),

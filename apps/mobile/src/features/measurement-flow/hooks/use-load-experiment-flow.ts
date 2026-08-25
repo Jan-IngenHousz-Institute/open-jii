@@ -27,7 +27,7 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
     error: experimentsError,
   } = useQuery(
     orpc.experiments.listExperiments.queryOptions({
-      input: { filter: "member" },
+      input: { scope: "related" },
       enabled: !!experimentId,
     }),
   );
