@@ -1,5 +1,6 @@
 "use client";
 
+import { CollaboratorsAboutRow } from "@/components/sharing/collaborators-about-row";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import Link from "next/link";
@@ -54,6 +55,12 @@ export function GroupAboutCard({
           )}
         </Row>
         <Row label={t("iot.groups.meta.created")}>{formatDate(group.createdAt)}</Row>
+        <CollaboratorsAboutRow
+          resourceType="device_group"
+          resourceId={group.id}
+          href={`/${locale}/platform/devices/groups/${group.id}/collaborators`}
+          enabled={group.capabilities.canShare}
+        />
       </dl>
 
       <Link

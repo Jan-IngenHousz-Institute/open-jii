@@ -1,5 +1,7 @@
 "use client";
 
+import { CollaboratorsAboutRow } from "@/components/sharing/collaborators-about-row";
+import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { presentDevice, resolveDeviceRoleLabels } from "@/util/device-presentation";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
@@ -19,6 +21,7 @@ import { useFormatLastSeen } from "./device-connectivity";
  */
 export function DeviceAboutCard({ device }: { device: IotDeviceDetail }) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
   const formatLastSeen = useFormatLastSeen();
 
   const present = presentDevice({
@@ -54,6 +57,12 @@ export function DeviceAboutCard({ device }: { device: IotDeviceDetail }) {
         <Row label={t("iot.devices.detail.meta.lastSeen")}>
           {formatLastSeen(device.connectivity)}
         </Row>
+        <CollaboratorsAboutRow
+          resourceType="device"
+          resourceId={device.id}
+          href={`/${locale}/platform/devices/${device.id}/collaborators`}
+          enabled={device.capabilities.canShare}
+        />
       </dl>
     </Card>
   );
