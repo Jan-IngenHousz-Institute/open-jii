@@ -187,6 +187,74 @@ describe("GlobalSearchUseCase", () => {
     expect(result.value.results.some((r) => r.title === "Open photosynthesis study")).toBe(true);
   });
 
+  // Cross-type order is one comparable score, not a round-robin over types.
+  describe("cross-type ranking", () => {
+    it("ranks an exact name match above weaker matches of other types", async () => {
+      await testApp.createMacro({
+        name: "Helper utilities",
+        description: "supporting zephyrine calculations",
+        createdBy: userId,
+      });
+      await testApp.createProtocol({
+        name: "Field routine",
+        description: "records zephyrine readings",
+        createdBy: userId,
+      });
+      await testApp.createExperiment({ name: "Zephyrine", userId, visibility: "public" });
+
+      const result = await useCase.execute(userId, "zephyrine", 20);
+
+      assertSuccess(result);
+      // The experiment wins on its name hit, not because experiments are listed first.
+      expect(result.value.results[0].title).toBe("Zephyrine");
+      expect(result.value.results[0].type).toBe("experiment");
+    });
+
+    it("lets one type take more than its share when it holds the best matches", async () => {
+      for (let i = 0; i < 10; i++) {
+        await testApp.createProtocol({ name: `Vorbulon protocol ${i}`, createdBy: userId });
+      }
+      await testApp.createMacro({
+        name: "Unrelated macro",
+        description: "mentions vorbulon in passing",
+        createdBy: userId,
+      });
+
+      const result = await useCase.execute(userId, "vorbulon", 8);
+
+      assertSuccess(result);
+      // The old fan-out capped every type at 8; overfetching removes that ceiling, so a
+      // limit of 8 can now be filled entirely from the type that matched best.
+      expect(result.value.results).toHaveLength(8);
+      expect(result.value.results.every((r) => r.type === "protocol")).toBe(true);
+    });
+
+    it("orders results by descending score", async () => {
+      await testApp.createExperiment({ name: "Grindelwax", userId, visibility: "public" });
+      await testApp.createProtocol({
+        name: "Grindelwax assay",
+        createdBy: userId,
+      });
+      await testApp.createMacro({
+        name: "Unrelated helper",
+        description: "grindelwax post-processing",
+        createdBy: userId,
+      });
+
+      const result = await useCase.execute(userId, "grindelwax", 20);
+
+      assertSuccess(result);
+      const titles = result.value.results.map((r) => r.title);
+      expect(titles).toContain("Grindelwax");
+      expect(titles).toContain("Grindelwax assay");
+      // A description-only hit ranks below both name hits regardless of its type.
+      expect(titles.indexOf("Unrelated helper")).toBeGreaterThan(titles.indexOf("Grindelwax"));
+      expect(titles.indexOf("Unrelated helper")).toBeGreaterThan(
+        titles.indexOf("Grindelwax assay"),
+      );
+    });
+  });
+
   // Global search delegates to the same per-type findAlls, so their access scoping
   // applies here too: a private macro/protocol/workbook is undiscoverable to a
   // non-grantee but visible once a grant is held.

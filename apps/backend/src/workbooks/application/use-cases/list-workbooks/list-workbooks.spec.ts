@@ -50,11 +50,11 @@ describe("ListWorkbooksUseCase", () => {
     expect(result.value[0].name).toBe("Alpha Workbook");
   });
 
-  it("filters by 'my' to show only user's workbooks", async () => {
+  it("scopes to related to show only the caller's workbooks", async () => {
     const otherUser = await testApp.createTestUser({});
     await testApp.createWorkbook({ name: "Mine", createdBy: userId });
     await testApp.createWorkbook({ name: "Theirs", createdBy: otherUser });
-    const result = await useCase.execute({ filter: "my", userId });
+    const result = await useCase.execute({ scope: "related", userId });
     assertSuccess(result);
     expect(result.value).toHaveLength(1);
     expect(result.value[0].name).toBe("Mine");

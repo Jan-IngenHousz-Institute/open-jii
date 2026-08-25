@@ -20,6 +20,7 @@ import type {
   DeviceOnboardingConfig,
   IotDevice,
 } from "@repo/api/domains/iot/iot.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { applyPlanAnswers } from "@repo/api/transforms/workbook-device-plan";
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
@@ -96,7 +97,7 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
     refetch: refetchExperiments,
   } = useQuery(orpc.experiments.listExperiments.queryOptions({ input: { filter: "member" } }));
   const selectable = useMemo(
-    () => (experimentsData ?? []).filter((experiment) => !boundIds.has(experiment.id)),
+    () => listItems(experimentsData).filter((experiment) => !boundIds.has(experiment.id)),
     [experimentsData, boundIds],
   );
 

@@ -18,4 +18,19 @@ export class ListWorkbooksUseCase {
     });
     return await this.workbookRepository.findAll(filter);
   }
+
+  async executePaginated(
+    page: number,
+    pageSize: number,
+    filter?: WorkbookFilter,
+  ): Promise<Result<{ items: WorkbookListItemDto[]; totalCount: number }>> {
+    this.logger.log({
+      msg: "Listing workbooks",
+      operation: "listWorkbooksPaginated",
+      page,
+      pageSize,
+      hasSearch: !!filter?.search,
+    });
+    return await this.workbookRepository.findPage(page, pageSize, filter);
+  }
 }

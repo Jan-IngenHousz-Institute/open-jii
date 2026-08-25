@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
 
+import { listItems } from "@repo/api/shared/listing";
+
 import { useDebounce } from "../../useDebounce";
 
 export type WorkbookFilter = "my" | "all";
@@ -58,22 +60,21 @@ export function useWorkbooks({
     }),
   );
 
+  // Narrowed to the array shape: this hook sends no `page`, so the response is
+  // always the bare list. Deletable once the caller migrates to the envelope.
+  const items = query.data ? listItems(query.data) : undefined;
+
   // Auto-switch to "all" if user has no workbooks of their own on initial load
   const hasAutoSwitched = useRef(false);
   useEffect(() => {
-    if (
-      !hasAutoSwitched.current &&
-      filter === "my" &&
-      query.data?.length === 0 &&
-      !debouncedSearch
-    ) {
+    if (!hasAutoSwitched.current && filter === "my" && items?.length === 0 && !debouncedSearch) {
       hasAutoSwitched.current = true;
       setFilter("all");
     }
-  }, [filter, query.data, setFilter, debouncedSearch]);
+  }, [filter, items, setFilter, debouncedSearch]);
 
   return {
-    data: query.data,
+    data: items,
     isLoading: query.isLoading,
     error: query.error,
     filter,
