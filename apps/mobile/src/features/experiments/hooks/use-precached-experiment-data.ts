@@ -15,7 +15,7 @@ function findExperimentRef(
   experimentId: string,
 ): ExperimentRef | undefined {
   const cached = queryClient.getQueryData(
-    orpc.experiments.listExperiments.queryKey({ input: { filter: "member" } }),
+    orpc.experiments.listExperiments.queryKey({ input: { scope: "related" } }),
   );
   return listItems(cached).find((e) => e.id === experimentId);
 }
@@ -36,7 +36,7 @@ async function precacheExperimentWorkbookFn(
   if (!ref) {
     await queryClient.fetchQuery(
       orpc.experiments.listExperiments.queryOptions({
-        input: { filter: "member" },
+        input: { scope: "related" },
         meta: { suppressToast: true },
       }),
     );

@@ -8,7 +8,7 @@ import { listItems } from "@repo/api/shared/listing";
 export function useExperiments() {
   const { data, isLoading, error, refetch, isRefetching } = useQuery(
     orpc.experiments.listExperiments.queryOptions({
-      input: { filter: "member" },
+      input: { scope: "related" },
       // Explicit: prefer the persisted cache when offline so the picker
       // doesn't render an empty list while the network is unreachable.
       networkMode: "offlineFirst",
