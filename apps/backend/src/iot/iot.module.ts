@@ -20,6 +20,7 @@ import { GetDeviceBatteryUseCase } from "./application/use-cases/get-device-batt
 import { GetDeviceFirmwareHistoryUseCase } from "./application/use-cases/get-device-firmware-history/get-device-firmware-history";
 import { GetDeviceMeasurementsUseCase } from "./application/use-cases/get-device-measurements/get-device-measurements";
 import { GetDeviceMonitoringUseCase } from "./application/use-cases/get-device-monitoring/get-device-monitoring";
+import { GetDeviceObservedExperimentsUseCase } from "./application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
 import { GetDevicePayloadStatsUseCase } from "./application/use-cases/get-device-payload-stats/get-device-payload-stats";
 import { GetDeviceRegistryUseCase } from "./application/use-cases/get-device-registry/get-device-registry";
 import { GetDeviceSessionsUseCase } from "./application/use-cases/get-device-sessions/get-device-sessions";
@@ -99,6 +100,7 @@ import { IotController } from "./presentation/iot.controller";
     GetDeviceThroughputUseCase,
     GetDeviceBatteryUseCase,
     GetDevicePayloadStatsUseCase,
+    GetDeviceObservedExperimentsUseCase,
     DeleteIotDeviceUseCase,
     IssueIotCredentialsUseCase,
     RevokeIotCredentialsUseCase,

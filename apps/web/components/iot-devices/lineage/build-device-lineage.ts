@@ -5,6 +5,7 @@ import type {
   DeviceMonitoring,
   IotDeviceDetail,
 } from "@repo/api/domains/iot/iot.schema";
+import { foldObservedExperiments } from "@repo/api/transforms/observed-experiments";
 
 import type { EntityAccess, ResolvedEntity } from "../monitoring/resolve-entity-label";
 import { resolveEntities } from "../monitoring/resolve-entity-label";
@@ -177,20 +178,15 @@ function appendExperiments(
   nodes: LineageNodeModel[],
   edges: LineageEdgeModel[],
 ): void {
-  const arrivals = new Map<string, ExperimentArrival>();
-  let unattributed = 0;
-  for (const bucket of input.monitoring.throughput) {
-    if (bucket.experimentId === null) {
-      unattributed += bucket.count;
-      continue;
-    }
-    const entry = arrivals.get(bucket.experimentId) ?? { count: 0, lastBucketAt: null };
-    entry.count += bucket.count;
-    if (entry.lastBucketAt === null || bucket.bucketStart > entry.lastBucketAt) {
-      entry.lastBucketAt = bucket.bucketStart;
-    }
-    arrivals.set(bucket.experimentId, entry);
-  }
+  const observed = foldObservedExperiments(input.monitoring.throughput);
+  const arrivals = new Map<string, ExperimentArrival>(
+    observed.flatMap((entry) =>
+      entry.experimentId === null
+        ? []
+        : [[entry.experimentId, { count: entry.count, lastBucketAt: entry.lastAt }]],
+    ),
+  );
+  const unattributed = observed.find((entry) => entry.experimentId === null)?.count ?? 0;
 
   // A bound experiment is one the viewer can already see through this device,
   // so its name is known regardless of the viewer's own experiment list.

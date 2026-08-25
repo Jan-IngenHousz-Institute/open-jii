@@ -17,6 +17,7 @@ import { BulkRegisterIotDevicesUseCase } from "../application/use-cases/bulk-reg
 import { DeleteIotDeviceUseCase } from "../application/use-cases/delete-iot-device/delete-iot-device";
 import { EnsureMobileDeviceUseCase } from "../application/use-cases/ensure-mobile-device/ensure-mobile-device";
 import { GetDeviceMonitoringUseCase } from "../application/use-cases/get-device-monitoring/get-device-monitoring";
+import { GetDeviceObservedExperimentsUseCase } from "../application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
 import { GetIotDeviceActivityUseCase } from "../application/use-cases/get-iot-device-activity/get-iot-device-activity";
 import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { GetIotDeviceUseCase } from "../application/use-cases/get-iot-device/get-iot-device";
@@ -44,6 +45,7 @@ export class IotDeviceController {
     private readonly getIotDeviceActivityUseCase: GetIotDeviceActivityUseCase,
     private readonly getDeviceMonitoringUseCase: GetDeviceMonitoringUseCase,
     private readonly getIotFleetMonitoringUseCase: GetIotFleetMonitoringUseCase,
+    private readonly getDeviceObservedExperimentsUseCase: GetDeviceObservedExperimentsUseCase,
     private readonly getIotDeviceFirmwareHistoryUseCase: GetIotDeviceFirmwareHistoryUseCase,
     private readonly deleteIotDeviceUseCase: DeleteIotDeviceUseCase,
     private readonly issueIotCredentialsUseCase: IssueIotCredentialsUseCase,
@@ -203,6 +205,26 @@ export class IotDeviceController {
       }
 
       return throwOrpcFailure(result, this.logger, "getIotDeviceActivity");
+    });
+  }
+
+  @CanAccess({ resource: "device", action: "read", param: "deviceId" })
+  @Implement(iotContract.getDeviceObservedExperiments)
+  getDeviceObservedExperiments(@Session() session: UserSession) {
+    return implement(iotContract.getDeviceObservedExperiments).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("getDeviceObservedExperiments");
+
+      const result = await this.getDeviceObservedExperimentsUseCase.execute(
+        input.deviceId,
+        input.from,
+        input.to,
+      );
+
+      if (result.isSuccess()) {
+        return { experiments: result.value };
+      }
+
+      return throwOrpcFailure(result, this.logger, "getDeviceObservedExperiments");
     });
   }
 

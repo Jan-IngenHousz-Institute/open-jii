@@ -1,4 +1,4 @@
-import { createIotDeviceDetail } from "@/test/factories";
+import { createExperiment, createIotDeviceDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -26,6 +26,8 @@ describe("DeviceOverviewCards", () => {
       body: { lastDataAt: null, pipelineUnavailable: false },
     });
     server.mount(contract.iot.getDeviceFirmwareHistory, { body: { versions: [] } });
+    server.mount(contract.iot.getDeviceObservedExperiments, { body: { experiments: [] } });
+    server.mount(contract.experiments.listExperiments, { body: [] });
   });
 
   it("links each card into the tab it summarises", async () => {
@@ -97,7 +99,7 @@ describe("DeviceOverviewCards", () => {
     expect(screen.getByRole("button", { name: "iot.onboarding.retry" })).toBeInTheDocument();
   });
 
-  it("gives a phone an activity card and none of the certificate machinery", async () => {
+  it("gives a phone activity and observed experiments, and none of the certificate machinery", async () => {
     server.mount(contract.iot.listDeviceExperiments, { body: [] });
     server.mount(contract.iot.getIotDeviceActivity, {
       body: { lastDataAt: "2026-08-24T09:00:00.000Z", pipelineUnavailable: false },
@@ -108,9 +110,37 @@ describe("DeviceOverviewCards", () => {
     expect(
       await screen.findByText("iot.devices.detail.cards.activityLastData"),
     ).toBeInTheDocument();
+    expect(await screen.findByText("iot.devices.detail.cards.observedEmpty")).toBeInTheDocument();
     expect(screen.queryByText("iot.devices.detail.cards.credentialsTitle")).not.toBeInTheDocument();
-    expect(screen.queryByText("iot.devices.detail.cards.experimentsTitle")).not.toBeInTheDocument();
     expect(screen.queryByText("iot.devices.detail.cards.firmwareTitle")).not.toBeInTheDocument();
+  });
+
+  it("reads a phone's experiments from the warehouse: named when the viewer is a member, opaque otherwise", async () => {
+    const MINE = "33333333-3333-4333-8333-333333333333";
+    const THEIRS = "44444444-4444-4444-8444-444444444444";
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.iot.getDeviceObservedExperiments, {
+      body: {
+        experiments: [
+          { experimentId: MINE, count: 42, lastAt: "2026-08-24T00:00:00.000Z" },
+          { experimentId: THEIRS, count: 7, lastAt: null },
+          { experimentId: null, count: 3, lastAt: null },
+        ],
+      },
+    });
+    server.mount(contract.experiments.listExperiments, {
+      body: [createExperiment({ id: MINE, name: "Greenhouse pilot" })],
+    });
+
+    render(<DeviceOverviewCards device={makeDevice({ deviceType: "mobile" })} />);
+
+    expect(await screen.findByRole("link", { name: /Greenhouse pilot/ })).toHaveAttribute(
+      "href",
+      `/en-US/platform/experiments/${MINE}`,
+    );
+    expect(screen.getByText("iot.devices.monitoring.privateExperiment")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.detail.cards.observedUnattributed")).toBeInTheDocument();
+    expect(screen.getByText("42")).toBeInTheDocument();
   });
 
   it("says plainly when no data has arrived yet", async () => {

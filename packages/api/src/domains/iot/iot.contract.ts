@@ -17,6 +17,8 @@ import {
   zIotDevicePathParam,
   zIotFleetMonitoring,
   zIotFleetMonitoringQuery,
+  zDeviceObservedExperiments,
+  zObservedExperimentsQuery,
   zIotUploadUrl,
   zEnsureMobileDeviceBody,
   zIotUploadUrlRequest,
@@ -79,6 +81,16 @@ export const iotContract = {
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}/activity", successStatus: 200 })
     .input(zIotDevicePathParam)
     .output(zIotDeviceActivity),
+  // What the warehouse observed the device feeding: the phone overview's
+  // experiment record, and any device's claimed-arrival view. One scan.
+  getDeviceObservedExperiments: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/devices/{deviceId}/observed-experiments",
+      successStatus: 200,
+    })
+    .input(zObservedExperimentsQuery)
+    .output(zDeviceObservedExperiments),
   // One warehouse scan for the reported version, split out of the monitoring
   // fan-out so a caller that only needs firmware does not pay for sessions,
   // throughput, battery and measurements too.
