@@ -91,6 +91,15 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
 
   const basePath = `/${locale}/platform/devices/${device.id}`;
 
+  function renderFigure(value: React.ReactNode, caption: string) {
+    return (
+      <div className="mb-3">
+        <p className="text-2xl font-semibold tabular-nums">{value}</p>
+        <p className="text-muted-foreground text-xs">{caption}</p>
+      </div>
+    );
+  }
+
   function renderBoundExperiment(experiment: (typeof bound)[number]) {
     return (
       <li
@@ -103,9 +112,6 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
         >
           {experiment.name}
         </Link>
-        <Badge variant="secondary" className="shrink-0">
-          {t("iot.devices.detail.cards.onboarded")}
-        </Badge>
       </li>
     );
   }
@@ -144,7 +150,12 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
         <EmptyState size="inline" description={t("iot.devices.detail.cards.experimentsEmpty")} />
       );
     }
-    return <ul className="-mx-6 -mb-3 divide-y">{bound.map(renderBoundExperiment)}</ul>;
+    return (
+      <>
+        {renderFigure(bound.length, t("iot.devices.detail.cards.onboarded"))}
+        <ul className="-mx-6 -mb-3 divide-y">{bound.map(renderBoundExperiment)}</ul>
+      </>
+    );
   }
 
   function renderObservedRow(entry: ObservedExperiment) {
@@ -210,7 +221,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     }
     return (
       <div className="space-y-2">
-        <CardDescription>{t("iot.devices.detail.cards.observedHint")}</CardDescription>
+        {renderFigure(observed.length, t("iot.devices.detail.cards.observedHint"))}
         <ul className="-mx-6 -mb-3 divide-y">{observed.map(renderObservedRow)}</ul>
       </div>
     );
@@ -232,11 +243,21 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
   }
 
   function renderActivityBody() {
+    const lastData =
+      activity !== undefined && !activity.pipelineUnavailable && activity.lastDataAt !== null
+        ? formatRelativeTime(activity.lastDataAt, locale)
+        : null;
+
     return (
-      <div className="space-y-2">
-        <ConnectivityDot connectivity={device.connectivity} />
-        <CardDescription>{formatLastSeen(device.connectivity)}</CardDescription>
-        <CardDescription>{activityLine()}</CardDescription>
+      <div>
+        {renderFigure(
+          lastData ?? "\u2014",
+          lastData === null ? activityLine() : t("iot.devices.detail.cards.activityFigureCaption"),
+        )}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <ConnectivityDot connectivity={device.connectivity} />
+          <CardDescription>{formatLastSeen(device.connectivity)}</CardDescription>
+        </div>
       </div>
     );
   }
@@ -249,13 +270,9 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     if (reported === null) {
       return <CardDescription>{t("iot.devices.detail.cards.firmwareUnknown")}</CardDescription>;
     }
-    return (
-      <div className="space-y-2">
-        <span className="bg-muted inline-flex rounded-md px-2 py-1 font-mono text-sm">
-          {reported}
-        </span>
-        <CardDescription>{t("iot.devices.detail.cards.firmwareReportedCaption")}</CardDescription>
-      </div>
+    return renderFigure(
+      <span className="font-mono">{reported}</span>,
+      t("iot.devices.detail.cards.firmwareReportedCaption"),
     );
   }
 
@@ -264,6 +281,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
       {!isMobileFamily && (
         <OverviewCard
           icon={<KeyRound aria-hidden />}
+          wellClassName="bg-secondary text-primary"
           title={t("iot.devices.detail.cards.credentialsTitle")}
           link={
             device.capabilities.canManage
@@ -288,10 +306,8 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
       {!isMobileFamily && (
         <OverviewCard
           icon={<FlaskConical aria-hidden />}
+          wellClassName="bg-quaternary text-primary"
           title={t("iot.devices.detail.cards.experimentsTitle")}
-          titleExtra={
-            bound.length > 0 ? <Badge variant="secondary">{bound.length}</Badge> : undefined
-          }
           link={{
             href: `${basePath}/onboarding`,
             label: t("iot.devices.detail.cards.onboardLink"),
@@ -304,10 +320,8 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
       {isMobileFamily && (
         <OverviewCard
           icon={<FlaskConical aria-hidden />}
+          wellClassName="bg-quaternary text-primary"
           title={t("iot.devices.detail.cards.experimentsTitle")}
-          titleExtra={
-            observed.length > 0 ? <Badge variant="secondary">{observed.length}</Badge> : undefined
-          }
           link={{
             href: `${basePath}/monitoring`,
             label: t("iot.devices.detail.cards.monitoringLink"),
@@ -319,6 +333,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
 
       <OverviewCard
         icon={<Activity aria-hidden />}
+        wellClassName="bg-primary/10 text-primary"
         title={t("iot.devices.detail.cards.activityTitle")}
         link={{
           href: `${basePath}/monitoring`,
@@ -331,6 +346,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
       {isManagedFirmware && (
         <OverviewCard
           icon={<Cpu aria-hidden />}
+          wellClassName="bg-muted text-foreground"
           title={t("iot.devices.detail.cards.firmwareTitle")}
           link={{ href: `${basePath}/firmware`, label: t("iot.devices.detail.cards.firmwareLink") }}
         >

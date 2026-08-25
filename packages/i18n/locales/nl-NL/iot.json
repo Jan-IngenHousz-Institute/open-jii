@@ -359,7 +359,8 @@
           "observedEmpty": "Geen uploads in de afgelopen 30 dagen.",
           "observedUnattributed": "Niet-toegewezen uploads",
           "firmwareReportedCaption": "In de afgelopen 30 dagen door het apparaat gemeld.",
-          "onboarded": "Ingesteld"
+          "onboarded": "Ingesteld",
+          "activityFigureCaption": "Laatste data-aankomst"
         },
         "overview": {
           "title": "Overzicht",

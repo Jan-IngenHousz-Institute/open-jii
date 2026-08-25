@@ -359,7 +359,8 @@
           "observedEmpty": "Keine Uploads in den letzten 30 Tagen.",
           "observedUnattributed": "Nicht zugeordnete Uploads",
           "firmwareReportedCaption": "Vom Gerät in den letzten 30 Tagen gemeldet.",
-          "onboarded": "Eingerichtet"
+          "onboarded": "Eingerichtet",
+          "activityFigureCaption": "Letzter Dateneingang"
         },
         "overview": {
           "title": "Übersicht",

@@ -43,7 +43,7 @@ describe("DeviceOverviewCards", () => {
     ).toHaveAttribute("href", `/en-US/platform/devices/${DEVICE_ID}/onboarding`);
   });
 
-  it("lists bound experiments as links with a streaming chip", async () => {
+  it("lists bound experiments as links under the count figure", async () => {
     server.mount(contract.iot.listDeviceExperiments, { body: [boundExperiment] });
 
     render(<DeviceOverviewCards device={makeDevice()} />);
@@ -108,7 +108,7 @@ describe("DeviceOverviewCards", () => {
     render(<DeviceOverviewCards device={makeDevice({ deviceType: "mobile" })} />);
 
     expect(
-      await screen.findByText("iot.devices.detail.cards.activityLastData"),
+      await screen.findByText("iot.devices.detail.cards.activityFigureCaption"),
     ).toBeInTheDocument();
     expect(await screen.findByText("iot.devices.detail.cards.observedEmpty")).toBeInTheDocument();
     expect(screen.queryByText("iot.devices.detail.cards.credentialsTitle")).not.toBeInTheDocument();
