@@ -1,5 +1,6 @@
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
 
@@ -36,6 +37,9 @@ vi.mock("@repo/ui/components/wizard-form", async (importOriginal) => {
           });
         }}
       >
+        <input aria-label="Experiment name" />
+        <a href="#">Zoom in</a>
+        <Link href="/en-US/platform/experiments">Experiments</Link>
         <button type="submit" disabled={isSubmitting}>
           Submit
         </button>
@@ -50,6 +54,45 @@ describe("NewExperimentForm", () => {
     expect(screen.getByRole("form", { name: "wizard form" })).toBeInTheDocument();
     // Dialog starts closed (open={false}), so Radix Dialog content is not in the DOM
     expect(screen.queryByText("experiments.unsavedChangesTitle")).not.toBeInTheDocument();
+  });
+
+  it("allows same-document controls while guarding internal navigation", async () => {
+    const user = userEvent.setup();
+    const push = vi.mocked(useRouter().push);
+    push.mockClear();
+
+    render(<NewExperimentForm />);
+
+    await user.type(screen.getByRole("textbox", { name: "Experiment name" }), "Dirty form");
+    const zoomLink = screen.getByRole("link", { name: "Zoom in" });
+    let zoomClickDefaultPrevented: boolean | undefined;
+    zoomLink.addEventListener("click", (event) => {
+      zoomClickDefaultPrevented = event.defaultPrevented;
+    });
+
+    await user.click(zoomLink);
+
+    expect(screen.queryByText("experiments.unsavedChangesTitle")).not.toBeInTheDocument();
+    expect(zoomClickDefaultPrevented).toBe(false);
+
+    const experimentsLink = screen.getByRole("link", { name: "Experiments" });
+    // Keep jsdom from attempting its unsupported navigation after the guard
+    // deliberately leaves this modified click alone.
+    experimentsLink.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    experimentsLink.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true }),
+    );
+
+    expect(screen.queryByText("experiments.unsavedChangesTitle")).not.toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+
+    await user.click(experimentsLink);
+
+    expect(screen.getByText("experiments.unsavedChangesTitle")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "experiments.unsavedLeave" }));
+
+    expect(push).toHaveBeenCalledWith("/en-US/platform/experiments");
   });
 
   it("submits experiment and navigates on success", async () => {
