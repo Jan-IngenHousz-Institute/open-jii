@@ -33,17 +33,17 @@ describe("DeviceGroupsBlock", () => {
     expect(screen.getByText("iot.groups.memberCount")).toBeInTheDocument();
   });
 
-  it("offers one inline line when there are no groups, not an empty section", async () => {
+  it("offers the create tile as the whole grid when there are no groups", async () => {
     server.mount(contract.iot.listIotDeviceGroups, { body: [] });
 
     render(<DeviceGroupsBlock />);
 
-    expect(await screen.findByText("iot.groups.emptyHint")).toBeInTheDocument();
-    // The header's Create button is suppressed so the empty state owns the CTA.
+    // One affordance, in the grid where its result will appear.
+    expect(await screen.findByRole("button", { name: "iot.groups.create" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "iot.groups.create" })).toHaveLength(1);
   });
 
-  it("opens the create dialog from the empty state", async () => {
+  it("opens the create dialog from the create tile", async () => {
     server.mount(contract.iot.listIotDeviceGroups, { body: [] });
     const user = userEvent.setup();
 

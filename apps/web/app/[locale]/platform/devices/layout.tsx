@@ -51,7 +51,7 @@ function DevicesLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-4xl font-bold text-gray-900">{t("iot.devices.title")}</h1>
           <p className="text-muted-foreground">{t("iot.devices.description")}</p>
