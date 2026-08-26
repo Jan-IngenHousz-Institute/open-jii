@@ -7,6 +7,7 @@ import { AlertTriangle } from "lucide-react";
 import type { DeviceExperiment, DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { HorizontalBarChart } from "@repo/ui/components/charts/bar-chart";
+import { EmptyState } from "@repo/ui/components/empty-state";
 
 import { EntityLink } from "./entity-link";
 import { MONITORING_PRIMARY_COLOR } from "./monitoring-palette";
@@ -46,11 +47,7 @@ export function DataByExperiment({
   );
 
   if (rows.length === 0) {
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("iot.devices.monitoring.noExperiments")}
-      </p>
-    );
+    return <EmptyState size="inline" description={t("iot.devices.monitoring.noExperiments")} />;
   }
 
   const charted = rows.filter((row) => row.count > 0);

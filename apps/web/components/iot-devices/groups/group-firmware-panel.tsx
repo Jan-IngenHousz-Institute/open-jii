@@ -6,6 +6,7 @@ import { AlertTriangle } from "lucide-react";
 import type { IotDeviceGroupFirmware } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
+import { EmptyState } from "@repo/ui/components/empty-state";
 
 interface GroupFirmwarePanelProps {
   firmware: IotDeviceGroupFirmware[];
@@ -50,11 +51,7 @@ export function GroupFirmwarePanel({ firmware, labelByDeviceId, locale }: GroupF
   );
 
   if (rows.length === 0) {
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("iot.groups.monitoring.noFirmware")}
-      </p>
-    );
+    return <EmptyState size="inline" description={t("iot.groups.monitoring.noFirmware")} />;
   }
 
   return (

@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { orpc } from "~/shared/api/orpc";
 
+import { listItems } from "@repo/api/shared/listing";
+
 interface ExperimentRef {
   id: string;
   workbookId: string | null;
@@ -13,9 +15,9 @@ function findExperimentRef(
   experimentId: string,
 ): ExperimentRef | undefined {
   const cached = queryClient.getQueryData(
-    orpc.experiments.listExperiments.queryKey({ input: { filter: "member" } }),
+    orpc.experiments.listExperiments.queryKey({ input: { scope: "related" } }),
   );
-  return cached?.find((e) => e.id === experimentId);
+  return listItems(cached).find((e) => e.id === experimentId);
 }
 
 // Finite so an incomplete (offline/failed) precache can retry on reconnect.
@@ -34,7 +36,7 @@ async function precacheExperimentWorkbookFn(
   if (!ref) {
     await queryClient.fetchQuery(
       orpc.experiments.listExperiments.queryOptions({
-        input: { filter: "member" },
+        input: { scope: "related" },
         meta: { suppressToast: true },
       }),
     );

@@ -223,7 +223,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Act
-      const result = await repository.findAll(mainUserId, "member");
+      const result = await repository.findAll(mainUserId, "related");
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -249,7 +249,7 @@ describe("ExperimentRepository", () => {
         organizationId: org,
       });
 
-      const result = await repository.findAll(orgMember, "member");
+      const result = await repository.findAll(orgMember, "related");
 
       assertSuccess(result);
       expect(result.value.map((e) => e.id)).toEqual([experiment.id]);
@@ -277,7 +277,7 @@ describe("ExperimentRepository", () => {
         role: "viewer",
       });
 
-      const result = await repository.findAll(teammate, "member");
+      const result = await repository.findAll(teammate, "related");
 
       assertSuccess(result);
       expect(result.value.map((e) => e.id)).toEqual([experiment.id]);
@@ -303,7 +303,7 @@ describe("ExperimentRepository", () => {
         role: "viewer",
       });
 
-      const result = await repository.findAll(outsider, "member");
+      const result = await repository.findAll(outsider, "related");
 
       assertSuccess(result);
       expect(result.value.map((e) => e.id)).toEqual([experiment.id]);
@@ -321,7 +321,7 @@ describe("ExperimentRepository", () => {
         visibility: "public",
       });
 
-      const result = await repository.findAll(mainUserId, "member");
+      const result = await repository.findAll(mainUserId, "related");
 
       assertSuccess(result);
       expect(result.value).toHaveLength(0);
@@ -483,7 +483,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Act - query with member filter as mainUser
-      const result = await repository.findAll(mainUserId, "member");
+      const result = await repository.findAll(mainUserId, "related");
 
       // Assert - should see nothing (not a member of any experiments)
       expect(result.isSuccess()).toBe(true);
@@ -663,8 +663,8 @@ describe("ExperimentRepository", () => {
         status: "active",
       });
 
-      // Act - filter by "member" relationship and "active" status
-      const result = await repository.findAll(mainUserId, "member", "active");
+      // Act - scope to "related" with "active" status
+      const result = await repository.findAll(mainUserId, "related", "active");
 
       // Assert
       expect(result.isSuccess()).toBe(true);

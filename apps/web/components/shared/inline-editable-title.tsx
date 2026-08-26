@@ -20,6 +20,7 @@ interface InlineEditableTitleProps {
   actions?: ReactNode;
   /** When true, actions render right after the title instead of pushed to the row's far end. */
   actionsInline?: boolean;
+  headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
 }
 
 const titleVariants = cva("text-2xl transition-all duration-300", {
@@ -43,6 +44,7 @@ export function InlineEditableTitle({
   badges,
   actions,
   actionsInline = false,
+  headingLevel,
 }: InlineEditableTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
@@ -119,7 +121,12 @@ export function InlineEditableTitle({
             </Button>
           </div>
         ) : (
-          <CardTitle className={titleVariants({ editable: hasAccess })} onClick={handleClick}>
+          <CardTitle
+            role={headingLevel ? "heading" : undefined}
+            aria-level={headingLevel}
+            className={titleVariants({ editable: hasAccess })}
+            onClick={handleClick}
+          >
             {name}
             {hasAccess && (
               <Pencil className="text-muted-foreground ml-2 inline h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />

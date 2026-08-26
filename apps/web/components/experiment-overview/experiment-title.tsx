@@ -51,6 +51,7 @@ export function ExperimentTitle({
       onSave={handleSave}
       isPending={isUpdating}
       icon={<Leaf className="h-6 w-6" />}
+      headingLevel={1}
     />
   );
 }

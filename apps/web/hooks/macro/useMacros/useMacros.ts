@@ -4,6 +4,7 @@ import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef } from "react";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
+import { listItems } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
 
@@ -64,23 +65,27 @@ export function useMacros({
     }),
   );
 
+  // Narrowed to the array shape: this hook sends no `page`, so the response is
+  // always the bare list. Deletable once the caller migrates to the envelope.
+  const items = query.data ? listItems(query.data) : undefined;
+
   // Auto-switch to "all" if user has no macros of their own on initial load
   const hasAutoSwitched = useRef(false);
   useEffect(() => {
     if (
       !hasAutoSwitched.current &&
       filter === "my" &&
-      query.data?.length === 0 &&
+      items?.length === 0 &&
       !debouncedSearch &&
       !language
     ) {
       hasAutoSwitched.current = true;
       setFilter("all");
     }
-  }, [filter, query.data, setFilter, debouncedSearch, language]);
+  }, [filter, items, setFilter, debouncedSearch, language]);
 
   return {
-    data: query.data,
+    data: items,
     isLoading: query.isLoading,
     error: query.error,
     filter,

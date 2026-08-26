@@ -13,6 +13,7 @@ function release(overrides: Record<string, unknown> = {}) {
     tag_name: "v1.3.0",
     name: "Spring release",
     body: "- fixes",
+    body_html: "<ul><li>fixes</li></ul>",
     draft: false,
     prerelease: false,
     published_at: "2026-08-01T10:00:00Z",
@@ -70,7 +71,7 @@ describe("GithubReleasesService", () => {
         publishedAt: "2026-08-01T10:00:00.000Z",
         prerelease: false,
         latest: true,
-        notes: "- fixes",
+        notesHtml: "<ul><li>fixes</li></ul>",
         releaseUrl: `https://github.com/${REPOSITORY}/releases/tag/v1.3.0`,
         assets: [
           {

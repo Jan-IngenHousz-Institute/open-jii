@@ -45,7 +45,7 @@ describe("DeviceOnboardingPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("iot.onboarding.currentEmpty")).toBeInTheDocument();
+    expect(await screen.findByText("iot.onboarding.experimentsTitle")).toBeInTheDocument();
   });
 
   it("sends a mobile device back to the overview, the app manages its own config", async () => {

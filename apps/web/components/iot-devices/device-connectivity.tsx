@@ -47,7 +47,7 @@ export function ConnectivityDot({ connectivity, className }: ConnectivityDotProp
     <span
       className={cn("text-muted-foreground inline-flex items-center gap-1.5 text-xs", className)}
     >
-      <span className="bg-muted-foreground/40 h-2 w-2 shrink-0 rounded-full" />
+      <span className="bg-border h-2 w-2 shrink-0 rounded-full" />
       {t("iot.devices.connectivity.disconnected")}
     </span>
   );

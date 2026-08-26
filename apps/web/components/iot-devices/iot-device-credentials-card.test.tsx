@@ -156,7 +156,7 @@ describe("IotDeviceCredentialsCard", () => {
     expect(screen.getByText("iot.devices.credentials.rotatingDescription")).toBeInTheDocument();
   });
 
-  it("dismisses the credential dialog when it is closed", async () => {
+  it("guards the close while nothing was downloaded, then dismisses", async () => {
     const user = userEvent.setup();
     server.mount(contract.iot.issueIotCredentials, { status: 201, body: CERT });
     render(<IotDeviceCredentialsCard device={createIotDevice({ status: "pending" })} />);
@@ -164,7 +164,12 @@ describe("IotDeviceCredentialsCard", () => {
     await user.click(screen.getByRole("button", { name: "iot.devices.credentials.issue" }));
     await screen.findByText("iot.devices.credentials.dialogTitle");
 
+    // The private key is not stored; an untouched bundle does not close silently.
     await user.click(screen.getByRole("button", { name: "common.close" }));
+    await screen.findByText("iot.devices.credentials.closeUnsavedTitle");
+    await user.click(
+      screen.getByRole("button", { name: "iot.devices.credentials.closeUnsavedConfirm" }),
+    );
 
     await waitFor(() => {
       expect(screen.queryByText("iot.devices.credentials.dialogTitle")).not.toBeInTheDocument();

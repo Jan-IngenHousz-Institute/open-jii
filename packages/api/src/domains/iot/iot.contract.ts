@@ -15,6 +15,10 @@ import {
   zMonitoringRangeQuery,
   zIotDeviceList,
   zIotDevicePathParam,
+  zIotFleetMonitoring,
+  zIotFleetMonitoringQuery,
+  zDeviceObservedExperiments,
+  zObservedExperimentsQuery,
   zIotUploadUrl,
   zEnsureMobileDeviceBody,
   zIotUploadUrlRequest,
@@ -52,6 +56,13 @@ export const iotContract = {
   listIotDevices: oc
     .route({ method: "GET", path: "/api/v1/devices", successStatus: 200 })
     .output(zIotDeviceList),
+  // Fleet-scoped warehouse facts for the devices overview. The static path
+  // segment must be registered before GET /devices/{deviceId} so it can never
+  // be read as a device id.
+  getIotFleetMonitoring: oc
+    .route({ method: "GET", path: "/api/v1/devices/monitoring", successStatus: 200 })
+    .input(zIotFleetMonitoringQuery)
+    .output(zIotFleetMonitoring),
   registerIotDevice: oc
     .route({ method: "POST", path: "/api/v1/devices", successStatus: 201 })
     .input(zRegisterIotDeviceBody)
@@ -123,4 +134,15 @@ export const iotContract = {
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}/experiments", successStatus: 200 })
     .input(zIotDevicePathParam)
     .output(zDeviceExperimentList),
+  // The same resource through the warehouse's eyes: what the device's stored
+  // rows claim it fed, windowed. Separate from the binding list above so a
+  // cheap relationship read never waits on a warehouse scan.
+  listDeviceObservedExperiments: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/devices/{deviceId}/experiments/observed",
+      successStatus: 200,
+    })
+    .input(zObservedExperimentsQuery)
+    .output(zDeviceObservedExperiments),
 };

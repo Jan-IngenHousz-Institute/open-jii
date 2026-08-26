@@ -3,6 +3,8 @@ export interface GithubReleasePayload {
   tag_name: string;
   name: string | null;
   body: string | null;
+  /** GitHub's own sanitized rendering of `body`; present with the full media type. */
+  body_html?: string | null;
   draft: boolean;
   prerelease: boolean;
   published_at: string | null;

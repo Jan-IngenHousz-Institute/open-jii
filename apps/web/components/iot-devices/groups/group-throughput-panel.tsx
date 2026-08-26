@@ -1,5 +1,6 @@
 "use client";
 
+import { BarChart3 } from "lucide-react";
 import { useState } from "react";
 
 import type { IotDeviceGroupThroughputBucket } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
@@ -75,7 +76,7 @@ export function GroupThroughputPanel({
   );
 
   return (
-    <div className="space-y-3">
+    <div className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-muted-foreground text-sm">
           {t("iot.devices.monitoring.throughputTotal", { count: total })}
@@ -84,9 +85,14 @@ export function GroupThroughputPanel({
       </div>
 
       {total === 0 ? (
-        <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-          {t("iot.devices.monitoring.noMeasurements")}
-        </p>
+        <div className="flex min-h-64 flex-1 flex-col items-center justify-center gap-3 text-center">
+          <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
+            <BarChart3 className="size-6" aria-hidden />
+          </div>
+          <p className="text-muted-foreground text-sm">
+            {t("iot.devices.monitoring.noMeasurements")}
+          </p>
+        </div>
       ) : view === "chart" ? (
         <div className="h-64 w-full">
           <BarChart

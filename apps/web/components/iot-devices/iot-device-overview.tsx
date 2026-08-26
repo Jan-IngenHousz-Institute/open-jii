@@ -1,149 +1,43 @@
 "use client";
 
-import { SettingsCard } from "@/components/shared/settings-card";
-import { useDeleteIotDevice } from "@/hooks/iot/useDeleteIotDevice/useDeleteIotDevice";
-import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
-import {
-  presentDevice,
-  resolveDevicePrimaryLabel,
-  resolveDeviceRoleLabels,
-} from "@/util/device-presentation";
-import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { Loader2, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
+import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 
 import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@repo/ui/components/alert-dialog";
-import { Button } from "@repo/ui/components/button";
-import { toast } from "@repo/ui/hooks/use-toast";
 
-import { MetaField } from "../experiment-dashboards/meta-field";
-import { useFormatLastSeen } from "./device-connectivity";
+import { DeviceAboutCard } from "./device-about-card";
+import { deviceNextAction } from "./device-next-action";
+import { DeviceNextActionChip } from "./device-next-action-chip";
+import { DeviceOverviewCards } from "./device-overview-cards";
 
-/** Device registry metadata and its manage-gated danger zone. */
+/** The stitched hub: summary cards into the neighbouring tabs. Identity
+ * facts live in the page header's meta strip, whole-device actions in its
+ * overflow menu; this tab is about where to go next. */
 export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
   const { t } = useTranslation("iot");
-  const { t: tCommon } = useTranslation("common");
-  const locale = useLocale();
-  const router = useRouter();
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const { mutate: deleteDevice, isPending: isDeleting } = useDeleteIotDevice({
-    onSuccess: () => {
-      toast({ title: t("iot.devices.remove.success") });
-      router.push(`/${locale}/platform/devices`);
-    },
-  });
-
-  const present = presentDevice({
-    name: device.name,
-    family: device.deviceType,
-    id: device.serialNumber,
-  });
-  const displayName = resolveDevicePrimaryLabel(present, t);
-  const roleLabels = resolveDeviceRoleLabels(present, t);
-  const formatLastSeen = useFormatLastSeen();
-
-  const connectivityLabel = (connectivity: IotDeviceDetail["connectivity"]) => {
-    if (connectivity === null) {
-      return t("iot.devices.connectivity.unknown");
-    }
-    return connectivity.connected
-      ? t("iot.devices.connectivity.connected")
-      : t("iot.devices.connectivity.disconnected");
-  };
+  const { data: boundExperiments } = useDeviceExperiments(device.id);
+  const nextAction = deviceNextAction(device, boundExperiments?.length ?? null);
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-start gap-10">
-        <MetaField label={t("iot.devices.detail.meta.serial")} value={device.serialNumber} />
-        <MetaField
-          label={t("iot.devices.detail.meta.type")}
-          value={getSensorFamilyLabel(device.deviceType)}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <TabBodyHeader
+          title={t("iot.devices.detail.overview.title")}
+          description={t("iot.devices.detail.overview.description")}
         />
-        {roleLabels.length > 0 && (
-          <MetaField label={t("iot.devices.detail.meta.role")} value={roleLabels.join(" · ")} />
-        )}
-        <MetaField
-          label={t("iot.devices.detail.meta.status")}
-          value={t(`iot.devices.status.${device.status}`)}
-        />
-        <MetaField
-          label={t("iot.devices.detail.meta.registered")}
-          value={formatDate(device.createdAt)}
-        />
-        <MetaField label={t("iot.devices.detail.meta.thingName")} value={device.thingName} />
-        <MetaField
-          label={t("iot.devices.detail.meta.connectivity")}
-          value={connectivityLabel(device.connectivity)}
-        />
-        <MetaField
-          label={t("iot.devices.detail.meta.lastSeen")}
-          value={formatLastSeen(device.connectivity)}
-        />
+        {nextAction !== null && <DeviceNextActionChip deviceId={device.id} action={nextAction} />}
       </div>
 
-      {device.capabilities.canManage && (
-        <SettingsCard
-          title={t("iot.devices.detail.dangerZone.title")}
-          contentClassName="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div>
-            <p className="text-sm font-medium">{t("iot.devices.detail.dangerZone.deleteLabel")}</p>
-            <p className="text-muted-foreground text-sm">
-              {t("iot.devices.detail.dangerZone.deleteDescription")}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 shrink-0"
-            onClick={() => setConfirmingDelete(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            {t("iot.devices.actions.delete")}
-          </Button>
-        </SettingsCard>
-      )}
-
-      <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("iot.devices.remove.title")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("iot.devices.remove.confirm", { name: displayName })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>{tCommon("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isDeleting}
-              onClick={(e) => {
-                e.preventDefault();
-                deleteDevice({ deviceId: device.id });
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                t("iot.devices.actions.delete")
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0">
+          {/* The component hides the certificate and onboarding cards for phones
+              itself; activity applies to every family. */}
+          <DeviceOverviewCards device={device} />
+        </div>
+        <DeviceAboutCard device={device} />
+      </div>
     </div>
   );
 }

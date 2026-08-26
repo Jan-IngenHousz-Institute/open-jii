@@ -1,7 +1,6 @@
 "use client";
 
 import { ConnectionTypeSelector } from "@/components/iot/iot-connection-type-selector";
-import { SettingsCard } from "@/components/shared/settings-card";
 import { sensorFamilyToDeviceType } from "@/hooks/iot/device-type-mapping";
 import { useAutoConnectionType } from "@/hooks/iot/useAutoConnectionType";
 import { useIotBrowserSupport } from "@/hooks/iot/useIotBrowserSupport";
@@ -109,35 +108,18 @@ export function DeviceConfigDelivery({
   };
 
   return (
-    <SettingsCard
-      title={t("iot.onboarding.deliveryTitle")}
-      description={t("iot.onboarding.deliveryDescription")}
-      contentClassName="space-y-4"
-    >
-      <div className="bg-muted/50 space-y-2 rounded-lg p-3">
-        <p className="text-xs font-medium">{t("iot.onboarding.endpointLabel")}</p>
-        <p className="text-muted-foreground break-all font-mono text-xs">{config.endpoint}</p>
-
-        <p className="pt-1 text-xs font-medium">{t("iot.onboarding.topicsLabel")}</p>
-        <ul className="space-y-1">
-          {config.experiments.map((experiment) => (
-            <li key={experiment.experimentId} className="text-muted-foreground font-mono text-xs">
-              {experiment.topicPrefix}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {supportsPush && !isConnected && (
+    <div className="space-y-3">
+      {supportsPush && (
         <ConnectionTypeSelector
           connectionType={connectionType}
           onConnectionTypeChange={handleConnectionTypeChange}
           browserSupport={browserSupport}
+          disabled={isConnected || isConnecting}
         />
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onClick={handleDownload} disabled={disabled}>
+        <Button className="w-full" onClick={handleDownload} disabled={disabled}>
           <Download className="mr-1.5 h-4 w-4" />
           {t("iot.onboarding.download")}
         </Button>
@@ -180,6 +162,6 @@ export function DeviceConfigDelivery({
       )}
 
       {!supportsPush && <p className="text-muted-foreground text-xs">{t(downloadOnlyNoteKey)}</p>}
-    </SettingsCard>
+    </div>
   );
 }

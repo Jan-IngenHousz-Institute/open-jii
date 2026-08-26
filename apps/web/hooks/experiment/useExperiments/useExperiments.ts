@@ -4,6 +4,7 @@ import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
 import type { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import { listItems } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
 
@@ -79,9 +80,13 @@ export const useExperiments = ({
     }),
   );
 
+  // Narrowed to the array shape: this hook sends no `page`, so the response is
+  // always the bare list. Deletable once the caller migrates to the envelope.
+  const items = data ? listItems(data) : undefined;
+
   // Return query result with filter, status, and search controls
   return {
-    data,
+    data: items,
     filter,
     setFilter,
     status,

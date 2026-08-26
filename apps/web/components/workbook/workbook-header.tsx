@@ -4,8 +4,9 @@ import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicat
 import { orpcClient } from "@/lib/orpc";
 import { decodeBase64 } from "@/util/base64";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
-import { ChevronDown, Circle, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
+import { ChevronDown, GitBranch, Play, Square, Trash2, Usb } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { ConnectionStatusCluster } from "~/components/iot/connection-status-cluster";
 import { sensorFamilyToDeviceType } from "~/hooks/iot/device-type-mapping";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
@@ -141,7 +142,10 @@ export function WorkbookHeader({
       id: device.stableId,
     });
     const primary = resolveDevicePrimaryLabel(presentation, t);
-    const ordinal = device.ordinal != null ? `Device #${device.ordinal}` : null;
+    const ordinal =
+      device.ordinal != null
+        ? t("iot.workbookBar.deviceOrdinal", { ordinal: device.ordinal })
+        : null;
     const identitySecondary =
       presentation.id ?? ordinal ?? (device.label !== primary ? device.label : null);
     const secondaryParts = [
@@ -169,13 +173,13 @@ export function WorkbookHeader({
     ? null
     : connectionType === "serial"
       ? browserSupport.serialReason === "browser"
-        ? "Your browser does not support Web Serial. Use Chrome or Edge."
-        : "This device does not support serial."
+        ? t("iot.protocolRunner.webSerialNotSupported")
+        : t("iot.protocolRunner.deviceNoSerial")
       : browserSupport.bluetoothReason === "browser"
-        ? "Your browser does not support Web Bluetooth. Use Chrome or Edge."
+        ? t("iot.protocolRunner.webBluetoothNotSupported")
         : bluetoothClassicOnly
-          ? "This device uses Bluetooth Classic, which Web Bluetooth cannot access. Connect over USB/serial instead."
-          : "This device does not support Bluetooth Low Energy (BLE).";
+          ? t("iot.protocolRunner.bluetoothClassicHint")
+          : t("iot.protocolRunner.deviceNoBLE");
 
   const handleExportJSON = useCallback(() => {
     const workbook = {
@@ -296,11 +300,11 @@ export function WorkbookHeader({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="serial">USB/serial</SelectItem>
+              <SelectItem value="serial">{t("iot.protocolRunner.serial")}</SelectItem>
               <SelectItem value="bluetooth" disabled={sensorFamily === "multispeq"}>
-                Bluetooth Low Energy (BLE)
+                {t("iot.protocolRunner.bluetooth")}
               </SelectItem>
-              {showMockDevices && <SelectItem value="mock">Mock</SelectItem>}
+              {showMockDevices && <SelectItem value="mock">{t("iot.workbookBar.mock")}</SelectItem>}
             </SelectContent>
           </Select>
         )}
@@ -318,12 +322,23 @@ export function WorkbookHeader({
                 (isConnecting || (!isConnected && !transportSupported)) &&
                   "cursor-not-allowed opacity-50",
               )}
+              style={
+                isConnected
+                  ? { background: "var(--muted)", borderRadius: 8, color: "var(--foreground)" }
+                  : {
+                      background: "var(--primary)",
+                      borderRadius: 8,
+                      color: "var(--primary-foreground)",
+                    }
+              }
               onClick={onConnect}
               disabled={isConnecting || !transportSupported}
               data-testid="connect-device"
             >
               <Usb className="size-4" />
-              <span className="hidden xl:inline">{isConnected ? "Add device" : "Connect"}</span>
+              <span className="hidden xl:inline">
+                {isConnected ? t("iot.workbookBar.addDevice") : t("iot.workbookBar.connect")}
+              </span>
             </Button>
           </TooltipTrigger>
           {transportTooltip && (
@@ -334,72 +349,13 @@ export function WorkbookHeader({
         </Tooltip>
       </TooltipProvider>
 
-      <div className="flex min-w-0 items-center gap-1.5">
-        <Circle
-          className={cn(
-            "size-2 shrink-0",
-            isConnected
-              ? "fill-status-active-foreground text-status-active-foreground"
-              : isConnecting
-                ? "fill-status-stale-foreground text-status-stale-foreground animate-pulse"
-                : "fill-muted-foreground/40 text-muted-foreground/40",
-          )}
-        />
-        {isConnected ? (
-          // One compact trigger regardless of device count; the dropdown
-          // lists every connected device with per-device disconnect.
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-foreground min-w-0 gap-1 font-normal"
-                data-testid="device-menu-trigger"
-              >
-                <span className="truncate">
-                  {presentedDevices.length > 1
-                    ? `${presentedDevices.length} devices`
-                    : (presentedDevices[0]?.primary ?? "Connected")}
-                </span>
-                {presentedDevices.length === 1 && presentedDevices[0]?.secondary && (
-                  <span className="text-muted-foreground hidden truncate text-[11px] xl:inline">
-                    · {presentedDevices[0].secondary}
-                  </span>
-                )}
-                <ChevronDown className="size-3 shrink-0" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {presentedDevices.map((device) => (
-                <DropdownMenuItem
-                  key={device.id}
-                  data-testid="device-menu-item"
-                  aria-label={`Disconnect ${device.primary}`}
-                  className="flex items-center justify-between gap-4"
-                  onSelect={() => onDisconnectDevice?.(device.id)}
-                >
-                  <span className="flex flex-col">
-                    <span>{device.primary}</span>
-                    {device.secondary && device.secondary !== device.primary && (
-                      <span className="text-muted-foreground text-[10px]">{device.secondary}</span>
-                    )}
-                  </span>
-                  <span className="text-muted-foreground text-[11px]">Disconnect</span>
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem data-testid="disconnect-all" onSelect={onDisconnect}>
-                Disconnect all
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <span className="text-muted-foreground hidden text-[12px] leading-[18px] xl:inline xl:text-[13px] xl:leading-[21px]">
-            {isConnecting ? "Connecting..." : "Disconnected"}
-          </span>
-        )}
-      </div>
+      <ConnectionStatusCluster
+        isConnected={isConnected}
+        isConnecting={isConnecting}
+        devices={presentedDevices}
+        onDisconnectDevice={onDisconnectDevice}
+        onDisconnectAll={onDisconnect}
+      />
 
       <div className="flex-1" />
 
@@ -407,12 +363,14 @@ export function WorkbookHeader({
         <Button
           type="button"
           variant="secondary"
-          size="sm"
-          className={cn("shrink-0", flowchartOpen && "bg-accent text-accent-foreground")}
+          className={cn(
+            "h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
+            flowchartOpen ? "bg-secondary text-primary" : "bg-muted text-foreground",
+          )}
           onClick={onToggleFlowchart}
         >
           <GitBranch className="size-4" />
-          <span className="hidden xl:inline">Flow</span>
+          <span className="hidden xl:inline">{t("iot.workbookBar.flow")}</span>
         </Button>
       )}
 
@@ -427,22 +385,28 @@ export function WorkbookHeader({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="outline" size="sm" className="shrink-0 font-normal">
-            <span className="hidden xl:inline">Export</span>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-[34px] shrink-0 gap-1.5 rounded-xl px-2.5 text-[12px] font-normal leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
+          >
+            <span className="hidden xl:inline">{t("iot.workbookBar.export")}</span>
             <ChevronDown className="size-3 xl:size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuItem onClick={handleExportJSON}>Export as JSON</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleExportJSON}>
+            {t("iot.workbookBar.exportJson")}
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => void handleExportProtocol()} disabled={!hasProtocols}>
-            Export Protocol Only
+            {t("iot.workbookBar.exportProtocol")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => void handleExportMacro()} disabled={!hasMacros}>
-            Export Macro Only
+            {t("iot.workbookBar.exportMacro")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleDownloadWorkbook}>
-            Download Workbook (.jii)
+            {t("iot.workbookBar.downloadWorkbook")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -450,13 +414,15 @@ export function WorkbookHeader({
       <Button
         type="button"
         variant="secondary"
-        size="sm"
-        className="shrink-0"
+        className={cn(
+          "bg-muted text-foreground h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
+          !hasOutputs && "cursor-not-allowed opacity-50",
+        )}
         onClick={onClearOutputs}
         disabled={!hasOutputs}
       >
         <Trash2 className="size-4" />
-        <span className="hidden xl:inline">Clear all</span>
+        <span className="hidden xl:inline">{t("iot.workbookBar.clearAll")}</span>
       </Button>
 
       {/* Only the workbook creator can run cells; the backend rejects updates
@@ -466,23 +432,24 @@ export function WorkbookHeader({
           <Button
             type="button"
             variant="destructive"
-            size="sm"
-            className="shrink-0"
+            className="h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
             onClick={onStopExecution}
           >
             <Square className="size-4 fill-current" />
-            <span className="hidden xl:inline">Stop</span>
+            <span className="hidden xl:inline">{t("iot.workbookBar.stop")}</span>
           </Button>
         ) : (
           <Button
             type="button"
-            size="sm"
-            className="shrink-0"
+            className={cn(
+              "h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
+              cells.length === 0 && "cursor-not-allowed opacity-50",
+            )}
             onClick={onRunAll}
             disabled={cells.length === 0}
           >
             <Play className="size-4 fill-current" />
-            <span className="hidden xl:inline">Run all</span>
+            <span className="hidden xl:inline">{t("iot.workbookBar.runAll")}</span>
           </Button>
         ))}
     </div>

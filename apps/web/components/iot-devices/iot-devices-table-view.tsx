@@ -8,8 +8,8 @@ import { useMemo, useState } from "react";
 import type { IotDeviceStatus, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { Input } from "@repo/ui/components/input";
-import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import {
   Pagination,
   PaginationContent,
@@ -24,6 +24,12 @@ import { IotDevicesTable } from "./iot-devices-table";
 
 const PAGE_SIZE = 25;
 type StatusFilter = "all" | IotDeviceStatus;
+
+// One-of chips in the group monitoring filter's language, not a tab strip:
+// a filter narrows the same list, it does not navigate. Rotating and its kin
+// are transient states, not filter axes, so the chips stay at these four.
+const CHIP_STATUSES = ["all", "active", "pending", "revoked"] as const;
+type ChipStatus = (typeof CHIP_STATUSES)[number];
 
 export function IotDevicesTableView() {
   const { t } = useTranslation("iot");
@@ -63,8 +69,8 @@ export function IotDevicesTableView() {
   const currentPage = Math.min(page, totalPages);
   const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const changeStatus = (value: string) => {
-    setStatus(value as StatusFilter);
+  const changeStatus = (value: StatusFilter) => {
+    setStatus(value);
     setPage(1);
   };
   const changeSearch = (value: string) => {
@@ -77,6 +83,27 @@ export function IotDevicesTableView() {
     setPage(1);
   };
 
+  function renderStatusChip(chipStatus: ChipStatus) {
+    const isActive = status === chipStatus;
+    const label =
+      chipStatus === "all" ? t("iot.devices.tabs.all") : t(`iot.devices.status.${chipStatus}`);
+
+    return (
+      <Button
+        key={chipStatus}
+        size="sm"
+        variant={isActive ? "default" : "outline"}
+        className="h-8"
+        onClick={() => {
+          changeStatus(chipStatus);
+        }}
+      >
+        {label}
+        <span className="ml-1.5 tabular-nums opacity-70">{counts[chipStatus]}</span>
+      </Button>
+    );
+  }
+
   if (isError) {
     return <ErrorDisplay error={error} title={t("iot.devices.loadError")} />;
   }
@@ -88,22 +115,7 @@ export function IotDevicesTableView() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <NavTabs value={status} onValueChange={changeStatus}>
-          <NavTabsList>
-            <NavTabsTrigger value="all" count={counts.all}>
-              {t("iot.devices.tabs.all")}
-            </NavTabsTrigger>
-            <NavTabsTrigger value="active" count={counts.active}>
-              {t("iot.devices.status.active")}
-            </NavTabsTrigger>
-            <NavTabsTrigger value="pending" count={counts.pending}>
-              {t("iot.devices.status.pending")}
-            </NavTabsTrigger>
-            <NavTabsTrigger value="revoked" count={counts.revoked}>
-              {t("iot.devices.status.revoked")}
-            </NavTabsTrigger>
-          </NavTabsList>
-        </NavTabs>
+        <div className="flex flex-wrap gap-1.5">{CHIP_STATUSES.map(renderStatusChip)}</div>
         <div className="relative w-full md:w-[280px]">
           <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
           <Input
@@ -116,13 +128,15 @@ export function IotDevicesTableView() {
       </div>
 
       {!isLoading && filtered.length === 0 ? (
-        <div className="border-border text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">
-          <p className="text-foreground font-medium">{t("iot.devices.zeroResults.title")}</p>
-          <p className="mt-1">{t("iot.devices.zeroResults.description")}</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
-            {t("iot.devices.zeroResults.clear")}
-          </Button>
-        </div>
+        <EmptyState
+          title={t("iot.devices.zeroResults.title")}
+          description={t("iot.devices.zeroResults.description")}
+          action={
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              {t("iot.devices.zeroResults.clear")}
+            </Button>
+          }
+        />
       ) : (
         <>
           <IotDevicesTable devices={pageRows} isLoading={isLoading} />

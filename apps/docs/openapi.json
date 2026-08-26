@@ -274,6 +274,9 @@
                         }
                       ]
                     },
+                    "membersCount": {
+                      "type": "integer"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -426,7 +429,21 @@
                 "member"
               ],
               "type": "string",
-              "description": "Filter experiments by relationship to the user"
+              "description": "Deprecated alias for scope=related"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "related",
+                "all"
+              ],
+              "type": "string",
+              "description": "Which slice of the accessible set to return"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -456,6 +473,29 @@
             },
             "allowEmptyValue": true,
             "allowReserved": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Rows per page"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
           }
         ],
         "responses": {
@@ -464,253 +504,536 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "description": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "status": {
-                        "enum": [
-                          "active",
-                          "stale",
-                          "archived",
-                          "published"
-                        ],
-                        "type": "string"
-                      },
-                      "visibility": {
-                        "enum": [
-                          "private",
-                          "public"
-                        ],
-                        "type": "string"
-                      },
-                      "embargoUntil": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "anonymizeContributors": {
-                        "type": "boolean"
-                      },
-                      "workbookId": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "workbookVersionId": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "organizationId": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "organizationName": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "createdBy": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "ownerFirstName": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "ownerLastName": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "updatedAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "data": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
                         "type": "object",
                         "properties": {
-                          "columns": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "status": {
+                            "enum": [
+                              "active",
+                              "stale",
+                              "archived",
+                              "published"
+                            ],
+                            "type": "string"
+                          },
+                          "visibility": {
+                            "enum": [
+                              "private",
+                              "public"
+                            ],
+                            "type": "string"
+                          },
+                          "embargoUntil": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "anonymizeContributors": {
+                            "type": "boolean"
+                          },
+                          "workbookId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "workbookVersionId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "organizationId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "organizationName": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdBy": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ownerFirstName": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "ownerLastName": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "membersCount": {
+                            "type": "integer"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "data": {
+                            "type": "object",
+                            "properties": {
+                              "columns": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "type_name": {
+                                      "type": "string"
+                                    },
+                                    "type_text": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "type_name",
+                                    "type_text"
+                                  ]
+                                }
+                              },
+                              "rows": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {},
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              "totalRows": {
+                                "type": "integer"
+                              },
+                              "truncated": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "columns",
+                              "rows",
+                              "totalRows",
+                              "truncated"
+                            ]
+                          },
+                          "locations": {
                             "type": "array",
                             "items": {
                               "type": "object",
                               "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
                                 "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 255
+                                },
+                                "latitude": {
+                                  "type": "number",
+                                  "minimum": -90,
+                                  "maximum": 90
+                                },
+                                "longitude": {
+                                  "type": "number",
+                                  "minimum": -180,
+                                  "maximum": 180
+                                },
+                                "country": {
                                   "type": "string"
                                 },
-                                "type_name": {
+                                "region": {
                                   "type": "string"
                                 },
-                                "type_text": {
+                                "municipality": {
                                   "type": "string"
+                                },
+                                "postalCode": {
+                                  "type": "string"
+                                },
+                                "addressLabel": {
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
                                 }
                               },
                               "required": [
+                                "id",
                                 "name",
-                                "type_name",
-                                "type_text"
+                                "latitude",
+                                "longitude",
+                                "createdAt",
+                                "updatedAt"
                               ]
                             }
-                          },
-                          "rows": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "additionalProperties": {
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "status",
+                          "visibility",
+                          "embargoUntil",
+                          "anonymizeContributors",
+                          "workbookId",
+                          "workbookVersionId",
+                          "organizationId",
+                          "createdBy",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
                                 "anyOf": [
-                                  {},
+                                  {
+                                    "type": "string"
+                                  },
                                   {
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "status": {
+                                "enum": [
+                                  "active",
+                                  "stale",
+                                  "archived",
+                                  "published"
+                                ],
+                                "type": "string"
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "embargoUntil": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "anonymizeContributors": {
+                                "type": "boolean"
+                              },
+                              "workbookId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "workbookVersionId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "organizationId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "organizationName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "createdBy": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "ownerFirstName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "ownerLastName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "membersCount": {
+                                "type": "integer"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "data": {
+                                "type": "object",
+                                "properties": {
+                                  "columns": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": "string"
+                                        },
+                                        "type_name": {
+                                          "type": "string"
+                                        },
+                                        "type_text": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "name",
+                                        "type_name",
+                                        "type_text"
+                                      ]
+                                    }
+                                  },
+                                  "rows": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {},
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "totalRows": {
+                                    "type": "integer"
+                                  },
+                                  "truncated": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "columns",
+                                  "rows",
+                                  "totalRows",
+                                  "truncated"
+                                ]
+                              },
+                              "locations": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 255
+                                    },
+                                    "latitude": {
+                                      "type": "number",
+                                      "minimum": -90,
+                                      "maximum": 90
+                                    },
+                                    "longitude": {
+                                      "type": "number",
+                                      "minimum": -180,
+                                      "maximum": 180
+                                    },
+                                    "country": {
+                                      "type": "string"
+                                    },
+                                    "region": {
+                                      "type": "string"
+                                    },
+                                    "municipality": {
+                                      "type": "string"
+                                    },
+                                    "postalCode": {
+                                      "type": "string"
+                                    },
+                                    "addressLabel": {
+                                      "type": "string"
+                                    },
+                                    "createdAt": {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    },
+                                    "updatedAt": {
+                                      "type": "string",
+                                      "format": "date-time"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name",
+                                    "latitude",
+                                    "longitude",
+                                    "createdAt",
+                                    "updatedAt"
+                                  ]
+                                }
                               }
-                            }
-                          },
-                          "totalRows": {
-                            "type": "integer"
-                          },
-                          "truncated": {
-                            "type": "boolean"
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "status",
+                              "visibility",
+                              "embargoUntil",
+                              "anonymizeContributors",
+                              "workbookId",
+                              "workbookVersionId",
+                              "organizationId",
+                              "createdBy",
+                              "createdAt",
+                              "updatedAt"
+                            ]
                           }
                         },
-                        "required": [
-                          "columns",
-                          "rows",
-                          "totalRows",
-                          "truncated"
-                        ]
-                      },
-                      "locations": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "string",
-                              "format": "uuid"
-                            },
-                            "name": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 255
-                            },
-                            "latitude": {
-                              "type": "number",
-                              "minimum": -90,
-                              "maximum": 90
-                            },
-                            "longitude": {
-                              "type": "number",
-                              "minimum": -180,
-                              "maximum": 180
-                            },
-                            "country": {
-                              "type": "string"
-                            },
-                            "region": {
-                              "type": "string"
-                            },
-                            "municipality": {
-                              "type": "string"
-                            },
-                            "postalCode": {
-                              "type": "string"
-                            },
-                            "addressLabel": {
-                              "type": "string"
-                            },
-                            "createdAt": {
-                              "type": "string",
-                              "format": "date-time"
-                            },
-                            "updatedAt": {
-                              "type": "string",
-                              "format": "date-time"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "name",
-                            "latitude",
-                            "longitude",
-                            "createdAt",
-                            "updatedAt"
-                          ]
+                        "page": {
+                          "type": "integer"
+                        },
+                        "pageSize": {
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "type": "integer"
+                        },
+                        "totalCount": {
+                          "type": "integer"
                         }
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "name",
-                      "description",
-                      "status",
-                      "visibility",
-                      "embargoUntil",
-                      "anonymizeContributors",
-                      "workbookId",
-                      "workbookVersionId",
-                      "organizationId",
-                      "createdBy",
-                      "createdAt",
-                      "updatedAt"
-                    ]
-                  }
+                      },
+                      "required": [
+                        "items",
+                        "page",
+                        "pageSize",
+                        "totalPages",
+                        "totalCount"
+                      ]
+                    }
+                  ]
                 }
               }
             }
@@ -847,6 +1170,9 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "membersCount": {
+                      "type": "integer"
                     },
                     "createdAt": {
                       "type": "string",
@@ -1203,6 +1529,9 @@
                         }
                       ]
                     },
+                    "membersCount": {
+                      "type": "integer"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -1511,6 +1840,9 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "membersCount": {
+                          "type": "integer"
                         },
                         "createdAt": {
                           "type": "string",
@@ -6205,6 +6537,9 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "membersCount": {
+                      "type": "integer"
                     },
                     "createdAt": {
                       "type": "string",
@@ -13641,6 +13976,193 @@
         }
       }
     },
+    "/api/v1/devices/monitoring": {
+      "get": {
+        "operationId": "iot.getIotFleetMonitoring",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "hour",
+                "day"
+              ],
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "devices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "deviceId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "lastDataAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "deviceId",
+                          "lastDataAt"
+                        ]
+                      }
+                    },
+                    "throughput": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "bucketStart": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "deviceId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "bucketStart",
+                          "deviceId",
+                          "count"
+                        ]
+                      }
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "deviceId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "eventType": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "eventTimestamp": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "disconnectReason": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "deviceId",
+                          "eventType",
+                          "eventTimestamp",
+                          "disconnectReason"
+                        ]
+                      }
+                    },
+                    "pipelineUnavailable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "devices",
+                    "throughput",
+                    "events",
+                    "pipelineUnavailable"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices/bulk": {
       "post": {
         "operationId": "iot.bulkRegisterIotDevices",
@@ -15392,6 +15914,99 @@
         }
       }
     },
+    "/api/v1/devices/{deviceId}/experiments/observed": {
+      "get": {
+        "operationId": "iot.listDeviceObservedExperiments",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "experiments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "experimentId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "count": {
+                            "type": "integer"
+                          },
+                          "lastAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "experimentId",
+                          "count",
+                          "lastAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "experiments"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/device-groups": {
       "get": {
         "operationId": "iot.listIotDeviceGroups",
@@ -17129,7 +17744,7 @@
                           "latest": {
                             "type": "boolean"
                           },
-                          "notes": {
+                          "notesHtml": {
                             "anyOf": [
                               {
                                 "type": "string"
@@ -17173,7 +17788,7 @@
                           "publishedAt",
                           "prerelease",
                           "latest",
-                          "notes",
+                          "notesHtml",
                           "releaseUrl",
                           "assets"
                         ]
@@ -17224,7 +17839,45 @@
               "enum": [
                 "my"
               ],
-              "type": "string"
+              "type": "string",
+              "description": "Deprecated alias for scope=related"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "related",
+                "all"
+              ],
+              "type": "string",
+              "description": "Which slice of the accessible set to return"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Rows per page"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -17236,120 +17889,264 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "filename": {
-                        "type": "string"
-                      },
-                      "description": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "language": {
-                        "enum": [
-                          "python",
-                          "r",
-                          "javascript"
-                        ],
-                        "type": "string"
-                      },
-                      "code": {
-                        "type": "string"
-                      },
-                      "sortOrder": {
-                        "anyOf": [
-                          {
-                            "type": "number"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "createdBy": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "createdByName": {
-                        "type": "string"
-                      },
-                      "forkedFrom": {
-                        "anyOf": [
-                          {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
                             "type": "string",
                             "format": "uuid"
                           },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "updatedAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "organizationId": {
-                        "anyOf": [
-                          {
+                          "name": {
+                            "type": "string"
+                          },
+                          "filename": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "language": {
+                            "enum": [
+                              "python",
+                              "r",
+                              "javascript"
+                            ],
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "sortOrder": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdBy": {
                             "type": "string",
                             "format": "uuid"
                           },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "organizationName": {
-                        "anyOf": [
-                          {
+                          "createdByName": {
                             "type": "string"
                           },
-                          {
-                            "type": "null"
+                          "forkedFrom": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "organizationId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "organizationName": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "visibility": {
+                            "enum": [
+                              "private",
+                              "public"
+                            ],
+                            "type": "string"
                           }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "filename",
+                          "description",
+                          "language",
+                          "code",
+                          "createdBy",
+                          "createdAt",
+                          "updatedAt",
+                          "organizationId",
+                          "visibility"
                         ]
-                      },
-                      "visibility": {
-                        "enum": [
-                          "private",
-                          "public"
-                        ],
-                        "type": "string"
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "filename",
-                      "description",
-                      "language",
-                      "code",
-                      "createdBy",
-                      "createdAt",
-                      "updatedAt",
-                      "organizationId",
-                      "visibility"
-                    ]
-                  }
+                    {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "filename": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "language": {
+                                "enum": [
+                                  "python",
+                                  "r",
+                                  "javascript"
+                                ],
+                                "type": "string"
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "sortOrder": {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "createdBy": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "createdByName": {
+                                "type": "string"
+                              },
+                              "forkedFrom": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "organizationId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "organizationName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "filename",
+                              "description",
+                              "language",
+                              "code",
+                              "createdBy",
+                              "createdAt",
+                              "updatedAt",
+                              "organizationId",
+                              "visibility"
+                            ]
+                          }
+                        },
+                        "page": {
+                          "type": "integer"
+                        },
+                        "pageSize": {
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "type": "integer"
+                        },
+                        "totalCount": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "page",
+                        "pageSize",
+                        "totalPages",
+                        "totalCount"
+                      ]
+                    }
+                  ]
                 }
               }
             }
@@ -20260,7 +21057,45 @@
               "enum": [
                 "my"
               ],
-              "type": "string"
+              "type": "string",
+              "description": "Deprecated alias for scope=related"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "related",
+                "all"
+              ],
+              "type": "string",
+              "description": "Which slice of the accessible set to return"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Rows per page"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -20272,116 +21107,256 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "description": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "code": {},
-                      "family": {
-                        "enum": [
-                          "multispeq",
-                          "ambyte",
-                          "minipar",
-                          "generic",
-                          "ambit"
-                        ],
-                        "type": "string"
-                      },
-                      "sortOrder": {
-                        "anyOf": [
-                          {
-                            "type": "number"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "createdBy": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "createdByName": {
-                        "type": "string"
-                      },
-                      "forkedFrom": {
-                        "anyOf": [
-                          {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
                             "type": "string",
                             "format": "uuid"
                           },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "updatedAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "organizationId": {
-                        "anyOf": [
-                          {
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "code": {},
+                          "family": {
+                            "enum": [
+                              "multispeq",
+                              "ambyte",
+                              "minipar",
+                              "generic",
+                              "ambit"
+                            ],
+                            "type": "string"
+                          },
+                          "sortOrder": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdBy": {
                             "type": "string",
                             "format": "uuid"
                           },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "organizationName": {
-                        "anyOf": [
-                          {
+                          "createdByName": {
                             "type": "string"
                           },
-                          {
-                            "type": "null"
+                          "forkedFrom": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "organizationId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "organizationName": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "visibility": {
+                            "enum": [
+                              "private",
+                              "public"
+                            ],
+                            "type": "string"
                           }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "family",
+                          "sortOrder",
+                          "createdBy",
+                          "createdAt",
+                          "updatedAt",
+                          "organizationId",
+                          "visibility"
                         ]
-                      },
-                      "visibility": {
-                        "enum": [
-                          "private",
-                          "public"
-                        ],
-                        "type": "string"
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "description",
-                      "family",
-                      "sortOrder",
-                      "createdBy",
-                      "createdAt",
-                      "updatedAt",
-                      "organizationId",
-                      "visibility"
-                    ]
-                  }
+                    {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "code": {},
+                              "family": {
+                                "enum": [
+                                  "multispeq",
+                                  "ambyte",
+                                  "minipar",
+                                  "generic",
+                                  "ambit"
+                                ],
+                                "type": "string"
+                              },
+                              "sortOrder": {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "createdBy": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "createdByName": {
+                                "type": "string"
+                              },
+                              "forkedFrom": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "organizationId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "organizationName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "family",
+                              "sortOrder",
+                              "createdBy",
+                              "createdAt",
+                              "updatedAt",
+                              "organizationId",
+                              "visibility"
+                            ]
+                          }
+                        },
+                        "page": {
+                          "type": "integer"
+                        },
+                        "pageSize": {
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "type": "integer"
+                        },
+                        "totalCount": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "page",
+                        "pageSize",
+                        "totalPages",
+                        "totalCount"
+                      ]
+                    }
+                  ]
                 }
               }
             }
@@ -24962,7 +25937,45 @@
               "enum": [
                 "my"
               ],
-              "type": "string"
+              "type": "string",
+              "description": "Deprecated alias for scope=related"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "related",
+                "all"
+              ],
+              "type": "string",
+              "description": "Which slice of the accessible set to return"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Rows per page"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -24974,112 +25987,248 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "description": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "metadata": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
                         "type": "object",
-                        "additionalProperties": {}
-                      },
-                      "organizationId": {
-                        "anyOf": [
-                          {
+                        "properties": {
+                          "id": {
                             "type": "string",
                             "format": "uuid"
                           },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "organizationName": {
-                        "anyOf": [
-                          {
+                          "name": {
                             "type": "string"
                           },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "visibility": {
-                        "enum": [
-                          "private",
-                          "public"
-                        ],
-                        "type": "string"
-                      },
-                      "createdBy": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "createdByName": {
-                        "type": "string"
-                      },
-                      "forkedFrom": {
-                        "anyOf": [
-                          {
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "metadata": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          },
+                          "organizationId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "organizationName": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "visibility": {
+                            "enum": [
+                              "private",
+                              "public"
+                            ],
+                            "type": "string"
+                          },
+                          "createdBy": {
                             "type": "string",
                             "format": "uuid"
                           },
-                          {
-                            "type": "null"
+                          "createdByName": {
+                            "type": "string"
+                          },
+                          "forkedFrom": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "isUpgradable": {
+                            "type": "boolean"
+                          },
+                          "experimentCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "cellTypeCounts": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
                           }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "metadata",
+                          "organizationId",
+                          "visibility",
+                          "createdBy",
+                          "createdAt",
+                          "updatedAt"
                         ]
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "updatedAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "isUpgradable": {
-                        "type": "boolean"
-                      },
-                      "experimentCount": {
-                        "type": "integer",
-                        "minimum": 0
-                      },
-                      "cellTypeCounts": {
-                        "type": "object",
-                        "additionalProperties": {
-                          "type": "integer",
-                          "minimum": 0
-                        }
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "description",
-                      "metadata",
-                      "organizationId",
-                      "visibility",
-                      "createdBy",
-                      "createdAt",
-                      "updatedAt"
-                    ]
-                  }
+                    {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "metadata": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "organizationId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "organizationName": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "createdBy": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "createdByName": {
+                                "type": "string"
+                              },
+                              "forkedFrom": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "isUpgradable": {
+                                "type": "boolean"
+                              },
+                              "experimentCount": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "cellTypeCounts": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "metadata",
+                              "organizationId",
+                              "visibility",
+                              "createdBy",
+                              "createdAt",
+                              "updatedAt"
+                            ]
+                          }
+                        },
+                        "page": {
+                          "type": "integer"
+                        },
+                        "pageSize": {
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "type": "integer"
+                        },
+                        "totalCount": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "page",
+                        "pageSize",
+                        "totalPages",
+                        "totalCount"
+                      ]
+                    }
+                  ]
                 }
               }
             }

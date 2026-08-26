@@ -27,6 +27,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
@@ -92,26 +93,31 @@ export default function DeviceMonitoringPage() {
   };
 
   return (
-    <div className="max-w-5xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-medium">{t("iot.devices.monitoring.title")}</h2>
-          <p className="text-muted-foreground text-sm">{t("iot.devices.monitoring.description")}</p>
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium">{t("iot.devices.monitoring.title")}</h2>
+            <p className="text-muted-foreground text-sm">
+              {t("iot.devices.monitoring.description")}
+            </p>
+          </div>
+          <MonitoringRangeControl
+            range={selection.range}
+            activePreset={selection.preset}
+            onRangeChange={handleRangeChange}
+            isUpdating={isFetching && !isLoading}
+          />
         </div>
-        <MonitoringRangeControl
+
+        <MonitoringTiles
+          device={device}
+          activity={activity}
+          monitoring={monitoring}
           range={selection.range}
-          activePreset={selection.preset}
-          onRangeChange={handleRangeChange}
-          isUpdating={isFetching && !isLoading}
+          tileClassName="bg-card"
         />
       </div>
-
-      <MonitoringTiles
-        device={device}
-        activity={activity}
-        monitoring={monitoring}
-        range={selection.range}
-      />
 
       {isError ? (
         <Card className="shadow-none">
@@ -155,8 +161,8 @@ export default function DeviceMonitoringPage() {
             <ThroughputPanel
               monitoring={monitoring}
               boundExperiments={boundExperiments ?? []}
-              visibleExperiments={visibleExperiments ?? []}
-              visibleProtocols={visibleProtocols ?? []}
+              visibleExperiments={listItems(visibleExperiments)}
+              visibleProtocols={listItems(visibleProtocols)}
               locale={locale}
               from={selection.range.from}
               to={selection.range.to}
@@ -170,7 +176,7 @@ export default function DeviceMonitoringPage() {
             <DataByExperiment
               monitoring={monitoring}
               boundExperiments={boundExperiments ?? []}
-              visibleExperiments={visibleExperiments ?? []}
+              visibleExperiments={listItems(visibleExperiments)}
               locale={locale}
             />
           </PanelCard>
@@ -178,9 +184,9 @@ export default function DeviceMonitoringPage() {
           <PanelCard title={t("iot.devices.monitoring.payloadTitle")}>
             <PayloadProfile
               payload={monitoring.payload}
-              visibleProtocols={visibleProtocols ?? []}
-              visibleWorkbooks={visibleWorkbooks ?? []}
-              visibleMacros={visibleMacros ?? []}
+              visibleProtocols={listItems(visibleProtocols)}
+              visibleWorkbooks={listItems(visibleWorkbooks)}
+              visibleMacros={listItems(visibleMacros)}
               locale={locale}
             />
           </PanelCard>

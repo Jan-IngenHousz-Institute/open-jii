@@ -5,6 +5,7 @@ import { formatRelativeTime } from "@/util/date";
 import type { IotDeviceGroupExperimentBucket } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { HorizontalBarChart } from "@repo/ui/components/charts/bar-chart";
+import { EmptyState } from "@repo/ui/components/empty-state";
 
 import { EntityLink } from "../monitoring/entity-link";
 import { MONITORING_PRIMARY_COLOR } from "../monitoring/monitoring-palette";
@@ -47,11 +48,7 @@ export function GroupDataByExperimentPanel({
   );
 
   if (rows.length === 0) {
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("iot.devices.monitoring.noExperiments")}
-      </p>
-    );
+    return <EmptyState size="inline" description={t("iot.devices.monitoring.noExperiments")} />;
   }
 
   return (

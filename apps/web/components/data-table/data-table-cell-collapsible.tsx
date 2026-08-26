@@ -61,7 +61,7 @@ export function DataTableCellCollapsible({
   return (
     <TableRow className="bg-muted min-w-full">
       <TableCell colSpan={columnCount + 1} className="border-border border-t p-0">
-        <div className="sticky left-0 w-[74vw]">{content}</div>
+        <div className="sticky left-0 w-[100cqw]">{content}</div>
       </TableCell>
     </TableRow>
   );

@@ -52,7 +52,21 @@ describe("IotDevicesTableView", () => {
     expect(screen.getByRole("link", { name: "Beta" })).toBeInTheDocument();
   });
 
-  it("filters the table by status tab", async () => {
+  it("offers to clear filters when the search matches nothing", async () => {
+    server.mount(contract.iot.listIotDevices, { body: [createIotDevice({ name: "Alpha" })] });
+    const user = userEvent.setup();
+
+    render(<IotDevicesTableView />);
+    await screen.findByRole("link", { name: "Alpha" });
+
+    await user.type(screen.getByPlaceholderText("iot.devices.searchPlaceholder"), "zzz");
+    expect(await screen.findByText("iot.devices.zeroResults.title")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.zeroResults.clear" }));
+    expect(await screen.findByRole("link", { name: "Alpha" })).toBeInTheDocument();
+  });
+
+  it("filters the table by status chip", async () => {
     server.mount(contract.iot.listIotDevices, {
       body: [
         createIotDevice({ name: "ActiveOne", status: "active" }),
@@ -64,7 +78,8 @@ describe("IotDevicesTableView", () => {
     render(<IotDevicesTableView />);
     await screen.findByRole("link", { name: "ActiveOne" });
 
-    await user.click(screen.getByRole("tab", { name: /devices\.status\.active/ }));
+    // A chip's accessible name carries its count, so match on the label alone.
+    await user.click(screen.getByRole("button", { name: /devices\.status\.active/ }));
 
     await waitFor(() =>
       expect(screen.queryByRole("link", { name: "PendingOne" })).not.toBeInTheDocument(),

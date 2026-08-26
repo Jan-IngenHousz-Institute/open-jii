@@ -1,8 +1,11 @@
+import { latestReportedVersion } from "@/util/firmware-family";
+
 import type {
   DeviceExperiment,
   DeviceMonitoring,
   IotDeviceDetail,
 } from "@repo/api/domains/iot/iot.schema";
+import { foldObservedExperiments } from "@repo/api/transforms/observed-experiments";
 
 import type { EntityAccess, ResolvedEntity } from "../monitoring/resolve-entity-label";
 import { resolveEntities } from "../monitoring/resolve-entity-label";
@@ -128,7 +131,7 @@ export function buildDeviceLineage(input: BuildDeviceLineageInput): DeviceLineag
     label: input.deviceLabel,
     family: device.deviceType,
     status: device.status,
-    firmwareVersion: currentFirmwareVersion(monitoring),
+    firmwareVersion: latestReportedVersion(monitoring.firmwareHistory),
   });
   nodes.push({
     id: "broker",
@@ -170,40 +173,20 @@ export function buildDeviceLineage(input: BuildDeviceLineageInput): DeviceLineag
   return { nodes, edges };
 }
 
-/** Newest non-null report wins by `lastSeen`, not array order; versions can
- * reappear on rollback, so recency is the only truthful tiebreak. */
-function currentFirmwareVersion(monitoring: DeviceMonitoring): string | null {
-  let current: { version: string; lastSeen: string } | null = null;
-  for (const entry of monitoring.firmwareHistory) {
-    if (entry.version === null) {
-      continue;
-    }
-    if (current === null || entry.lastSeen > current.lastSeen) {
-      current = { version: entry.version, lastSeen: entry.lastSeen };
-    }
-  }
-  return current === null ? null : current.version;
-}
-
 function appendExperiments(
   input: BuildDeviceLineageInput,
   nodes: LineageNodeModel[],
   edges: LineageEdgeModel[],
 ): void {
-  const arrivals = new Map<string, ExperimentArrival>();
-  let unattributed = 0;
-  for (const bucket of input.monitoring.throughput) {
-    if (bucket.experimentId === null) {
-      unattributed += bucket.count;
-      continue;
-    }
-    const entry = arrivals.get(bucket.experimentId) ?? { count: 0, lastBucketAt: null };
-    entry.count += bucket.count;
-    if (entry.lastBucketAt === null || bucket.bucketStart > entry.lastBucketAt) {
-      entry.lastBucketAt = bucket.bucketStart;
-    }
-    arrivals.set(bucket.experimentId, entry);
-  }
+  const observed = foldObservedExperiments(input.monitoring.throughput);
+  const arrivals = new Map<string, ExperimentArrival>(
+    observed.flatMap((entry) =>
+      entry.experimentId === null
+        ? []
+        : [[entry.experimentId, { count: entry.count, lastBucketAt: entry.lastAt }]],
+    ),
+  );
+  const unattributed = observed.find((entry) => entry.experimentId === null)?.count ?? 0;
 
   // A bound experiment is one the viewer can already see through this device,
   // so its name is known regardless of the viewer's own experiment list.
