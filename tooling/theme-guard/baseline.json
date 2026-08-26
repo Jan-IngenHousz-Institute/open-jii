@@ -1,9 +1,9 @@
 {
-  "total": 12,
+  "total": 15,
   "counts": {
     "apps/web": {
       "arbitrary-color": 0,
-      "palette-literal": 2,
+      "palette-literal": 5,
       "dissolved-family": 0
     },
     "packages/ui": {

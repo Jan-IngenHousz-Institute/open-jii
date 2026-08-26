@@ -75,11 +75,12 @@ export function RegistrationOtpVerification({
         <Button
           type="button"
           variant="link"
-          className="inline-flex h-auto items-center p-0 font-medium"
+          size="inline"
+          className="font-medium"
           onClick={onEditEmail}
           aria-label="Edit email address"
         >
-          {pendingEmail} <Pencil className="ml-1 h-3 w-3" aria-hidden="true" />
+          {pendingEmail} <Pencil className="h-3 w-3" aria-hidden="true" />
         </Button>
       </div>
       <FormField
@@ -110,7 +111,8 @@ export function RegistrationOtpVerification({
         <Button
           type="button"
           variant="link"
-          className="h-auto p-0 text-sm font-medium"
+          size="inline"
+          className="text-sm font-medium"
           onClick={handleResendCode}
           disabled={countdown > 0 || isPending}
           aria-label={countdown > 0 ? `Resend code in ${countdown} seconds` : "Resend code"}

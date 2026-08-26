@@ -1,8 +1,8 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
 import type { SearchParamsType } from "@/util/searchParams";
 import { getFirstSearchParam } from "@/util/searchParams";
-import Image from "next/image";
 import { auth } from "~/app/actions/auth";
+import { AuthBackground } from "~/components/auth/auth-background";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { LoginForm } from "~/components/auth/login-form";
 import { TermsAndConditionsDialog } from "~/components/auth/terms-and-conditions-dialog";
@@ -20,22 +20,12 @@ export default async function LoginPage(props: {
   // Fetch terms data on the server
   const termsData = await TermsAndConditionsDialog({ locale });
 
-  // Pick random background image
-  const bgIndex = Math.floor(Math.random() * 4) + 1;
-  const bgImage = `/login-background-${bgIndex}.jpg`;
-
   return (
     <>
       {/* Navbar stays sticky on top */}
       <UnifiedNavbar locale={locale} session={session} />
 
-      {/* Fixed full-screen background */}
-      <div className="fixed inset-0 z-0 w-full">
-        <Image src={bgImage} alt="Login background" fill priority className="object-cover" />
-
-        {/* Gradient Overlay */}
-        <div className="from-sidebar via-sidebar/80 to-sidebar/40 absolute inset-0 bg-gradient-to-l" />
-      </div>
+      <AuthBackground alt="Login background" />
 
       {/* Foreground content */}
       <div className="relative z-10 flex h-[calc(100vh-4rem)] w-full items-center">
