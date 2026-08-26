@@ -2,8 +2,11 @@
 
 import { X } from "lucide-react";
 import React from "react";
-import { MacroOverviewCards } from "~/components/macro-overview-cards";
+import { ListPagination } from "~/components/list-pagination";
+import { getMacroColumns } from "~/components/overview-table/macro-columns";
+import { OverviewTable } from "~/components/overview-table/overview-table";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
+import { useLocale } from "~/hooks/useLocale";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
@@ -21,14 +24,18 @@ export function ListMacros() {
   const {
     data: macros,
     isLoading,
-    filter,
-    setFilter,
+    isPlaceholderData,
+    error,
+    refetch,
     search,
     setSearch,
     language,
     setLanguage,
-  } = useMacros({});
-  const { t } = useTranslation("macro");
+    page,
+    setPage,
+  } = useMacros();
+  const { t } = useTranslation(["macro", "common"]);
+  const locale = useLocale();
 
   return (
     <div className="space-y-4">
@@ -71,19 +78,31 @@ export function ListMacros() {
               <SelectItem value="javascript">JavaScript</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-full md:w-[160px]">
-              <SelectValue placeholder={t("macros.filterMacros")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="my">{t("macros.filterMy")}</SelectItem>
-              <SelectItem value="all">{t("macros.filterAll")}</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
-      <MacroOverviewCards macros={macros} isLoading={isLoading} />
+      <div
+        aria-busy={isPlaceholderData}
+        inert={isPlaceholderData}
+        className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+      >
+        <OverviewTable
+          columns={getMacroColumns(t, locale)}
+          items={macros?.items}
+          isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+          errorMessage={t("macros.errorLoading")}
+          retryLabel={t("common.errors.tryAgain")}
+          getRowKey={(macro) => macro.id}
+          getRowHref={(macro) => `/${locale}/platform/macros/${macro.id}`}
+          emptyMessage={t("macros.noMacros")}
+        />
+
+        {macros && (
+          <ListPagination page={page} totalPages={macros.totalPages} onPageChange={setPage} />
+        )}
+      </div>
     </div>
   );
 }

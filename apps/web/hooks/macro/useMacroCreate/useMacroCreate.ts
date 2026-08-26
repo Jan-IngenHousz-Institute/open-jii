@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { getOrpcError, orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -39,7 +40,9 @@ export function useMacroCreate(options: UseMacroCreateOptions = {}) {
         options.onError?.(...args);
       },
       onSettled: async (...args) => {
-        await queryClient.invalidateQueries({ queryKey: orpc.macros.listMacros.key() });
+        for (const queryKey of listQueryKeys.macros()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
         options.onSettled?.(...args);
       },
     }),

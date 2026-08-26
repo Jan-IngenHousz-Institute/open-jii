@@ -85,11 +85,6 @@
     "faq": null
   },
   "experiments": {
-    "filterMy": "Meine Experimente",
-    "filterMember": "Mitglied-Experimente",
-    "filterRelated": "Alle verwandten Experimente",
-    "filterAll": "Alle Experimente",
-    "filterStatusAll": "Alle Status",
     "clearSearch": "Suche löschen",
     "title": "Experimente",
     "archiveTitle": "Experiment-Archiv",
@@ -1197,15 +1192,17 @@
     "notFoundDescription": "Das angeforderte Protokoll konnte nicht gefunden werden",
     "family": "Sensorfamilie",
     "onlyCreatorCanEdit": "Nur der Protokollersteller kann auf die Einstellungen zugreifen",
-    "filterMy": "Meine Protokolle",
-    "filterAll": "Alle Protokolle",
-    "filterProtocols": "Protokolle filtern",
     "clearSearch": "Suche löschen",
     "searchProtocols": "Protokolle suchen...",
     "descriptionPlaceholder": "Beschreibung hinzufügen...",
     "detailsTitle": "Details",
     "codePlaceholder": "Protokollcode als JSON eingeben",
-    "lastUpdate": "Letzte Aktualisierung"
+    "columns": {
+      "name": "Name",
+      "family": "Familie",
+      "macros": "Makros",
+      "updated": "Aktualisiert"
+    }
   },
   "newProtocol": {
     "description": "Richten Sie ein neues Protokoll ein.",
@@ -1401,5 +1398,10 @@
     "pageOf": "von",
     "previous": "Zurück",
     "next": "Weiter"
+  },
+  "pagination": {
+    "previous": "Zurück",
+    "next": "Weiter",
+    "pageOf": "Seite {{page}} von {{totalPages}}"
   }
 }

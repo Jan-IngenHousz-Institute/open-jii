@@ -1,51 +1,42 @@
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import { ListWorkbooks } from "./list-workbooks";
 
-// Mock WorkbookList to keep test focused
-vi.mock("~/components/workbook-list", () => ({
-  WorkbookList: ({
-    workbooks,
-    isLoading,
-  }: {
-    workbooks: { id: string; name: string }[] | undefined;
-    isLoading: boolean;
-  }) => (
-    <div data-testid="workbook-list">
-      {isLoading && <span>Loading...</span>}
-      {workbooks?.map((w) => <span key={w.id}>{w.name}</span>)}
-    </div>
-  ),
-}));
+const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
+  items,
+  page,
+  pageSize: 20,
+  totalPages,
+  totalCount: items.length,
+});
 
 describe("ListWorkbooks", () => {
-  it("renders search input and filter selector", () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+  it("renders the search input without a my/all filter toggle", () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     render(<ListWorkbooks />);
 
     expect(screen.getByPlaceholderText("workbooks.searchPlaceholder")).toBeInTheDocument();
-    expect(screen.getByText("workbooks.filterMy")).toBeInTheDocument();
+    expect(screen.queryByText("workbooks.filterWorkbooks")).not.toBeInTheDocument();
   });
 
-  it("passes workbooks data to cards", async () => {
+  it("renders workbooks as table rows linking to their detail pages", async () => {
     const workbooks = [createWorkbook({ id: "wb-1", name: "Test WB" })];
-    server.mount(contract.workbooks.listWorkbooks, { body: workbooks });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope(workbooks) });
 
     render(<ListWorkbooks />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Test WB")).toBeInTheDocument();
-    });
+    const link = await screen.findByRole("link", { name: "Test WB" });
+    expect(link.getAttribute("href")).toContain("/platform/workbooks/wb-1");
   });
 
   it("shows clear button when search has value", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListWorkbooks />);
@@ -57,7 +48,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("clears the search via the clear button", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListWorkbooks />);
@@ -70,7 +61,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("closes the create dialog via the Cancel button", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListWorkbooks />);
@@ -85,7 +76,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("resets the name field when the dialog is dismissed", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListWorkbooks />);
@@ -99,7 +90,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("creates a workbook with the entered name from the dialog", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
     const spy = server.mount(contract.workbooks.createWorkbook, {
       status: 201,
       body: createWorkbook({ id: "wb-new", name: "My New WB" }),
@@ -117,7 +108,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("gives the visibility select an accessible name", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
     const user = userEvent.setup();
     render(<ListWorkbooks />);
@@ -132,7 +123,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("creates a private workbook when private is picked", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
     const spy = server.mount(contract.workbooks.createWorkbook, {
       status: 201,
       body: createWorkbook({ id: "wb-new", name: "Private WB", visibility: "private" }),
@@ -153,7 +144,7 @@ describe("ListWorkbooks", () => {
   });
 
   it("does not create a workbook when the name is blank", async () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
     const spy = server.mount(contract.workbooks.createWorkbook, {
       status: 201,
       body: createWorkbook({ id: "x" }),
@@ -167,5 +158,17 @@ describe("ListWorkbooks", () => {
     await user.type(nameInput, "   {Enter}");
 
     expect(spy.called).toBe(false);
+  });
+
+  it("shows a recoverable error when the list request fails", async () => {
+    const spy = server.mount(contract.workbooks.listWorkbooks, { status: 500 });
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    expect(await screen.findByText("workbooks.errorLoading")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "common.errors.tryAgain" }));
+    await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
   });
 });

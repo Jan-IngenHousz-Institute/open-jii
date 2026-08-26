@@ -1,14 +1,17 @@
 "use client";
 
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
-import { useMacros } from "@/hooks/macro/useMacros/useMacros";
+import { useDebounce } from "@/hooks/useDebounce";
+import { orpc } from "@/lib/orpc";
 import { encodeBase64 } from "@/util/base64";
+import { useQuery } from "@tanstack/react-query";
 import { Code, Loader2, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import type { MacroCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { useSession } from "@repo/auth/client";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -57,15 +60,24 @@ function getDefaultCode(language: MacroLanguage, username: string): string {
 export function MacroPicker({ onSelect, children }: MacroPickerProps) {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
-  // Drive search/language from the hook's own state so the inputs actually
-  // filter the query (passing them as `initial*` props is read only once).
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 300);
+  const [language, setLanguage] = useState<MacroLanguage | undefined>(undefined);
   const {
-    data: macros,
-    search,
-    setSearch,
-    language,
-    setLanguage,
-  } = useMacros({ initialFilter: "all" });
+    data: macrosData,
+    isPending: isMacrosPending,
+    isError: isMacrosError,
+    refetch: refetchMacros,
+  } = useQuery(
+    orpc.macros.listMacros.queryOptions({
+      input: {
+        search: debouncedSearch.trim() || undefined,
+        language,
+      },
+    }),
+  );
+  // No `page` is sent, so the response is the bare list.
+  const macros = macrosData ? listItems(macrosData) : undefined;
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -214,7 +226,22 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
               </div>
 
               <div className="max-h-[240px] space-y-0.5 overflow-y-auto">
-                {macros && macros.length > 0 ? (
+                {isMacrosPending ? (
+                  <div
+                    role="status"
+                    className="text-muted-foreground flex items-center justify-center gap-2 py-3 text-xs"
+                  >
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Loading macros...
+                  </div>
+                ) : isMacrosError ? (
+                  <div role="alert" className="space-y-2 py-3 text-center text-xs">
+                    <p className="text-muted-foreground">Unable to load macros.</p>
+                    <Button variant="outline" size="sm" onClick={() => void refetchMacros()}>
+                      Try again
+                    </Button>
+                  </div>
+                ) : macros && macros.length > 0 ? (
                   macros.map((m) => (
                     <Button
                       type="button"

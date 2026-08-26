@@ -1,83 +1,51 @@
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 
-import { listItems } from "@repo/api/shared/listing";
+import { isPaginatedList } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
 
-export type ProtocolFilter = "my" | "all";
-
-export const useProtocols = ({
-  initialFilter = "my",
-  initialSearch = "",
-}: {
-  initialFilter?: ProtocolFilter;
-  initialSearch?: string;
-} = {}) => {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-
-  const rawFilter = searchParams.get("filter");
-
-  const [filter, setFilterState] = useState<ProtocolFilter>(
-    rawFilter === "all" ? "all" : rawFilter === "my" ? "my" : initialFilter,
-  );
-  const [search, setSearch] = useState<string>(initialSearch);
+export const useProtocols = ({ initialSearch = "" }: { initialSearch?: string } = {}) => {
+  const [search, setSearchState] = useState<string>(initialSearch);
+  const [page, setPage] = useState(1);
   const [debouncedSearch] = useDebounce(search, 300);
 
-  const createQueryString = useCallback(
-    (name: string, value: string | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (value === null) {
-        params.delete(name);
-      } else {
-        params.set(name, value);
-      }
-      return params.toString();
-    },
-    [searchParams],
-  );
+  const setSearch = (value: string) => {
+    setSearchState(value);
+    setPage(1);
+  };
 
-  const setFilter = useCallback(
-    (value: ProtocolFilter) => {
-      setFilterState(value);
-      const queryString = createQueryString("filter", value === "all" ? "all" : null);
-      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-      router.push(newUrl, { scroll: false });
-    },
-    [pathname, router, createQueryString],
-  );
-
-  const { data } = useQuery(
+  const query = useQuery(
     orpc.protocols.listProtocols.queryOptions({
       input: {
-        filter: filter === "all" ? undefined : "my",
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
+        page,
       },
+      placeholderData: (prev) => prev,
     }),
   );
 
-  // Narrowed to the array shape: this hook sends no `page`, so the response is
-  // always the bare list. Deletable once the caller migrates to the envelope.
-  const items = data ? listItems(data) : undefined;
+  // `page` is always sent, so the response is the envelope; narrow the union.
+  const data = query.data && isPaginatedList(query.data) ? query.data : undefined;
 
-  // Auto-switch to "all" if user has no protocols of their own on initial load
-  const hasAutoSwitched = useRef(false);
+  // A mutation or background update can shrink the result set under the current
+  // page; snap back into range once a real (non-placeholder) response says so.
   useEffect(() => {
-    if (!hasAutoSwitched.current && filter === "my" && items?.length === 0 && !debouncedSearch) {
-      hasAutoSwitched.current = true;
-      setFilter("all");
-    }
-  }, [filter, items, setFilter, debouncedSearch]);
+    if (!data || query.isPlaceholderData) return;
+    const maxPage = Math.max(1, data.totalPages);
+    if (page > maxPage) setPage(maxPage);
+  }, [data, query.isPlaceholderData, page]);
 
   return {
-    protocols: items,
-    filter,
-    setFilter,
+    data,
+    isLoading: query.isLoading,
+    isPlaceholderData: query.isPlaceholderData,
+    error: query.error,
+    refetch: query.refetch,
     search,
     setSearch,
+    page,
+    setPage,
   };
 };

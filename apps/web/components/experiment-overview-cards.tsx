@@ -1,6 +1,7 @@
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { ResourceCard, ResourceCardGrid } from "@/components/shared/resource-card";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
+import { useLocale } from "@/hooks/useLocale";
 import React from "react";
 
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
@@ -17,6 +18,7 @@ export function ExperimentOverviewCards({
   showGetStartedHelp?: boolean;
 }) {
   const { t } = useTranslation("experiments");
+  const locale = useLocale();
 
   return (
     <ResourceCardGrid
@@ -32,8 +34,8 @@ export function ExperimentOverviewCards({
           key={experiment.id}
           href={
             archived
-              ? `/platform/experiments-archive/${experiment.id}`
-              : `/platform/experiments/${experiment.id}`
+              ? `/${locale}/platform/experiments-archive/${experiment.id}`
+              : `/${locale}/platform/experiments/${experiment.id}`
           }
           title={experiment.name}
           // Only when private: "public" is the unremarkable default.

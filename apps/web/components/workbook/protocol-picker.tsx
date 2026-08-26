@@ -1,8 +1,10 @@
 "use client";
 
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
-import { useProtocols } from "@/hooks/protocol/useProtocols/useProtocols";
+import { useDebounce } from "@/hooks/useDebounce";
+import { orpc } from "@/lib/orpc";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, Microscope, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -10,6 +12,7 @@ import { useState } from "react";
 import type { ProtocolFamily, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -37,9 +40,20 @@ export function ProtocolPicker({
   children,
 }: ProtocolPickerProps) {
   const [open, setOpen] = useState(false);
-  // Drive search from the hook's own state so the input actually filters the
-  // query (passing it as `initialSearch` is read only once).
-  const { protocols, search, setSearch } = useProtocols({ initialFilter: "all" });
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 300);
+  const {
+    data: protocolsData,
+    isPending: isProtocolsPending,
+    isError: isProtocolsError,
+    refetch: refetchProtocols,
+  } = useQuery(
+    orpc.protocols.listProtocols.queryOptions({
+      input: { search: debouncedSearch.trim() || undefined },
+    }),
+  );
+  // No `page` is sent, so the response is the bare list.
+  const protocols = protocolsData ? listItems(protocolsData) : undefined;
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -178,7 +192,22 @@ export function ProtocolPicker({
               </div>
 
               <div className="max-h-[240px] space-y-0.5 overflow-y-auto">
-                {protocols && protocols.length > 0 ? (
+                {isProtocolsPending ? (
+                  <div
+                    role="status"
+                    className="text-muted-foreground flex items-center justify-center gap-2 py-3 text-xs"
+                  >
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Loading protocols...
+                  </div>
+                ) : isProtocolsError ? (
+                  <div role="alert" className="space-y-2 py-3 text-center text-xs">
+                    <p className="text-muted-foreground">Unable to load protocols.</p>
+                    <Button variant="outline" size="sm" onClick={() => void refetchProtocols()}>
+                      Try again
+                    </Button>
+                  </div>
+                ) : protocols && protocols.length > 0 ? (
                   protocols.map((p) => (
                     <Button
                       type="button"

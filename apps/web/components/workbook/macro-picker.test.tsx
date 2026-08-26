@@ -141,4 +141,32 @@ describe("MacroPicker", () => {
       expect(screen.getByPlaceholderText(/search macros/i)).toBeInTheDocument();
     });
   });
+
+  it("shows loading and error feedback instead of an empty result", async () => {
+    const user = userEvent.setup();
+    const spy = server.mount(contract.macros.listMacros, { status: 500, delay: 50 });
+
+    renderPicker();
+    await user.click(screen.getByRole("button", { name: /add macro/i }));
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading macros...");
+    expect(screen.queryByText("No macros available")).not.toBeInTheDocument();
+    expect(await screen.findByText("Unable to load macros.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
+  });
+
+  it("trims surrounding whitespace from the search query", async () => {
+    const user = userEvent.setup();
+    const spy = server.mount(contract.macros.listMacros, { body: [] });
+
+    renderPicker();
+    await user.click(screen.getByRole("button", { name: /add macro/i }));
+    await user.type(screen.getByPlaceholderText(/search macros/i), "  ndvi  ");
+
+    await waitFor(() => {
+      expect(spy.calls[spy.calls.length - 1]?.query.search).toBe("ndvi");
+    });
+  });
 });
