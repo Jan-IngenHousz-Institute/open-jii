@@ -24,6 +24,8 @@ export function ListMacros() {
     data: macros,
     isLoading,
     isPlaceholderData,
+    error,
+    refetch,
     search,
     setSearch,
     language,
@@ -31,7 +33,7 @@ export function ListMacros() {
     page,
     setPage,
   } = useMacros();
-  const { t } = useTranslation("macro");
+  const { t } = useTranslation(["macro", "common"]);
   const locale = useLocale();
 
   return (
@@ -85,6 +87,10 @@ export function ListMacros() {
           columns={getMacroColumns(t, locale)}
           items={macros?.items}
           isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+          errorMessage={t("macros.errorLoading")}
+          retryLabel={t("common.errors.tryAgain")}
           getRowKey={(macro) => macro.id}
           getRowHref={(macro) => `/${locale}/platform/macros/${macro.id}`}
           emptyMessage={t("macros.noMacros")}

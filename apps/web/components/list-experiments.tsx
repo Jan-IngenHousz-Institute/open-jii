@@ -15,10 +15,9 @@ interface ListExperimentsProps {
 }
 
 export function ListExperiments({ archived = false }: ListExperimentsProps) {
-  const { data, isPlaceholderData, search, setSearch, page, setPage } = useExperiments({
-    archived,
-  });
-  const { t } = useTranslation("experiments");
+  const { data, isLoading, isPlaceholderData, error, refetch, search, setSearch, page, setPage } =
+    useExperiments({ archived });
+  const { t } = useTranslation(["experiments", "common"]);
   const locale = useLocale();
 
   return (
@@ -51,6 +50,11 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
         <OverviewTable
           columns={getExperimentColumns(t, locale)}
           items={data?.items}
+          isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+          errorMessage={t("experiments.errorLoadingExperiment")}
+          retryLabel={t("common.errors.tryAgain")}
           getRowKey={(experiment) => experiment.id}
           getRowHref={(experiment) =>
             archived

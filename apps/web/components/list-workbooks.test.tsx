@@ -159,4 +159,16 @@ describe("ListWorkbooks", () => {
 
     expect(spy.called).toBe(false);
   });
+
+  it("shows a recoverable error when the list request fails", async () => {
+    const spy = server.mount(contract.workbooks.listWorkbooks, { status: 500 });
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    expect(await screen.findByText("workbooks.errorLoading")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "common.errors.tryAgain" }));
+    await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
+  });
 });

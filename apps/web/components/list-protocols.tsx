@@ -12,7 +12,8 @@ import { useTranslation } from "@repo/i18n";
 import { Input } from "@repo/ui/components/input";
 
 export function ListProtocols() {
-  const { data, isPlaceholderData, search, setSearch, page, setPage } = useProtocols();
+  const { data, isLoading, isPlaceholderData, error, refetch, search, setSearch, page, setPage } =
+    useProtocols();
   const { t } = useTranslation("common");
   const locale = useLocale();
 
@@ -46,6 +47,11 @@ export function ListProtocols() {
         <OverviewTable
           columns={getProtocolColumns(t, locale)}
           items={data?.items}
+          isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+          errorMessage={t("errors.failedToLoadProtocol")}
+          retryLabel={t("errors.tryAgain")}
           getRowKey={(protocol) => protocol.id}
           getRowHref={(protocol) => `/${locale}/platform/protocols/${protocol.id}`}
           emptyMessage={t("protocols.noProtocols")}

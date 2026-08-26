@@ -42,6 +42,7 @@ export const useProtocols = ({ initialSearch = "" }: { initialSearch?: string } 
     isLoading: query.isLoading,
     isPlaceholderData: query.isPlaceholderData,
     error: query.error,
+    refetch: query.refetch,
     search,
     setSearch,
     page,

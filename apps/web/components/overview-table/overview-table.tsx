@@ -4,6 +4,8 @@ import { DocsHelpLink } from "@/components/docs-help-link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { Button } from "@repo/ui/components/button";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {
   Table,
@@ -28,6 +30,10 @@ interface OverviewTableProps<T> {
   columns: OverviewTableColumn<T>[];
   items: T[] | undefined;
   isLoading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
+  errorMessage?: string;
+  retryLabel?: string;
   getRowKey: (item: T) => string;
   getRowHref: (item: T) => string;
   emptyMessage: string;
@@ -45,15 +51,36 @@ export function OverviewTable<T>({
   columns,
   items,
   isLoading,
+  error,
+  onRetry,
+  errorMessage,
+  retryLabel,
   getRowKey,
   getRowHref,
   emptyMessage,
   emptyHelpPath,
 }: OverviewTableProps<T>) {
   const router = useRouter();
-  const loading = isLoading === true || items === undefined;
+  const loading = isLoading === true;
 
-  if (!loading && items.length === 0) {
+  if (!loading && items === undefined) {
+    return (
+      <EmptyState
+        size="inline"
+        variant="error"
+        description={errorMessage ?? (error instanceof Error ? error.message : emptyMessage)}
+        action={
+          onRetry && retryLabel ? (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              {retryLabel}
+            </Button>
+          ) : undefined
+        }
+      />
+    );
+  }
+
+  if (!loading && items?.length === 0) {
     return (
       <div
         className={cn(
@@ -103,7 +130,7 @@ export function OverviewTable<T>({
                   ))}
                 </TableRow>
               ))
-            : items.map((item) => {
+            : (items ?? []).map((item) => {
                 const href = getRowHref(item);
                 return (
                   <TableRow

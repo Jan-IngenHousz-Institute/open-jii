@@ -47,18 +47,14 @@ function WorkbookActionsCell({ workbook, href }: { workbook: WorkbookListItem; h
       toast({ title: t("workbooks.createError"), variant: "destructive" });
       return;
     }
-    createWorkbook(
-      {
-        name: t("workbooks.duplicateName", { name: workbook.name }),
-        description: workbook.description ?? undefined,
-        cells,
-        metadata: workbook.metadata,
-        forkedFrom: workbook.id,
-      },
-      {
-        onError: () => toast({ title: t("workbooks.createError"), variant: "destructive" }),
-      },
-    );
+    createWorkbook({
+      name: t("workbooks.duplicateName", { name: workbook.name }),
+      description: workbook.description ?? undefined,
+      cells,
+      metadata: workbook.metadata,
+      visibility: workbook.visibility,
+      forkedFrom: workbook.id,
+    });
   };
 
   return (

@@ -42,9 +42,14 @@ export function ProtocolPicker({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 300);
-  const { data: protocolsData } = useQuery(
+  const {
+    data: protocolsData,
+    isPending: isProtocolsPending,
+    isError: isProtocolsError,
+    refetch: refetchProtocols,
+  } = useQuery(
     orpc.protocols.listProtocols.queryOptions({
-      input: { search: debouncedSearch.trim() !== "" ? debouncedSearch : undefined },
+      input: { search: debouncedSearch.trim() || undefined },
     }),
   );
   // No `page` is sent, so the response is the bare list.
@@ -187,7 +192,22 @@ export function ProtocolPicker({
               </div>
 
               <div className="max-h-[240px] space-y-0.5 overflow-y-auto">
-                {protocols && protocols.length > 0 ? (
+                {isProtocolsPending ? (
+                  <div
+                    role="status"
+                    className="text-muted-foreground flex items-center justify-center gap-2 py-3 text-xs"
+                  >
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Loading protocols...
+                  </div>
+                ) : isProtocolsError ? (
+                  <div role="alert" className="space-y-2 py-3 text-center text-xs">
+                    <p className="text-muted-foreground">Unable to load protocols.</p>
+                    <Button variant="outline" size="sm" onClick={() => void refetchProtocols()}>
+                      Try again
+                    </Button>
+                  </div>
+                ) : protocols && protocols.length > 0 ? (
                   protocols.map((p) => (
                     <button
                       type="button"

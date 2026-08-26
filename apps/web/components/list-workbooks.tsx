@@ -36,12 +36,14 @@ export function ListWorkbooks() {
     data: workbooks,
     isLoading,
     isPlaceholderData,
+    error,
+    refetch,
     search,
     setSearch,
     page,
     setPage,
   } = useWorkbooks({});
-  const { t } = useTranslation("workbook");
+  const { t } = useTranslation(["workbook", "common"]);
   const router = useRouter();
   const locale = useLocale();
   const [createOpen, setCreateOpen] = useState(false);
@@ -98,6 +100,10 @@ export function ListWorkbooks() {
           columns={getWorkbookColumns(t, locale)}
           items={workbooks?.items}
           isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+          errorMessage={t("workbooks.errorLoading")}
+          retryLabel={t("common.errors.tryAgain")}
           getRowKey={(workbook) => workbook.id}
           getRowHref={(workbook) => `/${locale}/platform/workbooks/${workbook.id}`}
           emptyMessage={t("workbooks.noWorkbooks")}

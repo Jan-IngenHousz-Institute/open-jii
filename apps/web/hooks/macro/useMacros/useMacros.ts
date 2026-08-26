@@ -56,6 +56,7 @@ export function useMacros({
     isLoading: query.isLoading,
     isPlaceholderData: query.isPlaceholderData,
     error: query.error,
+    refetch: query.refetch,
     search,
     setSearch,
     language,

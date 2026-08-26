@@ -63,4 +63,16 @@ describe("ListProtocols", () => {
       expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("2");
     });
   });
+
+  it("shows a recoverable error when the list request fails", async () => {
+    const spy = server.mount(contract.protocols.listProtocols, { status: 500 });
+    const user = userEvent.setup();
+    render(<ListProtocols />);
+
+    expect(await screen.findByText("errors.failedToLoadProtocol")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "errors.tryAgain" }));
+    await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
+  });
 });

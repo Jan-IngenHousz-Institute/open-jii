@@ -1,7 +1,7 @@
 import { createExperiment, createMacro, createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { Workbook } from "@repo/api/domains/workbook/workbook.schema";
@@ -28,12 +28,21 @@ const stubColumns: OverviewTableColumn<StubItem>[] = [
   },
 ];
 
-function renderStubTable(items: StubItem[] | undefined, isLoading?: boolean) {
+function renderStubTable(
+  items: StubItem[] | undefined,
+  isLoading = false,
+  error?: unknown,
+  onRetry?: () => void,
+) {
   return render(
     <OverviewTable
       columns={stubColumns}
       items={items}
       isLoading={isLoading}
+      error={error}
+      onRetry={onRetry}
+      errorMessage="Could not load items"
+      retryLabel="Try again"
       getRowKey={(item) => item.id}
       getRowHref={(item) => `/platform/stubs/${item.id}`}
       emptyMessage="Nothing here"
@@ -44,10 +53,22 @@ function renderStubTable(items: StubItem[] | undefined, isLoading?: boolean) {
 
 describe("OverviewTable", () => {
   it("renders skeleton rows while loading", () => {
-    const { container } = renderStubTable(undefined);
+    const { container } = renderStubTable(undefined, true);
 
     expect(container.querySelectorAll("tbody tr")).toHaveLength(4);
     expect(screen.queryByText("Nothing here")).not.toBeInTheDocument();
+  });
+
+  it("renders a recoverable error when loading finishes without data", async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+
+    renderStubTable(undefined, false, new Error("request failed"), onRetry);
+
+    expect(screen.getByText("Could not load items")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it("renders the empty state with a docs help link", () => {
@@ -221,6 +242,7 @@ describe("workbook overview columns", () => {
       id: "33333333-3333-3333-3333-333333333333",
       name: "Source WB",
       description: "desc",
+      visibility: "private",
       experimentCount: 0,
     });
     server.mount(contract.workbooks.getWorkbook, { status: 200, body: source });
@@ -237,7 +259,7 @@ describe("workbook overview columns", () => {
     await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.fork" }));
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toMatchObject({ name: "Fork of Source WB" });
+    expect(spy.body).toMatchObject({ name: "Fork of Source WB", visibility: "private" });
   });
 
   it("shows an error toast when fetching the source workbook fails", async () => {
@@ -270,8 +292,7 @@ describe("workbook overview columns", () => {
     await user.click(within(row).getByLabelText("workbooks.actions.more"));
     await user.click(await screen.findByRole("menuitem", { name: "workbooks.actions.fork" }));
 
-    await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })),
-    );
+    await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" }));
   });
 });

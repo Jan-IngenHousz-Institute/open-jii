@@ -63,10 +63,15 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 300);
   const [language, setLanguage] = useState<MacroLanguage | undefined>(undefined);
-  const { data: macrosData } = useQuery(
+  const {
+    data: macrosData,
+    isPending: isMacrosPending,
+    isError: isMacrosError,
+    refetch: refetchMacros,
+  } = useQuery(
     orpc.macros.listMacros.queryOptions({
       input: {
-        search: debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
+        search: debouncedSearch.trim() || undefined,
         language,
       },
     }),
@@ -221,7 +226,22 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
               </div>
 
               <div className="max-h-[240px] space-y-0.5 overflow-y-auto">
-                {macros && macros.length > 0 ? (
+                {isMacrosPending ? (
+                  <div
+                    role="status"
+                    className="text-muted-foreground flex items-center justify-center gap-2 py-3 text-xs"
+                  >
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Loading macros...
+                  </div>
+                ) : isMacrosError ? (
+                  <div role="alert" className="space-y-2 py-3 text-center text-xs">
+                    <p className="text-muted-foreground">Unable to load macros.</p>
+                    <Button variant="outline" size="sm" onClick={() => void refetchMacros()}>
+                      Try again
+                    </Button>
+                  </div>
+                ) : macros && macros.length > 0 ? (
                   macros.map((m) => (
                     <button
                       type="button"

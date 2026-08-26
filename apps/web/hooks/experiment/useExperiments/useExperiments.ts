@@ -31,7 +31,7 @@ export const useExperiments = ({
     setPage(1);
   };
 
-  const { data: rawData, isPlaceholderData } = useQuery(
+  const query = useQuery(
     orpc.experiments.listExperiments.queryOptions({
       input: {
         scope: archived ? "related" : undefined,
@@ -44,19 +44,22 @@ export const useExperiments = ({
   );
 
   // `page` is always sent, so the response is the envelope; narrow the union.
-  const data = rawData && isPaginatedList(rawData) ? rawData : undefined;
+  const data = query.data && isPaginatedList(query.data) ? query.data : undefined;
 
   // A mutation or background update can shrink the result set under the current
   // page; snap back into range once a real (non-placeholder) response says so.
   useEffect(() => {
-    if (!data || isPlaceholderData) return;
+    if (!data || query.isPlaceholderData) return;
     const maxPage = Math.max(1, data.totalPages);
     if (page > maxPage) setPage(maxPage);
-  }, [data, isPlaceholderData, page]);
+  }, [data, query.isPlaceholderData, page]);
 
   return {
     data,
-    isPlaceholderData,
+    isLoading: query.isLoading,
+    isPlaceholderData: query.isPlaceholderData,
+    error: query.error,
+    refetch: query.refetch,
     status,
     setStatus,
     search,
