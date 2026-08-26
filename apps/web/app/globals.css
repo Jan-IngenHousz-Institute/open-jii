@@ -310,6 +310,35 @@
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
 }
 
+/* The expand/collapse a `Collapsible` uses with `animated`, matching the docs
+   site. `tw-animate-css` ships a `collapsible-*` pair already, but it runs 200ms
+   ease-out and slides height alone; the fade is what keeps the rows from
+   appearing fully drawn at zero height. */
+@theme {
+  --animate-collapse-down: collapse-down 150ms cubic-bezier(0.45, 0, 0.55, 1);
+  --animate-collapse-up: collapse-up 150ms cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+@keyframes collapse-down {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
+
+@keyframes collapse-up {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
 /* Painted as a utility rather than a --color-* mapping: it is a gradient, not a
    flat colour, so there is no single value for bg-canvas to resolve to. */
 @utility bg-canvas {

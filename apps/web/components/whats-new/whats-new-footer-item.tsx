@@ -41,7 +41,7 @@ export function WhatsNewFooterItem({
       aria-label={
         hasUnread ? `${label} (${t("whatsNew.unreadBadge", { count: unreadCount })})` : label
       }
-      className="h-8 w-full justify-start gap-2 p-2 font-normal"
+      className="w-full justify-start gap-2 rounded-lg p-2 font-normal"
     >
       <Sparkles className="size-4 shrink-0" />
       <span className="flex-1 truncate text-left">{label}</span>
