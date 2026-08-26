@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
+import type { DeviceAnswer, DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
@@ -17,6 +17,8 @@ export interface OnboardDeviceGroupWindow {
   experimentIds: string[];
   deviceIds?: string[];
   includeWorkbook: boolean;
+  /** Question answers keyed by cell id, stored on every selected binding. */
+  answers: Record<string, DeviceAnswer>;
 }
 
 export interface IotDeviceGroupOnboardRowDto {
@@ -116,6 +118,7 @@ export class OnboardIotDeviceGroupUseCase {
       body.experimentIds,
       userId,
       body.includeWorkbook,
+      body.answers,
     );
     if (result.isSuccess()) {
       return { deviceId, config: result.value, error: null };

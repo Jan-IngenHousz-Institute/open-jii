@@ -57,6 +57,7 @@ export class ExperimentDeviceController {
         input.experimentIds,
         session.user.id,
         input.includeWorkbook,
+        input.answers,
       );
 
       if (result.isSuccess()) {

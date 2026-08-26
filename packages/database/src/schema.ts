@@ -858,6 +858,9 @@ export const experimentDevices = pgTable(
     addedBy: uuid("added_by")
       .references(() => users.id)
       .notNull(),
+    // Delivery-time question answers keyed by workbook cell id; the stored
+    // copy is what server-side config compilation resolves.
+    planAnswers: postgresJsJsonb("plan_answers").default({}).notNull(),
     ...timestamps,
   },
   (t) => [

@@ -222,7 +222,7 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
 
   const issue = (experimentIds: string[]) => {
     onboard(
-      { deviceId: device.id, experimentIds, includeWorkbook },
+      { deviceId: device.id, experimentIds, includeWorkbook, answers },
       {
         onSuccess: (data) => {
           setConfig(data);

@@ -60,7 +60,7 @@ describe("OnboardIotDeviceGroupUseCase", () => {
 
     const result = await useCase.execute(
       groupId,
-      { experimentIds: [], includeWorkbook: true },
+      { experimentIds: [], includeWorkbook: true, answers: {} },
       userId,
     );
 
@@ -81,7 +81,12 @@ describe("OnboardIotDeviceGroupUseCase", () => {
 
     const result = await useCase.execute(
       groupId,
-      { experimentIds: [experiment.id], deviceIds: [device.id], includeWorkbook: true },
+      {
+        experimentIds: [experiment.id],
+        deviceIds: [device.id],
+        includeWorkbook: true,
+        answers: {},
+      },
       userId,
     );
 
@@ -97,13 +102,34 @@ describe("OnboardIotDeviceGroupUseCase", () => {
 
     const result = await useCase.execute(
       groupId,
-      { experimentIds: [], deviceIds: [device.id, device.id], includeWorkbook: true },
+      { experimentIds: [], deviceIds: [device.id, device.id], includeWorkbook: true, answers: {} },
       userId,
     );
 
     assertSuccess(result);
     expect(result.value.devices).toHaveLength(1);
     expect(result.value.devices[0].error).toBeNull();
+  });
+
+  it("hands the submitted answers to every member's executor call", async () => {
+    const executor = testApp.module.get(OnboardDeviceUseCase);
+    const spy = vi.spyOn(executor, "execute");
+    const first = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+    const second = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+    const groupId = await seedGroup([first.id, second.id]);
+    const answers = { "cell-1": "A1" };
+
+    const result = await useCase.execute(
+      groupId,
+      { experimentIds: [], includeWorkbook: true, answers },
+      userId,
+    );
+
+    assertSuccess(result);
+    expect(spy).toHaveBeenCalledTimes(2);
+    for (const call of spy.mock.calls) {
+      expect(call[4]).toEqual(answers);
+    }
   });
 
   it("masks internal executor failures behind a generic row error", async () => {
@@ -114,7 +140,7 @@ describe("OnboardIotDeviceGroupUseCase", () => {
 
     const result = await useCase.execute(
       groupId,
-      { experimentIds: [], includeWorkbook: true },
+      { experimentIds: [], includeWorkbook: true, answers: {} },
       userId,
     );
 
@@ -144,7 +170,7 @@ describe("OnboardIotDeviceGroupUseCase", () => {
 
     const result = await useCase.execute(
       groupId,
-      { experimentIds: [], includeWorkbook: true },
+      { experimentIds: [], includeWorkbook: true, answers: {} },
       userId,
     );
 
@@ -157,7 +183,7 @@ describe("OnboardIotDeviceGroupUseCase", () => {
 
     const result = await useCase.execute(
       faker.string.uuid(),
-      { experimentIds: [], includeWorkbook: true },
+      { experimentIds: [], includeWorkbook: true, answers: {} },
       userId,
     );
 
@@ -188,7 +214,7 @@ describe("OnboardIotDeviceGroupUseCase", () => {
 
     const result = await useCase.execute(
       groupId,
-      { experimentIds: [], includeWorkbook: true },
+      { experimentIds: [], includeWorkbook: true, answers: {} },
       userId,
     );
 

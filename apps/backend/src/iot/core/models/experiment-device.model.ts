@@ -1,3 +1,4 @@
+import type { DeviceAnswer } from "@repo/api/domains/iot/iot.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 
@@ -25,6 +26,8 @@ export type DeviceExperimentDto = Pick<ExperimentDto, "id" | "name" | "status"> 
 export interface DeviceOnboardingExperimentDto {
   experimentId: string;
   experimentName: string;
+  /** Stored delivery-time answers for this binding, keyed by workbook cell id. */
+  planAnswers: Record<string, DeviceAnswer>;
   workbook: {
     version: number;
     cells: WorkbookCell[];

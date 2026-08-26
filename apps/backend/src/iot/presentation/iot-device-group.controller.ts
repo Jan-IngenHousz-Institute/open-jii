@@ -166,6 +166,7 @@ export class IotDeviceGroupController {
           experimentIds: input.experimentIds,
           deviceIds: input.deviceIds,
           includeWorkbook: input.includeWorkbook,
+          answers: input.answers,
         },
         session.user.id,
       );

@@ -112,7 +112,7 @@ export function GroupOnboardingContent() {
 
   const handleOnboard = () => {
     onboardGroup.mutate(
-      { groupId, experimentIds, deviceIds: selectedIds, includeWorkbook },
+      { groupId, experimentIds, deviceIds: selectedIds, includeWorkbook, answers },
       {
         onSuccess: (data) => {
           setRows(data.devices);

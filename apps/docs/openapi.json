@@ -15642,6 +15642,27 @@
                     "default": true,
                     "type": "boolean",
                     "description": "When false, the config carries only the connection and topic contract."
+                  },
+                  "answers": {
+                    "default": {},
+                    "type": "object",
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "description": "Question answers keyed by workbook cell id, persisted on the binding. An explicit null clears the stored answer; omitted ids keep theirs."
                   }
                 }
               }
@@ -16504,6 +16525,27 @@
                   "includeWorkbook": {
                     "default": true,
                     "type": "boolean"
+                  },
+                  "answers": {
+                    "default": {},
+                    "type": "object",
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "description": "Question answers keyed by workbook cell id, persisted on every selected member's binding."
                   }
                 }
               }

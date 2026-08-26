@@ -1,11 +1,14 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 
+import type { DeviceAnswer } from "@repo/api/domains/iot/iot.schema";
+import { zDevicePlanAnswers } from "@repo/api/domains/iot/iot.schema";
 import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { zEntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 import {
   and,
   desc,
   eq,
+  sql,
   experimentDevices,
   experiments,
   iotDevices,
@@ -44,6 +47,29 @@ export class ExperimentDeviceRepository {
         .insert(experimentDevices)
         .values(experimentIds.map((experimentId) => ({ experimentId, deviceId, addedBy })))
         .onConflictDoNothing();
+    });
+  }
+
+  // A jsonb concat, so keys not in `answers` keep their stored value and an
+  // explicit null overwrites one (a cleared answer must not resurrect the
+  // workbook prefill at compile time).
+  async mergePlanAnswers(
+    deviceId: string,
+    experimentId: string,
+    answers: Record<string, DeviceAnswer>,
+  ): Promise<Result<void>> {
+    return tryCatch(async () => {
+      await this.database
+        .update(experimentDevices)
+        .set({
+          planAnswers: sql`${experimentDevices.planAnswers} || ${JSON.stringify(answers)}::jsonb`,
+        })
+        .where(
+          and(
+            eq(experimentDevices.deviceId, deviceId),
+            eq(experimentDevices.experimentId, experimentId),
+          ),
+        );
     });
   }
 
@@ -126,6 +152,7 @@ export class ExperimentDeviceRepository {
         .select({
           experimentId: experiments.id,
           experimentName: experiments.name,
+          planAnswers: experimentDevices.planAnswers,
           version: workbookVersions.version,
           cells: workbookVersions.cells,
           entitySnapshots: workbookVersions.entitySnapshots,
@@ -139,10 +166,25 @@ export class ExperimentDeviceRepository {
       return rows.map((row) => ({
         experimentId: row.experimentId,
         experimentName: row.experimentName,
+        planAnswers: this.parsePlanAnswers(row.experimentId, row.planAnswers),
         workbook:
           row.version === null ? null : this.parseWorkbook(row.experimentId, row.version, row),
       }));
     });
+  }
+
+  // Parse (not cast) the stored answers; a non-conforming document degrades to
+  // no stored answers rather than failing the device's whole config.
+  private parsePlanAnswers(experimentId: string, raw: unknown): Record<string, DeviceAnswer> {
+    const parsed = zDevicePlanAnswers.safeParse(raw);
+    if (!parsed.success) {
+      this.logger.warn({
+        msg: "Stored plan answers no longer match the answer schema; compiling without them",
+        experimentId,
+      });
+      return {};
+    }
+    return parsed.data;
   }
 
   // Parse (not cast) the jsonb into the typed procedure. A version that no

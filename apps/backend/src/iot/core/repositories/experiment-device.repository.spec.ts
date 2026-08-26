@@ -1,4 +1,4 @@
-import { eq, experiments, workbookVersions } from "@repo/database";
+import { and, eq, experimentDevices, experiments, workbookVersions } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -96,6 +96,38 @@ describe("ExperimentDeviceRepository", () => {
     const again = await repository.removeDevice(experiment.id, device.id);
     assertSuccess(again);
     expect(again.value).toBe(false);
+  });
+
+  it("merges plan answers, keeping sibling keys and honoring an explicit null", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    const { experiment } = await testApp.createExperiment({ name: "Answers", userId });
+    await repository.addExperiments(device.id, [experiment.id], userId);
+
+    assertSuccess(await repository.mergePlanAnswers(device.id, experiment.id, { a: "1", b: "2" }));
+    assertSuccess(await repository.mergePlanAnswers(device.id, experiment.id, { b: null }));
+
+    const listed = await repository.listOnboardingExperiments(device.id);
+    assertSuccess(listed);
+    expect(listed.value[0].planAnswers).toEqual({ a: "1", b: null });
+  });
+
+  it("degrades nonconforming stored answers to none instead of failing the call", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    const { experiment } = await testApp.createExperiment({ name: "Bad", userId });
+    await repository.addExperiments(device.id, [experiment.id], userId);
+    await testApp.database
+      .update(experimentDevices)
+      .set({ planAnswers: { a: 42 } })
+      .where(
+        and(
+          eq(experimentDevices.deviceId, device.id),
+          eq(experimentDevices.experimentId, experiment.id),
+        ),
+      );
+
+    const listed = await repository.listOnboardingExperiments(device.id);
+    assertSuccess(listed);
+    expect(listed.value[0].planAnswers).toEqual({});
   });
 
   it("returns a null workbook for experiments without a pinned version", async () => {

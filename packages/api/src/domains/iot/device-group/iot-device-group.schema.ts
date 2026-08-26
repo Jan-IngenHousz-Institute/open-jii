@@ -7,6 +7,7 @@ import {
   zDeviceType,
   zIssueIotCredentialsResponse,
   zMonitoringBucket,
+  zDevicePlanAnswers,
 } from "../iot.schema";
 
 // Platform-native grouping: groups never mirror to AWS thing groups, whose
@@ -150,6 +151,11 @@ export const zOnboardIotDeviceGroupBody = zIotDeviceGroupPathParam.extend({
     .optional()
     .describe("Member subset to onboard; omitted means every member"),
   includeWorkbook: z.boolean().default(true),
+  answers: zDevicePlanAnswers
+    .default({})
+    .describe(
+      "Question answers keyed by workbook cell id, persisted on every selected member's binding.",
+    ),
 });
 
 /** Per-device outcome; the batch itself succeeds even when single rows fail. */

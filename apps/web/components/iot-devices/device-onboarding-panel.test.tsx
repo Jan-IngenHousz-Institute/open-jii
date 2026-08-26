@@ -127,7 +127,7 @@ describe("DeviceOnboardingPanel", () => {
     await user.click(screen.getByRole("button", { name: /iot.onboarding.onboardCount/ }));
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toEqual({ experimentIds: [fresh.id], includeWorkbook: true });
+    expect(spy.body).toEqual({ experimentIds: [fresh.id], includeWorkbook: true, answers: {} });
 
     await waitFor(() => {
       expect(screen.getByText(config.endpoint)).toBeInTheDocument();
@@ -148,7 +148,7 @@ describe("DeviceOnboardingPanel", () => {
 
     await waitFor(() => expect(spy.called).toBe(true));
     // The two jobs the old single button conflated: re-issue binds nothing new.
-    expect(spy.body).toEqual({ experimentIds: [], includeWorkbook: true });
+    expect(spy.body).toEqual({ experimentIds: [], includeWorkbook: true, answers: {} });
   });
 
   it("labels the old config stale when a re-issue fails, instead of dropping it", async () => {
@@ -190,7 +190,7 @@ describe("DeviceOnboardingPanel", () => {
     await user.click(screen.getByRole("button", { name: /iot.onboarding.onboardCount/ }));
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toEqual({ experimentIds: [fresh.id], includeWorkbook: false });
+    expect(spy.body).toEqual({ experimentIds: [fresh.id], includeWorkbook: false, answers: {} });
   });
 
   it("gates delivery on required answers and names the missing field in the rail", async () => {
@@ -252,6 +252,30 @@ describe("DeviceOnboardingPanel", () => {
     render(<DeviceOnboardingPanel device={device} />);
 
     expect(await screen.findByText("iot.onboarding.noMemberships")).toBeInTheDocument();
+  });
+
+  it("sends the typed answers with the issue click, so they persist server-side", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.iot.listDeviceExperiments, { body: [boundExperiment] });
+    server.mount(contract.experiments.listExperiments, { body: [] });
+    const spy = server.mount(contract.iot.onboardDevice, { body: configWithQuestion });
+
+    render(<DeviceOnboardingPanel device={device} />);
+
+    await user.click(await screen.findByRole("button", { name: /iot.onboarding.reissue/ }));
+    await waitFor(() => {
+      expect(screen.getByText("Which plot?")).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByLabelText(/Which plot\?/), "A1");
+    await user.click(screen.getByRole("button", { name: /iot.onboarding.reissue/ }));
+
+    await waitFor(() => expect(spy.calls).toHaveLength(2));
+    expect(spy.calls[1].body).toEqual({
+      experimentIds: [],
+      includeWorkbook: true,
+      answers: { "c-q": "A1" },
+    });
   });
 
   it("filters a long experiment list and says when nothing matches", async () => {

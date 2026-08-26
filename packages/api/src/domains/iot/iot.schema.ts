@@ -185,6 +185,11 @@ export const zIssueIotCredentialsResponse = z.object({
 // Onboarding binds a device to experiments and hands the hardware its full
 // desired state: broker endpoint plus, per experiment, the ingest topic prefix
 // and the pinned workbook version to run.
+export const zDeviceAnswer = z.union([z.string(), z.array(z.string()), z.null()]);
+
+/** Question answers keyed by workbook cell id. */
+export const zDevicePlanAnswers = z.record(z.string(), zDeviceAnswer);
+
 export const zOnboardDeviceBody = z.object({
   experimentIds: z
     .array(z.string().uuid())
@@ -195,6 +200,11 @@ export const zOnboardDeviceBody = z.object({
     .boolean()
     .default(true)
     .describe("When false, the config carries only the connection and topic contract."),
+  answers: zDevicePlanAnswers
+    .default({})
+    .describe(
+      "Question answers keyed by workbook cell id, persisted on the binding. An explicit null clears the stored answer; omitted ids keep theirs.",
+    ),
 });
 
 // The device-facing projection of a pinned workbook: only cells a headless
@@ -214,8 +224,6 @@ export const zDeviceProcedureCommand = z.object({
   content: z.string(),
   name: z.string().optional(),
 });
-
-export const zDeviceAnswer = z.union([z.string(), z.array(z.string()), z.null()]);
 
 export const zDeviceProcedureQuestion = z.object({
   type: z.literal("question"),

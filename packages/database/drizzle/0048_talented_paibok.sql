@@ -1,0 +1,1 @@
+ALTER TABLE "experiment_devices" ADD COLUMN "plan_answers" jsonb DEFAULT '{}'::jsonb NOT NULL;

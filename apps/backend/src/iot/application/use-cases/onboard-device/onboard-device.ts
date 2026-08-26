@@ -1,8 +1,8 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import type { DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
+import type { DeviceAnswer, DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
 import { buildIngestTopicPrefix } from "@repo/api/transforms/iot-topic";
-import { compileDevicePlan } from "@repo/api/transforms/workbook-device-plan";
+import { applyPlanAnswers, compileDevicePlan } from "@repo/api/transforms/workbook-device-plan";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
@@ -33,6 +33,7 @@ export class OnboardDeviceUseCase {
     experimentIds: string[],
     userId: string,
     includeWorkbook = true,
+    answers: Record<string, DeviceAnswer> = {},
   ): Promise<Result<DeviceOnboardingConfig>> {
     this.logger.log({
       msg: "Onboarding device",
@@ -119,23 +120,75 @@ export class OnboardDeviceUseCase {
     // are dropped (the device should stop serving them), inaccessible ones
     // already failed the call before anything bound.
     const includedIds = new Set([...accessibleResult.value, ...experimentIds]);
-    const experiments = onboardingResult.value
-      .filter((exp) => includedIds.has(exp.experimentId))
-      .map((exp) => ({
-        experimentId: exp.experimentId,
-        experimentName: exp.experimentName,
-        // The sensorType segment is the device's family; the device appends
-        // /{sensorVersion}/{sensorId} per measurement.
-        topicPrefix: buildIngestTopicPrefix(exp.experimentId, device.deviceType),
-        ...this.compileProcedures(exp, includeWorkbook),
-      }));
+    const included = onboardingResult.value.filter((exp) => includedIds.has(exp.experimentId));
+    const experiments = included.map((exp) => ({
+      experimentId: exp.experimentId,
+      experimentName: exp.experimentName,
+      // The sensorType segment is the device's family; the device appends
+      // /{sensorVersion}/{sensorId} per measurement.
+      topicPrefix: buildIngestTopicPrefix(exp.experimentId, device.deviceType),
+      ...this.compileProcedures(exp, includeWorkbook),
+    }));
 
-    return success({
-      thingName: device.thingName,
-      deviceType: device.deviceType,
-      endpoint: endpointResult.value,
-      experiments,
-    });
+    const persistResult = await this.persistAnswers(deviceId, experiments, answers);
+    if (persistResult.isFailure()) {
+      return failure(persistResult.error);
+    }
+
+    // Stored answers resolve into the config server-side; the submitted batch
+    // wins over what was stored, and both win over the workbook prefill.
+    const resolvedAnswers: Record<string, DeviceAnswer> = {
+      ...Object.fromEntries(included.flatMap((exp) => Object.entries(exp.planAnswers))),
+      ...answers,
+    };
+
+    return success(
+      applyPlanAnswers(
+        {
+          thingName: device.thingName,
+          deviceType: device.deviceType,
+          endpoint: endpointResult.value,
+          experiments,
+        },
+        resolvedAnswers,
+      ),
+    );
+  }
+
+  // Each submitted answer is stored on the binding whose compiled plan carries
+  // its question; ids matching no question in any included experiment are
+  // dropped rather than stored blind.
+  private async persistAnswers(
+    deviceId: string,
+    experiments: DeviceOnboardingConfig["experiments"],
+    answers: Record<string, DeviceAnswer>,
+  ): Promise<Result<void>> {
+    if (Object.keys(answers).length === 0) {
+      return success(undefined);
+    }
+
+    for (const experiment of experiments) {
+      const questionIds = experiment.procedures.flatMap((procedure) =>
+        procedure.type === "question" ? [procedure.id] : [],
+      );
+      const routed = Object.fromEntries(
+        Object.entries(answers).filter(([id]) => questionIds.includes(id)),
+      );
+      if (Object.keys(routed).length === 0) {
+        continue;
+      }
+
+      const mergeResult = await this.experimentDeviceRepository.mergePlanAnswers(
+        deviceId,
+        experiment.experimentId,
+        routed,
+      );
+      if (mergeResult.isFailure()) {
+        return failure(mergeResult.error);
+      }
+    }
+
+    return success(undefined);
   }
 
   // The device gets a flat, ordered plan compiled from the pinned workbook,

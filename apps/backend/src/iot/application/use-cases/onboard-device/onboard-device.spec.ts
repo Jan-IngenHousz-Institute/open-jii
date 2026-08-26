@@ -1,6 +1,13 @@
 import { faker } from "@faker-js/faker";
 
-import { and, eq, experiments, resourceGrants, workbookVersions } from "@repo/database";
+import {
+  and,
+  eq,
+  experimentDevices,
+  experiments,
+  resourceGrants,
+  workbookVersions,
+} from "@repo/database";
 
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
 import {
@@ -81,6 +88,53 @@ describe("OnboardDeviceUseCase", () => {
       .set({ workbookId: workbook.id, workbookVersionId: version.id })
       .where(eq(experiments.id, experimentId));
     return { version, protocolId };
+  };
+
+  const pinQuestionWorkbook = async (experimentId: string, cellId: string, prefill?: string) => {
+    const workbook = await testApp.createWorkbook({ name: "QWB", createdBy: userId });
+    const cells = [
+      {
+        id: cellId,
+        type: "question",
+        name: "plot",
+        question: { kind: "open_ended", text: "Which plot?", required: true },
+        ...(prefill === undefined ? {} : { answer: prefill }),
+        isCollapsed: false,
+      },
+    ];
+    const [version] = await testApp.database
+      .insert(workbookVersions)
+      .values({
+        workbookId: workbook.id,
+        version: 1,
+        cells,
+        metadata: {},
+        entitySnapshots: { protocols: {}, macros: {} },
+        createdBy: userId,
+      })
+      .returning();
+    await testApp.database
+      .update(experiments)
+      .set({ workbookId: workbook.id, workbookVersionId: version.id })
+      .where(eq(experiments.id, experimentId));
+  };
+
+  const storedAnswers = async (deviceId: string, experimentId: string) => {
+    const [row] = await testApp.database
+      .select({ planAnswers: experimentDevices.planAnswers })
+      .from(experimentDevices)
+      .where(
+        and(
+          eq(experimentDevices.deviceId, deviceId),
+          eq(experimentDevices.experimentId, experimentId),
+        ),
+      );
+    return row.planAnswers;
+  };
+
+  const questionAnswer = (config: { procedures: { type: string; answer?: unknown }[] }) => {
+    const question = config.procedures.find((procedure) => procedure.type === "question");
+    return question?.answer;
   };
 
   it("binds the device and returns the full config", async () => {
@@ -247,6 +301,67 @@ describe("OnboardDeviceUseCase", () => {
     assertSuccess(result);
     expect(result.value.experiments[0].workbookVersion).toBeNull();
     expect(result.value.experiments[0].procedures).toEqual([]);
+  });
+
+  it("persists submitted answers on the binding and resolves them into the config", async () => {
+    const device = await createActiveDevice(userId);
+    const { experiment } = await testApp.createExperiment({ name: "Q", userId });
+    const cellId = faker.string.uuid();
+    await pinQuestionWorkbook(experiment.id, cellId);
+
+    const result = await useCase.execute(device.id, [experiment.id], userId, true, {
+      [cellId]: "A1",
+    });
+
+    assertSuccess(result);
+    expect(questionAnswer(result.value.experiments[0])).toBe("A1");
+    expect(await storedAnswers(device.id, experiment.id)).toEqual({ [cellId]: "A1" });
+  });
+
+  it("resolves stored answers on a re-issue that submits none", async () => {
+    const device = await createActiveDevice(userId);
+    const { experiment } = await testApp.createExperiment({ name: "Q", userId });
+    const cellId = faker.string.uuid();
+    await pinQuestionWorkbook(experiment.id, cellId);
+    await useCase.execute(device.id, [experiment.id], userId, true, { [cellId]: "A1" });
+
+    const result = await useCase.execute(device.id, [], userId);
+
+    assertSuccess(result);
+    expect(questionAnswer(result.value.experiments[0])).toBe("A1");
+  });
+
+  it("lets a submitted answer beat the stored one, and an explicit null clear it", async () => {
+    const device = await createActiveDevice(userId);
+    const { experiment } = await testApp.createExperiment({ name: "Q", userId });
+    const cellId = faker.string.uuid();
+    // The workbook prefill must not resurrect once the stored null wins.
+    await pinQuestionWorkbook(experiment.id, cellId, "prefilled");
+    await useCase.execute(device.id, [experiment.id], userId, true, { [cellId]: "A1" });
+
+    const cleared = await useCase.execute(device.id, [], userId, true, { [cellId]: null });
+
+    assertSuccess(cleared);
+    expect(questionAnswer(cleared.value.experiments[0])).toBeNull();
+    expect(await storedAnswers(device.id, experiment.id)).toEqual({ [cellId]: null });
+
+    const reissued = await useCase.execute(device.id, [], userId);
+    assertSuccess(reissued);
+    expect(questionAnswer(reissued.value.experiments[0])).toBeNull();
+  });
+
+  it("drops answer ids that match no question instead of storing them blind", async () => {
+    const device = await createActiveDevice(userId);
+    const { experiment } = await testApp.createExperiment({ name: "Q", userId });
+    const cellId = faker.string.uuid();
+    await pinQuestionWorkbook(experiment.id, cellId);
+
+    const result = await useCase.execute(device.id, [experiment.id], userId, true, {
+      [faker.string.uuid()]: "stray",
+    });
+
+    assertSuccess(result);
+    expect(await storedAnswers(device.id, experiment.id)).toEqual({});
   });
 
   it("fails before binding when the endpoint cannot be resolved", async () => {
