@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import type { OrganizationResource } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
+import { Card } from "@repo/ui/components/card";
 import {
   Tooltip,
   TooltipContent,
@@ -63,60 +64,60 @@ function FeaturedResourceCard({ resource }: { resource: OrganizationResource }) 
 
   return (
     <li className="flex">
-      {/* The platform's card hover, verbatim — the design's border tint was prototype
-          styling. */}
       <Link
         href={`/${locale}/platform/${RESOURCE_SEGMENT[resource.type]}/${resource.id}`}
-        className="bg-card shadow-xs flex flex-1 flex-col gap-2 rounded-xl border p-4 transition-all hover:scale-[1.02] hover:shadow-lg"
+        className="flex flex-1"
       >
-        <div className="flex items-start justify-between gap-2.5">
-          <span className="text-primary min-w-0 break-words text-sm font-semibold">
-            {resource.name}
-          </span>
-          {/* The lock, not a "Public" badge on everything — as the resources card does. */}
-          {resource.visibility === "private" ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className="text-muted-foreground shrink-0"
-                  aria-label={t("resourceVisibility.privateStatus")}
-                >
-                  <Lock className="h-3 w-3" />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{t("organizations.resources.privateTooltip")}</TooltipContent>
-            </Tooltip>
-          ) : null}
-        </div>
+        <Card interactive className="flex-1 gap-2 p-4">
+          <div className="flex items-start justify-between gap-2.5">
+            <span className="text-primary min-w-0 break-words text-sm font-semibold">
+              {resource.name}
+            </span>
+            {/* The lock, not a "Public" badge on everything — as the resources card does. */}
+            {resource.visibility === "private" ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className="text-muted-foreground shrink-0"
+                    aria-label={t("resourceVisibility.privateStatus")}
+                  >
+                    <Lock className="h-3 w-3" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{t("organizations.resources.privateTooltip")}</TooltipContent>
+              </Tooltip>
+            ) : null}
+          </div>
 
-        {/* Tags stripped, not rendered: a description is authored in a rich editor, so
+          {/* Tags stripped, not rendered: a description is authored in a rich editor, so
             interpolating it raw prints literal `<p>` markup. Placeholder rather than
             nothing, so a device — which has no description column — keeps the card's
             height instead of reading as a shorter card in the grid. */}
-        {resource.description ? (
-          <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
-            {stripHtml(resource.description)}
-          </p>
-        ) : (
-          <p className="text-muted-foreground/70 text-xs italic leading-relaxed">
-            {t("organizations.resources.noDescription")}
-          </p>
-        )}
+          {resource.description ? (
+            <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
+              {stripHtml(resource.description)}
+            </p>
+          ) : (
+            <p className="text-muted-foreground/70 text-xs italic leading-relaxed">
+              {t("organizations.resources.noDescription")}
+            </p>
+          )}
 
-        <div className="text-muted-foreground mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs">
-          <span className="flex items-center gap-1.5">
-            <span
-              className={`h-2 w-2 shrink-0 rounded-full ${RESOURCE_TYPE_COLOR[resource.type]}`}
-              aria-hidden
-            />
-            {t(`organizations.resources.types.${resource.type}`, { count: 1 })}
-          </span>
-          {/* Spelled out rather than bare: "5" beside a person glyph is a guess. */}
-          <span className="flex items-center gap-1.5">
-            <Users className="h-3 w-3 shrink-0" aria-hidden />
-            {t("organizations.featured.collaboratorCount", { count: resource.collaboratorCount })}
-          </span>
-        </div>
+          <div className="text-muted-foreground mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs">
+            <span className="flex items-center gap-1.5">
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${RESOURCE_TYPE_COLOR[resource.type]}`}
+                aria-hidden
+              />
+              {t(`organizations.resources.types.${resource.type}`, { count: 1 })}
+            </span>
+            {/* Spelled out rather than bare: "5" beside a person glyph is a guess. */}
+            <span className="flex items-center gap-1.5">
+              <Users className="h-3 w-3 shrink-0" aria-hidden />
+              {t("organizations.featured.collaboratorCount", { count: resource.collaboratorCount })}
+            </span>
+          </div>
+        </Card>
       </Link>
     </li>
   );

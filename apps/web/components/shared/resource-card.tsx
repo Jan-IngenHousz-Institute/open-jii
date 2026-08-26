@@ -7,20 +7,16 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { cn, cva } from "@repo/ui/lib/utils";
 
 // Layout and the featured tint only — the chrome (background, border, radius,
-// shadow) comes from `Card`. The hover lift is the listing's own design and so
-// belongs here, in the shared component, rather than at any call site.
-const resourceCardVariants = cva(
-  "relative h-full min-h-[180px] gap-3 p-5 transition-all hover:scale-[1.02] hover:shadow-lg",
-  {
-    variants: {
-      featured: {
-        true: "border-secondary/30 from-status-featured to-card bg-gradient-to-br",
-        false: "",
-      },
+// shadow) comes from `Card`, and so does the hover lift, via `interactive`.
+const resourceCardVariants = cva("relative h-full min-h-[180px] gap-3 p-5", {
+  variants: {
+    featured: {
+      true: "border-secondary/30 from-status-featured to-card bg-gradient-to-br",
+      false: "",
     },
-    defaultVariants: { featured: false },
   },
-);
+  defaultVariants: { featured: false },
+});
 
 export interface ResourceCardProps {
   href: string;
@@ -59,7 +55,7 @@ export function ResourceCard({
 }: ResourceCardProps) {
   return (
     <Link href={href} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-      <Card className={cn(resourceCardVariants({ featured }), className)}>
+      <Card interactive className={cn(resourceCardVariants({ featured }), className)}>
         {badges ? <div className="inline-flex flex-wrap gap-1">{badges}</div> : null}
         <div className="mb-auto">
           <h3 className="text-foreground mb-2 line-clamp-2 break-words text-base font-semibold md:text-lg">
