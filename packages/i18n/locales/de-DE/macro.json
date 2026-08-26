@@ -40,14 +40,16 @@
     "deleteMacro": "Makro löschen",
     "deleteMacroDescription": "Sobald Sie ein Makro löschen, gibt es kein Zurück mehr. Bitte seien Sie sicher.",
     "onlyCreatorCanEdit": "Nur der Makro-Ersteller kann auf die Einstellungen zugreifen",
-    "filterMy": "Meine Makros",
-    "filterAll": "Alle Makros",
-    "filterMacros": "Makros filtern",
     "clearSearch": "Suche löschen",
     "descriptionPlaceholder": "Beschreibung hinzufügen...",
     "codeNotAvailable": "Kein Code verfügbar",
     "detailsTitle": "Details",
-    "lastUpdate": "Letzte Aktualisierung"
+    "columns": {
+      "name": "Name",
+      "language": "Sprache",
+      "protocols": "Protokolle",
+      "updated": "Aktualisiert"
+    }
   },
   "newMacro": {
     "description": "Beschreibung",

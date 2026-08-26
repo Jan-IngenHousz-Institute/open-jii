@@ -146,4 +146,32 @@ describe("ProtocolPicker", () => {
       expect(screen.getByPlaceholderText(/search protocols/i)).toBeInTheDocument();
     });
   });
+
+  it("shows loading and error feedback instead of an empty result", async () => {
+    const user = userEvent.setup();
+    const spy = server.mount(contract.protocols.listProtocols, { status: 500, delay: 50 });
+
+    renderPicker();
+    await user.click(screen.getByRole("button", { name: /add protocol/i }));
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading protocols...");
+    expect(screen.queryByText("No protocols available")).not.toBeInTheDocument();
+    expect(await screen.findByText("Unable to load protocols.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
+  });
+
+  it("trims surrounding whitespace from the search query", async () => {
+    const user = userEvent.setup();
+    const spy = server.mount(contract.protocols.listProtocols, { body: [] });
+
+    renderPicker();
+    await user.click(screen.getByRole("button", { name: /add protocol/i }));
+    await user.type(screen.getByPlaceholderText(/search protocols/i), "  leaf  ");
+
+    await waitFor(() => {
+      expect(spy.calls[spy.calls.length - 1]?.query.search).toBe("leaf");
+    });
+  });
 });

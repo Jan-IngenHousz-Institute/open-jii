@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -16,7 +17,9 @@ export const useSetProtocolVisibility = () => {
           queryKey: orpc.protocols.getProtocol.queryKey({ input: { id: variables.id } }),
           exact: true,
         });
-        await queryClient.invalidateQueries({ queryKey: orpc.protocols.listProtocols.key() });
+        for (const queryKey of listQueryKeys.protocols()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
         await queryClient.invalidateQueries({ queryKey: orpc.search.globalSearch.key() });
       },
     }),

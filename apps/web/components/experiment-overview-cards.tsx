@@ -1,5 +1,6 @@
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
+import { useLocale } from "@/hooks/useLocale";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
@@ -19,6 +20,7 @@ export function ExperimentOverviewCards({
   showGetStartedHelp?: boolean;
 }) {
   const { t } = useTranslation("experiments");
+  const locale = useLocale();
 
   if (!experiments) {
     return (
@@ -47,8 +49,8 @@ export function ExperimentOverviewCards({
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
       {experiments.map((experiment) => {
         const experimentPath = archived
-          ? `/platform/experiments-archive/${experiment.id}`
-          : `/platform/experiments/${experiment.id}`;
+          ? `/${locale}/platform/experiments-archive/${experiment.id}`
+          : `/${locale}/platform/experiments/${experiment.id}`;
 
         return (
           <Link key={experiment.id} href={experimentPath}>

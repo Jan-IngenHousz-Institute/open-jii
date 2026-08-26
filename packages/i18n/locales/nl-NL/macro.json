@@ -40,14 +40,16 @@
     "deleteMacro": "Macro verwijderen",
     "deleteMacroDescription": "Zodra u een macro verwijdert, is er geen weg terug. Wees alstublieft zeker van uw keuze.",
     "onlyCreatorCanEdit": "Alleen de maker van de macro heeft toegang tot de instellingen",
-    "filterMy": "Mijn macro's",
-    "filterAll": "Alle macro's",
-    "filterMacros": "Macro's filteren",
     "clearSearch": "Zoekopdracht wissen",
     "descriptionPlaceholder": "Beschrijving toevoegen...",
     "codeNotAvailable": "Geen code beschikbaar",
     "detailsTitle": "Details",
-    "lastUpdate": "Laatste update"
+    "columns": {
+      "name": "Naam",
+      "language": "Taal",
+      "protocols": "Protocollen",
+      "updated": "Bijgewerkt"
+    }
   },
   "newMacro": {
     "description": "Beschrijving",

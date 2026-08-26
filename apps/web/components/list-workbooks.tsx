@@ -5,8 +5,10 @@ import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkboo
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { ListPagination } from "~/components/list-pagination";
 import { OrganizationPicker } from "~/components/organizations/organization-picker";
-import { WorkbookList } from "~/components/workbook-list";
+import { OverviewTable } from "~/components/overview-table/overview-table";
+import { getWorkbookColumns } from "~/components/overview-table/workbook-columns";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
 import { useTranslation } from "@repo/i18n";
@@ -30,8 +32,18 @@ import {
 } from "@repo/ui/components/select";
 
 export function ListWorkbooks() {
-  const { data: workbooks, isLoading, filter, setFilter, search, setSearch } = useWorkbooks({});
-  const { t } = useTranslation("workbook");
+  const {
+    data: workbooks,
+    isLoading,
+    isPlaceholderData,
+    error,
+    refetch,
+    search,
+    setSearch,
+    page,
+    setPage,
+  } = useWorkbooks({});
+  const { t } = useTranslation(["workbook", "common"]);
   const router = useRouter();
   const locale = useLocale();
   const [createOpen, setCreateOpen] = useState(false);
@@ -75,20 +87,33 @@ export function ListWorkbooks() {
           )}
         </div>
         <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-4">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-full md:w-[160px]">
-              <SelectValue placeholder={t("workbooks.filterWorkbooks")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="my">{t("workbooks.filterMy")}</SelectItem>
-              <SelectItem value="all">{t("workbooks.filterAll")}</SelectItem>
-            </SelectContent>
-          </Select>
           <Button onClick={() => setCreateOpen(true)}>{t("workbooks.create")}</Button>
         </div>
       </div>
 
-      <WorkbookList workbooks={workbooks} isLoading={isLoading} showEmptyHelp={!search} />
+      <div
+        aria-busy={isPlaceholderData}
+        inert={isPlaceholderData}
+        className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+      >
+        <OverviewTable
+          columns={getWorkbookColumns(t, locale)}
+          items={workbooks?.items}
+          isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+          errorMessage={t("workbooks.errorLoading")}
+          retryLabel={t("common.errors.tryAgain")}
+          getRowKey={(workbook) => workbook.id}
+          getRowHref={(workbook) => `/${locale}/platform/workbooks/${workbook.id}`}
+          emptyMessage={t("workbooks.noWorkbooks")}
+          emptyHelpPath={!search ? "/guide/experiments/workbooks" : undefined}
+        />
+
+        {workbooks && (
+          <ListPagination page={page} totalPages={workbooks.totalPages} onPageChange={setPage} />
+        )}
+      </div>
 
       <Dialog
         open={createOpen}

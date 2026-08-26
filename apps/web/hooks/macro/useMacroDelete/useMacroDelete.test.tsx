@@ -2,7 +2,7 @@ import { orpc } from "@/lib/orpc";
 import { createMacroDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -57,6 +57,24 @@ describe("useMacroDelete", () => {
 
     await waitFor(() => {
       expect(result.current.isSuccess || result.current.isIdle).toBeTruthy();
+    });
+  });
+
+  it("invalidates both the unpaginated and paginated list caches on settled", async () => {
+    const queryClient = createTestQueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    server.mount(contract.macros.deleteMacro);
+
+    const { result } = renderHook(() => useMacroDelete(), { queryClient });
+
+    act(() => {
+      result.current.mutate({ id: "macro-1" });
+    });
+
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: orpc.macros.listMacros.key(),
+      });
     });
   });
 });

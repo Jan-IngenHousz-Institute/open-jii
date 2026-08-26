@@ -1,98 +1,67 @@
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
-import { listItems } from "@repo/api/shared/listing";
+import { isPaginatedList } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
 
-export type MacroFilter = "my" | "all";
-
 export function useMacros({
-  initialFilter = "my",
   initialSearch = "",
   initialLanguage,
 }: {
-  initialFilter?: MacroFilter;
   initialSearch?: string;
   initialLanguage?: MacroLanguage;
 } = {}) {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-
-  const rawFilter = searchParams.get("filter");
-
-  const [filter, setFilterState] = useState<MacroFilter>(
-    rawFilter === "all" ? "all" : rawFilter === "my" ? "my" : initialFilter,
-  );
-  const [search, setSearch] = useState<string>(initialSearch);
+  const [search, setSearchState] = useState<string>(initialSearch);
   const [debouncedSearch] = useDebounce(search, 300);
-  const [language, setLanguage] = useState<MacroLanguage | undefined>(initialLanguage);
+  const [language, setLanguageState] = useState<MacroLanguage | undefined>(initialLanguage);
+  const [page, setPage] = useState(1);
 
-  const createQueryString = useCallback(
-    (name: string, value: string | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (value === null) {
-        params.delete(name);
-      } else {
-        params.set(name, value);
-      }
-      return params.toString();
-    },
-    [searchParams],
-  );
+  const setSearch = (value: string) => {
+    setSearchState(value);
+    setPage(1);
+  };
 
-  const setFilter = useCallback(
-    (value: MacroFilter) => {
-      setFilterState(value);
-      const queryString = createQueryString("filter", value === "all" ? "all" : null);
-      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-      router.push(newUrl, { scroll: false });
-    },
-    [pathname, router, createQueryString],
-  );
+  const setLanguage = (value: MacroLanguage | undefined) => {
+    setLanguageState(value);
+    setPage(1);
+  };
 
   const query = useQuery(
     orpc.macros.listMacros.queryOptions({
       input: {
-        filter: filter === "all" ? undefined : "my",
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
         language,
+        page,
       },
+      placeholderData: (prev) => prev,
     }),
   );
 
-  // Narrowed to the array shape: this hook sends no `page`, so the response is
-  // always the bare list. Deletable once the caller migrates to the envelope.
-  const items = query.data ? listItems(query.data) : undefined;
+  // `page` is always sent, so the response is the envelope; narrow the union.
+  const data = query.data && isPaginatedList(query.data) ? query.data : undefined;
 
-  // Auto-switch to "all" if user has no macros of their own on initial load
-  const hasAutoSwitched = useRef(false);
+  // A mutation or background update can shrink the result set under the current
+  // page; snap back into range once a real (non-placeholder) response says so.
   useEffect(() => {
-    if (
-      !hasAutoSwitched.current &&
-      filter === "my" &&
-      items?.length === 0 &&
-      !debouncedSearch &&
-      !language
-    ) {
-      hasAutoSwitched.current = true;
-      setFilter("all");
-    }
-  }, [filter, items, setFilter, debouncedSearch, language]);
+    if (!data || query.isPlaceholderData) return;
+    const maxPage = Math.max(1, data.totalPages);
+    if (page > maxPage) setPage(maxPage);
+  }, [data, query.isPlaceholderData, page]);
 
   return {
-    data: items,
+    data,
     isLoading: query.isLoading,
+    isPlaceholderData: query.isPlaceholderData,
     error: query.error,
-    filter,
-    setFilter,
+    refetch: query.refetch,
     search,
     setSearch,
     language,
     setLanguage,
+    page,
+    setPage,
   };
 }

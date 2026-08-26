@@ -1,20 +1,19 @@
 "use client";
 
+import { orpc } from "@/lib/orpc";
+import { useQuery } from "@tanstack/react-query";
 import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
-import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 
+import { listItems } from "@repo/api/shared/listing";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 export function UserExperimentsSection() {
-  // Get only user's experiments (member experiments) with a limit for dashboard view
-  const { data } = useExperiments({
-    initialFilter: "member",
-    initialStatus: undefined,
-    initialSearch: "",
-  });
+  const { data } = useQuery(
+    orpc.experiments.listExperiments.queryOptions({ input: { scope: "related" } }),
+  );
 
   // Show only first 3 experiments for dashboard
-  const limitedExperiments = data ? data.slice(0, 3) : undefined;
+  const limitedExperiments = data ? listItems(data).slice(0, 3) : undefined;
 
   return (
     <div className="space-y-4">

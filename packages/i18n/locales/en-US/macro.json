@@ -40,14 +40,16 @@
     "deleteMacro": "Delete Macro",
     "deleteMacroDescription": "Once you delete a macro, there is no going back. Please be certain.",
     "onlyCreatorCanEdit": "Only the macro creator can access settings",
-    "filterMy": "My Macros",
-    "filterAll": "All Macros",
-    "filterMacros": "Filter macros",
     "clearSearch": "Clear search",
     "descriptionPlaceholder": "Add a description...",
     "codeNotAvailable": "No code available",
     "detailsTitle": "Details",
-    "lastUpdate": "Last update"
+    "columns": {
+      "name": "Name",
+      "language": "Language",
+      "protocols": "Protocols",
+      "updated": "Updated"
+    }
   },
   "newMacro": {
     "description": "Description",

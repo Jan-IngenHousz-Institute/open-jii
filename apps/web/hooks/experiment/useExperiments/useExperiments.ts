@@ -1,97 +1,70 @@
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
 
 import type { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
-import { listItems } from "@repo/api/shared/listing";
+import { isPaginatedList } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
 
-export type ExperimentFilter = "member" | "all";
-
 export const useExperiments = ({
-  initialFilter = "member",
   initialStatus = undefined,
   initialSearch = "",
   archived = false,
 }: {
-  initialFilter?: ExperimentFilter;
   initialStatus?: ExperimentStatus | undefined;
   initialSearch?: string;
   archived?: boolean;
 }) => {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-
-  // Get filter from URL params, defaulting to initialFilter
-  const rawFilter = searchParams.get("filter");
-
-  const [filter, setFilterState] = useState<ExperimentFilter>(
-    rawFilter === "all" ? "all" : rawFilter === "member" ? "member" : initialFilter,
-  );
-  const [status, setStatus] = useState<ExperimentStatus | undefined>(initialStatus);
-  const [search, setSearch] = useState<string>(initialSearch);
+  const [status, setStatusState] = useState<ExperimentStatus | undefined>(initialStatus);
+  const [search, setSearchState] = useState<string>(initialSearch);
+  const [page, setPage] = useState(1);
   const [debouncedSearch] = useDebounce(search, 300);
 
-  // Helper to create query string by merging current searchParams
-  const createQueryString = useCallback(
-    (name: string, value: string | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (value === null) {
-        params.delete(name);
-      } else {
-        params.set(name, value);
-      }
-      return params.toString();
-    },
-    [searchParams],
-  );
+  const setSearch = (value: string) => {
+    setSearchState(value);
+    setPage(1);
+  };
 
-  // Clean up invalid filter in URL
-  useEffect(() => {
-    if (rawFilter !== null && rawFilter !== "all") {
-      const queryString = createQueryString("filter", null);
-      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-      router.push(newUrl, { scroll: false });
-    }
-  }, [rawFilter, pathname, router, createQueryString]);
+  const setStatus = (value: ExperimentStatus | undefined) => {
+    setStatusState(value);
+    setPage(1);
+  };
 
-  // Sync filter state with URL
-  const setFilter = useCallback(
-    (value: ExperimentFilter) => {
-      setFilterState(value);
-      const queryString = createQueryString("filter", value === "all" ? "all" : null);
-      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-      router.push(newUrl, { scroll: false });
-    },
-    [pathname, router, createQueryString],
-  );
-
-  // When filter is "all", we don't pass any filter to the API
-  const { data } = useQuery(
+  const query = useQuery(
     orpc.experiments.listExperiments.queryOptions({
       input: {
-        filter: filter === "all" ? undefined : filter,
+        scope: archived ? "related" : undefined,
         status: archived ? "archived" : status,
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
+        page,
       },
+      placeholderData: (prev) => prev,
     }),
   );
 
-  // Narrowed to the array shape: this hook sends no `page`, so the response is
-  // always the bare list. Deletable once the caller migrates to the envelope.
-  const items = data ? listItems(data) : undefined;
+  // `page` is always sent, so the response is the envelope; narrow the union.
+  const data = query.data && isPaginatedList(query.data) ? query.data : undefined;
 
-  // Return query result with filter, status, and search controls
+  // A mutation or background update can shrink the result set under the current
+  // page; snap back into range once a real (non-placeholder) response says so.
+  useEffect(() => {
+    if (!data || query.isPlaceholderData) return;
+    const maxPage = Math.max(1, data.totalPages);
+    if (page > maxPage) setPage(maxPage);
+  }, [data, query.isPlaceholderData, page]);
+
   return {
-    data: items,
-    filter,
-    setFilter,
+    data,
+    isLoading: query.isLoading,
+    isPlaceholderData: query.isPlaceholderData,
+    error: query.error,
+    refetch: query.refetch,
     status,
     setStatus,
     search,
     setSearch,
+    page,
+    setPage,
   };
 };
