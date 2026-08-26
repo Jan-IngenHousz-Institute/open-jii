@@ -2,7 +2,6 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { PageContainer } from "@/components/page-container";
-import { EmptyState } from "@/components/shared/empty-state";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { BarChart3, Upload } from "lucide-react";
 import Link from "next/link";
@@ -16,6 +15,7 @@ import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useE
 
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -91,15 +91,20 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           </Button>
         </div>
 
-        <EmptyState icon={BarChart3} description={t("experimentData.noData")}>
-          <Link
-            href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/measuring/taking-measurements`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="secondary">{t("experimentData.readMore")}</Button>
-          </Link>
-        </EmptyState>
+        <EmptyState
+          size="page"
+          icon={<BarChart3 />}
+          description={t("experimentData.noData")}
+          action={
+            <Link
+              href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/measuring/taking-measurements`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="secondary">{t("experimentData.readMore")}</Button>
+            </Link>
+          }
+        />
 
         <UploadDataModal
           experimentId={id}
