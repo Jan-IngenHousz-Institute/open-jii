@@ -219,7 +219,7 @@ export function ActivityPopover({ className }: { className?: string }) {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={6} className="w-[360px] p-0">
+      <PopoverContent align="end" sideOffset={6} collisionPadding={8} className="w-[360px] p-0">
         <InvitationsSection onNavigate={() => setOpen(false)} />
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h3 className="text-sm font-semibold">Activity</h3>

@@ -6,6 +6,11 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 
+// A dimmer has to darken whatever is behind it, identically in light and dark, so
+// it is the same fixed wash the packages/ui modal scrims use rather than a token.
+// eslint-disable-next-line no-restricted-syntax -- A scrim is theme-independent by design
+const backdrop = "bg-black/50";
+
 export interface EdgeSidePanelProps {
   open: boolean;
   selectedEdge: Edge | null;
@@ -64,10 +69,10 @@ export function EdgeSidePanel({
       {/* Always render backdrop for fade animation */}
       <div
         className={
-          "fixed inset-0 z-[80] transition-opacity duration-300 " +
+          `${backdrop} fixed inset-0 z-[80] transition-opacity duration-300 ` +
           (open && selectedEdge
-            ? "bg-sidebar/60 pointer-events-auto opacity-100"
-            : "bg-sidebar/0 pointer-events-none opacity-0")
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0")
         }
         onClick={onClose}
         aria-label={t("edgePanel.closeBackdrop")}

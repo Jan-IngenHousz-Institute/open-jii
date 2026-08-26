@@ -23,6 +23,11 @@ import { InstructionPanel } from "./instruction-panel";
 import { MeasurementPanel } from "./measurement-panel";
 import { QuestionPanel } from "./question-panel";
 
+// A dimmer has to darken whatever is behind it, identically in light and dark, so
+// it is the same fixed wash the packages/ui modal scrims use rather than a token.
+// eslint-disable-next-line no-restricted-syntax -- A scrim is theme-independent by design
+const backdrop = "bg-black/50";
+
 // Local mirror of QuestionUI (not exported from question-panel)
 interface QuestionUI {
   answerType: "TEXT" | "SELECT" | "NUMBER" | "BOOLEAN";
@@ -146,10 +151,8 @@ export function ExperimentSidePanel({
       {/* Node Side Panel */}
       <div
         className={
-          "fixed inset-0 z-50 transition-opacity duration-300 " +
-          (open && nodeType
-            ? "bg-sidebar/60 pointer-events-auto opacity-100"
-            : "bg-sidebar/0 pointer-events-none opacity-0")
+          `${backdrop} fixed inset-0 z-50 transition-opacity duration-300 ` +
+          (open && nodeType ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0")
         }
         onClick={onClose}
         aria-label="Close side panel backdrop"

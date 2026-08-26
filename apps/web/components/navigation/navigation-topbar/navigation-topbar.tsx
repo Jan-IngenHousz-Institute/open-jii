@@ -94,46 +94,53 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
 
           <Link href={`/${locale}/platform`} className="md:hidden">
             <Image
-              src="/openJII_logo_RGB_horizontal_yellow.png"
+              src="/openJII_logo_RGB_horizontal_green_yellow_trimmed.svg"
               alt="JII Logo"
-              width={300}
-              height={300}
-              className="h-16 w-auto"
+              width={170}
+              height={50}
+              className="h-9 w-auto dark:hidden"
+            />
+            <Image
+              src="/openJII_logo_RGB_horizontal_yellow_transparentBG.png"
+              alt="JII Logo"
+              width={170}
+              height={50}
+              className="hidden h-9 w-auto dark:block"
             />
           </Link>
 
-          {/* Desktop: Full navigation */}
-          <div className="ml-auto hidden items-center gap-2 md:flex">
+          <div className="ml-auto flex items-center gap-2">
             {/* Activity bell - OJD-1506 */}
             <ActivityPopover />
-
-            {/* Language Switcher */}
-            <LanguageSwitcher locale={locale} />
 
             {/* Light / dark / system, in the bell's own treatment. */}
             <ThemeToggle className="text-foreground/70 hover:text-foreground" />
 
-            {/* User Dropdown */}
-            <NavUser
-              user={{
-                id: user.id,
-                email: user.email,
-              }}
-              locale={locale}
-              compact
-            />
-          </div>
+            <div className="hidden items-center gap-2 md:flex">
+              {/* Language Switcher */}
+              <LanguageSwitcher locale={locale} />
 
-          {/* Mobile: Hamburger menu */}
-          <div className="ml-auto flex md:hidden">
+              {/* User Dropdown */}
+              <NavUser
+                user={{
+                  id: user.id,
+                  email: user.email,
+                }}
+                locale={locale}
+                compact
+              />
+            </div>
+
+            {/* Mobile: Hamburger menu. Sized to the bell rather than to stock
+                `size="icon"`, so the three controls read as one set. */}
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Open menu"
-              className="text-primary"
+              className="text-primary md:hidden"
             >
-              <Menu className="!h-6 !w-6" />
+              <Menu className="size-[18px]" />
             </Button>
           </div>
         </div>
@@ -153,11 +160,18 @@ export function NavigationTopbar({ locale, user, releaseNotes = [] }: Navigation
                 <SheetTitle className="sr-only">Navigation menu</SheetTitle>
                 <SheetDescription className="sr-only">Navigation menu</SheetDescription>
                 <Image
+                  src="/openJII_logo_RGB_horizontal_green_yellow_trimmed.svg"
+                  alt="JII Logo"
+                  width={170}
+                  height={50}
+                  className="h-9 w-auto dark:hidden"
+                />
+                <Image
                   src="/openJII_logo_RGB_horizontal_yellow_transparentBG.png"
                   alt="JII Logo"
-                  width={116}
-                  height={34}
-                  className="h-9 w-auto"
+                  width={170}
+                  height={50}
+                  className="hidden h-9 w-auto dark:block"
                 />
                 <Button
                   variant="ghost"

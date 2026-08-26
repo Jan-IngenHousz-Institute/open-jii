@@ -41,25 +41,37 @@
   --chart-3: oklch(0.63 0.115 240);
   --chart-4: oklch(0.75 0.14 95);
   --chart-5: oklch(0.71 0.115 135);
-  /* The sidebar reads as a dark slab in both modes rather than following the
-     page. `#002F2F` and its `#1A4444` active row are the original openJII
-     sidebar restored exactly; `#49e06d` is the brand's bright green, which is
-     what made the active row unmistakable before the redesign. The slab is
-     lighter than the dark-mode page (L 0.276 vs 0.175), so it still separates
-     when everything around it is dark — one value serves both modes. */
-  --sidebar: oklch(0.2763 0.0472 194.7689);
-  --sidebar-foreground: oklch(0.98 0.005 195);
-  --sidebar-primary: oklch(0.8022 0.2017 147.7498);
-  --sidebar-primary-foreground: oklch(0.21 0.03 195);
-  --sidebar-accent: oklch(0.3573 0.0464 195.276);
-  --sidebar-accent-foreground: oklch(0.98 0.005 195);
-  --sidebar-border: oklch(0.3573 0.0464 195.276);
-  --sidebar-ring: oklch(0.8022 0.2017 147.7498);
-  /* The desktop sidebar's vertical fade. Identical to --primary in light, which
-     is the pair the pre-redesign sidebar faded between (#002F2F → #005E5E); a
-     separate token because --primary inverts to a light tint in dark mode and
-     would turn the slab's bottom edge into a glow. */
-  --sidebar-gradient: oklch(0.4363 0.0745 194.7689);
+  /* Written as references, not values: the sidebar is the card layer standing on
+     end, so it has no palette of its own and a theme swap carries it for free.
+     Nothing here may be given a literal — that is what turned this block into the
+     app's dark-chrome palette, borrowed by the public navbar, the login hero and
+     two overlay dimmers, none of which is a sidebar. The slab reads against the
+     page because --card already sits off --background, and because the slab draws
+     a --border edge. */
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--card-foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* The public site's chrome — navbar, footer, and anything rendered into them —
+     is dark in both modes by decision. That is the brand look, and it is why those
+     surfaces used to reach for `--sidebar-*`: it was the one block that stayed
+     dark on a light page. It has its own block now, declared identically in
+     `:root` and `.dark` so a theme toggle does not move it. The five names mirror
+     the five `--sidebar-*` those surfaces used, at the values they had before the
+     sidebar started following the theme, so the move was a rename and nothing
+     shifted. `#002F2F` and its `#1A4444` edge are the original openJII chrome;
+     `#49e06d` is the brand's bright green. */
+  --slab: oklch(0.2763 0.0472 194.7689);
+  --slab-foreground: oklch(0.98 0.005 195);
+  --slab-primary: oklch(0.8022 0.2017 147.7498);
+  --slab-accent: oklch(0.3573 0.0464 195.276);
+  --slab-border: oklch(0.3573 0.0464 195.276);
+
   /* The editor canvas: workbook, dashboard and visualization surfaces share it,
      and cells float on it as cards. Near-white with a wide hue sweep rather than
      a lightness change, so it reads as a gradient without carrying weight — the
@@ -154,16 +166,23 @@
   --chart-3: oklch(0.72 0.11 240);
   --chart-4: oklch(0.85 0.14 98);
   --chart-5: oklch(0.78 0.11 135);
-  --sidebar: oklch(0.2763 0.0472 194.7689);
-  --sidebar-foreground: oklch(0.98 0.005 195);
-  --sidebar-primary: oklch(0.8022 0.2017 147.7498);
-  --sidebar-primary-foreground: oklch(0.21 0.03 195);
-  --sidebar-accent: oklch(0.3573 0.0464 195.276);
-  --sidebar-accent-foreground: oklch(0.98 0.005 195);
-  --sidebar-border: oklch(0.3573 0.0464 195.276);
-  --sidebar-ring: oklch(0.8022 0.2017 147.7498);
-  /* Same delta from --sidebar as light (~0.15 L), so the fade reads the same. */
-  --sidebar-gradient: oklch(0.42 0.055 194.7689);
+  /* Same derivation as light, against this block's own values. */
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--card-foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Identical to the light block on purpose — see the note there. */
+  --slab: oklch(0.2763 0.0472 194.7689);
+  --slab-foreground: oklch(0.98 0.005 195);
+  --slab-primary: oklch(0.8022 0.2017 147.7498);
+  --slab-accent: oklch(0.3573 0.0464 195.276);
+  --slab-border: oklch(0.3573 0.0464 195.276);
+
   --canvas-from: oklch(0.168 0.016 148);
   --canvas-to: oklch(0.162 0.013 240);
   --font-sans: var(--font-inter), Inter, ui-sans-serif, sans-serif, system-ui;
@@ -240,7 +259,12 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-gradient: var(--sidebar-gradient);
+
+  --color-slab: var(--slab);
+  --color-slab-foreground: var(--slab-foreground);
+  --color-slab-primary: var(--slab-primary);
+  --color-slab-accent: var(--slab-accent);
+  --color-slab-border: var(--slab-border);
 
   --color-status-active: var(--status-active);
   --color-status-active-foreground: var(--status-active-foreground);

@@ -10,9 +10,10 @@ import { Button } from "@repo/ui/components/button";
 import { WHATS_NEW_OPEN_EVENT, countUnread } from "./whats-new-shared";
 
 /**
- * Standalone sidebar-footer row that opens the What's new sheet. Shows a brand-green
- * unread dot when there are new entries. Styled for the sidebar slab, matching the
- * search button above it.
+ * Row that opens the What's new sheet, in the sidebar footer and in the mobile nav
+ * sheet. Shaped like a stock sidebar row but not built from one — the mobile sheet
+ * is not inside a `Sidebar`, so `SidebarMenuButton` would throw there. Shows an accent
+ * unread dot when there are new entries.
  */
 export function WhatsNewFooterItem({
   entries,
@@ -40,15 +41,12 @@ export function WhatsNewFooterItem({
       aria-label={
         hasUnread ? `${label} (${t("whatsNew.unreadBadge", { count: unreadCount })})` : label
       }
-      className="text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-9 w-full justify-start gap-2 rounded-md px-3 text-left font-normal transition-colors"
+      className="h-8 w-full justify-start gap-2 p-2 font-normal"
     >
       <Sparkles className="size-4 shrink-0" />
-      <span className="flex-1 truncate">{label}</span>
+      <span className="flex-1 truncate text-left">{label}</span>
       {hasUnread && (
-        <span
-          className="bg-sidebar-primary ml-auto size-2 shrink-0 rounded-full"
-          aria-hidden="true"
-        />
+        <span className="bg-primary ml-auto size-2 shrink-0 rounded-full" aria-hidden="true" />
       )}
     </Button>
   );

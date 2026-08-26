@@ -14,6 +14,23 @@ import { FormatDate } from "../../shared/format-date";
 import { CtfImage } from "../contentful/ctf-image";
 import { ArticleAuthor } from "./article-author";
 
+// A tile is a photograph under a fade. The fade dims the image identically in
+// light and dark, so it is a scrim, and a scrim carries its own foregrounds rather
+// than theme tokens — following the theme would turn it into a near-white wash
+// over the photo in light mode. Hoisted so each literal is counted once.
+// eslint-disable-next-line no-restricted-syntax -- fixed neutral photo scrim
+const tileSurface = "bg-gray-900";
+// eslint-disable-next-line no-restricted-syntax -- fixed neutral photo scrim
+const tileScrim = "from-gray-900 via-gray-900/40";
+// eslint-disable-next-line no-restricted-syntax -- pairs with tileScrim
+const tileRing = "inset-ring-gray-900/10";
+// eslint-disable-next-line no-restricted-syntax -- pairs with tileScrim
+const tileForeground = "text-white";
+// eslint-disable-next-line no-restricted-syntax -- pairs with tileScrim
+const tileMeta = "text-gray-300";
+// eslint-disable-next-line no-restricted-syntax -- pairs with tileScrim
+const tileDot = "fill-white/50";
+
 interface ArticleTileProps extends HTMLProps<HTMLDivElement> {
   article: PageBlogPostFieldsFragment;
   locale: string;
@@ -41,7 +58,9 @@ export const ArticleTile = ({
   if (horizontal) {
     return (
       <Link href={`/${locale}/blog/${slug}`} className={cn("flex flex-col", className)}>
-        <article className="bg-sidebar relative isolate flex h-full min-h-[180px] flex-col overflow-hidden rounded-2xl">
+        <article
+          className={`relative isolate flex h-full min-h-[180px] flex-col overflow-hidden rounded-2xl ${tileSurface}`}
+        >
           {/* IMAGE */}
           {featuredImage && (
             <div {...inspectorProps({ fieldId: "featuredImage" })}>
@@ -56,22 +75,25 @@ export const ArticleTile = ({
           )}
 
           {/* GRADIENTS */}
-          <div className="from-sidebar via-sidebar/40 pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t" />
-          <div className="inset-ring inset-ring-border pointer-events-none absolute inset-0 -z-10 rounded-2xl" />
+          <div
+            className={`pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t ${tileScrim}`}
+          />
+          <div
+            className={`inset-ring pointer-events-none absolute inset-0 -z-10 rounded-2xl ${tileRing}`}
+          />
 
           {/* CONTENT */}
           <div className="relative z-10 mt-auto px-6 pb-6">
-            <div className="text-sidebar-foreground/70 flex flex-wrap items-center gap-y-1 overflow-hidden text-sm">
+            <div
+              className={`flex flex-wrap items-center gap-y-1 overflow-hidden text-sm ${tileMeta}`}
+            >
               {/* AUTHOR */}
               <div className="mr-8">
                 <ArticleAuthor article={article} noAvatar />
               </div>
 
               <div className="-ml-4 flex items-center gap-x-4">
-                <svg
-                  viewBox="0 0 2 2"
-                  className="fill-sidebar-foreground/50 -ml-0.5 h-0.5 w-0.5 flex-none"
-                >
+                <svg viewBox="0 0 2 2" className={`-ml-0.5 h-0.5 w-0.5 flex-none ${tileDot}`}>
                   <circle r="1" cx="1" cy="1" />
                 </svg>
 
@@ -83,7 +105,7 @@ export const ArticleTile = ({
 
             {title && (
               <h3
-                className="text-sidebar-foreground mt-1 text-lg font-semibold leading-6"
+                className={`mt-1 text-lg font-semibold leading-6 ${tileForeground}`}
                 {...inspectorProps({ fieldId: "title" })}
               >
                 {title}
@@ -98,7 +120,9 @@ export const ArticleTile = ({
   // VERTICAL
   return (
     <Link href={`/${locale}/blog/${slug}`} className={cn("flex flex-col", className)}>
-      <article className="bg-sidebar relative isolate flex h-[420px] flex-col overflow-hidden rounded-2xl">
+      <article
+        className={`relative isolate flex h-[420px] flex-col overflow-hidden rounded-2xl ${tileSurface}`}
+      >
         {/* IMAGE */}
         {featuredImage && (
           <div {...inspectorProps({ fieldId: "featuredImage" })}>
@@ -112,11 +136,15 @@ export const ArticleTile = ({
         )}
 
         {/* GRADIENTS */}
-        <div className="from-sidebar via-sidebar/40 pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t" />
-        <div className="inset-ring inset-ring-border pointer-events-none absolute inset-0 -z-10 rounded-2xl" />
+        <div
+          className={`pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t ${tileScrim}`}
+        />
+        <div
+          className={`inset-ring pointer-events-none absolute inset-0 -z-10 rounded-2xl ${tileRing}`}
+        />
 
         {/* CONTENT */}
-        <div className="text-sidebar-foreground/70 relative z-10 mt-auto px-8 pb-8">
+        <div className={`relative z-10 mt-auto px-8 pb-8 ${tileMeta}`}>
           {/* DATE */}
           <time className="text-sm" {...inspectorProps({ fieldId: "publishedDate" })}>
             <FormatDate date={safePublishedDate} />
@@ -125,7 +153,7 @@ export const ArticleTile = ({
           {/* TITLE */}
           {title && (
             <h3
-              className="text-sidebar-foreground mt-1 text-xl font-semibold leading-6"
+              className={`mt-1 text-xl font-semibold leading-6 ${tileForeground}`}
               {...inspectorProps({ fieldId: "title" })}
             >
               {title}

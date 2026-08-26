@@ -63,12 +63,12 @@ export function NewsletterSubscribeForm() {
       <div
         role="status"
         aria-live="polite"
-        className="text-sidebar-foreground flex items-start gap-2 text-sm"
+        className="text-slab-foreground flex items-start gap-2 text-sm"
       >
-        <CheckCircle2 className="text-sidebar-primary mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+        <CheckCircle2 className="text-slab-primary mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <div>
           <p className="font-semibold">{t("footer.successTitle")}</p>
-          <p className="text-sidebar-foreground/80">{t("footer.successMessage")}</p>
+          <p className="text-slab-foreground/80">{t("footer.successMessage")}</p>
         </div>
       </div>
     );
@@ -76,8 +76,8 @@ export function NewsletterSubscribeForm() {
 
   return (
     <div>
-      <h4 className="text-sidebar-foreground mb-1 font-extrabold">{t("footer.title")}</h4>
-      <p className="text-sidebar-foreground/80 mb-3 text-sm">{t("footer.description")}</p>
+      <h4 className="text-slab-foreground mb-1 font-extrabold">{t("footer.title")}</h4>
+      <p className="text-slab-foreground/80 mb-3 text-sm">{t("footer.description")}</p>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2" noValidate>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -98,7 +98,7 @@ export function NewsletterSubscribeForm() {
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage role="alert" className="text-sidebar-primary" />
+                  <FormMessage role="alert" className="text-slab-primary" />
                 </FormItem>
               )}
             />

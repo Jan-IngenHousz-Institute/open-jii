@@ -10,7 +10,16 @@ import * as React from "react";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { Button } from "@repo/ui/components/button";
-import { Sidebar, SidebarRail, SidebarTrigger } from "@repo/ui/components/sidebar";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarRail,
+  SidebarTrigger,
+} from "@repo/ui/components/sidebar";
 
 import { NavItems } from "../nav-items/nav-items";
 import { iconMap } from "../navigation-config";
@@ -64,19 +73,6 @@ export function AppSidebar({
   translations: Translations;
   releaseNotes?: ReleaseNoteFields[];
 }) {
-  // const { toggleSidebar, state } = useSidebar();
-  // const searchInputRef = React.useRef<HTMLInputElement>(null);
-
-  // const handleSearchClick = () => {
-  //   if (state === "collapsed") {
-  //     toggleSidebar();
-  //     // Focus the input after sidebar opens
-  //     setTimeout(() => {
-  //       searchInputRef.current?.focus();
-  //     }, 200);
-  //   }
-  // };
-
   // Convert string-based icons to actual icon components
   type MappedNavItem = Omit<NavigationItem, "icon" | "children"> & {
     icon?: (typeof iconMap)[keyof typeof iconMap];
@@ -89,62 +85,70 @@ export function AppSidebar({
     children: item.children?.map(mapItem),
   });
 
-  const processedNavDashboard = navigationData.navDashboard.map(mapItem);
-  const processedNavExperiments = navigationData.navExperiments.map(mapItem);
-  const processedNavDevices = navigationData.navDevices.map(mapItem);
-  const processedNavWorkbooks = navigationData.navWorkbooks.map(mapItem);
-  const processedNavOrganizations = navigationData.navOrganizations.map(mapItem);
-  const processedNavLibrary = navigationData.navLibrary.map(mapItem);
+  // One group per section, so the sections keep the spacing that separates them.
+  // No group labels: every section holds a single top-level row, so a label would
+  // only repeat the row beneath it.
+  const sections: { key: string; items: MappedNavItem[] }[] = [
+    { key: "dashboard", items: navigationData.navDashboard.map(mapItem) },
+    { key: "experiments", items: navigationData.navExperiments.map(mapItem) },
+    { key: "devices", items: navigationData.navDevices.map(mapItem) },
+    { key: "workbooks", items: navigationData.navWorkbooks.map(mapItem) },
+    { key: "organizations", items: navigationData.navOrganizations.map(mapItem) },
+    { key: "library", items: navigationData.navLibrary.map(mapItem) },
+  ];
 
   return (
-    // The fade is deliberately desktop-only; the mobile sidebar and the public
-    // navbar stay flat.
-    <Sidebar
-      collapsible="hidden"
-      className="[&_[data-sidebar=sidebar]]:from-sidebar [&_[data-sidebar=sidebar]]:to-sidebar-gradient hidden md:flex [&_[data-sidebar=sidebar]]:bg-gradient-to-b"
-      {...props}
-    >
-      <div className="flex h-full flex-col">
-        <div className="flex h-16 items-center justify-between px-4">
-          <Link href={`/${locale}/platform`} className="flex items-center gap-2">
+    <Sidebar collapsible="hidden" className="hidden md:flex" {...props}>
+      <SidebarHeader className="gap-3">
+        {/* SidebarHeader is a column, so the brand row is laid out here. */}
+        <div className="flex items-center gap-2">
+          <Link href={`/${locale}/platform`} className="flex min-w-0 items-center gap-2">
+            <Image
+              src="/openJII_logo_RGB_horizontal_green_yellow_trimmed.svg"
+              alt={translations.logoAlt}
+              width={170}
+              height={50}
+              className="h-auto w-full max-w-[120px] dark:hidden"
+            />
             <Image
               src="/openJII_logo_RGB_horizontal_yellow_transparentBG.png"
               alt={translations.logoAlt}
-              width={116}
-              height={34}
-              className="h-auto w-full max-w-[120px]"
+              width={170}
+              height={50}
+              className="hidden h-auto w-full max-w-[120px] dark:block"
             />
           </Link>
-          <SidebarTrigger className="bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" />
+          <SidebarTrigger className="ml-auto shrink-0" />
         </div>
 
-        <div className="px-4 pb-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={openCommandPalette}
-            aria-label="Open command palette"
-            className="border-sidebar-border bg-sidebar-accent/40 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring h-9 w-full justify-start gap-2 border px-3 text-left font-normal"
-          >
-            <Search className="size-4 shrink-0" />
-            <span className="flex-1 truncate">Search…</span>
-            <CommandKHint />
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={openCommandPalette}
+          aria-label="Open command palette"
+          className="border-sidebar-border bg-sidebar-accent/60 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring h-8 w-full justify-start gap-2 border p-2 text-left font-normal"
+        >
+          <Search className="size-4 shrink-0" />
+          <span className="flex-1 truncate">Search…</span>
+          <CommandKHint />
+        </Button>
+      </SidebarHeader>
 
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
-          <NavItems items={processedNavDashboard} />
-          <NavItems items={processedNavExperiments} />
-          <NavItems items={processedNavDevices} />
-          <NavItems items={processedNavWorkbooks} />
-          <NavItems items={processedNavOrganizations} />
-          <NavItems items={processedNavLibrary} />
-        </div>
+      <SidebarContent>
+        {sections
+          .filter((section) => section.items.length > 0)
+          .map((section) => (
+            <SidebarGroup key={section.key}>
+              <SidebarGroupContent>
+                <NavItems items={section.items} />
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
+      </SidebarContent>
 
-        <div className="border-sidebar-border border-t px-4 py-2">
-          <WhatsNewFooterItem entries={releaseNotes} />
-        </div>
-      </div>
+      <SidebarFooter>
+        <WhatsNewFooterItem entries={releaseNotes} />
+      </SidebarFooter>
       <SidebarRail resizable />
     </Sidebar>
   );

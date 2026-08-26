@@ -73,17 +73,17 @@ function UserMenu({
           aria-label={t("auth.userMenu", "User menu")}
         >
           {avatarUrl ? (
-            <Avatar className="group-hover:bg-sidebar-accent h-6 w-6 rounded-full transition-all duration-200 group-hover:shadow-[0_0_10px_var(--sidebar-primary)]">
+            <Avatar className="group-hover:bg-slab-accent h-6 w-6 rounded-full transition-all duration-200 group-hover:shadow-[0_0_10px_var(--slab-primary)]">
               <AvatarImage src={avatarUrl} alt={displayName} />
               <AvatarFallback>
                 <User className="h-4 w-4" />
               </AvatarFallback>
             </Avatar>
           ) : (
-            <User className="group-hover:text-sidebar-primary h-4 w-4 transition-all duration-200 group-hover:drop-shadow-[0_0_10px_var(--sidebar-primary)]" />
+            <User className="group-hover:text-slab-primary h-4 w-4 transition-all duration-200 group-hover:drop-shadow-[0_0_10px_var(--slab-primary)]" />
           )}
           <ChevronDown
-            className={`group-hover:text-sidebar-primary h-4 w-4 transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
+            className={`group-hover:text-slab-primary h-4 w-4 transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
           />
         </Button>
       </DropdownMenuTrigger>
@@ -265,11 +265,11 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
       {/* Solid layer - green/nav mode */}
       <div
         aria-hidden="true"
-        className={`bg-sidebar border-sidebar-border absolute inset-0 -z-10 border-b shadow-lg transition-opacity duration-300 ${showSolid ? "opacity-100" : "opacity-0"}`}
+        className={`bg-slab border-slab-border absolute inset-0 -z-10 border-b shadow-lg transition-opacity duration-300 ${showSolid ? "opacity-100" : "opacity-0"}`}
       />
       {/* One base colour for the whole bar; the controls below inherit it. */}
       <nav
-        className={`mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 ${showSolid ? "text-sidebar-foreground" : heroForeground}`}
+        className={`mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 ${showSolid ? "text-slab-foreground" : heroForeground}`}
       >
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
@@ -289,12 +289,12 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
 
             // Remove hover effect for selected (active) nav item
             const linkClass = item.isActive
-              ? "flex items-center space-x-2 text-sm font-medium text-sidebar-primary font-bold"
-              : "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-sidebar-primary";
+              ? "flex items-center space-x-2 text-sm font-medium text-slab-primary font-bold"
+              : "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-slab-primary";
 
             const iconClass = item.isActive
-              ? "h-4 w-4 text-sidebar-primary"
-              : "h-4 w-4 group-hover:text-sidebar-primary";
+              ? "h-4 w-4 text-slab-primary"
+              : "h-4 w-4 group-hover:text-slab-primary";
 
             return (
               <Link
@@ -327,7 +327,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
               accent. `dark:hover:bg-transparent` is needed alongside the
               unprefixed class because stock ghost declares the dark fill as its
               own variant. */}
-          <ThemeToggle className="hover:text-sidebar-primary hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent" />
+          <ThemeToggle className="hover:text-slab-primary hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent" />
 
           {/* Mobile Navigation Menu */}
           <div className="md:hidden">
@@ -339,7 +339,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                   aria-label={t("navigation.menu", "Navigation menu")}
                   className="group hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent"
                 >
-                  <Menu className="group-hover:text-sidebar-primary h-4 w-4 transition-colors duration-200" />
+                  <Menu className="group-hover:text-slab-primary h-4 w-4 transition-colors duration-200" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">

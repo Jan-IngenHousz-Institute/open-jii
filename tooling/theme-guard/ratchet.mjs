@@ -23,19 +23,33 @@
  *   node ratchet.mjs            check against the floor
  *   node ratchet.mjs --write    re-record, only ever downward
  *
- * The floor is 15, and every one of them is a scrim or a foreground paired with
+ * The floor is 25, and every one of them is a scrim or a foreground paired with
  * one. Four are the dialog, alert-dialog, drawer and sheet scrims in packages/ui,
  * which upstream shadcn ships as a fixed translucent dark wash rather than a
  * token. Two are the public navbar's topbar fade and its foreground; six are the
  * home hero's fade and the four foregrounds over it; three are the auth pages'
- * shared photo scrim. A scrim is theme-independent by design — it dims whatever
- * is behind it, identically in light and dark — and the contract has no slot for
- * one. A fixed scrim also has to carry its own foreground, or the pairing drifts
- * the next time a token moves. Each carries an inline disable saying so.
+ * shared photo scrim, and one is the auth hero's foreground over it. Two are the
+ * flow editor's side-panel dimmers. Seven are the blog tile's surface, its
+ * two-stop fade, its inset ring and the three foregrounds over it — one set of
+ * consts shared by the horizontal and vertical variants. A scrim is
+ * theme-independent by design — it dims whatever is behind it, identically in
+ * light and dark — and the contract has no slot for one. A fixed scrim also has
+ * to carry its own foreground, or the pairing drifts the next time a token moves.
+ * Each carries an inline disable saying so.
  *
  * The floor moves up only for a scrim, and only once the scrim has been hoisted
  * to a single definition — the auth scrim was four copies across four pages,
- * which would have cost twelve.
+ * which would have cost twelve. The blog tile's seven are shared across both
+ * variants for the same reason; written inline they would have cost fourteen.
+ *
+ * It went 15 -> 25 when `--sidebar-*` stopped being the app's dark-chrome palette
+ * and started deriving from the contract. Four surfaces had been borrowing it
+ * precisely because it was the one block that stayed dark in both modes: the auth
+ * hero's text over the login photo, the two overlay dimmers, and the blog tiles.
+ * A dimmer or a photo fade that follows the theme stops dimming, so all four
+ * became what they always were. The public navbar and footer were borrowing it too
+ * and cost nothing: they are opaque chrome rather than scrims, so they moved to
+ * `--slab-*`, a block declared identically in `:root` and `.dark`.
  *
  * Imported by relative path rather than as a workspace dependency: this is a
  * standalone script, and the eslint config is plain ESM with no build step.
