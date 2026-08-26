@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceBand } from "@/components/workspace-band";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -57,7 +58,8 @@ export function IotDeviceDetailTabs({
   const tabs = DEVICE_TABS.filter((tab) => {
     if (tab.value === "collaborators") return canShare || canLeave;
     if (tab.value === "credentials") return canManage && !isMobileFamily;
-    if (tab.value === "onboarding") return !isMobileFamily;
+    // Hidden, not shown-then-redirected: gating parity with Credentials.
+    if (tab.value === "onboarding") return canManage && !isMobileFamily;
     if (tab.value === "firmware") return hasManagedFirmware;
     return true;
   });
@@ -83,7 +85,7 @@ export function IotDeviceDetailTabs({
         ))}
       </NavTabsList>
 
-      <div className="mt-6 flex flex-1 flex-col">{children}</div>
+      <WorkspaceBand className="mt-6">{children}</WorkspaceBand>
     </NavTabs>
   );
 }

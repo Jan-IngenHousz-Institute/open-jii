@@ -2,6 +2,7 @@
 
 import type { DevicePayloadStats, WorkbookMixEntry } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { Progress } from "@repo/ui/components/progress";
 
 import { EntityLink } from "./entity-link";
@@ -30,11 +31,7 @@ export function PayloadProfile({
   const total = payload.totalMeasurements;
 
   if (total === 0) {
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("iot.devices.monitoring.noMeasurements")}
-      </p>
-    );
+    return <EmptyState size="inline" description={t("iot.devices.monitoring.noMeasurements")} />;
   }
 
   // An id the platform cannot resolve belongs to nothing it knows: unknown,

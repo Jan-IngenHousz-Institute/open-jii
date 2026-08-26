@@ -18,16 +18,11 @@ import {
 export type DevicePlanQuestion = Extract<DeviceProcedure, { type: "question" }>;
 
 interface DevicePlanQuestionFieldProps {
-  experimentName: string;
   question: DevicePlanQuestion;
   control: Control<Record<string, string>>;
 }
 
-export function DevicePlanQuestionField({
-  experimentName,
-  question,
-  control,
-}: DevicePlanQuestionFieldProps) {
+export function DevicePlanQuestionField({ question, control }: DevicePlanQuestionFieldProps) {
   const { t } = useTranslation("iot");
 
   const options =
@@ -38,13 +33,11 @@ export function DevicePlanQuestionField({
         : null;
 
   return (
-    <div className="space-y-1.5 px-3 py-2.5">
+    <div className="space-y-1.5">
       <Label htmlFor={`plan-q-${question.id}`} className="text-sm">
         {question.text}
         {question.required && <span className="text-destructive"> *</span>}
       </Label>
-      <p className="text-muted-foreground text-xs">{experimentName}</p>
-
       <Controller
         name={question.id}
         control={control}

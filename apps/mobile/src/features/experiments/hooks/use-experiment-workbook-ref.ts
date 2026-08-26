@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { orpc } from "~/shared/api/orpc";
 
+import { listItems } from "@repo/api/shared/listing";
+
 /**
  * The workbook a given experiment is backed by. Reads the same cached (and
  * persisted) `listExperiments` entry the pickers use, so it resolves offline
@@ -16,13 +18,13 @@ export function useExperimentWorkbookRef(experimentId: string | undefined): {
 } {
   const { data, isLoading, error, isPaused } = useQuery(
     orpc.experiments.listExperiments.queryOptions({
-      input: { filter: "member" },
+      input: { scope: "related" },
       enabled: !!experimentId,
       networkMode: "offlineFirst",
     }),
   );
 
-  const experiment = experimentId ? data?.find((e) => e.id === experimentId) : undefined;
+  const experiment = experimentId ? listItems(data).find((e) => e.id === experimentId) : undefined;
   return {
     workbookId: experiment?.workbookId ?? undefined,
     isLoading,

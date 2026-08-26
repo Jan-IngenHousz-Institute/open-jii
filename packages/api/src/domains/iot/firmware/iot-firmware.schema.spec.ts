@@ -23,7 +23,7 @@ describe("zFirmwareRelease", () => {
         publishedAt: new Date().toISOString(),
         prerelease: false,
         latest: true,
-        notes: "- fixes",
+        notesHtml: "<ul><li>fixes</li></ul>",
         releaseUrl: "https://github.com/org/repo/releases/tag/v1.3.0",
         assets: [
           {
@@ -44,7 +44,7 @@ describe("zFirmwareRelease", () => {
         publishedAt: new Date().toISOString(),
         prerelease: true,
         latest: false,
-        notes: null,
+        notesHtml: null,
         releaseUrl: "https://github.com/org/repo/releases/tag/v1.3.1",
         assets: [],
       }).success,

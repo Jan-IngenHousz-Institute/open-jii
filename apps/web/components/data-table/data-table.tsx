@@ -216,7 +216,7 @@ export function DataTable({
 
       <div
         className={cn(
-          "text-muted-foreground relative overflow-x-auto border",
+          "text-muted-foreground @container relative overflow-x-auto border",
           // The overlap and the squared top edge exist to meet a toolbar's
           // bottom border; standalone, the table draws its own.
           toolbar === undefined ? "rounded-lg" : "-mt-px rounded-b-lg",

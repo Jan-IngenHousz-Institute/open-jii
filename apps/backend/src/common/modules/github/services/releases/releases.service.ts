@@ -70,7 +70,9 @@ export class GithubReleasesService {
           {
             params: { per_page: RELEASES_PER_PAGE },
             headers: {
-              Accept: "application/vnd.github+json",
+              // full: GitHub also renders the body to sanitized HTML server-side, so
+              // the platform shows real release notes without a markdown stack.
+              Accept: "application/vnd.github.full+json",
               "X-GitHub-Api-Version": "2022-11-28",
               ...(this.githubConfig.token === ""
                 ? {}
@@ -172,7 +174,7 @@ export class GithubReleasesService {
       publishedAt: new Date(release.publishedAt).toISOString(),
       prerelease: release.prerelease,
       latest: release === latestStable,
-      notes: release.body,
+      notesHtml: release.body_html ?? null,
       releaseUrl: release.html_url,
       assets: release.assets.map((asset) => ({
         name: asset.name,

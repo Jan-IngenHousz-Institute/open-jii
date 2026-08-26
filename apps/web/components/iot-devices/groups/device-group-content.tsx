@@ -1,22 +1,19 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
-import { useDeleteIotDeviceGroup } from "@/hooks/iot/useDeleteIotDeviceGroup/useDeleteIotDeviceGroup";
+import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
 import { useRemoveIotDeviceGroupMember } from "@/hooks/iot/useRemoveIotDeviceGroupMember/useRemoveIotDeviceGroupMember";
 import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
-import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
-import { Trash2 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 
 import type { IotDeviceGroupMember } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {
   Table,
@@ -27,28 +24,26 @@ import {
   TableRow,
 } from "@repo/ui/components/table";
 
-import { MetaField } from "../../experiment-dashboards/meta-field";
+import { ActionChipLink } from "../action-chip-link";
+import { deviceNeedsCredentials } from "../device-next-action";
+import { DeviceIdentity } from "../device-row";
+import { IotDeviceStatusBadge } from "../iot-device-status-badge";
 import { AddGroupMembersDialog } from "./add-group-members-dialog";
-import { DeleteDeviceGroupDialog } from "./delete-device-group-dialog";
+import { GroupAboutCard } from "./group-about-card";
 
 export function DeviceGroupContent() {
   const { t } = useTranslation("iot");
   const locale = useLocale();
-  const router = useRouter();
   const params = useParams<{ groupId: string }>();
   const groupId = params.groupId;
 
   const { data: group, isLoading, isError, error } = useIotDeviceGroup(groupId);
   const { data: members } = useIotDeviceGroupMembers(groupId);
+  // The chip aggregates over members: certificates are the one blocked step
+  // this page can see without fanning out per-device reads.
+  const credentialsNeededCount = (members ?? []).filter(deviceNeedsCredentials).length;
   const removeMember = useRemoveIotDeviceGroupMember();
   const [addOpen, setAddOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-
-  const deleteGroup = useDeleteIotDeviceGroup({
-    onSuccess: () => {
-      router.push(`/${locale}/platform/devices`);
-    },
-  });
 
   if (isError) {
     return <ErrorDisplay error={error} title={t("iot.groups.loadError")} />;
@@ -70,121 +65,93 @@ export function DeviceGroupContent() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-start gap-10">
-        <MetaField label={t("iot.groups.meta.members")} value={String(group.memberCount)} />
-        <MetaField label={t("iot.groups.meta.created")} value={formatDate(group.createdAt)} />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <TabBodyHeader
+          title={t("iot.groups.overview.title")}
+          description={t("iot.groups.overview.description")}
+        />
+        {credentialsNeededCount > 0 && (
+          <ActionChipLink href={`/${locale}/platform/devices/groups/${groupId}/credentials`}>
+            {t("iot.groups.nextAction.credentials", { count: credentialsNeededCount })}
+          </ActionChipLink>
+        )}
       </div>
-
-      {canContribute && (
-        <div className="flex justify-end">
-          <Button
-            onClick={() => {
-              setAddOpen(true);
-            }}
-          >
-            {t("iot.groups.addDevices")}
-          </Button>
-        </div>
-      )}
-
-      {(members ?? []).length === 0 ? (
-        <Card className="shadow-none">
-          <CardContent className="text-muted-foreground py-10 text-center text-sm">
-            {t("iot.groups.noMembers")}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("iot.groups.deviceColumn")}</TableHead>
-                <TableHead>{t("iot.groups.familyColumn")}</TableHead>
-                <TableHead>{t("iot.groups.statusColumn")}</TableHead>
-                {canContribute && <TableHead className="w-10" />}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(members ?? []).map((member) => (
-                <TableRow key={member.deviceId}>
-                  <TableCell>
-                    {resolveDevicePrimaryLabel(
-                      presentDevice({
-                        name: member.name,
-                        family: member.deviceType,
-                        id: member.serialNumber,
-                      }),
-                      t,
-                    )}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{member.deviceType}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-normal">
-                      {t(`iot.devices.status.${member.status}`)}
-                    </Badge>
-                  </TableCell>
-                  {canContribute && (
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          handleRemove(member);
-                        }}
-                      >
-                        {t("iot.groups.remove")}
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {group.capabilities.canManage && (
-        <Card className="border-destructive/30 max-w-3xl shadow-none">
-          <CardHeader>
-            <CardTitle className="text-destructive text-base">
-              {t("iot.groups.dangerZone.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">{t("iot.groups.dangerZone.deleteLabel")}</p>
-              <p className="text-muted-foreground text-sm">
-                {t("iot.groups.dangerZone.deleteDescription")}
-              </p>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0 space-y-6">
+          {canContribute && (
+            <div className="flex justify-end">
+              <Button
+                onClick={() => {
+                  setAddOpen(true);
+                }}
+              >
+                {t("iot.groups.addDevices")}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 shrink-0"
-              onClick={() => {
-                setDeleteOpen(true);
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t("iot.groups.delete")}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+          )}
+
+          {(members ?? []).length === 0 ? (
+            <Card className="shadow-none">
+              <CardContent className="text-muted-foreground py-10 text-center text-sm">
+                {t("iot.groups.noMembers")}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="bg-card rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("iot.groups.deviceColumn")}</TableHead>
+                    <TableHead>{t("iot.groups.familyColumn")}</TableHead>
+                    <TableHead>{t("iot.groups.statusColumn")}</TableHead>
+                    {canContribute && <TableHead className="w-10" />}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(members ?? []).map((member) => (
+                    <TableRow key={member.deviceId}>
+                      <TableCell>
+                        <DeviceIdentity
+                          device={{ ...member, id: member.deviceId }}
+                          href={`/${locale}/platform/devices/${member.deviceId}`}
+                          showSerial
+                        />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-[13px]">
+                        {getSensorFamilyLabel(member.deviceType)}
+                      </TableCell>
+                      <TableCell>
+                        <IotDeviceStatusBadge status={member.status} />
+                      </TableCell>
+                      {canContribute && (
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              handleRemove(member);
+                            }}
+                          >
+                            {t("iot.groups.remove")}
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+
+        <GroupAboutCard group={group} members={members ?? []} />
+      </div>
 
       <AddGroupMembersDialog
         groupId={groupId}
         memberIds={(members ?? []).map((member) => member.deviceId)}
         open={addOpen}
         onOpenChange={setAddOpen}
-      />
-      <DeleteDeviceGroupDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        groupName={group.name}
-        isPending={deleteGroup.isPending}
-        onConfirm={() => {
-          deleteGroup.mutate({ groupId });
-        }}
       />
     </div>
   );

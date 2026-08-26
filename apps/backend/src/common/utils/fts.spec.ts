@@ -1,4 +1,6 @@
-import { buildTsQuery, escapeLike } from "./fts";
+import { sql } from "@repo/database";
+
+import { buildTsQuery, crossTableBonus, escapeLike } from "./fts";
 
 describe("fts buildTsQuery", () => {
   it("appends :* to a single term for prefix matching", () => {
@@ -43,5 +45,26 @@ describe("fts escapeLike", () => {
 
   it("leaves ordinary text untouched", () => {
     expect(escapeLike("photosynthesis study")).toBe("photosynthesis study");
+  });
+});
+
+describe("fts crossTableBonus", () => {
+  const render = (expression: { getSQL: () => { queryChunks: unknown[] } }) =>
+    JSON.stringify(expression.getSQL().queryChunks);
+
+  it("caps the summed per-match steps", () => {
+    const text = render(crossTableBonus(sql`a`, sql`b`, sql`c`));
+
+    expect(text).toContain("LEAST(");
+    expect(text.match(/CASE WHEN/g)).toHaveLength(3);
+    expect(text).toContain("0.1");
+  });
+
+  it("yields a plain zero with no probes, not an empty LEAST", () => {
+    // An empty term list would join into `LEAST(, 0.1)`, which Postgres cannot parse.
+    const text = render(crossTableBonus());
+
+    expect(text).not.toContain("LEAST(");
+    expect(text).toContain("0::numeric");
   });
 });

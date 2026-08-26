@@ -20,6 +20,7 @@ import { GetDeviceBatteryUseCase } from "./application/use-cases/get-device-batt
 import { GetDeviceFirmwareHistoryUseCase } from "./application/use-cases/get-device-firmware-history/get-device-firmware-history";
 import { GetDeviceMeasurementsUseCase } from "./application/use-cases/get-device-measurements/get-device-measurements";
 import { GetDeviceMonitoringUseCase } from "./application/use-cases/get-device-monitoring/get-device-monitoring";
+import { GetDeviceObservedExperimentsUseCase } from "./application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
 import { GetDevicePayloadStatsUseCase } from "./application/use-cases/get-device-payload-stats/get-device-payload-stats";
 import { GetDeviceRegistryUseCase } from "./application/use-cases/get-device-registry/get-device-registry";
 import { GetDeviceSessionsUseCase } from "./application/use-cases/get-device-sessions/get-device-sessions";
@@ -30,6 +31,7 @@ import { GetIotDeviceFirmwareHistoryUseCase } from "./application/use-cases/get-
 import { GetIotDeviceGroupMonitoringUseCase } from "./application/use-cases/get-iot-device-group-monitoring/get-iot-device-group-monitoring";
 import { GetIotDeviceGroupUseCase } from "./application/use-cases/get-iot-device-group/get-iot-device-group";
 import { GetIotDeviceUseCase } from "./application/use-cases/get-iot-device/get-iot-device";
+import { GetIotFleetMonitoringUseCase } from "./application/use-cases/get-iot-fleet-monitoring/get-iot-fleet-monitoring";
 import { GetIotUploadUrlUseCase } from "./application/use-cases/get-upload-url/get-upload-url";
 import { IssueIotCredentialsUseCase } from "./application/use-cases/issue-iot-credentials/issue-iot-credentials";
 import { IssueIotDeviceGroupCredentialsUseCase } from "./application/use-cases/issue-iot-device-group-credentials/issue-iot-device-group-credentials";
@@ -91,12 +93,14 @@ import { IotController } from "./presentation/iot.controller";
     GetIotDeviceUseCase,
     GetIotDeviceActivityUseCase,
     GetDeviceMonitoringUseCase,
+    GetIotFleetMonitoringUseCase,
     GetDeviceMeasurementsUseCase,
     GetDeviceFirmwareHistoryUseCase,
     GetDeviceSessionsUseCase,
     GetDeviceThroughputUseCase,
     GetDeviceBatteryUseCase,
     GetDevicePayloadStatsUseCase,
+    GetDeviceObservedExperimentsUseCase,
     DeleteIotDeviceUseCase,
     IssueIotCredentialsUseCase,
     RevokeIotCredentialsUseCase,

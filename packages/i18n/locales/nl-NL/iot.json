@@ -34,7 +34,8 @@
       "testProtocol": "Protocol testen",
       "connectToDeviceDescription": "Verbind met een apparaat en test uw protocol voordat u het opslaat",
       "browserNotSupported": "Uw browser ondersteunt geen Web Bluetooth of Web Serial APIs.",
-      "tryDifferentBrowser": "Probeer Chrome, Edge of Opera op desktop."
+      "tryDifferentBrowser": "Probeer Chrome, Edge of Opera op desktop.",
+      "registerDevice": "Dit apparaat registreren"
     },
     "deviceIdentity": {
       "unknown": "Onbekend apparaat",
@@ -68,11 +69,7 @@
         "all": "Alle"
       },
       "sections": {
-        "overview": "Overzicht",
-        "devices": "Apparaten",
-        "groups": "Groepen",
-        "onboarding": "Onboarding",
-        "monitoring": "Monitoring"
+        "groups": "Groepen"
       },
       "detailTabs": {
         "overview": "Overzicht",
@@ -82,14 +79,6 @@
         "lineage": "Herkomst",
         "monitoring": "Monitoring",
         "firmware": "Firmware"
-      },
-      "overview": {
-        "total": "Totaal aantal apparaten"
-      },
-      "comingSoon": {
-        "title": "Binnenkort beschikbaar",
-        "monitoring": "Volg apparaatconnectiviteit, laatst gezien en de gezondheid van de vloot in één oogopslag.",
-        "onboarding": "Onboard elk apparaat via zijn detailpagina (tabblad Onboarding). Bulk-onboarding vanuit dit overzicht volgt binnenkort."
       },
       "connectivity": {
         "connected": "Verbonden",
@@ -243,16 +232,17 @@
         },
         "unknownProtocolId": "Onbekend protocol",
         "unknownWorkbookId": "Onbekend workbook",
-        "workbookVersionShort": "v{{version}}",
         "macros": "Macro's",
         "unknownMacroId": "Onbekende macro",
-        "macroRunHint": "Geteld per macro-uitvoering"
+        "macroRunHint": "Geteld per macro-uitvoering",
+        "workbookVersionShort": "v{{version}}"
       },
       "pageOf": "Pagina {{page}} van {{total}}",
       "actions": {
         "more": "Apparaatacties",
         "view": "Details bekijken",
-        "delete": "Verwijderen"
+        "delete": "Verwijderen",
+        "title": "Acties"
       },
       "empty": {
         "title": "Nog geen apparaten",
@@ -320,8 +310,8 @@
         "namePlaceholder": "Kassensensor 1",
         "submit": "Registreren",
         "createSuccess": "Apparaat geregistreerd",
-        "createSuccessDetail": "Er wordt een certificaat uitgegeven om het te activeren.",
-        "createError": "Apparaat registreren mislukt"
+        "createError": "Apparaat registreren mislukt",
+        "createSuccessNext": "Volgende stap: activeren met een certificaat."
       },
       "remove": {
         "title": "Apparaat verwijderen",
@@ -339,15 +329,43 @@
           "registered": "Geregistreerd",
           "thingName": "Apparaat-identificatie",
           "connectivity": "Connectiviteit",
-          "lastSeen": "Laatst gezien"
+          "lastSeen": "Laatst gezien",
+          "visibility": "Zichtbaarheid"
         },
         "credentials": {
           "title": "Inloggegevens"
         },
-        "dangerZone": {
-          "title": "Gevarenzone",
-          "deleteLabel": "Dit apparaat verwijderen",
-          "deleteDescription": "Verwijdert het apparaat en zijn cloud-record permanent. Dit kan niet ongedaan worden gemaakt."
+        "cards": {
+          "experimentsTitle": "Experimenten",
+          "onboardLink": "Instellen",
+          "experimentsEmpty": "Streamt nog naar geen enkel experiment. Stel het in om te starten.",
+          "experimentsError": "De experimenten van dit apparaat konden niet worden geladen.",
+          "credentialHint": {
+            "active": "Certificaat actief. Het apparaat kan verbinden en streamen."
+          },
+          "activityTitle": "Activiteit",
+          "monitoringLink": "Monitoring openen",
+          "activityLoading": "Laatste data-aankomst wordt gecontroleerd...",
+          "activityNoData": "Er is nog geen data van dit apparaat binnengekomen.",
+          "activityLastData": "Laatste data binnengekomen {{time}}.",
+          "firmwareTitle": "Firmware",
+          "firmwareLink": "Firmware openen",
+          "firmwareUnknown": "In de afgelopen 30 dagen is geen firmwareversie gemeld.",
+          "observedEmpty": "Geen uploads in de afgelopen 30 dagen.",
+          "observedUnattributed": "Niet-toegewezen uploads",
+          "firmwareReportedCaption": "In de afgelopen 30 dagen door het apparaat gemeld.",
+          "onboarded": "Ingesteld",
+          "activityFigureCaption": "Laatste data-aankomst",
+          "observedShortCaption": "Naar geüpload, laatste 30 dagen",
+          "measurementCount_one": "{{count}} meting",
+          "measurementCount_other": "{{count}} metingen"
+        },
+        "overview": {
+          "title": "Overzicht",
+          "description": "Wat dit apparaat is en hoe ver de installatie is."
+        },
+        "about": {
+          "title": "Over"
         }
       },
       "credentials": {
@@ -360,7 +378,7 @@
         "rotateTitle": "Certificaat roteren",
         "rotateConfirm": "Het apparaat krijgt een nieuw certificaat en het huidige werkt direct niet meer. Het publiceert pas weer zodra de nieuwe inloggegevens zijn geïnstalleerd.",
         "disconnectWarning": "Dit apparaat is momenteel verbonden en wordt losgekoppeld.",
-        "rotatingDescription": "Een certificaatrotatie is bezig.",
+        "rotatingDescription": "U heeft een nieuw certificaat uitgegeven en het oude wordt ingetrokken. Het apparaat blijft streamen met wat het heeft totdat u de nieuwe bundel laadt; dit duurt meestal minder dan een minuut.",
         "revokedDescription": "Het certificaat is ingetrokken, waardoor dit apparaat zich niet meer bij AWS IoT kan authenticeren. Geef een nieuw certificaat uit om de toegang te herstellen.",
         "revoke": "Certificaat intrekken",
         "revokeTitle": "Certificaat intrekken",
@@ -385,16 +403,33 @@
         "rootCa3Sub": "ECC 256-bits sleutel",
         "copy": "Kopiëren",
         "download": "Downloaden",
-        "downloadAll": "Alles downloaden"
+        "downloadAll": "Alles downloaden",
+        "continueToOnboarding": "Door naar instellen",
+        "closeUnsavedTitle": "Sluiten zonder te downloaden?",
+        "closeUnsavedDescription": "De privésleutel wordt één keer getoond en niet opgeslagen. Wie nu sluit, moet voor een nieuwe sleutel een nieuw certificaat uitgeven.",
+        "closeUnsavedBack": "Terug",
+        "closeUnsavedConfirm": "Toch sluiten",
+        "refreshStatus": "Status vernieuwen",
+        "tabTitle": "Certificaten",
+        "tabDescription": "Het certificaat waarmee dit apparaat zich authenticeert, en de levenscyclus ervan.",
+        "guide": {
+          "title": "Zo werken certificaten",
+          "step1": "Geef hier een certificaat uit. De privésleutel wordt precies één keer getoond en nooit door het platform opgeslagen.",
+          "step2": "Download de bundel en zet alle drie de bestanden op het apparaat; de sleutel verlaat het nooit.",
+          "step3": "Roteer om het apparaat een vers certificaat te geven, of wanneer het van eigenaar wisselt. Intrekken sluit de toegang direct af.",
+          "step4": "Een ingetrokken apparaat kan pas weer verbinden zodra een nieuw certificaat is uitgegeven."
+        },
+        "certificateIdLabel": "Certificaat-ID"
+      },
+      "nextAction": {
+        "issueCredentials": "Certificaat uitgeven",
+        "onboard": "Instellen voor een experiment"
       },
       "firmware": {
         "title": "Firmware",
         "description": "Wat dit apparaat draait, wat JII heeft gepubliceerd en hoe updates het bereiken.",
         "currentTitle": "Op dit apparaat",
         "unknownVersion": "Dit apparaat heeft recent geen firmwareversie gemeld.",
-        "upToDate": "Draait {{version}}, de nieuwste gepubliceerde versie.",
-        "updateAvailable": "Draait {{installed}}; {{latest}} is beschikbaar.",
-        "reported": "Draait {{version}}.",
         "releasesTitle": "Versies",
         "releasesHint": "Gepubliceerd door JII; de nieuwste stabiele versie wordt bij een uitrol standaard geïnstalleerd.",
         "latest": "Nieuwste",
@@ -414,24 +449,36 @@
           "step2": "Een operator start een uitrol, die gefaseerd wordt uitgeleverd en automatisch stopt bij te veel fouten.",
           "step3": "Het apparaat ontvangt een update-taak, downloadt het image via een kortlevende link en verifieert de checksum.",
           "step4": "Het apparaat past de update toe, herstart en meldt het resultaat; een mislukte update wordt teruggedraaid."
-        }
+        },
+        "showLessNotes": "Minder notities tonen",
+        "upToDateShort": "Actueel",
+        "updateAvailableShort": "Update beschikbaar",
+        "reportedCaption": "In de afgelopen 30 dagen door het apparaat gemeld.",
+        "toolingReleases": "Tooling- en overige releases ({{count}})"
+      },
+      "fleet": {
+        "title": "Vlootpols",
+        "description": "Hoe uw apparaten er nu voor staan en wat er in het gekozen venster is binnengekomen.",
+        "onlineLabel": "Nu online",
+        "attentionLabel": "Aandacht nodig",
+        "throughputTitle": "Datastroom",
+        "attentionTitle": "Aandacht nodig",
+        "attentionHint": "Apparaten waarvan de installatie of levering vastzit, het meest urgente eerst.",
+        "attentionEmpty": "Alle apparaten zijn ingesteld en leveren data.",
+        "attentionMore_one": "en {{count}} ander apparaat",
+        "attentionMore_other": "en {{count}} andere apparaten",
+        "eventsTitle": "Recente broker-gebeurtenissen",
+        "loadError": "De vlootactiviteit kon niet worden geladen.",
+        "reasonCredentials": "Certificaat nodig",
+        "reasonNeverConnected": "Nooit verbonden",
+        "reasonSilent": "Verbonden, geen data"
       }
     },
     "onboarding": {
-      "currentTitle": "Experimenten",
-      "currentDescription": "De experimenten waar dit apparaat momenteel naartoe stuurt.",
-      "currentEmpty": "Dit apparaat is nog niet aan een experiment gekoppeld.",
-      "addTitle": "Aan experimenten koppelen",
-      "addDescription": "Kies de experimenten waar dit apparaat naartoe moet sturen. Bij het onboarden wordt de configuratie voor het apparaat aangemaakt.",
-      "addEmpty": "Geen andere experimenten beschikbaar. De huidige configuratie kan hieronder opnieuw worden uitgegeven.",
       "onboard": "Onboarden",
       "reissue": "Configuratie opnieuw uitgeven",
       "onboardSuccess": "Apparaat onboardet. Configuratie hieronder gereed.",
       "onboardError": "Kon het apparaat niet onboarden",
-      "deliveryTitle": "Apparaatconfiguratie",
-      "deliveryDescription": "Geef deze configuratie aan het apparaat: download hem of stuur hem via een directe verbinding.",
-      "endpointLabel": "Broker-endpoint",
-      "topicsLabel": "Publish-topics",
       "download": "JSON downloaden",
       "connect": "Apparaat verbinden",
       "disconnect": "Verbinding verbreken",
@@ -450,27 +497,68 @@
       "answerYes": "Ja",
       "answerNo": "Nee",
       "answerRequiredHint": "Beantwoord alle verplichte vragen voordat u de configuratie aflevert.",
-      "guide": {
-        "title": "Zo verbindt u uw apparaat",
-        "step1": "Haal de certificaatbundel en het Amazon-root-CA op via het tabblad Inloggegevens.",
-        "step2": "Maak verbinding met het onderstaande broker-eindpunt via MQTT over TLS, met de apparaatnaam als client-id.",
-        "step3": "Zet deze configuratie op het apparaat: download de JSON of push hem via een directe verbinding.",
-        "step4": "Voer de procedures van elk experiment op volgorde uit.",
-        "step5": "Publiceer elke meting naar het topic-prefix van het experiment plus /{{sensorVersion}}/{{sensorId}}.",
-        "step6": "Voeg de vooraf ingevulde antwoorden toe aan elke gepubliceerde meting.",
-        "docsLink": "Lees de volledige handleiding voor apparaatintegratie"
-      }
+      "experimentsTitle": "Experimenten",
+      "experimentsDescription": "Experimenten waar dit apparaat naartoe stuurt, en experimenten waarvoor u het kunt instellen.",
+      "selectedCount": "{{count}} experiment geselecteerd",
+      "selectedCount_other": "{{count}} experimenten geselecteerd",
+      "onboardCount_one": "Instellen voor {{count}} experiment",
+      "onboardCount_other": "Instellen voor {{count}} experimenten",
+      "selectAtLeastOne": "Selecteer minstens één experiment.",
+      "noMemberships": "U bent nog geen lid van een experiment. Maak er een aan of word lid om dit apparaat in te stellen.",
+      "allOnboarded": "Al uw experimenten zijn ingesteld. Geef de configuratie rechts opnieuw uit.",
+      "retry": "Opnieuw proberen",
+      "inactiveDeviceAction": "Certificaat uitgeven",
+      "rail": {
+        "title": "Configuratie",
+        "preview": "Voorbeeld",
+        "issuedAt": "Uitgegeven {{time}}",
+        "updating": "Bijwerken…",
+        "stale": "Verouderd",
+        "thingName": "Thing-naam",
+        "endpoint": "Broker-endpoint",
+        "resolvedWhenIssued": "Wordt bij uitgifte bepaald",
+        "copy": "Kopiëren",
+        "copied": "Gekopieerd",
+        "new": "Nieuw",
+        "topicsWhenIssued": "Topics en procedures worden bij uitgifte bepaald.",
+        "noExperiments": "Selecteer een experiment om te zien wat dit apparaat zou ontvangen.",
+        "procedureCounts": "{{protocols}} protocollen · {{commands}} commando's · {{questions}} vragen",
+        "workbookVersion": "wb v{{version}}",
+        "workbookExcluded": "Workbook-procedures uitgesloten.",
+        "topicRule": "Apparaten publiceren naar {prefix}/{sensorVersion}/{sensorId}.",
+        "answeredCount": "{{answered}} van {{required}} verplichte vragen beantwoord",
+        "missing": "Ontbreekt: {{fields}}",
+        "memoryOnly": "Uitgegeven configuraties bestaan alleen in deze browsersessie. U kunt altijd opnieuw uitgeven; het bestand wordt altijd uit de huidige staat gegenereerd.",
+        "integrationGuide": "Integratiegids",
+        "viewJson": "JSON bekijken"
+      },
+      "boundRowActions": "Experimentacties",
+      "removeMenuItem": "Uit experiment verwijderen",
+      "removeTitle": "{{name}} verwijderen?",
+      "removeBody": "Het apparaat streamt er niet meer naartoe, en zijn procedures verdwijnen uit de volgende uitgegeven configuratie.",
+      "removeSuccess": "Uit het experiment verwijderd",
+      "removeError": "Het apparaat kon niet uit het experiment worden verwijderd",
+      "title": "Instellen",
+      "description": "Kies de experimenten waar dit apparaat naartoe streamt en geef het daarna de uitgegeven configuratie.",
+      "filterExperiments": "Experimenten filteren",
+      "filterNoMatches": "Geen experimenten passen bij dit filter.",
+      "answeredOfRequired": "{{answered}} van {{required}} verplicht",
+      "reissueHint": "Opnieuw uitgeven genereert het bestand opnieuw voor alles wat nu gebonden is; er komt niets nieuws bij."
     },
     "experimentDevices": {
       "tabLabel": "Apparaten",
       "title": "Apparaten",
       "description": "Apparaten die aan dit experiment zijn gekoppeld. Een gekoppeld apparaat kan zijn metingen hiernaartoe sturen.",
       "loading": "Apparaten laden...",
-      "empty": "Er zijn nog geen apparaten aan dit experiment gekoppeld.",
+      "empty": "Apparaten worden ingesteld via hun eigen tabblad Instellen, waar certificaten en configuratie staan.",
       "detach": "Ontkoppelen",
       "detachSuccess": "Apparaat ontkoppeld van het experiment",
       "detachError": "Kon het apparaat niet ontkoppelen",
-      "loadError": "Kon de apparaten niet laden. Probeer het opnieuw."
+      "loadError": "Kon de apparaten niet laden. Probeer het opnieuw.",
+      "emptyTitle": "Nog geen apparaten streamen naar dit experiment",
+      "openRegistry": "Apparaatregister openen",
+      "detachTitle": "{{name}} verwijderen?",
+      "detachConfirmBody": "Het streamt niet meer naar dit experiment, en zijn procedures verdwijnen uit de volgende uitgegeven configuratie."
     },
     "groups": {
       "addDevices": "Apparaten toevoegen",
@@ -482,11 +570,6 @@
       "create": "Groep aanmaken",
       "createDescription": "Groepen organiseren apparaten; lidmaatschap verandert niets aan de apparaten zelf.",
       "createTitle": "Apparaatgroep aanmaken",
-      "dangerZone": {
-        "title": "Gevarenzone",
-        "deleteLabel": "Deze groep verwijderen",
-        "deleteDescription": "Verwijdert de groep permanent. De apparaten zelf blijven behouden. Dit kan niet ongedaan worden gemaakt."
-      },
       "delete": "Groep verwijderen",
       "deleteHint": "\"{{name}}\" wordt verwijderd. De apparaten zelf blijven bestaan.",
       "deleteTitle": "Deze groep verwijderen?",
@@ -559,7 +642,9 @@
         "resultsTitle": "Resultaten en configuraties",
         "downloadOne": "Configuratie voor {{device}} downloaden",
         "downloadAll_one": "{{count}} configuratie downloaden (zip)",
-        "downloadAll_other": "{{count}} configuraties downloaden (zip)"
+        "downloadAll_other": "{{count}} configuraties downloaden (zip)",
+        "experimentsTitle": "Experimenten",
+        "experimentsDescription": "Elk geselecteerd apparaat wordt ingesteld voor elk geselecteerd experiment."
       },
       "pageTitle": "Apparaatgroep",
       "credentials": {
@@ -599,8 +684,47 @@
         "resultsTitle": "Resultaten",
         "downloadOne": "Inloggegevens voor {{device}} downloaden",
         "downloadAll_one": "{{count}} pakket downloaden (zip)",
-        "downloadAll_other": "{{count}} pakketten downloaden (zip)"
-      }
+        "downloadAll_other": "{{count}} pakketten downloaden (zip)",
+        "actionTitle": "Actie",
+        "actionDescription": "De geschiktheid verschilt per actie; de apparaatlijst hieronder volgt de keuze.",
+        "railEmpty": "Voer een actie uit om hier resultaten en downloads per apparaat te zien."
+      },
+      "overview": {
+        "title": "Overzicht",
+        "description": "Wat deze groep bevat en hoe het met de apparaten gaat.",
+        "healthTitle": "Gezondheid",
+        "monitoringLink": "Monitoring openen",
+        "healthUnknown_one": "De connectiviteit van {{count}} apparaat is onbekend.",
+        "healthUnknown_other": "De connectiviteit van {{count}} apparaten is onbekend."
+      },
+      "nextAction": {
+        "credentials": "{{count}} apparaat heeft een certificaat nodig",
+        "credentials_other": "{{count}} apparaten hebben een certificaat nodig"
+      },
+      "showAll": "Nog {{count}} groepen tonen",
+      "showFewer": "Minder groepen tonen",
+      "searchPlaceholder": "Groepen zoeken",
+      "searchNoMatches": "Geen groepen voldoen aan de zoekopdracht."
+    },
+    "workbookBar": {
+      "mock": "Mock",
+      "addDevice": "Apparaat toevoegen",
+      "connect": "Verbinden",
+      "disconnected": "Niet verbonden",
+      "deviceCount": "{{count}} apparaat",
+      "deviceCount_other": "{{count}} apparaten",
+      "disconnectDevice": "{{name}} loskoppelen",
+      "disconnectAll": "Alles loskoppelen",
+      "flow": "Stroom",
+      "deviceOrdinal": "Apparaat #{{ordinal}}",
+      "export": "Exporteren",
+      "exportJson": "Exporteren als JSON",
+      "exportProtocol": "Alleen protocol exporteren",
+      "exportMacro": "Alleen macro exporteren",
+      "downloadWorkbook": "Workbook downloaden (.jii)",
+      "clearAll": "Alles wissen",
+      "stop": "Stoppen",
+      "runAll": "Alles uitvoeren"
     }
   }
 }

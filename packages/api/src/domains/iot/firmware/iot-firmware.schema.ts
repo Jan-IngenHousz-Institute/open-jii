@@ -21,8 +21,8 @@ export const zFirmwareRelease = z.object({
   prerelease: z.boolean(),
   /** The newest published, non-prerelease release; at most one per response. */
   latest: z.boolean(),
-  /** Release body verbatim (markdown); rendered as plain text. */
-  notes: z.string().nullable(),
+  /** The release body as GitHub's own sanitized HTML rendering of it. */
+  notesHtml: z.string().nullable(),
   releaseUrl: z.string().url(),
   assets: z.array(zFirmwareReleaseAsset),
 });

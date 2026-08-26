@@ -13,7 +13,6 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 import type { BulkBatch, BulkRow, BulkRowStatus } from "./bulk-register-parse";
-import { LIST_HEADER_BG, LIST_TABLE_BORDER, LIST_TEXT_MUTED } from "./iot-devices-list-tokens";
 
 interface BulkRegisterPreviewProps {
   batch: BulkBatch;
@@ -37,11 +36,11 @@ export function BulkRegisterPreview({ batch }: BulkRegisterPreviewProps) {
 
   function renderRow(row: BulkRow, index: number) {
     return (
-      <TableRow key={`${row.serialNumber}:${String(index)}`} className={LIST_TABLE_BORDER}>
+      <TableRow key={`${row.serialNumber}:${String(index)}`} className="border-border">
         <TableCell className="px-4 py-2 font-mono text-xs">
           {row.status === "invalid" ? row.line : row.serialNumber}
         </TableCell>
-        <TableCell className={cn("px-4 py-2 text-[13px]", LIST_TEXT_MUTED)}>{row.name}</TableCell>
+        <TableCell className="text-muted-foreground px-4 py-2 text-[13px]">{row.name}</TableCell>
         <TableCell className="px-4 py-2">
           <Badge variant="outline" className={cn("font-normal", STATUS_CLASS[row.status])}>
             {t(`iot.devices.bulkDialog.status.${row.status}`)}
@@ -52,10 +51,10 @@ export function BulkRegisterPreview({ batch }: BulkRegisterPreviewProps) {
   }
 
   return (
-    <div className={cn("max-h-64 overflow-y-auto rounded-lg border", LIST_TABLE_BORDER)}>
+    <div className="border-border max-h-64 overflow-y-auto rounded-lg border">
       <Table>
         <TableHeader>
-          <TableRow className={cn("hover:bg-transparent", LIST_HEADER_BG, LIST_TABLE_BORDER)}>
+          <TableRow className="bg-surface-light border-border hover:bg-transparent">
             <ColumnHead>{t("iot.devices.bulkDialog.serialColumn")}</ColumnHead>
             <ColumnHead>{t("iot.devices.bulkDialog.nameColumn")}</ColumnHead>
             <ColumnHead>{t("iot.devices.bulkDialog.statusColumn")}</ColumnHead>
@@ -69,12 +68,7 @@ export function BulkRegisterPreview({ batch }: BulkRegisterPreviewProps) {
 
 function ColumnHead({ children }: { children: React.ReactNode }) {
   return (
-    <TableHead
-      className={cn(
-        "h-9 px-4 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
-        LIST_TEXT_MUTED,
-      )}
-    >
+    <TableHead className="text-muted-foreground h-9 px-4 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]">
       {children}
     </TableHead>
   );

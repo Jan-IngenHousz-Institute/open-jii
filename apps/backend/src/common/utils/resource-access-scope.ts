@@ -5,9 +5,82 @@ import {
   or,
   organizationMembers,
   resourceGrants,
+  sql,
   teamMembers,
 } from "@repo/database";
 import type { AnyColumn, DatabaseInstance, ResourceType, SQL } from "@repo/database";
+
+/**
+ * The individual relationship probes, kept separately so both the "mine" predicate and
+ * the ranking tier are built from the same subqueries and can never drift apart.
+ */
+function resourceRelationshipParts(params: {
+  database: DatabaseInstance;
+  resourceType: ResourceType;
+  resourceIdColumn: AnyColumn;
+  organizationIdColumn: AnyColumn;
+  userId: string;
+}) {
+  const { database, resourceType, resourceIdColumn, organizationIdColumn, userId } = params;
+
+  return {
+    userGrantExists: exists(
+      database
+        .select()
+        .from(resourceGrants)
+        .where(
+          and(
+            eq(resourceGrants.resourceType, resourceType),
+            eq(resourceGrants.resourceId, resourceIdColumn),
+            eq(resourceGrants.granteeType, "user"),
+            eq(resourceGrants.granteeId, userId),
+          ),
+        ),
+    ),
+    teamGrantExists: exists(
+      database
+        .select()
+        .from(resourceGrants)
+        .innerJoin(teamMembers, eq(teamMembers.teamId, resourceGrants.granteeId))
+        .where(
+          and(
+            eq(resourceGrants.resourceType, resourceType),
+            eq(resourceGrants.resourceId, resourceIdColumn),
+            eq(resourceGrants.granteeType, "team"),
+            eq(teamMembers.userId, userId),
+          ),
+        ),
+    ),
+    orgGrantExists: exists(
+      database
+        .select()
+        .from(resourceGrants)
+        .innerJoin(
+          organizationMembers,
+          eq(organizationMembers.organizationId, resourceGrants.granteeId),
+        )
+        .where(
+          and(
+            eq(resourceGrants.resourceType, resourceType),
+            eq(resourceGrants.resourceId, resourceIdColumn),
+            eq(resourceGrants.granteeType, "organization"),
+            eq(organizationMembers.userId, userId),
+          ),
+        ),
+    ),
+    owningOrgMemberExists: exists(
+      database
+        .select()
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, organizationIdColumn),
+            eq(organizationMembers.userId, userId),
+          ),
+        ),
+    ),
+  };
+}
 
 /**
  * Every path that ties a caller to a row personally: membership of the owning
@@ -25,69 +98,48 @@ export function relatedResourceCondition(params: {
   organizationIdColumn: AnyColumn;
   userId: string | undefined;
 }): SQL | undefined {
-  const { database, resourceType, resourceIdColumn, organizationIdColumn, userId } = params;
-
-  if (!userId) {
+  if (!params.userId) {
     return undefined;
   }
 
-  const userGrantExists = exists(
-    database
-      .select()
-      .from(resourceGrants)
-      .where(
-        and(
-          eq(resourceGrants.resourceType, resourceType),
-          eq(resourceGrants.resourceId, resourceIdColumn),
-          eq(resourceGrants.granteeType, "user"),
-          eq(resourceGrants.granteeId, userId),
-        ),
-      ),
-  );
-  const teamGrantExists = exists(
-    database
-      .select()
-      .from(resourceGrants)
-      .innerJoin(teamMembers, eq(teamMembers.teamId, resourceGrants.granteeId))
-      .where(
-        and(
-          eq(resourceGrants.resourceType, resourceType),
-          eq(resourceGrants.resourceId, resourceIdColumn),
-          eq(resourceGrants.granteeType, "team"),
-          eq(teamMembers.userId, userId),
-        ),
-      ),
-  );
-  const orgGrantExists = exists(
-    database
-      .select()
-      .from(resourceGrants)
-      .innerJoin(
-        organizationMembers,
-        eq(organizationMembers.organizationId, resourceGrants.granteeId),
-      )
-      .where(
-        and(
-          eq(resourceGrants.resourceType, resourceType),
-          eq(resourceGrants.resourceId, resourceIdColumn),
-          eq(resourceGrants.granteeType, "organization"),
-          eq(organizationMembers.userId, userId),
-        ),
-      ),
-  );
-  const owningOrgMemberExists = exists(
-    database
-      .select()
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.organizationId, organizationIdColumn),
-          eq(organizationMembers.userId, userId),
-        ),
-      ),
-  );
+  const { userGrantExists, teamGrantExists, orgGrantExists, owningOrgMemberExists } =
+    resourceRelationshipParts({ ...params, userId: params.userId });
 
   return or(userGrantExists, teamGrantExists, orgGrantExists, owningOrgMemberExists);
+}
+
+/** Relationship tiers, highest wins. Ordering only: access is decided elsewhere. */
+export const RESOURCE_TIER = { owned: 3, shared: 2, org: 1, public: 0 } as const;
+
+/**
+ * How closely the caller is tied to each row, as a rank key. Anonymous callers get a
+ * constant 0, so ordering degrades to pure relevance/recency.
+ */
+export function resourceTierExpression(params: {
+  database: DatabaseInstance;
+  resourceType: ResourceType;
+  resourceIdColumn: AnyColumn;
+  organizationIdColumn: AnyColumn;
+  createdByColumn: AnyColumn;
+  userId: string | undefined;
+}): SQL<number> {
+  const { createdByColumn, userId } = params;
+
+  // Cast, never a bare integer: Postgres reads an unadorned constant in ORDER BY as
+  // an ordinal position, so a plain `0` would fail the query rather than sort by it.
+  if (!userId) {
+    return sql<number>`${sql.raw(String(RESOURCE_TIER.public))}::int`;
+  }
+
+  const { userGrantExists, teamGrantExists, orgGrantExists, owningOrgMemberExists } =
+    resourceRelationshipParts({ ...params, userId });
+
+  return sql<number>`(CASE
+    WHEN ${eq(createdByColumn, userId)} THEN ${sql.raw(String(RESOURCE_TIER.owned))}
+    WHEN ${or(userGrantExists, teamGrantExists)} THEN ${sql.raw(String(RESOURCE_TIER.shared))}
+    WHEN ${or(orgGrantExists, owningOrgMemberExists)} THEN ${sql.raw(String(RESOURCE_TIER.org))}
+    ELSE ${sql.raw(String(RESOURCE_TIER.public))}
+  END)`;
 }
 
 /**

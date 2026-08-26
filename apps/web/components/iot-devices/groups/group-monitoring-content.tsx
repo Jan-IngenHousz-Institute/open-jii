@@ -11,13 +11,14 @@ import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useIotDeviceGroupMonitoring } from "@/hooks/iot/useIotDeviceGroupMonitoring/useIotDeviceGroupMonitoring";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
-import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { resolveDeviceLabel } from "@/util/device-presentation";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
 import type { IotDeviceGroupMemberHealth } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
@@ -78,10 +79,7 @@ export function GroupMonitoringContent() {
   const now = Date.now();
 
   function labelFor(member: IotDeviceGroupMemberHealth): string {
-    return resolveDevicePrimaryLabel(
-      presentDevice({ name: member.name, family: member.deviceType, id: member.serialNumber }),
-      t,
-    );
+    return resolveDeviceLabel(member, t);
   }
 
   const labels =
@@ -128,36 +126,41 @@ export function GroupMonitoringContent() {
   );
 
   return (
-    <div className="max-w-5xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-medium">{t("iot.devices.monitoring.title")}</h2>
-          <p className="text-muted-foreground text-sm">{t("iot.groups.monitoring.description")}</p>
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium">{t("iot.devices.monitoring.title")}</h2>
+            <p className="text-muted-foreground text-sm">
+              {t("iot.groups.monitoring.description")}
+            </p>
+          </div>
+          <MonitoringRangeControl
+            range={selection.range}
+            activePreset={selection.preset}
+            onRangeChange={handleRangeChange}
+            isUpdating={isFetching && !isLoading}
+          />
         </div>
-        <MonitoringRangeControl
+
+        {monitoring !== undefined && monitoring.members.length > 0 && (
+          <GroupMonitoringFilter
+            filter={filter}
+            onFilterChange={setFilter}
+            summary={summarizeGroupHealth(monitoring.members, monitoring.pipelineUnavailable, now)}
+          />
+        )}
+
+        <GroupMonitoringTiles
+          monitoring={monitoring}
+          members={filteredMembers}
+          throughput={filteredThroughput}
           range={selection.range}
-          activePreset={selection.preset}
-          onRangeChange={handleRangeChange}
-          isUpdating={isFetching && !isLoading}
+          locale={locale}
+          now={now}
+          tileClassName="bg-card"
         />
       </div>
-
-      {monitoring !== undefined && monitoring.members.length > 0 && (
-        <GroupMonitoringFilter
-          filter={filter}
-          onFilterChange={setFilter}
-          summary={summarizeGroupHealth(monitoring.members, monitoring.pipelineUnavailable, now)}
-        />
-      )}
-
-      <GroupMonitoringTiles
-        monitoring={monitoring}
-        members={filteredMembers}
-        throughput={filteredThroughput}
-        range={selection.range}
-        locale={locale}
-        now={now}
-      />
 
       {isError ? (
         <Card className="shadow-none">
@@ -226,7 +229,7 @@ export function GroupMonitoringContent() {
           >
             <GroupDataByExperimentPanel
               dataByExperiment={monitoring.dataByExperiment}
-              visibleExperiments={visibleExperiments ?? []}
+              visibleExperiments={listItems(visibleExperiments)}
               locale={locale}
             />
           </PanelCard>

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import {
   Table,
   TableBody,
@@ -44,11 +45,7 @@ export function EventLog({ entries }: EventLogProps) {
   const [page, setPage] = useState(1);
 
   if (entries.length === 0) {
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("iot.devices.monitoring.noEvents")}
-      </p>
-    );
+    return <EmptyState size="inline" description={t("iot.devices.monitoring.noEvents")} />;
   }
 
   const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));

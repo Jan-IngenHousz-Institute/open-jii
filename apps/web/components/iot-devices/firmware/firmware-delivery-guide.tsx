@@ -1,16 +1,15 @@
 "use client";
 
 import { DocsHelpLink } from "@/components/docs-help-link";
-import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
-import { BookOpen, Check, ChevronDown, Copy } from "lucide-react";
+import { BookOpen, ChevronDown } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@repo/ui/components/collapsible";
+import { CopyButton } from "@repo/ui/components/copy-button";
 
 const JOB_DOCUMENT_EXAMPLE = `{
   "operation": "firmware-update",
@@ -27,13 +26,17 @@ const STEP_KEYS = ["step1", "step2", "step3", "step4"] as const;
  * reviewed workflow, never from this page, so this panel documents rather than
  * offers controls.
  */
-export function FirmwareDeliveryGuide() {
+interface FirmwareDeliveryGuideProps {
+  /** Open from the start where the guide is the surface's whole right rail. */
+  defaultOpen?: boolean;
+}
+
+export function FirmwareDeliveryGuide({ defaultOpen = false }: FirmwareDeliveryGuideProps) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
-  const { copy, copied } = useCopyToClipboard();
 
   return (
-    <Collapsible className="rounded-lg border">
+    <Collapsible defaultOpen={defaultOpen} className="bg-card rounded-lg border">
       <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium">
         <BookOpen className="h-4 w-4" aria-hidden />
         {t("iot.devices.firmware.guide.title")}
@@ -53,17 +56,13 @@ export function FirmwareDeliveryGuide() {
           <pre className="bg-muted/30 whitespace-pre-wrap break-words rounded border p-3 pr-20 text-xs">
             {JOB_DOCUMENT_EXAMPLE}
           </pre>
-          <Button
-            type="button"
+          <CopyButton
+            value={JOB_DOCUMENT_EXAMPLE}
+            label={tCommon("common.copy")}
+            copiedLabel={tCommon("common.copied")}
             variant="outline"
-            size="icon"
-            className="bg-background hover:bg-accent shadow-xs absolute right-2 top-2 h-7 w-7 border"
-            aria-label={copied ? tCommon("common.copied") : tCommon("common.copy")}
-            title={copied ? tCommon("common.copied") : tCommon("common.copy")}
-            onClick={() => copy(JOB_DOCUMENT_EXAMPLE)}
-          >
-            {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-          </Button>
+            className="bg-background hover:bg-accent shadow-xs absolute right-2 top-2 size-7 border"
+          />
         </div>
 
         <DocsHelpLink path="/developers/device-integration" />

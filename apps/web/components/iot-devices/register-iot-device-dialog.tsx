@@ -1,9 +1,11 @@
 "use client";
 
 import { useRegisterIotDevice } from "@/hooks/iot/useRegisterIotDevice/useRegisterIotDevice";
+import { useLocale } from "@/hooks/useLocale";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -53,25 +55,42 @@ type RegisterIotDeviceFormValues = z.infer<typeof registerIotDeviceFormSchema>;
 interface RegisterIotDeviceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Prefill for the register stitch: hardware just seen over a local connection. */
+  defaultSerialNumber?: string;
+  defaultDeviceType?: RegisterIotDeviceFormValues["deviceType"];
 }
 
-export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDeviceDialogProps) {
+export function RegisterIotDeviceDialog({
+  open,
+  onOpenChange,
+  defaultSerialNumber,
+  defaultDeviceType,
+}: RegisterIotDeviceDialogProps) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
+  const locale = useLocale();
+  const router = useRouter();
 
   const form = useForm<RegisterIotDeviceFormValues>({
     resolver: zodResolver(registerIotDeviceFormSchema),
-    defaultValues: { serialNumber: "", deviceType: undefined, name: "" },
+    defaultValues: {
+      serialNumber: defaultSerialNumber ?? "",
+      deviceType: defaultDeviceType,
+      name: "",
+    },
   });
 
   const { mutate: registerIotDevice, isPending } = useRegisterIotDevice({
-    onSuccess: () => {
+    // Success routes onward: the fresh detail page is where the next step
+    // (issuing a certificate) lives, and the toast names it.
+    onSuccess: (created) => {
       toast({
         title: t("iot.devices.dialog.createSuccess"),
-        description: t("iot.devices.dialog.createSuccessDetail"),
+        description: t("iot.devices.dialog.createSuccessNext"),
       });
       form.reset();
       onOpenChange(false);
+      router.push(`/${locale}/platform/devices/${created.id}`);
     },
   });
 

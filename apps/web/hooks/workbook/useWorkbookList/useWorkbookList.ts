@@ -1,6 +1,8 @@
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 
+import { listItems } from "@repo/api/shared/listing";
+
 import { useDebounce } from "../../useDebounce";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -23,8 +25,12 @@ export function useWorkbookList({ search = "" }: { search?: string } = {}) {
     }),
   );
 
+  // Narrowed to the array shape: no `page` is sent here, so the response is always
+  // the bare list. Deletable once this caller migrates to the envelope.
+  const items = query.data ? listItems(query.data) : undefined;
+
   return {
-    data: query.data,
+    data: items,
     isLoading: query.isLoading,
     error: query.error,
     // Compared against the settled term rather than `useDebounce`'s own flag, which

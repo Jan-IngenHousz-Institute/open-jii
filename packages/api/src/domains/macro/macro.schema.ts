@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zVisibility } from "../visibility/visibility.schema";
 
@@ -57,11 +58,20 @@ export const zMacroDetail = zMacro.extend({
 });
 
 // Query parameters
-export const zMacroFilterQuery = z.object({
-  search: z.string().optional(),
-  language: zMacroLanguage.optional(),
-  filter: z.enum(["my"]).optional(),
-});
+export const zMacroFilterQuery = z
+  .object({
+    search: z.string().optional(),
+    language: zMacroLanguage.optional(),
+    /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
+    filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
+    scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
+  })
+  .merge(zPaginationQuery);
+
+export const zMacroPaginatedList = zPaginated(zMacro);
+
+/** Array when the caller sent no `page`, envelope when they did. */
+export const zMacroListResponse = z.union([zMacroList, zMacroPaginatedList]);
 
 // Path parameters
 export const zMacroIdPathParam = z.object({
@@ -195,6 +205,8 @@ export type MacroDetail = z.infer<typeof zMacroDetail>;
 export type MacroList = z.infer<typeof zMacroList>;
 export type MacroFilterQuery = z.infer<typeof zMacroFilterQuery>;
 export type MacroFilter = MacroFilterQuery["search"];
+export type MacroPaginatedList = z.infer<typeof zMacroPaginatedList>;
+export type MacroListResponse = z.infer<typeof zMacroListResponse>;
 export type MacroIdPathParam = z.infer<typeof zMacroIdPathParam>;
 export type CreateMacroRequestBody = z.infer<typeof zCreateMacroRequestBody>;
 export type UpdateMacroRequestBody = z.infer<typeof zUpdateMacroRequestBody>;

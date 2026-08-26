@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api/domains/protocol/protocol.schema";
+import type { ResourceScope } from "@repo/api/shared/listing";
 
 import { Result } from "../../../../common/utils/fp-utils";
 import { ProtocolDto } from "../../../core/models/protocol.model";
@@ -12,9 +13,19 @@ export class ListProtocolsUseCase {
 
   async execute(
     search?: ProtocolFilter,
-    filter?: "my",
+    scope?: ResourceScope,
     userId?: string,
   ): Promise<Result<ProtocolDto[]>> {
-    return this.protocolRepository.findAll(search, filter, userId);
+    return this.protocolRepository.findAll(search, scope, userId);
+  }
+
+  async executePaginated(
+    page: number,
+    pageSize: number,
+    search?: ProtocolFilter,
+    scope?: ResourceScope,
+    userId?: string,
+  ): Promise<Result<{ items: ProtocolDto[]; totalCount: number }>> {
+    return this.protocolRepository.findPage(page, pageSize, search, scope, userId);
   }
 }

@@ -86,9 +86,9 @@ export const envManifest: readonly EnvVar[] = [
   // Firmware rollout reads public GitHub repositories; the token only raises the
   // anonymous rate limit, so it stays optional and out of the generated example.
   env("GITHUB_TOKEN", set, undefined, backend),
-  env("FIRMWARE_REPO_AMBYTE", set, "local-disabled", backend),
-  env("FIRMWARE_REPO_AMBIT", set, "local-disabled", backend),
-  env("FIRMWARE_REPO_MINIPAR", set, "local-disabled", backend),
+  env("FIRMWARE_REPO_AMBYTE", unset, undefined, backend),
+  env("FIRMWARE_REPO_AMBIT", unset, undefined, backend),
+  env("FIRMWARE_REPO_MINIPAR", unset, undefined, backend),
 
   env("EMAIL_BASE_URL", set, "http://localhost:3000", backend),
   // The sentinel is intentionally closed; no local SMTP service listens on port 9.

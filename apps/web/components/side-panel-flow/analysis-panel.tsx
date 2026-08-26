@@ -9,6 +9,7 @@ import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
@@ -32,11 +33,15 @@ export function AnalysisPanel({
   // Macro search state
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroData } = useQuery(
+  const { data: macroResponse } = useQuery(
     orpc.macros.listMacros.queryOptions({
       input: { search: debouncedMacroSearch || undefined },
     }),
   );
+
+  // Narrowed to the array shape: no `page` is sent here, so the response is always
+  // the bare list. Deletable once this caller migrates to the envelope.
+  const macroData = macroResponse ? listItems(macroResponse) : undefined;
   const macroList = macroData;
 
   // Fetch the upstream protocol name for recommendation context

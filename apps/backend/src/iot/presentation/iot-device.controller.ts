@@ -17,9 +17,11 @@ import { BulkRegisterIotDevicesUseCase } from "../application/use-cases/bulk-reg
 import { DeleteIotDeviceUseCase } from "../application/use-cases/delete-iot-device/delete-iot-device";
 import { EnsureMobileDeviceUseCase } from "../application/use-cases/ensure-mobile-device/ensure-mobile-device";
 import { GetDeviceMonitoringUseCase } from "../application/use-cases/get-device-monitoring/get-device-monitoring";
+import { GetDeviceObservedExperimentsUseCase } from "../application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
 import { GetIotDeviceActivityUseCase } from "../application/use-cases/get-iot-device-activity/get-iot-device-activity";
 import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { GetIotDeviceUseCase } from "../application/use-cases/get-iot-device/get-iot-device";
+import { GetIotFleetMonitoringUseCase } from "../application/use-cases/get-iot-fleet-monitoring/get-iot-fleet-monitoring";
 import { IssueIotCredentialsUseCase } from "../application/use-cases/issue-iot-credentials/issue-iot-credentials";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
 import { RegisterIotDeviceUseCase } from "../application/use-cases/register-iot-device/register-iot-device";
@@ -42,6 +44,8 @@ export class IotDeviceController {
     private readonly getIotDeviceUseCase: GetIotDeviceUseCase,
     private readonly getIotDeviceActivityUseCase: GetIotDeviceActivityUseCase,
     private readonly getDeviceMonitoringUseCase: GetDeviceMonitoringUseCase,
+    private readonly getIotFleetMonitoringUseCase: GetIotFleetMonitoringUseCase,
+    private readonly listDeviceObservedExperimentsUseCase: GetDeviceObservedExperimentsUseCase,
     private readonly getIotDeviceFirmwareHistoryUseCase: GetIotDeviceFirmwareHistoryUseCase,
     private readonly deleteIotDeviceUseCase: DeleteIotDeviceUseCase,
     private readonly issueIotCredentialsUseCase: IssueIotCredentialsUseCase,
@@ -77,6 +81,27 @@ export class IotDeviceController {
       }
 
       return throwOrpcFailure(result, this.logger, "listIotDevices");
+    });
+  }
+
+  // Declared before the {deviceId} routes: the static "monitoring" segment
+  // must never be read as a device id.
+  @Implement(iotContract.getIotFleetMonitoring)
+  getIotFleetMonitoring(@Session() session: UserSession) {
+    return implement(iotContract.getIotFleetMonitoring).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("getIotFleetMonitoring");
+
+      const result = await this.getIotFleetMonitoringUseCase.execute(session.user.id, {
+        from: input.from,
+        to: input.to,
+        bucket: input.bucket,
+      });
+
+      if (result.isSuccess()) {
+        return result.value;
+      }
+
+      return throwOrpcFailure(result, this.logger, "getIotFleetMonitoring");
     });
   }
 
@@ -180,6 +205,26 @@ export class IotDeviceController {
       }
 
       return throwOrpcFailure(result, this.logger, "getIotDeviceActivity");
+    });
+  }
+
+  @CanAccess({ resource: "device", action: "read", param: "deviceId" })
+  @Implement(iotContract.listDeviceObservedExperiments)
+  listDeviceObservedExperiments(@Session() session: UserSession) {
+    return implement(iotContract.listDeviceObservedExperiments).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("listDeviceObservedExperiments");
+
+      const result = await this.listDeviceObservedExperimentsUseCase.execute(
+        input.deviceId,
+        input.from,
+        input.to,
+      );
+
+      if (result.isSuccess()) {
+        return { experiments: result.value };
+      }
+
+      return throwOrpcFailure(result, this.logger, "listDeviceObservedExperiments");
     });
   }
 

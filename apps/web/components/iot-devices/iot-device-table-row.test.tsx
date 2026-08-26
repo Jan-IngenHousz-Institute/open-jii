@@ -1,13 +1,10 @@
 import { createIotDevice } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
 import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { Table, TableBody } from "@repo/ui/components/table";
-import { toast } from "@repo/ui/hooks/use-toast";
 
 import { IotDeviceTableRow } from "./iot-device-table-row";
 
@@ -114,24 +111,47 @@ describe("IotDeviceTableRow", () => {
     expect(router.push).not.toHaveBeenCalled();
   });
 
-  it("deletes the device and toasts on confirm", async () => {
-    const device = createIotDevice({ name: "Sensor A" });
-    const spy = server.mount(contract.iot.deleteIotDevice);
+  it("leads the menu with issue-certificate for a pending device", async () => {
     const user = userEvent.setup();
-
-    renderRow(device);
+    renderRow(createIotDevice({ status: "pending" }));
 
     await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
-    await user.click(await screen.findByRole("menuitem", { name: "iot.devices.actions.delete" }));
-    const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "iot.devices.actions.delete" }));
 
-    await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.params.deviceId).toBe(device.id);
-    await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "iot.devices.remove.success" }),
-      ),
-    );
+    expect(
+      await screen.findByRole("menuitem", { name: /iot.devices.nextAction.issueCredentials/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("leads the menu with onboarding for an active device", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ status: "active" }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    expect(
+      await screen.findByRole("menuitem", { name: /iot.devices.nextAction.onboard/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no next step for a phone, which sets itself up", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ deviceType: "mobile" }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    await screen.findByRole("menuitem", { name: /iot.devices.actions.view/ });
+    expect(
+      screen.queryByRole("menuitem", { name: /iot.devices.nextAction/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers no delete: the list payload cannot gate one", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ status: "active" }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    await screen.findByRole("menuitem", { name: /iot.devices.actions.view/ });
+    expect(screen.queryByRole("menuitem", { name: /iot.devices.actions.delete/ })).toBeNull();
   });
 });

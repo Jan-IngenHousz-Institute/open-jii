@@ -17,7 +17,7 @@ describe("shouldPersistQuery", () => {
   it("persists the offline-critical oRPC queries once they hold data", () => {
     expect(shouldPersistQuery(query(orpcKey(["users", "getUserProfile"])))).toBe(true);
     expect(
-      shouldPersistQuery(query(orpcKey(["experiments", "listExperiments"], { filter: "member" }))),
+      shouldPersistQuery(query(orpcKey(["experiments", "listExperiments"], { scope: "related" }))),
     ).toBe(true);
     expect(
       shouldPersistQuery(
@@ -47,7 +47,7 @@ describe("shouldPersistQuery", () => {
 
   it("drops an offline-critical query that has no data", () => {
     const q = {
-      queryKey: orpcKey(["experiments", "listExperiments"], { filter: "member" }),
+      queryKey: orpcKey(["experiments", "listExperiments"], { scope: "related" }),
       state: { status: "pending" },
     } as unknown as Query;
     expect(shouldPersistQuery(q)).toBe(false);
