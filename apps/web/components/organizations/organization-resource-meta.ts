@@ -29,16 +29,17 @@ export const GROUP_ORDER: readonly SharingResourceType[] = [
 ];
 
 /**
- * The colour each type wears as a proportion or a dot. Theme tokens, not hexes: the
- * four the design specifies are already these tokens' light-mode values, so naming
- * them gets dark mode for nothing. Devices take `--highlight` as the only token that
- * separates cleanly from a teal, two greens and a blue at 8px.
+ * The colour each type wears as a proportion or a dot. Theme tokens, not hexes, so
+ * dark mode comes for free. The set has to separate at 8px, which is what picks the
+ * two chart tokens: devices keep a blue (`--chart-3`), and protocols take an amber
+ * (`--chart-4`) rather than a green, because a green would sit on the same hue as
+ * the macro dot. `--chart-1` is unusable here — it is the same value as `--primary`.
  */
 export const RESOURCE_TYPE_COLOR: Record<SharingResourceType, string> = {
   experiment: "bg-primary",
-  protocol: "bg-tertiary",
+  protocol: "bg-chart-4",
   macro: "bg-sidebar-primary",
   workbook: "bg-accent",
-  device: "bg-highlight",
+  device: "bg-chart-3",
   device_group: "bg-secondary",
 };

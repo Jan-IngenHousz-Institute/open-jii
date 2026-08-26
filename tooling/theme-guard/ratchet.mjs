@@ -65,7 +65,10 @@ function collectTsx(dir, out) {
   for (const entry of entries) {
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) collectTsx(path.join(dir, entry.name), out);
-    } else if (entry.name.endsWith(".tsx")) {
+    } else if (entry.name.endsWith(".tsx") || entry.name.endsWith(".ts")) {
+      // `.ts` as well as `.tsx`: a tone map is a plain module, and two dead
+      // utility classes lived in one for a whole ticket because the scan
+      // stopped at components.
       out.push(path.join(dir, entry.name));
     }
   }

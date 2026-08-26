@@ -22,7 +22,7 @@ import {
 
 import { defaultAxisTypeFor } from "../../charts/chart-config";
 import type { ChartFormValues } from "../../charts/chart-config";
-import { getDefaultSeriesColor, getSuggestedSeriesColor } from "../../charts/colors/palettes";
+import { getDefaultSeriesColor } from "../../charts/colors/palettes";
 import { getDataSourceAggregate, setDataSourceAggregate } from "../../charts/data/aggregation";
 import {
   dataSourcesByRole,
@@ -166,7 +166,7 @@ export function YAxisShelf({
     if (Array.isArray(currentColors)) {
       form.setValue("config.color", [...currentColors, next]);
     } else {
-      form.setValue("config.color", [currentColors ?? getSuggestedSeriesColor(), next]);
+      form.setValue("config.color", [currentColors ?? "#3b82f6", next]);
     }
   };
 

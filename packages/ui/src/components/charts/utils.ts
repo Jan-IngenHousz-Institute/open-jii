@@ -71,17 +71,22 @@ export function getPlotType(baseType: string, renderer: WebGLRenderer): string {
 const OKLCH_RE =
   /^oklch\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)(?:deg)?\s*(?:\/\s*([\d.]+%?)\s*)?\)$/i;
 
-/** sRGB gamma encode, per CSS Color 4. */
+const LAB_RE = /^lab\(\s*(-?[\d.]+%?)\s+(-?[\d.]+%?)\s+(-?[\d.]+%?)\s*(?:\/\s*([\d.]+%?)\s*)?\)$/i;
+
+/** sRGB gamma encode, per CSS Color 4. Clamps first: a negative channel is
+ * out of gamut, and `Math.pow` of one is NaN. */
 function encodeChannel(value: number): number {
-  const linear = value <= 0.0031308 ? 12.92 * value : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
-  return Math.round(Math.min(1, Math.max(0, linear)) * 255);
+  const clamped = Math.min(1, Math.max(0, value));
+  const encoded =
+    clamped <= 0.0031308 ? 12.92 * clamped : 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055;
+  return Math.round(Math.min(1, Math.max(0, encoded)) * 255);
 }
 
 /**
  * Converts an `oklch()` string to `#rrggbb`. Plotly paints to SVG and canvas
  * and parses colours itself, so it never sees a value CSS would resolve — the
  * theme's oklch has to be turned into sRGB here. Returns `undefined` for
- * anything that is not oklch, which the callers pass through untouched.
+ * anything that is not oklch; `readThemeColor` then tries `lab()`.
  */
 export function oklchToHex(value: string): string | undefined {
   const match = OKLCH_RE.exec(value.trim());
@@ -109,16 +114,90 @@ export function oklchToHex(value: string): string | undefined {
   return `#${channels.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
 }
 
+/** D50 white point, which CSS `lab()` is referred to. */
+const LAB_D50: readonly [number, number, number] = [
+  0.3457 / 0.3585,
+  1.0,
+  (1.0 - 0.3457 - 0.3585) / 0.3585,
+];
+
+/** Bradford chromatic adaptation, D50 -> D65. */
+const BRADFORD_D50_TO_D65: readonly (readonly [number, number, number])[] = [
+  [0.955473421488075, -0.02309845494876471, 0.06325924320057072],
+  [-0.0283697093338637, 1.0099953980813041, 0.021041441191917323],
+  [0.012314014864481998, -0.020507649298898964, 1.3303659366080753],
+];
+
+/** XYZ (D65) -> linear sRGB. */
+const XYZ_D65_TO_LINEAR_SRGB: readonly (readonly [number, number, number])[] = [
+  [3.2409699419045226, -1.537383177570094, -0.4986107602930034],
+  [-0.9692436362808796, 1.8759675015077202, 0.04155505740717559],
+  [0.05563007969699366, -0.20397695888897652, 1.0569715142428786],
+];
+
 /**
- * Reads a theme custom property off the document root and returns it in a form
- * Plotly can parse. `undefined` when rendering on the server or when the
- * property is unset, so every caller keeps its own fallback.
+ * Converts a CSS `lab()` string to `#rrggbb`. Needed because a custom property
+ * registered by Tailwind as a `<color>` computes to `lab()`, not to the
+ * `oklch()` it was authored as — so this is the form the theme actually arrives
+ * in. CSS `lab()` is D50-referred, hence the Bradford adaptation before sRGB.
+ */
+export function labToHex(value: string): string | undefined {
+  const match = LAB_RE.exec(value.trim());
+  if (!match) return undefined;
+  const [, rawL, rawA, rawB] = match;
+  // `a`/`b` percentages are ±125 full-scale; lightness is 0-100.
+  const lightness = rawL!.endsWith("%") ? Number.parseFloat(rawL!) : Number.parseFloat(rawL!);
+  const aStar = rawA!.endsWith("%")
+    ? (Number.parseFloat(rawA!) * 125) / 100
+    : Number.parseFloat(rawA!);
+  const bStar = rawB!.endsWith("%")
+    ? (Number.parseFloat(rawB!) * 125) / 100
+    : Number.parseFloat(rawB!);
+  if (!Number.isFinite(lightness) || !Number.isFinite(aStar) || !Number.isFinite(bStar)) {
+    return undefined;
+  }
+
+  const kappa = 24389 / 27;
+  const epsilon = 216 / 24389;
+  const fy = (lightness + 16) / 116;
+  const fx = aStar / 500 + fy;
+  const fz = fy - bStar / 200;
+  const inverse = (f: number) => (f ** 3 > epsilon ? f ** 3 : (116 * f - 16) / kappa);
+
+  const xyzD50: [number, number, number] = [
+    inverse(fx) * LAB_D50[0],
+    (lightness > kappa * epsilon ? ((lightness + 16) / 116) ** 3 : lightness / kappa) * LAB_D50[1],
+    inverse(fz) * LAB_D50[2],
+  ];
+  const xyz = BRADFORD_D50_TO_D65.map(
+    (row) => row[0] * xyzD50[0] + row[1] * xyzD50[1] + row[2] * xyzD50[2],
+  );
+  const channels = XYZ_D65_TO_LINEAR_SRGB.map((row) =>
+    encodeChannel(row[0] * xyz[0]! + row[1] * xyz[1]! + row[2] * xyz[2]!),
+  );
+
+  return `#${channels.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** Colour forms Plotly's own parser understands. */
+const PLOTLY_PARSEABLE = /^(#|rgba?\(|hsla?\(|[a-z]+$)/i;
+
+/**
+ * Reads a theme custom property off the document root and returns it as
+ * something Plotly can parse, or `undefined`.
+ *
+ * Returning `undefined` matters: Plotly silently substitutes its own default
+ * for a colour string it cannot read, so forwarding an unrecognised value
+ * bypasses every caller's `?? "#fallback"` and fails invisibly. A token
+ * registered by Tailwind computes to `lab()`, which Plotly cannot parse at all.
  */
 export function readThemeColor(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
   const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   if (!raw) return undefined;
-  return oklchToHex(raw) ?? raw;
+  const converted = oklchToHex(raw) ?? labToHex(raw);
+  if (converted) return converted;
+  return PLOTLY_PARSEABLE.test(raw) ? raw : undefined;
 }
 
 /** Axis/grid rule colour, matching every other bordered surface. */

@@ -83,7 +83,7 @@ export function MultiColumnShelf({
       if (Array.isArray(currentColors)) {
         form.setValue("config.color", [...currentColors, next]);
       } else {
-        form.setValue("config.color", [currentColors ?? getSuggestedSeriesColor(), next]);
+        form.setValue("config.color", [currentColors ?? "#3b82f6", next]);
       }
     }
   };
@@ -105,7 +105,7 @@ export function MultiColumnShelf({
           const dsIndex = entry.index;
           const canRemove = entries.length > minSeries;
           return (
-            <InsetPanel className="space-y-3">
+            <InsetPanel key={entry.source.role + dsIndex} className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-xs font-medium">
                   {t("workspace.shelves.series", { index: seriesIndex + 1 })}

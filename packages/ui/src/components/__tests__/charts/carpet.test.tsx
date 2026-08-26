@@ -9,6 +9,8 @@ import type {
   CarpetContourSeriesData,
   CarpetContourProps,
 } from "../../charts/carpet";
+// Mocked above; asserting against it keeps the expectation and the mock in step.
+import { chartGridColor } from "../../charts/utils";
 
 // Mock common utilities
 vi.mock("../../charts/plotly-chart", () => ({
@@ -180,12 +182,12 @@ describe("CarpetPlot", () => {
     expect(chartData[0].aaxis).toMatchObject({
       title: "A",
       gridcolor: "#E6E6E6",
-      linecolor: "#444",
+      linecolor: chartGridColor(),
     });
     expect(chartData[0].baxis).toMatchObject({
       title: "B",
       gridcolor: "#E6E6E6",
-      linecolor: "#444",
+      linecolor: chartGridColor(),
     });
   });
 
