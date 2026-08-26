@@ -109,7 +109,7 @@ export function GroupDevicesTable({
     <div className="border-border overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
-          <TableRow className="bg-surface-light border-border hover:bg-transparent">
+          <TableRow className="bg-muted border-border hover:bg-transparent">
             <ColumnHead>{t("iot.groups.deviceColumn")}</ColumnHead>
             <ColumnHead>{t("iot.groups.monitoring.stateColumn")}</ColumnHead>
             <ColumnHead>{t("iot.groups.monitoring.lastSeenColumn")}</ColumnHead>

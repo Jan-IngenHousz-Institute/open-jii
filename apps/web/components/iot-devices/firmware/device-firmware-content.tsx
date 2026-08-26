@@ -21,7 +21,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";

@@ -53,7 +53,7 @@ export function BulkRegisterPreview({ batch }: BulkRegisterPreviewProps) {
     <div className="border-border max-h-64 overflow-y-auto rounded-lg border">
       <Table>
         <TableHeader>
-          <TableRow className="bg-surface-light border-border hover:bg-transparent">
+          <TableRow className="bg-muted border-border hover:bg-transparent">
             <ColumnHead>{t("iot.devices.bulkDialog.serialColumn")}</ColumnHead>
             <ColumnHead>{t("iot.devices.bulkDialog.nameColumn")}</ColumnHead>
             <ColumnHead>{t("iot.devices.bulkDialog.statusColumn")}</ColumnHead>
