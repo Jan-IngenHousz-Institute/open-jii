@@ -43,6 +43,37 @@ describe("AwsAdapter", () => {
     await testApp.teardown();
   });
 
+  describe("device config publishing", () => {
+    it("publishes the config JSON to the device's retained config topic", async () => {
+      const publishSpy = vi
+        .spyOn(awsIotService, "publishRetained")
+        .mockResolvedValue(success(undefined));
+      const config = {
+        thingName: "ambyte_1",
+        deviceType: "ambyte" as const,
+        endpoint: "abc-ats.example.com",
+        issuedAt: "2026-08-28T09:00:00.000Z",
+        experiments: [],
+      };
+
+      const result = await awsAdapter.publishDeviceConfig("ambyte_1", config);
+
+      assertSuccess(result);
+      expect(publishSpy).toHaveBeenCalledWith("device/config/v1/ambyte_1", JSON.stringify(config));
+    });
+
+    it("clears the retained config with an empty payload", async () => {
+      const publishSpy = vi
+        .spyOn(awsIotService, "publishRetained")
+        .mockResolvedValue(success(undefined));
+
+      const result = await awsAdapter.clearDeviceConfig("ambyte_1");
+
+      assertSuccess(result);
+      expect(publishSpy).toHaveBeenCalledWith("device/config/v1/ambyte_1", "");
+    });
+  });
+
   describe("searchPlaces", () => {
     it("should return successful search results when AWS Location Service returns places", async () => {
       const mockPlaces = [

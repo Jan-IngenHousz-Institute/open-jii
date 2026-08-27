@@ -5,6 +5,7 @@ import { buildIngestTopicPrefix } from "@repo/api/transforms/iot-topic";
 import { applyPlanAnswers, compileDevicePlan } from "@repo/api/transforms/workbook-device-plan";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
+import type { DeviceOnboardingExperimentDto } from "../../../core/models/experiment-device.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
@@ -58,9 +59,7 @@ export class RepublishDeviceConfigUseCase {
       experimentName: exp.experimentName,
       topicPrefix: buildIngestTopicPrefix(exp.experimentId, device.deviceType),
       workbookVersion: exp.workbook?.version ?? null,
-      procedures: exp.workbook
-        ? compileDevicePlan(exp.workbook.cells, exp.workbook.entitySnapshots).procedures
-        : [],
+      procedures: exp.workbook ? this.compileProcedures(exp.experimentId, exp.workbook) : [],
     }));
 
     const storedAnswers = Object.fromEntries(
@@ -79,6 +78,21 @@ export class RepublishDeviceConfigUseCase {
     );
 
     return this.awsPort.publishDeviceConfig(device.thingName, config);
+  }
+
+  private compileProcedures(
+    experimentId: string,
+    workbook: NonNullable<DeviceOnboardingExperimentDto["workbook"]>,
+  ): DeviceOnboardingConfig["experiments"][number]["procedures"] {
+    const plan = compileDevicePlan(workbook.cells, workbook.entitySnapshots);
+    if (plan.missingProtocolIds.length > 0) {
+      this.logger.warn({
+        msg: "Workbook references protocols with no published snapshot; their cells were dropped from the retained config",
+        experimentId,
+        missingProtocolIds: plan.missingProtocolIds,
+      });
+    }
+    return plan.procedures;
   }
 
   /**

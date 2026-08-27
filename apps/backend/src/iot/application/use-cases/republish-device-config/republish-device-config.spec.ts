@@ -14,6 +14,7 @@ import {
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
+import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { RepublishDeviceConfigUseCase } from "./republish-device-config";
 
 const ENDPOINT = "data.iot.example.amazonaws.com";
@@ -122,6 +123,16 @@ describe("RepublishDeviceConfigUseCase", () => {
 
     assertSuccess(await useCase.execute(phone.id));
     assertSuccess(await useCase.execute(faker.string.uuid()));
+    expect(publishSpy).not.toHaveBeenCalled();
+  });
+
+  it("propagates a device lookup failure", async () => {
+    const deviceRepository = testApp.module.get(IotDeviceRepository);
+    vi.spyOn(deviceRepository, "findById").mockResolvedValue(failure(AppError.internal("db down")));
+
+    const result = await useCase.execute(faker.string.uuid());
+
+    assertFailure(result);
     expect(publishSpy).not.toHaveBeenCalled();
   });
 
