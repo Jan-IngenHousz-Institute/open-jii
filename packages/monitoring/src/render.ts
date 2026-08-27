@@ -60,7 +60,7 @@ export function renderObservability(
       });
       lines.push(
         `• *${entry.metric.name}*: ${formatValue(entry.value ?? 0)} (${entry.evaluation.reason})` +
-          `${runbookLink(entry.metric, runbookBaseUrl)} · \`claude /triage ${entry.metric.id}\`` +
+          `${runbookLink(entry.metric, runbookBaseUrl)} · \`claude /openjii-triage ${entry.metric.id}\`` +
           `\n  \`${context}\``,
       );
     }

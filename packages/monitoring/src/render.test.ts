@@ -84,7 +84,7 @@ describe("renderObservability", () => {
     expect(output).toContain("Kinesis iterator age");
     expect(output).toContain("above threshold 600000");
     expect(output).toContain("<https://example.test/docs/runbooks/ingest-lag.md|runbook>");
-    expect(output).toContain("claude /triage ingest-lag");
+    expect(output).toContain("claude /openjii-triage ingest-lag");
     expect(output).toContain('"id":"ingest-lag"');
   });
 
