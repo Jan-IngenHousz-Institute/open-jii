@@ -364,6 +364,22 @@ describe("OnboardDeviceUseCase", () => {
     expect(await storedAnswers(device.id, experiment.id)).toEqual({});
   });
 
+  it("propagates an answer-store failure instead of returning a config the binding never kept", async () => {
+    vi.spyOn(repository, "mergePlanAnswers").mockResolvedValue(
+      failure(AppError.internal("write failed")),
+    );
+    const device = await createActiveDevice(userId);
+    const { experiment } = await testApp.createExperiment({ name: "Q", userId });
+    const cellId = faker.string.uuid();
+    await pinQuestionWorkbook(experiment.id, cellId);
+
+    const result = await useCase.execute(device.id, [experiment.id], userId, true, {
+      [cellId]: "A1",
+    });
+
+    assertFailure(result);
+  });
+
   it("fails before binding when the endpoint cannot be resolved", async () => {
     vi.spyOn(awsAdapter, "getIotDataEndpoint").mockResolvedValue(
       failure(AppError.internal("endpoint unavailable")),
