@@ -4,6 +4,7 @@ import { AppError, Result, failure, success } from "../../../../common/utils/fp-
 import type { ExperimentDto } from "../../../../experiments/core/models/experiment.model";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
+import { RepublishDeviceConfigUseCase } from "../republish-device-config/republish-device-config";
 
 @Injectable()
 export class RemoveExperimentDeviceUseCase {
@@ -12,6 +13,7 @@ export class RemoveExperimentDeviceUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDeviceRepository: ExperimentDeviceRepository,
+    private readonly republishDeviceConfig: RepublishDeviceConfigUseCase,
   ) {}
 
   async execute(experimentId: string, deviceId: string, userId: string): Promise<Result<void>> {
@@ -60,6 +62,9 @@ export class RemoveExperimentDeviceUseCase {
             AppError.notFound(`Device with ID ${deviceId} is not attached to this experiment`),
           );
         }
+
+        // The retained config must stop carrying the detached experiment.
+        await this.republishDeviceConfig.executeBestEffort(deviceId, "removeExperimentDevice");
 
         return success(undefined);
       },

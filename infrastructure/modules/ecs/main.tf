@@ -142,6 +142,14 @@ resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
           "iot:SearchIndex"
         ]
         Resource = "*"
+      },
+      {
+        # Retained config delivery: the backend republishes a device's
+        # configuration on every issue. Scoped to the config namespace so the
+        # task role can never publish on ingest or command topics.
+        Effect   = "Allow"
+        Action   = ["iot:Publish"]
+        Resource = "arn:aws:iot:*:*:topic/device/config/v1/*"
       }
     ]
   })

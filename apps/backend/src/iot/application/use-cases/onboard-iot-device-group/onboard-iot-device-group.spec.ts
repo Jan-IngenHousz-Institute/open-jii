@@ -33,6 +33,7 @@ describe("OnboardIotDeviceGroupUseCase", () => {
     vi.spyOn(awsAdapter, "getIotDataEndpoint").mockResolvedValue(
       success("data.iot.example.amazonaws.com"),
     );
+    vi.spyOn(awsAdapter, "publishDeviceConfig").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {

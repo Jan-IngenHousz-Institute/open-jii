@@ -53,6 +53,18 @@ export class DeleteIotDeviceUseCase {
       }
     }
 
+    // Best-effort: a deleted device's topic must not keep serving its last
+    // config to a re-registered thing of the same name.
+    const clearResult = await this.awsPort.clearDeviceConfig(device.thingName);
+    if (clearResult.isFailure()) {
+      this.logger.warn({
+        msg: "Retained config clear failed during device delete",
+        operation: "deleteIotDevice",
+        deviceId,
+        error: clearResult.error.message,
+      });
+    }
+
     const deleteThingResult = await this.awsPort.deleteThing(device.thingName);
     if (deleteThingResult.isFailure()) {
       return failure(deleteThingResult.error);

@@ -86,6 +86,7 @@ catalogs:
   aws-sdk:
     "@aws-sdk/client-cognito-identity": 3.1048.0
     "@aws-sdk/client-iot": 3.1048.0
+    "@aws-sdk/client-iot-data-plane": 3.1048.0
     "@aws-sdk/client-location": 3.1048.0
     "@aws-sdk/client-lambda": 3.1048.0
     "@aws-sdk/client-s3": 3.1048.0

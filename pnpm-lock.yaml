@@ -12,6 +12,9 @@ catalogs:
     '@aws-sdk/client-iot':
       specifier: 3.1048.0
       version: 3.1048.0
+    '@aws-sdk/client-iot-data-plane':
+      specifier: 3.1048.0
+      version: 3.1048.0
     '@aws-sdk/client-lambda':
       specifier: 3.1048.0
       version: 3.1048.0
@@ -187,6 +190,9 @@ importers:
         specifier: catalog:aws-sdk
         version: 3.1048.0
       '@aws-sdk/client-iot':
+        specifier: catalog:aws-sdk
+        version: 3.1048.0
+      '@aws-sdk/client-iot-data-plane':
         specifier: catalog:aws-sdk
         version: 3.1048.0
       '@aws-sdk/client-lambda':
@@ -1969,6 +1975,10 @@ packages:
 
   '@aws-sdk/client-cognito-identity@3.1048.0':
     resolution: {integrity: sha512-eJUSxEwhz9fKmjhRgOvFTuJ+SjCu15SpgYo3aSJ6rjs2IaWi2F8NcvOuejHb0a01a/J71/9bdjUDrQLH2kUmkg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-iot-data-plane@3.1048.0':
+    resolution: {integrity: sha512-Fs1Ou6llEGK/Xeo+ePB3ftZJbOfXy2QfHO61BG95zNEfJ0/obqej/VNr+V8MYpvV2Jzawn+I+tQjeDnQTDEAmw==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-iot@3.1048.0':
@@ -16508,6 +16518,19 @@ snapshots:
       tslib: 2.8.1
 
   '@aws-sdk/client-cognito-identity@3.1048.0':
+    dependencies:
+      '@aws-crypto/sha256-browser': 5.2.0
+      '@aws-crypto/sha256-js': 5.2.0
+      '@aws-sdk/core': 3.974.28
+      '@aws-sdk/credential-provider-node': 3.972.63
+      '@aws-sdk/types': 3.973.15
+      '@smithy/core': 3.29.1
+      '@smithy/fetch-http-handler': 5.6.3
+      '@smithy/node-http-handler': 4.9.3
+      '@smithy/types': 4.15.1
+      tslib: 2.8.1
+
+  '@aws-sdk/client-iot-data-plane@3.1048.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0

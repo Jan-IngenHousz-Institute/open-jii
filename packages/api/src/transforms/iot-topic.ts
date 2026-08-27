@@ -7,3 +7,12 @@
 export function buildIngestTopicPrefix(experimentId: string, deviceType: string): string {
   return `experiment/data_ingest/v1/${experimentId}/${deviceType}`;
 }
+
+/**
+ * The retained topic carrying a device's current configuration
+ * (`device/config/v1/{thingName}`, asyncapi.yaml). The platform publishes
+ * retained at QoS 1; the device subscribes and acks on the `/ack` leaf.
+ */
+export function buildDeviceConfigTopic(thingName: string): string {
+  return `device/config/v1/${thingName}`;
+}

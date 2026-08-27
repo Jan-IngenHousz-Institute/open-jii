@@ -95,6 +95,7 @@ describe("applyPlanAnswers", () => {
     thingName: "seed-ambyte-gw-01",
     deviceType: "ambyte",
     endpoint: "abc-ats.iot.eu-central-1.amazonaws.com",
+    issuedAt: "2026-08-28T09:00:00.000Z",
     experiments: [
       {
         experimentId: "22222222-2222-4222-8222-222222222222",

@@ -58,6 +58,7 @@ const config = {
   thingName: genericDevice.thingName,
   deviceType: "generic" as const,
   endpoint: "abc-ats.iot.eu-central-1.amazonaws.com",
+  issuedAt: "2026-08-28T09:00:00.000Z",
   experiments: [
     {
       experimentId: "11111111-1111-4111-8111-111111111111",

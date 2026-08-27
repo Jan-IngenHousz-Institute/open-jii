@@ -1,3 +1,5 @@
+import type { DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
+
 import type { IotCredentials } from "../../../common/modules/aws/services/cognito/cognito.types";
 import type {
   CreateThingInput,
@@ -39,6 +41,8 @@ export interface AwsPort {
   attachDevicePolicies(certificateArn: string): Promise<Result<void>>;
   setCertificateStatus(certificateId: string, status: CertificateStatus): Promise<Result<void>>;
   getIotDataEndpoint(): Promise<Result<string>>;
+  publishDeviceConfig(thingName: string, config: DeviceOnboardingConfig): Promise<Result<void>>;
+  clearDeviceConfig(thingName: string): Promise<Result<void>>;
   getCognitoIdentityId(userId: string): Promise<Result<string>>;
   searchThingsConnectivity(thingNames: string[]): Promise<Result<Map<string, ThingConnectivity>>>;
 }

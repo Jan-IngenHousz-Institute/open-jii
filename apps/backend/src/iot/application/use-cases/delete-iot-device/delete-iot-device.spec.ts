@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import type { MockInstance } from "vitest";
 
 import { eq, iotDevices } from "@repo/database";
 
@@ -20,6 +21,7 @@ describe("DeleteIotDeviceUseCase", () => {
   let awsAdapter: AwsAdapter;
   let repo: IotDeviceRepository;
   let deleteThingSpy: ReturnType<typeof vi.spyOn>;
+  let clearConfigSpy: MockInstance<AwsAdapter["clearDeviceConfig"]>;
   let userId: string;
 
   beforeAll(async () => {
@@ -34,6 +36,9 @@ describe("DeleteIotDeviceUseCase", () => {
     repo = testApp.module.get(IotDeviceRepository);
     deleteThingSpy = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
+    clearConfigSpy = vi
+      .spyOn(awsAdapter, "clearDeviceConfig")
+      .mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -86,6 +91,17 @@ describe("DeleteIotDeviceUseCase", () => {
       "arn:aws:iot:eu-central-1:000000000000:cert/cert-live",
     );
     expect(deleteThingSpy).toHaveBeenCalledWith(device.thingName);
+  });
+
+  it("clears the retained config, and tolerates the clear failing", async () => {
+    const first = await testApp.createIotDevice({ createdBy: userId });
+    assertSuccess(await useCase.execute(first.id, userId));
+    expect(clearConfigSpy).toHaveBeenCalledWith(first.thingName);
+
+    // Best-effort: the thing is going away either way.
+    clearConfigSpy.mockResolvedValue(failure(AppError.internal("broker down")));
+    const second = await testApp.createIotDevice({ createdBy: userId });
+    assertSuccess(await useCase.execute(second.id, userId));
   });
 
   it("returns 404 for a missing device", async () => {

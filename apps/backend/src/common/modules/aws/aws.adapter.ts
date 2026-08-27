@@ -1,6 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import type { ExperimentPlaceSearchResult } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
+import type { DeviceOnboardingConfig } from "@repo/api/domains/iot/iot.schema";
+import { buildDeviceConfigTopic } from "@repo/api/transforms/iot-topic";
 
 import type {
   SearchPlacesRequest,
@@ -231,6 +233,25 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
    */
   async getIotDataEndpoint(): Promise<Result<string>> {
     return this.awsIotService.describeDataEndpoint();
+  }
+
+  /**
+   * Publish a device's configuration to its retained config topic, replacing
+   * whatever the topic carried before.
+   */
+  async publishDeviceConfig(
+    thingName: string,
+    config: DeviceOnboardingConfig,
+  ): Promise<Result<void>> {
+    return this.awsIotService.publishRetained(
+      buildDeviceConfigTopic(thingName),
+      JSON.stringify(config),
+    );
+  }
+
+  /** Clear the retained config so a deleted device's topic carries nothing. */
+  async clearDeviceConfig(thingName: string): Promise<Result<void>> {
+    return this.awsIotService.publishRetained(buildDeviceConfigTopic(thingName), "");
   }
 
   /**

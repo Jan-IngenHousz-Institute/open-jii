@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import type { MockInstance } from "vitest";
 
 import {
   and,
@@ -29,6 +30,7 @@ describe("OnboardDeviceUseCase", () => {
   let repository: ExperimentDeviceRepository;
   let awsAdapter: AwsAdapter;
   let userId: string;
+  let publishConfigSpy: MockInstance<AwsAdapter["publishDeviceConfig"]>;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -41,6 +43,9 @@ describe("OnboardDeviceUseCase", () => {
     repository = testApp.module.get(ExperimentDeviceRepository);
     awsAdapter = testApp.module.get(AwsAdapter);
     vi.spyOn(awsAdapter, "getIotDataEndpoint").mockResolvedValue(success(ENDPOINT));
+    publishConfigSpy = vi
+      .spyOn(awsAdapter, "publishDeviceConfig")
+      .mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -378,6 +383,26 @@ describe("OnboardDeviceUseCase", () => {
     });
 
     assertFailure(result);
+  });
+
+  it("republishes the retained config after a successful onboard", async () => {
+    const device = await createActiveDevice(userId);
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+
+    const result = await useCase.execute(device.id, [experiment.id], userId);
+
+    assertSuccess(result);
+    expect(publishConfigSpy).toHaveBeenCalledWith(device.thingName, expect.anything());
+  });
+
+  it("still succeeds when the retained republish fails, since bindings and answers are durable", async () => {
+    publishConfigSpy.mockResolvedValue(failure(AppError.internal("broker down")));
+    const device = await createActiveDevice(userId);
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+
+    const result = await useCase.execute(device.id, [experiment.id], userId);
+
+    assertSuccess(result);
   });
 
   it("fails before binding when the endpoint cannot be resolved", async () => {

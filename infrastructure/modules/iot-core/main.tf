@@ -69,10 +69,13 @@ locals {
   }
 
   # Only cloud-bound (device-publish) channels are routed to Kinesis/S3. Outbound
-  # channels (e.g. script delivery) must not be ingested back into the data lake.
+  # channels (e.g. script delivery) must not be ingested back into the data lake,
+  # and a channel can opt out with x-ingest: false (config acks are operational
+  # state with their own S3 rule; bronze consumes the Kinesis stream
+  # unconditionally and is non-resettable).
   ingest_channels = {
     for channel, details in local.asyncapi.channels : channel => details
-    if contains(keys(details), "subscribe")
+    if contains(keys(details), "subscribe") && lookup(details, "x-ingest", true)
   }
 
   iot_policy_names = {
@@ -321,9 +324,12 @@ resource "aws_iam_policy" "iot_s3_policy" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect   = "Allow",
-      Action   = ["s3:PutObject"],
-      Resource = "${var.s3_archive_bucket_arn}/device-lifecycle-events/*"
+      Effect = "Allow",
+      Action = ["s3:PutObject"],
+      Resource = [
+        "${var.s3_archive_bucket_arn}/device-lifecycle-events/*",
+        "${var.s3_archive_bucket_arn}/device-config-acks/*",
+      ]
     }]
   })
 
@@ -445,6 +451,21 @@ resource "aws_iot_topic_rule" "device_lifecycle_events" {
     role_arn    = aws_iam_role.iot_s3_role.arn
     bucket_name = var.s3_archive_bucket_name
     key         = "device-lifecycle-events/$${parse_time(\"yyyy/MM/dd\", timestamp())}/$${newuuid()}.json"
+  }
+}
+
+# Config acks are archived to S3 only, mirroring the lifecycle-events rule: they
+# are operational state for config freshness, never measurement data.
+resource "aws_iot_topic_rule" "device_config_acks" {
+  name        = "open_jii_${var.environment}_iot_rule_device_config_acks"
+  enabled     = true
+  sql         = "SELECT *, topic() as topic, clientid() as client_id FROM 'device/config/v1/+/ack'"
+  sql_version = "2016-03-23"
+
+  s3 {
+    role_arn    = aws_iam_role.iot_s3_role.arn
+    bucket_name = var.s3_archive_bucket_name
+    key         = "device-config-acks/$${parse_time(\"yyyy/MM/dd\", timestamp())}/$${newuuid()}.json"
   }
 }
 

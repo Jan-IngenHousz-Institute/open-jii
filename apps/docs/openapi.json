@@ -15694,6 +15694,11 @@
                       "type": "string",
                       "description": "MQTT broker host (AWS IoT ATS data endpoint)"
                     },
+                    "issuedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When this configuration was issued; devices echo it in the config ack"
+                    },
                     "experiments": {
                       "type": "array",
                       "items": {
@@ -15866,6 +15871,7 @@
                     "thingName",
                     "deviceType",
                     "endpoint",
+                    "issuedAt",
                     "experiments"
                   ]
                 }
@@ -16591,6 +16597,11 @@
                                     "type": "string",
                                     "description": "MQTT broker host (AWS IoT ATS data endpoint)"
                                   },
+                                  "issuedAt": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "When this configuration was issued; devices echo it in the config ack"
+                                  },
                                   "experiments": {
                                     "type": "array",
                                     "items": {
@@ -16768,6 +16779,7 @@
                                   "thingName",
                                   "deviceType",
                                   "endpoint",
+                                  "issuedAt",
                                   "experiments"
                                 ]
                               },

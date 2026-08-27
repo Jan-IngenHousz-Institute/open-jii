@@ -1,6 +1,9 @@
+import type { MockInstance } from "vitest";
+
 import { eq, experiments } from "@repo/database";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { RemoveExperimentDeviceUseCase } from "./remove-experiment-device";
@@ -10,6 +13,7 @@ describe("RemoveExperimentDeviceUseCase", () => {
   let useCase: RemoveExperimentDeviceUseCase;
   let repository: ExperimentDeviceRepository;
   let userId: string;
+  let publishConfigSpy: MockInstance<AwsAdapter["publishDeviceConfig"]>;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -20,6 +24,13 @@ describe("RemoveExperimentDeviceUseCase", () => {
     userId = await testApp.createTestUser({ name: "Owner" });
     useCase = testApp.module.get(RemoveExperimentDeviceUseCase);
     repository = testApp.module.get(ExperimentDeviceRepository);
+    const awsAdapter = testApp.module.get(AwsAdapter);
+    vi.spyOn(awsAdapter, "getIotDataEndpoint").mockResolvedValue(
+      success("data.iot.example.amazonaws.com"),
+    );
+    publishConfigSpy = vi
+      .spyOn(awsAdapter, "publishDeviceConfig")
+      .mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -46,6 +57,8 @@ describe("RemoveExperimentDeviceUseCase", () => {
     const remaining = await repository.listByExperiment(experiment.id);
     assertSuccess(remaining);
     expect(remaining.value).toEqual([]);
+    // The retained config stops carrying the detached experiment.
+    expect(publishConfigSpy).toHaveBeenCalledWith(device.thingName, expect.anything());
   });
 
   it("allows detaching from an archived experiment", async () => {

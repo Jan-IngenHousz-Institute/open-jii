@@ -15,6 +15,7 @@ import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
+import { RepublishDeviceConfigUseCase } from "../republish-device-config/republish-device-config";
 
 @Injectable()
 export class OnboardDeviceUseCase {
@@ -26,6 +27,7 @@ export class OnboardDeviceUseCase {
     private readonly deviceRepository: IotDeviceRepository,
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDeviceRepository: ExperimentDeviceRepository,
+    private readonly republishDeviceConfig: RepublishDeviceConfigUseCase,
   ) {}
 
   async execute(
@@ -142,12 +144,18 @@ export class OnboardDeviceUseCase {
       ...answers,
     };
 
+    // The retained topic gets its own machine compile (always with workbook,
+    // stored answers only), so its issuedAt differs from this response's; acks
+    // correlate with the retained document.
+    await this.republishDeviceConfig.executeBestEffort(deviceId, "onboardDevice");
+
     return success(
       applyPlanAnswers(
         {
           thingName: device.thingName,
           deviceType: device.deviceType,
           endpoint: endpointResult.value,
+          issuedAt: new Date().toISOString(),
           experiments,
         },
         resolvedAnswers,

@@ -52,6 +52,7 @@ export enum ErrorCodes {
   AWS_IOT_ATTACH_CERT_POLICY_FAILED = "AWS_IOT_ATTACH_CERT_POLICY_FAILED", // IoT AttachPolicy to certificate failed
   AWS_IOT_UPDATE_CERT_FAILED = "AWS_IOT_UPDATE_CERT_FAILED", // IoT UpdateCertificate status failed
   AWS_IOT_DESCRIBE_ENDPOINT_FAILED = "AWS_IOT_DESCRIBE_ENDPOINT_FAILED", // IoT DescribeEndpoint failed
+  AWS_IOT_PUBLISH_FAILED = "AWS_IOT_PUBLISH_FAILED", // IoT data-plane publish failed
   AWS_IOT_LIST_PRINCIPALS_FAILED = "AWS_IOT_LIST_PRINCIPALS_FAILED", // IoT ListThingPrincipals failed
   AWS_IOT_SEARCH_INDEX_FAILED = "AWS_IOT_SEARCH_INDEX_FAILED", // IoT fleet-index connectivity search failed
   AWS_S3_PRESIGN_FAILED = "AWS_S3_PRESIGN_FAILED", // S3 pre-signed URL generation failed

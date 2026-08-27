@@ -26,6 +26,7 @@ export type DeviceExperimentDto = Pick<ExperimentDto, "id" | "name" | "status"> 
 export interface DeviceOnboardingExperimentDto {
   experimentId: string;
   experimentName: string;
+  experimentStatus: ExperimentDto["status"];
   /** Stored delivery-time answers for this binding, keyed by workbook cell id. */
   planAnswers: Record<string, DeviceAnswer>;
   workbook: {

@@ -13,6 +13,7 @@ import {
   SearchIndexCommand,
 } from "@aws-sdk/client-iot";
 import type { ThingDocument } from "@aws-sdk/client-iot";
+import { IoTDataPlaneClient, PublishCommand } from "@aws-sdk/client-iot-data-plane";
 import { Injectable } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -39,6 +40,7 @@ const SEARCH_INDEX_TERM_OVERHEAD = 'thingName:""'.length + " OR ".length;
 export class AwsIotService {
   private readonly iotClient: IoTClient;
   private cachedDataEndpoint: string | null = null;
+  private dataPlaneClient: IoTDataPlaneClient | null = null;
 
   constructor(private readonly awsConfig: AwsConfigService) {
     this.iotClient = new IoTClient({ region: this.awsConfig.region });
@@ -154,6 +156,36 @@ export class AwsIotService {
         await this.iotClient.send(new AttachPolicyCommand({ policyName, target: certificateArn }));
       },
       (error) => this.mapError(error, ErrorCodes.AWS_IOT_ATTACH_CERT_POLICY_FAILED),
+    );
+  }
+
+  // Retained at QoS 1, so the topic always carries the latest document and an
+  // offline device receives it on its next subscribe. An empty payload clears
+  // the retained message (MQTT semantics), used when a device is deleted. The
+  // data-plane client targets the same ATS endpoint devices connect to.
+  async publishRetained(topic: string, payload: string): Promise<Result<void>> {
+    const endpointResult = await this.describeDataEndpoint();
+    if (endpointResult.isFailure()) {
+      return endpointResult;
+    }
+
+    return tryCatch(
+      async () => {
+        this.dataPlaneClient ??= new IoTDataPlaneClient({
+          region: this.awsConfig.region,
+          endpoint: `https://${endpointResult.value}`,
+        });
+
+        await this.dataPlaneClient.send(
+          new PublishCommand({
+            topic,
+            qos: 1,
+            retain: true,
+            payload: Buffer.from(payload, "utf8"),
+          }),
+        );
+      },
+      (error) => this.mapError(error, ErrorCodes.AWS_IOT_PUBLISH_FAILED),
     );
   }
 

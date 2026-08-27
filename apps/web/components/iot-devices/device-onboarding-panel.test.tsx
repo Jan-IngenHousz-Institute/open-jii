@@ -24,6 +24,7 @@ const config = {
   thingName: device.thingName,
   deviceType: device.deviceType,
   endpoint: "abc-ats.iot.eu-central-1.amazonaws.com",
+  issuedAt: "2026-08-28T09:00:00.000Z",
   experiments: [
     {
       experimentId: boundExperiment.id,

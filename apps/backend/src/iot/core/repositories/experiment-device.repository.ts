@@ -152,6 +152,7 @@ export class ExperimentDeviceRepository {
         .select({
           experimentId: experiments.id,
           experimentName: experiments.name,
+          experimentStatus: experiments.status,
           planAnswers: experimentDevices.planAnswers,
           version: workbookVersions.version,
           cells: workbookVersions.cells,
@@ -166,6 +167,7 @@ export class ExperimentDeviceRepository {
       return rows.map((row) => ({
         experimentId: row.experimentId,
         experimentName: row.experimentName,
+        experimentStatus: row.experimentStatus,
         planAnswers: this.parsePlanAnswers(row.experimentId, row.planAnswers),
         workbook:
           row.version === null ? null : this.parseWorkbook(row.experimentId, row.version, row),

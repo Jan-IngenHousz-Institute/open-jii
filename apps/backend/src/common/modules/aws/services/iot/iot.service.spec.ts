@@ -13,6 +13,7 @@ import {
   SearchIndexCommand,
   InvalidRequestException,
 } from "@aws-sdk/client-iot";
+import { IoTDataPlaneClient, PublishCommand } from "@aws-sdk/client-iot-data-plane";
 import { mockClient } from "aws-sdk-client-mock";
 
 import { TestHarness } from "../../../../../test/test-harness";
@@ -22,6 +23,7 @@ import { AwsConfigService } from "../config/config.service";
 import { AwsIotService } from "./iot.service";
 
 const iotMock = mockClient(IoTClient);
+const dataPlaneMock = mockClient(IoTDataPlaneClient);
 
 describe("AwsIotService", () => {
   const testApp = TestHarness.App;
@@ -34,6 +36,7 @@ describe("AwsIotService", () => {
 
   beforeEach(async () => {
     iotMock.reset();
+    dataPlaneMock.reset();
     await testApp.beforeEach();
     service = testApp.module.get(AwsIotService);
     awsConfig = testApp.module.get(AwsConfigService);
@@ -437,6 +440,45 @@ describe("AwsIotService", () => {
 
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.AWS_IOT_SEARCH_INDEX_FAILED);
+    });
+  });
+
+  describe("publishRetained", () => {
+    // The endpoint cache is process-lifetime by design, so each case gets a
+    // fresh instance instead of the module singleton.
+    const freshService = () => new AwsIotService(awsConfig);
+
+    it("publishes retained at QoS 1 against the resolved ATS endpoint", async () => {
+      iotMock.on(DescribeEndpointCommand).resolves({ endpointAddress: "abc-ats.example.com" });
+      dataPlaneMock.on(PublishCommand).resolves({});
+
+      const result = await freshService().publishRetained("device/config/v1/thing-1", '{"a":1}');
+
+      assertSuccess(result);
+      const call = dataPlaneMock.commandCalls(PublishCommand)[0].args[0].input;
+      expect(call.topic).toBe("device/config/v1/thing-1");
+      expect(call.qos).toBe(1);
+      expect(call.retain).toBe(true);
+      expect(Buffer.from(call.payload as Uint8Array).toString("utf8")).toBe('{"a":1}');
+    });
+
+    it("fails without publishing when the endpoint cannot be resolved", async () => {
+      iotMock.on(DescribeEndpointCommand).rejects(new Error("throttled"));
+
+      const result = await freshService().publishRetained("device/config/v1/thing-1", "{}");
+
+      assertFailure(result);
+      expect(dataPlaneMock.commandCalls(PublishCommand)).toHaveLength(0);
+    });
+
+    it("maps a publish failure to its own error code", async () => {
+      iotMock.on(DescribeEndpointCommand).resolves({ endpointAddress: "abc-ats.example.com" });
+      dataPlaneMock.on(PublishCommand).rejects(new Error("boom"));
+
+      const result = await freshService().publishRetained("device/config/v1/thing-1", "{}");
+
+      assertFailure(result);
+      expect(result.error.code).toBe("AWS_IOT_PUBLISH_FAILED");
     });
   });
 });

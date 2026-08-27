@@ -122,6 +122,59 @@ channels:
       message:
         $ref: "#/components/messages/DeviceScriptMessage"
 
+  device/config/v1/{thingName}:
+    x-infra-name: device_config_v1
+    description: |
+      Channel for delivering a device's current platform configuration: broker
+      connection facts plus, per bound experiment, the ingest topic prefix and
+      the compiled workbook plan. The cloud publishes retained at QoS 1, so the
+      topic always carries the latest configuration and a device that connects
+      at any later time immediately receives it. Devices that only consume
+      workbook updates need nothing beyond this subscription; firmware OTA (AWS
+      IoT Jobs) is a separate, optional protocol.
+      The path parameter represents:
+      <ul>
+        <li><strong>thingName:</strong> AWS IoT Thing name of the target device. The IoT policy binds this
+          segment to ${iot:Connection.Thing.ThingName}, so a device (authenticated by its X.509 certificate)
+          can only subscribe to and receive its own configuration.</li>
+      </ul>
+    parameters:
+      thingName:
+        description: AWS IoT Thing name of the target device.
+        schema:
+          type: string
+    publish:
+      operationId: deliverDeviceConfig
+      summary: Deliver the device's current configuration.
+      message:
+        $ref: "#/components/messages/DeviceConfigMessage"
+
+  device/config/v1/{thingName}/ack:
+    x-infra-name: device_config_v1_ack
+    # Acks are operational state, not measurements: they are archived to S3 by a
+    # dedicated rule and must never reach the Kinesis measurement stream.
+    x-ingest: false
+    description: |
+      Channel for acknowledging an applied configuration. After applying (or
+      rejecting) a configuration received on the config topic, the device
+      publishes one ack echoing the configuration's issuedAt stamp, giving the
+      platform ground truth about what each device currently runs.
+      The path parameter represents:
+      <ul>
+        <li><strong>thingName:</strong> AWS IoT Thing name of the acknowledging device, bound to
+          ${iot:Connection.Thing.ThingName} in the IoT policy.</li>
+      </ul>
+    parameters:
+      thingName:
+        description: AWS IoT Thing name of the acknowledging device.
+        schema:
+          type: string
+    subscribe:
+      operationId: acknowledgeDeviceConfig
+      summary: Acknowledge an applied or rejected configuration.
+      message:
+        $ref: "#/components/messages/DeviceConfigAckMessage"
+
 components:
   messages:
     ExperimentDataMessage:
@@ -287,6 +340,94 @@ components:
             sample: '{"moisture": 30.5, "temperature": 22.1}'
             device_version: "1.1.0"
             device_battery: 4.1
+
+    DeviceConfigMessage:
+      contentType: application/json
+      name: DeviceConfigMessage
+      title: Device Configuration Message
+      summary: The device's full current configuration, published retained by the platform.
+      payload:
+        type: object
+        properties:
+          thingName:
+            type: string
+            description: The device's own Thing name; also its required MQTT client id.
+          deviceType:
+            type: string
+            description: The device family the configuration was compiled for.
+          endpoint:
+            type: string
+            description: The ATS broker endpoint the device should connect to.
+          issuedAt:
+            type: string
+            format: date-time
+            description: When this configuration was issued; echoed back verbatim in the ack.
+          experiments:
+            type: array
+            description: One entry per bound experiment, in binding order.
+            items:
+              type: object
+              properties:
+                experimentId:
+                  type: string
+                experimentName:
+                  type: string
+                topicPrefix:
+                  type: string
+                  description: Ingest topic prefix; the device appends /{sensorVersion}/{sensorId}.
+                workbookVersion:
+                  type: [integer, "null"]
+                  description: The pinned workbook version the procedures were compiled from.
+                procedures:
+                  type: array
+                  description: Flat, ordered device plan (protocol, command, and question steps).
+                  items:
+                    type: object
+        required:
+          - thingName
+          - deviceType
+          - endpoint
+          - issuedAt
+          - experiments
+      examples:
+        - payload:
+            thingName: "ambyte_28372FFFE704"
+            deviceType: "ambyte"
+            endpoint: "abc-ats.iot.eu-central-1.amazonaws.com"
+            issuedAt: "2026-08-28T09:00:00.000Z"
+            experiments:
+              - experimentId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                experimentName: "Soil study"
+                topicPrefix: "experiment/data_ingest/v1/3fa85f64-5717-4562-b3fc-2c963f66afa6/ambyte"
+                workbookVersion: 3
+                procedures: []
+
+    DeviceConfigAckMessage:
+      contentType: application/json
+      name: DeviceConfigAckMessage
+      title: Device Configuration Acknowledgement
+      summary: One acknowledgement per applied (or rejected) configuration.
+      payload:
+        type: object
+        properties:
+          issuedAt:
+            type: string
+            format: date-time
+            description: The issuedAt stamp of the configuration being acknowledged, echoed verbatim.
+          status:
+            type: string
+            enum: ["applied", "rejected"]
+            description: Whether the device now runs this configuration.
+          detail:
+            type: string
+            description: Optional device-reported reason, meaningful on rejection.
+        required:
+          - issuedAt
+          - status
+      examples:
+        - payload:
+            issuedAt: "2026-08-28T09:00:00.000Z"
+            status: "applied"
 
     DeviceScriptMessage:
       contentType: application/json

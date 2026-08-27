@@ -265,6 +265,10 @@ export const zDeviceOnboardingConfig = z.object({
   thingName: z.string(),
   deviceType: zRegisterableDeviceType,
   endpoint: z.string().describe("MQTT broker host (AWS IoT ATS data endpoint)"),
+  issuedAt: z
+    .string()
+    .datetime()
+    .describe("When this configuration was issued; devices echo it in the config ack"),
   experiments: z.array(zDeviceOnboardingExperiment),
 });
 
