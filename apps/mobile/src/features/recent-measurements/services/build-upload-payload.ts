@@ -30,6 +30,8 @@ export interface BuildUploadPayloadArgs {
   /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
   macroContext?: Record<string, unknown>;
   fallbackDeviceId?: string;
+  /** Canonical sensor family captured by the connection handshake. */
+  fallbackDeviceFamily?: string;
   /** Physical sensor firmware captured by the connection handshake. */
   fallbackDeviceFirmware?: string;
   /** GPS fix at measurement time; null/absent uploads without location. */
@@ -52,6 +54,7 @@ export function buildUploadPayload({
   workbookId,
   macroContext,
   fallbackDeviceId,
+  fallbackDeviceFamily,
   fallbackDeviceFirmware,
   location,
 }: BuildUploadPayloadArgs) {
@@ -83,6 +86,12 @@ export function buildUploadPayload({
     // fallback (Android USB deviceIds are transient across replugs).
     ...(rawMeasurement.device_id == null && fallbackDeviceId
       ? { device_id: fallbackDeviceId }
+      : {}),
+    // Report the canonical driver family so downstream consumers can
+    // distinguish MultispeQ, Ambit, MiniPAR, and generic devices without
+    // interpreting a device-reported display name.
+    ...(rawMeasurement.device_family == null && fallbackDeviceFamily
+      ? { device_family: fallbackDeviceFamily }
       : {}),
     // Preserve an explicit device-native value; otherwise report the version
     // learned by the mobile connection handshake for this physical sensor.

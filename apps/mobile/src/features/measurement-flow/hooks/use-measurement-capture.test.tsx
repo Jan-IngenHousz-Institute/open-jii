@@ -27,7 +27,11 @@ const mocks = vi.hoisted(() => {
   const executorState = {
     executors: new Map<
       string,
-      { identity?: { firmwareVersion?: string }; progress?: number; scanStartedAt?: number }
+      {
+        identity?: { family?: string; firmwareVersion?: string };
+        progress?: number;
+        scanStartedAt?: number;
+      }
     >(),
     progress: 0,
     scanStartedAt: 0,
@@ -131,8 +135,8 @@ describe("useMeasurementCapture", () => {
       flowNodes: [],
     });
     mocks.executorState.executors = new Map([
-      ["usb-a", { identity: { firmwareVersion: "2.311" } }],
-      ["usb-b", { identity: { firmwareVersion: "1.04" } }],
+      ["usb-a", { identity: { family: "multispeq", firmwareVersion: "2.311" } }],
+      ["usb-b", { identity: { family: "minipar", firmwareVersion: "1.04" } }],
     ]);
   });
 
@@ -152,11 +156,21 @@ describe("useMeasurementCapture", () => {
     expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
       [
         {
-          device: { id: "usb-a", name: "Device A", firmwareVersion: "2.311" },
+          device: {
+            id: "usb-a",
+            name: "Device A",
+            family: "multispeq",
+            firmwareVersion: "2.311",
+          },
           result: { value: 1 },
         },
         {
-          device: { id: "usb-b", name: "Device B", firmwareVersion: "1.04" },
+          device: {
+            id: "usb-b",
+            name: "Device B",
+            family: "minipar",
+            firmwareVersion: "1.04",
+          },
           result: { value: 2 },
         },
       ],
@@ -262,13 +276,23 @@ describe("useMeasurementCapture", () => {
     expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
       [
         {
-          device: { id: "usb-a", name: "Device A", firmwareVersion: "2.311" },
+          device: {
+            id: "usb-a",
+            name: "Device A",
+            family: "multispeq",
+            firmwareVersion: "2.311",
+          },
           result: { value: 1 },
           protocolId: "proto-a",
           protocolName: "Protocol A",
         },
         {
-          device: { id: "usb-b", name: "Device B", firmwareVersion: "1.04" },
+          device: {
+            id: "usb-b",
+            name: "Device B",
+            family: "minipar",
+            firmwareVersion: "1.04",
+          },
           result: { value: 2 },
           protocolId: undefined,
           protocolName: "Command target",

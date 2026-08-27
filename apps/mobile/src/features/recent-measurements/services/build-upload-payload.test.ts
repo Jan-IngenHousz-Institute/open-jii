@@ -287,7 +287,21 @@ describe("workbook run correlation", () => {
     expect(withNeither).not.toHaveProperty("device_id");
   });
 
-  it("reports the captured sensor version without overriding device-native provenance", () => {
+  it("reports captured sensor identity without overriding device-native provenance", () => {
+    const withCapturedFamily = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+      fallbackDeviceFamily: "multispeq",
+    });
+    expect(withCapturedFamily.device_family).toBe("multispeq");
+
+    const withNativeFamily = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_family: "ambit" },
+      fallbackDeviceFamily: "multispeq",
+    });
+    expect(withNativeFamily.device_family).toBe("ambit");
+
     const withCapturedVersion = buildUploadPayload({
       ...baseArgs,
       rawMeasurement: {},
@@ -303,6 +317,7 @@ describe("workbook run correlation", () => {
     expect(withNativeVersion.device_firmware).toBe("1.04");
 
     const withNeither = buildUploadPayload({ ...baseArgs, rawMeasurement: {} });
+    expect(withNeither).not.toHaveProperty("device_family");
     expect(withNeither).not.toHaveProperty("device_firmware");
   });
 });

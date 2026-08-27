@@ -57,6 +57,7 @@ type SavedCall = [
       protocol_id?: string;
       workbook_version_id?: string;
       macro_context?: string;
+      device_family?: string;
       device_firmware?: string;
     };
     metadata: { protocolName: string };
@@ -87,14 +88,19 @@ describe("useMeasurementUpload", () => {
         results: [
           {
             rawMeasurement: { a: 1 },
-            device: { id: "d1", name: "A", firmwareVersion: "2.311" },
+            device: {
+              id: "d1",
+              name: "A",
+              family: "multispeq",
+              firmwareVersion: "2.311",
+            },
             protocolId: "proto-a",
             protocolName: "Proto A",
             macroContext: { measurement: { a: 1 } },
           },
           {
             rawMeasurement: { b: 2 },
-            device: { id: "d2", name: "B", firmwareVersion: "1.04" },
+            device: { id: "d2", name: "B", family: "minipar", firmwareVersion: "1.04" },
             protocolId: "proto-b",
             protocolName: "Proto B",
           },
@@ -116,6 +122,11 @@ describe("useMeasurementUpload", () => {
     expect(calls.map(([m]) => m.measurementResult.device_firmware)).toEqual([
       "2.311",
       "1.04",
+      undefined,
+    ]);
+    expect(calls.map(([m]) => m.measurementResult.device_family)).toEqual([
+      "multispeq",
+      "minipar",
       undefined,
     ]);
 
