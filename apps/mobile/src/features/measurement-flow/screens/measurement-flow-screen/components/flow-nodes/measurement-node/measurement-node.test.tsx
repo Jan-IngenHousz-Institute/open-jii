@@ -19,23 +19,38 @@ const {
   toastError,
   playSound,
   scanState,
-} = vi.hoisted(() => ({
-  executeScanAll: vi.fn(),
-  resetScan: vi.fn(),
-  cancelAll: vi.fn(),
-  useConnectedDevices: vi.fn(),
-  refetchConnectedDevices: vi.fn(),
-  nextStep: vi.fn(),
-  setScanResults: vi.fn(),
-  navigateToQuestionFromOverview: vi.fn(),
-  openDeviceSheet: vi.fn(),
-  toastError: vi.fn(),
-  playSound: vi.fn(),
-  scanState: {
-    isScanning: false,
-    lastRound: undefined as { successes: unknown[]; failures: unknown[] } | undefined,
-  },
-}));
+  useScannerCommandExecutorStore,
+} = vi.hoisted(() => {
+  const executorState = {
+    executors: new Map(),
+    progress: undefined,
+    scanStartedAt: undefined,
+    estimatedMs: undefined,
+  };
+  const useScannerCommandExecutorStore = vi.fn((selector: (s: object) => unknown) =>
+    selector(executorState),
+  );
+  Object.assign(useScannerCommandExecutorStore, { getState: () => executorState });
+
+  return {
+    executeScanAll: vi.fn(),
+    resetScan: vi.fn(),
+    cancelAll: vi.fn(),
+    useConnectedDevices: vi.fn(),
+    refetchConnectedDevices: vi.fn(),
+    nextStep: vi.fn(),
+    setScanResults: vi.fn(),
+    navigateToQuestionFromOverview: vi.fn(),
+    openDeviceSheet: vi.fn(),
+    toastError: vi.fn(),
+    playSound: vi.fn(),
+    scanState: {
+      isScanning: false,
+      lastRound: undefined as { successes: unknown[]; failures: unknown[] } | undefined,
+    },
+    useScannerCommandExecutorStore,
+  };
+});
 
 vi.mock("~/features/connection/hooks/use-multi-scanner", () => ({
   useMultiScanner: () => ({
@@ -54,8 +69,7 @@ vi.mock("~/features/connection/hooks/use-device-connection", () => ({
 
 // The capture hook reads the Primary device's live progress off the store.
 vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
-  useScannerCommandExecutorStore: (selector: (s: object) => unknown) =>
-    selector({ progress: undefined, scanStartedAt: undefined, estimatedMs: undefined }),
+  useScannerCommandExecutorStore,
 }));
 
 vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({

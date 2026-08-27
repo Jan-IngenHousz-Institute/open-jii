@@ -89,7 +89,7 @@ export function useMeasurementUpload() {
     }: SharedUploadArgs & {
       results: {
         rawMeasurement: any;
-        device?: { id: string; name: string };
+        device?: { id: string; name: string; firmwareVersion?: string };
         // Dispatch rounds: the protocol this device actually ran; overrides
         // the batch-level protocolId/protocolName for this result only.
         protocolId?: string;
@@ -139,6 +139,7 @@ export function useMeasurementUpload() {
           workbookId,
           macroContext,
           fallbackDeviceId: device?.id,
+          fallbackDeviceFirmware: device?.firmwareVersion,
           location,
         });
 

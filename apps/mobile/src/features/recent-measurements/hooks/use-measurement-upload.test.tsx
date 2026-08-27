@@ -57,6 +57,7 @@ type SavedCall = [
       protocol_id?: string;
       workbook_version_id?: string;
       macro_context?: string;
+      device_firmware?: string;
     };
     metadata: { protocolName: string };
   },
@@ -86,14 +87,14 @@ describe("useMeasurementUpload", () => {
         results: [
           {
             rawMeasurement: { a: 1 },
-            device: { id: "d1", name: "A" },
+            device: { id: "d1", name: "A", firmwareVersion: "2.311" },
             protocolId: "proto-a",
             protocolName: "Proto A",
             macroContext: { measurement: { a: 1 } },
           },
           {
             rawMeasurement: { b: 2 },
-            device: { id: "d2", name: "B" },
+            device: { id: "d2", name: "B", firmwareVersion: "1.04" },
             protocolId: "proto-b",
             protocolName: "Proto B",
           },
@@ -112,6 +113,11 @@ describe("useMeasurementUpload", () => {
       "proto-shared",
     ]);
     expect(calls.map(([m]) => m.metadata.protocolName)).toEqual(["Proto A", "Proto B", "Shared"]);
+    expect(calls.map(([m]) => m.measurementResult.device_firmware)).toEqual([
+      "2.311",
+      "1.04",
+      undefined,
+    ]);
 
     const runIds = calls.map(([m]) => m.measurementResult.workbook_run_id);
     expect(runIds).toEqual(["run-attempt-1", "run-attempt-1", "run-attempt-1"]);

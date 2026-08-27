@@ -9,7 +9,7 @@ export type ScanResult = Record<string, unknown>;
 
 /** One device's scan output; device is absent for legacy single-device results. */
 export interface ScanResultEntry {
-  device?: { id: string; name: string };
+  device?: { id: string; name: string; firmwareVersion?: string };
   result: ScanResult;
   /** Dispatch rounds: the protocol this device actually ran (per-device upload). */
   protocolId?: string;

@@ -286,6 +286,25 @@ describe("workbook run correlation", () => {
     });
     expect(withNeither).not.toHaveProperty("device_id");
   });
+
+  it("reports the captured sensor version without overriding device-native provenance", () => {
+    const withCapturedVersion = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+      fallbackDeviceFirmware: "2.311",
+    });
+    expect(withCapturedVersion.device_firmware).toBe("2.311");
+
+    const withNativeVersion = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_firmware: "1.04" },
+      fallbackDeviceFirmware: "2.311",
+    });
+    expect(withNativeVersion.device_firmware).toBe("1.04");
+
+    const withNeither = buildUploadPayload({ ...baseArgs, rawMeasurement: {} });
+    expect(withNeither).not.toHaveProperty("device_firmware");
+  });
 });
 
 describe("measurement location", () => {

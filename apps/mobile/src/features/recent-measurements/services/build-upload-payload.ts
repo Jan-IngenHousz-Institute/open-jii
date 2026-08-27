@@ -30,6 +30,8 @@ export interface BuildUploadPayloadArgs {
   /** Device-scoped upstream workbook values consumed by the macro as `ctx`. */
   macroContext?: Record<string, unknown>;
   fallbackDeviceId?: string;
+  /** Physical sensor firmware captured by the connection handshake. */
+  fallbackDeviceFirmware?: string;
   /** GPS fix at measurement time; null/absent uploads without location. */
   location?: MeasurementLocation | null;
 }
@@ -50,6 +52,7 @@ export function buildUploadPayload({
   workbookId,
   macroContext,
   fallbackDeviceId,
+  fallbackDeviceFirmware,
   location,
 }: BuildUploadPayloadArgs) {
   const macroFilenames = macro?.filename ? [macro.filename] : [];
@@ -80,6 +83,11 @@ export function buildUploadPayload({
     // fallback (Android USB deviceIds are transient across replugs).
     ...(rawMeasurement.device_id == null && fallbackDeviceId
       ? { device_id: fallbackDeviceId }
+      : {}),
+    // Preserve an explicit device-native value; otherwise report the version
+    // learned by the mobile connection handshake for this physical sensor.
+    ...(rawMeasurement.device_firmware == null && fallbackDeviceFirmware
+      ? { device_firmware: fallbackDeviceFirmware }
       : {}),
     workbook_run_id: workbookRunId,
     workbook_version_id: workbookVersionId,

@@ -466,8 +466,14 @@ describe("AnalysisNode upload with a command in the flow", () => {
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },
       scanResults: [
-        { device: { id: "1", name: "MultispeQ #1" }, result: { sample: [{ phi2: 0.8 }] } },
-        { device: { id: "2", name: "MultispeQ #2" }, result: { sample: [{ phi2: 0.7 }] } },
+        {
+          device: { id: "1", name: "MultispeQ #1", firmwareVersion: "2.311" },
+          result: { sample: [{ phi2: 0.8 }] },
+        },
+        {
+          device: { id: "2", name: "MultispeQ #2", firmwareVersion: "2.312" },
+          result: { sample: [{ phi2: 0.7 }] },
+        },
       ],
       producerCellId: "p1",
       cells: [
@@ -510,12 +516,12 @@ describe("AnalysisNode upload with a command in the flow", () => {
       results: [
         {
           rawMeasurement: { sample: [{ phi2: 0.8 }] },
-          device: { id: "1" },
+          device: { id: "1", firmwareVersion: "2.311" },
           macroContext: { measurement: { phi2: 0.8 } },
         },
         {
           rawMeasurement: { sample: [{ phi2: 0.7 }] },
-          device: { id: "2" },
+          device: { id: "2", firmwareVersion: "2.312" },
           macroContext: { measurement: { phi2: 0.7 } },
         },
       ],
