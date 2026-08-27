@@ -25,11 +25,6 @@ export const LED_NAMES: Record<number, string> = {
 };
 
 // Approximate visual colours for the body LEDs; mirrors the notebook palette.
-/**
- * Physical LED colours, keyed by the MultispeQ's LED index — 530nm green, 650nm
- * red and so on. These describe the light the instrument actually emitted, so
- * they are data, not styling, and deliberately do not follow the theme.
- */
 export const LED_COLORS: Record<number, string> = {
   1: "#1b5e20",
   2: "#c62828",

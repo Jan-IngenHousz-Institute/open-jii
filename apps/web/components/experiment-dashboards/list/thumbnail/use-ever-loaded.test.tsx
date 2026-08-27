@@ -47,6 +47,36 @@ describe("useEverLoaded", () => {
     await waitFor(() => expect(result.current).toBe(true));
   });
 
+  // The shape every real caller produces. oRPC nests the id inside an input
+  // object, so a top-level scan of the key never sees it — which left the
+  // thumbnail's skeleton up permanently while the dashboard rendered beneath it.
+  it("flips to true for an oRPC-shaped key, where the id is nested in the input", async () => {
+    const { client, Wrapper } = wrap();
+
+    let resolveFetch: (v: unknown) => void = () => undefined;
+    const pending = new Promise((r) => {
+      resolveFetch = r;
+    });
+
+    void client.fetchQuery({
+      queryKey: [
+        ["experiments", "getExperimentVisualization"],
+        { input: { id: "exp-1", visualizationId: "viz-9" }, type: "query" },
+      ],
+      queryFn: () => pending,
+    });
+
+    const { result } = renderHook(() => useEverLoaded("exp-1", true), { wrapper: Wrapper });
+    expect(result.current).toBe(false);
+
+    await act(async () => {
+      resolveFetch("done");
+      await pending;
+    });
+
+    await waitFor(() => expect(result.current).toBe(true));
+  });
+
   it("ignores fetches keyed by a different experimentId", async () => {
     const { client, Wrapper } = wrap();
 
