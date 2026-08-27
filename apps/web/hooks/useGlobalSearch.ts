@@ -8,7 +8,8 @@ const SEARCH_DEBOUNCE_MS = 250;
 const DEFAULT_LIMIT = 20;
 
 /**
- * Debounced global search across experiments, protocols and macros. The query is disabled until
+ * Debounced global search across experiments, protocols, macros, workbooks and organizations. The
+ * query is disabled until
  * the (trimmed) input reaches {@link MIN_QUERY_LENGTH} characters. `isSearching` is true while the
  * user has typed enough but results are still debouncing or fetching, so callers can show a single
  * loading state. Previous results are kept while the next query loads to avoid flicker.

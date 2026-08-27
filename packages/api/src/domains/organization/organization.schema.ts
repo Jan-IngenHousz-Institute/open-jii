@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zResourceScope } from "../../shared/listing";
 import { zExperimentStatus } from "../experiment/experiment.schema";
 import { zDeviceType } from "../iot/iot.schema";
 import { zMacroLanguage } from "../macro/macro.schema";
@@ -33,7 +34,20 @@ export const zOrganizationIdPathParam = z.object({
 });
 
 export const zOrganizationDirectoryQuery = z.object({
-  search: z.string().trim().max(200).optional().describe("Name or description substring"),
+  search: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .describe(
+      "Name, description, location or type; also member and team names, for organizations you belong to",
+    ),
+  /**
+   * The same `scope` the experiment, macro and protocol listings take. `related` narrows
+   * to the caller's own memberships — a filter over this one query, not a second
+   * endpoint, so both slices match and rank identically.
+   */
+  scope: zResourceScope.optional().describe("Which slice of the visible set to return"),
 });
 
 /**

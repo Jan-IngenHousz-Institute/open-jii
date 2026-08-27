@@ -337,6 +337,13 @@
       "when": 1787132151020,
       "tag": "0047_iam_admission_and_owned_resource_locks",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1787834187577,
+      "tag": "0048_organizations_search_vector",
+      "breakpoints": true
     }
   ]
 }

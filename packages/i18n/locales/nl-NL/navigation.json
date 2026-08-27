@@ -62,6 +62,7 @@
       "workbooks": "Werkboeken",
       "protocols": "Protocollen",
       "macros": "Macro's",
+      "organizations": "Organisaties",
       "transferRequests": "Transferverzoeken",
       "settings": "Instellingen",
       "createExperiment": "Experiment aanmaken",
@@ -73,7 +74,8 @@
       "experiments": "Experimenten",
       "protocols": "Protocollen",
       "macros": "Macro's",
-      "workbooks": "Werkboeken"
+      "workbooks": "Werkboeken",
+      "organizations": "Organisaties"
     },
     "status": {
       "searching": "Zoeken...",

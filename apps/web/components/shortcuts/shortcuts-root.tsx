@@ -91,6 +91,7 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
       { key: "W", label: "Workbooks", path: `/${locale}/platform/workbooks` },
       { key: "P", label: "Protocols", path: `/${locale}/platform/protocols` },
       { key: "M", label: "Macros", path: `/${locale}/platform/macros` },
+      { key: "O", label: "Organizations", path: `/${locale}/platform/organizations` },
       { key: "T", label: "Transfer requests", path: `/${locale}/platform/transfer-request` },
       { key: "S", label: "Settings", path: `/${locale}/platform/account` },
       {

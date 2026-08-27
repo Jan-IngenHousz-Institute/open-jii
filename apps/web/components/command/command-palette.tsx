@@ -41,6 +41,7 @@ const RESULT_GROUPS: { type: SearchResultType; headingKey: string }[] = [
   { type: "protocol", headingKey: "commandPalette.results.protocols" },
   { type: "macro", headingKey: "commandPalette.results.macros" },
   { type: "workbook", headingKey: "commandPalette.results.workbooks" },
+  { type: "organization", headingKey: "commandPalette.results.organizations" },
 ];
 
 export function CommandPalette({ locale }: { locale: string }) {
@@ -115,6 +116,14 @@ export function CommandPalette({ locale }: { locale: string }) {
         run: () => navigate(`/${locale}/platform/macros`),
       },
       {
+        id: "page.organizations",
+        labelKey: "commandPalette.entries.organizations",
+        group: "pages",
+        icon: iconMap.Building2,
+        shortcut: "G O",
+        run: () => navigate(`/${locale}/platform/organizations`),
+      },
+      {
         id: "page.transfer",
         labelKey: "commandPalette.entries.transferRequests",
         group: "pages",
@@ -187,6 +196,7 @@ export function CommandPalette({ locale }: { locale: string }) {
       protocol: [],
       macro: [],
       workbook: [],
+      organization: [],
     };
     for (const result of results) groups[result.type].push(result);
     return groups;
@@ -203,6 +213,8 @@ export function CommandPalette({ locale }: { locale: string }) {
           return navigate(`/${locale}/platform/macros/${result.id}`);
         case "workbook":
           return navigate(`/${locale}/platform/workbooks/${result.id}`);
+        case "organization":
+          return navigate(`/${locale}/platform/organizations/${result.id}`);
       }
     },
     [locale, navigate],

@@ -29,7 +29,7 @@ describe("GlobalSearchUseCase", () => {
     await testApp.teardown();
   });
 
-  it("returns ranked matches across experiments, protocols, macros and workbooks", async () => {
+  it("returns ranked matches across experiments, protocols, macros, workbooks and organizations", async () => {
     await testApp.createExperiment({
       name: "Photosynthesis trial",
       userId,
@@ -38,6 +38,7 @@ describe("GlobalSearchUseCase", () => {
     await testApp.createProtocol({ name: "Photosynthesis protocol", createdBy: userId });
     await testApp.createMacro({ name: "Photosynthesis macro", createdBy: userId });
     await testApp.createWorkbook({ name: "Photosynthesis workbook", createdBy: userId });
+    await testApp.createOrganization("Photosynthesis Lab", { visibility: "public" });
 
     const result = await useCase.execute(userId, "photosynthesis", 20);
 
@@ -47,10 +48,15 @@ describe("GlobalSearchUseCase", () => {
     expect(types).toContain("protocol");
     expect(types).toContain("macro");
     expect(types).toContain("workbook");
+    expect(types).toContain("organization");
     // The workbook result carries no type-specific meta label (like experiments).
     const workbook = result.value.results.find((r) => r.type === "workbook");
     expect(workbook?.title).toBe("Photosynthesis workbook");
     expect(workbook?.meta).toBeNull();
+    // An organization that never set a type has no label either.
+    const organization = result.value.results.find((r) => r.type === "organization");
+    expect(organization?.title).toBe("Photosynthesis Lab");
+    expect(organization?.meta).toBeNull();
   });
 
   it("matches description text (FTS) and tolerates typos in the name (trigram)", async () => {
@@ -332,6 +338,163 @@ describe("GlobalSearchUseCase", () => {
       expect(titles).toContain("Shared photosynthesis macro");
       expect(titles).toContain("Shared photosynthesis protocol");
       expect(titles).toContain("Shared photosynthesis workbook");
+    });
+  });
+
+  // Organizations are a grantee, never a grantable resource, so they carry the
+  // directory's boundary rather than the shared resource access scope.
+  describe("organizations", () => {
+    it("hides a private organization from a non-member and shows it to a member", async () => {
+      const orgId = await testApp.createOrganization("Photosynthesis Consortium", {
+        visibility: "private",
+      });
+      await testApp.addOrganizationMember(orgId, otherUserId, "owner");
+
+      const toOutsider = await useCase.execute(userId, "photosynthesis", 20);
+      assertSuccess(toOutsider);
+      expect(toOutsider.value.results.some((r) => r.title === "Photosynthesis Consortium")).toBe(
+        false,
+      );
+
+      await testApp.addOrganizationMember(orgId, userId, "member");
+
+      const toMember = await useCase.execute(userId, "photosynthesis", 20);
+      assertSuccess(toMember);
+      expect(toMember.value.results.some((r) => r.title === "Photosynthesis Consortium")).toBe(
+        true,
+      );
+    });
+
+    it("never surfaces a personal workspace, even when it matches", async () => {
+      // Personal workspaces are named after their owner and are not organizations in
+      // product terms — every user having one would make them noise in every search.
+      const personalOrgId = await testApp.personalOrganizationId(userId);
+      await testApp.database.execute(
+        `UPDATE organizations SET name = 'Photosynthesis workspace', visibility = 'public' WHERE id = '${personalOrgId}'`,
+      );
+
+      const result = await useCase.execute(userId, "photosynthesis", 20);
+
+      assertSuccess(result);
+      expect(result.value.results.some((r) => r.type === "organization")).toBe(false);
+    });
+
+    it("matches the organization type and returns it as the meta label", async () => {
+      // The name deliberately omits the type — only the enum should match, and the
+      // spaced spelling is the one the UI shows.
+      await testApp.createOrganization("Vorbulon Collective", {
+        visibility: "public",
+        type: "research_institute",
+      });
+
+      const byType = await useCase.execute(userId, "research institute", 20);
+      assertSuccess(byType);
+      const organization = byType.value.results.find((r) => r.title === "Vorbulon Collective");
+      expect(organization?.meta).toBe("research_institute");
+    });
+
+    it("finds an organization by its location, ranked below a name hit", async () => {
+      // Location sits at weight C, so a place-name hit is findable but never outranks an
+      // organization whose actual name matches the same term.
+      await testApp.createOrganization("Delta Phenotyping Centre", {
+        visibility: "public",
+        location: "Wageningen, Netherlands",
+      });
+      await testApp.createOrganization("Wageningen Collective", { visibility: "public" });
+
+      const result = await useCase.execute(userId, "wageningen", 20);
+
+      assertSuccess(result);
+      const titles = result.value.results
+        .filter((r) => r.type === "organization")
+        .map((r) => r.title);
+      expect(titles).toContain("Delta Phenotyping Centre");
+      expect(titles.indexOf("Wageningen Collective")).toBeLessThan(
+        titles.indexOf("Delta Phenotyping Centre"),
+      );
+    });
+
+    // Member and team names are matched only for organizations the caller belongs to.
+    // The roster and the team list are both members-only reads — enforced even on a
+    // public organization — so an ungated probe would hand back through search exactly
+    // what those guards refuse to answer.
+    describe("member and team names", () => {
+      it("finds an organization by a member's name, but only one the caller belongs to", async () => {
+        const colleague = await testApp.createTestUser({ name: "Zephyrina Quibbleworth" });
+
+        const mine = await testApp.createOrganization("Delta Phenotyping Centre", {
+          visibility: "public",
+        });
+        await testApp.addOrganizationMember(mine, userId, "member");
+        await testApp.addOrganizationMember(mine, colleague, "member");
+
+        // Same person, an organization the caller has no part in. Public, so the row
+        // itself is visible — it is the *member name* that must not match.
+        const theirs = await testApp.createOrganization("Rhine Sensors", { visibility: "public" });
+        await testApp.addOrganizationMember(theirs, colleague, "member");
+
+        const result = await useCase.execute(userId, "zephyrina", 20);
+
+        assertSuccess(result);
+        const titles = result.value.results
+          .filter((r) => r.type === "organization")
+          .map((r) => r.title);
+        expect(titles).toContain("Delta Phenotyping Centre");
+        expect(titles).not.toContain("Rhine Sensors");
+      });
+
+      it("finds an organization by a team's name, under the same gate", async () => {
+        const mine = await testApp.createOrganization("Delta Phenotyping Centre", {
+          visibility: "public",
+        });
+        await testApp.addOrganizationMember(mine, userId, "member");
+        await testApp.createTeam(mine, "Vorbulon Canopy Squad");
+
+        const theirs = await testApp.createOrganization("Rhine Sensors", { visibility: "public" });
+        await testApp.createTeam(theirs, "Vorbulon Canopy Squad");
+
+        const result = await useCase.execute(userId, "vorbulon", 20);
+
+        assertSuccess(result);
+        const titles = result.value.results
+          .filter((r) => r.type === "organization")
+          .map((r) => r.title);
+        expect(titles).toContain("Delta Phenotyping Centre");
+        expect(titles).not.toContain("Rhine Sensors");
+      });
+
+      it("does not match a deactivated member's name", async () => {
+        // Deactivated and deleted profiles are anonymized on the way out, so matching
+        // them would surface a name the response itself would never print.
+        const departed = await testApp.createTestUser({
+          name: "Grindelwax Thornbury",
+          activated: false,
+        });
+        const orgId = await testApp.createOrganization("Delta Phenotyping Centre", {
+          visibility: "public",
+        });
+        await testApp.addOrganizationMember(orgId, userId, "member");
+        await testApp.addOrganizationMember(orgId, departed, "member");
+
+        const result = await useCase.execute(userId, "grindelwax", 20);
+
+        assertSuccess(result);
+        expect(result.value.results.some((r) => r.type === "organization")).toBe(false);
+      });
+    });
+
+    it("matches an organization description and links to it by id", async () => {
+      const orgId = await testApp.createOrganization("Grindelwax Institute", {
+        visibility: "public",
+        description: "studies chlorophyll fluorescence",
+      });
+
+      const result = await useCase.execute(userId, "chlorophyll", 20);
+
+      assertSuccess(result);
+      const organization = result.value.results.find((r) => r.type === "organization");
+      expect(organization?.id).toBe(orgId);
+      expect(organization?.subtitle).toBe("studies chlorophyll fluorescence");
     });
   });
 });

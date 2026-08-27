@@ -74,6 +74,7 @@ describe("CommandPalette", () => {
       ["commandPalette.entries.workbooks", "/en-US/platform/workbooks"],
       ["commandPalette.entries.protocols", "/en-US/platform/protocols"],
       ["commandPalette.entries.macros", "/en-US/platform/macros"],
+      ["commandPalette.entries.organizations", "/en-US/platform/organizations"],
       ["commandPalette.entries.transferRequests", "/en-US/platform/transfer-request"],
       ["commandPalette.entries.settings", "/en-US/platform/account"],
       ["commandPalette.entries.createExperiment", "/en-US/platform/experiments/new"],
@@ -154,6 +155,13 @@ describe("CommandPalette", () => {
           subtitle: null,
           meta: null,
         },
+        {
+          type: "organization",
+          id: "44444444-4444-4444-4444-444444444444",
+          title: "Photosynthesis Lab",
+          subtitle: null,
+          meta: "research_institute",
+        },
       ],
     });
     const user = userEvent.setup();
@@ -165,13 +173,43 @@ describe("CommandPalette", () => {
     expect(await screen.findByText("Photosynthesis trial")).toBeInTheDocument();
     expect(screen.getByText("Photosynthesis protocol")).toBeInTheDocument();
     expect(screen.getByText("Photosynthesis workbook")).toBeInTheDocument();
+    expect(screen.getByText("Photosynthesis Lab")).toBeInTheDocument();
     expect(screen.getByText("commandPalette.results.experiments")).toBeInTheDocument();
     expect(screen.getByText("commandPalette.results.protocols")).toBeInTheDocument();
     expect(screen.getByText("commandPalette.results.workbooks")).toBeInTheDocument();
+    expect(screen.getByText("commandPalette.results.organizations")).toBeInTheDocument();
 
     await user.click(screen.getByText("Photosynthesis workbook"));
     expect(router.push).toHaveBeenCalledWith(
       "/en-US/platform/workbooks/33333333-3333-3333-3333-333333333333",
+    );
+  });
+
+  it("navigates to a selected organization result", async () => {
+    mockSearch({
+      enabled: true,
+      results: [
+        {
+          type: "organization",
+          id: "44444444-4444-4444-4444-444444444444",
+          title: "Photosynthesis Lab",
+          subtitle: "A shared greenhouse",
+          meta: "research_institute",
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    const { router } = render(<CommandPalette locale="en-US" />);
+    openPalette();
+    const input = await screen.findByPlaceholderText("commandPalette.placeholder");
+    await user.type(input, "photo");
+
+    // The type renders through the shared organization label map, not raw enum text.
+    expect(await screen.findByText("organizations.types.research_institute")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Photosynthesis Lab"));
+    expect(router.push).toHaveBeenCalledWith(
+      "/en-US/platform/organizations/44444444-4444-4444-4444-444444444444",
     );
   });
 

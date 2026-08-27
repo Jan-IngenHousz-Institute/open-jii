@@ -66,6 +66,7 @@
       "workbooks": "Arbeitsmappen",
       "protocols": "Protokolle",
       "macros": "Makros",
+      "organizations": "Organisationen",
       "transferRequests": "Transferanfragen",
       "settings": "Einstellungen",
       "createExperiment": "Experiment erstellen",
@@ -77,7 +78,8 @@
       "experiments": "Experimente",
       "protocols": "Protokolle",
       "macros": "Makros",
-      "workbooks": "Arbeitsmappen"
+      "workbooks": "Arbeitsmappen",
+      "organizations": "Organisationen"
     },
     "status": {
       "searching": "Suche...",

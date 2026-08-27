@@ -59,6 +59,10 @@ export const useUpdateOrganization = (organizationId: string) => {
         // An organization is a grantee too, and its name is what a collaborator row
         // shows for one — so a rename has to reach the collaborators lists.
         orpc.sharing.listGrants.key(),
+        // Name, description, type and visibility are all searchable, and publishing a
+        // private organization is what makes it findable at all — a cached result set
+        // would keep answering from before the flip.
+        orpc.search.globalSearch.key(),
       ]);
     },
   });

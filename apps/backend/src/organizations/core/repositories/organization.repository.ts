@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
+import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
   asc,
@@ -12,6 +13,7 @@ import {
   ilike,
   iotDevices,
   isNotPersonalOrgSql,
+  isNull,
   isPersonalOrgSlug,
   macros,
   organizationJoinRequests,
@@ -30,14 +32,23 @@ import {
 import type { AnyColumn, DatabaseInstance, ResourceType, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { escapeLike } from "../../../common/utils/fts";
+import {
+  crossTableBonus,
+  escapeLike,
+  ftsMatch,
+  ftsRank,
+  searchScore,
+} from "../../../common/utils/fts";
 import {
   getAnonymizedAvatarUrl,
   getAnonymizedEmail,
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import {
+  RESOURCE_TIER,
+  accessibleResourceCondition,
+} from "../../../common/utils/resource-access-scope";
 import type {
   GranteeTeamDto,
   MembershipStatus,
@@ -46,6 +57,7 @@ import type {
   OrganizationDirectoryEntryDto,
   OrganizationMemberDto,
   OrganizationResourceTotalsDto,
+  OrganizationSearchRow,
   OrganizationTeamDto,
   OrganizationTeamGrantDto,
 } from "../models/organization.model";
@@ -189,6 +201,12 @@ function resourceCountSql(database: DatabaseInstance, userId: string | undefined
     sql` + `,
   )})`.mapWith(Number);
 }
+
+/**
+ * The type as a user would type it: stored `research_institute`, shown "Research
+ * institute". Normalized on both sides so either spelling matches.
+ */
+const ORGANIZATION_TYPE_TEXT: SQL<string> = sql<string>`replace(${organizations.type}::text, '_', ' ')`;
 
 /** Profile columns every people-shaped read in this domain selects. */
 const personFields = {
@@ -343,23 +361,17 @@ export class OrganizationRepository {
    * Personal workspaces stay out regardless — they are not organizations in product
    * terms. Unpaged: every matching row comes back, so the payload is unbounded in the
    * number of organizations. Accepted, as with the resources showcase.
+   *
+   * `scope: "related"` is "my organizations": one extra condition here, never a second
+   * read. The memberships used to be filtered client-side, so the two slices disagreed
+   * about what matched.
    */
   async listDirectory(
     userId: string,
-    params: { search?: string },
+    params: { search?: string; scope?: ResourceScope },
   ): Promise<Result<{ organizations: OrganizationDirectoryEntryDto[] }>> {
     return tryCatch(async () => {
-      const isMember = exists(
-        this.database
-          .select()
-          .from(organizationMembers)
-          .where(
-            and(
-              eq(organizationMembers.organizationId, organizations.id),
-              eq(organizationMembers.userId, userId),
-            ),
-          ),
-      );
+      const isMember = this.membershipExists(userId);
       const hasPendingRequest = exists(
         this.database
           .select()
@@ -373,15 +385,13 @@ export class OrganizationRepository {
           ),
       );
 
-      const like = params.search ? `%${escapeLike(params.search)}%` : undefined;
+      const { match, score } = this.buildDirectorySearch(userId, params.search);
       const where = and(
-        // Public, or the caller's own. A private organization they do not belong to
-        // stays invisible — this is the visibility boundary, not a convenience.
-        or(eq(organizations.visibility, "public"), isMember),
-        isNotPersonalOrgSql(),
-        like
-          ? sql`(${ilike(organizations.name, like)} OR ${ilike(organizations.description, like)})`
-          : undefined,
+        this.visibleOrganizationsCondition(userId),
+        match,
+        // "Mine": the visible set narrowed to what the caller belongs to. Applied on top
+        // of the visibility boundary, never instead of it.
+        params.scope === "related" ? isMember : undefined,
       );
 
       const rows = await this.database
@@ -406,10 +416,165 @@ export class OrganizationRepository {
         })
         .from(organizations)
         .where(where)
-        .orderBy(asc(organizations.name));
+        // Browsing has nothing to rank against, so it stays alphabetical. A search
+        // orders by relevance, ending on `id` so repeated queries are stable.
+        .orderBy(
+          ...(params.search ? [desc(score), asc(organizations.id)] : [asc(organizations.name)]),
+        );
 
       return { organizations: rows };
     });
+  }
+
+  /**
+   * Global search's view of {@link listDirectory}: same boundary, same match rules, same
+   * score, minus the columns a result row never renders.
+   */
+  async searchDirectory(
+    userId: string,
+    search: string,
+    limit: number,
+  ): Promise<Result<OrganizationSearchRow[]>> {
+    return tryCatch(async () => {
+      const { match, score } = this.buildDirectorySearch(userId, search);
+
+      return this.database
+        .select({
+          id: organizations.id,
+          name: organizations.name,
+          description: organizations.description,
+          type: organizations.type,
+          score,
+        })
+        .from(organizations)
+        .where(and(this.visibleOrganizationsCondition(userId), match))
+        .orderBy(desc(score), asc(organizations.id))
+        .limit(limit);
+    });
+  }
+
+  /** Whether the caller belongs to the `organizations` row the outer query is on. */
+  private membershipExists(userId: string) {
+    return exists(
+      this.database
+        .select()
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, organizations.id),
+            eq(organizationMembers.userId, userId),
+          ),
+        ),
+    );
+  }
+
+  /**
+   * The visibility boundary: public plus the caller's own, personal workspaces never.
+   * Shared by the listing and global search — a drift would either hide an organization
+   * from its own member or reveal a private one to an outsider.
+   */
+  private visibleOrganizationsCondition(userId: string): SQL | undefined {
+    return and(
+      or(eq(organizations.visibility, "public"), this.membershipExists(userId)),
+      isNotPersonalOrgSql(),
+    );
+  }
+
+  /**
+   * One definition of what a search matches and how well, so the listing and global
+   * search can never disagree. Three separate bonus args, not one OR'd together, so the
+   * ceiling is the full 0.1 and matching on two fronts outranks one.
+   */
+  private buildDirectorySearch(
+    userId: string,
+    search: string | undefined,
+  ): { match: SQL | undefined; score: SQL<number> } {
+    if (!search) {
+      // Cast, never a bare integer: Postgres reads an unadorned constant in ORDER BY as
+      // an ordinal position, so a plain `0` would fail the query rather than sort by it.
+      return { match: undefined, score: sql<number>`0::int` };
+    }
+
+    const typeMatch = ilike(ORGANIZATION_TYPE_TEXT, `%${escapeLike(search.replace(/_/g, " "))}%`);
+    const memberMatch = this.memberNameMatch(userId, search);
+    const teamMatch = this.teamNameMatch(userId, search);
+
+    return {
+      match: sql`(${ftsMatch(organizations.searchVector, organizations.name, search)} OR ${typeMatch} OR ${memberMatch} OR ${teamMatch})`,
+      score: searchScore(
+        sql<number>`(${ftsRank(organizations.searchVector, organizations.name, search)} + ${crossTableBonus(typeMatch, memberMatch, teamMatch)})`,
+        this.organizationTierExpression(userId),
+      ),
+    };
+  }
+
+  /**
+   * Whether anyone here is named `term`, gated to the caller's own organizations. The
+   * roster is members-only even on a public org, so an ungated probe would leak the very
+   * list that guard refuses. Deactivated/deleted profiles are anonymized on the way out,
+   * so matching them would surface a name the response never prints.
+   */
+  private memberNameMatch(userId: string, term: string): SQL {
+    return sql`(${this.membershipExists(userId)} AND ${exists(
+      this.database
+        .select()
+        .from(organizationMembers)
+        .innerJoin(profiles, eq(profiles.userId, organizationMembers.userId))
+        .where(
+          and(
+            eq(organizationMembers.organizationId, organizations.id),
+            eq(profiles.activated, true),
+            isNull(profiles.deletedAt),
+            ilike(
+              sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`,
+              `%${escapeLike(term)}%`,
+            ),
+          ),
+        ),
+    )})`;
+  }
+
+  /**
+   * Same gate as {@link memberNameMatch}: a team is a slice of the roster, so it cannot
+   * be less private than one.
+   */
+  private teamNameMatch(userId: string, term: string): SQL {
+    return sql`(${this.membershipExists(userId)} AND ${exists(
+      this.database
+        .select()
+        .from(teams)
+        .where(
+          and(
+            eq(teams.organizationId, organizations.id),
+            ilike(teams.name, `%${escapeLike(term)}%`),
+          ),
+        ),
+    )})`;
+  }
+
+  /**
+   * The caller's tie to each row, on the shared tier scale. No `created_by` exists here,
+   * so the owner role stands in for authorship.
+   */
+  private organizationTierExpression(userId: string): SQL<number> {
+    const isOwner = exists(
+      this.database
+        .select()
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, organizations.id),
+            eq(organizationMembers.userId, userId),
+            eq(organizationMembers.role, "owner"),
+          ),
+        ),
+    );
+
+    return sql<number>`(CASE
+      WHEN ${isOwner} THEN ${sql.raw(String(RESOURCE_TIER.owned))}
+      WHEN ${this.membershipExists(userId)} THEN ${sql.raw(String(RESOURCE_TIER.org))}
+      ELSE ${sql.raw(String(RESOURCE_TIER.public))}
+    END)`;
   }
 
   /**
