@@ -31,15 +31,6 @@
       "dependsOn": ["^build", "^lint"],
       "env": ["DATABASE_URL", "DB_HOST", "DB_PORT", "DB_NAME", "DB_CREDENTIALS"]
     },
-    "@repo/theme-guard#lint": {
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/tooling/eslint/theme-tokens.js",
-        "$TURBO_ROOT$/apps/web/{app,components,hooks,lib,providers}/**/*.tsx",
-        "$TURBO_ROOT$/packages/ui/src/**/*.tsx",
-        "$TURBO_ROOT$/packages/cms/src/**/*.tsx"
-      ]
-    },
     "check-types": {
       "dependsOn": ["^check-types"]
     },
