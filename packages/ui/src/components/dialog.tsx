@@ -21,9 +21,10 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      // eslint-disable-next-line no-restricted-syntax -- A scrim is theme-independent
-      // by design: it dims whatever sits behind it, identically in light and dark, and
-      // the shadcn contract has no slot for one. Upstream ships this fixed wash.
+      // A scrim is theme-independent by design: it dims whatever sits behind it,
+      // identically in light and dark, and the shadcn contract has no slot for one.
+      // Upstream ships this fixed wash.
+      // eslint-disable-next-line no-restricted-syntax -- fixed neutral scrim
       "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
       className,
     )}

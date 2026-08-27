@@ -1,19 +1,15 @@
+import reactHooks from "eslint-plugin-react-hooks";
+import * as tseslint from "typescript-eslint";
+
 /**
- * Guard for the token-only theme contract.
+ * Guard for the token-only theme contract: colour lives in the `:root`/`.dark`
+ * blocks of `apps/web/app/globals.css`, and a class string that names one
+ * directly escapes it.
  *
- * Every colour and font in apps/web lives in one place — the `:root`/`.dark`
- * blocks of `apps/web/app/globals.css`, surfaced as utilities through
- * `@theme inline`. A class string that names a colour directly (an arbitrary
- * `#`/`oklch()` value, a raw palette literal, or one of the brand families that
- * used to be declared in `tailwind.config.ts`) escapes that contract: swapping
- * the theme no longer changes it.
- *
- * The patterns are matched against string literals and template chunks rather
- * than parsed class lists, so they are deliberately permissive about what
- * precedes the utility (whitespace, a `!`, or a variant chain's `:`).
- *
- * `\x2f` is a literal `/` — spelled as an escape so the sources can be embedded
- * in esquery selectors, whose regex syntax is `/`-delimited.
+ * Matched against string literals and template chunks rather than parsed class
+ * lists, so the patterns are permissive about what precedes the utility.
+ * `\x2f` is a literal `/`, escaped so the sources can sit inside an esquery
+ * selector's `/`-delimited regex.
  */
 
 /** Variant chain / `!` / string boundary in front of the utility. */
@@ -27,12 +23,8 @@ const UTILITY =
 const AFTER = "(?:\\x2f\\d{1,3})?(?![\\w-])";
 
 /**
- * Every Tailwind hue, not just the greys.
- *
- * The rule shipped covering `white|black|gray|slate|zinc|neutral|stone` only,
- * on the assumption that off-contract colour would be neutral. It wasn't: the
- * sweep found ~40 `amber-*`/`blue-*`/`emerald-*`/`red-*` pairs carrying status
- * meaning, all of which the rule waved through. A hue is a hue.
+ * Every hue, not just the greys. Covering only the neutrals let ~40 status-
+ * carrying `amber-*`/`emerald-*`/`red-*` pairs through.
  */
 const PALETTE_HUES =
   "(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)";
@@ -70,19 +62,35 @@ export const themeClassPatterns = [
 const selectorRegex = (source) => `/${source}/`;
 
 /**
- * Flat-config fragment. Spread into a package's eslint.config.js after the base
- * config.
+ * For a package that lints with the theme guard alone: ESLint errors on an
+ * inline disable naming a rule it cannot resolve, and merely registering the
+ * plugin trades that for an unused-directive warning — so the rule runs, at
+ * `warn`. Exported here so the consumer needs no new devDependency.
  *
- * An error, not a warning: the sweep is finished and the inventory is at its
- * floor, so any new occurrence is a regression rather than a leftover. The
- * surviving cases are fixed scrims and the foregrounds paired with them, each
- * carrying an inline disable with that justification.
+ * @type {Awaited<import('typescript-eslint').Config>}
+ */
+export const reactHooksDirectives = [
+  {
+    files: ["**/*.tsx"],
+    plugins: { "react-hooks": reactHooks },
+    rules: { "react-hooks/exhaustive-deps": "warn" },
+  },
+];
+
+/**
+ * Spread into a package's eslint.config.js after the base config. An error, not
+ * a warning: the sweep is done, so a new occurrence is a regression. The
+ * survivors are fixed scrims and their paired foregrounds, each carrying an
+ * inline disable that says why.
  *
  * @type {Awaited<import('typescript-eslint').Config>}
  */
 export const themeTokenGuard = [
   {
     files: ["**/*.tsx"],
+    // Its own parser, so the guard can be dropped into a package alone —
+    // `packages/ui` does that, where the full config is not yet viable.
+    languageOptions: { parser: tseslint.parser },
     rules: {
       "no-restricted-syntax": [
         "error",
