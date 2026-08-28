@@ -9,7 +9,18 @@ export type ScanResult = Record<string, unknown>;
 
 /** One device's scan output; device is absent for legacy single-device results. */
 export interface ScanResultEntry {
-  device?: { id: string; name: string; family?: string; firmwareVersion?: string };
+  device?: {
+    id: string;
+    name: string;
+    family?: string;
+    firmwareVersion?: string;
+    /**
+     * The sensor's hardware address as seen by this phone, set only when the
+     * transport gives a real one (Bluetooth MAC). USB device ids are transient
+     * across replugs, so they are not an identity and are left out.
+     */
+    address?: string;
+  };
   result: ScanResult;
   /** Dispatch rounds: the protocol this device actually ran (per-device upload). */
   protocolId?: string;

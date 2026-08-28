@@ -398,3 +398,42 @@ describe("client metadata", () => {
     expect(Object.keys(payload).some((key) => key.startsWith("client_"))).toBe(false);
   });
 });
+
+describe("device_address", () => {
+  // MultispeQ firmware answers device_info with 4 of the 6 MAC octets, and that
+  // native value wins device_id. The complete address only exists at the
+  // transport, so it rides alongside rather than replacing it.
+  it("carries the full transport address next to a truncated native device_id", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "04:09:03:81" },
+      fallbackDeviceId: "20:24:04:09:03:81",
+      fallbackDeviceAddress: "20:24:04:09:03:81",
+    });
+
+    expect(payload).toMatchObject({
+      device_id: "04:09:03:81",
+      device_address: "20:24:04:09:03:81",
+    });
+  });
+
+  it("omits device_address when the transport has no stable address", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "10:91:A8:4F:53:48" },
+      fallbackDeviceId: "1002",
+    }) as Record<string, unknown>;
+
+    expect("device_address" in payload).toBe(false);
+  });
+
+  it("never overwrites a device-native address", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_address: "AA:BB:CC:DD:EE:FF" },
+      fallbackDeviceAddress: "20:24:04:09:03:81",
+    });
+
+    expect(payload.device_address).toBe("AA:BB:CC:DD:EE:FF");
+  });
+});

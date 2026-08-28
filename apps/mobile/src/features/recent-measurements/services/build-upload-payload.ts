@@ -33,6 +33,8 @@ export interface BuildUploadPayloadArgs {
   fallbackDeviceId?: string;
   /** Canonical sensor family captured by the connection handshake. */
   fallbackDeviceFamily?: string;
+  /** Sensor hardware address seen by this phone (Bluetooth MAC), when stable. */
+  fallbackDeviceAddress?: string;
   /** Physical sensor firmware captured by the connection handshake. */
   fallbackDeviceFirmware?: string;
   /** GPS fix at measurement time; null/absent uploads without location. */
@@ -58,6 +60,7 @@ export function buildUploadPayload({
   macroContext,
   fallbackDeviceId,
   fallbackDeviceFamily,
+  fallbackDeviceAddress,
   fallbackDeviceFirmware,
   location,
   client,
@@ -96,6 +99,13 @@ export function buildUploadPayload({
     // interpreting a device-reported display name.
     ...(rawMeasurement.device_family == null && fallbackDeviceFamily
       ? { device_family: fallbackDeviceFamily }
+      : {}),
+    // The sensor's full hardware address as this phone reached it. Reported
+    // alongside device_id, never instead of it: MultispeQ firmware answers
+    // device_info with a truncated id (4 of 6 octets), so the complete value
+    // only exists at the transport.
+    ...(rawMeasurement.device_address == null && fallbackDeviceAddress
+      ? { device_address: fallbackDeviceAddress }
       : {}),
     // Preserve an explicit device-native value; otherwise report the version
     // learned by the mobile connection handshake for this physical sensor.
