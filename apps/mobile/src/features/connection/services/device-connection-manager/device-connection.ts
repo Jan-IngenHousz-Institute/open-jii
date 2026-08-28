@@ -1,12 +1,12 @@
 import RNBluetoothClassic from "react-native-bluetooth-classic";
 import type { DeviceCommandExecutor } from "~/features/connection/services/device-command-executor";
+import { createIdentifiedCommandExecutor } from "~/features/connection/services/identified-command-executor";
 import { createMockCommandExecutor } from "~/features/connection/services/multispeq/mock-device/create-mock-command-executor";
 import {
   closeMockDevice,
   openMockDevice,
 } from "~/features/connection/services/multispeq/mock-device/mock-device-registry";
 import { mockDevicesEnabled } from "~/features/connection/services/multispeq/mock-device/mock-devices-enabled";
-import { createMultispeqCommandExecutor } from "~/features/connection/services/multispeq/multispeq-command-executor";
 import { bluetoothClassicTransport } from "~/features/connection/services/multispeq/transports/bluetooth-classic-transport";
 import { serialPortTransport } from "~/features/connection/services/multispeq/transports/serial-port-transport";
 import type { Device, DeviceType } from "~/shared/types/device";
@@ -15,8 +15,9 @@ import { closeSerialPort, getSerialPortConnection, openSerialPort } from "./seri
 
 // The single decision table over device transports. Adding a transport =
 // adding one entry here; nothing else in the app switches on device.type.
-// Executors are built from the shared @repo/iot driver via per-transport
-// adapters (transports/), which also handle MultispeQ frame parsing.
+// Executors are built from the shared @repo/iot drivers via per-transport
+// adapters (transports/). Which driver binds is decided by the identification
+// handshake, not by the transport, so any supported family works on either.
 interface DeviceTypeOps {
   connect(device: Device): Promise<void>;
   disconnect(device: Device): Promise<void>;
@@ -53,7 +54,7 @@ const bluetoothClassicOps: DeviceTypeOps = {
   },
   async createExecutor(device) {
     const bluetoothDevice = await RNBluetoothClassic.getConnectedDevice(device.id);
-    return createMultispeqCommandExecutor(bluetoothClassicTransport(bluetoothDevice));
+    return createIdentifiedCommandExecutor(bluetoothClassicTransport(bluetoothDevice));
   },
 };
 
@@ -71,7 +72,7 @@ const usbOps: DeviceTypeOps = {
   async createExecutor(device) {
     const connection = getSerialPortConnection(device.id);
     if (!connection) return undefined;
-    return createMultispeqCommandExecutor(serialPortTransport(connection));
+    return createIdentifiedCommandExecutor(serialPortTransport(connection));
   },
 };
 

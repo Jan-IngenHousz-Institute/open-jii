@@ -5,9 +5,9 @@ import { Emitter } from "~/features/connection/utils/emitter";
 
 import { MULTISPEQ_FRAMING } from "@repo/iot";
 
-import { createMultispeqCommandExecutor } from "./multispeq-command-executor";
-import { bluetoothClassicTransport } from "./transports/bluetooth-classic-transport";
-import { serialPortTransport } from "./transports/serial-port-transport";
+import { createIdentifiedCommandExecutor } from "./identified-command-executor";
+import { bluetoothClassicTransport } from "./multispeq/transports/bluetooth-classic-transport";
+import { serialPortTransport } from "./multispeq/transports/serial-port-transport";
 
 // The transport subscribes to the native disconnect event; capture the callback
 // and the returned remove() so tests can drive an unexpected OS disconnect.
@@ -24,6 +24,10 @@ vi.mock("react-native-bluetooth-classic", () => ({
     }),
   },
 }));
+
+// These cases assert MultispeQ framing specifically, so they bind that family
+// rather than probing. Identification itself is covered separately below.
+const MULTISPEQ = { assumeFamily: "multispeq" } as const;
 
 const CANCEL_FRAME = `-1+${MULTISPEQ_FRAMING.LINE_ENDING}`;
 
@@ -50,14 +54,14 @@ const LONG_PROTOCOL = [
   },
 ];
 
-describe("createMultispeqCommandExecutor", () => {
+describe("createIdentifiedCommandExecutor", () => {
   it("unwraps a successful CommandResult to raw data", async () => {
     const transport = mockTransport();
     transport.send.mockImplementation(() => {
       setTimeout(() => transport.simulate('{"value":42}ABCD1234\n'), 0);
       return Promise.resolve();
     });
-    const executor = createMultispeqCommandExecutor(transport);
+    const executor = createIdentifiedCommandExecutor(transport, MULTISPEQ);
 
     await expect(executor.execute("cmd")).resolves.toEqual({ value: 42 });
   });
@@ -68,7 +72,7 @@ describe("createMultispeqCommandExecutor", () => {
       setTimeout(() => transport.simulate("battery:85\n"), 0);
       return Promise.resolve();
     });
-    const executor = createMultispeqCommandExecutor(transport);
+    const executor = createIdentifiedCommandExecutor(transport, MULTISPEQ);
 
     await expect(executor.execute("battery")).resolves.toBe("battery:85");
   });
@@ -77,7 +81,7 @@ describe("createMultispeqCommandExecutor", () => {
     vi.useFakeTimers();
     try {
       const transport = mockTransport(); // never replies
-      const executor = createMultispeqCommandExecutor(transport);
+      const executor = createIdentifiedCommandExecutor(transport, MULTISPEQ);
 
       const settled = executor.execute("cmd").catch((e: Error) => e);
       await vi.advanceTimersByTimeAsync(MULTISPEQ_FRAMING.DEFAULT_TIMEOUT + 1);
@@ -93,7 +97,7 @@ describe("createMultispeqCommandExecutor", () => {
 
   it("cancel() aborts the in-flight command, sends -1+, and rejects as cancelled", async () => {
     const transport = mockTransport(); // never replies on its own
-    const executor = createMultispeqCommandExecutor(transport);
+    const executor = createIdentifiedCommandExecutor(transport, MULTISPEQ);
 
     const settled = executor.execute(LONG_PROTOCOL).catch((e: Error) => e);
     // Let the serialized command reach the driver and register its response
@@ -118,7 +122,7 @@ describe("createMultispeqCommandExecutor", () => {
       }, 0);
       return Promise.resolve();
     });
-    const executor = createMultispeqCommandExecutor(transport);
+    const executor = createIdentifiedCommandExecutor(transport, MULTISPEQ);
 
     const events: DeviceCommandProgress[] = [];
     const off = executor.onProgress((p) => events.push(p));
@@ -146,7 +150,7 @@ describe("createMultispeqCommandExecutor", () => {
       setTimeout(() => transport.simulate('{"ok":1}ABCD1234\n'), 0);
       return Promise.resolve();
     });
-    const executor = createMultispeqCommandExecutor(transport);
+    const executor = createIdentifiedCommandExecutor(transport, MULTISPEQ);
 
     // A throwing listener must never break command execution.
     executor.onProgress(() => {
@@ -158,7 +162,7 @@ describe("createMultispeqCommandExecutor", () => {
 
   it("tears down the underlying driver on destroy()", async () => {
     const transport = mockTransport();
-    const executor = createMultispeqCommandExecutor(transport);
+    const executor = createIdentifiedCommandExecutor(transport, MULTISPEQ);
 
     await executor.destroy();
 
@@ -171,7 +175,7 @@ describe("createMultispeqCommandExecutor", () => {
     transport.onStatusChanged.mockImplementation((cb: (connected: boolean) => void) => {
       statusCb = cb;
     });
-    const executor = createMultispeqCommandExecutor(transport);
+    const executor = createIdentifiedCommandExecutor(transport, MULTISPEQ);
 
     const settled = executor.execute(LONG_PROTOCOL).catch((e: Error) => e);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -205,10 +209,11 @@ describe("bluetoothClassicTransport", () => {
 
   it("re-appends the newline so the driver frames a delimiter-stripped message", async () => {
     const device = mockBtDevice('{"ok":1}ABCD1234'); // no trailing "\n"
-    const executor = createMultispeqCommandExecutor(
+    const executor = createIdentifiedCommandExecutor(
       bluetoothClassicTransport(
         device as unknown as Parameters<typeof bluetoothClassicTransport>[0],
       ),
+      MULTISPEQ,
     );
 
     await expect(executor.execute("cmd")).resolves.toEqual({ ok: 1 });
@@ -326,7 +331,7 @@ describe("serialPortTransport", () => {
       }, 0);
     });
 
-    const executor = createMultispeqCommandExecutor(serialPortTransport(emitter));
+    const executor = createIdentifiedCommandExecutor(serialPortTransport(emitter), MULTISPEQ);
 
     await expect(executor.execute("cmd")).resolves.toEqual({ v: 2 });
   });
@@ -369,5 +374,52 @@ describe("serialPortTransport", () => {
     await expect(transport.send("x")).rejects.toThrow("device not open");
     expect(onStatus).toHaveBeenCalledWith(false);
     expect(transport.isConnected()).toBe(false);
+  });
+});
+
+describe("identification handshake", () => {
+  /**
+   * Transport that answers the `hello` probe with the given reply, and every
+   * other command with a framed stub. The stub matters because a matched driver
+   * then runs its own `getDeviceIdentity()` over the same transport.
+   */
+  function helloTransport(reply: string) {
+    const transport = mockTransport();
+    transport.send.mockImplementation((payload: string) => {
+      const answer = payload.trim() === "hello" ? reply : `{"device_name":"stub"}ABCD1234\n`;
+      setTimeout(() => transport.simulate(answer), 0);
+      return Promise.resolve();
+    });
+    return transport;
+  }
+
+  it("reports ambit for a real Ambit, not the hardcoded multispeq", async () => {
+    // Verbatim hello from an Ambit on 1.1.4-3-g2a76435-dirty, captured over
+    // USB-OTG. Mobile used to bind the MultispeQ driver unconditionally, so an
+    // Ambit measurement uploaded device_family: "multispeq".
+    const transport = helloTransport("NEW AmbitV003 Ready FW:1.1.4-3-g2a76435-dirty\n");
+
+    const executor = createIdentifiedCommandExecutor(transport, { probeTimeoutMs: 50 });
+
+    await expect(executor.getIdentity()).resolves.toMatchObject({ family: "ambit" });
+  });
+
+  it("still reports multispeq for a MultispeQ", async () => {
+    const transport = helloTransport("MultispeQ Ready\n");
+
+    const executor = createIdentifiedCommandExecutor(transport, { probeTimeoutMs: 50 });
+
+    await expect(executor.getIdentity()).resolves.toMatchObject({ family: "multispeq" });
+  });
+
+  it("keeps the probe family when the driver would self-report generic", async () => {
+    // A silent device falls back to the raw connector; the reported family must
+    // be the probe's answer, never overwritten by the connector's own default.
+    const transport = helloTransport("NEW AmbitV003 Ready FW:1.1.4-3-g2a76435-dirty\n");
+
+    const executor = createIdentifiedCommandExecutor(transport, { probeTimeoutMs: 50 });
+    const identity = await executor.getIdentity();
+
+    expect(identity.family).toBe("ambit");
   });
 });

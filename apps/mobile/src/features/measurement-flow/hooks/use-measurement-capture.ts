@@ -146,11 +146,24 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     );
     successesRef.current = [];
     setScanResults(
-      ordered.map(({ device, result }) => ({
-        device: { id: device.id, name: device.name },
-        result: result as ScanResult,
-        ...assignmentMetaRef.current[device.id],
-      })),
+      ordered.map(({ device, result }) => {
+        // Read after the scan so an identity handshake that finished while the
+        // command was running is included in the persisted per-device result.
+        const identity = useScannerCommandExecutorStore
+          .getState()
+          .executors.get(device.id)?.identity;
+
+        return {
+          device: {
+            id: device.id,
+            name: device.name,
+            ...(identity?.family ? { family: identity.family } : {}),
+            ...(identity?.firmwareVersion ? { firmwareVersion: identity.firmwareVersion } : {}),
+          },
+          result: result as ScanResult,
+          ...assignmentMetaRef.current[device.id],
+        };
+      }),
       nodeId,
     );
     assignmentMetaRef.current = {};

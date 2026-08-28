@@ -13503,8 +13503,10 @@
                 "properties": {
                   "installId": {
                     "type": "string",
-                    "format": "uuid",
-                    "description": "Persisted per-install identifier; doubles as the serial"
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "pattern": "^[a-zA-Z0-9_.,@/:#=[\\]-]+$",
+                    "description": "Stable per-device identifier reported by the phone; doubles as the serial"
                   },
                   "name": {
                     "type": "string",
