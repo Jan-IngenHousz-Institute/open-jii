@@ -919,3 +919,137 @@ export const deviceGroupMembers = pgTable(
     index("device_group_members_device_idx").on(t.deviceId),
   ],
 );
+
+export const calibrationInputSourceEnum = pgEnum("calibration_input_source", [
+  "bench_wizard", // captured by the platform wizard, script executed by the platform
+  "external_bench", // blocks computed by a bench tool and submitted
+]);
+
+// "computed", not "fit_ok": some calibrations (compass, on-device self-cal)
+// pass blocks through with no fitting at all.
+export const calibrationRunStatusEnum = pgEnum("calibration_run_status", [
+  "running", // script invoke in flight
+  "computed", // blocks produced and schema-validated, awaiting review
+  "compute_failed", // script or validation failure; traceback and QC reasons kept
+  "error", // infrastructure failure (invoke failed, function timed out)
+  "approved", // reviewed; the applied row exists in device_calibrations
+  "rejected", // reviewed and declined; terminal, diagnostics kept
+]);
+
+// The versioned calibration recipe: capture procedure (rig steps the client
+// interprets), calibration script (executed by the runner Lambda), and output
+// schema (legal blocks and bounds). A new version is a new row; rows are never
+// rewritten, since runs pin the version that produced them.
+export const calibrationDefinitions = pgTable(
+  "calibration_definitions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    family: sensorFamilyEnum("family").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    version: integer("version").notNull().default(1),
+    captureProcedure: jsonb("capture_procedure").notNull(),
+    script: text("script").notNull(),
+    outputSchema: jsonb("output_schema").notNull(),
+    // Runs on devices below this are refused: a procedure using commands the
+    // firmware does not know would produce numbers that look like data.
+    minFirmwareVersion: varchar("min_firmware_version", { length: 32 }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "restrict",
+    }),
+    visibility: visibilityEnum("visibility").default("public").notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    unique("calibration_definitions_name_version_uniq").on(t.name, t.version),
+    index("calibration_definitions_family_idx").on(t.family),
+    index("calibration_definitions_organization_id_idx").on(t.organizationId),
+    index("calibration_definitions_created_by_idx").on(t.createdBy),
+  ],
+);
+
+// One execution of a definition against one device: the captured bench
+// payload, the produced blocks with their QC records, and the review outcome.
+// RESTRICT on the definition: runs are the audit trail of what produced a
+// coefficient, so a definition cannot vanish out from under them.
+export const calibrationRuns = pgTable(
+  "calibration_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    definitionId: uuid("definition_id")
+      .references(() => calibrationDefinitions.id, { onDelete: "restrict" })
+      .notNull(),
+    deviceId: uuid("device_id")
+      .references(() => iotDevices.id, { onDelete: "cascade" })
+      .notNull(),
+    requestedBy: uuid("requested_by")
+      .references(() => users.id)
+      .notNull(),
+    inputSource: calibrationInputSourceEnum("input_source").notNull(),
+    status: calibrationRunStatusEnum("status").default("running").notNull(),
+    // Captured series keyed by the procedure's series names; small payloads
+    // stay inline, oversized ones spill to S3.
+    payload: jsonb("payload"),
+    payloadS3Key: varchar("payload_s3_key", { length: 512 }),
+    // Operator-supplied run-level values, passed to the script as `params`.
+    params: jsonb("params"),
+    // Every declared block with its outcome: computed (with coefficients),
+    // rejected (QC failed), or skipped (not attempted at this bench).
+    blocks: jsonb("blocks"),
+    // Device info dumps around the session, for provenance and write-verify.
+    preInfo: jsonb("pre_info"),
+    postInfo: jsonb("post_info"),
+    firmwareVersion: varchar("firmware_version", { length: 64 }),
+    errorMessage: text("error_message"),
+    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    reviewedAt: timestamp("reviewed_at"),
+    finishedAt: timestamp("finished_at"),
+    ...timestamps,
+  },
+  (t) => [
+    index("calibration_runs_device_id_idx").on(t.deviceId),
+    index("calibration_runs_definition_id_idx").on(t.definitionId),
+    index("calibration_runs_status_idx").on(t.status),
+  ],
+);
+
+// The applied truth: coefficients with a validity window. Approving a new run
+// supersedes the previous active row rather than mutating it; the enriched
+// layer joins readings to the row active at measurement time.
+export const deviceCalibrations = pgTable(
+  "device_calibrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deviceId: uuid("device_id")
+      .references(() => iotDevices.id, { onDelete: "cascade" })
+      .notNull(),
+    runId: uuid("run_id")
+      .references(() => calibrationRuns.id, { onDelete: "cascade" })
+      .notNull(),
+    // Only the run's computed blocks; rejected and skipped ones stay on the run.
+    blocks: jsonb("blocks").notNull(),
+    approvedBy: uuid("approved_by")
+      .references(() => users.id)
+      .notNull(),
+    validFrom: timestamp("valid_from")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+    supersededAt: timestamp("superseded_at"),
+    writtenToDeviceAt: timestamp("written_to_device_at"),
+    // Per block: did the readback after reboot match what was written. One
+    // verdict per row could not describe a session where one gain persisted
+    // and another rolled back.
+    writeResults: jsonb("write_results"),
+    ...timestamps,
+  },
+  (t) => [
+    // One active calibration per device, enforced where it cannot race.
+    uniqueIndex("device_calibrations_active_uniq")
+      .on(t.deviceId)
+      .where(sql`${t.supersededAt} IS NULL`),
+    index("device_calibrations_run_id_idx").on(t.runId),
+  ],
+);
