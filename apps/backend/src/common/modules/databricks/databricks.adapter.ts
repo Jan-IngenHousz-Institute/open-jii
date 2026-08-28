@@ -31,6 +31,7 @@ import type {
   DailyActivityRow,
   FamilyTotalsRow,
   HourlyActivityRow,
+  ParameterCategory,
   ParameterStatsRow,
   PlatformTotalsRow,
   PoolFactsRow,
@@ -1324,8 +1325,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, MetricsDatab
     );
   }
 
-  async getTopParameter(): Promise<Result<ParameterStatsRow | null>> {
+  async getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>> {
     const result = await this.readMetricsTable("parameter_stats", {
+      filters: [{ column: "category", operator: "equals", value: category }],
       orderBy: "count_30d",
       orderDirection: "DESC",
       limit: 1,

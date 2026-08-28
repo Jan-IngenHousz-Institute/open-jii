@@ -77,8 +77,12 @@ describe("GetPublicMetricsUseCase", () => {
     vi.spyOn(adapter, "getHourlyActivity").mockResolvedValue(
       success([{ hourLocal: 12, measurements: 300 }]),
     );
-    vi.spyOn(adapter, "getTopParameter").mockResolvedValue(
-      success({ name: "Phi2", count30d: 4214, median: 0.62 }),
+    vi.spyOn(adapter, "getTopParameter").mockImplementation((category) =>
+      Promise.resolve(
+        category === "derived"
+          ? success({ name: "Phi2", count30d: 4214, median: 0.62 })
+          : success({ name: "humidity", count30d: 4797, median: 42.85 }),
+      ),
     );
     vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(success(poolFacts));
     vi.spyOn(adapter, "getContributorPairs").mockResolvedValue(success([]));
@@ -106,7 +110,8 @@ describe("GetPublicMetricsUseCase", () => {
       measurements24h: 140,
     });
     expect(result.value.community?.measurements30d).toBe(4_812);
-    expect(result.value.parameter?.name).toBe("Phi2");
+    expect(result.value.derivedParameter?.name).toBe("Phi2");
+    expect(result.value.sensorParameter?.name).toBe("humidity");
     expect(result.value.families).toHaveLength(1);
     expect(result.value.hourly).toHaveLength(1);
   });

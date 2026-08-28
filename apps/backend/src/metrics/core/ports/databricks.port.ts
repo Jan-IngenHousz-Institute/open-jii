@@ -5,6 +5,7 @@ import type {
   DailyActivityRow,
   FamilyTotalsRow,
   HourlyActivityRow,
+  ParameterCategory,
   ParameterStatsRow,
   PlatformTotalsRow,
   PoolFactsRow,
@@ -27,7 +28,7 @@ export interface DatabricksPort {
   getPublicFamilyTotals(): Promise<Result<FamilyTotalsRow[]>>;
   getActivityWindows(): Promise<Result<ActivityWindowsRow | null>>;
   getHourlyActivity(): Promise<Result<HourlyActivityRow[]>>;
-  getTopParameter(): Promise<Result<ParameterStatsRow | null>>;
+  getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>>;
   getPoolFacts(): Promise<Result<PoolFactsRow | null>>;
   getScopedDailyActivity(days: number): Promise<Result<ScopedDailyRow[]>>;
   getContributorPairs(): Promise<Result<ContributorPairRow[]>>;

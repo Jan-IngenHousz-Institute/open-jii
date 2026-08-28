@@ -55,21 +55,38 @@ export class GetPublicMetricsUseCase {
   }
 
   private async load(): Promise<PublicMetricsResponse | null> {
-    const [totals, daily, families, windows, hourly, parameter, poolFacts, contributorPairs] =
-      await Promise.all([
-        this.databricksPort.getPublicPlatformTotals(),
-        this.databricksPort.getPublicDailyActivity(DAILY_ACTIVITY_DAYS),
-        this.databricksPort.getPublicFamilyTotals(),
-        this.databricksPort.getActivityWindows(),
-        this.databricksPort.getHourlyActivity(),
-        this.databricksPort.getTopParameter(),
-        this.databricksPort.getPoolFacts(),
-        this.databricksPort.getContributorPairs(),
-      ]);
+    const [
+      totals,
+      daily,
+      families,
+      windows,
+      hourly,
+      derivedParameter,
+      sensorParameter,
+      poolFacts,
+      contributorPairs,
+    ] = await Promise.all([
+      this.databricksPort.getPublicPlatformTotals(),
+      this.databricksPort.getPublicDailyActivity(DAILY_ACTIVITY_DAYS),
+      this.databricksPort.getPublicFamilyTotals(),
+      this.databricksPort.getActivityWindows(),
+      this.databricksPort.getHourlyActivity(),
+      this.databricksPort.getTopParameter("derived"),
+      this.databricksPort.getTopParameter("sensor"),
+      this.databricksPort.getPoolFacts(),
+      this.databricksPort.getContributorPairs(),
+    ]);
 
-    const failures = [totals, daily, families, windows, hourly, parameter, poolFacts].filter(
-      (result) => result.isFailure(),
-    );
+    const failures = [
+      totals,
+      daily,
+      families,
+      windows,
+      hourly,
+      derivedParameter,
+      sensorParameter,
+      poolFacts,
+    ].filter((result) => result.isFailure());
     if (failures.length > 0) {
       this.logger.warn({
         msg: "Some warehouse metrics are unavailable, serving a partial snapshot",
@@ -106,7 +123,8 @@ export class GetPublicMetricsUseCase {
       activity: dailyRows,
       hourly: hourly.isSuccess() ? hourly.value : [],
       families: families.isSuccess() ? families.value : [],
-      parameter: parameter.isSuccess() ? parameter.value : null,
+      derivedParameter: derivedParameter.isSuccess() ? derivedParameter.value : null,
+      sensorParameter: sensorParameter.isSuccess() ? sensorParameter.value : null,
       captions: await this.buildCaptions(totalsRow, dailyRows, windowsRow, poolRow),
       computedAt: windowsRow?.computedAt ?? totalsRow?.computedAt ?? null,
     };

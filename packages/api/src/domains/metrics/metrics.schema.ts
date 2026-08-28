@@ -73,7 +73,8 @@ export const zPublicMetricsResponse = z.object({
   activity: z.array(zMetricsActivityDay),
   hourly: z.array(zMetricsHourlyBin),
   families: z.array(zMetricsFamily),
-  parameter: zMetricsParameter.nullable(),
+  derivedParameter: zMetricsParameter.nullable(),
+  sensorParameter: zMetricsParameter.nullable(),
   captions: z.array(zMetricsCaption),
   computedAt: z.string().nullable(),
 });

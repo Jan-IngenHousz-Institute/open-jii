@@ -19359,7 +19359,33 @@
                         ]
                       }
                     },
-                    "parameter": {
+                    "derivedParameter": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "count30d": {
+                              "type": "number"
+                            },
+                            "median": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "count30d",
+                            "median"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sensorParameter": {
                       "anyOf": [
                         {
                           "type": "object",
@@ -19579,7 +19605,8 @@
                     "activity",
                     "hourly",
                     "families",
-                    "parameter",
+                    "derivedParameter",
+                    "sensorParameter",
                     "captions",
                     "computedAt"
                   ]

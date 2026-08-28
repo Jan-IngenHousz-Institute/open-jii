@@ -36,6 +36,8 @@ export interface ActivityWindowsRow {
   computedAt: string | null;
 }
 
+export type ParameterCategory = "derived" | "sensor";
+
 export interface ParameterStatsRow {
   name: string;
   count30d: number;
