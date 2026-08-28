@@ -1370,8 +1370,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   async getScopedDailyActivity(days: number): Promise<Result<ScopedDailyRow[]>> {
+    // Inclusive BETWEEN: today plus days-1 back covers exactly `days` dates.
     const to = new Date();
-    const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+    const from = new Date(to.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
     const asDate = (value: Date) => value.toISOString().slice(0, 10);
 
     const result = await this.readMetricsTable("daily_activity_by_experiment", {

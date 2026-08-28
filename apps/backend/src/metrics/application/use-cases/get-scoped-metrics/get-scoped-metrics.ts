@@ -88,7 +88,12 @@ export class GetScopedMetricsUseCase {
       this.databricksPort.getActivityWindows(),
     ]);
 
-    if (scopedDaily.isFailure() || windows.isFailure() || windows.value === null) {
+    if (
+      scopedDaily.isFailure() ||
+      contributorPairs.isFailure() ||
+      windows.isFailure() ||
+      windows.value === null
+    ) {
       this.logger.warn({ msg: "Warehouse unavailable for scoped metrics", operation: "load" });
       return null;
     }
@@ -107,13 +112,11 @@ export class GetScopedMetricsUseCase {
     const measurements30d = rows.reduce((sum, row) => sum + row.measurements, 0);
     const activeExperiments = new Set(rows.map((row) => row.experimentId));
 
-    const contributors = contributorPairs.isSuccess()
-      ? new Set(
-          contributorPairs.value
-            .filter((pair) => scopeIds.has(pair.experimentId))
-            .map((pair) => pair.userId),
-        ).size
-      : 0;
+    const contributors = new Set(
+      contributorPairs.value
+        .filter((pair) => scopeIds.has(pair.experimentId))
+        .map((pair) => pair.userId),
+    ).size;
 
     const lastDate = activity.length > 0 ? activity[activity.length - 1].date : null;
     const baseline = windows.value;

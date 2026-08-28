@@ -1,5 +1,11 @@
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
-import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
+import {
+  AppError,
+  assertFailure,
+  assertSuccess,
+  failure,
+  success,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { CACHE_PORT } from "../../../core/ports/cache.port";
 import type { CachePort } from "../../../core/ports/cache.port";
@@ -88,6 +94,16 @@ describe("GetScopedMetricsUseCase", () => {
     ]);
     expect(result.value.scoped.lastMeasurementAt).toBe("2026-08-28");
     expect(result.value.baseline.measurements30d).toBe(4_000);
+  });
+
+  it("fails instead of serving zero contributors when the contributor read fails", async () => {
+    vi.spyOn(adapter, "getContributorPairs").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
+
+    const result = await useCase.execute("mine", userId);
+
+    assertFailure(result);
   });
 
   it("denies organization scope to non-members", async () => {

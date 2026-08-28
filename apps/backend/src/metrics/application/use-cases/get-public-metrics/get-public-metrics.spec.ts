@@ -136,7 +136,11 @@ describe("GetPublicMetricsUseCase", () => {
       ordinal: 1_000_000,
       date: "2026-08-28",
     });
-    expect(kinds.get("avgMeasurementSize")).toEqual({ kind: "avgMeasurementSize", bytes: 6 });
+    // 6 MB over the 300 measurements the daily window holds.
+    expect(kinds.get("avgMeasurementSize")).toEqual({
+      kind: "avgMeasurementSize",
+      bytes: 20_000,
+    });
     expect(kinds.get("endurance")).toEqual({ kind: "endurance", days: 94 });
   });
 
@@ -146,6 +150,18 @@ describe("GetPublicMetricsUseCase", () => {
 
     assertSuccess(result);
     expect(totalsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the community slot when contributor inputs are unavailable", async () => {
+    vi.spyOn(adapter, "getContributorPairs").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    expect(result.value.community).toBeNull();
+    expect(result.value.liveness).not.toBeNull();
   });
 
   it("serves a partial snapshot when the warehouse is unavailable", async () => {

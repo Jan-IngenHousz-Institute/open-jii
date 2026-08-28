@@ -100,9 +100,9 @@ export class GetPublicMetricsUseCase {
     const windowsRow = windows.isSuccess() ? windows.value : null;
     const poolRow = poolFacts.isSuccess() ? poolFacts.value : null;
 
-    const institutions = await this.countInstitutions(
-      contributorPairs.isSuccess() ? contributorPairs.value.map((pair) => pair.experimentId) : [],
-    );
+    const institutions = contributorPairs.isSuccess()
+      ? await this.countInstitutions(contributorPairs.value.map((pair) => pair.experimentId))
+      : null;
 
     return {
       hero: this.buildHero(totalsRow, dailyRows, poolRow),
@@ -112,14 +112,17 @@ export class GetPublicMetricsUseCase {
             measurements24h: windowsRow.measurements24h,
           }
         : null,
-      community: windowsRow
-        ? {
-            measurements30d: windowsRow.measurements30d,
-            activeExperiments30d: windowsRow.experiments30d,
-            contributors30d: windowsRow.contributors30d,
-            institutions30d: institutions,
-          }
-        : null,
+      // Hidden rather than shown with an invented zero when the institution
+      // inputs are unavailable.
+      community:
+        windowsRow && institutions !== null
+          ? {
+              measurements30d: windowsRow.measurements30d,
+              activeExperiments30d: windowsRow.experiments30d,
+              contributors30d: windowsRow.contributors30d,
+              institutions30d: institutions,
+            }
+          : null,
       activity: dailyRows,
       hourly: hourly.isSuccess() ? hourly.value : [],
       families: families.isSuccess() ? families.value : [],
@@ -148,12 +151,12 @@ export class GetPublicMetricsUseCase {
     };
   }
 
-  private async countInstitutions(activeExperimentIds: string[]): Promise<number> {
+  private async countInstitutions(activeExperimentIds: string[]): Promise<number | null> {
     const organizations = await this.metricsRepository.getExperimentOrganizations(
       Array.from(new Set(activeExperimentIds)),
     );
     if (organizations.isFailure()) {
-      return 0;
+      return null;
     }
 
     const distinct = new Set(
@@ -205,11 +208,14 @@ export class GetPublicMetricsUseCase {
       captions.push({ kind: "analysesRun", count: totals.totalMacroExecutions });
     }
     if (totals !== null && totals.totalMeasurements > 0) {
+      // Volume and count over the same fetched window, so the ratio stays
+      // honest once the platform outgrows the window.
       const totalVolumeBytes = daily.reduce((sum, row) => sum + row.volumeBytes, 0);
-      if (totalVolumeBytes > 0) {
+      const windowMeasurements = daily.reduce((sum, row) => sum + row.measurements, 0);
+      if (totalVolumeBytes > 0 && windowMeasurements > 0) {
         captions.push({
           kind: "avgMeasurementSize",
-          bytes: Math.round(totalVolumeBytes / totals.totalMeasurements),
+          bytes: Math.round(totalVolumeBytes / windowMeasurements),
         });
       }
 
