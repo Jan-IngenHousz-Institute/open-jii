@@ -5,7 +5,7 @@ description: "The current Bronze, Silver, Gold, and enriched-view model in the c
 
 {/* verified: code@12a361a74966 2026-07-19 */}
 
-The current data platform keeps all research data in one central Unity Catalog schema, `centrum`. This replaces the per-experiment schema model described in the project's 2025 historical ADRs. A small sibling schema, `metrics`, holds pre-aggregated public platform counters produced by a separate serverless DLT pipeline reading the centrum tables; it contains no per-experiment or per-user detail. Experiment isolation is now expressed through experiment identifiers, experiment-facing tables, access checks, and filtered queries rather than a separate Databricks schema for every experiment.
+The current data platform keeps all research data in one central Unity Catalog schema, `centrum`. This replaces the per-experiment schema model described in the project's 2025 historical ADRs. A small sibling schema, `metrics`, holds platform activity rollups produced by a separate serverless DLT pipeline reading the centrum tables. Its public-facing tables are aggregate-only; two backend-only tables (`daily_activity_by_experiment`, `experiment_contributors_window`) carry experiment- and contributor-grain rows that the backend aggregates per organization or user and never exposes unaggregated. Experiment isolation is now expressed through experiment identifiers, experiment-facing tables, access checks, and filtered queries rather than a separate Databricks schema for every experiment.
 
 ## Layers
 

@@ -52,10 +52,11 @@ def parameter_stats():
             recent.select(value.alias("value"))
             .filter(F.col("value").isNotNull())
             .agg(
-                F.lit(name).alias("parameter"),
                 F.count("*").alias("count_30d"),
                 F.percentile_approx("value", 0.5).alias("median_value"),
             )
+            .withColumn("parameter", F.lit(name))
+            .select("parameter", "count_30d", "median_value")
         )
 
     frames = [parameter_frame(name) for name in PARAMETER_ALLOWLIST]
