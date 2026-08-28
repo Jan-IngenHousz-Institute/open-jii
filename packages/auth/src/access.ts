@@ -33,6 +33,7 @@ export const RESOURCE_TYPES = [
   "workbook",
   "device",
   "device_group",
+  "calibration_definition",
 ] as const;
 
 export type ResourceType = (typeof RESOURCE_TYPES)[number];
@@ -69,6 +70,7 @@ const statement = {
   workbook: RESOURCE_ACTIONS,
   device: RESOURCE_ACTIONS,
   device_group: RESOURCE_ACTIONS,
+  calibration_definition: RESOURCE_ACTIONS,
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -103,6 +105,7 @@ export const roles = {
     workbook: RESOURCE_ACTIONS,
     device: RESOURCE_ACTIONS,
     device_group: RESOURCE_ACTIONS,
+    calibration_definition: RESOURCE_ACTIONS,
   }),
   admin: ac.newRole({
     ...adminAc.statements,
@@ -113,6 +116,7 @@ export const roles = {
     workbook: RESOURCE_ACTIONS,
     device: RESOURCE_ACTIONS,
     device_group: RESOURCE_ACTIONS,
+    calibration_definition: RESOURCE_ACTIONS,
   }),
   member: ac.newRole({
     ...memberAc.statements,
@@ -122,6 +126,7 @@ export const roles = {
     workbook: READ_ONLY,
     device: READ_ONLY,
     device_group: READ_ONLY,
+    calibration_definition: READ_ONLY,
   }),
 } as const;
 
@@ -157,6 +162,7 @@ const grantRoles = {
     workbook: READ_ONLY,
     device: READ_ONLY,
     device_group: READ_ONLY,
+    calibration_definition: READ_ONLY,
   }),
 } as const;
 

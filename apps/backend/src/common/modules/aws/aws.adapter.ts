@@ -8,6 +8,7 @@ import type {
   GeocodeResult,
 } from "../../../experiments/core/ports/aws.port";
 import type { AwsPort as IotAwsPort } from "../../../iot/core/ports/aws.port";
+import type { CalibrationSandboxPort } from "../../../iot/core/ports/calibration-sandbox.port";
 import type { LambdaPort } from "../../../macros/core/ports/lambda.port";
 import { ErrorCodes } from "../../utils/error-codes";
 import type { Result } from "../../utils/fp-utils";
@@ -30,7 +31,7 @@ import { AwsS3Service } from "./services/s3/s3.service";
 import type { IotUploadUrl } from "./services/s3/s3.types";
 
 @Injectable()
-export class AwsAdapter implements IotAwsPort, LambdaPort {
+export class AwsAdapter implements IotAwsPort, LambdaPort, CalibrationSandboxPort {
   private readonly logger = new Logger(AwsAdapter.name);
 
   constructor(
@@ -250,6 +251,24 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
     functionName: string,
     payload: object,
   ): Promise<Result<InvokeLambdaResponse<TResponse>>> {
+    return this.awsLambdaService.invoke<TResponse>({ functionName, payload });
+  }
+
+  /**
+   * Invoke the calibration sandbox Lambda synchronously.
+   */
+  async invokeCalibrationSandbox<TResponse = Record<string, unknown>>(
+    payload: object,
+  ): Promise<Result<InvokeLambdaResponse<TResponse>>> {
+    const functionName = this.awsConfigService.lambdaConfig.calibrationSandboxFunctionName;
+    if (!functionName) {
+      return failure(
+        AppError.internal(
+          "Calibration sandbox Lambda is not configured",
+          ErrorCodes.INTERNAL_SERVER_ERROR,
+        ),
+      );
+    }
     return this.awsLambdaService.invoke<TResponse>({ functionName, payload });
   }
 

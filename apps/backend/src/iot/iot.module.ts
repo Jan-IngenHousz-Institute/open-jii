@@ -11,11 +11,19 @@ import { GithubModule } from "../common/modules/github/github.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 import { AddIotDeviceGroupMembersUseCase } from "./application/use-cases/add-iot-device-group-members/add-iot-device-group-members";
+import { ApproveCalibrationRunUseCase } from "./application/use-cases/approve-calibration-run/approve-calibration-run";
 import { BulkRegisterIotDevicesUseCase } from "./application/use-cases/bulk-register-iot-devices/bulk-register-iot-devices";
+import { CreateCalibrationDefinitionUseCase } from "./application/use-cases/create-calibration-definition/create-calibration-definition";
+import { CreateCalibrationRunUseCase } from "./application/use-cases/create-calibration-run/create-calibration-run";
+import { CreateExternalCalibrationRunUseCase } from "./application/use-cases/create-external-calibration-run/create-external-calibration-run";
 import { CreateIotDeviceGroupUseCase } from "./application/use-cases/create-iot-device-group/create-iot-device-group";
+import { DeleteCalibrationDefinitionUseCase } from "./application/use-cases/delete-calibration-definition/delete-calibration-definition";
 import { DeleteIotDeviceGroupUseCase } from "./application/use-cases/delete-iot-device-group/delete-iot-device-group";
 import { DeleteIotDeviceUseCase } from "./application/use-cases/delete-iot-device/delete-iot-device";
 import { EnsureMobileDeviceUseCase } from "./application/use-cases/ensure-mobile-device/ensure-mobile-device";
+import { GetActiveDeviceCalibrationUseCase } from "./application/use-cases/get-active-device-calibration/get-active-device-calibration";
+import { GetCalibrationDefinitionUseCase } from "./application/use-cases/get-calibration-definition/get-calibration-definition";
+import { GetCalibrationRunUseCase } from "./application/use-cases/get-calibration-run/get-calibration-run";
 import { GetDeviceBatteryUseCase } from "./application/use-cases/get-device-battery/get-device-battery";
 import { GetDeviceFirmwareHistoryUseCase } from "./application/use-cases/get-device-firmware-history/get-device-firmware-history";
 import { GetDeviceMeasurementsUseCase } from "./application/use-cases/get-device-measurements/get-device-measurements";
@@ -35,6 +43,9 @@ import { GetIotFleetMonitoringUseCase } from "./application/use-cases/get-iot-fl
 import { GetIotUploadUrlUseCase } from "./application/use-cases/get-upload-url/get-upload-url";
 import { IssueIotCredentialsUseCase } from "./application/use-cases/issue-iot-credentials/issue-iot-credentials";
 import { IssueIotDeviceGroupCredentialsUseCase } from "./application/use-cases/issue-iot-device-group-credentials/issue-iot-device-group-credentials";
+import { ListCalibrationDefinitionsUseCase } from "./application/use-cases/list-calibration-definitions/list-calibration-definitions";
+import { ListDeviceCalibrationRunsUseCase } from "./application/use-cases/list-device-calibration-runs/list-device-calibration-runs";
+import { ListDeviceCalibrationsUseCase } from "./application/use-cases/list-device-calibrations/list-device-calibrations";
 import { ListDeviceExperimentsUseCase } from "./application/use-cases/list-device-experiments/list-device-experiments";
 import { ListExperimentDevicesUseCase } from "./application/use-cases/list-experiment-devices/list-experiment-devices";
 import { ListIotDeviceGroupMembersUseCase } from "./application/use-cases/list-iot-device-group-members/list-iot-device-group-members";
@@ -44,8 +55,10 @@ import { ListIotFirmwareReleasesUseCase } from "./application/use-cases/list-iot
 import { OnboardDeviceUseCase } from "./application/use-cases/onboard-device/onboard-device";
 import { OnboardIotDeviceGroupUseCase } from "./application/use-cases/onboard-iot-device-group/onboard-iot-device-group";
 import { RegisterIotDeviceUseCase } from "./application/use-cases/register-iot-device/register-iot-device";
+import { RejectCalibrationRunUseCase } from "./application/use-cases/reject-calibration-run/reject-calibration-run";
 import { RemoveExperimentDeviceUseCase } from "./application/use-cases/remove-experiment-device/remove-experiment-device";
 import { RemoveIotDeviceGroupMemberUseCase } from "./application/use-cases/remove-iot-device-group-member/remove-iot-device-group-member";
+import { ReportDeviceCalibrationWriteUseCase } from "./application/use-cases/report-device-calibration-write/report-device-calibration-write";
 import { RevokeIotCredentialsUseCase } from "./application/use-cases/revoke-iot-credentials/revoke-iot-credentials";
 import { RevokeIotDeviceGroupCredentialsUseCase } from "./application/use-cases/revoke-iot-device-group-credentials/revoke-iot-device-group-credentials";
 import { RotateIotCredentialsUseCase } from "./application/use-cases/rotate-iot-credentials/rotate-iot-credentials";
@@ -53,13 +66,17 @@ import { RotateIotDeviceGroupCredentialsUseCase } from "./application/use-cases/
 import { UpdateIotDeviceGroupUseCase } from "./application/use-cases/update-iot-device-group/update-iot-device-group";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
+import { CALIBRATION_SANDBOX_PORT } from "./core/ports/calibration-sandbox.port";
 import { IOT_DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { GITHUB_PORT } from "./core/ports/github.port";
 import { ExperimentDeviceRepository } from "./core/repositories/experiment-device.repository";
+import { IotCalibrationDefinitionRepository } from "./core/repositories/iot-calibration-definition.repository";
+import { IotCalibrationRunRepository } from "./core/repositories/iot-calibration-run.repository";
 import { IotDeviceGroupRepository } from "./core/repositories/iot-device-group.repository";
 import { IotDeviceRepository } from "./core/repositories/iot-device.repository";
 import { DeviceRegistryWebhookController } from "./presentation/device-registry-webhook.controller";
 import { ExperimentDeviceController } from "./presentation/experiment-device.controller";
+import { IotCalibrationController } from "./presentation/iot-calibration.controller";
 import { IotDeviceGroupController } from "./presentation/iot-device-group.controller";
 import { IotDeviceController } from "./presentation/iot-device.controller";
 import { IotFirmwareController } from "./presentation/iot-firmware.controller";
@@ -81,6 +98,7 @@ import { IotController } from "./presentation/iot.controller";
     ExperimentDeviceController,
     DeviceRegistryWebhookController,
     IotFirmwareController,
+    IotCalibrationController,
   ],
   providers: [
     GetDeviceRegistryUseCase,
@@ -124,9 +142,24 @@ import { IotController } from "./presentation/iot.controller";
     ListIotDeviceGroupMembersUseCase,
     AddIotDeviceGroupMembersUseCase,
     RemoveIotDeviceGroupMemberUseCase,
+    CreateCalibrationDefinitionUseCase,
+    ListCalibrationDefinitionsUseCase,
+    GetCalibrationDefinitionUseCase,
+    DeleteCalibrationDefinitionUseCase,
+    CreateCalibrationRunUseCase,
+    CreateExternalCalibrationRunUseCase,
+    ListDeviceCalibrationRunsUseCase,
+    GetCalibrationRunUseCase,
+    ApproveCalibrationRunUseCase,
+    RejectCalibrationRunUseCase,
+    GetActiveDeviceCalibrationUseCase,
+    ListDeviceCalibrationsUseCase,
+    ReportDeviceCalibrationWriteUseCase,
     IotDeviceRepository,
     IotDeviceGroupRepository,
     ExperimentDeviceRepository,
+    IotCalibrationDefinitionRepository,
+    IotCalibrationRunRepository,
     {
       provide: AWS_PORT,
       useExisting: AwsAdapter,
@@ -143,9 +176,13 @@ import { IotController } from "./presentation/iot.controller";
       provide: IOT_DATABRICKS_PORT,
       useExisting: DatabricksAdapter,
     },
+    {
+      provide: CALIBRATION_SANDBOX_PORT,
+      useExisting: AwsAdapter,
+    },
   ],
-  // For the organization showcase's device and device-group rows, both scoped by the
-  // shared read predicate.
-  exports: [IotDeviceRepository, IotDeviceGroupRepository],
+  // For the organization showcase's device, device-group, and calibration-definition
+  // rows, all scoped by the shared read predicate.
+  exports: [IotDeviceRepository, IotDeviceGroupRepository, IotCalibrationDefinitionRepository],
 })
 export class IotModule {}

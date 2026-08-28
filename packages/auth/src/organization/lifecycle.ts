@@ -2,6 +2,7 @@ import { APIError } from "better-auth/api";
 
 import {
   and,
+  calibrationDefinitions,
   db,
   eq,
   deviceGroups,
@@ -39,6 +40,11 @@ const OWNED_RESOURCE_TABLES = {
   workbook: { table: workbooks, singular: "workbook", plural: "workbooks" },
   device: { table: iotDevices, singular: "device", plural: "devices" },
   device_group: { table: deviceGroups, singular: "device group", plural: "device groups" },
+  calibration_definition: {
+    table: calibrationDefinitions,
+    singular: "calibration definition",
+    plural: "calibration definitions",
+  },
 } as const satisfies Record<ResourceType, { table: unknown; singular: string; plural: string }>;
 
 /** Personal workspaces exist for as long as their owner's account does. */

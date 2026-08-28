@@ -4,6 +4,7 @@ import { grantRoleCan, orgRoleCan } from "@repo/auth/access";
 import type { ResourceAction } from "@repo/auth/access";
 import {
   and,
+  calibrationDefinitions,
   eq,
   experiments,
   deviceGroups,
@@ -29,6 +30,7 @@ const OWNERSHIP_TABLES = {
   workbook: workbooks,
   device: iotDevices,
   device_group: deviceGroups,
+  calibration_definition: calibrationDefinitions,
 } as const satisfies Record<ResourceType, unknown>;
 
 export interface AccessRequest {

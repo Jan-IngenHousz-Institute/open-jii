@@ -8,6 +8,7 @@ import {
   ne,
   or,
   and,
+  calibrationDefinitions,
   ilike,
   inArray,
   deviceGroups,
@@ -239,6 +240,7 @@ export class UserRepository {
       protocol: protocols,
       workbook: workbooks,
       device_group: deviceGroups,
+      calibration_definition: calibrationDefinitions,
     } as const;
     const hydrated = await Promise.all(
       [...idsByType].map(async ([resourceType, ids]): Promise<SoleAdminResource[]> => {
