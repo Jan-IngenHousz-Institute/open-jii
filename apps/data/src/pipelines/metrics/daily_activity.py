@@ -43,6 +43,9 @@ def daily_activity():
             F.count(F.when(is_imported, True)).alias("imported_measurements"),
             F.countDistinct("device_id").alias("active_devices"),
             F.countDistinct("experiment_id").alias("active_experiments"),
+            # Logical payload size of the decompressed traces: grows
+            # monotonically, unlike storage size after OPTIMIZE/VACUUM.
+            F.coalesce(F.sum(F.octet_length("sample")), F.lit(0)).alias("volume_bytes"),
         )
     )
 
@@ -71,6 +74,7 @@ def daily_activity():
         "active_experiments",
         "macro_executions",
         "uploaded_rows",
+        "volume_bytes",
     ]
 
     daily = (

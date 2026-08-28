@@ -701,6 +701,12 @@ module "metrics_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/platform_totals",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/daily_activity",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/family_totals",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/hourly_activity",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/activity_windows",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/parameter_stats",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/pool_facts",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/daily_activity_by_experiment",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/experiment_contributors_window",
   ]
 
   configuration = {
