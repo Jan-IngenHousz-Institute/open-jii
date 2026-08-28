@@ -1,4 +1,4 @@
-// Characterization tests for buildUploadPayload — pins the payload
+// Characterization tests for buildUploadPayload: pins the payload
 // construction (including quirks) so refactors can prove equivalence.
 // Pure since Stage 1: input mutation assertions flipped deliberately.
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -360,5 +360,41 @@ describe("measurement location", () => {
 
     expect(payload.latitude).toBe(52.0907);
     expect(payload.longitude).toBe(5.1214);
+  });
+});
+
+describe("client metadata", () => {
+  it("carries the phone and OS alongside the sensor's own device fields", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_name: "Ambit", device_firmware: "1.1.4" },
+      client: {
+        client_model: "NX789J",
+        client_manufacturer: "nubia",
+        client_os: "Android",
+        client_os_version: "16",
+        client_app_version: "1.1.0",
+      },
+    });
+
+    expect(payload).toMatchObject({
+      client_model: "NX789J",
+      client_os: "Android",
+      client_os_version: "16",
+      client_app_version: "1.1.0",
+      // The sensor's own fields are a separate namespace and must survive.
+      device_name: "Ambit",
+      device_firmware: "1.1.4",
+    });
+  });
+
+  it("omits the block entirely when the platform reports nothing", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+      client: {},
+    }) as Record<string, unknown>;
+
+    expect(Object.keys(payload).some((key) => key.startsWith("client_"))).toBe(false);
   });
 });

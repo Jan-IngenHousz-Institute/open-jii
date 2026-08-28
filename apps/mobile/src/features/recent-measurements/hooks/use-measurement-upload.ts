@@ -6,6 +6,7 @@ import { exportSingleMeasurementToFile } from "~/features/recent-measurements/se
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { getMeasurementLocation } from "~/shared/location/measurement-location";
+import { getClientMetadata } from "~/shared/measurements/client-metadata";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { getMeasurementMqttTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
@@ -142,6 +143,7 @@ export function useMeasurementUpload() {
           fallbackDeviceFamily: device?.family,
           fallbackDeviceFirmware: device?.firmwareVersion,
           location,
+          client: getClientMetadata(),
         });
 
         const measurement = {

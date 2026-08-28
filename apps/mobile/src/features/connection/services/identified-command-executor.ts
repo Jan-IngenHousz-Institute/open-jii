@@ -9,10 +9,20 @@ import { createLogger } from "~/shared/observability/logger";
 import type { Trace } from "~/shared/observability/trace";
 import { startTrace } from "~/shared/observability/trace";
 
-import type { DeviceIdentity, ITransportAdapter, Logger as IotLogger } from "@repo/iot";
-import { MultispeqDriver } from "@repo/iot";
+import type {
+  DeviceIdentity,
+  IDeviceDriver,
+  ITransportAdapter,
+  Logger as IotLogger,
+  SensorFamily,
+} from "@repo/iot";
+import { identifyDevice } from "@repo/iot";
 
-const log = createLogger("multispeq");
+/** Namespace used until the handshake resolves which family answered. */
+const log = createLogger("device");
+
+/** Per-probe reply timeout, matching the web host's `useIotConnections`. */
+const PROBE_TIMEOUT_MS = 2000;
 
 let commandSeq = 0;
 
@@ -27,26 +37,50 @@ const PROGRESS_THROTTLE_MS = 100;
  */
 const HEARTBEAT_MS = 15_000;
 
-/**
- * Adapts the shared `@repo/iot` `MultispeqDriver` to the app's command-executor
- * contract: unwraps `CommandResult` to raw data (throwing on failure) and
- * exposes a preemptive `cancel()`. All framing, command queueing, dynamic
- * timeout sizing and cancel-on-timeout behaviour live in the driver; there is
- * no app-side reimplementation. See OJD-1565.
- *
- * Each execute() is captured as ONE wide trace event (`multispeq.command`):
- * the driver's debug logs are routed into the trace via a bridge logger, so a
- * long measurement produces a single fat entry (tx, rx summary, timings)
- * instead of hundreds of per-chunk debug lines.
- */
-export class MultispeqCommandExecutor implements DeviceCommandExecutor {
-  private readonly driver: MultispeqDriver;
+/** Options for building an executor over an already-connected transport. */
+export interface IdentifiedCommandExecutorOptions {
   /**
-   * Resolves once the driver has been initialized. `initialize()` is currently
-   * synchronous, but the interface allows it to be async (handshake/probe), so
-   * every public op awaits this first; that keeps execute/cancel/destroy from
-   * racing setup and turns any init failure into a controlled command error
-   * rather than an unhandled rejection.
+   * Skip the probe and bind this family directly. Used by transports that
+   * already know what they are (mock devices) and by tests that assert a
+   * specific driver's framing.
+   */
+  assumeFamily?: SensorFamily;
+  /** Override the per-probe reply timeout. */
+  probeTimeoutMs?: number;
+}
+
+/**
+ * Adapts a `@repo/iot` driver to the app's command-executor contract: unwraps
+ * `CommandResult` to raw data (throwing on failure) and exposes a preemptive
+ * `cancel()`. All framing, command queueing, dynamic timeout sizing and
+ * cancel-on-timeout behaviour live in the driver; there is no app-side
+ * reimplementation. See OJD-1565.
+ *
+ * Which driver is bound is decided by the `identifyDevice` handshake rather
+ * than assumed, so an Ambit or miniPAR on the same USB/Bluetooth transport gets
+ * its own driver and reports its own family. This mirrors what the web host has
+ * done since #1791 (`useIotConnections`); mobile previously hardcoded the
+ * MultispeQ driver, which made every device report `family: "multispeq"`.
+ *
+ * Each execute() is captured as ONE wide trace event (`<family>.command`): the
+ * driver's debug logs are routed into the trace via a bridge logger, so a long
+ * measurement produces a single fat entry (tx, rx summary, timings) instead of
+ * hundreds of per-chunk debug lines.
+ */
+export class IdentifiedCommandExecutor implements DeviceCommandExecutor {
+  /** Bound by the handshake; every public op awaits `initPromise` first. */
+  private driver: IDeviceDriver | undefined;
+  /** Family of record from the probe; the driver must not overwrite it. */
+  private family: SensorFamily = "generic";
+  /** Identity the probe resolved, merged under each live `getIdentity()`. */
+  private probeIdentity: DeviceIdentity | undefined;
+  /** Namespaced to the resolved family once known, so logs name the real device. */
+  private familyLog: ReturnType<typeof createLogger> | undefined;
+  /**
+   * Resolves once the handshake has picked a driver and initialized it. Every
+   * public op awaits this first; that keeps execute/cancel/destroy from racing
+   * setup and turns any init failure into a controlled command error rather
+   * than an unhandled rejection.
    */
   private readonly initPromise: Promise<void>;
   private activeTrace: Trace | null = null;
@@ -67,16 +101,48 @@ export class MultispeqCommandExecutor implements DeviceCommandExecutor {
   // wire, instead of a later call clobbering the in-flight command's trace.
   private commandTail: Promise<unknown> = Promise.resolve();
 
-  constructor(transport: ITransportAdapter) {
-    this.driver = new MultispeqDriver(this.createBridgeLogger());
-    // `initialize()` may return void or a promise; normalize so callers can
-    // always await it. Errors are swallowed here and re-surface per-command.
-    this.initPromise = Promise.resolve(this.driver.initialize(transport));
+  constructor(transport: ITransportAdapter, options?: IdentifiedCommandExecutorOptions) {
+    // `identifyDevice` probes, picks the connector and initializes it against
+    // this transport. Errors are swallowed here and re-surface per-command.
+    this.initPromise = this.identify(transport, options);
     // A transport-reported disconnect aborts the in-flight command at once;
-    // user-cancel is a separate path (it sets isCancelled).
+    // user-cancel is a separate path (it sets isCancelled). The driver may not
+    // be bound yet if the cable is pulled mid-handshake, hence the guard.
     transport.onStatusChanged((isConnected) => {
-      if (!isConnected) void this.driver.cancel();
+      if (!isConnected) void this.driver?.cancel?.();
     });
+  }
+
+  /**
+   * Run the identification handshake and adopt whatever answered. The probe's
+   * family is authoritative: fallback connectors self-report "generic" and must
+   * not overwrite a probe-resolved family.
+   */
+  private async identify(
+    transport: ITransportAdapter,
+    options?: IdentifiedCommandExecutorOptions,
+  ): Promise<void> {
+    const { family, info, connector } = await identifyDevice(transport, {
+      assumeFamily: options?.assumeFamily,
+      probeTimeoutMs: options?.probeTimeoutMs ?? PROBE_TIMEOUT_MS,
+      logger: this.createBridgeLogger(),
+    });
+    this.driver = connector;
+    this.family = family;
+    this.probeIdentity = info;
+    this.familyLog = createLogger(family);
+    this.familyLog.info("identified", { family, name: info.name });
+  }
+
+  /** The driver, once the handshake has bound one. */
+  private get boundDriver(): IDeviceDriver {
+    if (!this.driver) throw new Error("Device is not identified yet");
+    return this.driver;
+  }
+
+  /** Family-namespaced logger once known, the neutral one before that. */
+  private get activeLog(): ReturnType<typeof createLogger> {
+    return this.familyLog ?? log;
   }
 
   /**
@@ -117,18 +183,18 @@ export class MultispeqCommandExecutor implements DeviceCommandExecutor {
 
     return {
       debug: (msg, ...args) => {
-        if (!record(msg, args)) log.debug(msg, args[0] as LogFields | undefined);
+        if (!record(msg, args)) this.activeLog.debug(msg, args[0] as LogFields | undefined);
       },
       info: (msg, ...args) => {
-        if (!record(msg, args)) log.info(msg, args[0] as LogFields | undefined);
+        if (!record(msg, args)) this.activeLog.info(msg, args[0] as LogFields | undefined);
       },
       warn: (msg, ...args) => {
         record(msg, args);
-        log.warn(msg, args[0] as LogFields | undefined);
+        this.activeLog.warn(msg, args[0] as LogFields | undefined);
       },
       error: (msg, ...args) => {
         record(msg, args);
-        log.error(msg, args[0] as LogFields | undefined);
+        this.activeLog.error(msg, args[0] as LogFields | undefined);
       },
     };
   }
@@ -188,7 +254,7 @@ export class MultispeqCommandExecutor implements DeviceCommandExecutor {
   ): Promise<string | object> {
     // Ensure the driver finished initializing before sending anything.
     await this.initPromise;
-    const trace = startTrace("multispeq.command", `multispeq-cmd-${++commandSeq}`);
+    const trace = startTrace(`${this.family}.command`, `${this.family}-cmd-${++commandSeq}`);
     this.activeTrace = trace;
     this.chunkCount = 0;
     this.bytes = 0;
@@ -201,12 +267,12 @@ export class MultispeqCommandExecutor implements DeviceCommandExecutor {
     // wire; cleared in `finally`.
     const heartbeat = setInterval(() => {
       if (this.cmdStartedAt) {
-        log.info("measuring", { elapsedMs: Date.now() - this.cmdStartedAt });
+        this.activeLog.info("measuring", { elapsedMs: Date.now() - this.cmdStartedAt });
       }
     }, HEARTBEAT_MS);
 
     try {
-      const result = await this.driver.execute(command, options);
+      const result = await this.boundDriver.execute(command, options);
       if (!result.success) {
         throw result.error ?? new Error("Command failed");
       }
@@ -222,21 +288,39 @@ export class MultispeqCommandExecutor implements DeviceCommandExecutor {
   }
 
   cancel(): Promise<void> {
-    return this.initPromise.then(() => this.driver.cancel());
+    return this.initPromise.then(() => this.boundDriver.cancel?.());
   }
 
-  getIdentity(): Promise<DeviceIdentity> {
-    return this.initPromise.then(() => this.driver.getDeviceIdentity());
+  /**
+   * Re-reads the driver's identity each call so live fields (battery) stay
+   * fresh, layered over what the probe resolved. `family` is pinned to the
+   * probe's answer: a fallback connector self-reports "generic" and would
+   * otherwise erase a real classification.
+   */
+  async getIdentity(): Promise<DeviceIdentity> {
+    await this.initPromise;
+    const driver = this.boundDriver;
+    const live = await driver.getDeviceIdentity?.();
+    return {
+      ...this.probeIdentity,
+      ...live,
+      family: this.family,
+      raw: { ...this.probeIdentity?.raw, ...live?.raw },
+    };
   }
 
   destroy(): Promise<void> {
-    return this.initPromise.then(() => this.driver.destroy());
+    return this.initPromise.then(() => this.boundDriver.destroy());
   }
 }
 
-/** Build a command executor backed by the shared driver over the given transport. */
-export function createMultispeqCommandExecutor(
+/**
+ * Build a command executor over the given transport, probing to decide which
+ * driver to bind. Pass `assumeFamily` only when the caller already knows.
+ */
+export function createIdentifiedCommandExecutor(
   transport: ITransportAdapter,
+  options?: IdentifiedCommandExecutorOptions,
 ): DeviceCommandExecutor {
-  return new MultispeqCommandExecutor(transport);
+  return new IdentifiedCommandExecutor(transport, options);
 }

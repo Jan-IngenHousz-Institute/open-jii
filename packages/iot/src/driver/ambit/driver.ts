@@ -49,6 +49,8 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
   private rxBuffer = "";
   private onChunk: (() => void) | undefined;
   private lastTrafficAt = 0;
+  /** eFuse MAC from the last trace, remembered for identity reporting. */
+  private sensorId: string | undefined;
 
   constructor(config?: AmbitDriverConfig, logger?: Logger) {
     super(logger);
@@ -180,6 +182,7 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
 
         const envelope = parseOpenJiiEnvelope(reply);
         if (envelope) {
+          this.adoptSensorId(envelope);
           void this.emitter.emit("receivedEnvelope", envelope);
           return {
             success: true,
@@ -261,13 +264,36 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     });
   }
 
-  /** Identity from the hello sentinel line; the printed name is hardcoded upstream. */
+  /**
+   * Promote the trace's `sensor_id` to the envelope's `device_id`.
+   *
+   * `sensor_id` is the ESP32 eFuse MAC, formatted uppercase colon-separated by
+   * the firmware (`format_sensor_id`, trace_v3.h) precisely so it is the one
+   * stable hardware identity for a unit. It only ever appears nested in the
+   * trace, while the platform reads `device_id` off the envelope, so lift it.
+   * A firmware-supplied `device_id` is left alone, and the value is remembered
+   * so `getDeviceIdentity()` can report it once a measurement has been seen.
+   */
+  private adoptSensorId(envelope: Record<string, unknown>): void {
+    const sensorId = findSensorId(envelope);
+    if (!sensorId) return;
+    this.sensorId = sensorId;
+    envelope.device_id ??= sensorId;
+  }
+
+  /**
+   * Identity from the hello sentinel line; the printed name is hardcoded
+   * upstream. The hardware MAC is not reachable over the text console (the
+   * firmware's cmd 33 writes a raw binary struct), so `deviceId` is only
+   * populated once a measurement has carried the trace's `sensor_id`.
+   */
   async getDeviceIdentity(): Promise<DeviceIdentity> {
     const result = await this.execute<unknown>(AMBIT_COMMANDS.HELLO);
     const text = typeof result.data === "string" ? result.data : "";
     return {
       family: this.family,
-      raw: { helloReply: text },
+      ...(this.sensorId ? { deviceId: this.sensorId } : {}),
+      raw: { helloReply: text, ...(this.sensorId ? { sensor_id: this.sensorId } : {}) },
     };
   }
 
@@ -276,4 +302,29 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     this.onChunk = undefined;
     await super.destroy();
   }
+}
+
+/**
+ * First `sensor_id` string in a measurement envelope. The firmware nests it in
+ * `sample[].set[]` alongside the trace schema, so walk the envelope rather than
+ * hardcoding a path that a future trace revision could move.
+ */
+function findSensorId(value: unknown, depth = 0): string | undefined {
+  if (depth > 6 || value === null || typeof value !== "object") return undefined;
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const found = findSensorId(entry, depth + 1);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.sensor_id === "string" && record.sensor_id.trim() !== "") {
+    return record.sensor_id;
+  }
+  for (const entry of Object.values(record)) {
+    const found = findSensorId(entry, depth + 1);
+    if (found) return found;
+  }
+  return undefined;
 }

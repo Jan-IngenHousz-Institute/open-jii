@@ -27,6 +27,9 @@ vi.mock("~/shared/measurements/measurement-topic", () => ({
 vi.mock("~/features/recent-measurements/services/export-measurements", () => ({
   exportSingleMeasurementToFile: vi.fn(),
 }));
+vi.mock("~/shared/measurements/client-metadata", () => ({
+  getClientMetadata: () => ({ client_model: "NX789J", client_os: "Android" }),
+}));
 vi.mock("~/shared/ui/AlertDialog", () => ({ showAlert: vi.fn() }));
 vi.mock("sonner-native", () => ({ toast: { error: vi.fn() } }));
 vi.mock("~/shared/i18n", () => ({ useTranslation: () => ({ t: (k: string) => k }) }));

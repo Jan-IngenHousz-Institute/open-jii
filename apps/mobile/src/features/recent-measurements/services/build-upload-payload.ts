@@ -1,5 +1,6 @@
 import { compressSample } from "~/features/recent-measurements/utils/compress-sample";
 import { MeasurementLocation } from "~/shared/location/measurement-location";
+import type { ClientMetadata } from "~/shared/measurements/client-metadata";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
 
@@ -36,6 +37,8 @@ export interface BuildUploadPayloadArgs {
   fallbackDeviceFirmware?: string;
   /** GPS fix at measurement time; null/absent uploads without location. */
   location?: MeasurementLocation | null;
+  /** Publishing phone and OS; distinct from the sensor's `device_*` fields. */
+  client?: ClientMetadata;
 }
 
 // Pure: never mutates rawMeasurement or its sample entries. Macro filenames
@@ -57,6 +60,7 @@ export function buildUploadPayload({
   fallbackDeviceFamily,
   fallbackDeviceFirmware,
   location,
+  client,
 }: BuildUploadPayloadArgs) {
   const macroFilenames = macro?.filename ? [macro.filename] : [];
 
@@ -103,6 +107,9 @@ export function buildUploadPayload({
     ...(workbookId ? { workbook_id: workbookId } : {}),
     ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
+    // Phone provenance. Spread last but never overwrites device-native keys:
+    // every key is `client_`-prefixed, disjoint from the sensor's `device_*`.
+    ...client,
   };
 
   // Compress the (large) sample field to reduce MQTT payload size.
