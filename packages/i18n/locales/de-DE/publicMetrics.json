@@ -1,0 +1,57 @@
+{
+  "title": "Die Plattform in Zahlen",
+  "indicator": {
+    "active": "{{count}} Messungen in den letzten 24 Stunden",
+    "quiet": "Ruhig seit {{date}}"
+  },
+  "hero": {
+    "sentence": "<em>{{measurements}}</em> Messungen, <em>{{volume}}</em> Messdaten, erfasst in <em>{{timezones}}</em> Zeitzonen."
+  },
+  "community": {
+    "sentence": "Diesen Monat erfasste die Community <em>{{measurements}}</em> Messungen in <em>{{experiments}}</em> Experimenten, beigetragen von <em>{{contributors}}</em> Forschenden an <em>{{institutions}}</em> Institutionen."
+  },
+  "activityChart": {
+    "daily": "Täglich",
+    "cumulative": "Kumulativ",
+    "volume": "Volumen",
+    "title": {
+      "daily": "Messungen pro Tag, letzte 30 Tage",
+      "cumulative": "Erfasste Messungen, kumulativ",
+      "volume": "Messdaten pro Tag, letzte 30 Tage"
+    }
+  },
+  "sunClock": {
+    "aria": "Messaktivität nach lokaler Stunde",
+    "caption": "Messen folgt dem Tageslicht, nach lokaler Stunde"
+  },
+  "families": {
+    "title": "Messungen nach Instrument",
+    "unattributed": "Nicht zugeordnet"
+  },
+  "parameter": {
+    "sentence": "Meistgemessen diesen Monat: <em>{{name}}</em>, {{count}} Mal, Median <em>{{median}}</em>"
+  },
+  "captions": {
+    "streak": "Daten an {{days}} aufeinanderfolgenden Tagen",
+    "pace": "Etwa alle ~{{seconds}} Sekunden eine Messung diesen Monat",
+    "sessionSize": "Eine typische Feldsession umfasst {{count}} Messungen",
+    "endurance": "Ein Gerät meldet seit {{days}} Tagen ununterbrochen",
+    "simultaneity": "Zeitgleich haben {{devices}} Geräte gemessen",
+    "zonesPeakDay": "Meiste Zeitzonen an einem Tag: {{zones}}",
+    "analysesRun": "Durchgeführte Analysen: {{count}}",
+    "avgMeasurementSize": "Eine durchschnittliche Messung umfasst {{size}} Rohdaten",
+    "openDatasets": "Offene Datensätze: {{count}}",
+    "sharedExperiments": "Organisationsübergreifend geteilte Experimente: {{count}}",
+    "milestone": "Messung {{ordinal}} erfolgte am {{date}}"
+  },
+  "dashboard": {
+    "chips": {
+      "month": { "label": "Dieser Monat", "unit": "Messungen" },
+      "day": { "label": "Letzte 24 h", "unit": "Messungen" },
+      "mine": { "label": "Ihre Experimente", "unit": "diesen Monat" },
+      "experiments": { "label": "Aktive Experimente", "unit": "plattformweit" }
+    },
+    "milestone": "Die Community erfasste Messung {{ordinal}} am {{date}}.",
+    "dismiss": "Schließen"
+  }
+}

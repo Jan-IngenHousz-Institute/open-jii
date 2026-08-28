@@ -1,0 +1,57 @@
+{
+  "title": "Het platform in cijfers",
+  "indicator": {
+    "active": "{{count}} metingen in de laatste 24 uur",
+    "quiet": "Stil sinds {{date}}"
+  },
+  "hero": {
+    "sentence": "<em>{{measurements}}</em> metingen, <em>{{volume}}</em> aan meetdata, vastgelegd in <em>{{timezones}}</em> tijdzones."
+  },
+  "community": {
+    "sentence": "Deze maand registreerde de community <em>{{measurements}}</em> metingen in <em>{{experiments}}</em> experimenten, bijgedragen door <em>{{contributors}}</em> onderzoekers bij <em>{{institutions}}</em> instellingen."
+  },
+  "activityChart": {
+    "daily": "Dagelijks",
+    "cumulative": "Cumulatief",
+    "volume": "Volume",
+    "title": {
+      "daily": "Metingen per dag, laatste 30 dagen",
+      "cumulative": "Verzamelde metingen, cumulatief",
+      "volume": "Meetdata per dag, laatste 30 dagen"
+    }
+  },
+  "sunClock": {
+    "aria": "Meetactiviteit per lokaal uur",
+    "caption": "Meten volgt het daglicht, per lokaal uur"
+  },
+  "families": {
+    "title": "Metingen per instrument",
+    "unattributed": "Niet toegewezen"
+  },
+  "parameter": {
+    "sentence": "Meest gemeten deze maand: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>"
+  },
+  "captions": {
+    "streak": "Data op {{days}} opeenvolgende dagen",
+    "pace": "Elke ~{{seconds}} seconden een meting deze maand",
+    "sessionSize": "Een typische veldsessie telt {{count}} metingen",
+    "endurance": "Eén apparaat rapporteert al {{days}} dagen onafgebroken",
+    "simultaneity": "Op één moment maten {{devices}} apparaten tegelijk",
+    "zonesPeakDay": "Meeste tijdzones op één dag: {{zones}}",
+    "analysesRun": "Uitgevoerde analyses: {{count}}",
+    "avgMeasurementSize": "Een gemiddelde meting bevat {{size}} aan ruwe data",
+    "openDatasets": "Open datasets: {{count}}",
+    "sharedExperiments": "Experimenten gedeeld tussen organisaties: {{count}}",
+    "milestone": "Meting {{ordinal}} kwam binnen op {{date}}"
+  },
+  "dashboard": {
+    "chips": {
+      "month": { "label": "Deze maand", "unit": "metingen" },
+      "day": { "label": "Laatste 24 u", "unit": "metingen" },
+      "mine": { "label": "Jouw experimenten", "unit": "deze maand" },
+      "experiments": { "label": "Actieve experimenten", "unit": "platformbreed" }
+    },
+    "milestone": "De community registreerde meting {{ordinal}} op {{date}}.",
+    "dismiss": "Sluiten"
+  }
+}
