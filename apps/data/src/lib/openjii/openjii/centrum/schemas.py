@@ -108,6 +108,14 @@ large_iot_schema = StructType(
         StructField("macros", ArrayType(macro_schema), True),
         StructField("annotations", ArrayType(annotation_schema), True),
         StructField("experiment_id", StringType(), True),
+        # Canonical sensor family from the mobile identification handshake.
+        StructField("device_family", StringType(), True),
+        # The publishing phone, as opposed to the sensor's device_* fields.
+        StructField("client_model", StringType(), True),
+        StructField("client_manufacturer", StringType(), True),
+        StructField("client_os", StringType(), True),
+        StructField("client_os_version", StringType(), True),
+        StructField("client_app_version", StringType(), True),
         # Workbook execution metadata; absent on single-device uploads.
         # macro_context stays a JSON string because its keys are dynamic.
         StructField("workbook_run_id", StringType(), True),

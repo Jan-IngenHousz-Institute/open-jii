@@ -89,6 +89,14 @@ def clean_data():
         .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
         .withColumn("workbook_version_id", F.col("workbook_version_id"))
         .withColumn("macro_context", F.col("macro_context"))
+        # Sensor family and publishing-phone provenance. Extracted top-level in
+        # bronze, so they are read as columns rather than out of parsed_data.
+        .withColumn("device_family", F.col("device_family"))
+        .withColumn("client_model", F.col("client_model"))
+        .withColumn("client_manufacturer", F.col("client_manufacturer"))
+        .withColumn("client_os", F.col("client_os"))
+        .withColumn("client_os_version", F.col("client_os_version"))
+        .withColumn("client_app_version", F.col("client_app_version"))
         # GPS fix at measurement time; null on older payloads / no permission.
         .withColumn("latitude", F.col("parsed_data.latitude"))
         .withColumn("longitude", F.col("parsed_data.longitude"))
@@ -215,6 +223,12 @@ def clean_data():
         "workbook_run_id",
         "workbook_version_id",
         "macro_context",
+        "device_family",
+        "client_model",
+        "client_manufacturer",
+        "client_os",
+        "client_os_version",
+        "client_app_version",
         "latitude",
         "longitude",
         "timestamp",
@@ -267,6 +281,13 @@ def clean_data():
         .withColumn("workbook_run_id", F.lit(None).cast("string"))
         .withColumn("workbook_version_id", F.lit(None).cast("string"))
         .withColumn("macro_context", F.lit(None).cast("string"))
+        # Imported/transfer rows carry no driver family or phone provenance.
+        .withColumn("device_family", F.lit(None).cast("string"))
+        .withColumn("client_model", F.lit(None).cast("string"))
+        .withColumn("client_manufacturer", F.lit(None).cast("string"))
+        .withColumn("client_os", F.lit(None).cast("string"))
+        .withColumn("client_os_version", F.lit(None).cast("string"))
+        .withColumn("client_app_version", F.lit(None).cast("string"))
         # Mark imported data to skip macro processing
         .withColumn("skip_macro_processing", F.lit(True))
         .select(
@@ -289,6 +310,12 @@ def clean_data():
             "workbook_run_id",
             "workbook_version_id",
             "macro_context",
+            "device_family",
+            "client_model",
+            "client_manufacturer",
+            "client_os",
+            "client_os_version",
+            "client_app_version",
             "latitude",
             "longitude",
             "timestamp",
@@ -397,6 +424,12 @@ def clean_data_large_iot():
             "workbook_run_id",
             "workbook_version_id",
             "macro_context",
+            "device_family",
+            "client_model",
+            "client_manufacturer",
+            "client_os",
+            "client_os_version",
+            "client_app_version",
             "latitude",
             "longitude",
             "timestamp",

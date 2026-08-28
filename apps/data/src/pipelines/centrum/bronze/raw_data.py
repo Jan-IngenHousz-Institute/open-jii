@@ -69,11 +69,44 @@ def raw_data():
             "macro_context",
             F.get_json_object(F.col("data").cast("string"), "$.macro_context"),
         )
+        # Device and publisher provenance, extracted top-level for the same
+        # reason: device_family names the sensor's canonical driver family, and
+        # client_* describes the phone that published, not the sensor.
+        .withColumn(
+            "device_family",
+            F.get_json_object(F.col("data").cast("string"), "$.device_family"),
+        )
+        .withColumn(
+            "client_model",
+            F.get_json_object(F.col("data").cast("string"), "$.client_model"),
+        )
+        .withColumn(
+            "client_manufacturer",
+            F.get_json_object(F.col("data").cast("string"), "$.client_manufacturer"),
+        )
+        .withColumn(
+            "client_os",
+            F.get_json_object(F.col("data").cast("string"), "$.client_os"),
+        )
+        .withColumn(
+            "client_os_version",
+            F.get_json_object(F.col("data").cast("string"), "$.client_os_version"),
+        )
+        .withColumn(
+            "client_app_version",
+            F.get_json_object(F.col("data").cast("string"), "$.client_app_version"),
+        )
         .select(
             "experiment_id",
             "client_id",
             "workbook_version_id",
             "macro_context",
+            "device_family",
+            "client_model",
+            "client_manufacturer",
+            "client_os",
+            "client_os_version",
+            "client_app_version",
             "parsed_data",
             "ingestion_timestamp",
             "ingest_date",
