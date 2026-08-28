@@ -15,7 +15,7 @@ import type { DatabaseInstance } from "@repo/database";
 
 import { tryCatch } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { ExperimentOrganizationRow } from "../models/public-metrics.model";
+import type { ExperimentOrganizationRow } from "../models/experiment-organization.model";
 
 @Injectable()
 export class MetricsRepository {

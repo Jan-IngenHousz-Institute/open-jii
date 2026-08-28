@@ -36,8 +36,7 @@ import type {
   PlatformTotalsRow,
   PoolFactsRow,
   ScopedDailyRow,
-} from "../../../metrics/core/models/public-metrics.model";
-import type { DatabricksPort as MetricsDatabricksPort } from "../../../metrics/core/ports/databricks.port";
+} from "../../../metrics/core/ports/databricks.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -55,7 +54,7 @@ import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData } from "./services/sql/sql.types";
 
 @Injectable()
-export class DatabricksAdapter implements ExperimentDatabricksPort, MetricsDatabricksPort {
+export class DatabricksAdapter implements ExperimentDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
   readonly CATALOG_NAME: string;

@@ -7,15 +7,15 @@ import type {
 
 import { AppError, failure, success } from "../../../../common/utils/fp-utils";
 import type { Result } from "../../../../common/utils/fp-utils";
+import { CACHE_PORT, CachePort } from "../../../core/ports/cache.port";
+import { METRICS_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type {
   ActivityWindowsRow,
   DailyActivityRow,
+  DatabricksPort,
   PlatformTotalsRow,
   PoolFactsRow,
-} from "../../../core/models/public-metrics.model";
-import { CACHE_PORT, CachePort } from "../../../core/ports/cache.port";
-import { METRICS_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+} from "../../../core/ports/databricks.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
 
 export const PUBLIC_METRICS_CACHE_KEY = "public-snapshot";
