@@ -606,6 +606,27 @@ module "databricks_catalog" {
         "USE_SCHEMA"
       ]
     }
+
+    # Read-only access for the jii-data-platform deploy SP, which runs the
+    # analyst gold pipelines in the sandbox workspace. grebbedijk-ambit-2026-gold
+    # reads centrum.enriched_experiment_raw_data from here cross-catalog.
+    #
+    # These privileges are already live — this block only stops them being
+    # undeclared drift. They were granted by hand and have survived purely
+    # because nothing authoritative covers the catalog securable. The equivalent
+    # prod grant lived at SCHEMA level instead, where the authoritative
+    # `databricks_grants.centrum_schema` reclaimed it on 2026-08-20 and took two
+    # pipelines down for eight days. Same access, different level, opposite
+    # outcome — so it is written down here before someone rediscovers that.
+    data_platform_deploy_sp = {
+      principal = var.data_platform_sp_application_id
+      privileges = [
+        "BROWSE",
+        "SELECT",
+        "USE_CATALOG",
+        "USE_SCHEMA"
+      ]
+    }
   }
 
   providers = {
