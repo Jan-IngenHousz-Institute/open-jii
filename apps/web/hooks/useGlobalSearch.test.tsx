@@ -8,10 +8,10 @@ import { useSession } from "@repo/auth/client";
 
 import { useGlobalSearch } from "./useGlobalSearch";
 
-function mockSession(userId: string | undefined) {
+function mockSession(userId: string | undefined, isPending = false) {
   vi.mocked(useSession).mockReturnValue({
     data: userId ? { user: { id: userId } } : null,
-    isPending: false,
+    isPending,
   } as ReturnType<typeof useSession>);
 }
 
@@ -31,6 +31,15 @@ describe("useGlobalSearch", () => {
     });
     expect(query.queryKey.at(-1)).toEqual({ principal: "user-a" });
     expect(query.meta).toEqual({ principal: "user-a" });
+  });
+
+  it("stays in the searching state while the session is resolving", async () => {
+    mockSession(undefined, true);
+    const { result } = renderHook(() => useGlobalSearch("photosynthesis"));
+
+    await waitFor(() => expect(result.current.enabled).toBe(true));
+    expect(result.current.isSearching).toBe(true);
+    expect(result.current.results).toEqual([]);
   });
 
   it("does not retain one principal's results while another principal loads", async () => {

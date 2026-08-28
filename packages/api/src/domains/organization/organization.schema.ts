@@ -15,6 +15,20 @@ export const zOrganizationType = z.enum([
   "government_agency",
   "university",
 ]);
+export type OrganizationType = z.infer<typeof zOrganizationType>;
+
+/**
+ * Every visible organization-type label the search service accepts. Kept beside
+ * {@link zOrganizationType} so a new enum member cannot silently become unsearchable;
+ * the web locale contract tests keep these aliases aligned with the translated labels.
+ */
+export const ORGANIZATION_TYPE_SEARCH_ALIASES = {
+  research_institute: "Research institute Forschungsinstitut Onderzoeksinstituut",
+  non_profit: "Non-profit non profit nonprofit Gemeinnützige Organisation",
+  private_company: "Private company Privatunternehmen Particulier bedrijf",
+  government_agency: "Government agency Behörde Overheidsinstantie",
+  university: "University Universität Universiteit",
+} as const satisfies Record<OrganizationType, string>;
 
 /** Directory listing state. Private organizations are invisible to non-members. */
 export const zOrganizationVisibility = z.enum(["private", "public"]);
@@ -299,7 +313,6 @@ export const zGranteeTeamsPathParams = z.object({
   id: z.string().uuid().describe("ID of the resource being shared"),
 });
 
-export type OrganizationType = z.infer<typeof zOrganizationType>;
 export type OrganizationVisibility = z.infer<typeof zOrganizationVisibility>;
 export type OrganizationRole = z.infer<typeof zOrganizationRole>;
 export type OrganizationMembershipStatus = z.infer<typeof zOrganizationMembershipStatus>;

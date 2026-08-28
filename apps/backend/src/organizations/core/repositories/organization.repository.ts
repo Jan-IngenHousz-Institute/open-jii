@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
+import { ORGANIZATION_TYPE_SEARCH_ALIASES } from "@repo/api/domains/organization/organization.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
@@ -210,11 +211,12 @@ function resourceCountSql(database: DatabaseInstance, userId: string | undefined
  * while preventing arbitrary mid-word fragments such as `ate` → `private`.
  */
 const ORGANIZATION_TYPE_SEARCH_TEXT: SQL<string> = sql<string>`(CASE ${organizations.type}
-  WHEN 'research_institute' THEN 'research institute Forschungsinstitut Onderzoeksinstituut'
-  WHEN 'non_profit' THEN 'non profit nonprofit Gemeinnützige Organisation'
-  WHEN 'private_company' THEN 'private company Privatunternehmen Particulier bedrijf'
-  WHEN 'government_agency' THEN 'government agency Behörde Overheidsinstantie'
-  WHEN 'university' THEN 'university Universität Universiteit'
+  ${sql.join(
+    Object.entries(ORGANIZATION_TYPE_SEARCH_ALIASES).map(
+      ([type, aliases]) => sql`WHEN ${type} THEN ${aliases}`,
+    ),
+    sql` `,
+  )}
   ELSE ''
 END)`;
 

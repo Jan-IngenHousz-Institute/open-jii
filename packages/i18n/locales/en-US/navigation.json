@@ -55,7 +55,7 @@
   },
   "commandPalette": {
     "title": "Command palette",
-    "placeholder": "Search pages and actions...",
+    "placeholder": "Search pages, actions, and resources...",
     "groups": {
       "pages": "Pages",
       "actions": "Actions",
@@ -74,13 +74,6 @@
       "openWhatsNew": "Open What's new",
       "showKeyboardShortcuts": "Show keyboard shortcuts",
       "openDocumentation": "Open documentation"
-    },
-    "results": {
-      "experiments": "Experiments",
-      "protocols": "Protocols",
-      "macros": "Macros",
-      "workbooks": "Workbooks",
-      "organizations": "Organizations"
     },
     "status": {
       "searching": "Searching...",

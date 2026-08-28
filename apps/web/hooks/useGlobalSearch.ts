@@ -24,13 +24,14 @@ export function useGlobalSearch(query: string, limit = DEFAULT_LIMIT) {
   const trimmed = query.trim();
   const [debouncedQuery, isDebounced] = useDebounce(trimmed, SEARCH_DEBOUNCE_MS);
   const enabled = debouncedQuery.length >= MIN_QUERY_LENGTH;
+  const queryEnabled = enabled && !isSessionPending;
   const input = { query: debouncedQuery, limit };
 
   const result = useQuery(
     orpc.search.globalSearch.queryOptions({
       input,
       queryKey: withPrincipal(orpc.search.globalSearch.queryKey({ input }), userId),
-      enabled: enabled && !isSessionPending,
+      enabled: queryEnabled,
       meta: { principal },
       // Keep a settled result while the same person types the next term, but never
       // carry private results through a sign-out/sign-in transition.
@@ -41,7 +42,7 @@ export function useGlobalSearch(query: string, limit = DEFAULT_LIMIT) {
 
   const isSearching =
     trimmed.length >= MIN_QUERY_LENGTH &&
-    (!isDebounced || (enabled && !isSessionPending && result.isFetching));
+    (isSessionPending || !isDebounced || (queryEnabled && result.isFetching));
 
   return {
     ...result,

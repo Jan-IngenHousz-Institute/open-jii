@@ -51,7 +51,7 @@
   },
   "commandPalette": {
     "title": "Commandopalet",
-    "placeholder": "Pagina's en acties zoeken...",
+    "placeholder": "Pagina's, acties en bronnen zoeken...",
     "groups": {
       "pages": "Pagina's",
       "actions": "Acties",
@@ -70,13 +70,6 @@
       "openWhatsNew": "Wat is er nieuw openen",
       "showKeyboardShortcuts": "Sneltoetsen tonen",
       "openDocumentation": "Documentatie openen"
-    },
-    "results": {
-      "experiments": "Experimenten",
-      "protocols": "Protocollen",
-      "macros": "Macro's",
-      "workbooks": "Werkboeken",
-      "organizations": "Organisaties"
     },
     "status": {
       "searching": "Zoeken...",

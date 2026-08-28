@@ -55,7 +55,7 @@
   },
   "commandPalette": {
     "title": "Befehlspalette",
-    "placeholder": "Seiten und Aktionen suchen...",
+    "placeholder": "Seiten, Aktionen und Ressourcen suchen...",
     "groups": {
       "pages": "Seiten",
       "actions": "Aktionen",
@@ -74,13 +74,6 @@
       "openWhatsNew": "Neuigkeiten öffnen",
       "showKeyboardShortcuts": "Tastenkürzel anzeigen",
       "openDocumentation": "Dokumentation öffnen"
-    },
-    "results": {
-      "experiments": "Experimente",
-      "protocols": "Protokolle",
-      "macros": "Makros",
-      "workbooks": "Arbeitsmappen",
-      "organizations": "Organisationen"
     },
     "status": {
       "searching": "Suche...",
