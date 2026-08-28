@@ -1,0 +1,7 @@
+[project]
+name = "calibration-sandbox"
+version = "0.1.0"
+description = "Calibration sandbox Lambda: executes calibration scripts against captured bench series"
+requires-python = ">=3.12"
+# Pins match functions/python/Dockerfile so local runs see the Lambda's packages.
+dependencies = ["numpy==2.4.2", "pandas==3.0.1", "scipy==1.17.0"]
