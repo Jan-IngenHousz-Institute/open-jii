@@ -1,0 +1,57 @@
+{
+  "title": "The platform in numbers",
+  "indicator": {
+    "active": "{{count}} measurements in the last 24 hours",
+    "quiet": "Quiet since {{date}}"
+  },
+  "hero": {
+    "sentence": "<em>{{measurements}}</em> measurements, <em>{{volume}}</em> of measurement data, recorded across <em>{{timezones}}</em> time zones."
+  },
+  "community": {
+    "sentence": "This month the community recorded <em>{{measurements}}</em> measurements across <em>{{experiments}}</em> experiments, contributed by <em>{{contributors}}</em> researchers at <em>{{institutions}}</em> institutions."
+  },
+  "activityChart": {
+    "daily": "Daily",
+    "cumulative": "Cumulative",
+    "volume": "Volume",
+    "title": {
+      "daily": "Measurements per day, last 30 days",
+      "cumulative": "Measurements collected, cumulative",
+      "volume": "Measurement data per day, last 30 days"
+    }
+  },
+  "sunClock": {
+    "aria": "Measurement activity by local hour",
+    "caption": "Measuring follows daylight, by local hour"
+  },
+  "families": {
+    "title": "Measurements by instrument",
+    "unattributed": "Unattributed"
+  },
+  "parameter": {
+    "sentence": "Most measured this month: <em>{{name}}</em>, {{count}} times, median <em>{{median}}</em>"
+  },
+  "captions": {
+    "streak": "Data recorded on {{days}} consecutive days",
+    "pace": "A measurement arrives every ~{{seconds}} seconds this month",
+    "sessionSize": "A typical field session records {{count}} measurements",
+    "endurance": "One device has reported {{days}} days straight",
+    "simultaneity": "At one moment, {{devices}} devices measured at once",
+    "zonesPeakDay": "Most time zones active in one day: {{zones}}",
+    "analysesRun": "Analyses run on the platform: {{count}}",
+    "avgMeasurementSize": "An average measurement carries {{size}} of trace data",
+    "openDatasets": "Open datasets: {{count}}",
+    "sharedExperiments": "Experiments shared across organizations: {{count}}",
+    "milestone": "Measurement {{ordinal}} landed on {{date}}"
+  },
+  "dashboard": {
+    "chips": {
+      "month": { "label": "This month", "unit": "measurements" },
+      "day": { "label": "Last 24 h", "unit": "measurements" },
+      "mine": { "label": "Your experiments", "unit": "this month" },
+      "experiments": { "label": "Active experiments", "unit": "community-wide" }
+    },
+    "milestone": "The community recorded measurement {{ordinal}} on {{date}}.",
+    "dismiss": "Dismiss"
+  }
+}
