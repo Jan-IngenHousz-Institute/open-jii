@@ -77,6 +77,7 @@ export const METRICS_DATABRICKS_PORT = Symbol("METRICS_DATABRICKS_PORT");
  */
 export interface DatabricksPort {
   getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>>;
+  getPublicTotalVolumeBytes(): Promise<Result<number | null>>;
   getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>>;
   getPublicFamilyTotals(): Promise<Result<FamilyTotalsRow[]>>;
   getActivityWindows(): Promise<Result<ActivityWindowsRow | null>>;

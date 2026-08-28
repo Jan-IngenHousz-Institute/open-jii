@@ -71,6 +71,7 @@ describe("GetPublicMetricsUseCase", () => {
     useCase = testApp.module.get(GetPublicMetricsUseCase);
 
     totalsSpy = vi.spyOn(adapter, "getPublicPlatformTotals").mockResolvedValue(success(totals));
+    vi.spyOn(adapter, "getPublicTotalVolumeBytes").mockResolvedValue(success(6_000_000));
     vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(success(daily));
     vi.spyOn(adapter, "getPublicFamilyTotals").mockResolvedValue(
       success([{ family: "multispeq", measurements: 900 }]),
@@ -185,7 +186,7 @@ describe("GetPublicMetricsUseCase", () => {
   });
 
   it("hides the hero instead of inventing zeros when an input is missing", async () => {
-    vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(
+    vi.spyOn(adapter, "getPublicTotalVolumeBytes").mockResolvedValue(
       failure(AppError.internal("warehouse down")),
     );
 

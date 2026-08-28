@@ -26,6 +26,7 @@ describe("MetricsController", () => {
     const adapter = testApp.module.get(DatabricksAdapter);
     const warehouseDown = failure(AppError.internal("warehouse down"));
     vi.spyOn(adapter, "getPublicPlatformTotals").mockResolvedValue(warehouseDown);
+    vi.spyOn(adapter, "getPublicTotalVolumeBytes").mockResolvedValue(warehouseDown);
     vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(warehouseDown);
     vi.spyOn(adapter, "getPublicFamilyTotals").mockResolvedValue(warehouseDown);
     vi.spyOn(adapter, "getActivityWindows").mockResolvedValue(warehouseDown);

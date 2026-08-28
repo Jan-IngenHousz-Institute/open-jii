@@ -74,6 +74,7 @@ export class GetPublicMetricsUseCase {
   private async load(): Promise<PublicMetricsResponse | null> {
     const [
       totals,
+      totalVolume,
       daily,
       families,
       windows,
@@ -84,6 +85,7 @@ export class GetPublicMetricsUseCase {
       contributorPairs,
     ] = await Promise.all([
       this.databricksPort.getPublicPlatformTotals(),
+      this.databricksPort.getPublicTotalVolumeBytes(),
       this.databricksPort.getPublicDailyActivity(DAILY_ACTIVITY_DAYS),
       this.databricksPort.getPublicFamilyTotals(),
       this.databricksPort.getActivityWindows(),
@@ -101,6 +103,7 @@ export class GetPublicMetricsUseCase {
 
     const failures = [
       totals,
+      totalVolume,
       daily,
       families,
       windows,
@@ -125,13 +128,14 @@ export class GetPublicMetricsUseCase {
 
     const windowVolumeBytes = dailyRows.reduce((sum, row) => sum + row.volumeBytes, 0);
     const windowMeasurements = dailyRows.reduce((sum, row) => sum + row.measurements, 0);
+    const totalVolumeBytes = totalVolume.isSuccess() ? totalVolume.value : null;
 
     const institutions = contributorPairs.isSuccess()
       ? await this.countInstitutions(contributorPairs.value.map((pair) => pair.experimentId))
       : null;
 
     return {
-      hero: this.buildHero(totalsRow, dailyRows, poolRow, windowVolumeBytes),
+      hero: this.buildHero(totalsRow, poolRow, totalVolumeBytes),
       liveness: windowsRow
         ? {
             lastMeasurementAt: windowsRow.lastMeasurementAt,
@@ -168,19 +172,18 @@ export class GetPublicMetricsUseCase {
 
   private buildHero(
     totals: PlatformTotalsRow | null,
-    daily: DailyActivityRow[],
     poolFacts: PoolFactsRow | null,
-    windowVolumeBytes: number,
+    totalVolumeBytes: number | null,
   ) {
     // Every figure measured, or no hero at all: a failed input must not
     // render as a zero.
-    if (totals === null || daily.length === 0 || poolFacts?.timezonesAllTime == null) {
+    if (totals === null || totalVolumeBytes === null || poolFacts?.timezonesAllTime == null) {
       return null;
     }
 
     return {
       totalMeasurements: totals.totalMeasurements,
-      totalVolumeBytes: windowVolumeBytes,
+      totalVolumeBytes,
       timezonesSpanned: poolFacts.timezonesAllTime,
     };
   }

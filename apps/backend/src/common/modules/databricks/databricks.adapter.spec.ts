@@ -2662,6 +2662,28 @@ describe("DatabricksAdapter", () => {
       expect(empty.value).toBeNull();
     });
 
+    it("sums the all-time volume and reads a blank aggregate as absent", async () => {
+      mockToken();
+      mockSqlResponse(["total_volume_bytes"], [["123456789"]]);
+      const volume = await databricksAdapter.getPublicTotalVolumeBytes();
+      assertSuccess(volume);
+      expect(volume.value).toBe(123456789);
+
+      mockToken();
+      mockSqlResponse(["total_volume_bytes"], [[""]]);
+      const blank = await databricksAdapter.getPublicTotalVolumeBytes();
+      assertSuccess(blank);
+      expect(blank.value).toBeNull();
+    });
+
+    it("reads blank numeric cells as absent, never as zero", async () => {
+      mockToken();
+      mockSqlResponse(["total_measurements", "computed_at"], [["   ", "2026-08-14 10:05:00"]]);
+      const totals = await databricksAdapter.getPublicPlatformTotals();
+      assertSuccess(totals);
+      expect(totals.value).toBeNull();
+    });
+
     it("drops malformed rows instead of inventing values", async () => {
       mockToken();
       mockSqlResponse(
