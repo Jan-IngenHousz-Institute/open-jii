@@ -15,6 +15,7 @@ import { experimentUploadsContract } from "./domains/experiment/uploads/experime
 import { experimentVisualizationsContract } from "./domains/experiment/visualizations/experiment-visualizations.contract";
 import { experimentWorkbooksContract } from "./domains/experiment/workbooks/experiment-workbooks.contract";
 import { healthContract } from "./domains/health/health.contract";
+import { iotCalibrationContract } from "./domains/iot/calibration/iot-calibration.contract";
 import { iotDeviceGroupContract } from "./domains/iot/device-group/iot-device-group.contract";
 import { iotFirmwareContract } from "./domains/iot/firmware/iot-firmware.contract";
 import { iotContract } from "./domains/iot/iot.contract";
@@ -55,7 +56,12 @@ export const contract = {
     ...experimentProjectTransferWebhookContract,
   },
   health: healthContract,
-  iot: { ...iotContract, ...iotDeviceGroupContract, ...iotFirmwareContract },
+  iot: {
+    ...iotContract,
+    ...iotDeviceGroupContract,
+    ...iotFirmwareContract,
+    ...iotCalibrationContract,
+  },
   macros: macroContract,
   metrics: metricsContract,
   newsletter: newsletterContract,

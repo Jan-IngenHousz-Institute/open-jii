@@ -17881,6 +17881,3908 @@
         }
       }
     },
+    "/api/v1/calibration-definitions": {
+      "get": {
+        "operationId": "iot.listCalibrationDefinitions",
+        "parameters": [
+          {
+            "name": "family",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "multispeq",
+                "ambyte",
+                "minipar",
+                "generic",
+                "ambit"
+              ],
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "family": {
+                        "enum": [
+                          "multispeq",
+                          "ambyte",
+                          "minipar",
+                          "generic",
+                          "ambit"
+                        ],
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "version": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "visibility": {
+                        "enum": [
+                          "private",
+                          "public"
+                        ],
+                        "type": "string"
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "family",
+                      "name",
+                      "description",
+                      "version",
+                      "organizationId",
+                      "visibility",
+                      "createdBy",
+                      "createdAt",
+                      "updatedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "iot.createCalibrationDefinition",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "family": {
+                    "enum": [
+                      "multispeq",
+                      "ambyte",
+                      "minipar",
+                      "generic",
+                      "ambit"
+                    ],
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "captureProcedure": {
+                    "type": "object",
+                    "properties": {
+                      "instruments": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "role": {
+                                  "const": "dut"
+                                }
+                              },
+                              "required": [
+                                "role"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "role": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "handshake": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 64
+                                }
+                              },
+                              "required": [
+                                "role",
+                                "handshake"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 8
+                      },
+                      "steps": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "const": "operator"
+                                },
+                                "prompt": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1000
+                                },
+                                "confirm": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 32
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "prompt"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "const": "settle"
+                                },
+                                "ms": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 600000
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "ms"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "const": "read"
+                                },
+                                "series": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "prompt": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1000
+                                },
+                                "read": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "instrument": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "command": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 255
+                                          },
+                                          "protocol": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "as": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "repeat": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 1000
+                                          },
+                                          "intervalMs": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 600000
+                                          },
+                                          "timeoutMs": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 600000
+                                          }
+                                        },
+                                        "required": [
+                                          "instrument",
+                                          "as"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "operator": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 500
+                                          },
+                                          "as": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "type": {
+                                            "enum": [
+                                              "number",
+                                              "text"
+                                            ],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "operator",
+                                          "as",
+                                          "type"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 16
+                                },
+                                "optional": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "series",
+                                "read"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "const": "sweep"
+                                },
+                                "series": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "stimulus": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "instrument": {
+                                          "type": "string",
+                                          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                        },
+                                        "set": {
+                                          "type": "string",
+                                          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                        },
+                                        "values": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "number"
+                                          },
+                                          "minItems": 1,
+                                          "maxItems": 64
+                                        }
+                                      },
+                                      "required": [
+                                        "instrument",
+                                        "set",
+                                        "values"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "operator": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 500
+                                        },
+                                        "values": {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 64
+                                              },
+                                              {
+                                                "type": "object",
+                                                "additionalProperties": {
+                                                  "anyOf": [
+                                                    {},
+                                                    {}
+                                                  ]
+                                                }
+                                              }
+                                            ]
+                                          },
+                                          "minItems": 1,
+                                          "maxItems": 64
+                                        }
+                                      },
+                                      "required": [
+                                        "operator",
+                                        "values"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "settleMs": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 600000
+                                },
+                                "read": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "instrument": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "command": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 255
+                                          },
+                                          "protocol": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "as": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "repeat": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 1000
+                                          },
+                                          "intervalMs": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 600000
+                                          },
+                                          "timeoutMs": {
+                                            "type": "integer",
+                                            "minimum": 1,
+                                            "maximum": 600000
+                                          }
+                                        },
+                                        "required": [
+                                          "instrument",
+                                          "as"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "operator": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 500
+                                          },
+                                          "as": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "type": {
+                                            "enum": [
+                                              "number",
+                                              "text"
+                                            ],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "operator",
+                                          "as",
+                                          "type"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 1,
+                                  "maxItems": 16
+                                },
+                                "optional": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "series",
+                                "stimulus",
+                                "read"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 64
+                      }
+                    },
+                    "required": [
+                      "instruments",
+                      "steps"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "script": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000000
+                  },
+                  "outputSchema": {
+                    "type": "object",
+                    "properties": {
+                      "blocks": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "const": "number"
+                                  },
+                                  "min": {
+                                    "type": "number"
+                                  },
+                                  "max": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "const": "integer_array"
+                                  },
+                                  "length": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 64
+                                  },
+                                  "min": {
+                                    "type": "integer"
+                                  },
+                                  "max": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "length"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "required": [
+                      "blocks"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minFirmwareVersion": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+){1,2}$"
+                  },
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "family",
+                  "name",
+                  "captureProcedure",
+                  "script",
+                  "outputSchema"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "family": {
+                      "enum": [
+                        "multispeq",
+                        "ambyte",
+                        "minipar",
+                        "generic",
+                        "ambit"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "captureProcedure": {
+                      "type": "object",
+                      "properties": {
+                        "instruments": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "role": {
+                                    "const": "dut"
+                                  }
+                                },
+                                "required": [
+                                  "role"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "role": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "handshake": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64
+                                  }
+                                },
+                                "required": [
+                                  "role",
+                                  "handshake"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 8
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "operator"
+                                  },
+                                  "prompt": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  },
+                                  "confirm": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 32
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "prompt"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "settle"
+                                  },
+                                  "ms": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 600000
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "ms"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "read"
+                                  },
+                                  "series": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "prompt": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  },
+                                  "read": {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "instrument": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "command": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 255
+                                            },
+                                            "protocol": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "as": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "repeat": {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 1000
+                                            },
+                                            "intervalMs": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 600000
+                                            },
+                                            "timeoutMs": {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 600000
+                                            }
+                                          },
+                                          "required": [
+                                            "instrument",
+                                            "as"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "operator": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "as": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "type": {
+                                              "enum": [
+                                                "number",
+                                                "text"
+                                              ],
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "operator",
+                                            "as",
+                                            "type"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "minItems": 1,
+                                    "maxItems": 16
+                                  },
+                                  "optional": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "series",
+                                  "read"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "sweep"
+                                  },
+                                  "series": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "stimulus": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "instrument": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "set": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "values": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "number"
+                                            },
+                                            "minItems": 1,
+                                            "maxItems": 64
+                                          }
+                                        },
+                                        "required": [
+                                          "instrument",
+                                          "set",
+                                          "values"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "operator": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 500
+                                          },
+                                          "values": {
+                                            "type": "array",
+                                            "items": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "number"
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 64
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "additionalProperties": {
+                                                    "anyOf": [
+                                                      {},
+                                                      {}
+                                                    ]
+                                                  }
+                                                }
+                                              ]
+                                            },
+                                            "minItems": 1,
+                                            "maxItems": 64
+                                          }
+                                        },
+                                        "required": [
+                                          "operator",
+                                          "values"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "settleMs": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 600000
+                                  },
+                                  "read": {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "instrument": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "command": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 255
+                                            },
+                                            "protocol": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "as": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "repeat": {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 1000
+                                            },
+                                            "intervalMs": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 600000
+                                            },
+                                            "timeoutMs": {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 600000
+                                            }
+                                          },
+                                          "required": [
+                                            "instrument",
+                                            "as"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "operator": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "as": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "type": {
+                                              "enum": [
+                                                "number",
+                                                "text"
+                                              ],
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "operator",
+                                            "as",
+                                            "type"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "minItems": 1,
+                                    "maxItems": 16
+                                  },
+                                  "optional": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "series",
+                                  "stimulus",
+                                  "read"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 64
+                        }
+                      },
+                      "required": [
+                        "instruments",
+                        "steps"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "script": {
+                      "type": "string"
+                    },
+                    "outputSchema": {
+                      "type": "object",
+                      "properties": {
+                        "blocks": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "number"
+                                    },
+                                    "min": {
+                                      "type": "number"
+                                    },
+                                    "max": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "integer_array"
+                                    },
+                                    "length": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 64
+                                    },
+                                    "min": {
+                                      "type": "integer"
+                                    },
+                                    "max": {
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "length"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "blocks"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minFirmwareVersion": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d+){1,2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "family",
+                    "name",
+                    "description",
+                    "version",
+                    "captureProcedure",
+                    "script",
+                    "outputSchema",
+                    "minFirmwareVersion",
+                    "organizationId",
+                    "visibility",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration-definitions/{definitionId}": {
+      "get": {
+        "operationId": "iot.getCalibrationDefinition",
+        "parameters": [
+          {
+            "name": "definitionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "family": {
+                      "enum": [
+                        "multispeq",
+                        "ambyte",
+                        "minipar",
+                        "generic",
+                        "ambit"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "captureProcedure": {
+                      "type": "object",
+                      "properties": {
+                        "instruments": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "role": {
+                                    "const": "dut"
+                                  }
+                                },
+                                "required": [
+                                  "role"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "role": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "handshake": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64
+                                  }
+                                },
+                                "required": [
+                                  "role",
+                                  "handshake"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 8
+                        },
+                        "steps": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "operator"
+                                  },
+                                  "prompt": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  },
+                                  "confirm": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 32
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "prompt"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "settle"
+                                  },
+                                  "ms": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 600000
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "ms"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "read"
+                                  },
+                                  "series": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "prompt": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  },
+                                  "read": {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "instrument": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "command": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 255
+                                            },
+                                            "protocol": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "as": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "repeat": {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 1000
+                                            },
+                                            "intervalMs": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 600000
+                                            },
+                                            "timeoutMs": {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 600000
+                                            }
+                                          },
+                                          "required": [
+                                            "instrument",
+                                            "as"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "operator": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "as": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "type": {
+                                              "enum": [
+                                                "number",
+                                                "text"
+                                              ],
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "operator",
+                                            "as",
+                                            "type"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "minItems": 1,
+                                    "maxItems": 16
+                                  },
+                                  "optional": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "series",
+                                  "read"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "sweep"
+                                  },
+                                  "series": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "stimulus": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "instrument": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "set": {
+                                            "type": "string",
+                                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                          },
+                                          "values": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "number"
+                                            },
+                                            "minItems": 1,
+                                            "maxItems": 64
+                                          }
+                                        },
+                                        "required": [
+                                          "instrument",
+                                          "set",
+                                          "values"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "operator": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 500
+                                          },
+                                          "values": {
+                                            "type": "array",
+                                            "items": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "number"
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 64
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "additionalProperties": {
+                                                    "anyOf": [
+                                                      {},
+                                                      {}
+                                                    ]
+                                                  }
+                                                }
+                                              ]
+                                            },
+                                            "minItems": 1,
+                                            "maxItems": 64
+                                          }
+                                        },
+                                        "required": [
+                                          "operator",
+                                          "values"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "settleMs": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 600000
+                                  },
+                                  "read": {
+                                    "type": "array",
+                                    "items": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "instrument": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "command": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 255
+                                            },
+                                            "protocol": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "as": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "repeat": {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 1000
+                                            },
+                                            "intervalMs": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 600000
+                                            },
+                                            "timeoutMs": {
+                                              "type": "integer",
+                                              "minimum": 1,
+                                              "maximum": 600000
+                                            }
+                                          },
+                                          "required": [
+                                            "instrument",
+                                            "as"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "operator": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 500
+                                            },
+                                            "as": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                            },
+                                            "type": {
+                                              "enum": [
+                                                "number",
+                                                "text"
+                                              ],
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "operator",
+                                            "as",
+                                            "type"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "minItems": 1,
+                                    "maxItems": 16
+                                  },
+                                  "optional": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "series",
+                                  "stimulus",
+                                  "read"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 64
+                        }
+                      },
+                      "required": [
+                        "instruments",
+                        "steps"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "script": {
+                      "type": "string"
+                    },
+                    "outputSchema": {
+                      "type": "object",
+                      "properties": {
+                        "blocks": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "number"
+                                    },
+                                    "min": {
+                                      "type": "number"
+                                    },
+                                    "max": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "integer_array"
+                                    },
+                                    "length": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 64
+                                    },
+                                    "min": {
+                                      "type": "integer"
+                                    },
+                                    "max": {
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "length"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "blocks"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minFirmwareVersion": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d+){1,2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "family",
+                    "name",
+                    "description",
+                    "version",
+                    "captureProcedure",
+                    "script",
+                    "outputSchema",
+                    "minFirmwareVersion",
+                    "organizationId",
+                    "visibility",
+                    "createdBy",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "iot.deleteCalibrationDefinition",
+        "parameters": [
+          {
+            "name": "definitionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/calibration-runs": {
+      "post": {
+        "operationId": "iot.createCalibrationRun",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "definitionId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "payload": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string",
+                                  "maxLength": 4096
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "number"
+                                  },
+                                  "maxItems": 10000
+                                },
+                                {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "string",
+                                        "maxLength": 64
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "maxItems": 5000
+                    }
+                  },
+                  "params": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "maxLength": 512
+                        },
+                        {
+                          "type": "boolean"
+                        }
+                      ]
+                    }
+                  },
+                  "preInfo": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "firmwareVersion": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+){1,2}$"
+                  }
+                },
+                "required": [
+                  "definitionId",
+                  "payload"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "definitionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "definitionVersion": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "deviceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "requestedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "inputSource": {
+                      "enum": [
+                        "bench_wizard",
+                        "external_bench"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "running",
+                        "computed",
+                        "compute_failed",
+                        "error",
+                        "approved",
+                        "rejected"
+                      ],
+                      "type": "string"
+                    },
+                    "blocks": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "enum": [
+                                  "computed",
+                                  "rejected",
+                                  "skipped"
+                                ],
+                                "type": "string"
+                              },
+                              "coefficients": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "integer"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "fit": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "quality": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "reason": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            },
+                            "required": [
+                              "status"
+                            ]
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "preInfo": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "postInfo": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "firmwareVersion": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "errorMessage": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reviewedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reviewedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "definitionId",
+                    "definitionVersion",
+                    "deviceId",
+                    "requestedBy",
+                    "inputSource",
+                    "status",
+                    "blocks",
+                    "preInfo",
+                    "postInfo",
+                    "firmwareVersion",
+                    "errorMessage",
+                    "reviewedBy",
+                    "reviewedAt",
+                    "finishedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "iot.listDeviceCalibrationRuns",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "definitionId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "definitionVersion": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "deviceId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "requestedBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "inputSource": {
+                        "enum": [
+                          "bench_wizard",
+                          "external_bench"
+                        ],
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "running",
+                          "computed",
+                          "compute_failed",
+                          "error",
+                          "approved",
+                          "rejected"
+                        ],
+                        "type": "string"
+                      },
+                      "blocks": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "status": {
+                                  "enum": [
+                                    "computed",
+                                    "rejected",
+                                    "skipped"
+                                  ],
+                                  "type": "string"
+                                },
+                                "coefficients": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "integer"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                },
+                                "fit": {
+                                  "type": "object",
+                                  "additionalProperties": {}
+                                },
+                                "quality": {
+                                  "type": "object",
+                                  "additionalProperties": {}
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "maxLength": 2000
+                                }
+                              },
+                              "required": [
+                                "status"
+                              ]
+                            }
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "preInfo": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": {}
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "postInfo": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": {}
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "firmwareVersion": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "errorMessage": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "reviewedBy": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "reviewedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "finishedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "definitionId",
+                      "definitionVersion",
+                      "deviceId",
+                      "requestedBy",
+                      "inputSource",
+                      "status",
+                      "blocks",
+                      "preInfo",
+                      "postInfo",
+                      "firmwareVersion",
+                      "errorMessage",
+                      "reviewedBy",
+                      "reviewedAt",
+                      "finishedAt",
+                      "createdAt",
+                      "updatedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/calibration-runs/external": {
+      "post": {
+        "operationId": "iot.createExternalCalibrationRun",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "definitionId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "blocks": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "enum": [
+                            "computed",
+                            "rejected",
+                            "skipped"
+                          ],
+                          "type": "string"
+                        },
+                        "coefficients": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer"
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "fit": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "quality": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "reason": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "status"
+                      ]
+                    }
+                  },
+                  "payload": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string",
+                                  "maxLength": 4096
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "number"
+                                  },
+                                  "maxItems": 10000
+                                },
+                                {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "string",
+                                        "maxLength": 64
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "maxItems": 5000
+                    }
+                  },
+                  "params": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "maxLength": 512
+                        },
+                        {
+                          "type": "boolean"
+                        }
+                      ]
+                    }
+                  },
+                  "preInfo": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "postInfo": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "firmwareVersion": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+){1,2}$"
+                  }
+                },
+                "required": [
+                  "definitionId",
+                  "blocks"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "definitionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "definitionVersion": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "deviceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "requestedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "inputSource": {
+                      "enum": [
+                        "bench_wizard",
+                        "external_bench"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "running",
+                        "computed",
+                        "compute_failed",
+                        "error",
+                        "approved",
+                        "rejected"
+                      ],
+                      "type": "string"
+                    },
+                    "blocks": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "enum": [
+                                  "computed",
+                                  "rejected",
+                                  "skipped"
+                                ],
+                                "type": "string"
+                              },
+                              "coefficients": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "integer"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "fit": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "quality": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "reason": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            },
+                            "required": [
+                              "status"
+                            ]
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "preInfo": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "postInfo": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "firmwareVersion": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "errorMessage": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reviewedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reviewedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "definitionId",
+                    "definitionVersion",
+                    "deviceId",
+                    "requestedBy",
+                    "inputSource",
+                    "status",
+                    "blocks",
+                    "preInfo",
+                    "postInfo",
+                    "firmwareVersion",
+                    "errorMessage",
+                    "reviewedBy",
+                    "reviewedAt",
+                    "finishedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration-runs/{runId}": {
+      "get": {
+        "operationId": "iot.getCalibrationRun",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "definitionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "definitionVersion": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "deviceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "requestedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "inputSource": {
+                      "enum": [
+                        "bench_wizard",
+                        "external_bench"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "running",
+                        "computed",
+                        "compute_failed",
+                        "error",
+                        "approved",
+                        "rejected"
+                      ],
+                      "type": "string"
+                    },
+                    "blocks": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "enum": [
+                                  "computed",
+                                  "rejected",
+                                  "skipped"
+                                ],
+                                "type": "string"
+                              },
+                              "coefficients": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "integer"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "fit": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "quality": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "reason": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            },
+                            "required": [
+                              "status"
+                            ]
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "preInfo": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "postInfo": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "firmwareVersion": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "errorMessage": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reviewedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reviewedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "definitionId",
+                    "definitionVersion",
+                    "deviceId",
+                    "requestedBy",
+                    "inputSource",
+                    "status",
+                    "blocks",
+                    "preInfo",
+                    "postInfo",
+                    "firmwareVersion",
+                    "errorMessage",
+                    "reviewedBy",
+                    "reviewedAt",
+                    "finishedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration-runs/{runId}/approve": {
+      "post": {
+        "operationId": "iot.approveCalibrationRun",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "deviceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "blocks": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "coefficients": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "fit": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          },
+                          "quality": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          }
+                        },
+                        "required": [
+                          "coefficients"
+                        ]
+                      }
+                    },
+                    "approvedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "validFrom": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "supersededAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "writtenToDeviceAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "writeResults": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "verified": {
+                                "type": "boolean"
+                              },
+                              "error": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            },
+                            "required": [
+                              "verified"
+                            ]
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "deviceId",
+                    "runId",
+                    "blocks",
+                    "approvedBy",
+                    "validFrom",
+                    "supersededAt",
+                    "writtenToDeviceAt",
+                    "writeResults",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration-runs/{runId}/reject": {
+      "post": {
+        "operationId": "iot.rejectCalibrationRun",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "definitionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "definitionVersion": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "deviceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "requestedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "inputSource": {
+                      "enum": [
+                        "bench_wizard",
+                        "external_bench"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "running",
+                        "computed",
+                        "compute_failed",
+                        "error",
+                        "approved",
+                        "rejected"
+                      ],
+                      "type": "string"
+                    },
+                    "blocks": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "enum": [
+                                  "computed",
+                                  "rejected",
+                                  "skipped"
+                                ],
+                                "type": "string"
+                              },
+                              "coefficients": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "integer"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "fit": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "quality": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "reason": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            },
+                            "required": [
+                              "status"
+                            ]
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "preInfo": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "postInfo": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "firmwareVersion": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "errorMessage": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reviewedBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reviewedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "finishedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "definitionId",
+                    "definitionVersion",
+                    "deviceId",
+                    "requestedBy",
+                    "inputSource",
+                    "status",
+                    "blocks",
+                    "preInfo",
+                    "postInfo",
+                    "firmwareVersion",
+                    "errorMessage",
+                    "reviewedBy",
+                    "reviewedAt",
+                    "finishedAt",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/calibration": {
+      "get": {
+        "operationId": "iot.getActiveDeviceCalibration",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "deviceId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "runId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "blocks": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "coefficients": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "integer"
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "fit": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "quality": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              }
+                            },
+                            "required": [
+                              "coefficients"
+                            ]
+                          }
+                        },
+                        "approvedBy": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "validFrom": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "supersededAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "writtenToDeviceAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "writeResults": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                              },
+                              "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                  "verified": {
+                                    "type": "boolean"
+                                  },
+                                  "error": {
+                                    "type": "string",
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "verified"
+                                ]
+                              }
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "deviceId",
+                        "runId",
+                        "blocks",
+                        "approvedBy",
+                        "validFrom",
+                        "supersededAt",
+                        "writtenToDeviceAt",
+                        "writeResults",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/calibrations": {
+      "get": {
+        "operationId": "iot.listDeviceCalibrations",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "deviceId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "runId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "blocks": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "coefficients": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                              },
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "integer"
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "fit": {
+                              "type": "object",
+                              "additionalProperties": {}
+                            },
+                            "quality": {
+                              "type": "object",
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "coefficients"
+                          ]
+                        }
+                      },
+                      "approvedBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "validFrom": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "supersededAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "writtenToDeviceAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "writeResults": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "verified": {
+                                  "type": "boolean"
+                                },
+                                "error": {
+                                  "type": "string",
+                                  "maxLength": 2000
+                                }
+                              },
+                              "required": [
+                                "verified"
+                              ]
+                            }
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "deviceId",
+                      "runId",
+                      "blocks",
+                      "approvedBy",
+                      "validFrom",
+                      "supersededAt",
+                      "writtenToDeviceAt",
+                      "writeResults",
+                      "createdAt",
+                      "updatedAt"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/device-calibrations/{calibrationId}/written": {
+      "post": {
+        "operationId": "iot.reportDeviceCalibrationWrite",
+        "parameters": [
+          {
+            "name": "calibrationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "writeResults": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "verified": {
+                          "type": "boolean"
+                        },
+                        "error": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "verified"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "writeResults"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "deviceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "runId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "blocks": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "coefficients": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "fit": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          },
+                          "quality": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          }
+                        },
+                        "required": [
+                          "coefficients"
+                        ]
+                      }
+                    },
+                    "approvedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "validFrom": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "supersededAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "writtenToDeviceAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "writeResults": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "verified": {
+                                "type": "boolean"
+                              },
+                              "error": {
+                                "type": "string",
+                                "maxLength": 2000
+                              }
+                            },
+                            "required": [
+                              "verified"
+                            ]
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "deviceId",
+                    "runId",
+                    "blocks",
+                    "approvedBy",
+                    "validFrom",
+                    "supersededAt",
+                    "writtenToDeviceAt",
+                    "writeResults",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/macros": {
       "get": {
         "operationId": "macros.listMacros",
