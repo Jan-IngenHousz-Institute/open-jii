@@ -1,0 +1,19 @@
+{
+  "script": "from qc import assess_origin_fit\n\nsweep = inputs[\"par_sweep\"]\nfit = assess_origin_fit(\n    sweep[\"par_raw\"], sweep[\"par_ref\"], sweep[\"stimulus\"],\n    coefficient_min=0.05, coefficient_max=100.0,\n)\nsubmit({\"par\": {\"coefficients\": {\"spec\": fit[\"coefficient\"]}, \"quality\": fit}})\n",
+  "series": {
+    "par_sweep": [
+      { "stimulus": 0.0, "par_raw": 1.1, "par_ref": 1.3 },
+      { "stimulus": 0.8, "par_raw": 148.2, "par_ref": 176.4 },
+      { "stimulus": 2.4, "par_raw": 431.7, "par_ref": 513.7 },
+      { "stimulus": 3.0, "par_raw": 540.1, "par_ref": 642.7 },
+      { "stimulus": 4.0, "par_raw": 715.3, "par_ref": 851.2 },
+      { "stimulus": 6.6, "par_raw": 1182.4, "par_ref": 1407.1 }
+    ]
+  },
+  "params": {},
+  "outputSchema": {
+    "blocks": {
+      "par": { "spec": { "type": "number", "min": 0.05, "max": 100.0 } }
+    }
+  }
+}
