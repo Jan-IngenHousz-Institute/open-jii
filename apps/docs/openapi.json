@@ -19663,78 +19663,81 @@
                       "type": "string"
                     },
                     "scoped": {
-                      "type": "object",
-                      "properties": {
-                        "measurements30d": {
-                          "type": "number"
-                        },
-                        "activeExperiments30d": {
-                          "type": "number"
-                        },
-                        "contributors30d": {
-                          "type": "number"
-                        },
-                        "activity": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "date": {
-                                "type": "string"
-                              },
-                              "measurements": {
-                                "type": "number"
-                              }
-                            },
-                            "required": [
-                              "date",
-                              "measurements"
-                            ]
-                          }
-                        },
-                        "lastMeasurementAt": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "measurements24h": {
-                          "anyOf": [
-                            {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "measurements30d": {
                               "type": "number"
                             },
-                            {
-                              "type": "null"
+                            "activeExperiments30d": {
+                              "type": "number"
+                            },
+                            "contributors30d": {
+                              "type": "number"
+                            },
+                            "activity": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "date": {
+                                    "type": "string"
+                                  },
+                                  "measurements": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "date",
+                                  "measurements"
+                                ]
+                              }
+                            },
+                            "lastActivityDate": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             }
+                          },
+                          "required": [
+                            "measurements30d",
+                            "activeExperiments30d",
+                            "contributors30d",
+                            "activity",
+                            "lastActivityDate"
                           ]
+                        },
+                        {
+                          "type": "null"
                         }
-                      },
-                      "required": [
-                        "measurements30d",
-                        "activeExperiments30d",
-                        "contributors30d",
-                        "activity",
-                        "lastMeasurementAt",
-                        "measurements24h"
                       ]
                     },
                     "baseline": {
-                      "type": "object",
-                      "properties": {
-                        "measurements30d": {
-                          "type": "number"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "measurements30d": {
+                              "type": "number"
+                            },
+                            "activeExperiments30d": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "measurements30d",
+                            "activeExperiments30d"
+                          ]
                         },
-                        "activeExperiments30d": {
-                          "type": "number"
+                        {
+                          "type": "null"
                         }
-                      },
-                      "required": [
-                        "measurements30d",
-                        "activeExperiments30d"
                       ]
                     },
                     "computedAt": {

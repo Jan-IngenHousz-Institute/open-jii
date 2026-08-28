@@ -6,16 +6,34 @@ import { AppError, failure, success } from "../../../../common/utils/fp-utils";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { CACHE_PORT, CachePort } from "../../../core/ports/cache.port";
 import { METRICS_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import type {
+  ActivityWindowsRow,
+  ContributorPairRow,
+  DatabricksPort,
+  ScopedDailyRow,
+} from "../../../core/ports/databricks.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
 
 const WINDOW_DAYS = 30;
 
 /**
+ * One shared key: the warehouse inputs are scope-independent, so per-caller
+ * keys would multiply identical platform-wide reads and accumulate without
+ * bound in the in-memory store.
+ */
+export const SCOPED_INPUTS_CACHE_KEY = "scoped-inputs";
+
+interface ScopedInputs {
+  daily: ScopedDailyRow[];
+  contributorPairs: ContributorPairRow[];
+  windows: ActivityWindowsRow;
+}
+
+/**
  * Org- and user-scoped activity: per-experiment warehouse rows are joined
- * against Postgres ownership/membership here, aggregated to the requested
- * scope, and served with the platform baseline for comparison. The
- * experiment- and user-grain inputs never leave this use case unaggregated.
+ * against Postgres ownership/grants here, aggregated to the requested scope,
+ * and served with the platform baseline for comparison. The experiment- and
+ * user-grain inputs never leave this use case unaggregated.
  */
 @Injectable()
 export class GetScopedMetricsUseCase {
@@ -48,40 +66,26 @@ export class GetScopedMetricsUseCase {
       }
     }
 
-    const cacheKey =
-      scope === "organization" ? `scoped-org-${organizationId}` : `scoped-user-${userId}`;
-
-    const snapshot = await this.cachePort.tryCache(cacheKey, () =>
-      this.load(scope, userId, organizationId),
-    );
-
-    if (snapshot === null) {
-      return failure(AppError.internal("Scoped metrics are unavailable"));
-    }
-
-    return success(snapshot);
-  }
-
-  private async load(
-    scope: MetricsScope,
-    userId: string,
-    organizationId?: string,
-  ): Promise<ScopedMetricsResponse | null> {
     const experimentIds =
       scope === "organization" && organizationId !== undefined
         ? await this.metricsRepository.getOrganizationExperimentIds(organizationId)
         : await this.metricsRepository.getUserExperimentIds(userId);
-
     if (experimentIds.isFailure()) {
-      this.logger.error({
-        msg: "Could not resolve experiments for scope",
-        operation: "load",
-        scope,
-        error: experimentIds.error,
-      });
-      return null;
+      return failure(experimentIds.error);
     }
 
+    const inputs = await this.cachePort.tryCache(SCOPED_INPUTS_CACHE_KEY, () => this.loadInputs());
+
+    if (inputs === null) {
+      // A lagging or absent warehouse degrades to empty slots. Nothing is
+      // cached, so the next request retries instead of pinning the outage.
+      return success({ scope, scoped: null, baseline: null, computedAt: null });
+    }
+
+    return success(this.aggregate(scope, new Set(experimentIds.value), inputs));
+  }
+
+  private async loadInputs(): Promise<ScopedInputs | null> {
     const [scopedDaily, contributorPairs, windows] = await Promise.all([
       this.databricksPort.getScopedDailyActivity(WINDOW_DAYS),
       this.databricksPort.getContributorPairs(),
@@ -94,12 +98,26 @@ export class GetScopedMetricsUseCase {
       windows.isFailure() ||
       windows.value === null
     ) {
-      this.logger.warn({ msg: "Warehouse unavailable for scoped metrics", operation: "load" });
+      this.logger.warn({
+        msg: "Warehouse unavailable for scoped metrics",
+        operation: "loadInputs",
+      });
       return null;
     }
 
-    const scopeIds = new Set(experimentIds.value);
-    const rows = scopedDaily.value.filter((row) => scopeIds.has(row.experimentId));
+    return {
+      daily: scopedDaily.value,
+      contributorPairs: contributorPairs.value,
+      windows: windows.value,
+    };
+  }
+
+  private aggregate(
+    scope: MetricsScope,
+    scopeIds: Set<string>,
+    inputs: ScopedInputs,
+  ): ScopedMetricsResponse {
+    const rows = inputs.daily.filter((row) => scopeIds.has(row.experimentId));
 
     const byDate = new Map<string, number>();
     for (const row of rows) {
@@ -113,13 +131,12 @@ export class GetScopedMetricsUseCase {
     const activeExperiments = new Set(rows.map((row) => row.experimentId));
 
     const contributors = new Set(
-      contributorPairs.value
+      inputs.contributorPairs
         .filter((pair) => scopeIds.has(pair.experimentId))
         .map((pair) => pair.userId),
     ).size;
 
     const lastDate = activity.length > 0 ? activity[activity.length - 1].date : null;
-    const baseline = windows.value;
 
     return {
       scope,
@@ -128,15 +145,13 @@ export class GetScopedMetricsUseCase {
         activeExperiments30d: activeExperiments.size,
         contributors30d: contributors,
         activity,
-        lastMeasurementAt: lastDate,
-        // Scoped rows are date-grain; a 24h count is not derivable from them.
-        measurements24h: null,
+        lastActivityDate: lastDate,
       },
       baseline: {
-        measurements30d: baseline.measurements30d,
-        activeExperiments30d: baseline.experiments30d,
+        measurements30d: inputs.windows.measurements30d,
+        activeExperiments30d: inputs.windows.experiments30d,
       },
-      computedAt: baseline.computedAt,
+      computedAt: inputs.windows.computedAt,
     };
   }
 }

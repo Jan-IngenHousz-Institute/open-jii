@@ -164,17 +164,64 @@ describe("GetPublicMetricsUseCase", () => {
     expect(result.value.liveness).not.toBeNull();
   });
 
-  it("serves a partial snapshot when the warehouse is unavailable", async () => {
+  it("serves an empty snapshot without caching it when the core reads fail", async () => {
     const warehouseDown = failure(AppError.internal("warehouse down"));
-    vi.spyOn(adapter, "getPublicPlatformTotals").mockResolvedValue(warehouseDown);
+    totalsSpy = vi.spyOn(adapter, "getPublicPlatformTotals").mockResolvedValue(warehouseDown);
     vi.spyOn(adapter, "getActivityWindows").mockResolvedValue(warehouseDown);
     vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(warehouseDown);
+
+    const first = await useCase.execute();
+    const second = await useCase.execute();
+
+    assertSuccess(first);
+    expect(first.value.hero).toBeNull();
+    expect(first.value.liveness).toBeNull();
+    expect(first.value.activity).toEqual([]);
+    expect(first.value.captions).toEqual([]);
+
+    // The empty snapshot was not cached: the second request retried.
+    assertSuccess(second);
+    expect(totalsSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("hides the hero instead of inventing zeros when an input is missing", async () => {
+    vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
 
     const result = await useCase.execute();
 
     assertSuccess(result);
     expect(result.value.hero).toBeNull();
-    expect(result.value.liveness).toBeNull();
-    expect(result.value.activity).toEqual([]);
+    expect(result.value.liveness).not.toBeNull();
+  });
+
+  it("withholds the streak once the newest daily row is stale", async () => {
+    vi.useFakeTimers({ now: new Date("2026-09-10T12:00:00Z"), toFake: ["Date"] });
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    const kinds = result.value.captions.map((caption) => caption.kind);
+    expect(kinds).not.toContain("streak");
+  });
+
+  it("withholds the milestone when its crossing predates the fetched window", async () => {
+    vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(
+      success([
+        {
+          date: "2026-08-28",
+          measurements: 120,
+          cumulativeMeasurements: 1_500_000,
+          volumeBytes: 2_400_000,
+        },
+      ]),
+    );
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    const kinds = result.value.captions.map((caption) => caption.kind);
+    expect(kinds).not.toContain("milestone");
   });
 });

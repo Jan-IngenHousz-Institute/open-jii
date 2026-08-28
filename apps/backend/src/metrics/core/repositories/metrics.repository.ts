@@ -5,9 +5,9 @@ import {
   count,
   countDistinct,
   eq,
-  experimentMembers,
   experiments,
   inArray,
+  isNull,
   ne,
   or,
   organizationMembers,
@@ -55,22 +55,29 @@ export class MetricsRepository {
     });
   }
 
-  /** Experiments the user created or explicitly joined; the attribution set
-   * for "your experiments", deliberately narrower than view access. */
+  /** Experiments the user created or holds a direct grant on; membership is
+   * sole-sourced in resource_grants. The attribution set for "your
+   * experiments", deliberately narrower than view access. */
   async getUserExperimentIds(userId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {
-      const [created, memberships] = await Promise.all([
+      const [created, granted] = await Promise.all([
         this.database
           .select({ id: experiments.id })
           .from(experiments)
           .where(eq(experiments.createdBy, userId)),
         this.database
-          .select({ id: experimentMembers.experimentId })
-          .from(experimentMembers)
-          .where(eq(experimentMembers.userId, userId)),
+          .select({ id: resourceGrants.resourceId })
+          .from(resourceGrants)
+          .where(
+            and(
+              eq(resourceGrants.resourceType, "experiment"),
+              eq(resourceGrants.granteeType, "user"),
+              eq(resourceGrants.granteeId, userId),
+            ),
+          ),
       ]);
 
-      return Array.from(new Set([...created, ...memberships].map((row) => row.id)));
+      return Array.from(new Set([...created, ...granted].map((row) => row.id)));
     });
   }
 
@@ -101,8 +108,9 @@ export class MetricsRepository {
     });
   }
 
-  /** Experiments granted to someone other than their creator; the creator's
-   * own seeded control grant is not sharing. */
+  /** Experiments granted beyond creator and owning org. Seeded creator-control
+   * grants (create-into-org and the org-backfill migration) and grants to the
+   * experiment's own organization are internal staffing, not sharing. */
   async countSharedExperiments(): Promise<Result<number>> {
     return tryCatch(async () => {
       const rows = await this.database
@@ -115,6 +123,11 @@ export class MetricsRepository {
             or(
               ne(resourceGrants.granteeType, "user"),
               ne(resourceGrants.granteeId, experiments.createdBy),
+            ),
+            or(
+              ne(resourceGrants.granteeType, "organization"),
+              isNull(experiments.organizationId),
+              ne(resourceGrants.granteeId, experiments.organizationId),
             ),
           ),
         );

@@ -91,17 +91,23 @@ export const zScopedActivity = z.object({
   activeExperiments30d: z.number(),
   contributors30d: z.number(),
   activity: z.array(z.object({ date: z.string(), measurements: z.number() })),
-  lastMeasurementAt: z.string().nullable(),
-  measurements24h: z.number().nullable(),
+  lastActivityDate: z.string().nullable(),
 });
 
+/**
+ * `scoped` and `baseline` are null before the pipeline's first refresh and
+ * while the warehouse is unavailable; both endpoints degrade to empty slots
+ * rather than an error.
+ */
 export const zScopedMetricsResponse = z.object({
   scope: zMetricsScope,
-  scoped: zScopedActivity,
-  baseline: z.object({
-    measurements30d: z.number(),
-    activeExperiments30d: z.number(),
-  }),
+  scoped: zScopedActivity.nullable(),
+  baseline: z
+    .object({
+      measurements30d: z.number(),
+      activeExperiments30d: z.number(),
+    })
+    .nullable(),
   computedAt: z.string().nullable(),
 });
 

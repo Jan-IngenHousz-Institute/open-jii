@@ -1217,7 +1217,27 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return result;
     }
 
+    // A truncated result would silently under-report aggregates.
+    if (result.value.truncated) {
+      return failure(AppError.internal(`Metrics read of ${tableName} was truncated`));
+    }
+
     return success({ rows: result.value.rows, index: this.columnIndex(result.value.columns) });
+  }
+
+  private metricString(value: string | null | undefined): string | null {
+    return value == null || value === "" ? null : value;
+  }
+
+  /** Warehouse timestamps arrive zone-less but are UTC; anchor before ISO. */
+  private toUtcIsoOrNull(raw: string | null | undefined): string | null {
+    if (!raw) {
+      return null;
+    }
+    const withT = raw.includes("T") ? raw : raw.replace(" ", "T");
+    const candidate = /(Z|[+-]\d{2}:?\d{2})$/.test(withT) ? withT : `${withT}Z`;
+    const parsed = new Date(candidate);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   }
 
   async getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>> {
@@ -1232,15 +1252,20 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const row = rows[0];
+    const totalMeasurements = this.toNumberOrNull(row[index.total_measurements]);
+    if (totalMeasurements === null) {
+      return success(null);
+    }
+
     return success({
-      totalMeasurements: Number(row[index.total_measurements] ?? 0),
-      totalUploadedRows: Number(row[index.total_uploaded_rows] ?? 0),
-      totalMacroExecutions: Number(row[index.total_macro_executions] ?? 0),
-      devicesAllTime: Number(row[index.devices_all_time] ?? 0),
-      experimentsWithData: Number(row[index.experiments_with_data] ?? 0),
-      firstMeasurementAt: row[index.first_measurement_at] ?? null,
-      lastMeasurementAt: row[index.last_measurement_at] ?? null,
-      computedAt: row[index.computed_at] ?? null,
+      totalMeasurements,
+      totalUploadedRows: this.toNumberOrNull(row[index.total_uploaded_rows]) ?? 0,
+      totalMacroExecutions: this.toNumberOrNull(row[index.total_macro_executions]) ?? 0,
+      devicesAllTime: this.toNumberOrNull(row[index.devices_all_time]) ?? 0,
+      experimentsWithData: this.toNumberOrNull(row[index.experiments_with_data]) ?? 0,
+      firstMeasurementAt: this.toUtcIsoOrNull(row[index.first_measurement_at]),
+      lastMeasurementAt: this.toUtcIsoOrNull(row[index.last_measurement_at]),
+      computedAt: this.toUtcIsoOrNull(row[index.computed_at]),
     });
   }
 
@@ -1255,13 +1280,22 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const { rows, index } = result.value;
-    const mapped = rows.map((row) => ({
-      date: String(row[index.date]),
-      measurements: Number(row[index.measurements] ?? 0),
-      cumulativeMeasurements: Number(row[index.cumulative_measurements] ?? 0),
-      volumeBytes: Number(row[index.volume_bytes] ?? 0),
-    }));
+    const mapped = rows
+      .map((row) => ({
+        date: this.metricString(row[index.date]),
+        measurements: this.toNumberOrNull(row[index.measurements]),
+        cumulativeMeasurements: this.toNumberOrNull(row[index.cumulative_measurements]),
+        volumeBytes: this.toNumberOrNull(row[index.volume_bytes]),
+      }))
+      .filter(
+        (row): row is DailyActivityRow =>
+          row.date !== null &&
+          row.measurements !== null &&
+          row.cumulativeMeasurements !== null &&
+          row.volumeBytes !== null,
+      );
 
+    this.warnDroppedMetricsRows("daily_activity", rows.length - mapped.length);
     return success(mapped.reverse());
   }
 
@@ -1275,12 +1309,15 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const { rows, index } = result.value;
-    return success(
-      rows.map((row) => ({
-        family: String(row[index.family]),
-        measurements: Number(row[index.total_measurements] ?? 0),
-      })),
-    );
+    const mapped = rows
+      .map((row) => ({
+        family: this.metricString(row[index.family]),
+        measurements: this.toNumberOrNull(row[index.total_measurements]),
+      }))
+      .filter((row): row is FamilyTotalsRow => row.family !== null && row.measurements !== null);
+
+    this.warnDroppedMetricsRows("family_totals", rows.length - mapped.length);
+    return success(mapped);
   }
 
   async getActivityWindows(): Promise<Result<ActivityWindowsRow | null>> {
@@ -1295,14 +1332,27 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const row = rows[0];
+    const measurements24h = this.toNumberOrNull(row[index.measurements_24h]);
+    const measurements30d = this.toNumberOrNull(row[index.measurements_30d]);
+    const experiments30d = this.toNumberOrNull(row[index.experiments_30d]);
+    const contributors30d = this.toNumberOrNull(row[index.contributors_30d]);
+    if (
+      measurements24h === null ||
+      measurements30d === null ||
+      experiments30d === null ||
+      contributors30d === null
+    ) {
+      return success(null);
+    }
+
     return success({
-      measurements24h: Number(row[index.measurements_24h] ?? 0),
-      measurements30d: Number(row[index.measurements_30d] ?? 0),
-      experiments30d: Number(row[index.experiments_30d] ?? 0),
-      contributors30d: Number(row[index.contributors_30d] ?? 0),
-      devices30d: Number(row[index.devices_30d] ?? 0),
-      lastMeasurementAt: row[index.last_measurement_at] ?? null,
-      computedAt: row[index.computed_at] ?? null,
+      measurements24h,
+      measurements30d,
+      experiments30d,
+      contributors30d,
+      devices30d: this.toNumberOrNull(row[index.devices_30d]) ?? 0,
+      lastMeasurementAt: this.toUtcIsoOrNull(row[index.last_measurement_at]),
+      computedAt: this.toUtcIsoOrNull(row[index.computed_at]),
     });
   }
 
@@ -1316,12 +1366,22 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const { rows, index } = result.value;
-    return success(
-      rows.map((row) => ({
-        hourLocal: Number(row[index.hour_local] ?? 0),
-        measurements: Number(row[index.measurements] ?? 0),
-      })),
-    );
+    const mapped = rows
+      .map((row) => ({
+        hourLocal: this.toNumberOrNull(row[index.hour_local]),
+        measurements: this.toNumberOrNull(row[index.measurements]),
+      }))
+      .filter(
+        (row): row is HourlyActivityRow =>
+          row.hourLocal !== null &&
+          Number.isInteger(row.hourLocal) &&
+          row.hourLocal >= 0 &&
+          row.hourLocal <= 23 &&
+          row.measurements !== null,
+      );
+
+    this.warnDroppedMetricsRows("hourly_activity", rows.length - mapped.length);
+    return success(mapped);
   }
 
   async getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>> {
@@ -1341,11 +1401,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const row = rows[0];
-    return success({
-      name: String(row[index.parameter]),
-      count30d: Number(row[index.count_30d] ?? 0),
-      median: Number(row[index.median_value] ?? 0),
-    });
+    const name = this.metricString(row[index.parameter]);
+    const count30d = this.toNumberOrNull(row[index.count_30d]);
+    const median = this.toNumberOrNull(row[index.median_value]);
+    if (name === null || count30d === null || median === null) {
+      return success(null);
+    }
+
+    return success({ name, count30d, median });
   }
 
   async getPoolFacts(): Promise<Result<PoolFactsRow | null>> {
@@ -1385,13 +1448,19 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const { rows, index } = result.value;
-    return success(
-      rows.map((row) => ({
-        date: String(row[index.date]),
-        experimentId: String(row[index.experiment_id]),
-        measurements: Number(row[index.measurements] ?? 0),
-      })),
-    );
+    const mapped = rows
+      .map((row) => ({
+        date: this.metricString(row[index.date]),
+        experimentId: this.metricString(row[index.experiment_id]),
+        measurements: this.toNumberOrNull(row[index.measurements]),
+      }))
+      .filter(
+        (row): row is ScopedDailyRow =>
+          row.date !== null && row.experimentId !== null && row.measurements !== null,
+      );
+
+    this.warnDroppedMetricsRows("daily_activity_by_experiment", rows.length - mapped.length);
+    return success(mapped);
   }
 
   async getContributorPairs(): Promise<Result<ContributorPairRow[]>> {
@@ -1401,12 +1470,21 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const { rows, index } = result.value;
-    return success(
-      rows.map((row) => ({
-        experimentId: String(row[index.experiment_id]),
-        userId: String(row[index.user_id]),
-      })),
-    );
+    const mapped = rows
+      .map((row) => ({
+        experimentId: this.metricString(row[index.experiment_id]),
+        userId: this.metricString(row[index.user_id]),
+      }))
+      .filter((row): row is ContributorPairRow => row.experimentId !== null && row.userId !== null);
+
+    this.warnDroppedMetricsRows("experiment_contributors_window", rows.length - mapped.length);
+    return success(mapped);
+  }
+
+  private warnDroppedMetricsRows(tableName: string, dropped: number): void {
+    if (dropped > 0) {
+      this.logger.warn({ msg: "Skipped malformed metrics rows", tableName, dropped });
+    }
   }
 
   async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {

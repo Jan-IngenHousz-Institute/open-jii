@@ -98,6 +98,52 @@ describe("MetricsRepository", () => {
     expect(after.value).toBe(1);
   });
 
+  it("does not count a grant to the experiment's own organization as sharing", async () => {
+    await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: orgExperimentId,
+      granteeType: "organization",
+      granteeId: organizationId,
+      role: "viewer",
+      createdBy: userId,
+    });
+
+    const ownOrg = await repository.countSharedExperiments();
+    assertSuccess(ownOrg);
+    expect(ownOrg.value).toBe(0);
+
+    const otherOrganizationId = await testApp.createOrganization();
+    await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: orgExperimentId,
+      granteeType: "organization",
+      granteeId: otherOrganizationId,
+      role: "viewer",
+      createdBy: userId,
+    });
+
+    const otherOrg = await repository.countSharedExperiments();
+    assertSuccess(otherOrg);
+    expect(otherOrg.value).toBe(1);
+  });
+
+  it("attributes experiments held through a direct grant to the user", async () => {
+    const granteeId = await testApp.createTestUser({ email: "grantee@example.com" });
+    await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: orgExperimentId,
+      granteeType: "user",
+      granteeId,
+      role: "viewer",
+      createdBy: userId,
+    });
+
+    const result = await repository.getUserExperimentIds(granteeId);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([orgExperimentId]);
+  });
+
   it("attributes created experiments to the user, without duplicates", async () => {
     const strangerId = await testApp.createTestUser({});
 

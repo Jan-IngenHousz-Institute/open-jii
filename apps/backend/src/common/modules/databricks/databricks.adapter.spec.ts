@@ -2648,11 +2648,11 @@ describe("DatabricksAdapter", () => {
         totalMeasurements: 1000,
         devicesAllTime: 9,
         experimentsWithData: 5,
-        firstMeasurementAt: "2024-01-01 00:00:00",
-        lastMeasurementAt: "2026-08-14 10:00:00",
+        firstMeasurementAt: "2024-01-01T00:00:00.000Z",
+        lastMeasurementAt: "2026-08-14T10:00:00.000Z",
         totalMacroExecutions: 200,
         totalUploadedRows: 50,
-        computedAt: "2026-08-14 10:05:00",
+        computedAt: "2026-08-14T10:05:00.000Z",
       });
 
       mockToken();
@@ -2660,6 +2660,43 @@ describe("DatabricksAdapter", () => {
       const empty = await databricksAdapter.getPublicPlatformTotals();
       assertSuccess(empty);
       expect(empty.value).toBeNull();
+    });
+
+    it("drops malformed rows instead of inventing values", async () => {
+      mockToken();
+      mockSqlResponse(
+        ["date", "measurements", "cumulative_measurements", "volume_bytes"],
+        [
+          ["2026-08-14", "10", "1000", "200000"],
+          [null, "10", "1000", "200000"],
+          ["2026-08-15", "not-a-number", "1010", "200000"],
+        ],
+      );
+      const daily = await databricksAdapter.getPublicDailyActivity(30);
+      assertSuccess(daily);
+      expect(daily.value).toEqual([
+        { date: "2026-08-14", measurements: 10, cumulativeMeasurements: 1000, volumeBytes: 200000 },
+      ]);
+
+      // A totals row without its core figure reads as no data, not zero.
+      mockToken();
+      mockSqlResponse(["computed_at"], [["2026-08-14 10:05:00"]]);
+      const totals = await databricksAdapter.getPublicPlatformTotals();
+      assertSuccess(totals);
+      expect(totals.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(
+        ["hour_local", "measurements"],
+        [
+          ["12", "300"],
+          ["25", "300"],
+          [null, "300"],
+        ],
+      );
+      const hourly = await databricksAdapter.getHourlyActivity();
+      assertSuccess(hourly);
+      expect(hourly.value).toEqual([{ hourLocal: 12, measurements: 300 }]);
     });
 
     it("returns daily activity ascending with volume", async () => {
@@ -2718,8 +2755,8 @@ describe("DatabricksAdapter", () => {
         experiments30d: 23,
         contributors30d: 31,
         devices30d: 12,
-        lastMeasurementAt: "2026-08-28 10:00:00",
-        computedAt: "2026-08-28 10:05:00",
+        lastMeasurementAt: "2026-08-28T10:00:00.000Z",
+        computedAt: "2026-08-28T10:05:00.000Z",
       });
     });
 

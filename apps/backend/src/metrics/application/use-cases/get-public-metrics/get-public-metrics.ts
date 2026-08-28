@@ -5,7 +5,7 @@ import type {
   PublicMetricsResponse,
 } from "@repo/api/domains/metrics/metrics.schema";
 
-import { AppError, failure, success } from "../../../../common/utils/fp-utils";
+import { success } from "../../../../common/utils/fp-utils";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { CACHE_PORT, CachePort } from "../../../core/ports/cache.port";
 import { METRICS_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -48,10 +48,27 @@ export class GetPublicMetricsUseCase {
     const snapshot = await this.cachePort.tryCache(PUBLIC_METRICS_CACHE_KEY, () => this.load());
 
     if (snapshot === null) {
-      return failure(AppError.internal("Public metrics are unavailable"));
+      // A fully-failed refresh serves empty slots and is never cached, so a
+      // transient warehouse blip cannot pin an empty snapshot for a TTL.
+      return success(this.emptySnapshot());
     }
 
     return success(snapshot);
+  }
+
+  private emptySnapshot(): PublicMetricsResponse {
+    return {
+      hero: null,
+      liveness: null,
+      community: null,
+      activity: [],
+      hourly: [],
+      families: [],
+      derivedParameter: null,
+      sensorParameter: null,
+      captions: [],
+      computedAt: null,
+    };
   }
 
   private async load(): Promise<PublicMetricsResponse | null> {
@@ -77,6 +94,11 @@ export class GetPublicMetricsUseCase {
       this.databricksPort.getContributorPairs(),
     ]);
 
+    if (totals.isFailure() && daily.isFailure() && windows.isFailure()) {
+      this.logger.warn({ msg: "Warehouse unavailable for public metrics", operation: "load" });
+      return null;
+    }
+
     const failures = [
       totals,
       daily,
@@ -86,6 +108,7 @@ export class GetPublicMetricsUseCase {
       derivedParameter,
       sensorParameter,
       poolFacts,
+      contributorPairs,
     ].filter((result) => result.isFailure());
     if (failures.length > 0) {
       this.logger.warn({
@@ -100,12 +123,15 @@ export class GetPublicMetricsUseCase {
     const windowsRow = windows.isSuccess() ? windows.value : null;
     const poolRow = poolFacts.isSuccess() ? poolFacts.value : null;
 
+    const windowVolumeBytes = dailyRows.reduce((sum, row) => sum + row.volumeBytes, 0);
+    const windowMeasurements = dailyRows.reduce((sum, row) => sum + row.measurements, 0);
+
     const institutions = contributorPairs.isSuccess()
       ? await this.countInstitutions(contributorPairs.value.map((pair) => pair.experimentId))
       : null;
 
     return {
-      hero: this.buildHero(totalsRow, dailyRows, poolRow),
+      hero: this.buildHero(totalsRow, dailyRows, poolRow, windowVolumeBytes),
       liveness: windowsRow
         ? {
             lastMeasurementAt: windowsRow.lastMeasurementAt,
@@ -128,7 +154,14 @@ export class GetPublicMetricsUseCase {
       families: families.isSuccess() ? families.value : [],
       derivedParameter: derivedParameter.isSuccess() ? derivedParameter.value : null,
       sensorParameter: sensorParameter.isSuccess() ? sensorParameter.value : null,
-      captions: await this.buildCaptions(totalsRow, dailyRows, windowsRow, poolRow),
+      captions: await this.buildCaptions(
+        totalsRow,
+        dailyRows,
+        windowsRow,
+        poolRow,
+        windowVolumeBytes,
+        windowMeasurements,
+      ),
       computedAt: windowsRow?.computedAt ?? totalsRow?.computedAt ?? null,
     };
   }
@@ -137,17 +170,18 @@ export class GetPublicMetricsUseCase {
     totals: PlatformTotalsRow | null,
     daily: DailyActivityRow[],
     poolFacts: PoolFactsRow | null,
+    windowVolumeBytes: number,
   ) {
-    if (totals === null) {
+    // Every figure measured, or no hero at all: a failed input must not
+    // render as a zero.
+    if (totals === null || daily.length === 0 || poolFacts?.timezonesAllTime == null) {
       return null;
     }
 
-    const totalVolumeBytes = daily.reduce((sum, row) => sum + row.volumeBytes, 0);
-
     return {
       totalMeasurements: totals.totalMeasurements,
-      totalVolumeBytes,
-      timezonesSpanned: poolFacts?.timezonesAllTime ?? 0,
+      totalVolumeBytes: windowVolumeBytes,
+      timezonesSpanned: poolFacts.timezonesAllTime,
     };
   }
 
@@ -172,6 +206,8 @@ export class GetPublicMetricsUseCase {
     daily: DailyActivityRow[],
     windows: ActivityWindowsRow | null,
     poolFacts: PoolFactsRow | null,
+    windowVolumeBytes: number,
+    windowMeasurements: number,
   ): Promise<MetricsCaption[]> {
     const captions: MetricsCaption[] = [];
 
@@ -207,18 +243,16 @@ export class GetPublicMetricsUseCase {
     if (totals !== null && totals.totalMacroExecutions > 0) {
       captions.push({ kind: "analysesRun", count: totals.totalMacroExecutions });
     }
-    if (totals !== null && totals.totalMeasurements > 0) {
-      // Volume and count over the same fetched window, so the ratio stays
-      // honest once the platform outgrows the window.
-      const totalVolumeBytes = daily.reduce((sum, row) => sum + row.volumeBytes, 0);
-      const windowMeasurements = daily.reduce((sum, row) => sum + row.measurements, 0);
-      if (totalVolumeBytes > 0 && windowMeasurements > 0) {
-        captions.push({
-          kind: "avgMeasurementSize",
-          bytes: Math.round(totalVolumeBytes / windowMeasurements),
-        });
-      }
+    // Volume and count over the same fetched window, so the ratio stays
+    // honest once the platform outgrows the window.
+    if (windowVolumeBytes > 0 && windowMeasurements > 0) {
+      captions.push({
+        kind: "avgMeasurementSize",
+        bytes: Math.round(windowVolumeBytes / windowMeasurements),
+      });
+    }
 
+    if (totals !== null && totals.totalMeasurements > 0) {
       const milestone = this.latestMilestone(totals.totalMeasurements, daily);
       if (milestone !== null) {
         captions.push(milestone);
