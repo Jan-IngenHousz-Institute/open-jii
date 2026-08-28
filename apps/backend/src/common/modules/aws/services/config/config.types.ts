@@ -13,6 +13,7 @@ export interface AwsConfig {
     macroSandboxPythonFunctionName: string;
     macroSandboxJavascriptFunctionName: string;
     macroSandboxRFunctionName: string;
+    calibrationSandboxFunctionName: string;
   };
   s3: {
     iotArchiveBucketName: string;
