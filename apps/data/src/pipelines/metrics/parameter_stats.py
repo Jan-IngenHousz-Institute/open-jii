@@ -1,8 +1,9 @@
 # Databricks notebook source
 # DBTITLE 1,Metrics - Parameter Stats
 # Public metrics: 30-day counts and medians for allowlisted physical
-# parameters. Only vetted parameter names may surface publicly; medians (not
-# means) so junk values and mixed conditions cannot skew the figure.
+# parameters, read from the macro output variant. Only vetted parameter names
+# may surface publicly; medians (not means) so junk values and mixed
+# conditions cannot skew the figure.
 
 # COMMAND ----------
 import dlt
@@ -10,13 +11,14 @@ from functools import reduce
 
 from pyspark.sql import functions as F
 
+from openjii.centrum import EXPERIMENT_MACRO_DATA_TABLE
 from openjii.metrics import (
     ACTIVITY_WINDOW_DAYS,
     PARAMETER_ALLOWLIST,
     PARAMETER_STATS_TABLE,
     within_plausible_range,
 )
-from openjii.metrics.runtime import SILVER_TABLE, centrum_table
+from openjii.metrics.runtime import centrum_table
 
 # COMMAND ----------
 
@@ -34,20 +36,21 @@ from openjii.metrics.runtime import SILVER_TABLE, centrum_table
 def parameter_stats():
     """One row per allowlisted parameter observed in the window.
 
-    Values come from the payload's macro output JSON; a parameter that never
-    parses simply yields no row and the frontend hides the line.
+    A parameter that never parses out of macro_output simply yields no row
+    and the frontend hides the line.
     """
     now = F.current_timestamp()
 
     recent = (
-        spark.table(centrum_table(SILVER_TABLE))
+        spark.table(centrum_table(EXPERIMENT_MACRO_DATA_TABLE))
         .filter(within_plausible_range(F.col("timestamp"), now))
         .filter(F.col("timestamp") >= now - F.expr(f"INTERVAL {ACTIVITY_WINDOW_DAYS} DAYS"))
-        .select("output")
+        .filter(F.col("macro_output").isNotNull())
+        .select("macro_output")
     )
 
     def parameter_frame(name):
-        value = F.get_json_object(F.col("output"), f"$.{name}").cast("double")
+        value = F.expr(f"try_variant_get(macro_output, '$.{name}', 'double')")
         return (
             recent.select(value.alias("value"))
             .filter(F.col("value").isNotNull())
