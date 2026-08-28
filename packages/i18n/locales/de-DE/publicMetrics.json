@@ -29,7 +29,8 @@
     "unattributed": "Nicht zugeordnet"
   },
   "parameter": {
-    "sentence": "Meistgemessen diesen Monat: <em>{{name}}</em>, {{count}} Mal, Median <em>{{median}}</em>"
+    "derivedSentence": "Meistberechnet diesen Monat: <em>{{name}}</em>, {{count}} Mal, Median <em>{{median}}</em>",
+    "sensorSentence": "Meisterfasster Sensorwert: <em>{{name}}</em>, {{count}} Mal, Median <em>{{median}}</em>"
   },
   "captions": {
     "streak": "Daten an {{days}} aufeinanderfolgenden Tagen",
@@ -46,10 +47,22 @@
   },
   "dashboard": {
     "chips": {
-      "month": { "label": "Dieser Monat", "unit": "Messungen" },
-      "day": { "label": "Letzte 24 h", "unit": "Messungen" },
-      "mine": { "label": "Ihre Experimente", "unit": "diesen Monat" },
-      "experiments": { "label": "Aktive Experimente", "unit": "plattformweit" }
+      "month": {
+        "label": "Dieser Monat",
+        "unit": "Messungen"
+      },
+      "day": {
+        "label": "Letzte 24 h",
+        "unit": "Messungen"
+      },
+      "mine": {
+        "label": "Ihre Experimente",
+        "unit": "diesen Monat"
+      },
+      "experiments": {
+        "label": "Aktive Experimente",
+        "unit": "plattformweit"
+      }
     },
     "milestone": "Die Community erfasste Messung {{ordinal}} am {{date}}.",
     "dismiss": "Schließen"

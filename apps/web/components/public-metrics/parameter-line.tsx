@@ -6,17 +6,18 @@ import { Trans } from "@repo/i18n/client";
 
 interface ParameterLineProps {
   parameter: MetricsParameter;
+  kind: "derived" | "sensor";
   locale: string;
 }
 
-export function ParameterLine({ parameter, locale }: ParameterLineProps) {
+export function ParameterLine({ parameter, kind, locale }: ParameterLineProps) {
   const { t } = useTranslation("publicMetrics");
 
   return (
     <p className="text-muted-foreground text-sm">
       <Trans
         t={t}
-        i18nKey="parameter.sentence"
+        i18nKey={kind === "derived" ? "parameter.derivedSentence" : "parameter.sensorSentence"}
         values={{
           name: parameter.name,
           count: new Intl.NumberFormat(locale).format(parameter.count30d),

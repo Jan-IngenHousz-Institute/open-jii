@@ -29,7 +29,8 @@
     "unattributed": "Unattributed"
   },
   "parameter": {
-    "sentence": "Most measured this month: <em>{{name}}</em>, {{count}} times, median <em>{{median}}</em>"
+    "derivedSentence": "Most computed this month: <em>{{name}}</em>, {{count}} times, median <em>{{median}}</em>",
+    "sensorSentence": "Most captured sensor reading: <em>{{name}}</em>, {{count}} times, median <em>{{median}}</em>"
   },
   "captions": {
     "streak": "Data recorded on {{days}} consecutive days",
@@ -46,10 +47,22 @@
   },
   "dashboard": {
     "chips": {
-      "month": { "label": "This month", "unit": "measurements" },
-      "day": { "label": "Last 24 h", "unit": "measurements" },
-      "mine": { "label": "Your experiments", "unit": "this month" },
-      "experiments": { "label": "Active experiments", "unit": "community-wide" }
+      "month": {
+        "label": "This month",
+        "unit": "measurements"
+      },
+      "day": {
+        "label": "Last 24 h",
+        "unit": "measurements"
+      },
+      "mine": {
+        "label": "Your experiments",
+        "unit": "this month"
+      },
+      "experiments": {
+        "label": "Active experiments",
+        "unit": "community-wide"
+      }
     },
     "milestone": "The community recorded measurement {{ordinal}} on {{date}}.",
     "dismiss": "Dismiss"
