@@ -110,6 +110,8 @@ large_iot_schema = StructType(
         StructField("experiment_id", StringType(), True),
         # Canonical sensor family from the mobile identification handshake.
         StructField("device_family", StringType(), True),
+        # Sensor hardware address seen by the edge device (Bluetooth MAC).
+        StructField("device_address", StringType(), True),
         # The publishing phone, as opposed to the sensor's device_* fields.
         StructField("client_model", StringType(), True),
         StructField("client_manufacturer", StringType(), True),
