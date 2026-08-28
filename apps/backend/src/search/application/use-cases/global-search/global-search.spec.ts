@@ -1,6 +1,7 @@
-import { eq, experiments } from "@repo/database";
+import { eq, experiments, organizationMembers } from "@repo/database";
 
 import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { OrganizationRepository } from "../../../../organizations/core/repositories/organization.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { GlobalSearchUseCase } from "./global-search";
 
@@ -391,6 +392,60 @@ describe("GlobalSearchUseCase", () => {
       assertSuccess(byType);
       const organization = byType.value.results.find((r) => r.title === "Vorbulon Collective");
       expect(organization?.meta).toBe("research_institute");
+    });
+
+    it.each([
+      ["non_profit", "non-profit"],
+      ["research_institute", "Forschungsinstitut"],
+      ["government_agency", "Overheidsinstantie"],
+    ] as const)("matches the visible %s label %s", async (type, query) => {
+      const name = `Vorbulon ${type}`;
+      await testApp.createOrganization(name, { visibility: "public", type });
+
+      const result = await useCase.execute(userId, query, 20);
+
+      assertSuccess(result);
+      expect(result.value.results.some((row) => row.title === name)).toBe(true);
+    });
+
+    it("does not match arbitrary fragments inside an organization type", async () => {
+      await testApp.createOrganization("Vorbulon Collective", {
+        visibility: "public",
+        type: "private_company",
+      });
+
+      const result = await useCase.execute(userId, "ate", 20);
+
+      assertSuccess(result);
+      expect(result.value.results.some((row) => row.title === "Vorbulon Collective")).toBe(false);
+    });
+
+    it("recognizes owner inside a stored multi-role when ranking organizations", async () => {
+      const owned = await testApp.createOrganization("Owned Vorbulon", {
+        visibility: "public",
+        description: "zephyrine research",
+      });
+      const member = await testApp.createOrganization("Member Vorbulon", {
+        visibility: "public",
+        description: "zephyrine research",
+      });
+      await testApp.addOrganizationMember(owned, userId, "owner");
+      await testApp.addOrganizationMember(member, userId, "member");
+      await testApp.database
+        .update(organizationMembers)
+        .set({ role: "owner,admin" })
+        .where(eq(organizationMembers.organizationId, owned));
+
+      const repository = testApp.module.get(OrganizationRepository);
+      const result = await repository.searchDirectory(userId, "zephyrine", 20);
+
+      assertSuccess(result);
+      const ownedScore = result.value.find((row) => row.id === owned)?.score;
+      const memberScore = result.value.find((row) => row.id === member)?.score;
+      if (ownedScore === undefined || memberScore === undefined) {
+        throw new Error("Expected both organizations in the ranked result set");
+      }
+      expect(ownedScore).toBeGreaterThan(memberScore);
     });
 
     it("finds an organization by its location, ranked below a name hit", async () => {

@@ -58,7 +58,8 @@
     "placeholder": "Seiten und Aktionen suchen...",
     "groups": {
       "pages": "Seiten",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "searchResults": "Suchergebnisse"
     },
     "entries": {
       "home": "Startseite",

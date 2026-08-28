@@ -38,6 +38,7 @@ import {
   ftsMatch,
   ftsRank,
   searchScore,
+  tsQuery,
 } from "../../../common/utils/fts";
 import {
   getAnonymizedAvatarUrl,
@@ -203,10 +204,19 @@ function resourceCountSql(database: DatabaseInstance, userId: string | undefined
 }
 
 /**
- * The type as a user would type it: stored `research_institute`, shown "Research
- * institute". Normalized on both sides so either spelling matches.
+ * Search aliases for every organization type label shown by the supported locales.
+ * The compact spellings cover punctuated input after {@link tsQuery} sanitizes it
+ * (`non-profit` becomes `nonprofit:*`). A tsvector match keeps partial words useful
+ * while preventing arbitrary mid-word fragments such as `ate` → `private`.
  */
-const ORGANIZATION_TYPE_TEXT: SQL<string> = sql<string>`replace(${organizations.type}::text, '_', ' ')`;
+const ORGANIZATION_TYPE_SEARCH_TEXT: SQL<string> = sql<string>`(CASE ${organizations.type}
+  WHEN 'research_institute' THEN 'research institute Forschungsinstitut Onderzoeksinstituut'
+  WHEN 'non_profit' THEN 'non profit nonprofit Gemeinnützige Organisation'
+  WHEN 'private_company' THEN 'private company Privatunternehmen Particulier bedrijf'
+  WHEN 'government_agency' THEN 'government agency Behörde Overheidsinstantie'
+  WHEN 'university' THEN 'university Universität Universiteit'
+  ELSE ''
+END)`;
 
 /** Profile columns every people-shaped read in this domain selects. */
 const personFields = {
@@ -495,7 +505,9 @@ export class OrganizationRepository {
       return { match: undefined, score: sql<number>`0::int` };
     }
 
-    const typeMatch = ilike(ORGANIZATION_TYPE_TEXT, `%${escapeLike(search.replace(/_/g, " "))}%`);
+    const typeMatch = sql`to_tsvector('english', ${ORGANIZATION_TYPE_SEARCH_TEXT}) @@ ${tsQuery(
+      search.replace(/_/g, " "),
+    )}`;
     const memberMatch = this.memberNameMatch(userId, search);
     const teamMatch = this.teamNameMatch(userId, search);
 
@@ -565,7 +577,7 @@ export class OrganizationRepository {
           and(
             eq(organizationMembers.organizationId, organizations.id),
             eq(organizationMembers.userId, userId),
-            eq(organizationMembers.role, "owner"),
+            orgRoleIncludes(organizationMembers.role, ["owner"]),
           ),
         ),
     );
@@ -791,8 +803,20 @@ export class OrganizationRepository {
  * and admins both can — admins run the membership surface.
  */
 function orgRoleDecides(roleRef: typeof organizationMembers.role): SQL {
+  return orgRoleIncludes(roleRef, ["owner", "admin"]);
+}
+
+/** Better Auth may persist more than one role as a comma-separated string. */
+function orgRoleIncludes(
+  roleRef: typeof organizationMembers.role,
+  acceptedRoles: readonly string[],
+): SQL {
+  const acceptedRoleList = sql.join(
+    acceptedRoles.map((role) => sql`${role}`),
+    sql`, `,
+  );
   return sql`EXISTS (
     SELECT 1 FROM unnest(string_to_array(${roleRef}, ',')) AS role_token
-    WHERE trim(role_token) IN ('owner', 'admin')
+    WHERE trim(role_token) IN (${acceptedRoleList})
   )`;
 }

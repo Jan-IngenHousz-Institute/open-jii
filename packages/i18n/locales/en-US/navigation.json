@@ -58,7 +58,8 @@
     "placeholder": "Search pages and actions...",
     "groups": {
       "pages": "Pages",
-      "actions": "Actions"
+      "actions": "Actions",
+      "searchResults": "Search results"
     },
     "entries": {
       "home": "Home",

@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { env } from "~/env";
 
-import type { SearchResult, SearchResultType } from "@repo/api/domains/search/search.schema";
+import type { SearchResult } from "@repo/api/domains/search/search.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   CommandDialog,
@@ -35,14 +35,6 @@ interface PaletteEntry {
   shortcut?: string;
   run: () => void;
 }
-
-const RESULT_GROUPS: { type: SearchResultType; headingKey: string }[] = [
-  { type: "experiment", headingKey: "commandPalette.results.experiments" },
-  { type: "protocol", headingKey: "commandPalette.results.protocols" },
-  { type: "macro", headingKey: "commandPalette.results.macros" },
-  { type: "workbook", headingKey: "commandPalette.results.workbooks" },
-  { type: "organization", headingKey: "commandPalette.results.organizations" },
-];
 
 export function CommandPalette({ locale }: { locale: string }) {
   const [open, setOpen] = React.useState(false);
@@ -190,18 +182,6 @@ export function CommandPalette({ locale }: { locale: string }) {
   const pages = entries.filter((e) => e.group === "pages" && matchesQuery(t(e.labelKey)));
   const actions = entries.filter((e) => e.group === "actions" && matchesQuery(t(e.labelKey)));
 
-  const resultsByType = React.useMemo(() => {
-    const groups: Record<SearchResultType, SearchResult[]> = {
-      experiment: [],
-      protocol: [],
-      macro: [],
-      workbook: [],
-      organization: [],
-    };
-    for (const result of results) groups[result.type].push(result);
-    return groups;
-  }, [results]);
-
   const onSelectResult = React.useCallback(
     (result: SearchResult) => {
       switch (result.type) {
@@ -282,19 +262,15 @@ export function CommandPalette({ locale }: { locale: string }) {
             <>
               {hasStaticEntries && <CommandSeparator />}
               {showSearchResults ? (
-                RESULT_GROUPS.map(({ type, headingKey }) =>
-                  resultsByType[type].length > 0 ? (
-                    <CommandGroup key={type} heading={t(headingKey)}>
-                      {resultsByType[type].map((result) => (
-                        <SearchResultItem
-                          key={`${result.type}:${result.id}`}
-                          result={result}
-                          onSelect={onSelectResult}
-                        />
-                      ))}
-                    </CommandGroup>
-                  ) : null,
-                )
+                <CommandGroup heading={t("commandPalette.groups.searchResults")}>
+                  {results.map((result) => (
+                    <SearchResultItem
+                      key={`${result.type}:${result.id}`}
+                      result={result}
+                      onSelect={onSelectResult}
+                    />
+                  ))}
+                </CommandGroup>
               ) : (
                 // No results to list — center the status message in whatever space is left so it
                 // doesn't cling to the static entries above it.

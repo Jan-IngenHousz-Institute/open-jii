@@ -1,5 +1,8 @@
+import { ANONYMOUS_PRINCIPAL, withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
+
+import { useSession } from "@repo/auth/client";
 
 import { useDebounce } from "./useDebounce";
 
@@ -15,20 +18,30 @@ const DEFAULT_LIMIT = 20;
  * loading state. Previous results are kept while the next query loads to avoid flicker.
  */
 export function useGlobalSearch(query: string, limit = DEFAULT_LIMIT) {
+  const { data: session, isPending: isSessionPending } = useSession();
+  const userId = session?.user.id;
+  const principal = userId ?? ANONYMOUS_PRINCIPAL;
   const trimmed = query.trim();
   const [debouncedQuery, isDebounced] = useDebounce(trimmed, SEARCH_DEBOUNCE_MS);
   const enabled = debouncedQuery.length >= MIN_QUERY_LENGTH;
+  const input = { query: debouncedQuery, limit };
 
   const result = useQuery(
     orpc.search.globalSearch.queryOptions({
-      input: { query: debouncedQuery, limit },
-      enabled,
-      placeholderData: (prev) => prev,
+      input,
+      queryKey: withPrincipal(orpc.search.globalSearch.queryKey({ input }), userId),
+      enabled: enabled && !isSessionPending,
+      meta: { principal },
+      // Keep a settled result while the same person types the next term, but never
+      // carry private results through a sign-out/sign-in transition.
+      placeholderData: (previous, previousQuery) =>
+        previousQuery?.meta?.principal === principal ? previous : undefined,
     }),
   );
 
   const isSearching =
-    trimmed.length >= MIN_QUERY_LENGTH && (!isDebounced || (enabled && result.isFetching));
+    trimmed.length >= MIN_QUERY_LENGTH &&
+    (!isDebounced || (enabled && !isSessionPending && result.isFetching));
 
   return {
     ...result,

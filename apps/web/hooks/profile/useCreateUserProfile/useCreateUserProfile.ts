@@ -14,8 +14,9 @@ export const useCreateUserProfile = (props: CreateUserProfileProps) => {
         if (props.onSuccess) await props.onSuccess();
       },
       onSettled: async () => {
-        // Ensure any component reading the user profile refetches and gets the latest data
+        // A profile name is also part of organization global search for fellow members.
         await queryClient.invalidateQueries({ queryKey: orpc.users.getUserProfile.key() });
+        await queryClient.invalidateQueries({ queryKey: orpc.search.globalSearch.key() });
       },
     }),
   );

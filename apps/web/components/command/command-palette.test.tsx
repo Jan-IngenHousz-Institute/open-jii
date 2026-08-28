@@ -130,10 +130,17 @@ describe("CommandPalette", () => {
     expect(screen.queryByText("commandPalette.entries.home")).not.toBeInTheDocument();
   });
 
-  it("renders grouped server results and navigates to a selected one", async () => {
+  it("renders server results in backend rank order and navigates to a selected one", async () => {
     mockSearch({
       enabled: true,
       results: [
+        {
+          type: "organization",
+          id: "44444444-4444-4444-4444-444444444444",
+          title: "Photosynthesis Lab",
+          subtitle: null,
+          meta: "research_institute",
+        },
         {
           type: "experiment",
           id: "11111111-1111-1111-1111-111111111111",
@@ -155,13 +162,6 @@ describe("CommandPalette", () => {
           subtitle: null,
           meta: null,
         },
-        {
-          type: "organization",
-          id: "44444444-4444-4444-4444-444444444444",
-          title: "Photosynthesis Lab",
-          subtitle: null,
-          meta: "research_institute",
-        },
       ],
     });
     const user = userEvent.setup();
@@ -170,14 +170,15 @@ describe("CommandPalette", () => {
     const input = await screen.findByPlaceholderText("commandPalette.placeholder");
     await user.type(input, "photo");
 
-    expect(await screen.findByText("Photosynthesis trial")).toBeInTheDocument();
+    const organization = await screen.findByText("Photosynthesis Lab");
+    const experiment = screen.getByText("Photosynthesis trial");
+    expect(
+      organization.compareDocumentPosition(experiment) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    expect(experiment).toBeInTheDocument();
     expect(screen.getByText("Photosynthesis protocol")).toBeInTheDocument();
     expect(screen.getByText("Photosynthesis workbook")).toBeInTheDocument();
-    expect(screen.getByText("Photosynthesis Lab")).toBeInTheDocument();
-    expect(screen.getByText("commandPalette.results.experiments")).toBeInTheDocument();
-    expect(screen.getByText("commandPalette.results.protocols")).toBeInTheDocument();
-    expect(screen.getByText("commandPalette.results.workbooks")).toBeInTheDocument();
-    expect(screen.getByText("commandPalette.results.organizations")).toBeInTheDocument();
+    expect(screen.getByText("commandPalette.groups.searchResults")).toBeInTheDocument();
 
     await user.click(screen.getByText("Photosynthesis workbook"));
     expect(router.push).toHaveBeenCalledWith(

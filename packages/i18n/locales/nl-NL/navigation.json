@@ -54,7 +54,8 @@
     "placeholder": "Pagina's en acties zoeken...",
     "groups": {
       "pages": "Pagina's",
-      "actions": "Acties"
+      "actions": "Acties",
+      "searchResults": "Zoekresultaten"
     },
     "entries": {
       "home": "Home",
