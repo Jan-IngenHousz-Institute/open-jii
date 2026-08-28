@@ -50,6 +50,7 @@ import type {
   FilterCondition,
   QueryParams,
 } from "./services/query-builder/query-builder.types";
+import { cellNumber, cellString, cellUtcIso } from "./services/sql/cell-values";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData } from "./services/sql/sql.types";
 
@@ -1226,27 +1227,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     return success({ rows: result.value.rows, index: this.columnIndex(result.value.columns) });
   }
 
-  private metricString(value: string | null | undefined): string | null {
-    return value == null || value.trim() === "" ? null : value;
-  }
-
-  /** Number("") is 0; a blank cell must read as absent, never as zero. */
-  private metricNumber(value: string | null | undefined): number | null {
-    return this.toNumberOrNull(this.metricString(value));
-  }
-
-  /** Warehouse timestamps arrive zone-less but are UTC ("2026-08-28 10:00:00");
-   * anchor before ISO. Any other shape reads as absent rather than mis-zoned. */
-  private toUtcIsoOrNull(raw: string | null | undefined): string | null {
-    if (!raw) {
-      return null;
-    }
-    const withT = raw.replace(" ", "T");
-    const candidate = withT.endsWith("Z") ? withT : `${withT}Z`;
-    const parsed = new Date(candidate);
-    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-  }
-
   async getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>> {
     const result = await this.readMetricsTable("platform_totals", { limit: 1 });
     if (result.isFailure()) {
@@ -1259,20 +1239,20 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const row = rows[0];
-    const totalMeasurements = this.metricNumber(row[index.total_measurements]);
+    const totalMeasurements = cellNumber(row[index.total_measurements]);
     if (totalMeasurements === null) {
       return success(null);
     }
 
     return success({
       totalMeasurements,
-      totalUploadedRows: this.metricNumber(row[index.total_uploaded_rows]) ?? 0,
-      totalMacroExecutions: this.metricNumber(row[index.total_macro_executions]) ?? 0,
-      devicesAllTime: this.metricNumber(row[index.devices_all_time]) ?? 0,
-      experimentsWithData: this.metricNumber(row[index.experiments_with_data]) ?? 0,
-      firstMeasurementAt: this.toUtcIsoOrNull(row[index.first_measurement_at]),
-      lastMeasurementAt: this.toUtcIsoOrNull(row[index.last_measurement_at]),
-      computedAt: this.toUtcIsoOrNull(row[index.computed_at]),
+      totalUploadedRows: cellNumber(row[index.total_uploaded_rows]) ?? 0,
+      totalMacroExecutions: cellNumber(row[index.total_macro_executions]) ?? 0,
+      devicesAllTime: cellNumber(row[index.devices_all_time]) ?? 0,
+      experimentsWithData: cellNumber(row[index.experiments_with_data]) ?? 0,
+      firstMeasurementAt: cellUtcIso(row[index.first_measurement_at]),
+      lastMeasurementAt: cellUtcIso(row[index.last_measurement_at]),
+      computedAt: cellUtcIso(row[index.computed_at]),
     });
   }
 
@@ -1291,7 +1271,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return success(null);
     }
 
-    return success(this.metricNumber(rows[0][index.total_volume_bytes]));
+    return success(cellNumber(rows[0][index.total_volume_bytes]));
   }
 
   async getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>> {
@@ -1307,10 +1287,10 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const { rows, index } = result.value;
     const mapped = rows
       .map((row) => ({
-        date: this.metricString(row[index.date]),
-        measurements: this.metricNumber(row[index.measurements]),
-        cumulativeMeasurements: this.metricNumber(row[index.cumulative_measurements]),
-        volumeBytes: this.metricNumber(row[index.volume_bytes]),
+        date: cellString(row[index.date]),
+        measurements: cellNumber(row[index.measurements]),
+        cumulativeMeasurements: cellNumber(row[index.cumulative_measurements]),
+        volumeBytes: cellNumber(row[index.volume_bytes]),
       }))
       .filter(
         (row): row is DailyActivityRow =>
@@ -1336,8 +1316,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const { rows, index } = result.value;
     const mapped = rows
       .map((row) => ({
-        family: this.metricString(row[index.family]),
-        measurements: this.metricNumber(row[index.total_measurements]),
+        family: cellString(row[index.family]),
+        measurements: cellNumber(row[index.total_measurements]),
       }))
       .filter((row): row is FamilyTotalsRow => row.family !== null && row.measurements !== null);
 
@@ -1357,10 +1337,10 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const row = rows[0];
-    const measurements24h = this.metricNumber(row[index.measurements_24h]);
-    const measurements30d = this.metricNumber(row[index.measurements_30d]);
-    const experiments30d = this.metricNumber(row[index.experiments_30d]);
-    const contributors30d = this.metricNumber(row[index.contributors_30d]);
+    const measurements24h = cellNumber(row[index.measurements_24h]);
+    const measurements30d = cellNumber(row[index.measurements_30d]);
+    const experiments30d = cellNumber(row[index.experiments_30d]);
+    const contributors30d = cellNumber(row[index.contributors_30d]);
     if (
       measurements24h === null ||
       measurements30d === null ||
@@ -1375,9 +1355,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       measurements30d,
       experiments30d,
       contributors30d,
-      devices30d: this.metricNumber(row[index.devices_30d]) ?? 0,
-      lastMeasurementAt: this.toUtcIsoOrNull(row[index.last_measurement_at]),
-      computedAt: this.toUtcIsoOrNull(row[index.computed_at]),
+      devices30d: cellNumber(row[index.devices_30d]) ?? 0,
+      lastMeasurementAt: cellUtcIso(row[index.last_measurement_at]),
+      computedAt: cellUtcIso(row[index.computed_at]),
     });
   }
 
@@ -1393,8 +1373,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const { rows, index } = result.value;
     const mapped = rows
       .map((row) => ({
-        hourLocal: this.metricNumber(row[index.hour_local]),
-        measurements: this.metricNumber(row[index.measurements]),
+        hourLocal: cellNumber(row[index.hour_local]),
+        measurements: cellNumber(row[index.measurements]),
       }))
       .filter(
         (row): row is HourlyActivityRow =>
@@ -1426,9 +1406,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const row = rows[0];
-    const name = this.metricString(row[index.parameter]);
-    const count30d = this.metricNumber(row[index.count_30d]);
-    const median = this.metricNumber(row[index.median_value]);
+    const name = cellString(row[index.parameter]);
+    const count30d = cellNumber(row[index.count_30d]);
+    const median = cellNumber(row[index.median_value]);
     if (name === null || count30d === null || median === null) {
       return success(null);
     }
@@ -1449,11 +1429,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     const row = rows[0];
     return success({
-      sessionMedianMeasurements: this.metricNumber(row[index.session_median_measurements]),
-      deviceEnduranceDays: this.metricNumber(row[index.device_endurance_days]),
-      simultaneityPeakDevices: this.metricNumber(row[index.simultaneity_peak_devices]),
-      timezonesAllTime: this.metricNumber(row[index.timezones_all_time]),
-      timezonesPeakDay: this.metricNumber(row[index.timezones_peak_day]),
+      sessionMedianMeasurements: cellNumber(row[index.session_median_measurements]),
+      deviceEnduranceDays: cellNumber(row[index.device_endurance_days]),
+      simultaneityPeakDevices: cellNumber(row[index.simultaneity_peak_devices]),
+      timezonesAllTime: cellNumber(row[index.timezones_all_time]),
+      timezonesPeakDay: cellNumber(row[index.timezones_peak_day]),
     });
   }
 
@@ -1475,9 +1455,9 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const { rows, index } = result.value;
     const mapped = rows
       .map((row) => ({
-        date: this.metricString(row[index.date]),
-        experimentId: this.metricString(row[index.experiment_id]),
-        measurements: this.metricNumber(row[index.measurements]),
+        date: cellString(row[index.date]),
+        experimentId: cellString(row[index.experiment_id]),
+        measurements: cellNumber(row[index.measurements]),
       }))
       .filter(
         (row): row is ScopedDailyRow =>
@@ -1497,8 +1477,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const { rows, index } = result.value;
     const mapped = rows
       .map((row) => ({
-        experimentId: this.metricString(row[index.experiment_id]),
-        userId: this.metricString(row[index.user_id]),
+        experimentId: cellString(row[index.experiment_id]),
+        userId: cellString(row[index.user_id]),
       }))
       .filter((row): row is ContributorPairRow => row.experimentId !== null && row.userId !== null);
 
