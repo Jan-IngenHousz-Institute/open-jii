@@ -1,12 +1,15 @@
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import type { Cache } from "cache-manager";
 
+import type { CachePort as MacroCachePort } from "../../../macros/core/ports/cache.port";
+import { CACHE_PORT as MACRO_CACHE_PORT } from "../../../macros/core/ports/cache.port";
+import type { CachePort as MetricsCachePort } from "../../../metrics/core/ports/cache.port";
+import { CACHE_PORT as METRICS_CACHE_PORT } from "../../../metrics/core/ports/cache.port";
 import { TestHarness } from "../../../test/test-harness";
-import { CacheAdapter } from "./cache.adapter";
 
 describe("CacheAdapter", () => {
   const testApp = TestHarness.App;
-  let cacheAdapter: CacheAdapter;
+  let cacheAdapter: MacroCachePort;
   let cacheManager: Cache;
 
   beforeAll(async () => {
@@ -15,7 +18,7 @@ describe("CacheAdapter", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    cacheAdapter = testApp.module.get(CacheAdapter);
+    cacheAdapter = testApp.module.get<MacroCachePort>(MACRO_CACHE_PORT);
     cacheManager = testApp.module.get(CACHE_MANAGER);
   });
 
@@ -155,6 +158,45 @@ describe("CacheAdapter", () => {
 
     it("should not throw when invalidating a non-existent key", async () => {
       await expect(cacheAdapter.invalidate("non-existent")).resolves.toBeUndefined();
+    });
+  });
+
+  describe("metrics namespace", () => {
+    let metricsCache: MetricsCachePort;
+
+    beforeEach(() => {
+      metricsCache = testApp.module.get<MetricsCachePort>(METRICS_CACHE_PORT);
+    });
+
+    it("stores results under the metrics prefix, separate from the macro namespace", async () => {
+      const fetchFn = vi.fn().mockResolvedValue({ registeredUsers: 5 });
+
+      const result = await metricsCache.tryCache("miss-key", fetchFn);
+
+      expect(result).toEqual({ registeredUsers: 5 });
+      expect(await cacheManager.get("metrics:miss-key")).toEqual({ registeredUsers: 5 });
+      expect(await cacheManager.get("macro:miss-key")).toBeUndefined();
+    });
+
+    it("returns the cached value without calling fetchFn on a hit", async () => {
+      await cacheManager.set("metrics:hit-key", { registeredUsers: 7 });
+      const fetchFn = vi.fn();
+
+      const result = await metricsCache.tryCache("hit-key", fetchFn);
+
+      expect(result).toEqual({ registeredUsers: 7 });
+      expect(fetchFn).not.toHaveBeenCalled();
+    });
+
+    it("invalidates so the next read fetches again", async () => {
+      await cacheManager.set("metrics:inv-key", { registeredUsers: 7 });
+
+      await metricsCache.invalidate("inv-key");
+
+      const fetchFn = vi.fn().mockResolvedValue({ registeredUsers: 9 });
+      const result = await metricsCache.tryCache("inv-key", fetchFn);
+      expect(result).toEqual({ registeredUsers: 9 });
+      expect(fetchFn).toHaveBeenCalledTimes(1);
     });
   });
 });

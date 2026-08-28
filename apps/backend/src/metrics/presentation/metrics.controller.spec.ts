@@ -3,11 +3,12 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 import { zPublicMetricsResponse } from "@repo/api/domains/metrics/metrics.schema";
 
-import { MetricsCacheAdapter } from "../../common/modules/cache/metrics-cache.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { PUBLIC_METRICS_CACHE_KEY } from "../application/use-cases/get-public-metrics/get-public-metrics";
+import { CACHE_PORT } from "../core/ports/cache.port";
+import type { CachePort } from "../core/ports/cache.port";
 
 describe("MetricsController", () => {
   const testApp = TestHarness.App;
@@ -20,7 +21,7 @@ describe("MetricsController", () => {
     await testApp.beforeEach();
 
     // The snapshot key is shared, so each test starts from a cold cache.
-    await testApp.module.get(MetricsCacheAdapter).invalidate(PUBLIC_METRICS_CACHE_KEY);
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(PUBLIC_METRICS_CACHE_KEY);
 
     const adapter = testApp.module.get(DatabricksAdapter);
     const warehouseDown = failure(AppError.internal("warehouse down"));

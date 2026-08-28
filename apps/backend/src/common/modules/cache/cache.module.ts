@@ -1,9 +1,6 @@
 import { CacheModule as NestCacheModule } from "@nestjs/cache-manager";
 import { Module } from "@nestjs/common";
 
-import { CacheAdapter } from "./cache.adapter";
-import { MetricsCacheAdapter } from "./metrics-cache.adapter";
-
 /**
  * Shared cache module wrapping @nestjs/cache-manager.
  *
@@ -18,7 +15,6 @@ import { MetricsCacheAdapter } from "./metrics-cache.adapter";
       max: 500, // max entries in memory
     }),
   ],
-  providers: [CacheAdapter, MetricsCacheAdapter],
-  exports: [NestCacheModule, CacheAdapter, MetricsCacheAdapter],
+  exports: [NestCacheModule],
 })
 export class CacheModule {}

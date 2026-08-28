@@ -1,7 +1,8 @@
-import { MetricsCacheAdapter } from "../../../../common/modules/cache/metrics-cache.adapter";
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { CACHE_PORT } from "../../../core/ports/cache.port";
+import type { CachePort } from "../../../core/ports/cache.port";
 import { GetScopedMetricsUseCase } from "./get-scoped-metrics";
 
 const windows = {
@@ -45,7 +46,7 @@ describe("GetScopedMetricsUseCase", () => {
     });
     orgExperimentId = experiment.id;
 
-    const cache = testApp.module.get(MetricsCacheAdapter);
+    const cache = testApp.module.get<CachePort>(CACHE_PORT);
     await cache.invalidate(`scoped-org-${organizationId}`);
     await cache.invalidate(`scoped-user-${userId}`);
 

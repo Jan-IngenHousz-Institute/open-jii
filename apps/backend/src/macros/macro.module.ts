@@ -1,4 +1,6 @@
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Module } from "@nestjs/common";
+import type { Cache } from "cache-manager";
 
 // Adapters
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
@@ -45,7 +47,9 @@ import { MacroController } from "./presentation/macro.controller";
     },
     {
       provide: CACHE_PORT,
-      useExisting: CacheAdapter,
+      useFactory: (cache: Cache) =>
+        new CacheAdapter(cache, { prefix: "macro:", ttlMs: 5 * 60 * 1000 }),
+      inject: [CACHE_MANAGER],
     },
 
     // Repositories
