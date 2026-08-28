@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useWebAuthnSupport } from "~/hooks/auth/useWebAuthnSupport/useWebAuthnSupport";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -108,9 +109,9 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
       {/* Divider */}
       {!showOTP && oauthProviders.length > 0 && (
         <div className="my-8 flex items-center">
-          <div className="border-surface flex-1 border-t" />
+          <div className="border-border flex-1 border-t" />
           <span className="bg-card text-muted-foreground mx-2 px-2 text-sm">{t("auth.or")}</span>
-          <div className="border-surface flex-1 border-t" />
+          <div className="border-border flex-1 border-t" />
         </div>
       )}
 
@@ -136,9 +137,9 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
           {t("auth.continueTermsPrefix")}{" "}
           <Dialog>
             <DialogTrigger asChild>
-              <button type="button" className="cursor-pointer underline">
+              <Button type="button" variant="link" className="h-auto p-0 text-xs">
                 {t("auth.terms")}
-              </button>
+              </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>

@@ -15,6 +15,7 @@ import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useE
 
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -90,21 +91,20 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           </Button>
         </div>
 
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
-            <BarChart3 className="text-muted-foreground h-12 w-12" />
-          </div>
-          <p className="text-muted-foreground mb-4 text-center text-sm">
-            {t("experimentData.noData")}
-          </p>
-          <Link
-            href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/measuring/taking-measurements`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="muted">{t("experimentData.readMore")}</Button>
-          </Link>
-        </div>
+        <EmptyState
+          size="page"
+          icon={<BarChart3 />}
+          description={t("experimentData.noData")}
+          action={
+            <Link
+              href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/measuring/taking-measurements`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="secondary">{t("experimentData.readMore")}</Button>
+            </Link>
+          }
+        />
 
         <UploadDataModal
           experimentId={id}

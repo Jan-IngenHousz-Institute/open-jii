@@ -55,7 +55,7 @@ function relativeTime(iso: string) {
 function StatusPill({ status }: { status: ActivityJobStatus }) {
   if (status === "running") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-[hsl(180_100%_18.4%)] dark:text-[hsl(136_74%_58%)]">
+      <span className="text-primary inline-flex items-center gap-1 text-xs font-medium">
         <Loader2 className="size-3 animate-spin" />
         Running
       </span>
@@ -63,7 +63,7 @@ function StatusPill({ status }: { status: ActivityJobStatus }) {
   }
   if (status === "succeeded") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-[hsl(136_50%_35%)] dark:text-[hsl(136_74%_58%)]">
+      <span className="text-status-active-foreground inline-flex items-center gap-1 text-xs font-medium">
         <CheckCircle2 className="size-3" />
         Succeeded
       </span>
@@ -202,35 +202,36 @@ export function ActivityPopover({ className }: { className?: string }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-sm"
           aria-label={`Activity${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
-          className={cn(
-            "text-foreground/70 hover:bg-foreground/5 hover:text-foreground focus-visible:ring-ring focus-visible:outline-hidden relative inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:ring-2",
-            className,
-          )}
+          className={cn("text-foreground/70 hover:text-foreground relative", className)}
         >
           <Bell className="size-[18px]" />
           {(unreadCount > 0 || hasInvitations) && (
             <span
               aria-hidden="true"
               data-testid="bell-indicator"
-              className="absolute right-1 top-1 size-1.5 rounded-full bg-[hsl(136_74%_58%)]"
+              className="bg-primary absolute right-1 top-1 size-1.5 rounded-full"
             />
           )}
-        </button>
+        </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={6} className="w-[360px] p-0">
+      <PopoverContent align="end" sideOffset={6} collisionPadding={8} className="w-[360px] p-0">
         <InvitationsSection onNavigate={() => setOpen(false)} />
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h3 className="text-sm font-semibold">Activity</h3>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             onClick={markAllRead}
-            className="text-muted-foreground hover:text-foreground text-xs"
+            className="text-muted-foreground hover:text-foreground font-normal"
           >
             Mark all read
-          </button>
+          </Button>
         </div>
         <ScrollArea className="max-h-[400px]">
           {sorted.length === 0 ? (

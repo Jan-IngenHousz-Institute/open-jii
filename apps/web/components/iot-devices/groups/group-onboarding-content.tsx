@@ -292,7 +292,7 @@ export function GroupOnboardingContent() {
                 </div>
 
                 {isOverCap && (
-                  <p className="text-sm text-amber-600">
+                  <p className="text-status-stale-foreground text-sm">
                     {t("iot.groups.onboarding.overCap", { max: MAX_BATCH })}
                   </p>
                 )}

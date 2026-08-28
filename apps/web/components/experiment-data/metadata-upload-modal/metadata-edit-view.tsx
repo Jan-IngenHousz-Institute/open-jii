@@ -358,6 +358,8 @@ export function MetadataEditView({
         </div>
       )}
 
+      {/* A hidden file picker driven by the import button, never rendered
+          visibly — the styled `Input` has nothing to contribute here. */}
       <input
         ref={fileInputRef}
         type="file"

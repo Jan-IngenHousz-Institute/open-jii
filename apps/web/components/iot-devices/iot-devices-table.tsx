@@ -26,7 +26,7 @@ export function IotDevicesTable({ devices, isLoading }: IotDevicesTableProps) {
     <div className="border-border overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
-          <TableRow className="bg-surface-light border-border hover:bg-transparent">
+          <TableRow className="bg-muted border-border hover:bg-transparent">
             <ColumnHead>{t("iot.devices.columns.name")}</ColumnHead>
             <ColumnHead>{t("iot.devices.columns.status")}</ColumnHead>
             <ColumnHead>{t("iot.devices.columns.type")}</ColumnHead>

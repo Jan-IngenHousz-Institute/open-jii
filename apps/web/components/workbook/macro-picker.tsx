@@ -193,7 +193,7 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
                 className="w-full justify-start gap-2 text-sm"
                 onClick={() => setShowCreate(true)}
               >
-                <Plus className="h-4 w-4 text-[#6C5CE7]" />
+                <Plus className="text-node-analysis h-4 w-4" />
                 Create new macro
               </Button>
 
@@ -243,13 +243,14 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
                   </div>
                 ) : macros && macros.length > 0 ? (
                   macros.map((m) => (
-                    <button
+                    <Button
                       type="button"
                       key={m.id}
-                      className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors"
+                      variant="ghost"
+                      className="h-auto w-full justify-start gap-2 px-2 py-1.5 text-left font-normal"
                       onClick={() => handleSelect(m)}
                     >
-                      <Code className="h-3.5 w-3.5 shrink-0 text-[#6C5CE7]" />
+                      <Code className="text-node-analysis h-3.5 w-3.5 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm">{m.name}</p>
                         {m.createdByName && (
@@ -261,7 +262,7 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
                       <Badge variant="outline" className="shrink-0 text-[10px]">
                         {languageLabels[m.language]}
                       </Badge>
-                    </button>
+                    </Button>
                   ))
                 ) : (
                   <p className="text-muted-foreground py-3 text-center text-xs">

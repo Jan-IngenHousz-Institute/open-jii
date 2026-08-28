@@ -7,7 +7,13 @@ import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartSizing } from "./use-is-compact";
-import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import {
+  createBaseLayout,
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  readThemeColor,
+} from "./utils";
 
 export interface DensityPlotProps extends BaseChartProps {
   x: number[];
@@ -41,7 +47,7 @@ export function DensityPlot({
   x,
   y,
   name = "data",
-  color = "rgb(102,0,0)",
+  color = readThemeColor("--chart-1") ?? "rgb(102,0,0)",
   showScatter = false,
   showContours = true,
   showMarginalHistograms = false,
@@ -425,7 +431,8 @@ export function RidgePlot({
           mode: "lines",
           fill: "none",
           line: {
-            color: "rgba(255, 255, 255, 0.3)", // Light white border
+            // The paper colour, so stacked ridges are carved apart in both modes.
+            color: readThemeColor("--card") ?? "rgba(255, 255, 255, 0.3)",
             width: 1,
           },
           visible: series.visible,
@@ -446,7 +453,7 @@ export function RidgePlot({
           fill: "toself",
           fillcolor: fillColor,
           line: {
-            color: "rgba(255, 255, 255, 0.4)", // Light white border
+            color: readThemeColor("--card") ?? "rgba(255, 255, 255, 0.4)",
             width: 1,
           },
           visible: series.visible,

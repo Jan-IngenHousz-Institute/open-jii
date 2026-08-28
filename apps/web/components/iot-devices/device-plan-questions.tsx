@@ -1,17 +1,11 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 
 import type { DeviceAnswer } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
 import { Progress } from "@repo/ui/components/progress";
 
 import type { DevicePlanQuestion } from "./device-plan-question-field";
@@ -114,25 +108,25 @@ export function DevicePlanQuestions({ questions, onAnswersChange }: DevicePlanQu
   }
 
   return (
-    <Card className="shadow-none">
-      <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">{t("iot.onboarding.questionsTitle")}</CardTitle>
-          {required.length > 0 && (
-            <span className="flex items-center gap-2">
-              <Progress value={(answeredRequired / required.length) * 100} className="h-2 w-24" />
-              <span className="text-muted-foreground text-xs tabular-nums">
-                {t("iot.onboarding.answeredOfRequired", {
-                  answered: answeredRequired,
-                  required: required.length,
-                })}
-              </span>
+    <SettingsCard
+      title={t("iot.onboarding.questionsTitle")}
+      description={t("iot.onboarding.questionsDescription")}
+      action={
+        required.length > 0 ? (
+          <span className="flex items-center gap-2">
+            <Progress value={(answeredRequired / required.length) * 100} className="h-2 w-24" />
+            <span className="text-muted-foreground text-xs tabular-nums">
+              {t("iot.onboarding.answeredOfRequired", {
+                answered: answeredRequired,
+                required: required.length,
+              })}
             </span>
-          )}
-        </div>
-        <CardDescription>{t("iot.onboarding.questionsDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">{byExperiment.map(renderExperimentGroup)}</CardContent>
-    </Card>
+          </span>
+        ) : undefined
+      }
+      contentClassName="space-y-6"
+    >
+      {byExperiment.map(renderExperimentGroup)}
+    </SettingsCard>
   );
 }

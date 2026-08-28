@@ -310,7 +310,7 @@ export function GroupCredentialsContent() {
 
               <div className="flex items-center justify-end gap-4">
                 {isOverCap && (
-                  <p className="text-sm text-amber-600">
+                  <p className="text-status-stale-foreground text-sm">
                     {t("iot.groups.credentials.overCap", { max: MAX_BATCH })}
                   </p>
                 )}

@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { PolarPlot } from "../../charts/polar";
 import type { PolarSeriesData } from "../../charts/polar";
+// Mocked above; asserting against it keeps the expectation and the mock in step.
+import { chartGridColor } from "../../charts/utils";
 
 // Mock common utilities
 vi.mock("../../charts/plotly-chart", () => ({
@@ -19,6 +21,8 @@ vi.mock("../../charts/plotly-chart", () => ({
 }));
 
 vi.mock("../../charts/utils", () => ({
+  chartGridColor: vi.fn(() => "#E6E6E6"),
+  readThemeColor: vi.fn(() => undefined),
   createPlotlyConfig: vi.fn((config: any) => ({
     displayModeBar: config.displayModeBar !== false,
     responsive: config.responsive !== false,
@@ -373,7 +377,7 @@ describe("PolarPlot", () => {
       angle: 90,
       side: "clockwise",
       gridcolor: "#E6E6E6",
-      linecolor: "#444",
+      linecolor: chartGridColor(),
       showgrid: true,
       showline: true,
       showticklabels: true,
@@ -435,7 +439,7 @@ describe("PolarPlot", () => {
       rotation: 0,
       period: 360,
       gridcolor: "#E6E6E6",
-      linecolor: "#444",
+      linecolor: chartGridColor(),
       showgrid: true,
       showline: true,
       showticklabels: true,

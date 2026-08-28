@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
-import { cn } from "@repo/ui/lib/utils";
+import { SettingsCard } from "@/components/shared/settings-card";
 
 interface PanelCardProps {
   title: string;
@@ -26,12 +19,13 @@ export function PanelCard({
   children,
 }: PanelCardProps) {
   return (
-    <Card className={cn("shadow-none", className)}>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        {description !== undefined && <CardDescription>{description}</CardDescription>}
-      </CardHeader>
-      <CardContent className={contentClassName}>{children}</CardContent>
-    </Card>
+    <SettingsCard
+      title={title}
+      description={description}
+      className={className}
+      contentClassName={contentClassName}
+    >
+      {children}
+    </SettingsCard>
   );
 }

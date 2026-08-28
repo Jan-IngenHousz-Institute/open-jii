@@ -1,7 +1,7 @@
+import { SettingsCard } from "@/components/shared/settings-card";
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 
 import type { QuestionUI } from "../question-card/question-card";
 import { QuestionCard } from "../question-card/question-card";
@@ -92,28 +92,21 @@ export function QuestionPanel({
 
   const { t } = useTranslation("experiments");
   return (
-    <Card className="mt-6">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-jii-dark-green">{t("questionPanel.title")}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <QuestionCard
-            stepSpecification={stepSpecification}
-            onUpdateText={updateQuestionText}
-            onUpdateAnswerType={updateAnswerType}
-            onToggleRequired={toggleRequired}
-            onAddOption={addOption}
-            onUpdateOption={updateOption}
-            onDeleteOption={deleteOption}
-            onBulkAddOptions={bulkAddOptions}
-            onDeleteAllOptions={deleteAllOptions}
-            disabled={disabled}
-          />
-        </div>
-      </CardContent>
-    </Card>
+    <SettingsCard title={t("questionPanel.title")}>
+      <div className="space-y-4">
+        <QuestionCard
+          stepSpecification={stepSpecification}
+          onUpdateText={updateQuestionText}
+          onUpdateAnswerType={updateAnswerType}
+          onToggleRequired={toggleRequired}
+          onAddOption={addOption}
+          onUpdateOption={updateOption}
+          onDeleteOption={deleteOption}
+          onBulkAddOptions={bulkAddOptions}
+          onDeleteAllOptions={deleteAllOptions}
+          disabled={disabled}
+        />
+      </div>
+    </SettingsCard>
   );
 }

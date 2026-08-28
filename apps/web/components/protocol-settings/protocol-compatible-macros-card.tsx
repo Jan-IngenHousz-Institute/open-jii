@@ -1,9 +1,11 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
-import { getMacroLanguageBadgeColor, getMacroLanguageLabel } from "@/util/macro-language";
+import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, FileCode2, X } from "lucide-react";
 import Link from "next/link";
@@ -12,15 +14,8 @@ import { useMemo, useState } from "react";
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@repo/ui/components/card";
+import { Card } from "@repo/ui/components/card";
 
 import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
@@ -105,10 +100,7 @@ export function ProtocolCompatibleMacrosCard({
       ) : compatibleMacros.length > 0 ? (
         <div className="space-y-3">
           {compatibleMacros.map((entry) => (
-            <div
-              key={entry.macro.id}
-              className="shadow-xs group rounded-lg border border-gray-200 bg-white p-3 transition-shadow hover:shadow-md"
-            >
+            <Card key={entry.macro.id} className="group gap-0 p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex items-center gap-2">
@@ -129,9 +121,9 @@ export function ProtocolCompatibleMacrosCard({
                       <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
                     </Link>
                   </div>
-                  <Badge className={getMacroLanguageBadgeColor(entry.macro.language)}>
+                  <StatusBadge tone={getMacroLanguageBadgeTone(entry.macro.language)}>
                     {getMacroLanguageLabel(entry.macro.language)}
-                  </Badge>
+                  </StatusBadge>
                 </div>
                 <Button
                   variant="ghost"
@@ -143,7 +135,7 @@ export function ProtocolCompatibleMacrosCard({
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       ) : (
@@ -167,12 +159,12 @@ export function ProtocolCompatibleMacrosCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("protocolSettings.compatibleMacros")}</CardTitle>
-        <CardDescription>{t("protocolSettings.compatibleMacrosDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">{content}</CardContent>
-    </Card>
+    <SettingsCard
+      title={t("protocolSettings.compatibleMacros")}
+      description={t("protocolSettings.compatibleMacrosDescription")}
+      contentClassName="space-y-4"
+    >
+      {content}
+    </SettingsCard>
   );
 }

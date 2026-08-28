@@ -3,12 +3,13 @@
 import { ConnectivityDot } from "@/components/iot-devices/device-connectivity";
 import { IotDeviceStatusBadge } from "@/components/iot-devices/iot-device-status-badge";
 import { EntityLink } from "@/components/iot-devices/monitoring/entity-link";
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDateTime, formatRelativeTime } from "@/util/date";
 
 import type { DeviceMonitoring, IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { Card, CardContent } from "@repo/ui/components/card";
 
 import type { LineageNodeModel } from "./build-device-lineage";
 import { lineageNodeTitle } from "./lineage-title";
@@ -40,7 +41,7 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
 
   if (selected === null) {
     return (
-      <Card className="shadow-none">
+      <Card>
         <CardContent className="text-muted-foreground py-8 text-center text-sm">
           {t("iot.devices.lineage.inspectHint")}
         </CardContent>
@@ -219,11 +220,8 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
   }
 
   return (
-    <Card className="shadow-none">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">{lineageNodeTitle(selected, t)}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">{renderDetails(selected)}</CardContent>
-    </Card>
+    <SettingsCard title={lineageNodeTitle(selected, t)} contentClassName="space-y-2">
+      {renderDetails(selected)}
+    </SettingsCard>
   );
 }

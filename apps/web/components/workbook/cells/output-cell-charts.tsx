@@ -3,6 +3,8 @@
 import { X } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import { LineChart } from "@repo/ui/components/charts/line-chart";
 
@@ -34,9 +36,10 @@ export function Sparkline({
   const path = `M ${points}`;
   const interactive = !!onClick;
   return (
-    <button
+    <Button
       type="button"
-      className={`flex items-center gap-2 rounded p-1 text-left transition-colors ${interactive ? "hover:bg-[#EDF2F6]" : "cursor-default"}`}
+      variant="ghost"
+      className={`h-auto justify-start gap-2 p-1 text-left ${interactive ? "hover:bg-muted" : "cursor-default"}`}
       onClick={() => onClick?.(data, columnName)}
       aria-label={interactive ? t("output.expandChart", { column: columnName }) : undefined}
       data-testid={interactive ? `sparkline-${columnName}` : undefined}
@@ -46,14 +49,14 @@ export function Sparkline({
         <path
           d={path}
           fill="none"
-          stroke="#005E5E"
+          stroke="var(--primary)"
           strokeWidth="1"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
       </svg>
-      <span className="text-[10px] tabular-nums text-[#68737B]">n={data.length}</span>
-    </button>
+      <span className="text-muted-foreground text-[10px] tabular-nums">n={data.length}</span>
+    </Button>
   );
 }
 
@@ -73,23 +76,25 @@ export function ExpandedChart({
       x: data.map((_, idx) => idx),
       y: data,
       mode: "lines",
-      line: { color: "#005E5E", width: 2 },
+      line: { color: "var(--primary)", width: 2 },
       showlegend: false,
     },
   ];
   return (
-    <div className="mt-3 overflow-hidden rounded-lg border border-[#EDF2F6] bg-white">
-      <div className="flex items-center justify-between border-b border-[#EDF2F6] bg-[#F7F8FA] px-3 py-1.5">
-        <span className="text-xs font-semibold text-[#011111]">{columnName}</span>
-        <button
+    <Card className="mt-3 gap-0 overflow-hidden py-0">
+      <div className="border-border bg-muted flex items-center justify-between border-b px-3 py-1.5">
+        <span className="text-foreground text-xs font-semibold">{columnName}</span>
+        <Button
           type="button"
-          className="flex size-5 items-center justify-center rounded text-[#68737B] hover:bg-[#EDF2F6]"
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground hover:bg-muted size-5"
           onClick={onClose}
           title={t("output.closeChart")}
           aria-label={t("output.closeChart")}
         >
           <X className="size-3" />
-        </button>
+        </Button>
       </div>
       {/* Plotly renders at ~450px when its container's height isn't propagated through the
           plotly-container div (a quirk of the shared chart wrapper). Match the experiment-data
@@ -100,6 +105,6 @@ export function ExpandedChart({
           config={{ xAxisTitle: "Index", yAxisTitle: columnName, useWebGL: false }}
         />
       </div>
-    </div>
+    </Card>
   );
 }

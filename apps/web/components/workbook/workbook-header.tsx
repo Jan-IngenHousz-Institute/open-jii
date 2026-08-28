@@ -17,6 +17,7 @@ import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { getDeviceTransportSupport } from "@repo/iot";
+import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -262,10 +263,7 @@ export function WorkbookHeader({
   const hasOutputs = cells.some((c) => c.type === "output");
 
   return (
-    <div
-      className="sticky top-16 z-30 flex items-center gap-2 border-b px-4 py-2 xl:gap-3 xl:py-3"
-      style={{ background: "var(--background)", borderColor: "var(--muted)" }}
-    >
+    <div className="bg-card border-border sticky top-16 z-30 flex items-center gap-2 border-b px-4 py-2 xl:gap-3 xl:py-3">
       <div className="flex items-center gap-1.5 xl:gap-2.5">
         {onSensorFamilyChange && (
           <Select
@@ -279,10 +277,7 @@ export function WorkbookHeader({
             }}
             disabled={isConnected || isConnecting}
           >
-            <SelectTrigger
-              className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
-              style={{ borderColor: "var(--border)", borderRadius: 12, color: "var(--foreground)" }}
-            >
+            <SelectTrigger className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -301,10 +296,7 @@ export function WorkbookHeader({
             onValueChange={(v) => onConnectionTypeChange(v as WorkbookConnectionType)}
             disabled={isConnecting}
           >
-            <SelectTrigger
-              className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
-              style={{ borderColor: "var(--border)", borderRadius: 12, color: "var(--foreground)" }}
-            >
+            <SelectTrigger className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -321,10 +313,12 @@ export function WorkbookHeader({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              type="button"
+              variant={isConnected ? "secondary" : "default"}
+              size="sm"
               className={cn(
-                "inline-flex shrink-0 items-center justify-center gap-1.5 text-[12px] font-semibold leading-[18px]",
-                "h-[34px] px-2.5 xl:h-[38px] xl:gap-2 xl:px-3 xl:text-[13px]",
+                "shrink-0",
                 (isConnecting || (!isConnected && !transportSupported)) &&
                   "cursor-not-allowed opacity-50",
               )}
@@ -345,7 +339,7 @@ export function WorkbookHeader({
               <span className="hidden xl:inline">
                 {isConnected ? t("iot.workbookBar.addDevice") : t("iot.workbookBar.connect")}
               </span>
-            </button>
+            </Button>
           </TooltipTrigger>
           {transportTooltip && (
             <TooltipContent>
@@ -366,18 +360,18 @@ export function WorkbookHeader({
       <div className="flex-1" />
 
       {onToggleFlowchart && (
-        <button
-          className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
-          style={
-            flowchartOpen
-              ? { background: "var(--secondary)", borderRadius: 8, color: "var(--primary)" }
-              : { background: "var(--muted)", borderRadius: 8, color: "var(--foreground)" }
-          }
+        <Button
+          type="button"
+          variant="secondary"
+          className={cn(
+            "h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
+            flowchartOpen ? "bg-secondary text-primary" : "bg-muted text-foreground",
+          )}
           onClick={onToggleFlowchart}
         >
           <GitBranch className="size-4" />
           <span className="hidden xl:inline">{t("iot.workbookBar.flow")}</span>
-        </button>
+        </Button>
       )}
 
       <div
@@ -391,18 +385,14 @@ export function WorkbookHeader({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
-            className="hover:bg-muted inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
-            style={{
-              borderColor: "var(--border)",
-              borderRadius: 12,
-              color: "var(--foreground)",
-              background: "var(--background)",
-            }}
+          <Button
+            type="button"
+            variant="outline"
+            className="h-[34px] shrink-0 gap-1.5 rounded-xl px-2.5 text-[12px] font-normal leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]"
           >
             <span className="hidden xl:inline">{t("iot.workbookBar.export")}</span>
             <ChevronDown className="size-3 xl:size-4" />
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuItem onClick={handleExportJSON}>
@@ -421,52 +411,46 @@ export function WorkbookHeader({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <button
+      <Button
+        type="button"
+        variant="secondary"
         className={cn(
-          "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
+          "bg-muted text-foreground h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
           !hasOutputs && "cursor-not-allowed opacity-50",
         )}
-        style={{ background: "var(--muted)", borderRadius: 8, color: "var(--foreground)" }}
         onClick={onClearOutputs}
         disabled={!hasOutputs}
       >
         <Trash2 className="size-4" />
         <span className="hidden xl:inline">{t("iot.workbookBar.clearAll")}</span>
-      </button>
+      </Button>
 
       {/* Only the workbook creator can run cells; the backend rejects updates
           from others, so non-creators don't see the Run all / Stop control. */}
       {!readOnly &&
         (isRunningAll ? (
-          <button
-            className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
-            style={{
-              background: "var(--destructive)",
-              borderRadius: 8,
-              color: "var(--destructive-foreground)",
-            }}
+          <Button
+            type="button"
+            variant="destructive"
+            className="h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]"
             onClick={onStopExecution}
           >
             <Square className="size-4 fill-current" />
             <span className="hidden xl:inline">{t("iot.workbookBar.stop")}</span>
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
+            type="button"
             className={cn(
-              "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
+              "h-[34px] shrink-0 gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold leading-[18px] xl:h-[44px] xl:gap-2 xl:px-4 xl:text-[15px] xl:leading-[20px]",
               cells.length === 0 && "cursor-not-allowed opacity-50",
             )}
-            style={{
-              background: "var(--primary)",
-              borderRadius: 8,
-              color: "var(--primary-foreground)",
-            }}
             onClick={onRunAll}
             disabled={cells.length === 0}
           >
             <Play className="size-4 fill-current" />
             <span className="hidden xl:inline">{t("iot.workbookBar.runAll")}</span>
-          </button>
+          </Button>
         ))}
     </div>
   );

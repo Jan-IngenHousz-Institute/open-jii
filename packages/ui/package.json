@@ -19,6 +19,7 @@
   "scripts": {
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint --config eslint.theme.config.js src",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
     "ui-add": "pnpm dlx shadcn@latest add && prettier src --write --list-different",
     "test": "vitest",

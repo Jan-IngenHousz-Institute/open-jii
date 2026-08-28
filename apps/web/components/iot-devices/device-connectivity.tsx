@@ -33,11 +33,11 @@ export function ConnectivityDot({ connectivity, className }: ConnectivityDotProp
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400",
+          "text-status-active-foreground inline-flex items-center gap-1.5 text-xs",
           className,
         )}
       >
-        <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+        <span className="bg-status-active-foreground h-2 w-2 animate-pulse rounded-full" />
         {t("iot.devices.connectivity.connected")}
       </span>
     );

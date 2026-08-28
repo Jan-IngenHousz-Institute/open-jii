@@ -1,10 +1,10 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
 import type { SearchParamsType } from "@/util/searchParams";
 import { getFirstSearchParam } from "@/util/searchParams";
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import z from "zod";
 import { auth } from "~/app/actions/auth";
+import { AuthBackground } from "~/components/auth/auth-background";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { RegistrationForm } from "~/components/auth/registration-form";
 import { TermsAndConditionsDialog } from "~/components/auth/terms-and-conditions-dialog";
@@ -35,22 +35,12 @@ export default async function UserRegistrationPage(props: {
   // Fetch terms and conditions data
   const termsData = await TermsAndConditionsDialog({ locale });
 
-  // pick random number between 1 and 4
-  const bgIndex = Math.floor(Math.random() * 4) + 1;
-  const bgImage = `/login-background-${bgIndex}.jpg`;
-
   return (
     <>
       {/* Navbar stays sticky on top */}
       <UnifiedNavbar locale={locale} session={session} />
 
-      {/* Fixed full-screen background */}
-      <div className="fixed inset-0 z-0 w-full">
-        <Image src={bgImage} alt="Registration background" fill priority className="object-cover" />
-
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-l from-black via-black/80 to-black/40" />
-      </div>
+      <AuthBackground alt="Registration background" />
 
       {/* Foreground content */}
       <div className="relative z-10 flex h-[calc(100vh-4rem)] w-full items-center">

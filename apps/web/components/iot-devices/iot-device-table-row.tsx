@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 
 import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,13 +120,15 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
         {/* Persistently visible: no hover-only affordances anywhere in the domain. */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               aria-label={t("iot.devices.actions.more")}
-              className="text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground inline-flex size-8 items-center justify-center rounded-md"
+              className="text-muted-foreground data-[state=open]:bg-accent size-8"
             >
               <MoreHorizontal className="size-4" />
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             {renderNextActionItem()}

@@ -1,7 +1,8 @@
 import { CompatibleMacrosCell } from "@/components/overview-table/protocol-macros-cell";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
-import { getSensorFamilyBadgeColor } from "@/util/sensor-family";
+import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
 import Link from "next/link";
 
 import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
@@ -46,9 +47,9 @@ export function getProtocolColumns(
       header: t("protocols.columns.family"),
       className: "w-36",
       cell: (protocol) => (
-        <Badge className={cn(getSensorFamilyBadgeColor(protocol.family), "capitalize")}>
+        <StatusBadge tone={getSensorFamilyBadgeTone(protocol.family)} className="capitalize">
           {protocol.family}
-        </Badge>
+        </StatusBadge>
       ),
     },
     {

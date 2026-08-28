@@ -23,11 +23,11 @@ const COUNTED_STATES: readonly LineageEdgeModel["state"][] = [
 const EDGE_STYLE: Record<LineageEdgeModel["state"], React.CSSProperties> = {
   identity: { stroke: "var(--border)", strokeWidth: 1.5 },
   input: { stroke: "var(--border)", strokeWidth: 1.5 },
-  processing: { stroke: "#6F8596", strokeWidth: 1.5, strokeDasharray: "2 4" },
+  processing: { stroke: "var(--node-instruction)", strokeWidth: 1.5, strokeDasharray: "2 4" },
   active: { stroke: "var(--primary)", strokeWidth: 2 },
   silent: { stroke: "var(--border)", strokeWidth: 1.5, strokeDasharray: "6 4" },
-  unbound: { stroke: "#D97706", strokeWidth: 1.5, strokeDasharray: "6 4" },
-  unattributed: { stroke: "#94A3B8", strokeWidth: 1.5, strokeDasharray: "6 4" },
+  unbound: { stroke: "var(--status-stale-foreground)", strokeWidth: 1.5, strokeDasharray: "6 4" },
+  unattributed: { stroke: "var(--muted-foreground)", strokeWidth: 1.5, strokeDasharray: "6 4" },
 };
 
 interface DeviceLineageFlowProps {
@@ -59,7 +59,7 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
       animated: edge.state === "active",
       label: edgeLabel(edge, locale),
       labelStyle: { fontSize: 11, fill: "var(--muted-foreground)" },
-      labelBgStyle: { fill: "var(--background)", fillOpacity: 0.85 },
+      labelBgStyle: { fill: "var(--card)", fillOpacity: 0.85 },
     }));
 
     return { layoutNodes: layoutLineage(flowNodes), edges: flowEdges };
@@ -79,10 +79,7 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
   };
 
   return (
-    <div
-      className="bg-card h-135 w-full overflow-hidden rounded-lg border"
-      data-testid="lineage-flow"
-    >
+    <div className="h-135 w-full rounded-lg border" data-testid="lineage-flow">
       <ReactFlow
         nodes={nodes}
         edges={edges}

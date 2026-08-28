@@ -9,7 +9,17 @@ import Link from "next/link";
 import * as React from "react";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
-import { Sidebar, SidebarRail, SidebarTrigger } from "@repo/ui/components/sidebar";
+import { Button } from "@repo/ui/components/button";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarRail,
+  SidebarTrigger,
+} from "@repo/ui/components/sidebar";
 
 import { NavItems } from "../nav-items/nav-items";
 import { iconMap } from "../navigation-config";
@@ -63,19 +73,6 @@ export function AppSidebar({
   translations: Translations;
   releaseNotes?: ReleaseNoteFields[];
 }) {
-  // const { toggleSidebar, state } = useSidebar();
-  // const searchInputRef = React.useRef<HTMLInputElement>(null);
-
-  // const handleSearchClick = () => {
-  //   if (state === "collapsed") {
-  //     toggleSidebar();
-  //     // Focus the input after sidebar opens
-  //     setTimeout(() => {
-  //       searchInputRef.current?.focus();
-  //     }, 200);
-  //   }
-  // };
-
   // Convert string-based icons to actual icon components
   type MappedNavItem = Omit<NavigationItem, "icon" | "children"> & {
     icon?: (typeof iconMap)[keyof typeof iconMap];
@@ -88,59 +85,67 @@ export function AppSidebar({
     children: item.children?.map(mapItem),
   });
 
-  const processedNavDashboard = navigationData.navDashboard.map(mapItem);
-  const processedNavExperiments = navigationData.navExperiments.map(mapItem);
-  const processedNavDevices = navigationData.navDevices.map(mapItem);
-  const processedNavWorkbooks = navigationData.navWorkbooks.map(mapItem);
-  const processedNavOrganizations = navigationData.navOrganizations.map(mapItem);
-  const processedNavLibrary = navigationData.navLibrary.map(mapItem);
+  // Kept as six named sections though they render as one flat list: each holds a
+  // single top-level row, so a label would only repeat the row beneath it, and the
+  // docs sidebar this follows separates sections with a label rather than with air.
+  const sections: { key: string; items: MappedNavItem[] }[] = [
+    { key: "dashboard", items: navigationData.navDashboard.map(mapItem) },
+    { key: "experiments", items: navigationData.navExperiments.map(mapItem) },
+    { key: "devices", items: navigationData.navDevices.map(mapItem) },
+    { key: "workbooks", items: navigationData.navWorkbooks.map(mapItem) },
+    { key: "organizations", items: navigationData.navOrganizations.map(mapItem) },
+    { key: "library", items: navigationData.navLibrary.map(mapItem) },
+  ];
 
   return (
-    <Sidebar
-      collapsible="hidden"
-      className="[&_[data-sidebar=sidebar]]:from-sidebar-gradient-from [&_[data-sidebar=sidebar]]:to-sidebar-gradient-to hidden md:flex [&_[data-sidebar=sidebar]]:bg-gradient-to-b"
-      {...props}
-    >
-      <div className="flex h-full flex-col">
-        <div className="flex h-16 items-center justify-between px-4">
-          <Link href={`/${locale}/platform`} className="flex items-center gap-2">
+    <Sidebar collapsible="hidden" className="hidden md:flex" {...props}>
+      <SidebarHeader className="gap-3 p-4 pb-2">
+        {/* SidebarHeader is a column, so the brand row is laid out here. */}
+        <div className="flex items-center gap-2">
+          <Link href={`/${locale}/platform`} className="flex min-w-0 items-center gap-2">
+            <Image
+              src="/openJII_logo_RGB_horizontal_green_yellow_trimmed.svg"
+              alt={translations.logoAlt}
+              width={170}
+              height={50}
+              className="h-7 w-auto dark:hidden"
+            />
             <Image
               src="/openJII_logo_RGB_horizontal_yellow_transparentBG.png"
               alt={translations.logoAlt}
-              width={116}
-              height={34}
-              className="h-auto w-full max-w-[120px]"
+              width={170}
+              height={50}
+              className="hidden h-7 w-auto dark:block"
             />
           </Link>
-          <SidebarTrigger className="bg-jii-dark-green hover:bg-sidebar-trigger-hover flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white" />
+          <SidebarTrigger className="ml-auto shrink-0" />
         </div>
 
-        <div className="px-4 pb-2">
-          <button
-            type="button"
-            onClick={openCommandPalette}
-            aria-label="Open command palette"
-            className="focus-visible:ring-sidebar-ring focus-visible:outline-hidden flex h-9 w-full items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2"
-          >
-            <Search className="size-4 shrink-0" />
-            <span className="flex-1 truncate">Search…</span>
-            <CommandKHint />
-          </button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={openCommandPalette}
+          aria-label="Open command palette"
+          className="border-sidebar-border bg-sidebar-accent/60 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring w-full justify-start gap-2 rounded-lg border p-2 text-left font-normal"
+        >
+          <Search className="size-4 shrink-0" />
+          <span className="flex-1 truncate">Search…</span>
+          <CommandKHint />
+        </Button>
+      </SidebarHeader>
 
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
-          <NavItems items={processedNavDashboard} />
-          <NavItems items={processedNavExperiments} />
-          <NavItems items={processedNavDevices} />
-          <NavItems items={processedNavWorkbooks} />
-          <NavItems items={processedNavOrganizations} />
-          <NavItems items={processedNavLibrary} />
-        </div>
+      {/* The docs sidebar puts its padding on the body and none on the sections. */}
+      <SidebarContent className="p-4 pt-2">
+        <SidebarGroup className="p-0">
+          <SidebarGroupContent>
+            <NavItems items={sections.flatMap((section) => section.items)} />
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
 
-        <div className="border-t border-white/10 px-4 py-2">
-          <WhatsNewFooterItem entries={releaseNotes} />
-        </div>
-      </div>
+      <SidebarFooter className="border-t p-4 pt-2">
+        <WhatsNewFooterItem entries={releaseNotes} />
+      </SidebarFooter>
       <SidebarRail resizable />
     </Sidebar>
   );

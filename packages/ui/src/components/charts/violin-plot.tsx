@@ -15,6 +15,7 @@ import {
   extendLayoutForFacets,
   getPlotType,
   getRenderer,
+  readThemeColor,
 } from "./utils";
 
 export interface ViolinSeriesData extends BaseSeries {
@@ -110,15 +111,19 @@ export function ViolinPlot({
           ? {
               visible: series.box.visible !== false,
               width: series.box.width || 0.25,
-              fillcolor: series.box.fillcolor ?? "rgba(255,255,255,0.9)",
-              line: series.box.line ?? { color: "#444", width: 1 },
+              fillcolor:
+                series.box.fillcolor ?? readThemeColor("--card") ?? "rgba(255,255,255,0.9)",
+              line: series.box.line ?? {
+                color: readThemeColor("--foreground") ?? "#444",
+                width: 1,
+              },
             }
           : { visible: true, width: 0.25 },
 
         meanline: series.meanline
           ? {
               visible: series.meanline.visible !== false,
-              color: series.meanline.color ?? "#222",
+              color: series.meanline.color ?? readThemeColor("--foreground") ?? "#222",
               width: series.meanline.width || 2,
             }
           : { visible: true },

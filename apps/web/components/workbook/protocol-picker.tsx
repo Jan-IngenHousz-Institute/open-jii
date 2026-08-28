@@ -177,7 +177,7 @@ export function ProtocolPicker({
                 className="w-full justify-start gap-2 text-sm"
                 onClick={() => setShowCreate(true)}
               >
-                <Plus className="h-4 w-4 text-[#2D3142]" />
+                <Plus className="text-node-measurement h-4 w-4" />
                 Create new protocol
               </Button>
 
@@ -209,13 +209,14 @@ export function ProtocolPicker({
                   </div>
                 ) : protocols && protocols.length > 0 ? (
                   protocols.map((p) => (
-                    <button
+                    <Button
                       type="button"
                       key={p.id}
-                      className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors"
+                      variant="ghost"
+                      className="h-auto w-full justify-start gap-2 px-2 py-1.5 text-left font-normal"
                       onClick={() => handleSelect(p)}
                     >
-                      <Microscope className="h-3.5 w-3.5 shrink-0 text-[#2D3142]" />
+                      <Microscope className="text-node-measurement h-3.5 w-3.5 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm">{p.name}</p>
                         {p.createdByName && (
@@ -227,7 +228,7 @@ export function ProtocolPicker({
                       <Badge variant="outline" className="shrink-0 text-[10px]">
                         {p.family}
                       </Badge>
-                    </button>
+                    </Button>
                   ))
                 ) : (
                   <p className="text-muted-foreground py-3 text-center text-xs">

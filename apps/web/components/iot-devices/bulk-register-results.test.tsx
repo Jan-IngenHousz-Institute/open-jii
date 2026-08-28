@@ -24,10 +24,10 @@ describe("BulkRegisterResults", () => {
     render(<BulkRegisterResults result={buildResult()} />);
 
     const okRow = screen.getByText("AA:BB:CC:01").closest("li");
-    expect(okRow?.querySelector("svg")).toHaveClass("text-green-600");
+    expect(okRow?.querySelector("svg")).toHaveClass("text-status-active-foreground");
 
     const failedRow = screen.getByText("AA:BB:CC:02").closest("li");
-    expect(failedRow?.querySelector("svg")).toHaveClass("text-amber-600");
+    expect(failedRow?.querySelector("svg")).toHaveClass("text-status-stale-foreground");
     expect(screen.getByText("Already registered")).toBeInTheDocument();
   });
 

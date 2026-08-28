@@ -91,7 +91,7 @@ export function IotProtocolRunner({
     return (
       <Button
         type="button"
-        variant="buttonLink"
+        variant="link"
         size="sm"
         className="w-full"
         onClick={() => {

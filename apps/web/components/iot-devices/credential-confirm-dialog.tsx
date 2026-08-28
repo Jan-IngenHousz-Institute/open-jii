@@ -59,7 +59,9 @@ export function CredentialConfirmDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
-          {warning !== undefined && <p className="text-sm font-medium text-amber-600">{warning}</p>}
+          {warning !== undefined && (
+            <p className="text-status-stale-foreground text-sm font-medium">{warning}</p>
+          )}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{tCommon("common.cancel")}</AlertDialogCancel>

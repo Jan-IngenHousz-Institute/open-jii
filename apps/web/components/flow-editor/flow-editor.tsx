@@ -51,7 +51,7 @@ const nodeTypes = ALL_NODE_TYPES.reduce(
 const edgeTypes = { back: BackEdge };
 
 function lookupAccent(type: string | undefined): string {
-  if (!type || !(type in nodeTypeColorMap)) return "#94A3B8";
+  if (!type || !(type in nodeTypeColorMap)) return "var(--muted-foreground)";
   return nodeTypeColorMap[type as keyof typeof nodeTypeColorMap].accent;
 }
 
@@ -226,7 +226,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           sourceHandle: params.sourceHandle ?? null,
           targetHandle: params.targetHandle ?? null,
           animated: false,
-          markerEnd: { type: MarkerType.ArrowClosed, color: "#CDD5DB" },
+          markerEnd: { type: MarkerType.ArrowClosed, color: "var(--border)" },
         };
         setEdges((eds) => addEdge(newEdge, eds));
       },
@@ -292,10 +292,16 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
           type: edgeType,
           pathOptions: edgeType === "smoothstep" ? { borderRadius: 16 } : undefined,
           animated: false,
-          markerEnd: { type: MarkerType.ArrowClosed, color: pathColor ?? "#94A3B8" },
-          style: { stroke: pathColor ?? "#94A3B8", strokeWidth: pathColor ? 2 : 1.75 },
-          labelStyle: { fill: "#475569", fontSize: 11, fontWeight: 500 },
-          labelBgStyle: { fill: "#FFFFFF", stroke: "#E2E8F0", strokeWidth: 1 },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: pathColor ?? "var(--muted-foreground)",
+          },
+          style: {
+            stroke: pathColor ?? "var(--muted-foreground)",
+            strokeWidth: pathColor ? 2 : 1.75,
+          },
+          labelStyle: { fill: "var(--foreground)", fontSize: 11, fontWeight: 500 },
+          labelBgStyle: { fill: "var(--card)", stroke: "var(--border)", strokeWidth: 1 },
           labelBgPadding: [8, 4] as [number, number],
           labelBgBorderRadius: 6,
         };
@@ -336,7 +342,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
         <div
           className={
             isFullscreen
-              ? "fixed inset-0 z-40 flex h-screen w-screen flex-col overflow-hidden overscroll-contain bg-white p-6"
+              ? "bg-background fixed inset-0 z-40 flex h-screen w-screen flex-col overflow-hidden overscroll-contain p-6"
               : undefined
           }
         >
@@ -357,7 +363,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                     ref={flowAreaRef}
                     className={cn(
                       isFullscreen ? "relative h-full w-full" : "relative h-[700px] w-full",
-                      "bg-slate-50/60",
+                      "bg-muted/60",
                     )}
                     onDragOver={isDisabled ? undefined : (e) => e.preventDefault()}
                     onDrop={isDisabled ? undefined : handleDrop}
@@ -409,14 +415,14 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                         proOptions={{ hideAttribution: true }}
                         defaultEdgeOptions={{
                           type: "smoothstep",
-                          markerEnd: { type: MarkerType.ArrowClosed, color: "#CDD5DB" },
+                          markerEnd: { type: MarkerType.ArrowClosed, color: "var(--border)" },
                         }}
                       >
                         <Background
                           variant={BackgroundVariant.Dots}
                           gap={18}
                           size={1.4}
-                          color="#CBD5E1"
+                          color="var(--border)"
                         />
                         <Controls position="bottom-right" showInteractive={false} />
                         <MiniMap
@@ -424,17 +430,17 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                           pannable
                           zoomable
                           ariaLabel="ExperimentFlow minimap"
-                          maskColor="rgba(241, 245, 249, 0.7)"
+                          maskColor="color-mix(in srgb, var(--muted) 70%, transparent)"
                           nodeStrokeWidth={3}
                           nodeBorderRadius={4}
                           nodeColor={(n) => {
                             const accent = lookupAccent(n.type);
-                            return `color-mix(in srgb, ${accent} 25%, white)`;
+                            return `color-mix(in srgb, ${accent} 25%, var(--card))`;
                           }}
                           nodeStrokeColor={(n) => lookupAccent(n.type)}
                           style={{
-                            backgroundColor: "#FFFFFF",
-                            border: "1px solid #E2E8F0",
+                            backgroundColor: "var(--card)",
+                            border: "1px solid var(--border)",
                             borderRadius: 8,
                             width: 200,
                             height: 130,

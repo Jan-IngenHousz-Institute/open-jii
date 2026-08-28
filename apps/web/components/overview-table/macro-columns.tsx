@@ -1,7 +1,8 @@
 import { CompatibleProtocolsCell } from "@/components/overview-table/macro-protocols-cell";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
-import { getMacroLanguageBadgeColor, getMacroLanguageLabel } from "@/util/macro-language";
+import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
 import Link from "next/link";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
@@ -46,9 +47,9 @@ export function getMacroColumns(
       header: t("macros.columns.language"),
       className: "w-32",
       cell: (macro) => (
-        <Badge className={getMacroLanguageBadgeColor(macro.language)}>
+        <StatusBadge tone={getMacroLanguageBadgeTone(macro.language)}>
           {getMacroLanguageLabel(macro.language)}
-        </Badge>
+        </StatusBadge>
       ),
     },
     {

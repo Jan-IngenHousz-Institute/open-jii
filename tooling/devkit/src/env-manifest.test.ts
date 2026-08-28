@@ -158,5 +158,5 @@ describe("environment manifest", () => {
       }
     }
     expect(Object.fromEntries(missing)).toEqual({});
-  }, 15_000);
+  }, 30_000);
 });

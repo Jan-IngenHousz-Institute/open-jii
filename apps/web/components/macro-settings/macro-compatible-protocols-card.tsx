@@ -1,8 +1,10 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
-import { getSensorFamilyBadgeColor } from "@/util/sensor-family";
+import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
 import { ExternalLink, FileJson2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -10,15 +12,8 @@ import { useMemo, useState } from "react";
 import type { MacroProtocolEntry } from "@repo/api/domains/macro/macro.schema";
 import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@repo/ui/components/card";
+import { Card } from "@repo/ui/components/card";
 
 import { useAddCompatibleProtocol } from "../../hooks/macro/useAddCompatibleProtocol/useAddCompatibleProtocol";
 import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
@@ -96,10 +91,7 @@ export function MacroCompatibleProtocolsCard({
       ) : compatibleProtocols.length > 0 ? (
         <div className="space-y-3">
           {compatibleProtocols.map((entry) => (
-            <div
-              key={entry.protocol.id}
-              className="shadow-xs group rounded-lg border border-gray-200 bg-white p-3 transition-shadow hover:shadow-md"
-            >
+            <Card key={entry.protocol.id} className="group gap-0 p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex items-center gap-2">
@@ -120,11 +112,12 @@ export function MacroCompatibleProtocolsCard({
                       <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
                     </Link>
                   </div>
-                  <Badge
-                    className={`${getSensorFamilyBadgeColor(entry.protocol.family)} capitalize`}
+                  <StatusBadge
+                    tone={getSensorFamilyBadgeTone(entry.protocol.family)}
+                    className="capitalize"
                   >
                     {entry.protocol.family}
-                  </Badge>
+                  </StatusBadge>
                 </div>
                 <Button
                   variant="ghost"
@@ -136,7 +129,7 @@ export function MacroCompatibleProtocolsCard({
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       ) : (
@@ -160,12 +153,12 @@ export function MacroCompatibleProtocolsCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("macroSettings.compatibleProtocols")}</CardTitle>
-        <CardDescription>{t("macroSettings.compatibleProtocolsDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">{content}</CardContent>
-    </Card>
+    <SettingsCard
+      title={t("macroSettings.compatibleProtocols")}
+      description={t("macroSettings.compatibleProtocolsDescription")}
+      contentClassName="space-y-4"
+    >
+      {content}
+    </SettingsCard>
   );
 }

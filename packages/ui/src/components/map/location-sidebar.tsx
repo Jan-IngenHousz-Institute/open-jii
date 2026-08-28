@@ -68,8 +68,8 @@ export const LocationSidebarEntry = ({
     <div
       className={`cursor-pointer rounded-lg border p-4 transition-all duration-200 hover:shadow-md ${
         isSelected
-          ? "border-jii-dark-green bg-jii-dark-green/10 shadow-md"
-          : "border-gray-200 bg-white hover:border-gray-300"
+          ? "border-primary bg-primary/10 shadow-md"
+          : "bg-card hover:border-ring border-border"
       }`}
       onClick={onClick}
     >
@@ -79,28 +79,28 @@ export const LocationSidebarEntry = ({
           <div className="flex items-start gap-2">
             <MapPin
               className={`mt-0.5 h-4 w-4 shrink-0 ${
-                isSelected ? "text-jii-dark-green" : "text-gray-500"
+                isSelected ? "text-primary" : "text-muted-foreground"
               }`}
             />
             <div className="min-w-0 flex-1">
-              <h3 className="truncate font-semibold text-gray-900" title={name}>
+              <h3 className="text-foreground truncate font-semibold" title={name}>
                 {name}
               </h3>
             </div>
           </div>
 
           {/* Location Details */}
-          <div className="mt-2 space-y-1 text-sm text-gray-600">
+          <div className="text-muted-foreground mt-2 space-y-1 text-sm">
             {/* City and Region */}
             {(municipality || region) && (
               <div className="truncate">{[municipality, region].filter(Boolean).join(", ")}</div>
             )}
 
             {/* Country */}
-            {country && <div className="text-xs text-gray-500">{country}</div>}
+            {country && <div className="text-muted-foreground text-xs">{country}</div>}
 
             {/* Coordinates, Distance, and Postal Code */}
-            <div className="flex items-center justify-between pt-1 text-xs text-gray-500">
+            <div className="text-muted-foreground flex items-center justify-between pt-1 text-xs">
               <span className="font-mono">{coordinates}</span>
               <div className="flex items-center gap-2">
                 {showDistance && distance !== undefined && (
@@ -110,7 +110,7 @@ export const LocationSidebarEntry = ({
                   </span>
                 )}
                 {postalCode && (
-                  <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-700">
+                  <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono">
                     {postalCode}
                   </span>
                 )}
@@ -127,7 +127,7 @@ export const LocationSidebarEntry = ({
                 e.stopPropagation();
                 onRemove();
               }}
-              className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-1.5 transition-colors"
               title="Remove location"
             >
               <Trash2 className="h-4 w-4" />
@@ -139,7 +139,7 @@ export const LocationSidebarEntry = ({
                 e.stopPropagation();
                 onNavigate();
               }}
-              className="hover:bg-jii-dark-green/10 hover:text-jii-dark-green rounded p-1.5 text-gray-400 transition-colors"
+              className="hover:bg-primary/10 hover:text-primary text-muted-foreground rounded p-1.5 transition-colors"
               title="Navigate to location"
             >
               <Navigation2 className="h-4 w-4" />
@@ -152,7 +152,7 @@ export const LocationSidebarEntry = ({
               const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
               window.open(url, "_blank");
             }}
-            className="hover:bg-jii-dark-green/10 hover:text-jii-dark-green rounded p-1.5 text-gray-400 transition-colors"
+            className="hover:bg-primary/10 hover:text-primary text-muted-foreground rounded p-1.5 transition-colors"
             title="Open in Google Maps"
           >
             <ExternalLink className="h-4 w-4" />
@@ -187,8 +187,8 @@ export const LocationSidebar = ({
   return (
     <div className={`space-y-3 ${className}`}>
       {locations.length === 0 ? (
-        <div className="p-8 text-center text-gray-500">
-          <MapPin className="mx-auto mb-3 h-12 w-12 text-gray-300" />
+        <div className="text-muted-foreground p-8 text-center">
+          <MapPin className="text-muted-foreground/60 mx-auto mb-3 h-12 w-12" />
           <p className="text-sm">No locations to display</p>
         </div>
       ) : (

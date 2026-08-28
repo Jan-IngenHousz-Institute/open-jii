@@ -174,37 +174,32 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
           )}
 
           {teams.map((team) => (
-            <Link
-              key={team.id}
-              href={organizationTeamPath(locale, organizationId, team.id)}
-              // The platform's card hover, verbatim: every listing card — experiments,
-              // protocols, macros, organizations — lifts and shadows without changing
-              // its border. The design's border tint was prototype styling.
-              className="bg-card shadow-xs flex flex-col gap-3.5 rounded-xl border p-5 transition-all hover:scale-[1.02] hover:shadow-lg"
-            >
-              <div className="min-w-0">
-                <span className="block truncate text-base font-semibold tracking-tight">
-                  {team.name}
-                </span>
-                <span className="text-muted-foreground mt-0.5 block text-xs">
-                  {t("organizations.teams.memberCount", { count: team.members.length })}
-                </span>
-              </div>
+            <Link key={team.id} href={organizationTeamPath(locale, organizationId, team.id)}>
+              <Card interactive className="h-full gap-3.5 p-5">
+                <div className="min-w-0">
+                  <span className="block truncate text-base font-semibold tracking-tight">
+                    {team.name}
+                  </span>
+                  <span className="text-muted-foreground mt-0.5 block text-xs">
+                    {t("organizations.teams.memberCount", { count: team.members.length })}
+                  </span>
+                </div>
 
-              <AvatarStack members={team.members} />
+                <AvatarStack members={team.members} />
 
-              {/* A count of zero is a claim about the team's reach, so an unread grant
+                {/* A count of zero is a claim about the team's reach, so an unread grant
                   list says so instead of making it. */}
-              <div className="text-muted-foreground flex items-center gap-1.5 border-t pt-3 text-xs">
-                <FolderOpen className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                {isGrantsPending ? (
-                  <Skeleton className="h-3 w-24" />
-                ) : isGrantsError ? (
-                  t("organizations.teams.grantCountUnavailable")
-                ) : (
-                  t("organizations.teams.grantCount", { count: grantCounts.get(team.id) ?? 0 })
-                )}
-              </div>
+                <div className="text-muted-foreground flex items-center gap-1.5 border-t pt-3 text-xs">
+                  <FolderOpen className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  {isGrantsPending ? (
+                    <Skeleton className="h-3 w-24" />
+                  ) : isGrantsError ? (
+                    t("organizations.teams.grantCountUnavailable")
+                  ) : (
+                    t("organizations.teams.grantCount", { count: grantCounts.get(team.id) ?? 0 })
+                  )}
+                </div>
+              </Card>
             </Link>
           ))}
         </div>

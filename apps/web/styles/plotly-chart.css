@@ -20,7 +20,7 @@
 .js-plotly-plot .modebar,
 .js-plotly-plot .hovertext,
 .js-plotly-plot .legendtext {
-  font-family: var(--font-inter), Inter, sans-serif !important;
+  font-family: var(--font-sans) !important;
 }
 
 .js-plotly-plot .modebar-container .modebar-btn svg,

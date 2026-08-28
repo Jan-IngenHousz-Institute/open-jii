@@ -12,10 +12,10 @@ import type { OverviewTableColumn } from "./overview-table";
 import { overviewTableText } from "./overview-table";
 
 const STATUS_DOT: Record<ExperimentStatus, string> = {
-  active: "bg-emerald-500",
-  published: "bg-sky-500",
-  stale: "bg-amber-500",
-  archived: "bg-slate-400",
+  active: "bg-status-active-foreground",
+  published: "bg-status-published-foreground",
+  stale: "bg-status-stale-foreground",
+  archived: "bg-status-archived-foreground",
 };
 
 function ownerName(experiment: Experiment): string | null {

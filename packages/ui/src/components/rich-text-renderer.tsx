@@ -176,26 +176,27 @@ export function RichTextRenderer({
           }
 
           .rich-text-renderer a {
-            color: #3b82f6;
+            color: var(--primary);
             text-decoration: underline;
           }
 
           .rich-text-renderer a:hover {
-            color: #1d4ed8;
+            color: var(--primary);
+            opacity: 0.85;
           }
 
           .rich-text-renderer code {
-            background-color: #f3f4f6;
+            background-color: var(--muted);
             padding: 2px 4px;
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;
             font-size: 0.9em;
-            color: black;
+            color: var(--foreground);
           }
 
           .rich-text-renderer pre {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background-color: var(--muted);
+            border: 1px solid var(--border);
             border-radius: 6px;
             padding: 8px;
             margin: 8px 0;
@@ -206,12 +207,12 @@ export function RichTextRenderer({
           }
 
           .rich-text-renderer blockquote {
-            border-left: 3px solid #d1d5db;
+            border-left: 3px solid var(--border);
             margin: 12px 0;
             padding: 8px 12px;
-            color: #6b7280;
+            color: var(--muted-foreground);
             font-style: italic;
-            background-color: #f9fafb;
+            background-color: var(--muted);
             border-radius: 0 4px 4px 0;
           }
 

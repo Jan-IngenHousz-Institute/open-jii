@@ -24,7 +24,7 @@ export function CompatibleProtocolsCell({ macroId }: { macroId: string }) {
       {protocols.map((entry) => (
         <span
           key={entry.protocol.id}
-          className="inline-block max-w-40 truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600"
+          className="bg-muted text-muted-foreground inline-block max-w-40 truncate rounded px-1.5 py-0.5 text-[11px]"
         >
           {entry.protocol.name}
         </span>

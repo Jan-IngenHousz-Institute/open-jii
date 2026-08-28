@@ -62,18 +62,14 @@ export function OwningOrganizationField({
           <h4
             className={
               isMeta
-                ? "text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]"
+                ? "text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]"
                 : "text-sm font-medium"
             }
           >
             {t("organizations.owningOrganization")}
           </h4>
           {canTransfer && (
-            <Button
-              variant="buttonLink"
-              className="h-auto p-0"
-              onClick={() => setIsTransferOpen(true)}
-            >
+            <Button variant="link" className="h-auto p-0" onClick={() => setIsTransferOpen(true)}>
               {t("organizations.transfer.action")}
             </Button>
           )}
@@ -82,7 +78,9 @@ export function OwningOrganizationField({
           organizationId={organizationId}
           organizationName={organizationName}
           className={
-            isMeta ? "text-sm leading-[21px] text-[#68737B]" : "text-muted-foreground text-sm"
+            isMeta
+              ? "text-muted-foreground text-sm leading-[21px]"
+              : "text-muted-foreground text-sm"
           }
         />
       </div>

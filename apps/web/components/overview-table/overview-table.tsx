@@ -40,10 +40,10 @@ interface OverviewTableProps<T> {
   emptyHelpPath?: string;
 }
 
-const HEADER_BG = "bg-[#F6F8FA]";
-const TABLE_BORDER = "border-[#CDD5DB]";
-const TEXT_STRONG = "text-[#011111]";
-const TEXT_MUTED = "text-[#68737B]";
+const HEADER_BG = "bg-muted";
+const TABLE_BORDER = "border-border";
+const TEXT_STRONG = "text-foreground";
+const TEXT_MUTED = "text-muted-foreground";
 
 export const overviewTableText = { strong: TEXT_STRONG, muted: TEXT_MUTED };
 
@@ -136,7 +136,7 @@ export function OverviewTable<T>({
                   <TableRow
                     key={getRowKey(item)}
                     className={cn(
-                      "group cursor-pointer bg-white hover:bg-[#F6F8FA] has-[[data-state=open]]:bg-[#F6F8FA]",
+                      "bg-card hover:bg-muted has-[[data-state=open]]:bg-muted group cursor-pointer",
                       TABLE_BORDER,
                     )}
                     onClick={() => router.push(href)}

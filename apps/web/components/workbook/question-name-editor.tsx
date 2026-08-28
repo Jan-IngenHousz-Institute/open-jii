@@ -64,7 +64,7 @@ export function QuestionNameEditor({
       <PopoverContent className="w-80 p-3" align="start" side="bottom">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <HelpCircle className="size-4 text-[#C58AAE]" />
+            <HelpCircle className="text-node-question size-4" />
             <p className="text-sm font-medium">Rename question</p>
           </div>
           <p className="text-muted-foreground text-xs">

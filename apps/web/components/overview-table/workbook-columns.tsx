@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import type { WorkbookListItem } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
+import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,16 +65,18 @@ function WorkbookActionsCell({ workbook, href }: { workbook: WorkbookListItem; h
     >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label={t("workbooks.actions.more")}
             className={cn(
-              "inline-flex size-8 items-center justify-center rounded-md hover:bg-[#EDF2F6] hover:text-[#011111] data-[state=open]:bg-[#EDF2F6] data-[state=open]:text-[#011111]",
+              "data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
               overviewTableText.muted,
             )}
           >
             <MoreHorizontal className="size-4" />
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem asChild>

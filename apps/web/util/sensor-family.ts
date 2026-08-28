@@ -1,3 +1,5 @@
+import type { StatusTone } from "@/components/shared/status-badge";
+
 import { DEVICE_PROFILES } from "@repo/api/domains/iot/device-profile";
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
@@ -45,19 +47,19 @@ export function getSensorFamilyLabel(family: SensorFamily): string {
 }
 
 /**
- * Badge color class for a sensor family. Unknown values fall back to the
- * neutral badge, so this accepts the raw `family` string carried on a protocol.
+ * Badge tone for a sensor family. Unknown values fall back to the neutral
+ * tone, so this accepts the raw `family` string carried on a protocol.
  */
-export function getSensorFamilyBadgeColor(family: string): string {
+export function getSensorFamilyBadgeTone(family: string): StatusTone {
   switch (family) {
     case "multispeq":
-      return "bg-badge-published";
+      return "published";
     case "ambyte":
     case "ambit":
-      return "bg-badge-active";
+      return "active";
     case "minipar":
-      return "bg-badge-stale";
+      return "stale";
     default:
-      return "bg-badge-archived";
+      return "archived";
   }
 }

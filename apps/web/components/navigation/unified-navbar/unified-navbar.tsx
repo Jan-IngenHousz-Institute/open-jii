@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
+import { ThemeToggle } from "@repo/ui/components/theme";
 
 interface UnifiedNavbarProps {
   locale: string;
@@ -68,21 +69,21 @@ function UserMenu({
         <Button
           variant="ghost"
           size="sm"
-          className="group flex gap-2 hover:bg-transparent focus:bg-transparent"
+          className="group flex gap-2 hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent"
           aria-label={t("auth.userMenu", "User menu")}
         >
           {avatarUrl ? (
-            <Avatar className="group-hover:bg-jii-medium-green/20 h-6 w-6 rounded-full transition-all duration-200 group-hover:shadow-[0_0_10px_theme(colors.jii-medium-green)]">
+            <Avatar className="group-hover:bg-slab-accent h-6 w-6 rounded-full transition-all duration-200 group-hover:shadow-[0_0_10px_var(--slab-primary)]">
               <AvatarImage src={avatarUrl} alt={displayName} />
               <AvatarFallback>
                 <User className="h-4 w-4" />
               </AvatarFallback>
             </Avatar>
           ) : (
-            <User className="group-hover:text-jii-medium-green h-4 w-4 transition-all duration-200 group-hover:drop-shadow-[0_0_10px_theme(colors.jii-medium-green)]" />
+            <User className="group-hover:text-slab-primary h-4 w-4 transition-all duration-200 group-hover:drop-shadow-[0_0_10px_var(--slab-primary)]" />
           )}
           <ChevronDown
-            className={`group-hover:text-jii-medium-green h-4 w-4 text-white transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
+            className={`group-hover:text-slab-primary h-4 w-4 transition-all duration-300 ${open ? "rotate-180" : "rotate-0"}`}
           />
         </Button>
       </DropdownMenuTrigger>
@@ -244,6 +245,13 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
   // The yellow logo reads well everywhere, including over the home hero.
   const logoSrc = "/openJII_logo_RGB_horizontal_yellow_transparentBG.png";
 
+  // The scrim darkens the photo identically in both themes, so it and the
+  // foreground it pairs with are fixed literals rather than theme tokens.
+  // eslint-disable-next-line no-restricted-syntax -- fixed neutral photo scrim
+  const heroScrim = "bg-linear-to-b from-black/80 to-transparent";
+  // eslint-disable-next-line no-restricted-syntax -- pairs with heroScrim
+  const heroForeground = "text-white";
+
   return (
     <header
       className="pointer-events-auto sticky left-0 z-50 w-full"
@@ -252,14 +260,17 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
       {/* Gradient layer - hero/dark mode */}
       <div
         aria-hidden="true"
-        className={`bg-linear-to-b absolute inset-0 -z-10 from-black/80 to-transparent transition-opacity duration-300 ${showSolid ? "opacity-0" : "opacity-100"}`}
+        className={`${heroScrim} absolute inset-0 -z-10 transition-opacity duration-300 ${showSolid ? "opacity-0" : "opacity-100"}`}
       />
       {/* Solid layer - green/nav mode */}
       <div
         aria-hidden="true"
-        className={`bg-sidebar absolute inset-0 -z-10 border-b border-white/40 shadow-lg transition-opacity duration-300 ${showSolid ? "opacity-100" : "opacity-0"}`}
+        className={`bg-slab border-slab-border absolute inset-0 -z-10 border-b shadow-lg transition-opacity duration-300 ${showSolid ? "opacity-100" : "opacity-0"}`}
       />
-      <nav className="font-notosans mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 text-white">
+      {/* One base colour for the whole bar; the controls below inherit it. */}
+      <nav
+        className={`mx-auto grid h-16 max-w-7xl grid-cols-3 items-center px-6 ${showSolid ? "text-slab-foreground" : heroForeground}`}
+      >
         {/* Logo/Brand */}
         <div className="col-start-1 col-end-2 flex items-center">
           <Image
@@ -278,12 +289,12 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
 
             // Remove hover effect for selected (active) nav item
             const linkClass = item.isActive
-              ? "flex items-center space-x-2 text-sm font-medium text-jii-bright-green font-bold"
-              : "flex items-center space-x-2 text-sm font-medium transition-colors text-white hover:text-jii-medium-green";
+              ? "flex items-center space-x-2 text-sm font-medium text-slab-primary font-bold"
+              : "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-slab-primary";
 
             const iconClass = item.isActive
-              ? "h-4 w-4 text-jii-bright-green"
-              : "h-4 w-4 text-white group-hover:text-jii-medium-green";
+              ? "h-4 w-4 text-slab-primary"
+              : "h-4 w-4 group-hover:text-slab-primary";
 
             return (
               <Link
@@ -312,6 +323,12 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
           </div>
           <LanguageSwitcher locale={locale} />
 
+          {/* This nav's icon-button idiom: no hover fill, the icon shifts to the
+              accent. `dark:hover:bg-transparent` is needed alongside the
+              unprefixed class because stock ghost declares the dark fill as its
+              own variant. */}
+          <ThemeToggle className="hover:text-slab-primary hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent" />
+
           {/* Mobile Navigation Menu */}
           <div className="md:hidden">
             <DropdownMenu>
@@ -320,12 +337,12 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                   variant="ghost"
                   size="sm"
                   aria-label={t("navigation.menu", "Navigation menu")}
-                  className="group hover:bg-transparent focus:bg-transparent"
+                  className="group hover:bg-transparent focus:bg-transparent dark:hover:bg-transparent"
                 >
-                  <Menu className="group-hover:text-jii-medium-green h-4 w-4 text-white transition-colors duration-200" />
+                  <Menu className="group-hover:text-slab-primary h-4 w-4 transition-colors duration-200" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="font-notosans w-56">
+              <DropdownMenuContent align="end" className="w-56">
                 {/* Navigation items */}
                 {navItems.map((item) => {
                   const Icon = item.icon;
@@ -335,7 +352,7 @@ export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNa
                       <Link
                         href={item.href}
                         className={`flex items-center space-x-3 ${
-                          item.isActive ? "bg-surface-dark" : ""
+                          item.isActive ? "bg-accent text-accent-foreground" : ""
                         }`}
                         aria-current={item.isActive ? "page" : undefined}
                       >
