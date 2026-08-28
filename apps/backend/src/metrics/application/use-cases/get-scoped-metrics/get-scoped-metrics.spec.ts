@@ -88,7 +88,6 @@ describe("GetScopedMetricsUseCase", () => {
     ]);
     expect(result.value.scoped.lastMeasurementAt).toBe("2026-08-28");
     expect(result.value.baseline.measurements30d).toBe(4_000);
-    expect(result.value.share).toBe(0.25);
   });
 
   it("denies organization scope to non-members", async () => {
@@ -109,7 +108,6 @@ describe("GetScopedMetricsUseCase", () => {
 
     assertSuccess(result);
     expect(result.value.scoped.measurements30d).toBe(1_000);
-    expect(result.value.share).toBe(0.25);
   });
 
   it("returns an empty mine scope for a user with no experiments", async () => {

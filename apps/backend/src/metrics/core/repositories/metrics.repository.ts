@@ -8,6 +8,8 @@ import {
   experimentMembers,
   experiments,
   inArray,
+  ne,
+  or,
   organizationMembers,
   resourceGrants,
 } from "@repo/database";
@@ -99,13 +101,23 @@ export class MetricsRepository {
     });
   }
 
-  /** Experiments granted beyond their owning org, the shareable-science count. */
+  /** Experiments granted to someone other than their creator; the creator's
+   * own seeded control grant is not sharing. */
   async countSharedExperiments(): Promise<Result<number>> {
     return tryCatch(async () => {
       const rows = await this.database
         .select({ value: countDistinct(resourceGrants.resourceId) })
         .from(resourceGrants)
-        .where(eq(resourceGrants.resourceType, "experiment"));
+        .innerJoin(experiments, eq(resourceGrants.resourceId, experiments.id))
+        .where(
+          and(
+            eq(resourceGrants.resourceType, "experiment"),
+            or(
+              ne(resourceGrants.granteeType, "user"),
+              ne(resourceGrants.granteeId, experiments.createdBy),
+            ),
+          ),
+        );
 
       return rows[0]?.value ?? 0;
     });

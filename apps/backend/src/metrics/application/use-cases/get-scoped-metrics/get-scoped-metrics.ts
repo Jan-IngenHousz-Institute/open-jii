@@ -133,10 +133,6 @@ export class GetScopedMetricsUseCase {
         measurements30d: baseline.measurements30d,
         activeExperiments30d: baseline.experiments30d,
       },
-      share:
-        baseline.measurements30d > 0
-          ? Math.round((measurements30d / baseline.measurements30d) * 1000) / 1000
-          : null,
       computedAt: baseline.computedAt,
     };
   }

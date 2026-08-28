@@ -78,6 +78,26 @@ describe("MetricsRepository", () => {
     expect(result.value).toBe(1);
   });
 
+  it("does not count a creator's own control grant as a shared experiment", async () => {
+    const before = await repository.countSharedExperiments();
+    assertSuccess(before);
+    expect(before.value).toBe(0);
+
+    const collaboratorId = await testApp.createTestUser({ email: "collab@example.com" });
+    await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: orgExperimentId,
+      granteeType: "user",
+      granteeId: collaboratorId,
+      role: "viewer",
+      createdBy: userId,
+    });
+
+    const after = await repository.countSharedExperiments();
+    assertSuccess(after);
+    expect(after.value).toBe(1);
+  });
+
   it("attributes created experiments to the user, without duplicates", async () => {
     const strangerId = await testApp.createTestUser({});
 

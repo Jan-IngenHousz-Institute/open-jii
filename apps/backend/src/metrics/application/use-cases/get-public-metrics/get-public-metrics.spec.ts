@@ -61,6 +61,7 @@ describe("GetPublicMetricsUseCase", () => {
   });
 
   beforeEach(async () => {
+    vi.useFakeTimers({ now: new Date("2026-08-28T12:00:00Z"), toFake: ["Date"] });
     await testApp.beforeEach();
 
     // The snapshot key is shared, so each test starts from a cold cache.
@@ -90,6 +91,7 @@ describe("GetPublicMetricsUseCase", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     testApp.afterEach();
   });
 

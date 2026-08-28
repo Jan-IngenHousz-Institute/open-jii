@@ -19737,16 +19737,6 @@
                         "activeExperiments30d"
                       ]
                     },
-                    "share": {
-                      "anyOf": [
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    },
                     "computedAt": {
                       "anyOf": [
                         {
@@ -19762,7 +19752,6 @@
                     "scope",
                     "scoped",
                     "baseline",
-                    "share",
                     "computedAt"
                   ]
                 }

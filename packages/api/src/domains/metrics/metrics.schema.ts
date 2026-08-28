@@ -102,7 +102,6 @@ export const zScopedMetricsResponse = z.object({
     measurements30d: z.number(),
     activeExperiments30d: z.number(),
   }),
-  share: z.number().nullable(),
   computedAt: z.string().nullable(),
 });
 

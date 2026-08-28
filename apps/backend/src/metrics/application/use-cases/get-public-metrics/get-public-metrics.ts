@@ -232,9 +232,17 @@ export class GetPublicMetricsUseCase {
     return captions;
   }
 
-  /** Consecutive days with data, counted back from the newest date present. */
+  /** Consecutive days with data, counted back from the newest date present.
+   * Zero when that date is not recent: a streak that ended is not current,
+   * and daily rows only exist for days with data. */
   private currentStreakDays(daily: DailyActivityRow[]): number {
     const dayMs = 24 * 60 * 60 * 1000;
+
+    const newest = daily.length > 0 ? daily[daily.length - 1] : null;
+    if (newest === null || Date.now() - Date.parse(newest.date) >= 2 * dayMs) {
+      return 0;
+    }
+
     let streak = 0;
     let expected: number | null = null;
 
@@ -270,7 +278,14 @@ export class GetPublicMetricsUseCase {
       return null;
     }
 
-    const crossing = daily.find((row) => row.cumulativeMeasurements >= milestone);
+    // The day the cumulative count actually passed the milestone. When the
+    // crossing predates the fetched window, no row satisfies both bounds and
+    // the caption is withheld rather than dated at the window edge.
+    const crossing = daily.find(
+      (row) =>
+        row.cumulativeMeasurements >= milestone &&
+        row.cumulativeMeasurements - row.measurements < milestone,
+    );
     if (crossing === undefined) {
       return null;
     }
