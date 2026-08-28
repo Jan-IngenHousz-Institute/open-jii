@@ -77,6 +77,10 @@ def raw_data():
             F.get_json_object(F.col("data").cast("string"), "$.device_family"),
         )
         .withColumn(
+            "device_address",
+            F.get_json_object(F.col("data").cast("string"), "$.device_address"),
+        )
+        .withColumn(
             "client_model",
             F.get_json_object(F.col("data").cast("string"), "$.client_model"),
         )
@@ -102,6 +106,7 @@ def raw_data():
             "workbook_version_id",
             "macro_context",
             "device_family",
+            "device_address",
             "client_model",
             "client_manufacturer",
             "client_os",

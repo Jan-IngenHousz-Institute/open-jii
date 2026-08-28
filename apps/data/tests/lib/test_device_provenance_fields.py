@@ -8,6 +8,7 @@ import openjii.centrum as centrum
 # family, client_* describes the phone that published.
 PROVENANCE_FIELDS = (
     "device_family",
+    "device_address",
     "client_model",
     "client_manufacturer",
     "client_os",

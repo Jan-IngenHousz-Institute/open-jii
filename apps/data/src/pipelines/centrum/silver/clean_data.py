@@ -92,6 +92,7 @@ def clean_data():
         # Sensor family and publishing-phone provenance. Extracted top-level in
         # bronze, so they are read as columns rather than out of parsed_data.
         .withColumn("device_family", F.col("device_family"))
+        .withColumn("device_address", F.col("device_address"))
         .withColumn("client_model", F.col("client_model"))
         .withColumn("client_manufacturer", F.col("client_manufacturer"))
         .withColumn("client_os", F.col("client_os"))
@@ -224,6 +225,7 @@ def clean_data():
         "workbook_version_id",
         "macro_context",
         "device_family",
+        "device_address",
         "client_model",
         "client_manufacturer",
         "client_os",
@@ -283,6 +285,7 @@ def clean_data():
         .withColumn("macro_context", F.lit(None).cast("string"))
         # Imported/transfer rows carry no driver family or phone provenance.
         .withColumn("device_family", F.lit(None).cast("string"))
+        .withColumn("device_address", F.lit(None).cast("string"))
         .withColumn("client_model", F.lit(None).cast("string"))
         .withColumn("client_manufacturer", F.lit(None).cast("string"))
         .withColumn("client_os", F.lit(None).cast("string"))
@@ -311,6 +314,7 @@ def clean_data():
             "workbook_version_id",
             "macro_context",
             "device_family",
+            "device_address",
             "client_model",
             "client_manufacturer",
             "client_os",
@@ -425,6 +429,7 @@ def clean_data_large_iot():
             "workbook_version_id",
             "macro_context",
             "device_family",
+            "device_address",
             "client_model",
             "client_manufacturer",
             "client_os",
