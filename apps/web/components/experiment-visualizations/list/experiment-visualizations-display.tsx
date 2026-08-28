@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -78,6 +79,7 @@ export default function ExperimentVisualizationsDisplay({
             </div>
             {isArchived || !hasAccess ? (
               <Button variant="secondary" disabled>
+                <Plus className="size-4" aria-hidden />
                 {t("selector.createVisualization")}
               </Button>
             ) : (
@@ -85,7 +87,10 @@ export default function ExperimentVisualizationsDisplay({
                 href={`/en-US/platform/experiments/${experimentId}/analysis/visualizations`}
                 passHref
               >
-                <Button variant="secondary">{t("selector.createVisualization")}</Button>
+                <Button variant="secondary">
+                  <Plus className="size-4" aria-hidden />
+                  {t("selector.createVisualization")}
+                </Button>
               </Link>
             )}
           </CardContent>

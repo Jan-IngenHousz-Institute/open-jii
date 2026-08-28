@@ -45,7 +45,7 @@ export default function WorkbookOverviewPage({ params }: WorkbookOverviewPagePro
       {/* The tinted canvas is the editor's, so it bleeds to the container edges
           here rather than in the layout — the Collaborators route renders on
           plain background, like the experiment collaborators page. */}
-      <div className="border-border bg-canvas -mx-6 -mb-6 flex-1 border-t px-6 pb-6">
+      <div className="border-border bg-canvas -mx-4 -mb-4 flex-1 border-t px-4 pb-4 md:-mx-6 md:-mb-6 md:px-6 md:pb-6">
         <div className="flex w-full flex-1 flex-col gap-6">
           <WorkbookDraftEditor
             id={id}

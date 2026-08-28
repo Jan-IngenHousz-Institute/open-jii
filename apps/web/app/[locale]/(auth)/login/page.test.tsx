@@ -51,6 +51,17 @@ describe("LoginPage", () => {
     expect(screen.getByText("callback:/platform")).toBeInTheDocument();
   });
 
+  // 100vh is taller than the visible viewport once mobile browser chrome is up,
+  // and a fixed height there is what forced the page to scroll at 390px.
+  it("sizes the foreground to the small viewport and keeps mobile gutters", async () => {
+    const { container } = await renderPage();
+
+    const viewport = container.querySelector(".relative.z-10");
+    expect(viewport?.className).toContain("min-h-[calc(100svh-4rem)]");
+    expect(viewport?.className).not.toMatch(/\bh-\[calc\(100vh/);
+    expect(viewport?.className).toContain("px-4");
+  });
+
   it("renders with an authenticated session", async () => {
     vi.mocked(auth).mockResolvedValue(createSession());
     await renderPage();

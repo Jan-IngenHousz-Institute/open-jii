@@ -398,6 +398,7 @@ export class OrganizationRepository {
       );
 
       const { match, score } = this.buildDirectorySearch(userId, params.search);
+      const ownershipTier = this.organizationTierExpression(userId);
       const where = and(
         this.visibleOrganizationsCondition(userId),
         match,
@@ -428,10 +429,13 @@ export class OrganizationRepository {
         })
         .from(organizations)
         .where(where)
-        // Browsing has nothing to rank against, so it stays alphabetical. A search
-        // orders by relevance, ending on `id` so repeated queries are stable.
+        // The unified product surface replaces separate "mine" and "all" views:
+        // ownership therefore leads the browse order. Search already folds the same
+        // tier into its relevance score. Stable tie-breakers keep both modes predictable.
         .orderBy(
-          ...(params.search ? [desc(score), asc(organizations.id)] : [asc(organizations.name)]),
+          ...(params.search
+            ? [desc(score), asc(organizations.id)]
+            : [desc(ownershipTier), asc(organizations.name), asc(organizations.id)]),
         );
 
       return { organizations: rows };

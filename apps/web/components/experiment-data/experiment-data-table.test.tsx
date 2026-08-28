@@ -1,3 +1,4 @@
+import type { DataTableFeatures } from "@/components/data-table/data-table-features";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { describe, it, expect, vi } from "vitest";
@@ -46,7 +47,7 @@ vi.mock("~/components/data-table/data-table-utils", () => ({
   formatValue: (v: unknown) => v,
 }));
 
-const mockColumns: ColumnDef<Record<string, unknown>>[] = [
+const mockColumns: ColumnDef<DataTableFeatures, Record<string, unknown>>[] = [
   { id: "name", accessorKey: "name", header: "Name" },
   { id: "value", accessorKey: "value", header: "Value" },
 ];

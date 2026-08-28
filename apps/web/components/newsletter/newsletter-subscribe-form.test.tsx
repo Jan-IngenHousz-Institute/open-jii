@@ -34,9 +34,15 @@ describe("NewsletterSubscribeForm", () => {
 
     expect(screen.getByText("footer.title")).toBeInTheDocument();
     expect(screen.getByLabelText("footer.emailLabel")).toBeInTheDocument();
+    // Chrome tokens, not the theme's: the footer stays deep teal in both modes,
+    // so a themed control would go near-invisible on it in dark mode.
     expect(screen.getByRole("button", { name: "footer.submit" })).toHaveClass(
-      "bg-secondary",
-      "text-secondary-foreground",
+      "bg-brand-accent",
+      "text-brand-chrome",
+    );
+    expect(screen.getByLabelText("footer.emailLabel")).toHaveClass(
+      "bg-brand-chrome-foreground",
+      "text-brand-chrome",
     );
   });
 
@@ -83,6 +89,7 @@ describe("NewsletterSubscribeForm", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("footer.errorMessage");
+    expect(alert).toHaveClass("text-brand-accent");
     // Generic only: no rate-limit-specific copy leaks through.
     expect(screen.queryByText(/429|rate|limit/i)).not.toBeInTheDocument();
   });

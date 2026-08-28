@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import type { DataTableFeatures } from "./data-table-features";
 import { formatValue, LoadingRows, DataTableHeader, DataTableRows } from "./data-table-utils";
 
 vi.mock("./cells/array/data-table-array-cell", () => ({
@@ -198,7 +199,7 @@ describe("DataTableHeader", () => {
           getContext: () => ({}),
         })),
       },
-    ] as unknown as HeaderGroup<Record<string, unknown>>[];
+    ] as unknown as HeaderGroup<DataTableFeatures, Record<string, unknown>>[];
   }
 
   it("renders header text and aligns numeric types right", () => {
@@ -337,7 +338,7 @@ describe("DataTableRows", () => {
           },
         ],
       },
-    ] as unknown as Row<Record<string, unknown>>[];
+    ] as unknown as Row<DataTableFeatures, Record<string, unknown>>[];
 
     render(
       <table>

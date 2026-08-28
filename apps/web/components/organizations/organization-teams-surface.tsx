@@ -152,6 +152,7 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
                     size="sm"
                     disabled={isCreating || newTeamName.trim().length === 0}
                   >
+                    {!isCreating && <Plus className="size-4" aria-hidden />}
                     {isCreating
                       ? t("organizations.teams.creating")
                       : t("organizations.teams.createAction")}

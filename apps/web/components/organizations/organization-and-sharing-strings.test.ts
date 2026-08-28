@@ -208,12 +208,9 @@ describe("organization and sharing strings", () => {
   });
 
   it.each(localeNames)("%s translates the organizations navigation entry", (locale) => {
-    const missing = [
-      "sidebar.organizations",
-      "sidebar.newOrganization",
-      "sidebar.myOrganizations",
-      "sidebar.organizationDirectory",
-    ].filter((key) => !bundles[locale].navigation.has(key));
+    const missing = ["sidebar.organizations", "sidebar.newOrganization"].filter(
+      (key) => !bundles[locale].navigation.has(key),
+    );
 
     expect(missing).toEqual([]);
   });

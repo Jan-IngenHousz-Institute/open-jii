@@ -90,7 +90,9 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
   const oauthProviders = providerMap.filter((p) => p.id !== "email");
 
   return (
-    <div className="bg-card text-card-foreground ring-border flex min-h-[600px] w-full flex-col rounded-2xl p-8 shadow-lg ring-1 md:p-14">
+    // Height follows the content: the card is a page surface over the photo, not
+    // a modal, and a fixed one left a tall empty box at 390px.
+    <div className="bg-card text-card-foreground flex w-full flex-col rounded-2xl p-5 shadow-2xl sm:p-6 md:p-10">
       {/* Title - hide when OTP shown because OTP view has its own title */}
       {!showOTP && (
         <h1 className="mb-4 text-left text-2xl font-bold">{t("auth.loginToAccount")}</h1>
@@ -128,8 +130,6 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
       {!showOTP && webAuthnSupported && (
         <PasskeyLoginButton callbackUrl={callbackUrl} isLastUsed={lastLoginMethod === "passkey"} />
       )}
-
-      <div className="flex-1" />
 
       {/* Terms */}
       {!showOTP && (

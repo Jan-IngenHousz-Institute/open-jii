@@ -2,7 +2,6 @@ import { DashboardBanner } from "@/components/dashboard/dashboard-banner";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import { PageContainer } from "@/components/page-container";
-import { PageHeader } from "@/components/shared/page-header";
 import type { Metadata } from "next";
 import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
 import { env } from "~/env";
@@ -30,24 +29,19 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
   return (
     <PageContainer width="fluid" className="space-y-6">
       {/* Dashboard Banner */}
-      <div className="-mt-6">
-        <DashboardBanner
-          title={t("dashboard.transferBannerTitle")}
-          description={t("dashboard.transferBannerDescription")}
-          descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
-          descriptionItalicHref={
-            "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
-          }
-          secondaryButtonLabel={t("dashboard.reportBugButton")}
-          secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/guide/reference/getting-help`}
-          buttonLabel={t("dashboard.transferBannerButton")}
-          buttonHref={`/${locale}/platform/transfer-request`}
-          locale={locale}
-        />
-      </div>
-
-      {/* Dashboard Header */}
-      <PageHeader title={t("dashboard.title")} />
+      <DashboardBanner
+        title={t("dashboard.transferBannerTitle")}
+        description={t("dashboard.transferBannerDescription")}
+        descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
+        descriptionItalicHref={
+          "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
+        }
+        secondaryButtonLabel={t("dashboard.reportBugButton")}
+        secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/guide/reference/getting-help`}
+        buttonLabel={t("dashboard.transferBannerButton")}
+        buttonHref={`/${locale}/platform/transfer-request`}
+        locale={locale}
+      />
 
       {/* First Row - User's Experiments */}
       <DashboardSection

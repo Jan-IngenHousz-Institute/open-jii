@@ -115,10 +115,16 @@ export function ProtocolCompatibleMacrosCard({
                       href={`/${locale}/platform/macros/${entry.macro.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                      title={t("protocolSettings.openCompatibleMacro", {
+                        name: entry.macro.name,
+                      })}
+                      aria-label={t("protocolSettings.openCompatibleMacro", {
+                        name: entry.macro.name,
+                      })}
+                      className="text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring/50 inline-flex size-8 shrink-0 items-center justify-center rounded-md outline-none transition-[color,box-shadow] focus-visible:ring-[3px]"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
+                      <ExternalLink className="h-4 w-4" />
                     </Link>
                   </div>
                   <StatusBadge tone={getMacroLanguageBadgeTone(entry.macro.language)}>
@@ -127,8 +133,11 @@ export function ProtocolCompatibleMacrosCard({
                 </div>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                  size="icon-sm"
+                  className="text-muted-foreground hover:text-destructive shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                  aria-label={t("protocolSettings.removeCompatibleMacro", {
+                    name: entry.macro.name,
+                  })}
                   onClick={() => handleRemoveMacro(entry.macro.id)}
                   disabled={isRemoving}
                 >

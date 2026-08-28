@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { OverviewToolbar } from "@/components/overview-toolbar";
 import React from "react";
 import { ListPagination } from "~/components/list-pagination";
 import { getMacroColumns } from "~/components/overview-table/macro-columns";
@@ -10,8 +10,7 @@ import { useLocale } from "~/hooks/useLocale";
 
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
-import { Input } from "@repo/ui/components/input";
+import { SearchInput } from "@repo/ui/components/search-input";
 import {
   Select,
   SelectContent,
@@ -25,9 +24,11 @@ export function ListMacros() {
     data: macros,
     isLoading,
     isPlaceholderData,
+    isSearchPending,
     error,
     refetch,
     search,
+    debouncedSearch,
     setSearch,
     language,
     setLanguage,
@@ -36,32 +37,23 @@ export function ListMacros() {
   } = useMacros();
   const { t } = useTranslation(["macro", "common"]);
   const locale = useLocale();
+  const hasSearch = debouncedSearch.trim() !== "";
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-8">
-        <div className="relative w-full md:w-[220px]">
-          <Input
-            type="text"
+      <OverviewToolbar
+        search={
+          <SearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
+            isLoading={isSearchPending}
             placeholder={t("macros.searchPlaceholder")}
-            className="w-full pr-8"
+            clearLabel={t("macros.clearSearch")}
+            loadingLabel={t("macros.loadingMacros")}
+            className="w-full md:w-[220px]"
           />
-          {search && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t("macros.clearSearch")}
-              onClick={() => setSearch("")}
-              className="text-muted-foreground hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-        <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-8">
+        }
+        filters={
           <Select
             value={language ?? "all"}
             onValueChange={(value: string) =>
@@ -78,8 +70,8 @@ export function ListMacros() {
               <SelectItem value="javascript">JavaScript</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-      </div>
+        }
+      />
 
       <div
         aria-busy={isPlaceholderData}
@@ -96,10 +88,10 @@ export function ListMacros() {
           retryLabel={t("common.errors.tryAgain")}
           getRowKey={(macro) => macro.id}
           getRowHref={(macro) => `/${locale}/platform/macros/${macro.id}`}
-          emptyMessage={t("macros.noMacros")}
+          emptyMessage={t(hasSearch ? "macros.noMatches" : "macros.noMacros")}
         />
 
-        {macros && (
+        {macros && macros.items.length > 0 && (
           <ListPagination page={page} totalPages={macros.totalPages} onPageChange={setPage} />
         )}
       </div>

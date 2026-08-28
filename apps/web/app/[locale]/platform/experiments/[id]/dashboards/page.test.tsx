@@ -57,7 +57,9 @@ describe("ExperimentDashboardsPage", () => {
 
     render(<ExperimentDashboardsPage />);
 
-    expect(screen.getByRole("button", { name: "ui.actions.create" })).toBeDisabled();
+    const createButton = screen.getByRole("button", { name: "ui.actions.create" });
+    expect(createButton).toBeDisabled();
+    expect(createButton.querySelector(".lucide-plus")).toBeInTheDocument();
   });
 
   it("disables the create button when the caller is not an admin", async () => {

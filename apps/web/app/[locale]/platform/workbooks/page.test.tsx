@@ -8,13 +8,12 @@ import { contract } from "@repo/api/contract";
 import WorkbookPage from "./page";
 
 describe("WorkbookPage (list)", () => {
-  it("renders the heading and description", async () => {
+  it("does not repeat the shell heading", () => {
     server.mount(contract.workbooks.listWorkbooks, { body: [] });
 
-    render(await WorkbookPage({ params: Promise.resolve({ locale: "en-US" }) }));
+    render(WorkbookPage({ params: Promise.resolve({ locale: "en-US" }) }));
 
-    expect(screen.getByRole("heading", { name: "workbooks.title" })).toBeInTheDocument();
-    expect(screen.getByText("workbooks.listDescription")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "workbooks.title" })).not.toBeInTheDocument();
   });
 
   it("renders the workbook list once data resolves", async () => {
@@ -31,7 +30,7 @@ describe("WorkbookPage (list)", () => {
       },
     });
 
-    render(await WorkbookPage({ params: Promise.resolve({ locale: "en-US" }) }));
+    render(WorkbookPage({ params: Promise.resolve({ locale: "en-US" }) }));
 
     await waitFor(() => {
       expect(screen.getByText("Photosynthesis")).toBeInTheDocument();

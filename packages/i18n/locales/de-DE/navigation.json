@@ -42,9 +42,7 @@
     "macros": "Makros",
     "workbooks": "Arbeitsmappen",
     "organizations": "Organisationen",
-    "newOrganization": "Neue Organisation",
-    "myOrganizations": "Meine Organisationen",
-    "organizationDirectory": "Verzeichnis"
+    "newOrganization": "Neue Organisation"
   },
   "breadcrumbs": {
     "home": "Startseite",

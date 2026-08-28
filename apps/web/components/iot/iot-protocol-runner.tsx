@@ -1,6 +1,6 @@
 "use client";
 
-import { Hand, Loader2, Play } from "lucide-react";
+import { Hand, Loader2, Play, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { RegisterIotDeviceDialog } from "~/components/iot-devices/register-iot-device-dialog";
 import { sensorFamilyToDeviceType } from "~/hooks/iot/device-type-mapping";
@@ -98,6 +98,7 @@ export function IotProtocolRunner({
           setRegisterOpen(true);
         }}
       >
+        <Plus className="size-4" aria-hidden />
         {t("iot.protocolRunner.registerDevice")}
       </Button>
     );

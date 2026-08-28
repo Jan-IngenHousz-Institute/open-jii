@@ -11,9 +11,6 @@ import { useSession } from "@repo/auth/client";
  * the cache is principal-scoped — a module-level QueryClient survives sign-out, and
  * the next user must not inherit the previous one's directory or join state.
  *
- * `scope: "related"` is the "my organizations" slice. It is the same endpoint with one
- * more condition, so both slices search the same fields and rank the same way.
- *
  * Unpaged: the endpoint returns every match.
  */
 export const useOrganizations = (
@@ -40,10 +37,8 @@ export const useOrganizations = (
       // reader had open. The rows stay put while the next result set loads; the search
       // input's own spinner is what says it is still moving.
       //
-      // Held only within one scope. A term narrows the set it is already showing, but
-      // "mine" and "all" are different sets: carrying rows across would render public
-      // organizations the reader does not belong to under "My organizations", counts
-      // and all, until the refetch lands.
+      // Held only within one scope so callers with a narrower resource listing never
+      // inherit rows from the full directory while their request is in flight.
       placeholderData: (previous, previousQuery) =>
         previousQuery?.meta?.scope === input.scope && previousQuery?.meta?.principal === principal
           ? previous

@@ -17,6 +17,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@repo/ui/components/sidebar";
 
 interface NavItem {
@@ -43,12 +44,24 @@ function isActivePath(pathname: string, url: string) {
 
 export function NavItems({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const closeMobileNavigation = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   return (
     <SidebarMenu>
       {items.map((item) => {
         if (item.children && item.children.length > 0 && item.navigable === false) {
-          return <NavGroup key={item.title} item={item} pathname={pathname} />;
+          return (
+            <NavGroup
+              key={item.title}
+              item={item}
+              pathname={pathname}
+              onNavigate={closeMobileNavigation}
+            />
+          );
         }
 
         return (
@@ -58,7 +71,7 @@ export function NavItems({ items }: { items: NavItem[] }) {
               isActive={isActivePath(pathname, item.url)}
               tooltip={item.title}
             >
-              <Link href={item.url}>
+              <Link href={item.url} onClick={closeMobileNavigation}>
                 {item.icon && <item.icon />}
                 <span>{item.title}</span>
               </Link>
@@ -70,7 +83,15 @@ export function NavItems({ items }: { items: NavItem[] }) {
   );
 }
 
-function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
+function NavGroup({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: NavItem;
+  pathname: string;
+  onNavigate: () => void;
+}) {
   const anyChildActive = item.children?.some((child) => isActivePath(pathname, child.url));
 
   return (
@@ -88,7 +109,7 @@ function NavGroup({ item, pathname }: { item: NavItem; pathname: string }) {
             {item.children?.map((child) => (
               <SidebarMenuSubItem key={child.title}>
                 <SidebarMenuSubButton asChild isActive={isActivePath(pathname, child.url)}>
-                  <Link href={child.url}>
+                  <Link href={child.url} onClick={onNavigate}>
                     {child.icon && <child.icon />}
                     <span>{child.title}</span>
                   </Link>

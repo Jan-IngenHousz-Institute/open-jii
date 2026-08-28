@@ -19,9 +19,9 @@ vi.mock("~/components/dashboard/blog-posts-section", () => ({
 }));
 
 describe("PlatformDashboard", () => {
-  it("renders heading and both dashboard sections", async () => {
+  it("lets the shell own the dashboard heading and renders both dashboard sections", async () => {
     render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("dashboard.title");
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: /dashboard.yourExperiments/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /dashboard.recentArticles/i })).toBeInTheDocument();
     expect(screen.getByText("Experiments")).toBeInTheDocument();

@@ -38,9 +38,7 @@
     "otherDevices": "Andere apparaten",
     "otherDevice1": "Ander apparaat 1",
     "organizations": "Organisaties",
-    "newOrganization": "Nieuwe organisatie",
-    "myOrganizations": "Mijn organisaties",
-    "organizationDirectory": "Overzicht"
+    "newOrganization": "Nieuwe organisatie"
   },
   "breadcrumbs": {
     "home": "Home",

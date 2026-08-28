@@ -624,9 +624,11 @@ describe("IotProtocolRunner", () => {
 
       render(<IotProtocolRunner {...defaultProps} />);
 
-      await user.click(
-        await screen.findByRole("button", { name: "iot.protocolRunner.registerDevice" }),
-      );
+      const registerButton = await screen.findByRole("button", {
+        name: "iot.protocolRunner.registerDevice",
+      });
+      expect(registerButton.querySelector(".lucide-plus")).toBeInTheDocument();
+      await user.click(registerButton);
 
       // The dialog mounts before the serial is known, so the prefill only
       // lands if the connect remounts it.

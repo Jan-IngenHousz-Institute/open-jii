@@ -42,12 +42,12 @@ export default async function UserRegistrationPage(props: {
 
       <AuthBackground alt="Registration background" />
 
-      {/* Foreground content */}
-      <div className="relative z-10 flex h-[calc(100vh-4rem)] w-full items-center">
+      {/* Foreground content; see the note on the login page for `svh`. */}
+      <div className="relative z-10 flex min-h-[calc(100svh-4rem)] w-full items-center px-4 py-8 sm:px-6 md:py-12">
         <div className="mx-auto w-full max-w-7xl">
-          <div className="grid h-full grid-cols-1 md:grid-cols-2">
+          <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
             {/* Registration Form */}
-            <div className="flex flex-col p-0 md:px-10">
+            <div className="flex flex-col md:px-10">
               <div className="w-full md:max-w-md">
                 <RegistrationForm
                   callbackUrl={getFirstSearchParam(callbackUrl)}

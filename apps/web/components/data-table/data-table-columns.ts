@@ -17,6 +17,8 @@ import {
   isStructType,
 } from "@repo/api/transforms/column-type-utils";
 
+import type { DataTableFeatures } from "./data-table-features";
+
 export type DataRow = Record<string, unknown>;
 export type DataRenderFunction = (
   value: unknown,
@@ -144,9 +146,9 @@ export function createTableColumns({
   isCellExpanded,
   errorColumn,
 }: CreateTableColumnsParams) {
-  const columnHelper = createColumnHelper<DataRow>();
+  const columnHelper = createColumnHelper<DataTableFeatures, DataRow>();
 
-  const columns: AccessorKeyColumnDef<DataRow, unknown>[] = [];
+  const columns: AccessorKeyColumnDef<DataTableFeatures, DataRow, unknown>[] = [];
   if (!dataColumns) {
     return columns;
   }
@@ -157,7 +159,7 @@ export function createTableColumns({
     return columnName;
   }
 
-  function getRow(columnName: string, typeName: string, row: Row<DataRow>) {
+  function getRow(columnName: string, typeName: string, row: Row<DataTableFeatures, DataRow>) {
     const value = row.getValue(columnName);
     const rowId = row.original.id as string | undefined;
 
@@ -197,7 +199,7 @@ export function createTableColumns({
 }
 
 export interface TableMetadata {
-  columns: AccessorKeyColumnDef<DataRow, unknown>[];
+  columns: AccessorKeyColumnDef<DataTableFeatures, DataRow, unknown>[];
   totalRows: number;
   totalPages: number;
   rawColumns?: ExperimentDataColumn[];

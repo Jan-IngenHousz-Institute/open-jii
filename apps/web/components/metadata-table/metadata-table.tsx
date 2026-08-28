@@ -1,10 +1,12 @@
 "use client";
 
 import {
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
-  flexRender,
+  columnSizingFeature,
+  columnVisibilityFeature,
+  createPaginatedRowModel,
+  rowPaginationFeature,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
 import type { ColumnDef, PaginationState } from "@tanstack/react-table";
 import { KeyRound, MoreHorizontal, PencilIcon, Trash2 } from "lucide-react";
@@ -37,6 +39,13 @@ import { cn } from "@repo/ui/lib/utils";
 import { EditableCell } from "./editable-cell";
 import type { MetadataColumn, MetadataRow } from "./types";
 
+const metadataTableFeatures = tableFeatures({
+  columnSizingFeature,
+  columnVisibilityFeature,
+  rowPaginationFeature,
+  paginatedRowModel: createPaginatedRowModel(),
+});
+
 interface MetadataTableProps {
   columns: MetadataColumn[];
   rows: MetadataRow[];
@@ -67,8 +76,8 @@ export function MetadataTable({
     pageSize,
   });
 
-  const columns = useMemo<ColumnDef<MetadataRow>[]>(() => {
-    const cols: ColumnDef<MetadataRow>[] = metaColumns.map((col) => {
+  const columns = useMemo<ColumnDef<typeof metadataTableFeatures, MetadataRow>[]>(() => {
+    const cols: ColumnDef<typeof metadataTableFeatures, MetadataRow>[] = metaColumns.map((col) => {
       const isIdentifier = identifierColumnId === col.id;
       return {
         id: col.id,
@@ -170,11 +179,10 @@ export function MetadataTable({
     disabled,
   ]);
 
-  const table = useReactTable({
+  const table = useTable({
+    features: metadataTableFeatures,
     data: rows,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onPaginationChange: setPagination,
     state: { pagination },
   });
@@ -211,9 +219,7 @@ export function MetadataTable({
                         isIdentifierColumn && "bg-primary/10",
                       )}
                     >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.isPlaceholder ? null : <table.FlexRender header={header} />}
                     </TableHead>
                   );
                 })}
@@ -246,7 +252,7 @@ export function MetadataTable({
                           isIdentifierColumn && "bg-primary/5",
                         )}
                       >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        <table.FlexRender cell={cell} />
                       </TableCell>
                     );
                   })}

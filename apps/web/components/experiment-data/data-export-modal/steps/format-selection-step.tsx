@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Download } from "lucide-react";
+import { Plus } from "lucide-react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -111,7 +111,7 @@ export function FormatSelectionStep({
             </>
           ) : (
             <>
-              <Download className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-4 w-4" aria-hidden />
               {t("experimentData.exportModal.createExport")}
             </>
           )}

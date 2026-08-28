@@ -1,9 +1,10 @@
+import type { DataTableFeatures } from "@/components/data-table/data-table-features";
 import type { AccessorKeyColumnDef } from "@tanstack/react-table";
 import type { DataRow } from "~/components/data-table/data-table-columns";
 
 const MAX_COLUMN_WIDTH = 120;
 
-type SizedColumn = AccessorKeyColumnDef<DataRow, unknown>;
+type SizedColumn = AccessorKeyColumnDef<DataTableFeatures, DataRow, unknown>;
 
 export function projectAndOrderColumns(
   metadataColumns: SizedColumn[] | undefined,

@@ -1,7 +1,10 @@
 "use client";
 
 import { DocsHelpLink } from "@/components/docs-help-link";
+import { tableFeatures, useTable } from "@tanstack/react-table";
+import type { ColumnDef, RowData } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 
 import { Button } from "@repo/ui/components/button";
@@ -17,7 +20,7 @@ import {
 } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
-export interface OverviewTableColumn<T> {
+export interface OverviewTableColumn<T extends RowData> {
   /** Translated header label; null renders an aria-hidden spacer head (actions column). */
   header: ReactNode;
   /** Extra classes for both the head and every cell of the column. */
@@ -26,7 +29,7 @@ export interface OverviewTableColumn<T> {
   cell: (item: T, href: string) => ReactNode;
 }
 
-interface OverviewTableProps<T> {
+interface OverviewTableProps<T extends RowData> {
   columns: OverviewTableColumn<T>[];
   items: T[] | undefined;
   isLoading?: boolean;
@@ -40,14 +43,22 @@ interface OverviewTableProps<T> {
   emptyHelpPath?: string;
 }
 
-const HEADER_BG = "bg-muted";
+const HEADER_BG = "bg-muted/50";
 const TABLE_BORDER = "border-border";
 const TEXT_STRONG = "text-foreground";
 const TEXT_MUTED = "text-muted-foreground";
+const EMPTY_ITEMS: never[] = [];
 
 export const overviewTableText = { strong: TEXT_STRONG, muted: TEXT_MUTED };
 
-export function OverviewTable<T>({
+const overviewTableFeatures = tableFeatures({});
+
+interface OverviewColumnMeta {
+  className?: string;
+  spacer: boolean;
+}
+
+export function OverviewTable<T extends RowData>({
   columns,
   items,
   isLoading,
@@ -62,6 +73,25 @@ export function OverviewTable<T>({
 }: OverviewTableProps<T>) {
   const router = useRouter();
   const loading = isLoading === true;
+  const tableColumns = useMemo<ColumnDef<typeof overviewTableFeatures, T>[]>(
+    () =>
+      columns.map((column, index) => ({
+        id: `column-${index}`,
+        header: () => column.header,
+        cell: ({ row }) => column.cell(row.original, getRowHref(row.original)),
+        meta: {
+          className: column.className,
+          spacer: column.header == null,
+        } satisfies OverviewColumnMeta,
+      })),
+    [columns, getRowHref],
+  );
+  const table = useTable({
+    features: overviewTableFeatures,
+    data: items ?? EMPTY_ITEMS,
+    columns: tableColumns,
+    getRowId: (item) => getRowKey(item),
+  });
 
   if (!loading && items === undefined) {
     return (
@@ -100,52 +130,69 @@ export function OverviewTable<T>({
   }
 
   return (
-    <div className={cn("overflow-hidden rounded-lg border", TABLE_BORDER)}>
-      <Table>
+    <div className={cn("overflow-hidden rounded-md border", TABLE_BORDER)}>
+      <Table className="table-fixed">
         <TableHeader>
-          <TableRow className={cn("hover:bg-transparent", HEADER_BG, TABLE_BORDER)}>
-            {columns.map((column, index) => (
-              <TableHead
-                key={index}
-                aria-hidden={column.header == null || undefined}
-                className={cn(
-                  "h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
-                  TEXT_MUTED,
-                  column.className,
-                )}
-              >
-                {column.header}
-              </TableHead>
-            ))}
-          </TableRow>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow
+              key={headerGroup.id}
+              className={cn("hover:bg-transparent", HEADER_BG, TABLE_BORDER)}
+            >
+              {headerGroup.headers.map((header) => {
+                const meta = header.column.columnDef.meta as OverviewColumnMeta;
+                return (
+                  <TableHead
+                    key={header.id}
+                    aria-hidden={meta.spacer ? true : undefined}
+                    className={cn(
+                      "h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
+                      TEXT_MUTED,
+                      meta.className,
+                    )}
+                  >
+                    {header.isPlaceholder ? null : <table.FlexRender header={header} />}
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          ))}
         </TableHeader>
         <TableBody>
           {loading
             ? Array.from({ length: 4 }).map((_, rowIndex) => (
                 <TableRow key={rowIndex} className={cn("hover:bg-transparent", TABLE_BORDER)}>
                   {columns.map((column, columnIndex) => (
-                    <TableCell key={columnIndex} className={cn("px-6 py-3", column.className)}>
+                    <TableCell
+                      key={columnIndex}
+                      className={cn("min-w-0 overflow-hidden px-6 py-3", column.className)}
+                    >
                       <Skeleton className={cn("h-4", columnIndex === 0 ? "w-48" : "w-24")} />
                     </TableCell>
                   ))}
                 </TableRow>
               ))
-            : (items ?? []).map((item) => {
-                const href = getRowHref(item);
+            : table.getRowModel().rows.map((row) => {
+                const href = getRowHref(row.original);
                 return (
                   <TableRow
-                    key={getRowKey(item)}
+                    key={row.id}
                     className={cn(
-                      "bg-card hover:bg-muted has-[[data-state=open]]:bg-muted group cursor-pointer",
+                      "hover:bg-muted has-[[data-state=open]]:bg-muted group cursor-pointer",
                       TABLE_BORDER,
                     )}
                     onClick={() => router.push(href)}
                   >
-                    {columns.map((column, columnIndex) => (
-                      <TableCell key={columnIndex} className={cn("px-6 py-3", column.className)}>
-                        {column.cell(item, href)}
-                      </TableCell>
-                    ))}
+                    {row.getAllCells().map((cell) => {
+                      const meta = cell.column.columnDef.meta as OverviewColumnMeta;
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          className={cn("min-w-0 overflow-hidden px-6 py-3", meta.className)}
+                        >
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 );
               })}

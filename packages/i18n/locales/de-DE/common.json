@@ -13,6 +13,10 @@
     "languageDrawer": "Sprachschublade umschalten",
     "regionalSettings": "Regionale Einstellungen",
     "loading": "Laden...",
+    "clear": "Leeren",
+    "toggleTheme": "Darstellung umschalten",
+    "switchToLightMode": "Zum hellen Modus wechseln",
+    "switchToDarkMode": "Zum dunklen Modus wechseln",
     "error": "Fehler",
     "success": "Erfolg",
     "save": "Speichern",
@@ -82,6 +86,8 @@
     "home": "Startseite",
     "openJII": "openJII",
     "support": null,
+    "documentation": "Dokumentation",
+    "breadcrumbs": "Brotkrümelnavigation",
     "faq": null
   },
   "experiments": {
@@ -100,14 +106,13 @@
     "updatedAt": "Aktualisiert am",
     "loadingExperiments": "Experimente suchen...",
     "noExperiments": "Keine Experimente gefunden",
+    "noMatches": "Keine Experimente entsprechen Ihrer Suche",
     "noExperimentsDescription": null,
     "viewDetails": "Details anzeigen",
     "experimentCreated": "Experiment erfolgreich erstellt",
     "experimentUpdated": "Experiment erfolgreich aktualisiert",
     "experimentUpdateFailed": "Aktualisierung des Experiments fehlgeschlagen",
     "experimentDeleted": "Experiment erfolgreich gelöscht",
-    "listDescription": "Diese Seite zeigt eine Liste der vorhandenen Experimente.",
-    "archiveDescription": "Diese Seite zeigt eine Liste der archivierten Experimente.",
     "experiment": "Experiment",
     "settings": "Experimenteinstellungen",
     "settingsDescription": "Verwalten Sie Einstellungen und Mitglieder für dieses Experiment.",
@@ -452,11 +457,6 @@
     "searchPlaceholder": "Organisationen suchen…",
     "searchLabel": "Organisationen durchsuchen",
     "noMatches": "Keine Organisation passt zu Ihrer Suche",
-    "filter": {
-      "label": "Organisationen filtern",
-      "my": "Meine Organisationen",
-      "all": "Alle Organisationen"
-    },
     "tabs": {
       "members": "Mitglieder",
       "teams": "Teams",
@@ -543,15 +543,9 @@
         "failed": "Die Organisation wurde erstellt, aber {{names}} konnte nicht eingeladen werden. Versuchen Sie es über den Tab „Mitglieder“ erneut."
       }
     },
-    "mine": {
-      "emptyTitle": "Sie sind noch in keiner Organisation",
-      "emptyHint": "Erstellen Sie eine, um Experimente, Protokolle, Makros und Arbeitsmappen mit einer Gruppe zu teilen, oder suchen Sie eine im Verzeichnis.",
-      "loadFailed": "Ihre Organisationen konnten nicht geladen werden."
-    },
     "directory": {
-      "emptyTitle": "Noch keine öffentliche Organisation",
-      "emptyHint": "Hier erscheinen nur Organisationen, die sich öffentlich gemacht haben.",
-      "loadFailed": "Das Verzeichnis konnte nicht geladen werden."
+      "emptyTitle": "Noch keine Organisationen",
+      "loadFailed": "Organisationen konnten nicht geladen werden."
     },
     "join": {
       "requestAction": "Mitgliedschaft anfragen",
@@ -1173,13 +1167,13 @@
     "updatedAt": "Aktualisiert am",
     "loadingProtocols": "Protokolle suchen...",
     "noProtocols": "Es wurden keine Protokolle gefunden, die Ihren Kriterien entsprechen.",
+    "noMatches": "Keine Protokolle entsprechen Ihrer Suche",
     "viewDetails": "Details anzeigen",
     "protocolCreated": "Protokoll erfolgreich erstellt",
     "protocolUpdated": "Protokoll erfolgreich aktualisiert",
     "protocolDeleted": "Protokoll erfolgreich gelöscht",
     "nameAlreadyExists": "Ein Protokoll mit diesem Namen existiert bereits. Bitte wählen Sie einen anderen Namen.",
     "createError": "Protokoll konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
-    "listDescription": "Diese Seite zeigt eine Liste der vorhandenen Protokolle.",
     "protocol": "Protokoll",
     "settings": "Protokolleinstellungen",
     "settingsDescription": "Verwalten Sie Einstellungen für dieses Protokoll.",
@@ -1272,6 +1266,8 @@
     "compatibleMacrosDescription": "Makros, die bekanntermaßen mit diesem Protokoll funktionieren. Diese werden im Flow-Builder empfohlen.",
     "noCompatibleMacros": "Noch keine kompatiblen Makros verknüpft.",
     "addCompatibleMacro": "Kompatibles Makro suchen und hinzufügen...",
+    "openCompatibleMacro": "{{name}} in einem neuen Tab öffnen",
+    "removeCompatibleMacro": "{{name}} entfernen",
     "detailsTitle": "Protokolldetails",
     "testerTitle": "Verbinden & Testen"
   },

@@ -199,7 +199,7 @@ export function RegistrationForm({
     }
   }
   return (
-    <div className="bg-card text-card-foreground ring-border flex h-full min-h-[600px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 md:p-14">
+    <div className="bg-card text-card-foreground flex w-full flex-col rounded-2xl p-5 shadow-2xl sm:p-6 md:p-10">
       {/* Title */}
       {!showOTPInput && (
         <div className="mb-4 text-left">

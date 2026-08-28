@@ -187,7 +187,11 @@ export function CreateApiKeyDialog() {
                     {t("apiKeys.cancel")}
                   </Button>
                   <Button type="submit" disabled={createApiKey.isPending}>
-                    {createApiKey.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {createApiKey.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" aria-hidden />
+                    )}
                     {t("apiKeys.createConfirm")}
                   </Button>
                 </DialogFooter>

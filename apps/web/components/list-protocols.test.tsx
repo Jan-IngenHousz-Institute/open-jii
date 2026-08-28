@@ -16,6 +16,14 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 });
 
 describe("ListProtocols", () => {
+  it("keeps route-wide create actions out of the collection toolbar", () => {
+    server.mount(contract.protocols.listProtocols, { body: envelope([]) });
+    render(<ListProtocols />);
+
+    expect(screen.getByPlaceholderText("protocols.searchProtocols")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "protocols.create" })).toBeNull();
+  });
+
   it("renders the search input without a my/all filter toggle", async () => {
     server.mount(contract.protocols.listProtocols, { body: envelope([]) });
     render(<ListProtocols />);
@@ -33,6 +41,8 @@ describe("ListProtocols", () => {
 
     const link = await screen.findByRole("link", { name: "P1" });
     expect(link.getAttribute("href")).toContain("/platform/protocols/1");
+    expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "pagination.next" })).toBeDisabled();
   });
 
   it("sends search query to the API", async () => {
@@ -46,6 +56,18 @@ describe("ListProtocols", () => {
       const lastCall = spy.calls[spy.calls.length - 1];
       expect(lastCall.query.search).toBe("test");
     });
+  });
+
+  it("distinguishes a search with no matches from an empty protocol collection", async () => {
+    server.mount(contract.protocols.listProtocols, { body: envelope([]) });
+    const user = userEvent.setup();
+    render(<ListProtocols />);
+
+    await screen.findByText("protocols.noProtocols");
+    await user.type(screen.getByPlaceholderText("protocols.searchProtocols"), "missing");
+
+    expect(await screen.findByText("protocols.noMatches")).toBeInTheDocument();
+    expect(screen.queryByText("protocols.noProtocols")).not.toBeInTheDocument();
   });
 
   it("navigates pages via the pagination controls", async () => {

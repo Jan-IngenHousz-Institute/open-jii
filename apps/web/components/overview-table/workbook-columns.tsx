@@ -119,18 +119,21 @@ export function getWorkbookColumns(
       header: t("workbooks.columns.name"),
       cell: (workbook, href) => (
         <>
-          <Link
-            href={href}
-            onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "focus-visible:ring-primary/40 focus-visible:outline-hidden text-[13px] font-semibold hover:underline focus-visible:ring-2",
-              overviewTableText.strong,
-            )}
-          >
-            {workbook.name}
-          </Link>
-          {/* Only when private: "public" is the unremarkable default. */}
-          <VisibilityBadge visibility={workbook.visibility} privateOnly className="ml-2" />
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              href={href}
+              title={workbook.name}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                "focus-visible:ring-primary/40 focus-visible:outline-hidden min-w-0 truncate text-[13px] font-semibold hover:underline focus-visible:ring-2",
+                overviewTableText.strong,
+              )}
+            >
+              {workbook.name}
+            </Link>
+            {/* Only when private: "public" is the unremarkable default. */}
+            <VisibilityBadge visibility={workbook.visibility} privateOnly className="shrink-0" />
+          </div>
           <WorkbookCellSummary counts={workbook.cellTypeCounts ?? {}} className="mt-1.5" />
         </>
       ),
@@ -163,7 +166,12 @@ export function getWorkbookColumns(
                 {initialsOf(author)}
               </AvatarFallback>
             </Avatar>
-            <span className={cn("text-[13px]", overviewTableText.muted)}>{author}</span>
+            <span
+              title={author}
+              className={cn("min-w-0 truncate text-[13px]", overviewTableText.muted)}
+            >
+              {author}
+            </span>
           </div>
         );
       },
@@ -179,7 +187,7 @@ export function getWorkbookColumns(
     },
     {
       header: null,
-      className: "w-12",
+      className: "w-14 px-3",
       cell: (workbook, href) => <WorkbookActionsCell workbook={workbook} href={href} />,
     },
   ];

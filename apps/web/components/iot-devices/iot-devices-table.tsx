@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui/components/table";
+import { cn } from "@repo/ui/lib/utils";
 
 import { IotDeviceTableRow } from "./iot-device-table-row";
 
@@ -23,16 +24,16 @@ export function IotDevicesTable({ devices, isLoading }: IotDevicesTableProps) {
   const { t } = useTranslation("iot");
 
   return (
-    <div className="border-border overflow-hidden rounded-lg border">
-      <Table>
+    <div className="border-border overflow-hidden rounded-md border">
+      <Table className="table-fixed">
         <TableHeader>
-          <TableRow className="bg-muted border-border hover:bg-transparent">
-            <ColumnHead>{t("iot.devices.columns.name")}</ColumnHead>
-            <ColumnHead>{t("iot.devices.columns.status")}</ColumnHead>
-            <ColumnHead>{t("iot.devices.columns.type")}</ColumnHead>
-            <ColumnHead>{t("iot.devices.columns.serial")}</ColumnHead>
-            <ColumnHead>{t("iot.devices.columns.lastSeen")}</ColumnHead>
-            <ColumnHead>{t("iot.devices.columns.created")}</ColumnHead>
+          <TableRow className="bg-muted/50 border-border hover:bg-transparent">
+            <ColumnHead className="w-[30%]">{t("iot.devices.columns.name")}</ColumnHead>
+            <ColumnHead className="w-28">{t("iot.devices.columns.status")}</ColumnHead>
+            <ColumnHead className="w-28">{t("iot.devices.columns.type")}</ColumnHead>
+            <ColumnHead className="w-36">{t("iot.devices.columns.serial")}</ColumnHead>
+            <ColumnHead className="w-32">{t("iot.devices.columns.lastSeen")}</ColumnHead>
+            <ColumnHead className="w-32">{t("iot.devices.columns.created")}</ColumnHead>
             <TableHead aria-hidden className="w-12" />
           </TableRow>
         </TableHeader>
@@ -46,9 +47,14 @@ export function IotDevicesTable({ devices, isLoading }: IotDevicesTableProps) {
   );
 }
 
-function ColumnHead({ children }: { children: React.ReactNode }) {
+function ColumnHead({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <TableHead className="text-muted-foreground h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]">
+    <TableHead
+      className={cn(
+        "text-muted-foreground h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
+        className,
+      )}
+    >
       {children}
     </TableHead>
   );
@@ -57,7 +63,7 @@ function ColumnHead({ children }: { children: React.ReactNode }) {
 function SkeletonRow() {
   return (
     <TableRow className="border-border hover:bg-transparent">
-      <TableCell className="px-6 py-3">
+      <TableCell className="min-w-0 overflow-hidden px-6 py-3">
         <Skeleton className="h-4 w-40" />
       </TableCell>
       <TableCell className="px-6 py-3">

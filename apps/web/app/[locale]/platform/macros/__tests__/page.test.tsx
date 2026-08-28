@@ -8,15 +8,13 @@ vi.mock("@/components/list-macros", () => ({
 }));
 
 describe("MacroPage", () => {
-  it("renders heading, description, and create button", async () => {
-    render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("macros.title");
-    expect(screen.getByText("macros.listDescription")).toBeInTheDocument();
-    expect(screen.getByText("macros.create")).toBeInTheDocument();
+  it("does not repeat the shell heading", () => {
+    render(<Page />);
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
   });
 
-  it("renders the macro list component", async () => {
-    render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
+  it("renders the macro list component", () => {
+    render(<Page />);
     expect(screen.getByTestId("list-macros")).toBeInTheDocument();
   });
 });

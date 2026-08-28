@@ -12,13 +12,13 @@
     "updatedAt": "Updated At",
     "loadingMacros": "Loading macros...",
     "noMacros": "No macros found",
+    "noMatches": "No macros match your search",
     "viewDetails": "View Details",
     "macroCreated": "Macro created successfully",
     "macroUpdated": "Macro updated successfully",
     "macroDeleted": "Macro deleted successfully",
     "nameAlreadyExists": "A macro with this name already exists. Please choose a different name.",
     "createError": "Failed to create macro. Please try again.",
-    "listDescription": "View and manage your code macros for data processing.",
     "manageMacroDescription": "View and manage your macro's details and settings.",
     "settings": "Macro Settings",
     "settingsDescription": "Manage settings for this macro.",
@@ -101,7 +101,9 @@
     "compatibleProtocols": "Compatible Protocols",
     "compatibleProtocolsDescription": "Protocols that are known to work with this macro.",
     "noCompatibleProtocols": "No compatible protocols linked yet.",
-    "addCompatibleProtocol": "Search and add a compatible protocol..."
+    "addCompatibleProtocol": "Search and add a compatible protocol...",
+    "openCompatibleProtocol": "Open {{name}} in a new tab",
+    "removeCompatibleProtocol": "Remove {{name}}"
   },
   "errors": {
     "failedToLoadMacro": "Failed to load macro"

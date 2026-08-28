@@ -117,4 +117,16 @@ describe("LoginForm", () => {
 
     expect(screen.queryByTestId("passkey-login-button")).not.toBeInTheDocument();
   });
+
+  // The card is a page surface over a photograph, not a modal: a desktop-derived
+  // minimum height left a tall empty box at 390px, and the ring read as a frame
+  // around the image behind it.
+  it("sizes the card from its content and does not frame it", () => {
+    const { container } = render(<LoginForm locale="en-US" termsData={termsData} />);
+
+    const card = container.firstElementChild;
+    expect(card).toHaveClass("bg-card");
+    expect(card?.className).not.toMatch(/\bmin-h-/);
+    expect(card?.className).not.toMatch(/\bring-1\b/);
+  });
 });

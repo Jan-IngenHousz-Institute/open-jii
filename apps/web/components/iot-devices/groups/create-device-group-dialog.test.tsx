@@ -37,6 +37,9 @@ describe("CreateDeviceGroupDialog", () => {
 
     render(<CreateDeviceGroupDialog open onOpenChange={vi.fn()} locale="en-US" />);
 
+    expect(
+      screen.getByRole("button", { name: "iot.groups.create" }).querySelector(".lucide-plus"),
+    ).toBeInTheDocument();
     await user.type(screen.getByLabelText("iot.groups.nameLabel"), "Greenhouse A");
     await user.click(screen.getByText("iot.groups.create"));
 

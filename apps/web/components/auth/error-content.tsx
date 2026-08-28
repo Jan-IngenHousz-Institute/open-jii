@@ -16,7 +16,7 @@ export function ErrorContent({ locale, error, errorDescription }: ErrorContentPr
   const { t } = useTranslation();
 
   return (
-    <div className="bg-card text-card-foreground ring-border flex min-h-[600px] w-full flex-col rounded-2xl p-8 shadow-lg ring-1 md:p-14">
+    <div className="bg-card text-card-foreground flex w-full flex-col rounded-2xl p-5 shadow-2xl sm:p-6 md:p-10">
       {/* Spacer to center content vertically */}
       <div className="flex-1" />
 
