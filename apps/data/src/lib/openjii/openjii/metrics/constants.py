@@ -18,19 +18,34 @@ POOL_FACTS_TABLE = "pool_facts"
 DAILY_ACTIVITY_BY_EXPERIMENT_TABLE = "daily_activity_by_experiment"
 EXPERIMENT_CONTRIBUTORS_WINDOW_TABLE = "experiment_contributors_window"
 
-# Physical parameters eligible for the public "most measured" line. Question
-# labels and macro outputs carry arbitrary keys; only vetted physical
-# parameters may surface publicly.
-PARAMETER_ALLOWLIST = (
+# Parameters eligible for the public "most measured" lines, keyed into
+# macro_output. Only vetted names may surface publicly, and each name must be
+# variant-path safe: keys with spaces, slashes, or "+" (Ambient Temperature,
+# FvP/FmP, gH+) cannot be interpolated into try_variant_get paths.
+PARAMETER_CATEGORY_DERIVED = "derived"
+PARAMETER_CATEGORY_SENSOR = "sensor"
+
+# Values a macro computes from the measurement.
+DERIVED_PARAMETER_ALLOWLIST = (
     "Phi2",
     "PhiNPQ",
     "PhiNO",
     "NPQt",
     "LEF",
-    "SPAD",
     "qL",
-    "FvP_over_FmP",
-    "ECS_tau",
+    "qP",
+    "RFd",
+    "SPAD",
+)
+
+# Raw instrument readings echoed into the macro output.
+SENSOR_PARAMETER_ALLOWLIST = (
+    "humidity",
+    "pressure",
+    "temperature",
+    "light_intensity",
+    "PAR",
+    "thickness",
 )
 
 ACTIVITY_WINDOW_DAYS = 30

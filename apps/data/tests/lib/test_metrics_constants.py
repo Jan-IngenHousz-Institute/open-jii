@@ -21,18 +21,25 @@ def test_table_constants_exported() -> None:
         "EXPERIMENT_CONTRIBUTORS_WINDOW_TABLE",
         "UNATTRIBUTED_FAMILY",
         "MEASUREMENT_TIMESTAMP_FLOOR",
-        "PARAMETER_ALLOWLIST",
+        "DERIVED_PARAMETER_ALLOWLIST",
+        "SENSOR_PARAMETER_ALLOWLIST",
+        "PARAMETER_CATEGORY_DERIVED",
+        "PARAMETER_CATEGORY_SENSOR",
         "ACTIVITY_WINDOW_DAYS",
         "within_plausible_range",
     ):
         assert name in metrics.__all__
 
 
-def test_parameter_allowlist_is_json_path_safe() -> None:
-    # Names are interpolated into get_json_object paths; anything beyond
+def test_parameter_allowlists_are_variant_path_safe() -> None:
+    # Names are interpolated into try_variant_get paths; anything beyond
     # identifier characters would silently break the extraction.
-    for name in metrics.PARAMETER_ALLOWLIST:
+    for name in metrics.DERIVED_PARAMETER_ALLOWLIST + metrics.SENSOR_PARAMETER_ALLOWLIST:
         assert name.replace("_", "").isalnum(), name
+
+
+def test_parameter_allowlists_are_disjoint() -> None:
+    assert not set(metrics.DERIVED_PARAMETER_ALLOWLIST) & set(metrics.SENSOR_PARAMETER_ALLOWLIST)
 
 
 def test_runtime_not_reexported() -> None:
