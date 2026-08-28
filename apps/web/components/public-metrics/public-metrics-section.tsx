@@ -24,7 +24,17 @@ interface PublicMetricsSectionProps {
  */
 export function PublicMetricsSection({ metrics, locale }: PublicMetricsSectionProps) {
   const { t } = useTranslation("publicMetrics");
-  const { hero, liveness, community, activity, hourly, families, parameter, captions } = metrics;
+  const {
+    hero,
+    liveness,
+    community,
+    activity,
+    hourly,
+    families,
+    derivedParameter,
+    sensorParameter,
+    captions,
+  } = metrics;
 
   const hasAnything = hero !== null || community !== null || activity.length > 0;
   if (!hasAnything) {
@@ -60,7 +70,12 @@ export function PublicMetricsSection({ metrics, locale }: PublicMetricsSectionPr
       <div className="border-border mt-8 grid gap-8 border-t pt-6 md:grid-cols-2">
         {families.length > 0 ? <FamilyBars families={families} locale={locale} /> : null}
         <div className="flex flex-col gap-4">
-          {parameter ? <ParameterLine parameter={parameter} locale={locale} /> : null}
+          {derivedParameter ? (
+            <ParameterLine parameter={derivedParameter} kind="derived" locale={locale} />
+          ) : null}
+          {sensorParameter ? (
+            <ParameterLine parameter={sensorParameter} kind="sensor" locale={locale} />
+          ) : null}
           <CaptionRotator captions={captions} locale={locale} />
         </div>
       </div>

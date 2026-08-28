@@ -29,7 +29,8 @@
     "unattributed": "Niet toegewezen"
   },
   "parameter": {
-    "sentence": "Meest gemeten deze maand: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>"
+    "derivedSentence": "Meest berekend deze maand: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>",
+    "sensorSentence": "Meest vastgelegde sensorwaarde: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>"
   },
   "captions": {
     "streak": "Data op {{days}} opeenvolgende dagen",
@@ -46,10 +47,22 @@
   },
   "dashboard": {
     "chips": {
-      "month": { "label": "Deze maand", "unit": "metingen" },
-      "day": { "label": "Laatste 24 u", "unit": "metingen" },
-      "mine": { "label": "Jouw experimenten", "unit": "deze maand" },
-      "experiments": { "label": "Actieve experimenten", "unit": "platformbreed" }
+      "month": {
+        "label": "Deze maand",
+        "unit": "metingen"
+      },
+      "day": {
+        "label": "Laatste 24 u",
+        "unit": "metingen"
+      },
+      "mine": {
+        "label": "Jouw experimenten",
+        "unit": "deze maand"
+      },
+      "experiments": {
+        "label": "Actieve experimenten",
+        "unit": "platformbreed"
+      }
     },
     "milestone": "De community registreerde meting {{ordinal}} op {{date}}.",
     "dismiss": "Sluiten"
