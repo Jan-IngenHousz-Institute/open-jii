@@ -31,7 +31,7 @@ export function PlatformStatChips({ locale }: PlatformStatChipsProps) {
   const chips: Chip[] = [
     { key: "month", value: community.measurements30d },
     { key: "day", value: liveness.measurements24h },
-    ...(mine ? [{ key: "mine", value: mine.scoped.measurements30d }] : []),
+    ...(mine?.scoped ? [{ key: "mine", value: mine.scoped.measurements30d }] : []),
     { key: "experiments", value: community.activeExperiments30d },
   ];
 
