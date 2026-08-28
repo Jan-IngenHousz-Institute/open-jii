@@ -55,6 +55,16 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=${PROJECT} deplo
 FROM alpine AS runner
 ARG PROJECT=backend
 
+# The runtime starts Node directly and does not need package managers.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/bin/corepack \
+    /usr/local/bin/yarn \
+    /usr/local/bin/yarnpkg \
+    /opt/yarn-*
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
 USER nodejs
