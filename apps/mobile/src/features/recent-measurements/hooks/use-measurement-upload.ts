@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
+import type { ScanResultEntry } from "~/features/measurement-flow/domain/flow-transitions";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
@@ -90,7 +91,7 @@ export function useMeasurementUpload() {
     }: SharedUploadArgs & {
       results: {
         rawMeasurement: any;
-        device?: { id: string; name: string; family?: string; firmwareVersion?: string };
+        device?: ScanResultEntry["device"];
         // Dispatch rounds: the protocol this device actually ran; overrides
         // the batch-level protocolId/protocolName for this result only.
         protocolId?: string;
@@ -140,6 +141,7 @@ export function useMeasurementUpload() {
           workbookId,
           macroContext,
           fallbackDeviceId: device?.id,
+          fallbackDeviceAddress: device?.address,
           fallbackDeviceFamily: device?.family,
           fallbackDeviceFirmware: device?.firmwareVersion,
           location,
