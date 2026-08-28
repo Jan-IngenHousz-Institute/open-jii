@@ -25,6 +25,18 @@ import type {
   GroupLifecycleEventRow,
   GroupThroughputRow,
 } from "../../../iot/core/ports/databricks.port";
+import type {
+  ActivityWindowsRow,
+  ContributorPairRow,
+  DailyActivityRow,
+  FamilyTotalsRow,
+  HourlyActivityRow,
+  ParameterStatsRow,
+  PlatformTotalsRow,
+  PoolFactsRow,
+  ScopedDailyRow,
+} from "../../../metrics/core/models/public-metrics.model";
+import type { DatabricksPort as MetricsDatabricksPort } from "../../../metrics/core/ports/databricks.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -42,11 +54,12 @@ import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData } from "./services/sql/sql.types";
 
 @Injectable()
-export class DatabricksAdapter implements ExperimentDatabricksPort {
+export class DatabricksAdapter implements ExperimentDatabricksPort, MetricsDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
   readonly CATALOG_NAME: string;
   readonly CENTRUM_SCHEMA_NAME: string;
+  readonly METRICS_SCHEMA_NAME: string;
 
   readonly RAW_DATA_TABLE_NAME: string;
   readonly DEVICE_DATA_TABLE_NAME: string;
@@ -62,6 +75,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   ) {
     this.CATALOG_NAME = this.configService.getCatalogName();
     this.CENTRUM_SCHEMA_NAME = this.configService.getCentrumSchemaName();
+    this.METRICS_SCHEMA_NAME = this.configService.getMetricsSchemaName();
     this.RAW_DATA_TABLE_NAME = this.configService.getRawDataTableName();
     this.DEVICE_DATA_TABLE_NAME = this.configService.getDeviceDataTableName();
     this.MACRO_DATA_TABLE_NAME = this.configService.getMacroDataTableName();
@@ -1175,6 +1189,222 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       limit,
       offset,
     });
+  }
+
+  private metricsTable(tableName: string): string {
+    return `${this.CATALOG_NAME}.${this.METRICS_SCHEMA_NAME}.${tableName}`;
+  }
+
+  private async readMetricsTable(
+    tableName: string,
+    options: {
+      orderBy?: string;
+      orderDirection?: "ASC" | "DESC";
+      limit?: number;
+      filters?: FilterCondition[];
+    } = {},
+  ): Promise<Result<{ rows: (string | null)[][]; index: Record<string, number> }>> {
+    const queryResult = this.queryBuilder.buildQuery({
+      table: this.metricsTable(tableName),
+      ...options,
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const result = await this.executeSqlQuery(this.METRICS_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success({ rows: result.value.rows, index: this.columnIndex(result.value.columns) });
+  }
+
+  async getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>> {
+    const result = await this.readMetricsTable("platform_totals", { limit: 1 });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    if (rows.length === 0) {
+      return success(null);
+    }
+
+    const row = rows[0];
+    return success({
+      totalMeasurements: Number(row[index.total_measurements] ?? 0),
+      totalUploadedRows: Number(row[index.total_uploaded_rows] ?? 0),
+      totalMacroExecutions: Number(row[index.total_macro_executions] ?? 0),
+      devicesAllTime: Number(row[index.devices_all_time] ?? 0),
+      experimentsWithData: Number(row[index.experiments_with_data] ?? 0),
+      firstMeasurementAt: row[index.first_measurement_at] ?? null,
+      lastMeasurementAt: row[index.last_measurement_at] ?? null,
+      computedAt: row[index.computed_at] ?? null,
+    });
+  }
+
+  async getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>> {
+    const result = await this.readMetricsTable("daily_activity", {
+      orderBy: "date",
+      orderDirection: "DESC",
+      limit: days,
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    const mapped = rows.map((row) => ({
+      date: String(row[index.date]),
+      measurements: Number(row[index.measurements] ?? 0),
+      cumulativeMeasurements: Number(row[index.cumulative_measurements] ?? 0),
+      volumeBytes: Number(row[index.volume_bytes] ?? 0),
+    }));
+
+    return success(mapped.reverse());
+  }
+
+  async getPublicFamilyTotals(): Promise<Result<FamilyTotalsRow[]>> {
+    const result = await this.readMetricsTable("family_totals", {
+      orderBy: "total_measurements",
+      orderDirection: "DESC",
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        family: String(row[index.family]),
+        measurements: Number(row[index.total_measurements] ?? 0),
+      })),
+    );
+  }
+
+  async getActivityWindows(): Promise<Result<ActivityWindowsRow | null>> {
+    const result = await this.readMetricsTable("activity_windows", { limit: 1 });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    if (rows.length === 0) {
+      return success(null);
+    }
+
+    const row = rows[0];
+    return success({
+      measurements24h: Number(row[index.measurements_24h] ?? 0),
+      measurements30d: Number(row[index.measurements_30d] ?? 0),
+      experiments30d: Number(row[index.experiments_30d] ?? 0),
+      contributors30d: Number(row[index.contributors_30d] ?? 0),
+      devices30d: Number(row[index.devices_30d] ?? 0),
+      lastMeasurementAt: row[index.last_measurement_at] ?? null,
+      computedAt: row[index.computed_at] ?? null,
+    });
+  }
+
+  async getHourlyActivity(): Promise<Result<HourlyActivityRow[]>> {
+    const result = await this.readMetricsTable("hourly_activity", {
+      orderBy: "hour_local",
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        hourLocal: Number(row[index.hour_local] ?? 0),
+        measurements: Number(row[index.measurements] ?? 0),
+      })),
+    );
+  }
+
+  async getTopParameter(): Promise<Result<ParameterStatsRow | null>> {
+    const result = await this.readMetricsTable("parameter_stats", {
+      orderBy: "count_30d",
+      orderDirection: "DESC",
+      limit: 1,
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    if (rows.length === 0) {
+      return success(null);
+    }
+
+    const row = rows[0];
+    return success({
+      name: String(row[index.parameter]),
+      count30d: Number(row[index.count_30d] ?? 0),
+      median: Number(row[index.median_value] ?? 0),
+    });
+  }
+
+  async getPoolFacts(): Promise<Result<PoolFactsRow | null>> {
+    const result = await this.readMetricsTable("pool_facts", { limit: 1 });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    if (rows.length === 0) {
+      return success(null);
+    }
+
+    const row = rows[0];
+    return success({
+      sessionMedianMeasurements: this.toNumberOrNull(row[index.session_median_measurements]),
+      deviceEnduranceDays: this.toNumberOrNull(row[index.device_endurance_days]),
+      simultaneityPeakDevices: this.toNumberOrNull(row[index.simultaneity_peak_devices]),
+      timezonesAllTime: this.toNumberOrNull(row[index.timezones_all_time]),
+      timezonesPeakDay: this.toNumberOrNull(row[index.timezones_peak_day]),
+    });
+  }
+
+  async getScopedDailyActivity(days: number): Promise<Result<ScopedDailyRow[]>> {
+    const to = new Date();
+    const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+    const asDate = (value: Date) => value.toISOString().slice(0, 10);
+
+    const result = await this.readMetricsTable("daily_activity_by_experiment", {
+      filters: [{ column: "date", operator: "between", value: [asDate(from), asDate(to)] }],
+      orderBy: "date",
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        date: String(row[index.date]),
+        experimentId: String(row[index.experiment_id]),
+        measurements: Number(row[index.measurements] ?? 0),
+      })),
+    );
+  }
+
+  async getContributorPairs(): Promise<Result<ContributorPairRow[]>> {
+    const result = await this.readMetricsTable("experiment_contributors_window", {});
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        experimentId: String(row[index.experiment_id]),
+        userId: String(row[index.user_id]),
+      })),
+    );
   }
 
   async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
