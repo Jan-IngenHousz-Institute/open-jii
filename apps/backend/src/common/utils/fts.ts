@@ -4,7 +4,8 @@ import type { SQL, SQLWrapper } from "@repo/database";
 /**
  * Shared helpers for PostgreSQL full-text search (tsvector/tsquery) + pg_trgm fuzzy matching.
  *
- * Searchable entities (experiments, protocols, macros) have a generated `search_vector` weighting
+ * Searchable entities (experiments, protocols, macros, workbooks, organizations) have a generated
+ * `search_vector` weighting
  * name (A) above description (B). Queries combine FTS prefix matching on the vector (stemming +
  * "photo" -> "photosynthesis") with trigram similarity on the name (typos, "experimnt" ->
  * "experiment"). `ts_rank` + `setweight` make name hits outrank description hits; callers add small

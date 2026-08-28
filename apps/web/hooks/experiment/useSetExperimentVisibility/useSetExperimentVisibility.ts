@@ -2,7 +2,7 @@ import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-/** Publishes an experiment and invalidates its detail, access, and list caches. */
+/** Publishes an experiment and refreshes its detail, access, list, and search caches. */
 export const useSetExperimentVisibility = () => {
   const queryClient = useQueryClient();
 
@@ -19,6 +19,7 @@ export const useSetExperimentVisibility = () => {
         for (const queryKey of listQueryKeys.experiments()) {
           await queryClient.invalidateQueries({ queryKey });
         }
+        await queryClient.invalidateQueries({ queryKey: orpc.search.globalSearch.key() });
       },
     }),
   );

@@ -51,6 +51,13 @@ describe("ShortcutsRoot", () => {
     expect(router.push).toHaveBeenCalledWith("/en-US/platform/experiments");
   });
 
+  it("navigates via g-then-o to organizations", () => {
+    const { router } = renderShortcuts();
+    key("g");
+    key("o");
+    expect(router.push).toHaveBeenCalledWith("/en-US/platform/organizations");
+  });
+
   it("g-then-n opens the notification bell instead of navigating", () => {
     const handler = vi.fn();
     window.addEventListener(NOTIFICATION_BELL_OPEN_EVENT, handler);

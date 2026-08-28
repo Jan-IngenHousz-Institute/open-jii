@@ -19343,7 +19343,21 @@
             "schema": {
               "type": "string",
               "maxLength": 200,
-              "description": "Name or description substring"
+              "description": "Name, description, location or type; also member and team names, for organizations you belong to"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "related",
+                "all"
+              ],
+              "type": "string",
+              "description": "Which slice of the visible set to return"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -23188,7 +23202,8 @@
                               "experiment",
                               "protocol",
                               "macro",
-                              "workbook"
+                              "workbook",
+                              "organization"
                             ],
                             "type": "string"
                           },

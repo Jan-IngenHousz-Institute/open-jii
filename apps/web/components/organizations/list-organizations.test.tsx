@@ -1,14 +1,12 @@
-import { createMyOrganization, createOrganizationDirectoryEntry } from "@/test/factories";
+import { createOrganizationDirectoryEntry } from "@/test/factories";
+import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { ReadonlyURLSearchParams, useSearchParams } from "next/navigation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type {
-  MyOrganization,
-  OrganizationDirectoryEntry,
-} from "@repo/api/domains/organization/organization.schema";
+import type { OrganizationDirectoryEntry } from "@repo/api/domains/organization/organization.schema";
 import { useSession } from "@repo/auth/client";
 
 import { ListOrganizations } from "./list-organizations";
@@ -33,8 +31,18 @@ function mountDirectory(organizations: OrganizationDirectoryEntry[]) {
   return server.mount(contract.organizations.listOrganizations, { body: { organizations } });
 }
 
-function mountMyOrganizations(organizations: MyOrganization[]) {
-  return server.mount(contract.organizations.listMyOrganizations, { body: organizations });
+/**
+ * The "my organizations" slice. It is the *same* endpoint as the directory with
+ * `scope=related`, not a second one — so these mount the directory too, and rows carry
+ * `membershipStatus: "member"` because that is what the caller's own organizations
+ * come back as.
+ */
+function mountMine(organizations: Partial<OrganizationDirectoryEntry>[]) {
+  return mountDirectory(
+    organizations.map((organization) =>
+      createOrganizationDirectoryEntry({ membershipStatus: "member", ...organization }),
+    ),
+  );
 }
 
 /** The card for an organization — the whole card is the link to it. */
@@ -50,28 +58,27 @@ describe("<ListOrganizations />", () => {
   });
 
   describe("my organizations", () => {
-    it("lands on the caller's own organizations, personal workspace excluded", async () => {
+    it("lands on the caller's own organizations, asking the directory for that slice", async () => {
       mockSession({ id: "user-1" });
-      mountMyOrganizations([
-        createMyOrganization({ id: "org-1", name: "Greenhouse Lab", memberCount: 4 }),
-        createMyOrganization({ name: "Grace Hopper", isPersonal: true }),
-      ]);
+      // Personal workspaces are excluded server-side now, so there is nothing to filter
+      // out here — what this has to prove instead is that the slice is requested at all.
+      const spy = mountMine([{ id: "org-1", name: "Greenhouse Lab", memberCount: 4 }]);
 
       render(<ListOrganizations />);
 
       await screen.findByText("Greenhouse Lab");
-      expect(screen.queryByText("Grace Hopper")).not.toBeInTheDocument();
+      expect(spy.calls.at(-1)?.query.scope).toBe("related");
     });
 
     it("shows the card's description, count pills and visibility on a private organization", async () => {
       mockSession({ id: "user-1" });
-      mountMyOrganizations([
-        createMyOrganization({
+      mountMine([
+        {
           id: "org-7",
           name: "Greenhouse Lab",
           description: "Chlorophyll fluorescence at scale",
           visibility: "private",
-        }),
+        },
       ]);
 
       render(<ListOrganizations />);
@@ -96,13 +103,13 @@ describe("<ListOrganizations />", () => {
      */
     it("clamps a plain-text description, which does not arrive with markup", async () => {
       mockSession({ id: "user-1" });
-      mountMyOrganizations([
-        createMyOrganization({
+      mountMine([
+        {
           name: "Greenhouse Lab",
           description:
             "A field group studying canopy photosynthesis across three continents, " +
             "with a long enough profile to run past three lines in a card column.",
-        }),
+        },
       ]);
 
       render(<ListOrganizations />);
@@ -118,7 +125,7 @@ describe("<ListOrganizations />", () => {
 
     it("falls back to the shared placeholder when an organization has no description", async () => {
       mockSession({ id: "user-1" });
-      mountMyOrganizations([createMyOrganization({ name: "Greenhouse Lab", description: null })]);
+      mountMine([{ name: "Greenhouse Lab", description: null }]);
 
       render(<ListOrganizations />);
 
@@ -129,7 +136,7 @@ describe("<ListOrganizations />", () => {
     /** The my-organizations branch is all memberships, so always the plain label. */
     it("labels the resource count plainly, since every row here is one you belong to", async () => {
       mockSession({ id: "user-1" });
-      mountMyOrganizations([createMyOrganization({ name: "Greenhouse Lab", resourceCount: 7 })]);
+      mountMine([{ name: "Greenhouse Lab", resourceCount: 7 }]);
 
       render(<ListOrganizations />);
 
@@ -141,7 +148,7 @@ describe("<ListOrganizations />", () => {
 
     it("carries no membership badge or in-card action", async () => {
       mockSession({ id: "user-1" });
-      mountMyOrganizations([createMyOrganization({ name: "Greenhouse Lab", role: "owner" })]);
+      mountMine([{ name: "Greenhouse Lab" }]);
 
       render(<ListOrganizations />);
 
@@ -153,9 +160,7 @@ describe("<ListOrganizations />", () => {
 
     it("leaves the visibility badge off a listed organization", async () => {
       mockSession({ id: "user-1" });
-      mountMyOrganizations([
-        createMyOrganization({ name: "Greenhouse Lab", visibility: "public" }),
-      ]);
+      mountMine([{ name: "Greenhouse Lab", visibility: "public" }]);
 
       render(<ListOrganizations />);
 
@@ -165,13 +170,26 @@ describe("<ListOrganizations />", () => {
       expect(card.queryByText("resourceVisibility.publicStatus")).not.toBeInTheDocument();
     });
 
-    it("searches the caller's own organizations too", async () => {
+    /**
+     * Searching "mine" is a server round trip carrying `scope=related`, not a substring
+     * test in the browser. That is the whole point of the change: the memberships used to
+     * be filtered client-side on name and description only, so a location or type match —
+     * or a stemmed or misspelled term — found rows under "all" and nothing under "my".
+     * Answering off the query proves the term reaches the server with the slice intact.
+     */
+    it("searches its own slice server-side, carrying the term and the scope", async () => {
       const user = userEvent.setup();
       mockSession({ id: "user-1" });
-      mountMyOrganizations([
-        createMyOrganization({ name: "Greenhouse Lab" }),
-        createMyOrganization({ name: "Coastal Station" }),
-      ]);
+      const spy = server.mount(contract.organizations.listOrganizations, {
+        body: ({ query }: SpyCall) => ({
+          organizations: query.search
+            ? [createOrganizationDirectoryEntry({ name: "Coastal Station" })]
+            : [
+                createOrganizationDirectoryEntry({ name: "Greenhouse Lab" }),
+                createOrganizationDirectoryEntry({ name: "Coastal Station" }),
+              ],
+        }),
+      });
 
       render(<ListOrganizations />);
 
@@ -183,11 +201,12 @@ describe("<ListOrganizations />", () => {
         expect(screen.queryByText("Greenhouse Lab")).not.toBeInTheDocument();
       });
       expect(screen.getByText("Coastal Station")).toBeVisible();
+      expect(spy.calls.at(-1)?.query).toMatchObject({ search: "coastal", scope: "related" });
     });
 
     it("offers the empty state a way to create the first organization", async () => {
       mockSession({ id: "user-1" });
-      mountMyOrganizations([]);
+      mountMine([]);
 
       render(<ListOrganizations />);
 
@@ -201,10 +220,17 @@ describe("<ListOrganizations />", () => {
     it("switches to the directory from the filter, without leaving the route", async () => {
       const user = userEvent.setup();
       mockSession({ id: "user-1" });
-      mountMyOrganizations([createMyOrganization({ name: "Greenhouse Lab" })]);
-      const directorySpy = mountDirectory([
-        createOrganizationDirectoryEntry({ name: "Coastal Station" }),
-      ]);
+      // One endpoint answering both slices off `scope` — the filter changes the query,
+      // not which endpoint is called.
+      const directorySpy = server.mount(contract.organizations.listOrganizations, {
+        body: ({ query }: SpyCall) => ({
+          organizations: [
+            createOrganizationDirectoryEntry({
+              name: query.scope === "related" ? "Greenhouse Lab" : "Coastal Station",
+            }),
+          ],
+        }),
+      });
 
       render(<ListOrganizations />);
 
@@ -217,9 +243,37 @@ describe("<ListOrganizations />", () => {
       await user.click(screen.getByRole("option", { name: "organizations.filter.all" }));
 
       await waitFor(() => {
-        expect(directorySpy.called).toBe(true);
+        expect(directorySpy.calls.at(-1)?.query.scope).toBe("all");
       });
       expect(await screen.findByText("Coastal Station")).toBeVisible();
+    });
+
+    /**
+     * Held-over rows are right for a new search term — it narrows the set already on
+     * screen — and wrong across a scope change, where the two slices are different sets.
+     * Without the guard the directory's rows render under "My organizations", counts and
+     * all, for as long as the related request is in flight.
+     */
+    it("does not show the other scope's rows while the switch is in flight", async () => {
+      const user = userEvent.setup();
+      mockSession({ id: "user-1" });
+      vi.mocked(useSearchParams).mockReturnValue(new ReadonlyURLSearchParams("filter=all"));
+      mountDirectory([createOrganizationDirectoryEntry({ name: "Somebody Elses Lab" })]);
+
+      render(<ListOrganizations />);
+      await screen.findByText("Somebody Elses Lab");
+
+      // Hangs, so the switch stays mid-flight for the whole assertion.
+      server.mount(contract.organizations.listOrganizations, {
+        body: { organizations: [] },
+        delay: "infinite",
+      });
+      await user.click(screen.getByRole("combobox", { name: "organizations.filter.label" }));
+      await user.click(screen.getByRole("option", { name: "organizations.filter.my" }));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Somebody Elses Lab")).not.toBeInTheDocument();
+      });
     });
   });
 

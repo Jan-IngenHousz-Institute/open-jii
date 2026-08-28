@@ -25,21 +25,25 @@ vulnerabilities:
     statement: "DoS via unbounded arrays, same copy."
     expired_at: 2026-11-05
 
-  # tar@7.5.16, fixed in 7.5.21. Pinned by purl: a bumped base that still
-  # ships a vulnerable tar re-fails the scan instead of inheriting these.
+  # Pinned by purl: a bumped base that still ships a vulnerable tar re-fails the
+  # scan instead of inheriting a suppression for a different bundled npm copy.
+  # tar@7.5.16, fixed in 7.5.19.
   - id: CVE-2026-59873
     purls:
       - "pkg:npm/tar@7.5.16"
     statement: "tar DoS via crafted archives. npm extracts nothing at runtime."
     expired_at: 2026-11-05
+  # tar@7.5.16, fixed in 7.5.18.
   - id: CVE-2026-59874
     purls:
       - "pkg:npm/tar@7.5.16"
     statement: "Same tar DoS family, different CVE id."
     expired_at: 2026-11-05
+  # tar@7.5.16 / 7.5.19, fixed in 7.5.21.
   - id: CVE-2026-73566
     purls:
       - "pkg:npm/tar@7.5.16"
+      - "pkg:npm/tar@7.5.19"
     statement: "tar DoS via crafted long-path archive, same copy."
     expired_at: 2026-11-05
 

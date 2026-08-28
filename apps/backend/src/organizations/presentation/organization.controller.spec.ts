@@ -145,6 +145,49 @@ describe("OrganizationController", () => {
       expect(response.body.organizations).toHaveLength(0);
     });
 
+    it("scope=related narrows to the caller's memberships without changing what matches", async () => {
+      // "My organizations" is this same query plus one condition, so a term that finds a
+      // row in the directory finds it under `related` too whenever the caller belongs to
+      // it. The old listing filtered memberships client-side on name/description only,
+      // which is exactly the disagreement this asserts is gone.
+      const mine = await testApp.createOrganization("Delta Phenotyping Centre", {
+        visibility: "public",
+        location: "Wageningen, Netherlands",
+      });
+      await testApp.addOrganizationMember(mine, ownerId, "owner");
+      await testApp.createOrganization("Someone Else Lab", {
+        visibility: "public",
+        location: "Wageningen, Netherlands",
+      });
+
+      const all: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(`${path()}?search=wageningen`)
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+      expect(all.body.organizations.map((o) => o.name).sort()).toEqual([
+        "Delta Phenotyping Centre",
+        "Someone Else Lab",
+      ]);
+
+      const related: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(`${path()}?search=wageningen&scope=related`)
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+      expect(related.body.organizations.map((o) => o.name)).toEqual(["Delta Phenotyping Centre"]);
+    });
+
+    it("scope=related never widens past the visibility boundary", async () => {
+      // The narrowing rides on top of the boundary, never instead of it.
+      await seedPrivateOrg();
+
+      const response: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(`${path()}?scope=related`)
+        .withAuth(outsiderId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.organizations).toHaveLength(0);
+    });
+
     it("filters by name and description", async () => {
       await seedPublicOrg("Photosynthesis Lab");
       const other = await testApp.createOrganization("Soil Institute", {

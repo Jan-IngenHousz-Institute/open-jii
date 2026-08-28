@@ -55,10 +55,11 @@
   },
   "commandPalette": {
     "title": "Command palette",
-    "placeholder": "Search pages and actions...",
+    "placeholder": "Search pages, actions, and resources...",
     "groups": {
       "pages": "Pages",
-      "actions": "Actions"
+      "actions": "Actions",
+      "searchResults": "Search results"
     },
     "entries": {
       "home": "Home",
@@ -66,18 +67,13 @@
       "workbooks": "Workbooks",
       "protocols": "Protocols",
       "macros": "Macros",
+      "organizations": "Organizations",
       "transferRequests": "Transfer requests",
       "settings": "Settings",
       "createExperiment": "Create experiment",
       "openWhatsNew": "Open What's new",
       "showKeyboardShortcuts": "Show keyboard shortcuts",
       "openDocumentation": "Open documentation"
-    },
-    "results": {
-      "experiments": "Experiments",
-      "protocols": "Protocols",
-      "macros": "Macros",
-      "workbooks": "Workbooks"
     },
     "status": {
       "searching": "Searching...",

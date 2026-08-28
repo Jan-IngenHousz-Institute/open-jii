@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zResourceScope } from "../../shared/listing";
 import { zExperimentStatus } from "../experiment/experiment.schema";
 import { zDeviceType } from "../iot/iot.schema";
 import { zMacroLanguage } from "../macro/macro.schema";
@@ -14,6 +15,20 @@ export const zOrganizationType = z.enum([
   "government_agency",
   "university",
 ]);
+export type OrganizationType = z.infer<typeof zOrganizationType>;
+
+/**
+ * Every visible organization-type label the search service accepts. Kept beside
+ * {@link zOrganizationType} so a new enum member cannot silently become unsearchable;
+ * the web locale contract tests keep these aliases aligned with the translated labels.
+ */
+export const ORGANIZATION_TYPE_SEARCH_ALIASES = {
+  research_institute: "Research institute Forschungsinstitut Onderzoeksinstituut",
+  non_profit: "Non-profit non profit nonprofit Gemeinnützige Organisation",
+  private_company: "Private company Privatunternehmen Particulier bedrijf",
+  government_agency: "Government agency Behörde Overheidsinstantie",
+  university: "University Universität Universiteit",
+} as const satisfies Record<OrganizationType, string>;
 
 /** Directory listing state. Private organizations are invisible to non-members. */
 export const zOrganizationVisibility = z.enum(["private", "public"]);
@@ -33,7 +48,20 @@ export const zOrganizationIdPathParam = z.object({
 });
 
 export const zOrganizationDirectoryQuery = z.object({
-  search: z.string().trim().max(200).optional().describe("Name or description substring"),
+  search: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .describe(
+      "Name, description, location or type; also member and team names, for organizations you belong to",
+    ),
+  /**
+   * The same `scope` the experiment, macro and protocol listings take. `related` narrows
+   * to the caller's own memberships — a filter over this one query, not a second
+   * endpoint, so both slices match and rank identically.
+   */
+  scope: zResourceScope.optional().describe("Which slice of the visible set to return"),
 });
 
 /**
@@ -285,7 +313,6 @@ export const zGranteeTeamsPathParams = z.object({
   id: z.string().uuid().describe("ID of the resource being shared"),
 });
 
-export type OrganizationType = z.infer<typeof zOrganizationType>;
 export type OrganizationVisibility = z.infer<typeof zOrganizationVisibility>;
 export type OrganizationRole = z.infer<typeof zOrganizationRole>;
 export type OrganizationMembershipStatus = z.infer<typeof zOrganizationMembershipStatus>;

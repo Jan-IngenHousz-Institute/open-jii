@@ -462,6 +462,7 @@ export class TestHarness {
       slug?: string;
       visibility?: "private" | "public";
       description?: string | null;
+      location?: string | null;
       type?:
         | "research_institute"
         | "non_profit"
@@ -477,6 +478,7 @@ export class TestHarness {
         slug: options.slug ?? `org-${faker.string.uuid()}`,
         ...(options.visibility ? { visibility: options.visibility } : {}),
         ...(options.description === undefined ? {} : { description: options.description }),
+        ...(options.location === undefined ? {} : { location: options.location }),
         ...(options.type ? { type: options.type } : {}),
       })
       .returning();
