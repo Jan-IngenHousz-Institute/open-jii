@@ -42,25 +42,12 @@
     "milestone": "Measurement {{ordinal}} landed on {{date}}"
   },
   "dashboard": {
-    "chips": {
-      "month": {
-        "label": "This month",
-        "unit": "measurements"
-      },
-      "day": {
-        "label": "Last 24 h",
-        "unit": "measurements"
-      },
-      "mine": {
-        "label": "Your experiments",
-        "unit": "this month"
-      },
-      "experiments": {
-        "label": "Active experiments",
-        "unit": "community-wide"
-      }
-    },
     "milestone": "The community recorded measurement {{ordinal}} on {{date}}.",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "activity": {
+      "summary": "measurements in your experiments over 30 days, across <em>{{experiments}}</em> active experiments with <em>{{contributors}}</em> contributors",
+      "context": "The community recorded <em>{{measurements}}</em> measurements over the same period.",
+      "trend": "Daily measurements"
+    }
   }
 }

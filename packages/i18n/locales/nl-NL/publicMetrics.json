@@ -42,25 +42,12 @@
     "milestone": "Meting {{ordinal}} kwam binnen op {{date}}"
   },
   "dashboard": {
-    "chips": {
-      "month": {
-        "label": "Deze maand",
-        "unit": "metingen"
-      },
-      "day": {
-        "label": "Laatste 24 u",
-        "unit": "metingen"
-      },
-      "mine": {
-        "label": "Jouw experimenten",
-        "unit": "deze maand"
-      },
-      "experiments": {
-        "label": "Actieve experimenten",
-        "unit": "platformbreed"
-      }
-    },
     "milestone": "De community registreerde meting {{ordinal}} op {{date}}.",
-    "dismiss": "Sluiten"
+    "dismiss": "Sluiten",
+    "activity": {
+      "summary": "metingen in je experimenten over 30 dagen, verdeeld over <em>{{experiments}}</em> actieve experimenten met <em>{{contributors}}</em> bijdragers",
+      "context": "De community registreerde in dezelfde periode <em>{{measurements}}</em> metingen.",
+      "trend": "Dagelijkse metingen"
+    }
   }
 }

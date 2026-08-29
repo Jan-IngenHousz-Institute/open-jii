@@ -42,25 +42,12 @@
     "milestone": "Messung {{ordinal}} erfolgte am {{date}}"
   },
   "dashboard": {
-    "chips": {
-      "month": {
-        "label": "Dieser Monat",
-        "unit": "Messungen"
-      },
-      "day": {
-        "label": "Letzte 24 h",
-        "unit": "Messungen"
-      },
-      "mine": {
-        "label": "Ihre Experimente",
-        "unit": "diesen Monat"
-      },
-      "experiments": {
-        "label": "Aktive Experimente",
-        "unit": "plattformweit"
-      }
-    },
     "milestone": "Die Community erfasste Messung {{ordinal}} am {{date}}.",
-    "dismiss": "Schließen"
+    "dismiss": "Schließen",
+    "activity": {
+      "summary": "Messungen in deinen Experimenten über 30 Tage, verteilt auf <em>{{experiments}}</em> aktive Experimente mit <em>{{contributors}}</em> Mitwirkenden",
+      "context": "Die Community erfasste im selben Zeitraum <em>{{measurements}}</em> Messungen.",
+      "trend": "Tägliche Messungen"
+    }
   }
 }
