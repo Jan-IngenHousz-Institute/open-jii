@@ -13,11 +13,9 @@
   "activityChart": {
     "daily": "Daily",
     "cumulative": "Cumulative",
-    "volume": "Volume",
     "title": {
       "daily": "Measurements per day, last 30 days",
-      "cumulative": "Measurements collected, cumulative",
-      "volume": "Measurement data per day, last 30 days"
+      "cumulative": "Measurements collected, last 12 months"
     }
   },
   "families": {
@@ -39,19 +37,27 @@
     "avgMeasurementSize": "An average measurement carries {{size}} of trace data",
     "openDatasets": "Open datasets: {{count}}",
     "sharedExperiments": "Experiments shared across organizations: {{count}}",
-    "milestone": "Measurement {{ordinal}} landed on {{date}}"
+    "milestone": "Measurement {{ordinal}} landed on {{date}}",
+    "paceFast": "{{count}} measurements arrive every second this month"
   },
   "dashboard": {
     "milestone": "The community recorded measurement {{ordinal}} on {{date}}.",
     "dismiss": "Dismiss",
     "activity": {
-      "summary": "measurements in your experiments over 30 days, across <em>{{experiments}}</em> active experiments with <em>{{contributors}}</em> contributors",
-      "context": "The community recorded <em>{{measurements}}</em> measurements over the same period.",
+      "label": "Your experiments, last 30 days",
+      "experiments_one": "active experiment",
+      "experiments_other": "active experiments",
+      "contributors_one": "contributor",
+      "contributors_other": "contributors",
+      "context": "Across the community, {{measurements}} measurements over the same period.",
       "trend": "Daily measurements"
     }
   },
   "experiment": {
-    "collecting": "<em>{{measurements}}</em> measurements recorded here in the last 30 days, by <em>{{contributors}}</em> contributors",
+    "measurements": "measurements in the last 30 days",
+    "window": "recorded here over the last 30 days",
+    "byContributors_one": "recorded by {{count}} contributor",
+    "byContributors_other": "recorded by {{count}} contributors",
     "quiet": "No measurements recorded here in the last 30 days",
     "trend": "Daily measurements"
   }

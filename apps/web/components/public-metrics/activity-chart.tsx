@@ -10,39 +10,48 @@ import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import { detectAxisType } from "@repo/ui/components/charts/utils";
 
 const DAYS_SHOWN = 30;
+// Device clocks drift, so daily_activity carries a tail of implausibly early
+// dates. Twelve months is the honest span for a growth curve.
+const CUMULATIVE_DAYS = 365;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-type ActivityMode = "daily" | "cumulative" | "volume";
+type ActivityMode = "daily" | "cumulative";
 
 interface ActivityChartProps {
   data: MetricsActivityDay[];
   locale: string;
 }
 
-/** One chart, three measures: daily bars, cumulative area, volume bars. */
+/** Days within a year of the newest one, dropping clock-skewed outliers. */
+function recentYear(data: MetricsActivityDay[]): MetricsActivityDay[] {
+  if (data.length === 0) {
+    return data;
+  }
+
+  const cutoff = Date.parse(data[data.length - 1].date) - CUMULATIVE_DAYS * DAY_MS;
+  return data.filter((day) => Date.parse(day.date) >= cutoff);
+}
+
+/** Daily bars or the twelve-month cumulative curve, over the same series. */
 export function ActivityChart({ data, locale }: ActivityChartProps) {
   const { t } = useTranslation("publicMetrics");
   const [mode, setMode] = useState<ActivityMode>("daily");
 
   const isCumulative = mode === "cumulative";
-  const points = isCumulative ? data : data.slice(-DAYS_SHOWN);
-
-  const measureOf = (day: MetricsActivityDay) => {
-    if (mode === "daily") {
-      return day.measurements;
-    }
-    return isCumulative ? day.cumulativeMeasurements : day.volumeBytes;
-  };
+  const points = isCumulative ? recentYear(data) : data.slice(-DAYS_SHOWN);
 
   const x = points.map((day) => day.date);
-  const y = points.map(measureOf);
+  const y = points.map((day) => (isCumulative ? day.cumulativeMeasurements : day.measurements));
   const label = t(`activityChart.${mode}`);
 
   const config: PlotlyChartConfig = {
     showLegend: false,
     showModeBar: false,
+    // A display chart: hover reads values, drag would zoom or select.
+    dragMode: false,
+    scrollZoom: false,
     showGrid: true,
     backgroundColor: "rgba(0,0,0,0)",
-    height: 208,
     xAxisType: detectAxisType(x),
     locale,
   };
@@ -59,22 +68,24 @@ export function ActivityChart({ data, locale }: ActivityChartProps) {
     </button>
   );
 
-  const modes: ActivityMode[] = ["daily", "cumulative", "volume"];
+  const modes: ActivityMode[] = ["daily", "cumulative"];
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-foreground text-sm font-medium">{t(`activityChart.title.${mode}`)}</h3>
-        <div className="border-border flex rounded-full border">{modes.map(renderModeButton)}</div>
+        <div className="border-border flex shrink-0 rounded-full border">
+          {modes.map(renderModeButton)}
+        </div>
       </div>
       {isCumulative ? (
         <AreaChart
           data={[{ x, y, name: label, fill: "tozeroy", mode: "lines" }]}
           config={config}
-          className="h-52 w-full"
+          className="h-48 w-full sm:h-56"
         />
       ) : (
-        <BarChart data={[{ x, y, name: label }]} config={config} className="h-52 w-full" />
+        <BarChart data={[{ x, y, name: label }]} config={config} className="h-48 w-full sm:h-56" />
       )}
     </div>
   );

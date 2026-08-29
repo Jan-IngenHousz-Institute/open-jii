@@ -50,8 +50,5 @@ describe("ActivityChart", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "activityChart.cumulative" }));
     expect(screen.getByText("activityChart.title.cumulative")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "activityChart.volume" }));
-    expect(screen.getByText("activityChart.title.volume")).toBeInTheDocument();
   });
 });

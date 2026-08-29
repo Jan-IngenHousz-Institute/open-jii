@@ -13,11 +13,9 @@
   "activityChart": {
     "daily": "Täglich",
     "cumulative": "Kumulativ",
-    "volume": "Volumen",
     "title": {
       "daily": "Messungen pro Tag, letzte 30 Tage",
-      "cumulative": "Erfasste Messungen, kumulativ",
-      "volume": "Messdaten pro Tag, letzte 30 Tage"
+      "cumulative": "Erfasste Messungen, letzte 12 Monate"
     }
   },
   "families": {
@@ -39,19 +37,27 @@
     "avgMeasurementSize": "Eine durchschnittliche Messung umfasst {{size}} Rohdaten",
     "openDatasets": "Offene Datensätze: {{count}}",
     "sharedExperiments": "Organisationsübergreifend geteilte Experimente: {{count}}",
-    "milestone": "Messung {{ordinal}} erfolgte am {{date}}"
+    "milestone": "Messung {{ordinal}} erfolgte am {{date}}",
+    "paceFast": "Diesen Monat treffen {{count}} Messungen pro Sekunde ein"
   },
   "dashboard": {
     "milestone": "Die Community erfasste Messung {{ordinal}} am {{date}}.",
     "dismiss": "Schließen",
     "activity": {
-      "summary": "Messungen in deinen Experimenten über 30 Tage, verteilt auf <em>{{experiments}}</em> aktive Experimente mit <em>{{contributors}}</em> Mitwirkenden",
-      "context": "Die Community erfasste im selben Zeitraum <em>{{measurements}}</em> Messungen.",
+      "label": "Deine Experimente, letzte 30 Tage",
+      "experiments_one": "aktives Experiment",
+      "experiments_other": "aktive Experimente",
+      "contributors_one": "Mitwirkender",
+      "contributors_other": "Mitwirkende",
+      "context": "Community-weit {{measurements}} Messungen im selben Zeitraum.",
       "trend": "Tägliche Messungen"
     }
   },
   "experiment": {
-    "collecting": "<em>{{measurements}}</em> Messungen hier in den letzten 30 Tagen, von <em>{{contributors}}</em> Mitwirkenden",
+    "measurements": "Messungen in den letzten 30 Tagen",
+    "window": "hier in den letzten 30 Tagen erfasst",
+    "byContributors_one": "erfasst von {{count}} Mitwirkendem",
+    "byContributors_other": "erfasst von {{count}} Mitwirkenden",
     "quiet": "Keine Messungen hier in den letzten 30 Tagen",
     "trend": "Tägliche Messungen"
   }

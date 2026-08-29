@@ -44,7 +44,9 @@ describe("ResearchActivityPanel", () => {
     render(<ResearchActivityPanel locale="en-US" />);
 
     expect(screen.getByText("4,120")).toBeInTheDocument();
-    expect(screen.getByText("dashboard.activity.summary")).toBeInTheDocument();
+    expect(screen.getByText("dashboard.activity.label")).toBeInTheDocument();
+    expect(screen.getByText("dashboard.activity.experiments")).toBeInTheDocument();
+    expect(screen.getByText("dashboard.activity.contributors")).toBeInTheDocument();
     expect(screen.getByText("dashboard.activity.context")).toBeInTheDocument();
 
     const series = (areaProps[0]?.data as { y: number[] }[])[0];

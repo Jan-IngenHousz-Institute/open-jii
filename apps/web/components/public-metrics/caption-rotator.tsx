@@ -40,7 +40,16 @@ export function CaptionRotator({ captions, locale }: CaptionRotatorProps) {
       case "streak":
         return t("captions.streak", { days: format(caption.days) });
       case "pace":
-        return t("captions.pace", { seconds: format(caption.secondsPerMeasurement) });
+        // Below one second per measurement the interval reads as "every 0
+        // seconds", so the same fact is stated as a rate instead.
+        if (caption.secondsPerMeasurement <= 0) {
+          return null;
+        }
+        return caption.secondsPerMeasurement >= 1
+          ? t("captions.pace", { seconds: format(Math.round(caption.secondsPerMeasurement)) })
+          : t("captions.paceFast", {
+              count: Math.max(1, Math.round(1 / caption.secondsPerMeasurement)),
+            });
       case "sessionSize":
         return t("captions.sessionSize", { count: format(caption.medianMeasurements) });
       case "endurance":
