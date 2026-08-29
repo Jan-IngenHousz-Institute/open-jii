@@ -58,7 +58,6 @@
   },
   "experiment": {
     "measurements": "measurements in the last 30 days",
-    "window": "recorded here over the last 30 days",
     "byContributors_one": "recorded by {{count}} contributor",
     "byContributors_other": "recorded by {{count}} contributors",
     "quiet": "No measurements recorded here in the last 30 days",

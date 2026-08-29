@@ -52,6 +52,8 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
     dragMode: false,
     scrollZoom: false,
     showGrid: false,
+    // A trend indicator beside text: the shape is the message.
+    sparkline: true,
     backgroundColor: "rgba(0,0,0,0)",
     xAxisType: detectAxisType(days.map((day) => day.date)),
     locale,
@@ -80,7 +82,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
         },
       ]}
       config={chartConfig}
-      className="h-20 w-full sm:h-24"
+      className="h-16 w-full"
     />
   );
 

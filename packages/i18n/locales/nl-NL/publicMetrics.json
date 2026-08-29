@@ -58,7 +58,6 @@
   },
   "experiment": {
     "measurements": "metingen in de afgelopen 30 dagen",
-    "window": "hier vastgelegd in de afgelopen 30 dagen",
     "byContributors_one": "vastgelegd door {{count}} bijdrager",
     "byContributors_other": "vastgelegd door {{count}} bijdragers",
     "quiet": "Geen metingen hier in de afgelopen 30 dagen",
