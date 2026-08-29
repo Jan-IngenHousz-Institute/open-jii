@@ -3,6 +3,9 @@
 import type { MetricsFamily } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
 
+/** Publishers the device registry could not resolve to a device. */
+export const UNATTRIBUTED_FAMILY = "unattributed";
+
 interface FamilyBarsProps {
   families: MetricsFamily[];
   locale: string;
@@ -16,7 +19,7 @@ export function FamilyBars({ families, locale }: FamilyBarsProps) {
     new Intl.NumberFormat(locale, { notation: "compact" }).format(value);
 
   const familyLabel = (family: string) =>
-    family === "unattributed" ? t("families.unattributed") : family;
+    family === UNATTRIBUTED_FAMILY ? t("families.unattributed") : family;
 
   const renderRow = (family: MetricsFamily) => (
     <li key={family.family} className="flex items-center gap-3">
