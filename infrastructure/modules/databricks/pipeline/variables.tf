@@ -126,3 +126,14 @@ variable "permissions" {
     error_message = "permission_level must be one of: CAN_VIEW, CAN_RUN, CAN_MANAGE, IS_OWNER"
   }
 }
+
+variable "environment_dependencies" {
+  description = "Library specs installed into a serverless pipeline's environment, e.g. workspace wheel paths. Serverless pipelines have no cluster, so cluster-policy libraries never reach them."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = length(var.environment_dependencies) == 0 || var.serverless
+    error_message = "environment_dependencies applies to serverless pipelines only; non-serverless pipelines install libraries through their cluster policy."
+  }
+}
