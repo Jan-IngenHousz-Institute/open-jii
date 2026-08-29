@@ -2619,6 +2619,7 @@ describe("DatabricksAdapter", () => {
       mockSqlResponse(
         [
           "total_measurements",
+          "total_volume_bytes",
           "devices_all_time",
           "experiments_with_data",
           "first_measurement_at",
@@ -2630,6 +2631,7 @@ describe("DatabricksAdapter", () => {
         [
           [
             "1000",
+            "949000",
             "9",
             "5",
             "2024-01-01 00:00:00",
@@ -2646,6 +2648,7 @@ describe("DatabricksAdapter", () => {
       assertSuccess(result);
       expect(result.value).toEqual({
         totalMeasurements: 1000,
+        totalVolumeBytes: 949000,
         devicesAllTime: 9,
         experimentsWithData: 5,
         firstMeasurementAt: "2024-01-01T00:00:00.000Z",
@@ -2662,20 +2665,6 @@ describe("DatabricksAdapter", () => {
       expect(empty.value).toBeNull();
     });
 
-    it("sums the all-time volume and reads a blank aggregate as absent", async () => {
-      mockToken();
-      mockSqlResponse(["total_volume_bytes"], [["123456789"]]);
-      const volume = await databricksAdapter.getPublicTotalVolumeBytes();
-      assertSuccess(volume);
-      expect(volume.value).toBe(123456789);
-
-      mockToken();
-      mockSqlResponse(["total_volume_bytes"], [[""]]);
-      const blank = await databricksAdapter.getPublicTotalVolumeBytes();
-      assertSuccess(blank);
-      expect(blank.value).toBeNull();
-    });
-
     it("reads blank numeric cells as absent, never as zero", async () => {
       mockToken();
       mockSqlResponse(["total_measurements", "computed_at"], [["   ", "2026-08-14 10:05:00"]]);
@@ -2687,7 +2676,6 @@ describe("DatabricksAdapter", () => {
     it("passes a warehouse failure through every reader", async () => {
       const readers = [
         () => databricksAdapter.getPublicPlatformTotals(),
-        () => databricksAdapter.getPublicTotalVolumeBytes(),
         () => databricksAdapter.getPublicDailyActivity(30),
         () => databricksAdapter.getPublicFamilyTotals(),
         () => databricksAdapter.getActivityWindows(),
@@ -2732,12 +2720,6 @@ describe("DatabricksAdapter", () => {
     });
 
     it("reads empty single-row tables as null", async () => {
-      mockToken();
-      mockSqlResponse(["total_volume_bytes"], []);
-      const volume = await databricksAdapter.getPublicTotalVolumeBytes();
-      assertSuccess(volume);
-      expect(volume.value).toBeNull();
-
       mockToken();
       mockSqlResponse(["measurements_24h"], []);
       const windows = await databricksAdapter.getActivityWindows();
@@ -2914,14 +2896,18 @@ describe("DatabricksAdapter", () => {
           "simultaneity_peak_devices",
           "timezones_all_time",
           "timezones_peak_day",
+          "median_arrival_gap_seconds",
+          "current_streak_days",
           "computed_at",
         ],
-        [["45", null, "14", "14", "9", "x"]],
+        [["45", null, "14", "14", "9", "0.25", "12", "x"]],
       );
       const pool = await databricksAdapter.getPoolFacts();
       assertSuccess(pool);
       expect(pool.value).toEqual({
         sessionMedianMeasurements: 45,
+        medianArrivalGapSeconds: 0.25,
+        currentStreakDays: 12,
         deviceEnduranceDays: null,
         simultaneityPeakDevices: 14,
         timezonesAllTime: 14,

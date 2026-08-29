@@ -8,6 +8,7 @@ import { GetPublicMetricsUseCase, PUBLIC_METRICS_CACHE_KEY } from "./get-public-
 
 const totals = {
   totalMeasurements: 1_000_000,
+  totalVolumeBytes: 6_000_000,
   totalUploadedRows: 50,
   totalMacroExecutions: 200,
   devicesAllTime: 9,
@@ -45,6 +46,8 @@ const windows = {
 
 const poolFacts = {
   sessionMedianMeasurements: 45,
+  medianArrivalGapSeconds: 538.65,
+  currentStreakDays: 2,
   deviceEnduranceDays: 94,
   simultaneityPeakDevices: 14,
   timezonesAllTime: 14,
@@ -94,7 +97,6 @@ describe("GetPublicMetricsUseCase", () => {
     });
 
     totalsSpy = vi.spyOn(adapter, "getPublicPlatformTotals").mockResolvedValue(success(totals));
-    vi.spyOn(adapter, "getPublicTotalVolumeBytes").mockResolvedValue(success(6_000_000));
     vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(success(daily));
     vi.spyOn(adapter, "getPublicFamilyTotals").mockResolvedValue(
       success([{ family: "multispeq", measurements: 900 }]),
@@ -154,11 +156,8 @@ describe("GetPublicMetricsUseCase", () => {
 
     // 2026-08-25 is not adjacent to 08-27, so the streak is the last two days.
     expect(kinds.get("streak")).toEqual({ kind: "streak", days: 2 });
-    // Unrounded, so a sub-second interval stays expressible as a rate.
-    expect(kinds.get("pace")).toEqual({
-      kind: "pace",
-      secondsPerMeasurement: (30 * 24 * 3600) / 4_812,
-    });
+    // The measured gap between measurements, straight from the pipeline.
+    expect(kinds.get("pace")).toEqual({ kind: "pace", secondsPerMeasurement: 538.65 });
     expect(kinds.get("milestone")).toEqual({
       kind: "milestone",
       ordinal: 1_000_000,
@@ -175,18 +174,18 @@ describe("GetPublicMetricsUseCase", () => {
   });
 
   it("drops captions that would state a degenerate figure", async () => {
-    // A platform faster than one measurement per second: the interval is a
-    // fraction, and a rounded one would read as "every 0 seconds".
-    vi.spyOn(adapter, "getActivityWindows").mockResolvedValue(
-      success({ ...windows, measurements30d: 5_000_000_000 }),
+    // Timestamps sharing a millisecond leave no measurable gap; a zero here
+    // would publish "a measurement arrives every 0 seconds".
+    vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(
+      success({ ...poolFacts, medianArrivalGapSeconds: 0, currentStreakDays: 0 }),
     );
 
     const result = await useCase.execute();
 
     assertSuccess(result);
-    const pace = result.value.captions.find((caption) => caption.kind === "pace");
-    expect(pace).toBeDefined();
-    expect(pace?.kind === "pace" && pace.secondsPerMeasurement).toBeGreaterThan(0);
+    const kinds = result.value.captions.map((caption) => caption.kind);
+    expect(kinds).not.toContain("pace");
+    expect(kinds).not.toContain("streak");
   });
 
   it("serves the cached snapshot without refetching", async () => {
@@ -230,45 +229,13 @@ describe("GetPublicMetricsUseCase", () => {
   });
 
   it("hides the hero instead of inventing zeros when an input is missing", async () => {
-    vi.spyOn(adapter, "getPublicTotalVolumeBytes").mockResolvedValue(
-      failure(AppError.internal("warehouse down")),
-    );
+    vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(failure(AppError.internal("down")));
 
     const result = await useCase.execute();
 
     assertSuccess(result);
     expect(result.value.hero).toBeNull();
     expect(result.value.liveness).not.toBeNull();
-  });
-
-  it("withholds the streak once the newest daily row is stale", async () => {
-    vi.useFakeTimers({ now: new Date("2026-09-10T12:00:00Z"), toFake: ["Date"] });
-
-    const result = await useCase.execute();
-
-    assertSuccess(result);
-    const kinds = result.value.captions.map((caption) => caption.kind);
-    expect(kinds).not.toContain("streak");
-  });
-
-  it("reports no streak when the newest day is empty", async () => {
-    vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(
-      success([
-        {
-          date: "2026-08-27",
-          measurements: 80,
-          cumulativeMeasurements: 999_880,
-          volumeBytes: 1_600_000,
-        },
-        { date: "2026-08-28", measurements: 0, cumulativeMeasurements: 999_880, volumeBytes: 0 },
-      ]),
-    );
-
-    const result = await useCase.execute();
-
-    assertSuccess(result);
-    const kinds = result.value.captions.map((caption) => caption.kind);
-    expect(kinds).not.toContain("streak");
   });
 
   it("emits no milestone below the first threshold", async () => {

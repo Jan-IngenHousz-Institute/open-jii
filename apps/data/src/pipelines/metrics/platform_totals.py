@@ -38,6 +38,8 @@ def platform_totals():
         .filter(within_plausible_range(F.col("timestamp"), now))
         .agg(
             F.count("*").alias("total_measurements"),
+            # Logical payload size of the decompressed traces.
+            F.coalesce(F.sum(F.octet_length("sample")), F.lit(0)).alias("total_volume_bytes"),
             F.countDistinct("device_id").alias("devices_all_time"),
             F.countDistinct("experiment_id").alias("experiments_with_data"),
             F.min("timestamp").alias("first_measurement_at"),

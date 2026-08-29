@@ -2,6 +2,7 @@ import type { Result } from "../../../common/utils/fp-utils";
 
 export interface PlatformTotalsRow {
   totalMeasurements: number;
+  totalVolumeBytes: number;
   totalUploadedRows: number;
   totalMacroExecutions: number;
   devicesAllTime: number;
@@ -48,6 +49,8 @@ export interface ParameterStatsRow {
 
 export interface PoolFactsRow {
   sessionMedianMeasurements: number | null;
+  medianArrivalGapSeconds: number | null;
+  currentStreakDays: number | null;
   deviceEnduranceDays: number | null;
   simultaneityPeakDevices: number | null;
   timezonesAllTime: number | null;
@@ -77,7 +80,6 @@ export const METRICS_DATABRICKS_PORT = Symbol("METRICS_DATABRICKS_PORT");
  */
 export interface DatabricksPort {
   getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>>;
-  getPublicTotalVolumeBytes(): Promise<Result<number | null>>;
   getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>>;
   getPublicFamilyTotals(): Promise<Result<FamilyTotalsRow[]>>;
   getActivityWindows(): Promise<Result<ActivityWindowsRow | null>>;

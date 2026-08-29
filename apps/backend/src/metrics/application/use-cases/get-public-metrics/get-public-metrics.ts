@@ -21,7 +21,6 @@ import { MetricsRepository } from "../../../core/repositories/metrics.repository
 export const PUBLIC_METRICS_CACHE_KEY = "public-snapshot";
 
 const DAILY_ACTIVITY_DAYS = 366;
-const WINDOW_DAYS = 30;
 
 // Milestone thresholds follow the 1-2-5 decade pattern.
 const MILESTONE_STEPS = [1, 2, 5];
@@ -74,7 +73,6 @@ export class GetPublicMetricsUseCase {
   private async load(): Promise<PublicMetricsResponse | null> {
     const [
       totals,
-      totalVolume,
       daily,
       families,
       windows,
@@ -85,7 +83,6 @@ export class GetPublicMetricsUseCase {
       contributorPairs,
     ] = await Promise.all([
       this.databricksPort.getPublicPlatformTotals(),
-      this.databricksPort.getPublicTotalVolumeBytes(),
       this.databricksPort.getPublicDailyActivity(DAILY_ACTIVITY_DAYS),
       this.databricksPort.getPublicFamilyTotals(),
       this.databricksPort.getActivityWindows(),
@@ -103,7 +100,6 @@ export class GetPublicMetricsUseCase {
 
     const failures = [
       totals,
-      totalVolume,
       daily,
       families,
       windows,
@@ -128,14 +124,13 @@ export class GetPublicMetricsUseCase {
 
     const windowVolumeBytes = dailyRows.reduce((sum, row) => sum + row.volumeBytes, 0);
     const windowMeasurements = dailyRows.reduce((sum, row) => sum + row.measurements, 0);
-    const totalVolumeBytes = totalVolume.isSuccess() ? totalVolume.value : null;
 
     const institutions = contributorPairs.isSuccess()
       ? await this.countInstitutions(contributorPairs.value.map((pair) => pair.experimentId))
       : null;
 
     return {
-      hero: this.buildHero(totalsRow, poolRow, totalVolumeBytes),
+      hero: this.buildHero(totalsRow, poolRow),
       liveness: windowsRow
         ? {
             lastMeasurementAt: windowsRow.lastMeasurementAt,
@@ -170,20 +165,16 @@ export class GetPublicMetricsUseCase {
     };
   }
 
-  private buildHero(
-    totals: PlatformTotalsRow | null,
-    poolFacts: PoolFactsRow | null,
-    totalVolumeBytes: number | null,
-  ) {
+  private buildHero(totals: PlatformTotalsRow | null, poolFacts: PoolFactsRow | null) {
     // Every figure measured, or no hero at all: a failed input must not
     // render as a zero.
-    if (totals === null || totalVolumeBytes === null || poolFacts?.timezonesAllTime == null) {
+    if (totals === null || poolFacts?.timezonesAllTime == null) {
       return null;
     }
 
     return {
       totalMeasurements: totals.totalMeasurements,
-      totalVolumeBytes,
+      totalVolumeBytes: totals.totalVolumeBytes,
       timezonesSpanned: poolFacts.timezonesAllTime,
     };
   }
@@ -214,18 +205,16 @@ export class GetPublicMetricsUseCase {
   ): Promise<MetricsCaption[]> {
     const captions: MetricsCaption[] = [];
 
-    const streak = this.currentStreakDays(daily);
-    if (streak > 1) {
-      captions.push({ kind: "streak", days: streak });
+    if (poolFacts?.currentStreakDays != null && poolFacts.currentStreakDays > 1) {
+      captions.push({ kind: "streak", days: poolFacts.currentStreakDays });
     }
 
-    if (windows !== null && windows.measurements30d > 0) {
-      const windowSeconds = WINDOW_DAYS * 24 * 60 * 60;
-      // Unrounded: above one measurement per second the interval is a fraction,
-      // and rounding it here would ship "every 0 seconds" as a fact.
+    if (poolFacts?.medianArrivalGapSeconds != null) {
+      // The measured interval between consecutive measurements, not a window
+      // divided by a count.
       captions.push({
         kind: "pace",
-        secondsPerMeasurement: windowSeconds / windows.measurements30d,
+        secondsPerMeasurement: poolFacts.medianArrivalGapSeconds,
       });
     }
 
@@ -296,36 +285,6 @@ export class GetPublicMetricsUseCase {
       }
       return true;
     });
-  }
-
-  /** Consecutive days with data, counted back from the newest date present.
-   * Zero when that date is not recent: a streak that ended is not current,
-   * and daily rows only exist for days with data. */
-  private currentStreakDays(daily: DailyActivityRow[]): number {
-    const dayMs = 24 * 60 * 60 * 1000;
-
-    const newest = daily.length > 0 ? daily[daily.length - 1] : null;
-    if (newest === null || Date.now() - Date.parse(newest.date) >= 2 * dayMs) {
-      return 0;
-    }
-
-    let streak = 0;
-    let expected: number | null = null;
-
-    for (let i = daily.length - 1; i >= 0; i--) {
-      const row = daily[i];
-      if (row.measurements === 0) {
-        break;
-      }
-      const time = Date.parse(row.date);
-      if (expected !== null && expected - time !== dayMs) {
-        break;
-      }
-      streak += 1;
-      expected = time;
-    }
-
-    return streak;
   }
 
   /** The largest 1-2-5 decade milestone at or below the total, dated by the

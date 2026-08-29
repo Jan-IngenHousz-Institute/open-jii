@@ -1246,6 +1246,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     return success({
       totalMeasurements,
+      totalVolumeBytes: cellNumber(row[index.total_volume_bytes]) ?? 0,
       totalUploadedRows: cellNumber(row[index.total_uploaded_rows]) ?? 0,
       totalMacroExecutions: cellNumber(row[index.total_macro_executions]) ?? 0,
       devicesAllTime: cellNumber(row[index.devices_all_time]) ?? 0,
@@ -1254,24 +1255,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       lastMeasurementAt: cellUtcIso(row[index.last_measurement_at]),
       computedAt: cellUtcIso(row[index.computed_at]),
     });
-  }
-
-  async getPublicTotalVolumeBytes(): Promise<Result<number | null>> {
-    const result = await this.readMetricsTable("daily_activity", {
-      aggregation: {
-        functions: [{ column: "volume_bytes", function: "sum", alias: "total_volume_bytes" }],
-      },
-    });
-    if (result.isFailure()) {
-      return result;
-    }
-
-    const { rows, index } = result.value;
-    if (rows.length === 0) {
-      return success(null);
-    }
-
-    return success(cellNumber(rows[0][index.total_volume_bytes]));
   }
 
   async getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>> {
@@ -1430,6 +1413,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const row = rows[0];
     return success({
       sessionMedianMeasurements: cellNumber(row[index.session_median_measurements]),
+      medianArrivalGapSeconds: cellNumber(row[index.median_arrival_gap_seconds]),
+      currentStreakDays: cellNumber(row[index.current_streak_days]),
       deviceEnduranceDays: cellNumber(row[index.device_endurance_days]),
       simultaneityPeakDevices: cellNumber(row[index.simultaneity_peak_devices]),
       timezonesAllTime: cellNumber(row[index.timezones_all_time]),
