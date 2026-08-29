@@ -7,6 +7,7 @@ import { useTranslation } from "@repo/i18n";
 import { AreaChart } from "@repo/ui/components/charts/area-chart";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
+import { detectAxisType } from "@repo/ui/components/charts/utils";
 
 const DAYS_SHOWN = 30;
 
@@ -38,10 +39,11 @@ export function ActivityChart({ data, locale }: ActivityChartProps) {
 
   const config: PlotlyChartConfig = {
     showLegend: false,
+    showModeBar: false,
     showGrid: true,
+    backgroundColor: "rgba(0,0,0,0)",
     height: 208,
-    xAxisTitle: "",
-    yAxisTitle: "",
+    xAxisType: detectAxisType(x),
     locale,
   };
 
