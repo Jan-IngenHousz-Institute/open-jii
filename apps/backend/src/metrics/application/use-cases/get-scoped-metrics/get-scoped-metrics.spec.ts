@@ -162,6 +162,29 @@ describe("GetScopedMetricsUseCase", () => {
     assertFailure(result);
   });
 
+  it("scopes to a single experiment the caller may read", async () => {
+    const result = await useCase.execute("experiment", userId, undefined, orgExperimentId);
+
+    assertSuccess(result);
+    expect(result.value.scoped?.measurements30d).toBe(1_000);
+    expect(result.value.scoped?.activeExperiments30d).toBe(1);
+    expect(result.value.scoped?.contributors30d).toBe(2);
+  });
+
+  it("denies experiment scope to a user without read access", async () => {
+    const result = await useCase.execute("experiment", outsiderId, undefined, orgExperimentId);
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+  });
+
+  it("requires an experimentId for experiment scope", async () => {
+    const result = await useCase.execute("experiment", userId);
+
+    assertFailure(result);
+    expect(result.error.code).toBe("BAD_REQUEST");
+  });
+
   it("denies organization scope to non-members", async () => {
     const result = await useCase.execute("organization", outsiderId, organizationId);
 

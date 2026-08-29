@@ -19628,7 +19628,8 @@
             "schema": {
               "enum": [
                 "organization",
-                "mine"
+                "mine",
+                "experiment"
               ],
               "type": "string"
             },
@@ -19637,6 +19638,17 @@
           },
           {
             "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "experimentId",
             "in": "query",
             "required": false,
             "schema": {
@@ -19658,7 +19670,8 @@
                     "scope": {
                       "enum": [
                         "organization",
-                        "mine"
+                        "mine",
+                        "experiment"
                       ],
                       "type": "string"
                     },

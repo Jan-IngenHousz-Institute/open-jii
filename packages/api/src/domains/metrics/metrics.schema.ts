@@ -79,11 +79,17 @@ export const zPublicMetricsResponse = z.object({
   computedAt: z.string().nullable(),
 });
 
-export const zMetricsScope = z.enum(["organization", "mine"]);
+export const zMetricsScope = z.enum(["organization", "mine", "experiment"]);
 
+/**
+ * `organizationId` is required for organization scope and `experimentId` for
+ * experiment scope; both are checked against the caller's access before any
+ * cached figure is served.
+ */
 export const zScopedMetricsQuery = z.object({
   scope: zMetricsScope,
   organizationId: z.string().uuid().optional(),
+  experimentId: z.string().uuid().optional(),
 });
 
 export const zScopedActivity = z.object({
