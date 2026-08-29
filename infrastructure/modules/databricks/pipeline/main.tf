@@ -60,6 +60,13 @@ resource "databricks_pipeline" "this" {
   # Serverless compute block
   serverless = var.serverless
 
+  dynamic "environment" {
+    for_each = length(var.environment_dependencies) > 0 ? [1] : []
+    content {
+      dependencies = var.environment_dependencies
+    }
+  }
+
   # Support continuous or triggered execution
   continuous = var.continuous_mode
 
