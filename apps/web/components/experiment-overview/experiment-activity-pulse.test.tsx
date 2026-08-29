@@ -3,16 +3,22 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ExperimentActivityPulse } from "./experiment-activity-pulse";
 
+/** What the mocked chart component was handed. */
+interface CapturedChart {
+  config: Record<string, unknown>;
+  data: { x: string[]; y: number[]; name: string }[];
+}
+
 const { mockExperimentMetrics, areaProps } = vi.hoisted(() => ({
   mockExperimentMetrics: vi.fn(),
-  areaProps: [] as Record<string, unknown>[],
+  areaProps: new Array<CapturedChart>(),
 }));
 
 vi.mock("~/hooks/metrics/useExperimentMetrics/useExperimentMetrics", () => ({
   useExperimentMetrics: mockExperimentMetrics,
 }));
 vi.mock("@repo/ui/components/charts/area-chart", () => ({
-  AreaChart: (props: Record<string, unknown>) => {
+  AreaChart: (props: CapturedChart) => {
     areaProps.push(props);
     return <div data-testid="trend" />;
   },
@@ -43,7 +49,7 @@ describe("ExperimentActivityPulse", () => {
     expect(screen.getByText("102")).toBeInTheDocument();
     expect(screen.getByText("experiment.measurements")).toBeInTheDocument();
     expect(screen.getByText("experiment.byContributors")).toBeInTheDocument();
-    const series = (areaProps[0]?.data as { y: number[] }[])[0];
+    const [series] = areaProps[0].data;
     expect(series.y).toEqual([40, 62]);
   });
 
