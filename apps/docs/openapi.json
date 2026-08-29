@@ -19199,6 +19199,571 @@
         }
       }
     },
+    "/api/v1/metrics/public": {
+      "get": {
+        "operationId": "metrics.getPublicMetrics",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hero": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "totalMeasurements": {
+                              "type": "number"
+                            },
+                            "totalVolumeBytes": {
+                              "type": "number"
+                            },
+                            "timezonesSpanned": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "totalMeasurements",
+                            "totalVolumeBytes",
+                            "timezonesSpanned"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "liveness": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "lastMeasurementAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "measurements24h": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "lastMeasurementAt",
+                            "measurements24h"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "community": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "measurements30d": {
+                              "type": "number"
+                            },
+                            "activeExperiments30d": {
+                              "type": "number"
+                            },
+                            "contributors30d": {
+                              "type": "number"
+                            },
+                            "institutions30d": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "measurements30d",
+                            "activeExperiments30d",
+                            "contributors30d",
+                            "institutions30d"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "activity": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string"
+                          },
+                          "measurements": {
+                            "type": "number"
+                          },
+                          "cumulativeMeasurements": {
+                            "type": "number"
+                          },
+                          "volumeBytes": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "measurements",
+                          "cumulativeMeasurements",
+                          "volumeBytes"
+                        ]
+                      }
+                    },
+                    "hourly": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hourLocal": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 23
+                          },
+                          "measurements": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "hourLocal",
+                          "measurements"
+                        ]
+                      }
+                    },
+                    "families": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "family": {
+                            "type": "string"
+                          },
+                          "measurements": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "family",
+                          "measurements"
+                        ]
+                      }
+                    },
+                    "derivedParameter": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "count30d": {
+                              "type": "number"
+                            },
+                            "median": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "count30d",
+                            "median"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sensorParameter": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "count30d": {
+                              "type": "number"
+                            },
+                            "median": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "count30d",
+                            "median"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "captions": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "streak"
+                              },
+                              "days": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "days"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "pace"
+                              },
+                              "secondsPerMeasurement": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "secondsPerMeasurement"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "sessionSize"
+                              },
+                              "medianMeasurements": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "medianMeasurements"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "endurance"
+                              },
+                              "days": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "days"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "simultaneity"
+                              },
+                              "devices": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "devices"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "zonesPeakDay"
+                              },
+                              "zones": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "zones"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "analysesRun"
+                              },
+                              "count": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "count"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "avgMeasurementSize"
+                              },
+                              "bytes": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "bytes"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "openDatasets"
+                              },
+                              "count": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "count"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "sharedExperiments"
+                              },
+                              "count": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "count"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "milestone"
+                              },
+                              "ordinal": {
+                                "type": "number"
+                              },
+                              "date": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "ordinal",
+                              "date"
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "computedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "hero",
+                    "liveness",
+                    "community",
+                    "activity",
+                    "hourly",
+                    "families",
+                    "derivedParameter",
+                    "sensorParameter",
+                    "captions",
+                    "computedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metrics/scoped": {
+      "get": {
+        "operationId": "metrics.getScopedMetrics",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "organization",
+                "mine"
+              ],
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scope": {
+                      "enum": [
+                        "organization",
+                        "mine"
+                      ],
+                      "type": "string"
+                    },
+                    "scoped": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "measurements30d": {
+                              "type": "number"
+                            },
+                            "activeExperiments30d": {
+                              "type": "number"
+                            },
+                            "contributors30d": {
+                              "type": "number"
+                            },
+                            "activity": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "date": {
+                                    "type": "string"
+                                  },
+                                  "measurements": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "date",
+                                  "measurements"
+                                ]
+                              }
+                            },
+                            "lastActivityDate": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "measurements30d",
+                            "activeExperiments30d",
+                            "contributors30d",
+                            "activity",
+                            "lastActivityDate"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "baseline": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "measurements30d": {
+                              "type": "number"
+                            },
+                            "activeExperiments30d": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "measurements30d",
+                            "activeExperiments30d"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "computedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "scope",
+                    "scoped",
+                    "baseline",
+                    "computedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/newsletter/subscribe": {
       "post": {
         "operationId": "newsletter.subscribe",

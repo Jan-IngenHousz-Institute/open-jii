@@ -1,12 +1,15 @@
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import type { Cache } from "cache-manager";
 
+import type { CachePort as MacroCachePort } from "../../../macros/core/ports/cache.port";
+import { CACHE_PORT as MACRO_CACHE_PORT } from "../../../macros/core/ports/cache.port";
+import type { CachePort as MetricsCachePort } from "../../../metrics/core/ports/cache.port";
+import { CACHE_PORT as METRICS_CACHE_PORT } from "../../../metrics/core/ports/cache.port";
 import { TestHarness } from "../../../test/test-harness";
-import { CacheAdapter } from "./cache.adapter";
 
 describe("CacheAdapter", () => {
   const testApp = TestHarness.App;
-  let cacheAdapter: CacheAdapter;
+  let cacheAdapter: MacroCachePort;
   let cacheManager: Cache;
 
   beforeAll(async () => {
@@ -15,7 +18,7 @@ describe("CacheAdapter", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    cacheAdapter = testApp.module.get(CacheAdapter);
+    cacheAdapter = testApp.module.get<MacroCachePort>(MACRO_CACHE_PORT);
     cacheManager = testApp.module.get(CACHE_MANAGER);
   });
 
@@ -155,6 +158,83 @@ describe("CacheAdapter", () => {
 
     it("should not throw when invalidating a non-existent key", async () => {
       await expect(cacheAdapter.invalidate("non-existent")).resolves.toBeUndefined();
+    });
+  });
+
+  describe("storage failures", () => {
+    it("treats a failed read as a miss and still serves the fetched value", async () => {
+      vi.spyOn(cacheManager, "get").mockRejectedValueOnce(new Error("store down"));
+      const fetchFn = vi.fn().mockResolvedValue({ id: "1" });
+
+      const result = await cacheAdapter.tryCache("bad-read", fetchFn);
+
+      expect(result).toEqual({ id: "1" });
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns the fetched value even when the write fails", async () => {
+      vi.spyOn(cacheManager, "set").mockRejectedValueOnce(new Error("store down"));
+      const fetchFn = vi.fn().mockResolvedValue({ id: "2" });
+
+      const result = await cacheAdapter.tryCache("bad-write", fetchFn);
+
+      expect(result).toEqual({ id: "2" });
+    });
+
+    it("treats failed batch reads as misses and survives failed batch writes", async () => {
+      vi.spyOn(cacheManager, "get").mockRejectedValue(new Error("store down"));
+      vi.spyOn(cacheManager, "set").mockRejectedValue(new Error("store down"));
+      const fetchFn = vi.fn().mockResolvedValue(new Map([["k1", "v1"]]));
+
+      const result = await cacheAdapter.tryCacheMany(["k1"], fetchFn);
+
+      expect(result.get("k1")).toBe("v1");
+      expect(fetchFn).toHaveBeenCalledWith(["k1"]);
+    });
+
+    it("does not throw when invalidation fails", async () => {
+      vi.spyOn(cacheManager, "del").mockRejectedValueOnce(new Error("store down"));
+
+      await expect(cacheAdapter.invalidate("whatever")).resolves.toBeUndefined();
+    });
+  });
+
+  describe("metrics namespace", () => {
+    let metricsCache: MetricsCachePort;
+
+    beforeEach(() => {
+      metricsCache = testApp.module.get<MetricsCachePort>(METRICS_CACHE_PORT);
+    });
+
+    it("stores results under the metrics prefix, separate from the macro namespace", async () => {
+      const fetchFn = vi.fn().mockResolvedValue({ registeredUsers: 5 });
+
+      const result = await metricsCache.tryCache("miss-key", fetchFn);
+
+      expect(result).toEqual({ registeredUsers: 5 });
+      expect(await cacheManager.get("metrics:miss-key")).toEqual({ registeredUsers: 5 });
+      expect(await cacheManager.get("macro:miss-key")).toBeUndefined();
+    });
+
+    it("returns the cached value without calling fetchFn on a hit", async () => {
+      await cacheManager.set("metrics:hit-key", { registeredUsers: 7 });
+      const fetchFn = vi.fn();
+
+      const result = await metricsCache.tryCache("hit-key", fetchFn);
+
+      expect(result).toEqual({ registeredUsers: 7 });
+      expect(fetchFn).not.toHaveBeenCalled();
+    });
+
+    it("invalidates so the next read fetches again", async () => {
+      await cacheManager.set("metrics:inv-key", { registeredUsers: 7 });
+
+      await metricsCache.invalidate("inv-key");
+
+      const fetchFn = vi.fn().mockResolvedValue({ registeredUsers: 9 });
+      const result = await metricsCache.tryCache("inv-key", fetchFn);
+      expect(result).toEqual({ registeredUsers: 9 });
+      expect(fetchFn).toHaveBeenCalledTimes(1);
     });
   });
 });

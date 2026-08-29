@@ -118,7 +118,7 @@ describe("environment manifest", () => {
   });
 
   it("contains every in-scope application environment read", async () => {
-    expect(envManifest).toHaveLength(81);
+    expect(envManifest).toHaveLength(82);
     expect(envByKey.size).toBe(envManifest.length);
     expect(
       envReads("const url = `https://host/${process.env.URL_KEY}`; // process.env.NOPE"),
