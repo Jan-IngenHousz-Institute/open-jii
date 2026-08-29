@@ -17,7 +17,11 @@ import type { DatabaseInstance } from "@repo/database";
 
 import { tryCatch } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { ExperimentOrganizationRow } from "../models/experiment-organization.model";
+
+export interface ExperimentOrganizationRow {
+  experimentId: string;
+  organizationId: string | null;
+}
 
 @Injectable()
 export class MetricsRepository {
