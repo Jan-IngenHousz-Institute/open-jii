@@ -49,5 +49,10 @@
       "context": "De community registreerde in dezelfde periode <em>{{measurements}}</em> metingen.",
       "trend": "Dagelijkse metingen"
     }
+  },
+  "experiment": {
+    "collecting": "<em>{{measurements}}</em> metingen hier in de afgelopen 30 dagen, door <em>{{contributors}}</em> bijdragers",
+    "quiet": "Geen metingen hier in de afgelopen 30 dagen",
+    "trend": "Dagelijkse metingen"
   }
 }
