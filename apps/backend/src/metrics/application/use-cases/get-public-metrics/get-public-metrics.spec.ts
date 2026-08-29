@@ -3,6 +3,7 @@ import { AppError, assertSuccess, failure, success } from "../../../../common/ut
 import { TestHarness } from "../../../../test/test-harness";
 import { CACHE_PORT } from "../../../core/ports/cache.port";
 import type { CachePort } from "../../../core/ports/cache.port";
+import { MetricsRepository } from "../../../core/repositories/metrics.repository";
 import { GetPublicMetricsUseCase, PUBLIC_METRICS_CACHE_KEY } from "./get-public-metrics";
 
 const totals = {
@@ -55,6 +56,7 @@ describe("GetPublicMetricsUseCase", () => {
   let adapter: DatabricksAdapter;
   let useCase: GetPublicMetricsUseCase;
   let totalsSpy: ReturnType<typeof vi.spyOn>;
+  let experimentId: string;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -69,6 +71,27 @@ describe("GetPublicMetricsUseCase", () => {
 
     adapter = testApp.module.get(DatabricksAdapter);
     useCase = testApp.module.get(GetPublicMetricsUseCase);
+
+    const userId = await testApp.createTestUser({});
+    const organizationId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(organizationId, userId, "member");
+    const { experiment } = await testApp.createExperiment({
+      name: "Public experiment",
+      userId,
+      organizationId,
+      visibility: "public",
+    });
+    experimentId = experiment.id;
+
+    const collaboratorId = await testApp.createTestUser({ email: "metrics-collab@example.com" });
+    await testApp.addResourceGrant({
+      resourceType: "experiment",
+      resourceId: experimentId,
+      granteeType: "user",
+      granteeId: collaboratorId,
+      role: "viewer",
+      createdBy: userId,
+    });
 
     totalsSpy = vi.spyOn(adapter, "getPublicPlatformTotals").mockResolvedValue(success(totals));
     vi.spyOn(adapter, "getPublicTotalVolumeBytes").mockResolvedValue(success(6_000_000));
@@ -88,7 +111,9 @@ describe("GetPublicMetricsUseCase", () => {
       ),
     );
     vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(success(poolFacts));
-    vi.spyOn(adapter, "getContributorPairs").mockResolvedValue(success([]));
+    vi.spyOn(adapter, "getContributorPairs").mockResolvedValue(
+      success([{ experimentId, userId: "contributor-1" }]),
+    );
   });
 
   afterEach(() => {
@@ -114,6 +139,7 @@ describe("GetPublicMetricsUseCase", () => {
       measurements24h: 140,
     });
     expect(result.value.community?.measurements30d).toBe(4_812);
+    expect(result.value.community?.institutions30d).toBe(1);
     expect(result.value.derivedParameter?.name).toBe("Phi2");
     expect(result.value.sensorParameter?.name).toBe("humidity");
     expect(result.value.families).toHaveLength(1);
@@ -143,6 +169,8 @@ describe("GetPublicMetricsUseCase", () => {
       bytes: 20_000,
     });
     expect(kinds.get("endurance")).toEqual({ kind: "endurance", days: 94 });
+    expect(kinds.get("openDatasets")).toEqual({ kind: "openDatasets", count: 1 });
+    expect(kinds.get("sharedExperiments")).toEqual({ kind: "sharedExperiments", count: 1 });
   });
 
   it("serves the cached snapshot without refetching", async () => {
@@ -205,6 +233,50 @@ describe("GetPublicMetricsUseCase", () => {
     assertSuccess(result);
     const kinds = result.value.captions.map((caption) => caption.kind);
     expect(kinds).not.toContain("streak");
+  });
+
+  it("reports no streak when the newest day is empty", async () => {
+    vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(
+      success([
+        {
+          date: "2026-08-27",
+          measurements: 80,
+          cumulativeMeasurements: 999_880,
+          volumeBytes: 1_600_000,
+        },
+        { date: "2026-08-28", measurements: 0, cumulativeMeasurements: 999_880, volumeBytes: 0 },
+      ]),
+    );
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    const kinds = result.value.captions.map((caption) => caption.kind);
+    expect(kinds).not.toContain("streak");
+  });
+
+  it("emits no milestone below the first threshold", async () => {
+    totalsSpy = vi
+      .spyOn(adapter, "getPublicPlatformTotals")
+      .mockResolvedValue(success({ ...totals, totalMeasurements: 500 }));
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    const kinds = result.value.captions.map((caption) => caption.kind);
+    expect(kinds).not.toContain("milestone");
+  });
+
+  it("hides the community slot when the institution lookup fails", async () => {
+    const repository = testApp.module.get(MetricsRepository);
+    vi.spyOn(repository, "getExperimentOrganizations").mockResolvedValue(
+      failure(AppError.internal("database down")),
+    );
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    expect(result.value.community).toBeNull();
   });
 
   it("withholds the milestone when its crossing predates the fetched window", async () => {

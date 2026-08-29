@@ -2684,6 +2684,114 @@ describe("DatabricksAdapter", () => {
       expect(totals.value).toBeNull();
     });
 
+    it("passes a warehouse failure through every reader", async () => {
+      const readers = [
+        () => databricksAdapter.getPublicPlatformTotals(),
+        () => databricksAdapter.getPublicTotalVolumeBytes(),
+        () => databricksAdapter.getPublicDailyActivity(30),
+        () => databricksAdapter.getPublicFamilyTotals(),
+        () => databricksAdapter.getActivityWindows(),
+        () => databricksAdapter.getHourlyActivity(),
+        () => databricksAdapter.getTopParameter("derived"),
+        () => databricksAdapter.getPoolFacts(),
+        () => databricksAdapter.getScopedDailyActivity(30),
+        () => databricksAdapter.getContributorPairs(),
+      ];
+
+      for (const read of readers) {
+        mockToken();
+        nock(databricksHost)
+          .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+          .reply(500, { message: "warehouse down" });
+        assertFailure(await read());
+      }
+    });
+
+    it("fails the read when the warehouse truncates the result", async () => {
+      mockToken();
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 2,
+              columns: [
+                { name: "experiment_id", type_name: "STRING", type_text: "STRING", position: 0 },
+                { name: "user_id", type_name: "STRING", type_text: "STRING", position: 1 },
+              ],
+            },
+            total_row_count: 1,
+            truncated: true,
+          },
+          result: { data_array: [["e1", "u1"]], chunk_index: 0, row_count: 1 },
+        });
+
+      assertFailure(await databricksAdapter.getContributorPairs());
+    });
+
+    it("reads empty single-row tables as null", async () => {
+      mockToken();
+      mockSqlResponse(["total_volume_bytes"], []);
+      const volume = await databricksAdapter.getPublicTotalVolumeBytes();
+      assertSuccess(volume);
+      expect(volume.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(["measurements_24h"], []);
+      const windows = await databricksAdapter.getActivityWindows();
+      assertSuccess(windows);
+      expect(windows.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(["parameter"], []);
+      const parameter = await databricksAdapter.getTopParameter("derived");
+      assertSuccess(parameter);
+      expect(parameter.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(["session_median_measurements"], []);
+      const pool = await databricksAdapter.getPoolFacts();
+      assertSuccess(pool);
+      expect(pool.value).toBeNull();
+    });
+
+    it("reads rows with blank essentials as null and absent timestamps as null", async () => {
+      mockToken();
+      mockSqlResponse(
+        [
+          "measurements_24h",
+          "measurements_30d",
+          "experiments_30d",
+          "contributors_30d",
+          "devices_30d",
+          "last_measurement_at",
+          "computed_at",
+        ],
+        [["140", "", "23", "31", "12", "2026-08-28 10:00:00", "2026-08-28 10:05:00"]],
+      );
+      const windows = await databricksAdapter.getActivityWindows();
+      assertSuccess(windows);
+      expect(windows.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(
+        ["parameter", "category", "count_30d", "median_value"],
+        [["Phi2", "derived", "4214", ""]],
+      );
+      const parameter = await databricksAdapter.getTopParameter("derived");
+      assertSuccess(parameter);
+      expect(parameter.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(["total_measurements"], [["1000"]]);
+      const totals = await databricksAdapter.getPublicPlatformTotals();
+      assertSuccess(totals);
+      expect(totals.value?.computedAt).toBeNull();
+      expect(totals.value?.lastMeasurementAt).toBeNull();
+    });
+
     it("drops malformed rows instead of inventing values", async () => {
       mockToken();
       mockSqlResponse(

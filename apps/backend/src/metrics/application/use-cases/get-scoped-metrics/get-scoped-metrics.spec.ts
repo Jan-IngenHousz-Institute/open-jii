@@ -9,6 +9,7 @@ import {
 import { TestHarness } from "../../../../test/test-harness";
 import { CACHE_PORT } from "../../../core/ports/cache.port";
 import type { CachePort } from "../../../core/ports/cache.port";
+import { MetricsRepository } from "../../../core/repositories/metrics.repository";
 import { GetScopedMetricsUseCase, SCOPED_INPUTS_CACHE_KEY } from "./get-scoped-metrics";
 
 const windows = {
@@ -137,6 +138,28 @@ describe("GetScopedMetricsUseCase", () => {
     assertSuccess(result);
     expect(result.value.scoped?.measurements30d).toBe(342);
     expect(result.value.scoped?.activeExperiments30d).toBe(2);
+  });
+
+  it("propagates a failed membership lookup", async () => {
+    const repository = testApp.module.get(MetricsRepository);
+    vi.spyOn(repository, "isOrganizationMember").mockResolvedValue(
+      failure(AppError.internal("database down")),
+    );
+
+    const result = await useCase.execute("organization", userId, organizationId);
+
+    assertFailure(result);
+  });
+
+  it("propagates a failed experiment-id lookup", async () => {
+    const repository = testApp.module.get(MetricsRepository);
+    vi.spyOn(repository, "getUserExperimentIds").mockResolvedValue(
+      failure(AppError.internal("database down")),
+    );
+
+    const result = await useCase.execute("mine", userId);
+
+    assertFailure(result);
   });
 
   it("denies organization scope to non-members", async () => {

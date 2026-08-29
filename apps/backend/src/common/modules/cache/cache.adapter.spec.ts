@@ -161,6 +161,44 @@ describe("CacheAdapter", () => {
     });
   });
 
+  describe("storage failures", () => {
+    it("treats a failed read as a miss and still serves the fetched value", async () => {
+      vi.spyOn(cacheManager, "get").mockRejectedValueOnce(new Error("store down"));
+      const fetchFn = vi.fn().mockResolvedValue({ id: "1" });
+
+      const result = await cacheAdapter.tryCache("bad-read", fetchFn);
+
+      expect(result).toEqual({ id: "1" });
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns the fetched value even when the write fails", async () => {
+      vi.spyOn(cacheManager, "set").mockRejectedValueOnce(new Error("store down"));
+      const fetchFn = vi.fn().mockResolvedValue({ id: "2" });
+
+      const result = await cacheAdapter.tryCache("bad-write", fetchFn);
+
+      expect(result).toEqual({ id: "2" });
+    });
+
+    it("treats failed batch reads as misses and survives failed batch writes", async () => {
+      vi.spyOn(cacheManager, "get").mockRejectedValue(new Error("store down"));
+      vi.spyOn(cacheManager, "set").mockRejectedValue(new Error("store down"));
+      const fetchFn = vi.fn().mockResolvedValue(new Map([["k1", "v1"]]));
+
+      const result = await cacheAdapter.tryCacheMany(["k1"], fetchFn);
+
+      expect(result.get("k1")).toBe("v1");
+      expect(fetchFn).toHaveBeenCalledWith(["k1"]);
+    });
+
+    it("does not throw when invalidation fails", async () => {
+      vi.spyOn(cacheManager, "del").mockRejectedValueOnce(new Error("store down"));
+
+      await expect(cacheAdapter.invalidate("whatever")).resolves.toBeUndefined();
+    });
+  });
+
   describe("metrics namespace", () => {
     let metricsCache: MetricsCachePort;
 
