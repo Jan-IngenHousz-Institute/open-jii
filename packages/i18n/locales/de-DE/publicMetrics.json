@@ -28,8 +28,10 @@
   },
   "captions": {
     "streak": "Daten an {{days}} aufeinanderfolgenden Tagen",
-    "pace": "Etwa alle ~{{seconds}} Sekunden eine Messung diesen Monat",
-    "sessionSize": "Eine typische Feldsession umfasst {{count}} Messungen",
+    "pace_one": "Diesen Monat trifft etwa jede {{count}} Sekunde eine Messung ein",
+    "pace_other": "Diesen Monat trifft etwa alle {{count}} Sekunden eine Messung ein",
+    "sessionSize_one": "Eine typische Feldsitzung erfasst {{count}} Messung",
+    "sessionSize_other": "Eine typische Feldsitzung erfasst {{count}} Messungen",
     "endurance": "Ein Gerät meldet seit {{days}} Tagen ununterbrochen",
     "simultaneity": "Zeitgleich haben {{devices}} Geräte gemessen",
     "zonesPeakDay": "Meiste Zeitzonen an einem Tag: {{zones}}",
@@ -38,7 +40,8 @@
     "openDatasets": "Offene Datensätze: {{count}}",
     "sharedExperiments": "Organisationsübergreifend geteilte Experimente: {{count}}",
     "milestone": "Messung {{ordinal}} erfolgte am {{date}}",
-    "paceFast": "Diesen Monat treffen {{count}} Messungen pro Sekunde ein"
+    "paceFast_one": "Diesen Monat trifft {{count}} Messung pro Sekunde ein",
+    "paceFast_other": "Diesen Monat treffen {{count}} Messungen pro Sekunde ein"
   },
   "dashboard": {
     "milestone": "Die Community erfasste Messung {{ordinal}} am {{date}}.",
