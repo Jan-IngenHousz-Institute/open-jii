@@ -49,5 +49,10 @@
       "context": "The community recorded <em>{{measurements}}</em> measurements over the same period.",
       "trend": "Daily measurements"
     }
+  },
+  "experiment": {
+    "collecting": "<em>{{measurements}}</em> measurements recorded here in the last 30 days, by <em>{{contributors}}</em> contributors",
+    "quiet": "No measurements recorded here in the last 30 days",
+    "trend": "Daily measurements"
   }
 }

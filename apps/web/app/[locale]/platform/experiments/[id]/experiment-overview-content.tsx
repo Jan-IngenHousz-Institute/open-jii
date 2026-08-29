@@ -6,6 +6,7 @@ import { useExperimentContributors } from "@/hooks/experiment/useExperimentContr
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
+import { ExperimentActivityPulse } from "~/components/experiment-overview/experiment-activity-pulse";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
 import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details/experiment-details-card";
 import { ExperimentLinkedWorkbook } from "~/components/experiment-overview/experiment-linked-workbook";
@@ -85,6 +86,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
 
       {/* LEFT SIDE CONTENT (Second on mobile) */}
       <div className="flex-1 space-y-10 md:order-1">
+        <ExperimentActivityPulse experimentId={id} />
         <ExperimentDescription
           experimentId={id}
           description={experiment.description ?? ""}
