@@ -47,7 +47,6 @@
     "@repo/i18n": "workspace:*",
     "@repo/iot": "workspace:*",
     "@repo/ui": "workspace:*",
-    "recharts": "^2.15.4",
     "@tanstack/react-hotkeys": "0.10.0",
     "@tanstack/react-query": "catalog:react-query",
     "@tanstack/react-table": "^9.2.3",
