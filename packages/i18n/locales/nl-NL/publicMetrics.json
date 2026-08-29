@@ -13,11 +13,9 @@
   "activityChart": {
     "daily": "Dagelijks",
     "cumulative": "Cumulatief",
-    "volume": "Volume",
     "title": {
       "daily": "Metingen per dag, laatste 30 dagen",
-      "cumulative": "Verzamelde metingen, cumulatief",
-      "volume": "Meetdata per dag, laatste 30 dagen"
+      "cumulative": "Verzamelde metingen, laatste 12 maanden"
     }
   },
   "families": {
@@ -39,19 +37,27 @@
     "avgMeasurementSize": "Een gemiddelde meting bevat {{size}} aan ruwe data",
     "openDatasets": "Open datasets: {{count}}",
     "sharedExperiments": "Experimenten gedeeld tussen organisaties: {{count}}",
-    "milestone": "Meting {{ordinal}} kwam binnen op {{date}}"
+    "milestone": "Meting {{ordinal}} kwam binnen op {{date}}",
+    "paceFast": "Deze maand komen er {{count}} metingen per seconde binnen"
   },
   "dashboard": {
     "milestone": "De community registreerde meting {{ordinal}} op {{date}}.",
     "dismiss": "Sluiten",
     "activity": {
-      "summary": "metingen in je experimenten over 30 dagen, verdeeld over <em>{{experiments}}</em> actieve experimenten met <em>{{contributors}}</em> bijdragers",
-      "context": "De community registreerde in dezelfde periode <em>{{measurements}}</em> metingen.",
+      "label": "Jouw experimenten, laatste 30 dagen",
+      "experiments_one": "actief experiment",
+      "experiments_other": "actieve experimenten",
+      "contributors_one": "bijdrager",
+      "contributors_other": "bijdragers",
+      "context": "Community-breed {{measurements}} metingen in dezelfde periode.",
       "trend": "Dagelijkse metingen"
     }
   },
   "experiment": {
-    "collecting": "<em>{{measurements}}</em> metingen hier in de afgelopen 30 dagen, door <em>{{contributors}}</em> bijdragers",
+    "measurements": "metingen in de afgelopen 30 dagen",
+    "window": "hier vastgelegd in de afgelopen 30 dagen",
+    "byContributors_one": "vastgelegd door {{count}} bijdrager",
+    "byContributors_other": "vastgelegd door {{count}} bijdragers",
     "quiet": "Geen metingen hier in de afgelopen 30 dagen",
     "trend": "Dagelijkse metingen"
   }

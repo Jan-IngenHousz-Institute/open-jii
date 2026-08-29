@@ -40,7 +40,9 @@ describe("ExperimentActivityPulse", () => {
 
     render(<ExperimentActivityPulse experimentId="e1" />);
 
-    expect(screen.getByText("experiment.collecting")).toBeInTheDocument();
+    expect(screen.getByText("102")).toBeInTheDocument();
+    expect(screen.getByText("experiment.measurements")).toBeInTheDocument();
+    expect(screen.getByText("experiment.byContributors")).toBeInTheDocument();
     const series = (areaProps[0]?.data as { y: number[] }[])[0];
     expect(series.y).toEqual([40, 62]);
   });
