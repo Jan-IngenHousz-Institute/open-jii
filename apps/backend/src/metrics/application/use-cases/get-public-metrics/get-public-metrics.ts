@@ -221,9 +221,11 @@ export class GetPublicMetricsUseCase {
 
     if (windows !== null && windows.measurements30d > 0) {
       const windowSeconds = WINDOW_DAYS * 24 * 60 * 60;
+      // Unrounded: above one measurement per second the interval is a fraction,
+      // and rounding it here would ship "every 0 seconds" as a fact.
       captions.push({
         kind: "pace",
-        secondsPerMeasurement: Math.round(windowSeconds / windows.measurements30d),
+        secondsPerMeasurement: windowSeconds / windows.measurements30d,
       });
     }
 
@@ -272,7 +274,28 @@ export class GetPublicMetricsUseCase {
       captions.push({ kind: "sharedExperiments", count: sharedExperiments.value });
     }
 
-    return captions;
+    return captions.filter((caption) => this.statesSomething(caption));
+  }
+
+  /**
+   * A last gate before a caption is published as fact. Every caption reduces to
+   * positive finite quantities and, where dated, a real date; anything else
+   * renders as "every 0 seconds" or "0 devices" and is dropped instead. Applies
+   * to kinds added later without needing a rule per kind.
+   */
+  private statesSomething(caption: MetricsCaption): boolean {
+    return Object.entries(caption).every(([field, value]) => {
+      if (field === "kind") {
+        return true;
+      }
+      if (typeof value === "number") {
+        return Number.isFinite(value) && value > 0;
+      }
+      if (field === "date" && typeof value === "string") {
+        return !Number.isNaN(Date.parse(value));
+      }
+      return true;
+    });
   }
 
   /** Consecutive days with data, counted back from the newest date present.

@@ -154,9 +154,10 @@ describe("GetPublicMetricsUseCase", () => {
 
     // 2026-08-25 is not adjacent to 08-27, so the streak is the last two days.
     expect(kinds.get("streak")).toEqual({ kind: "streak", days: 2 });
+    // Unrounded, so a sub-second interval stays expressible as a rate.
     expect(kinds.get("pace")).toEqual({
       kind: "pace",
-      secondsPerMeasurement: Math.round((30 * 24 * 3600) / 4_812),
+      secondsPerMeasurement: (30 * 24 * 3600) / 4_812,
     });
     expect(kinds.get("milestone")).toEqual({
       kind: "milestone",
@@ -171,6 +172,21 @@ describe("GetPublicMetricsUseCase", () => {
     expect(kinds.get("endurance")).toEqual({ kind: "endurance", days: 94 });
     expect(kinds.get("openDatasets")).toEqual({ kind: "openDatasets", count: 1 });
     expect(kinds.get("sharedExperiments")).toEqual({ kind: "sharedExperiments", count: 1 });
+  });
+
+  it("drops captions that would state a degenerate figure", async () => {
+    // A platform faster than one measurement per second: the interval is a
+    // fraction, and a rounded one would read as "every 0 seconds".
+    vi.spyOn(adapter, "getActivityWindows").mockResolvedValue(
+      success({ ...windows, measurements30d: 5_000_000_000 }),
+    );
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    const pace = result.value.captions.find((caption) => caption.kind === "pace");
+    expect(pace).toBeDefined();
+    expect(pace?.kind === "pace" && pace.secondsPerMeasurement).toBeGreaterThan(0);
   });
 
   it("serves the cached snapshot without refetching", async () => {
