@@ -497,6 +497,7 @@ export function createBaseLayout(
     yAxisType = "linear",
     showLegend = true,
     showGrid = true,
+    sparkline = false,
     backgroundColor,
     annotations = [],
     shapes = [],
@@ -597,6 +598,7 @@ export function createBaseLayout(
       : undefined,
 
     xaxis: {
+      visible: !sparkline,
       title: xAxisTitle ? { text: xAxisTitle, font: axisTitleFont } : undefined,
       gridcolor: showGrid ? gridColor : "rgba(0,0,0,0)",
       showgrid: showGrid,
@@ -612,6 +614,7 @@ export function createBaseLayout(
     },
 
     yaxis: {
+      visible: !sparkline,
       title: yAxisTitle ? { text: yAxisTitle, font: axisTitleFont } : undefined,
       gridcolor: showGrid ? gridColor : "rgba(0,0,0,0)",
       showgrid: showGrid,
@@ -677,6 +680,7 @@ export function createBaseLayout(
       }
       return base;
     })(),
+    ...(sparkline ? { margin: { l: 0, r: 0, t: 2, b: 2, pad: 0 } } : {}),
     autosize: !width && !height, // Enable autosize when no fixed dimensions
     ...(width && { width }), // Only include width if it's defined
     ...(height && { height }), // Only include height if it's defined

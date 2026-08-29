@@ -17,6 +17,12 @@ export interface PlotlyChartConfig extends Partial<Config> {
   theme?: "light" | "dark" | "auto";
   showLegend?: boolean;
   showGrid?: boolean;
+  /**
+   * Strip the chart to its line: no axes, ticks, grid, or margins. For
+   * trend indicators sitting beside text, where the shape is the message
+   * and hover carries the values.
+   */
+  sparkline?: boolean;
   backgroundColor?: string;
   /**
    * Where to anchor the legend.

@@ -58,7 +58,6 @@
   },
   "experiment": {
     "measurements": "Messungen in den letzten 30 Tagen",
-    "window": "hier in den letzten 30 Tagen erfasst",
     "byContributors_one": "erfasst von {{count}} Mitwirkendem",
     "byContributors_other": "erfasst von {{count}} Mitwirkenden",
     "quiet": "Keine Messungen hier in den letzten 30 Tagen",

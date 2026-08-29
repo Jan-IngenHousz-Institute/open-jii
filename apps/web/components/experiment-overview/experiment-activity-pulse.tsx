@@ -42,6 +42,8 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
     dragMode: false,
     scrollZoom: false,
     showGrid: false,
+    // A trend indicator beside text: the shape is the message.
+    sparkline: true,
     backgroundColor: "rgba(0,0,0,0)",
     xAxisType: detectAxisType(days.map((day) => day.date)),
     locale,
@@ -59,7 +61,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
         },
       ]}
       config={chartConfig}
-      className="h-16 w-full sm:h-14 sm:w-64 lg:w-80"
+      className="h-10 w-full sm:w-48 lg:w-64"
     />
   );
 
@@ -76,11 +78,11 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
           </span>
           <span className="text-muted-foreground text-sm">{t("experiment.measurements")}</span>
         </div>
-        <span className="text-muted-foreground text-xs">
-          {hasContributors
-            ? t("experiment.byContributors", { count: scoped.contributors30d })
-            : t("experiment.window")}
-        </span>
+        {hasContributors ? (
+          <span className="text-muted-foreground text-xs">
+            {t("experiment.byContributors", { count: scoped.contributors30d })}
+          </span>
+        ) : null}
       </div>
       {days.length > 1 ? renderTrend() : null}
     </section>
