@@ -173,7 +173,7 @@ describe("GetPublicMetricsUseCase", () => {
     expect(kinds.get("sharedExperiments")).toEqual({ kind: "sharedExperiments", count: 1 });
   });
 
-  it("drops captions that would state a degenerate figure", async () => {
+  it("omits the pace and streak when there is no interval or run to report", async () => {
     // Timestamps sharing a millisecond leave no measurable gap; a zero here
     // would publish "a measurement arrives every 0 seconds".
     vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(
