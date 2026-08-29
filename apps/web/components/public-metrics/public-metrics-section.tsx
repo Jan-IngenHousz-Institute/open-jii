@@ -7,10 +7,9 @@ import { ActivityChart } from "./activity-chart";
 import { ActivityIndicator } from "./activity-indicator";
 import { CaptionRotator } from "./caption-rotator";
 import { CommunityLine } from "./community-line";
-import { FamilyBars } from "./family-bars";
+import { FamilyBars, UNATTRIBUTED_FAMILY } from "./family-bars";
 import { HeroSentence } from "./hero-sentence";
 import { ParameterLine } from "./parameter-line";
-import { SunClock } from "./sun-clock";
 
 interface PublicMetricsSectionProps {
   metrics: PublicMetricsResponse;
@@ -29,12 +28,18 @@ export function PublicMetricsSection({ metrics, locale }: PublicMetricsSectionPr
     liveness,
     community,
     activity,
-    hourly,
     families,
     derivedParameter,
     sensorParameter,
     captions,
   } = metrics;
+
+  const instruments = families.filter((family) => family.family !== UNATTRIBUTED_FAMILY);
+  const attributed = instruments.reduce((sum, family) => sum + family.measurements, 0);
+  const total = families.reduce((sum, family) => sum + family.measurements, 0);
+  // While the registry resolves a minority of publishers, an instrument
+  // breakdown describes a sliver of the pool and reads as the whole of it.
+  const showInstruments = instruments.length > 0 && attributed * 2 > total;
 
   const hasAnything = hero !== null || community !== null || activity.length > 0;
   if (!hasAnything) {
@@ -52,12 +57,9 @@ export function PublicMetricsSection({ metrics, locale }: PublicMetricsSectionPr
             locale={locale}
           />
         ) : null}
-        <div className="grid items-center gap-10 md:grid-cols-[3fr_2fr]">
-          <div className="flex flex-col gap-4">
-            {hero ? <HeroSentence hero={hero} locale={locale} /> : null}
-            {community ? <CommunityLine community={community} locale={locale} /> : null}
-          </div>
-          {hourly.length > 0 ? <SunClock hourly={hourly} /> : null}
+        <div className="flex flex-col gap-4">
+          {hero ? <HeroSentence hero={hero} locale={locale} /> : null}
+          {community ? <CommunityLine community={community} locale={locale} /> : null}
         </div>
       </div>
 
@@ -68,7 +70,7 @@ export function PublicMetricsSection({ metrics, locale }: PublicMetricsSectionPr
       ) : null}
 
       <div className="border-border mt-8 grid gap-8 border-t pt-6 md:grid-cols-2">
-        {families.length > 0 ? <FamilyBars families={families} locale={locale} /> : null}
+        {showInstruments ? <FamilyBars families={instruments} locale={locale} /> : null}
         <div className="flex flex-col gap-4">
           {derivedParameter ? (
             <ParameterLine parameter={derivedParameter} kind="derived" locale={locale} />

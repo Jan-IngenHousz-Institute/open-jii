@@ -20,10 +20,6 @@
       "volume": "Meetdata per dag, laatste 30 dagen"
     }
   },
-  "sunClock": {
-    "aria": "Meetactiviteit per lokaal uur",
-    "caption": "Meten volgt het daglicht, per lokaal uur"
-  },
   "families": {
     "title": "Metingen per instrument",
     "unattributed": "Niet toegewezen"

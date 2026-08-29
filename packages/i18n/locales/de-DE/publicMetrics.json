@@ -20,10 +20,6 @@
       "volume": "Messdaten pro Tag, letzte 30 Tage"
     }
   },
-  "sunClock": {
-    "aria": "Messaktivität nach lokaler Stunde",
-    "caption": "Messen folgt dem Tageslicht, nach lokaler Stunde"
-  },
   "families": {
     "title": "Messungen nach Instrument",
     "unattributed": "Nicht zugeordnet"

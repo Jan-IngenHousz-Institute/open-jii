@@ -20,10 +20,6 @@
       "volume": "Measurement data per day, last 30 days"
     }
   },
-  "sunClock": {
-    "aria": "Measurement activity by local hour",
-    "caption": "Measuring follows daylight, by local hour"
-  },
   "families": {
     "title": "Measurements by instrument",
     "unattributed": "Unattributed"

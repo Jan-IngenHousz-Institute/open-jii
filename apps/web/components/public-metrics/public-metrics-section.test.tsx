@@ -53,10 +53,8 @@ describe("PublicMetricsSection", () => {
     expect(screen.getByText("hero.sentence")).toBeInTheDocument();
     expect(screen.getByText("community.sentence")).toBeInTheDocument();
     expect(screen.getByText("activityChart.title.daily")).toBeInTheDocument();
-    expect(screen.getByLabelText("sunClock.aria")).toBeInTheDocument();
     expect(screen.getByText("families.title")).toBeInTheDocument();
     expect(screen.getByText("multispeq")).toBeInTheDocument();
-    expect(screen.getByText("families.unattributed")).toBeInTheDocument();
     expect(screen.getByText("parameter.derivedSentence")).toBeInTheDocument();
     expect(screen.getByText("parameter.sensorSentence")).toBeInTheDocument();
     expect(screen.getByText("captions.streak")).toBeInTheDocument();
@@ -84,6 +82,23 @@ describe("PublicMetricsSection", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("hides the instrument breakdown while unresolved publishers dominate", () => {
+    render(
+      <PublicMetricsSection
+        metrics={{
+          ...metrics,
+          families: [
+            { family: "multispeq", measurements: 14_000 },
+            { family: "unattributed", measurements: 35_000_000 },
+          ],
+        }}
+        locale="en-US"
+      />,
+    );
+
+    expect(screen.queryByText("families.title")).not.toBeInTheDocument();
+  });
+
   it("omits absent slots while rendering the rest", () => {
     render(
       <PublicMetricsSection
@@ -99,7 +114,6 @@ describe("PublicMetricsSection", () => {
     );
 
     expect(screen.getByText("hero.sentence")).toBeInTheDocument();
-    expect(screen.queryByLabelText("sunClock.aria")).not.toBeInTheDocument();
     expect(screen.queryByText("families.title")).not.toBeInTheDocument();
     expect(screen.queryByText("parameter.derivedSentence")).not.toBeInTheDocument();
     expect(screen.queryByText("parameter.sensorSentence")).not.toBeInTheDocument();
