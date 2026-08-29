@@ -46,12 +46,12 @@ export function CaptionRotator({ captions, locale }: CaptionRotatorProps) {
           return null;
         }
         return caption.secondsPerMeasurement >= 1
-          ? t("captions.pace", { seconds: format(Math.round(caption.secondsPerMeasurement)) })
+          ? t("captions.pace", { count: Math.round(caption.secondsPerMeasurement) })
           : t("captions.paceFast", {
               count: Math.max(1, Math.round(1 / caption.secondsPerMeasurement)),
             });
       case "sessionSize":
-        return t("captions.sessionSize", { count: format(caption.medianMeasurements) });
+        return t("captions.sessionSize", { count: caption.medianMeasurements });
       case "endurance":
         return t("captions.endurance", { days: format(caption.days) });
       case "simultaneity":

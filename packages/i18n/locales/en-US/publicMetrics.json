@@ -28,8 +28,10 @@
   },
   "captions": {
     "streak": "Data recorded on {{days}} consecutive days",
-    "pace": "A measurement arrives every ~{{seconds}} seconds this month",
-    "sessionSize": "A typical field session records {{count}} measurements",
+    "pace_one": "A measurement arrives every ~{{count}} second this month",
+    "pace_other": "A measurement arrives every ~{{count}} seconds this month",
+    "sessionSize_one": "A typical field session records {{count}} measurement",
+    "sessionSize_other": "A typical field session records {{count}} measurements",
     "endurance": "One device has reported {{days}} days straight",
     "simultaneity": "At one moment, {{devices}} devices measured at once",
     "zonesPeakDay": "Most time zones active in one day: {{zones}}",
@@ -38,7 +40,8 @@
     "openDatasets": "Open datasets: {{count}}",
     "sharedExperiments": "Experiments shared across organizations: {{count}}",
     "milestone": "Measurement {{ordinal}} landed on {{date}}",
-    "paceFast": "{{count}} measurements arrive every second this month"
+    "paceFast_one": "{{count}} measurement arrives every second this month",
+    "paceFast_other": "{{count}} measurements arrive every second this month"
   },
   "dashboard": {
     "milestone": "The community recorded measurement {{ordinal}} on {{date}}.",

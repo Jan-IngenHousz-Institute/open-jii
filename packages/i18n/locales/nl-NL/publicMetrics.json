@@ -28,8 +28,10 @@
   },
   "captions": {
     "streak": "Data op {{days}} opeenvolgende dagen",
-    "pace": "Elke ~{{seconds}} seconden een meting deze maand",
-    "sessionSize": "Een typische veldsessie telt {{count}} metingen",
+    "pace_one": "Deze maand komt er ongeveer elke {{count}} seconde een meting binnen",
+    "pace_other": "Deze maand komt er ongeveer elke {{count}} seconden een meting binnen",
+    "sessionSize_one": "Een typische veldsessie legt {{count}} meting vast",
+    "sessionSize_other": "Een typische veldsessie legt {{count}} metingen vast",
     "endurance": "Eén apparaat rapporteert al {{days}} dagen onafgebroken",
     "simultaneity": "Op één moment maten {{devices}} apparaten tegelijk",
     "zonesPeakDay": "Meeste tijdzones op één dag: {{zones}}",
@@ -38,7 +40,8 @@
     "openDatasets": "Open datasets: {{count}}",
     "sharedExperiments": "Experimenten gedeeld tussen organisaties: {{count}}",
     "milestone": "Meting {{ordinal}} kwam binnen op {{date}}",
-    "paceFast": "Deze maand komen er {{count}} metingen per seconde binnen"
+    "paceFast_one": "Deze maand komt er {{count}} meting per seconde binnen",
+    "paceFast_other": "Deze maand komen er {{count}} metingen per seconde binnen"
   },
   "dashboard": {
     "milestone": "De community registreerde meting {{ordinal}} op {{date}}.",
