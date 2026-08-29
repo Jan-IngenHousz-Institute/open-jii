@@ -209,9 +209,10 @@ export class GetPublicMetricsUseCase {
       captions.push({ kind: "streak", days: poolFacts.currentStreakDays });
     }
 
-    if (poolFacts?.medianArrivalGapSeconds != null) {
-      // The measured interval between consecutive measurements, not a window
-      // divided by a count.
+    // The measured interval between consecutive measurements, not a window
+    // divided by a count. Measurements sharing a millisecond leave no gap to
+    // report, which would read as "a measurement arrives every 0 seconds".
+    if (poolFacts?.medianArrivalGapSeconds != null && poolFacts.medianArrivalGapSeconds > 0) {
       captions.push({
         kind: "pace",
         secondsPerMeasurement: poolFacts.medianArrivalGapSeconds,
@@ -263,28 +264,7 @@ export class GetPublicMetricsUseCase {
       captions.push({ kind: "sharedExperiments", count: sharedExperiments.value });
     }
 
-    return captions.filter((caption) => this.statesSomething(caption));
-  }
-
-  /**
-   * A last gate before a caption is published as fact. Every caption reduces to
-   * positive finite quantities and, where dated, a real date; anything else
-   * renders as "every 0 seconds" or "0 devices" and is dropped instead. Applies
-   * to kinds added later without needing a rule per kind.
-   */
-  private statesSomething(caption: MetricsCaption): boolean {
-    return Object.entries(caption).every(([field, value]) => {
-      if (field === "kind") {
-        return true;
-      }
-      if (typeof value === "number") {
-        return Number.isFinite(value) && value > 0;
-      }
-      if (field === "date" && typeof value === "string") {
-        return !Number.isNaN(Date.parse(value));
-      }
-      return true;
-    });
+    return captions;
   }
 
   /** The largest 1-2-5 decade milestone at or below the total, dated by the
