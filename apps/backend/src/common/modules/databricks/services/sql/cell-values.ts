@@ -24,5 +24,12 @@ export function cellUtcIso(value: string | null | undefined): string | null {
   const withT = value.replace(" ", "T");
   const candidate = withT.endsWith("Z") ? withT : `${withT}Z`;
   const parsed = new Date(candidate);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  // Date silently normalizes impossible calendar dates (Feb 30 becomes
+  // Mar 2); a round-trip mismatch reads as absent rather than shifted.
+  const iso = parsed.toISOString();
+  return iso.startsWith(candidate.slice(0, 19)) ? iso : null;
 }
