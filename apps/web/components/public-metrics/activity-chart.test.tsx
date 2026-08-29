@@ -5,10 +5,16 @@ import type { MetricsActivityDay } from "@repo/api/domains/metrics/metrics.schem
 
 import { ActivityChart } from "./activity-chart";
 
-const barProps: Record<string, unknown>[] = [];
+/** What the mocked chart component was handed. */
+interface CapturedChart {
+  config: Record<string, unknown>;
+  data: { x: string[]; y: number[]; name: string }[];
+}
+
+const barProps: CapturedChart[] = [];
 
 vi.mock("@repo/ui/components/charts/bar-chart", () => ({
-  BarChart: (props: Record<string, unknown>) => {
+  BarChart: (props: CapturedChart) => {
     barProps.push(props);
     return <div data-testid="bar-chart" />;
   },
@@ -24,13 +30,13 @@ describe("ActivityChart", () => {
     barProps.length = 0;
     render(<ActivityChart data={data} locale="en-US" />);
 
-    const config = barProps[0]?.config as Record<string, unknown>;
+    const [captured] = barProps;
     // A linear axis silently drops date-string bars: the chart renders empty.
-    expect(config.xAxisType).toBe("date");
-    expect(config.showModeBar).toBe(false);
-    expect(config.backgroundColor).toBe("rgba(0,0,0,0)");
+    expect(captured.config.xAxisType).toBe("date");
+    expect(captured.config.showModeBar).toBe(false);
+    expect(captured.config.backgroundColor).toBe("rgba(0,0,0,0)");
 
-    const series = (barProps[0]?.data as { x: string[]; y: number[] }[])[0];
+    const [series] = captured.data;
     expect(series.x).toEqual(["2026-08-27", "2026-08-28"]);
     expect(series.y).toEqual([20, 20]);
   });
