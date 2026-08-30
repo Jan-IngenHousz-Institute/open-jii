@@ -1,4 +1,5 @@
 import { CompatibleMacrosCell } from "@/components/overview-table/protocol-macros-cell";
+import { ResourceActivityCell } from "@/components/overview-table/resource-activity-cell";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
@@ -66,6 +67,11 @@ export function getProtocolColumns(
       header: t("protocols.columns.macros"),
       className: "hidden w-56 md:table-cell",
       cell: (protocol) => <CompatibleMacrosCell protocolId={protocol.id} />,
+    },
+    {
+      header: t("protocols.columns.activity"),
+      className: "w-32",
+      cell: (protocol) => <ResourceActivityCell kind="protocol" resourceId={protocol.id} />,
     },
     {
       header: t("protocols.columns.updated"),

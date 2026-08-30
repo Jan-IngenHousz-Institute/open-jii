@@ -63,5 +63,24 @@
     "byContributors_other": "recorded by {{count}} contributors",
     "quiet": "No measurements recorded here in the last 30 days",
     "trend": "Daily measurements"
+  },
+  "resourceActivity": {
+    "strip": "Daily measurements over {{days}} days",
+    "experiment": {
+      "active": "experiments with data",
+      "measurements": "measurements, {{days}} days"
+    },
+    "protocol": {
+      "active": "protocols in use",
+      "measurements": "measurements, {{days}} days"
+    },
+    "macro": {
+      "active": "macros run",
+      "measurements": "analyses, {{days}} days"
+    },
+    "workbook": {
+      "active": "workbooks collecting",
+      "measurements": "measurements, {{days}} days"
+    }
   }
 }

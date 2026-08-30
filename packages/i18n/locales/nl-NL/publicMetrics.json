@@ -63,5 +63,24 @@
     "byContributors_other": "vastgelegd door {{count}} bijdragers",
     "quiet": "Geen metingen hier in de afgelopen 30 dagen",
     "trend": "Dagelijkse metingen"
+  },
+  "resourceActivity": {
+    "strip": "Dagelijkse metingen over {{days}} dagen",
+    "experiment": {
+      "active": "experimenten met data",
+      "measurements": "metingen, {{days}} dagen"
+    },
+    "protocol": {
+      "active": "gebruikte protocollen",
+      "measurements": "metingen, {{days}} dagen"
+    },
+    "macro": {
+      "active": "uitgevoerde macro's",
+      "measurements": "analyses, {{days}} dagen"
+    },
+    "workbook": {
+      "active": "verzamelende werkboeken",
+      "measurements": "metingen, {{days}} dagen"
+    }
   }
 }

@@ -38,7 +38,8 @@
       "name": "Name",
       "usedBy": "Verwendet von",
       "user": "Benutzer",
-      "updated": "Aktualisiert"
+      "updated": "Aktualisiert",
+      "activity": "Aktivität"
     },
     "actions": {
       "open": "Öffnen",

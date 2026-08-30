@@ -38,7 +38,8 @@
       "name": "Naam",
       "usedBy": "Gebruikt door",
       "user": "Gebruiker",
-      "updated": "Bijgewerkt"
+      "updated": "Bijgewerkt",
+      "activity": "Activiteit"
     },
     "actions": {
       "open": "Openen",
