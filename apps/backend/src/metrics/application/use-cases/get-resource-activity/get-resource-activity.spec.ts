@@ -5,6 +5,13 @@ import { CACHE_PORT } from "../../../core/ports/cache.port";
 import type { CachePort } from "../../../core/ports/cache.port";
 import { GetResourceActivityUseCase, resourceActivityCacheKey } from "./get-resource-activity";
 
+/** Dates relative to today: the window slides, so fixed ones would age out. */
+const daysAgo = (offset: number) =>
+  new Date(Date.now() - offset * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+const YESTERDAY = daysAgo(1);
+const TWO_DAYS_AGO = daysAgo(2);
+
 describe("GetResourceActivityUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: GetResourceActivityUseCase;
@@ -43,19 +50,19 @@ describe("GetResourceActivityUseCase", () => {
     vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
       success([
         {
-          date: "2026-08-27",
+          date: TWO_DAYS_AGO,
           resourceType: "protocol",
           resourceId: visibleProtocolId,
           measurements: 40,
         },
         {
-          date: "2026-08-28",
+          date: YESTERDAY,
           resourceType: "protocol",
           resourceId: visibleProtocolId,
           measurements: 62,
         },
         {
-          date: "2026-08-28",
+          date: YESTERDAY,
           resourceType: "protocol",
           resourceId: privateProtocolId,
           measurements: 999,
@@ -84,9 +91,13 @@ describe("GetResourceActivityUseCase", () => {
     assertSuccess(result);
     const resource = result.value.resources.find((entry) => entry.id === visibleProtocolId);
     expect(resource?.measurements).toBe(102);
-    expect(resource?.days).toEqual([
-      { date: "2026-08-27", measurements: 40 },
-      { date: "2026-08-28", measurements: 62 },
+
+    // The series spans the whole window so every row's strip is the same
+    // length; a day without measurements is a zero, not a gap.
+    expect(resource?.days).toHaveLength(result.value.windowDays);
+    expect(resource?.days.filter((day) => day.measurements > 0)).toEqual([
+      { date: TWO_DAYS_AGO, measurements: 40 },
+      { date: YESTERDAY, measurements: 62 },
     ]);
   });
 

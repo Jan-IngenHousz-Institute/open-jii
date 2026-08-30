@@ -85,7 +85,7 @@ export class GetResourceActivityUseCase {
       case "workbook":
         return this.metricsRepository.getVisibleWorkbookIds(userId);
       case "experiment":
-        return this.metricsRepository.getUserExperimentIds(userId);
+        return this.metricsRepository.getVisibleExperimentIds(userId);
     }
   }
 
@@ -150,6 +150,16 @@ export class GetResourceActivityUseCase {
     return success(owned);
   }
 
+  /** The window's dates, oldest first, matching the warehouse read's range. */
+  private windowDates(): string[] {
+    const today = new Date();
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    return Array.from({ length: WINDOW_DAYS }, (_, offset) =>
+      new Date(today.getTime() - (WINDOW_DAYS - 1 - offset) * dayMs).toISOString().slice(0, 10),
+    );
+  }
+
   private aggregate(
     kind: ResourceKind,
     rows: ResourceDailyRow[],
@@ -166,10 +176,12 @@ export class GetResourceActivityUseCase {
       byResource.set(row.resourceId, days);
     }
 
+    // Every resource spans the same window: a strip is read by its shape, and
+    // a series that skipped silent days would draw a different length per row.
+    const window = this.windowDates();
+
     const resources = Array.from(byResource.entries()).map(([id, days]) => {
-      const series = Array.from(days.entries())
-        .map(([date, measurements]) => ({ date, measurements }))
-        .sort((a, b) => a.date.localeCompare(b.date));
+      const series = window.map((date) => ({ date, measurements: days.get(date) ?? 0 }));
 
       return {
         id,
