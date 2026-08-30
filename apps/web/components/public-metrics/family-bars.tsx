@@ -8,10 +8,12 @@ export const UNATTRIBUTED_FAMILY = "unattributed";
 
 interface FamilyBarsProps {
   families: MetricsFamily[];
+  /** Measurements whose publisher the registry could not resolve. */
+  unresolved: number;
   locale: string;
 }
 
-export function FamilyBars({ families, locale }: FamilyBarsProps) {
+export function FamilyBars({ families, unresolved, locale }: FamilyBarsProps) {
   const { t } = useTranslation("publicMetrics");
 
   const max = Math.max(...families.map((family) => family.measurements), 1);
@@ -42,6 +44,11 @@ export function FamilyBars({ families, locale }: FamilyBarsProps) {
     <div className="flex flex-col gap-2">
       <h3 className="text-foreground text-sm font-medium">{t("families.title")}</h3>
       <ul className="flex flex-col gap-2">{families.map(renderRow)}</ul>
+      {unresolved > 0 ? (
+        <p className="text-muted-foreground text-xs">
+          {t("families.unresolved", { count: formatCount(unresolved) })}
+        </p>
+      ) : null}
     </div>
   );
 }

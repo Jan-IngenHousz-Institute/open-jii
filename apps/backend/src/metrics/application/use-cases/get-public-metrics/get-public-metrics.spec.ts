@@ -108,8 +108,8 @@ describe("GetPublicMetricsUseCase", () => {
     vi.spyOn(adapter, "getTopParameter").mockImplementation((category) =>
       Promise.resolve(
         category === "derived"
-          ? success({ name: "Phi2", count30d: 4214, median: 0.62 })
-          : success({ name: "humidity", count30d: 4797, median: 42.85 }),
+          ? success({ name: "Phi2", observations: 4214, median: 0.62 })
+          : success({ name: "humidity", observations: 4797, median: 42.85 }),
       ),
     );
     vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(success(poolFacts));

@@ -36,8 +36,8 @@ const metrics: PublicMetricsResponse = {
     { family: "multispeq", measurements: 812_000 },
     { family: "unattributed", measurements: 46_000 },
   ],
-  derivedParameter: { name: "Phi2", count30d: 4_214, median: 0.62 },
-  sensorParameter: { name: "humidity", count30d: 4_797, median: 42.85 },
+  derivedParameter: { name: "Phi2", observations: 4_214, median: 0.62 },
+  sensorParameter: { name: "humidity", observations: 4_797, median: 42.85 },
   captions: [
     { kind: "streak", days: 312 },
     { kind: "milestone", ordinal: 1_000_000, date: "2026-06-12" },
@@ -82,7 +82,7 @@ describe("PublicMetricsSection", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("hides the instrument breakdown while unresolved publishers dominate", () => {
+  it("names the identified instruments and states what is unresolved", () => {
     render(
       <PublicMetricsSection
         metrics={{
@@ -96,7 +96,11 @@ describe("PublicMetricsSection", () => {
       />,
     );
 
-    expect(screen.queryByText("families.title")).not.toBeInTheDocument();
+    expect(screen.getByText("families.title")).toBeInTheDocument();
+    expect(screen.getByText("multispeq")).toBeInTheDocument();
+    // The unresolvable bulk is reported, not drawn as an instrument.
+    expect(screen.queryByText("families.unattributed")).not.toBeInTheDocument();
+    expect(screen.getByText("families.unresolved")).toBeInTheDocument();
   });
 
   it("omits absent slots while rendering the rest", () => {

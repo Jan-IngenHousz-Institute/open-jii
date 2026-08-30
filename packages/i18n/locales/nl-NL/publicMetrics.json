@@ -20,7 +20,8 @@
   },
   "families": {
     "title": "Metingen per instrument",
-    "unattributed": "Niet toegewezen"
+    "unattributed": "Niet toegewezen",
+    "unresolved": "Nog eens {{count}} metingen komen van publishers die het apparaatregister nog niet kan benoemen."
   },
   "parameter": {
     "derivedSentence": "Meest berekend deze maand: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>",

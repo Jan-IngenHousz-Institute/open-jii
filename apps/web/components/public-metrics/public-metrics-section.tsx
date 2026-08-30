@@ -36,11 +36,10 @@ export function PublicMetricsSection({ metrics, locale }: PublicMetricsSectionPr
   } = metrics;
 
   const instruments = families.filter((family) => family.family !== UNATTRIBUTED_FAMILY);
-  const attributed = instruments.reduce((sum, family) => sum + family.measurements, 0);
-  const total = families.reduce((sum, family) => sum + family.measurements, 0);
-  // While the registry resolves a minority of publishers, an instrument
-  // breakdown describes a sliver of the pool and reads as the whole of it.
-  const showInstruments = instruments.length > 0 && attributed * 2 > total;
+  const unresolved = families
+    .filter((family) => family.family === UNATTRIBUTED_FAMILY)
+    .reduce((sum, family) => sum + family.measurements, 0);
+  const showInstruments = instruments.length > 0;
 
   const hasAnything = hero !== null || community !== null || activity.length > 0;
   if (!hasAnything) {
@@ -76,7 +75,9 @@ export function PublicMetricsSection({ metrics, locale }: PublicMetricsSectionPr
           showInstruments && "md:grid-cols-2",
         )}
       >
-        {showInstruments ? <FamilyBars families={instruments} locale={locale} /> : null}
+        {showInstruments ? (
+          <FamilyBars families={instruments} unresolved={unresolved} locale={locale} />
+        ) : null}
         <div className="flex flex-col gap-4">
           {derivedParameter ? (
             <ParameterLine parameter={derivedParameter} kind="derived" locale={locale} />
