@@ -19,7 +19,7 @@ export function ParameterLine({ parameter, kind, locale }: ParameterLineProps) {
         t={t}
         i18nKey={kind === "derived" ? "parameter.derivedSentence" : "parameter.sensorSentence"}
         values={{
-          name: parameter.name,
+          name: parameter.label,
           count: new Intl.NumberFormat(locale).format(parameter.observations),
           median: new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(
             parameter.median,

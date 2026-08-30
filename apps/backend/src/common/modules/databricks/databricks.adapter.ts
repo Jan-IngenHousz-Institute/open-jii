@@ -33,6 +33,7 @@ import type {
   HourlyActivityRow,
   ParameterCategory,
   ParameterStatsRow,
+  ResourceDailyRow,
   PlatformTotalsRow,
   PoolFactsRow,
   ScopedDailyRow,
@@ -1390,13 +1391,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     const row = rows[0];
     const name = cellString(row[index.parameter]);
+    const label = cellString(row[index.label]) ?? name;
     const observations = cellNumber(row[index.observations]);
     const median = cellNumber(row[index.median_value]);
     if (name === null || observations === null || median === null) {
       return success(null);
     }
 
-    return success({ name, observations, median });
+    return success({ label: label ?? name, name, observations, median });
   }
 
   async getPoolFacts(): Promise<Result<PoolFactsRow | null>> {
@@ -1450,6 +1452,46 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       );
 
     this.warnDroppedMetricsRows("daily_activity_by_experiment", rows.length - mapped.length);
+    return success(mapped);
+  }
+
+  async getResourceDailyActivity(
+    resourceType: string,
+    days: number,
+  ): Promise<Result<ResourceDailyRow[]>> {
+    const to = new Date();
+    const from = new Date(to.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
+    const asDate = (value: Date) => value.toISOString().slice(0, 10);
+
+    const result = await this.readMetricsTable("daily_activity_by_resource", {
+      filters: [
+        { column: "resource_type", operator: "equals", value: resourceType },
+        { column: "date", operator: "between", value: [asDate(from), asDate(to)] },
+      ],
+      orderBy: "date",
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    const mapped = rows
+      .map((row) => ({
+        date: cellString(row[index.date]),
+        resourceType: cellString(row[index.resource_type]),
+        resourceId: cellString(row[index.resource_id]),
+        measurements: cellNumber(row[index.measurements]),
+      }))
+      .filter(
+        (row): row is ResourceDailyRow =>
+          row.date !== null &&
+          row.resourceType !== null &&
+          row.resourceId !== null &&
+          row.measurements !== null,
+      );
+
+    this.warnDroppedMetricsRows("daily_activity_by_resource", rows.length - mapped.length);
     return success(mapped);
   }
 
