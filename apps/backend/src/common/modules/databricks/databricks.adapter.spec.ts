@@ -2896,7 +2896,7 @@ describe("DatabricksAdapter", () => {
           "simultaneity_peak_devices",
           "timezones_all_time",
           "timezones_peak_day",
-          "median_arrival_gap_seconds",
+          "mean_arrival_gap_seconds",
           "current_streak_days",
           "computed_at",
         ],
@@ -2906,7 +2906,7 @@ describe("DatabricksAdapter", () => {
       assertSuccess(pool);
       expect(pool.value).toEqual({
         sessionMedianMeasurements: 45,
-        medianArrivalGapSeconds: 0.25,
+        meanArrivalGapSeconds: 0.25,
         currentStreakDays: 12,
         deviceEnduranceDays: null,
         simultaneityPeakDevices: 14,

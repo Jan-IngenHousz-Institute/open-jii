@@ -212,10 +212,10 @@ export class GetPublicMetricsUseCase {
     // The measured interval between consecutive measurements, not a window
     // divided by a count. Measurements sharing a millisecond leave no gap to
     // report, which would read as "a measurement arrives every 0 seconds".
-    if (poolFacts?.medianArrivalGapSeconds != null && poolFacts.medianArrivalGapSeconds > 0) {
+    if (poolFacts?.meanArrivalGapSeconds != null && poolFacts.meanArrivalGapSeconds > 0) {
       captions.push({
         kind: "pace",
-        secondsPerMeasurement: poolFacts.medianArrivalGapSeconds,
+        secondsPerMeasurement: poolFacts.meanArrivalGapSeconds,
       });
     }
 

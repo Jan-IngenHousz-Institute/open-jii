@@ -49,7 +49,7 @@ export interface ParameterStatsRow {
 
 export interface PoolFactsRow {
   sessionMedianMeasurements: number | null;
-  medianArrivalGapSeconds: number | null;
+  meanArrivalGapSeconds: number | null;
   currentStreakDays: number | null;
   deviceEnduranceDays: number | null;
   simultaneityPeakDevices: number | null;

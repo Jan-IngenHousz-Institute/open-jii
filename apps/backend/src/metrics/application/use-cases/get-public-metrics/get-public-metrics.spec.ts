@@ -46,7 +46,7 @@ const windows = {
 
 const poolFacts = {
   sessionMedianMeasurements: 45,
-  medianArrivalGapSeconds: 538.65,
+  meanArrivalGapSeconds: 538.65,
   currentStreakDays: 2,
   deviceEnduranceDays: 94,
   simultaneityPeakDevices: 14,
@@ -177,7 +177,7 @@ describe("GetPublicMetricsUseCase", () => {
     // Timestamps sharing a millisecond leave no measurable gap; a zero here
     // would publish "a measurement arrives every 0 seconds".
     vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(
-      success({ ...poolFacts, medianArrivalGapSeconds: 0, currentStreakDays: 0 }),
+      success({ ...poolFacts, meanArrivalGapSeconds: 0, currentStreakDays: 0 }),
     );
 
     const result = await useCase.execute();

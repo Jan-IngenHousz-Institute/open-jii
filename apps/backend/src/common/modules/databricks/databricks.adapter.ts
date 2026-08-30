@@ -1413,7 +1413,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const row = rows[0];
     return success({
       sessionMedianMeasurements: cellNumber(row[index.session_median_measurements]),
-      medianArrivalGapSeconds: cellNumber(row[index.median_arrival_gap_seconds]),
+      meanArrivalGapSeconds: cellNumber(row[index.mean_arrival_gap_seconds]),
       currentStreakDays: cellNumber(row[index.current_streak_days]),
       deviceEnduranceDays: cellNumber(row[index.device_endurance_days]),
       simultaneityPeakDevices: cellNumber(row[index.simultaneity_peak_devices]),

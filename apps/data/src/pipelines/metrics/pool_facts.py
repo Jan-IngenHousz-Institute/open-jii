@@ -64,22 +64,26 @@ def pool_facts():
         .agg(F.max("devices_at_once").alias("simultaneity_peak_devices"))
     )
 
-    # The interval between consecutive measurements, measured rather than
-    # assumed: dividing a window by a count would describe an even arrival
-    # rate the platform does not have. Partitioned by date so the ordering
-    # stays parallel; only the day boundaries are lost.
-    arrival_order = Window.partitionBy("date").orderBy("timestamp")
+    # The interval between measurements across the span they actually cover.
+    # A median gap reads as zero here: ingest arrives in bulk, so most
+    # consecutive measurements share a millisecond. The span is measured from
+    # the first and last measurement rather than assumed to be the window.
     arrival_gap = (
         plausible.filter(in_window)
-        .select("date", "timestamp")
-        .withColumn("previous", F.lag("timestamp").over(arrival_order))
-        .filter(F.col("previous").isNotNull())
-        .select(
-            (F.col("timestamp").cast("double") - F.col("previous").cast("double")).alias(
-                "gap_seconds"
-            )
+        .agg(
+            F.count("*").alias("arrivals"),
+            F.min("timestamp").alias("first_arrival"),
+            F.max("timestamp").alias("last_arrival"),
         )
-        .agg(F.percentile_approx("gap_seconds", 0.5).alias("median_arrival_gap_seconds"))
+        .select(
+            F.when(
+                F.col("arrivals") > 1,
+                (
+                    F.col("last_arrival").cast("double") - F.col("first_arrival").cast("double")
+                )
+                / F.col("arrivals"),
+            ).alias("mean_arrival_gap_seconds")
+        )
     )
 
     # Consecutive days with data counted back from the newest, by the same
