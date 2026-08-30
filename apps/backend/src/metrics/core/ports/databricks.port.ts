@@ -43,7 +43,7 @@ export type ParameterCategory = "derived" | "sensor";
 
 export interface ParameterStatsRow {
   name: string;
-  count30d: number;
+  observations: number;
   median: number;
 }
 

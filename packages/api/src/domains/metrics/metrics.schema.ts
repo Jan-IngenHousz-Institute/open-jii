@@ -37,7 +37,7 @@ export const zMetricsFamily = z.object({
 
 export const zMetricsParameter = z.object({
   name: z.string(),
-  count30d: z.number(),
+  observations: z.number(),
   median: z.number(),
 });
 

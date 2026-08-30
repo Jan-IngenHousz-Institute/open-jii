@@ -19367,7 +19367,7 @@
                             "name": {
                               "type": "string"
                             },
-                            "count30d": {
+                            "observations": {
                               "type": "number"
                             },
                             "median": {
@@ -19376,7 +19376,7 @@
                           },
                           "required": [
                             "name",
-                            "count30d",
+                            "observations",
                             "median"
                           ]
                         },
@@ -19393,7 +19393,7 @@
                             "name": {
                               "type": "string"
                             },
-                            "count30d": {
+                            "observations": {
                               "type": "number"
                             },
                             "median": {
@@ -19402,7 +19402,7 @@
                           },
                           "required": [
                             "name",
-                            "count30d",
+                            "observations",
                             "median"
                           ]
                         },

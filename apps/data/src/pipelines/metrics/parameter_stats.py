@@ -13,7 +13,7 @@ from pyspark.sql import functions as F
 
 from openjii.centrum import EXPERIMENT_MACRO_DATA_TABLE
 from openjii.metrics import (
-    ACTIVITY_WINDOW_DAYS,
+    PARAMETER_WINDOW_DAYS,
     DERIVED_PARAMETER_ALLOWLIST,
     PARAMETER_CATEGORY_DERIVED,
     PARAMETER_CATEGORY_SENSOR,
@@ -50,7 +50,7 @@ def parameter_stats():
     recent = (
         spark.table(centrum_table(EXPERIMENT_MACRO_DATA_TABLE))
         .filter(within_plausible_range(F.col("timestamp"), now))
-        .filter(F.col("timestamp") >= now - F.expr(f"INTERVAL {ACTIVITY_WINDOW_DAYS} DAYS"))
+        .filter(F.col("timestamp") >= now - F.expr(f"INTERVAL {PARAMETER_WINDOW_DAYS} DAYS"))
         .filter(F.col("macro_output").isNotNull())
         .select("macro_output")
     )
@@ -61,12 +61,12 @@ def parameter_stats():
             recent.select(value.alias("value"))
             .filter(F.col("value").isNotNull())
             .agg(
-                F.count("*").alias("count_30d"),
+                F.count("*").alias("observations"),
                 F.percentile_approx("value", 0.5).alias("median_value"),
             )
             .withColumn("parameter", F.lit(name))
             .withColumn("category", F.lit(category))
-            .select("parameter", "category", "count_30d", "median_value")
+            .select("parameter", "category", "observations", "median_value")
         )
 
     frames = [
@@ -74,4 +74,4 @@ def parameter_stats():
     ] + [parameter_frame(name, PARAMETER_CATEGORY_SENSOR) for name in SENSOR_PARAMETER_ALLOWLIST]
     combined = reduce(lambda a, b: a.unionByName(b), frames)
 
-    return combined.filter(F.col("count_30d") > 0).withColumn("computed_at", now)
+    return combined.filter(F.col("observations") > 0).withColumn("computed_at", now)

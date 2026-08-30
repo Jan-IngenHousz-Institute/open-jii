@@ -20,7 +20,8 @@
   },
   "families": {
     "title": "Measurements by instrument",
-    "unattributed": "Unattributed"
+    "unattributed": "Unattributed",
+    "unresolved": "A further {{count}} measurements come from publishers the device registry cannot yet name."
   },
   "parameter": {
     "derivedSentence": "Most computed this month: <em>{{name}}</em>, {{count}} times, median <em>{{median}}</em>",

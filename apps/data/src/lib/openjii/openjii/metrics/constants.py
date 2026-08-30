@@ -73,6 +73,11 @@ SENSOR_PARAMETER_ALLOWLIST = (
 
 ACTIVITY_WINDOW_DAYS = 30
 
+# Parameters get a wider window than activity does. Which instrument is in
+# the field varies month to month, and a 30-day view described whichever
+# family happened to be collecting rather than the platform.
+PARAMETER_WINDOW_DAYS = 90
+
 # Family bucket for rows without a broker identity (imported, large-IoT,
 # Cognito publishers) or without a registry match.
 UNATTRIBUTED_FAMILY = "unattributed"

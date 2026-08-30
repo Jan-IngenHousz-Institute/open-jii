@@ -2759,7 +2759,7 @@ describe("DatabricksAdapter", () => {
 
       mockToken();
       mockSqlResponse(
-        ["parameter", "category", "count_30d", "median_value"],
+        ["parameter", "category", "observations", "median_value"],
         [["Phi2", "derived", "4214", ""]],
       );
       const parameter = await databricksAdapter.getTopParameter("derived");
@@ -2881,12 +2881,12 @@ describe("DatabricksAdapter", () => {
 
       mockToken();
       mockSqlResponse(
-        ["parameter", "category", "count_30d", "median_value", "computed_at"],
+        ["parameter", "category", "observations", "median_value", "computed_at"],
         [["Phi2", "derived", "4214", "0.62", "x"]],
       );
       const parameter = await databricksAdapter.getTopParameter("derived");
       assertSuccess(parameter);
-      expect(parameter.value).toEqual({ name: "Phi2", count30d: 4214, median: 0.62 });
+      expect(parameter.value).toEqual({ name: "Phi2", observations: 4214, median: 0.62 });
 
       mockToken();
       mockSqlResponse(

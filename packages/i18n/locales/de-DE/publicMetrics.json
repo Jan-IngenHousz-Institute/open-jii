@@ -20,7 +20,8 @@
   },
   "families": {
     "title": "Messungen nach Instrument",
-    "unattributed": "Nicht zugeordnet"
+    "unattributed": "Nicht zugeordnet",
+    "unresolved": "Weitere {{count}} Messungen stammen von Publishern, die die Geräteregistrierung noch nicht benennen kann."
   },
   "parameter": {
     "derivedSentence": "Meistberechnet diesen Monat: <em>{{name}}</em>, {{count}} Mal, Median <em>{{median}}</em>",

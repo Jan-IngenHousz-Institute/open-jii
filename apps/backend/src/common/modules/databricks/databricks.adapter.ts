@@ -1375,7 +1375,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   async getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>> {
     const result = await this.readMetricsTable("parameter_stats", {
       filters: [{ column: "category", operator: "equals", value: category }],
-      orderBy: "count_30d",
+      orderBy: "observations",
       orderDirection: "DESC",
       limit: 1,
     });
@@ -1390,13 +1390,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     const row = rows[0];
     const name = cellString(row[index.parameter]);
-    const count30d = cellNumber(row[index.count_30d]);
+    const observations = cellNumber(row[index.observations]);
     const median = cellNumber(row[index.median_value]);
-    if (name === null || count30d === null || median === null) {
+    if (name === null || observations === null || median === null) {
       return success(null);
     }
 
-    return success({ name, count30d, median });
+    return success({ name, observations, median });
   }
 
   async getPoolFacts(): Promise<Result<PoolFactsRow | null>> {
