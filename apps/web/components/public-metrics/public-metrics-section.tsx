@@ -2,6 +2,7 @@
 
 import type { PublicMetricsResponse } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
+import { cn } from "@repo/ui/lib/utils";
 
 import { ActivityChart } from "./activity-chart";
 import { ActivityIndicator } from "./activity-indicator";
@@ -69,7 +70,12 @@ export function PublicMetricsSection({ metrics, locale }: PublicMetricsSectionPr
         </div>
       ) : null}
 
-      <div className="border-border mt-8 grid gap-8 border-t pt-6 md:grid-cols-2">
+      <div
+        className={cn(
+          "border-border mt-8 grid gap-8 border-t pt-6",
+          showInstruments && "md:grid-cols-2",
+        )}
+      >
         {showInstruments ? <FamilyBars families={instruments} locale={locale} /> : null}
         <div className="flex flex-col gap-4">
           {derivedParameter ? (
