@@ -97,6 +97,19 @@ export { AmbitDriver } from "./driver/ambit/driver";
 export type { AmbitDriverConfig } from "./driver/ambit/config";
 export { AMBIT_SERIAL_DEFAULTS, AMBIT_FRAMING } from "./driver/ambit/config";
 export { AMBIT_COMMANDS, AMBIT_SILENT_COMMANDS } from "./driver/ambit/commands";
+
+// Bench instruments: rig equipment a calibration drives but never measures with.
+export type { BenchInstrument, InstrumentSetpoint } from "./instrument/interface";
+export { identityMatches, findSetpoint } from "./instrument/interface";
+export { KiprimDcSource } from "./instrument/kiprim/instrument";
+export type { KiprimConfig } from "./instrument/kiprim/instrument";
+export { KIPRIM_COMMANDS, KIPRIM_LIMITS } from "./instrument/kiprim/commands";
+export {
+  BENCH_INSTRUMENTS,
+  identifyBenchInstrument,
+  benchInstrumentForHandshake,
+} from "./instrument/registry";
+export type { BenchInstrumentFactory } from "./instrument/registry";
 export type {
   AmbitParReading,
   AmbitTempReading,
