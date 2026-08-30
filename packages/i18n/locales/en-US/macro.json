@@ -48,7 +48,8 @@
       "name": "Name",
       "language": "Language",
       "protocols": "Protocols",
-      "updated": "Updated"
+      "updated": "Updated",
+      "activity": "Activity"
     }
   },
   "newMacro": {

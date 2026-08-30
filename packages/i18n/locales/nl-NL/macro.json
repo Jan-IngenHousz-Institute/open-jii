@@ -48,7 +48,8 @@
       "name": "Naam",
       "language": "Taal",
       "protocols": "Protocollen",
-      "updated": "Bijgewerkt"
+      "updated": "Bijgewerkt",
+      "activity": "Activiteit"
     }
   },
   "newMacro": {

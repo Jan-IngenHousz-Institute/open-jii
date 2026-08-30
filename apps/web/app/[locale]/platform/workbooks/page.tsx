@@ -1,4 +1,5 @@
 import { ListWorkbooks } from "@/components/list-workbooks";
+import { ResourceActivitySummary } from "@/components/metrics/resource-activity-summary";
 import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 
@@ -18,6 +19,7 @@ export async function generateMetadata({ params }: WorkbookPageProps): Promise<M
 export default function WorkbookPage(_props: WorkbookPageProps) {
   return (
     <PageContainer width="fluid" className="space-y-6">
+      <ResourceActivitySummary kind="workbook" />
       <ListWorkbooks />
     </PageContainer>
   );

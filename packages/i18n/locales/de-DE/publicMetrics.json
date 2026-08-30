@@ -63,5 +63,24 @@
     "byContributors_other": "erfasst von {{count}} Mitwirkenden",
     "quiet": "Keine Messungen hier in den letzten 30 Tagen",
     "trend": "Tägliche Messungen"
+  },
+  "resourceActivity": {
+    "strip": "Tägliche Messungen über {{days}} Tage",
+    "experiment": {
+      "active": "Experimente mit Daten",
+      "measurements": "Messungen, {{days}} Tage"
+    },
+    "protocol": {
+      "active": "genutzte Protokolle",
+      "measurements": "Messungen, {{days}} Tage"
+    },
+    "macro": {
+      "active": "ausgeführte Makros",
+      "measurements": "Analysen, {{days}} Tage"
+    },
+    "workbook": {
+      "active": "sammelnde Arbeitsmappen",
+      "measurements": "Messungen, {{days}} Tage"
+    }
   }
 }
