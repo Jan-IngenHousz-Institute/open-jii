@@ -110,6 +110,28 @@ export {
   benchInstrumentForHandshake,
 } from "./instrument/registry";
 export type { BenchInstrumentFactory } from "./instrument/registry";
+
+// Capture procedures: the declared steps a calibration runs at a bench.
+export { runCaptureProcedure, shutdownRig } from "./procedure/interpreter";
+export type {
+  ProcedureContext,
+  RigBinding,
+  ReadTarget,
+  SetpointTarget,
+} from "./procedure/interpreter";
+export { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./procedure/operator";
+export type { OperatorPort, ProcedureProgress } from "./procedure/operator";
+export { requiredSeriesNames, DUT_ROLE, SWEEP_STIMULUS_COLUMN } from "./procedure/types";
+export type {
+  CaptureProcedure,
+  CaptureResult,
+  CapturePayload,
+  ProcedureStep,
+  ProcedureRead,
+  SeriesRow,
+  SeriesCell,
+  SetpointValue,
+} from "./procedure/types";
 export type {
   AmbitParReading,
   AmbitTempReading,
