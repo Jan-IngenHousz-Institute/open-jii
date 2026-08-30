@@ -1,5 +1,5 @@
 import { CompatibleMacrosCell } from "@/components/overview-table/protocol-macros-cell";
-import { ResourceActivityCell } from "@/components/overview-table/resource-activity-cell";
+import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
@@ -73,7 +73,7 @@ export function getProtocolColumns(
       header: t("protocols.columns.activity"),
       className: "w-32",
       cell: (protocol) => (
-        <ResourceActivityCell kind="protocol" resourceId={protocol.id} pageIds={pageIds} />
+        <ResourceMetricsCell kind="protocol" resourceId={protocol.id} pageIds={pageIds} />
       ),
     },
     {

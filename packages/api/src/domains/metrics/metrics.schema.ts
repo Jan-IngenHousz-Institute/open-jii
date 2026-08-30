@@ -121,7 +121,7 @@ export const zScopedMetricsResponse = z.object({
 
 export const zResourceKind = z.enum(["experiment", "protocol", "macro", "workbook"]);
 
-export const zResourceActivityQuery = z.object({
+export const zResourceMetricsQuery = z.object({
   kind: zResourceKind,
   /**
    * The rows on screen. Series are returned only for these, so a page of 20
@@ -132,7 +132,7 @@ export const zResourceActivityQuery = z.object({
   ids: z.array(z.string().uuid()).max(200).optional(),
 });
 
-export const zResourceActivity = z.object({
+export const zResourceMetrics = z.object({
   id: z.string(),
   measurements: z.number(),
   days: z.array(z.object({ date: z.string(), measurements: z.number() })),
@@ -143,9 +143,9 @@ export const zResourceActivity = z.object({
  * read. `resources` carries one entry per resource with recorded activity; the
  * totals describe the same visible set, so the header and the rows agree.
  */
-export const zResourceActivityResponse = z.object({
+export const zResourceMetricsResponse = z.object({
   kind: zResourceKind,
-  resources: z.array(zResourceActivity),
+  resources: z.array(zResourceMetrics),
   totalMeasurements: z.number(),
   activeCount: z.number(),
   windowDays: z.number(),
@@ -165,6 +165,6 @@ export type MetricsScope = z.infer<typeof zMetricsScope>;
 export type ScopedMetricsQuery = z.infer<typeof zScopedMetricsQuery>;
 export type ScopedMetricsResponse = z.infer<typeof zScopedMetricsResponse>;
 export type ResourceKind = z.infer<typeof zResourceKind>;
-export type ResourceActivity = z.infer<typeof zResourceActivity>;
-export type ResourceActivityQuery = z.infer<typeof zResourceActivityQuery>;
-export type ResourceActivityResponse = z.infer<typeof zResourceActivityResponse>;
+export type ResourceMetrics = z.infer<typeof zResourceMetrics>;
+export type ResourceMetricsQuery = z.infer<typeof zResourceMetricsQuery>;
+export type ResourceMetricsResponse = z.infer<typeof zResourceMetricsResponse>;

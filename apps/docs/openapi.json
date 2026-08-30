@@ -19785,9 +19785,9 @@
         }
       }
     },
-    "/api/v1/metrics/resource-activity": {
+    "/api/v1/metrics/resource-metrics": {
       "get": {
-        "operationId": "metrics.getResourceActivity",
+        "operationId": "metrics.getResourceMetrics",
         "parameters": [
           {
             "name": "kind",
@@ -19802,6 +19802,23 @@
               ],
               "type": "string"
             },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "maxItems": 200
+            },
+            "style": "deepObject",
+            "explode": true,
             "allowEmptyValue": true,
             "allowReserved": true
           }

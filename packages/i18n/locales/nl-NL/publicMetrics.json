@@ -64,7 +64,7 @@
     "quiet": "Geen metingen hier in de afgelopen 30 dagen",
     "trend": "Dagelijkse metingen"
   },
-  "resourceActivity": {
+  "resourceMetrics": {
     "strip": "Dagelijkse metingen over {{days}} dagen",
     "experiment": {
       "active": "experimenten met data",

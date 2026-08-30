@@ -1,5 +1,5 @@
 import { ListProtocols } from "@/components/list-protocols";
-import { ResourceActivitySummary } from "@/components/metrics/resource-activity-summary";
+import { ResourceMetricsSummary } from "@/components/metrics/resource-metrics-summary";
 import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: ProtocolPageProps): Promise<M
 export default function ProtocolPage() {
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <ResourceActivitySummary kind="protocol" />
+      <ResourceMetricsSummary kind="protocol" />
       <ListProtocols />
     </PageContainer>
   );

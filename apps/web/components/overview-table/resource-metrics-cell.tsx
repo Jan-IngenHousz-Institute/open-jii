@@ -1,12 +1,12 @@
 "use client";
 
 import { ActivityStrip } from "@/components/metrics/activity-strip";
-import { useResourceActivity } from "@/hooks/metrics/useResourceActivity/useResourceActivity";
+import { useResourceMetrics } from "@/hooks/metrics/useResourceMetrics/useResourceMetrics";
 
 import type { ResourceKind } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
 
-interface ResourceActivityCellProps {
+interface ResourceMetricsCellProps {
   kind: ResourceKind;
   resourceId: string;
   /** Every row on the page, so the table issues one request rather than one per row. */
@@ -18,9 +18,9 @@ interface ResourceActivityCellProps {
  * Query dedupes by key, so the table reads a single response rather than
  * fanning out per row.
  */
-export function ResourceActivityCell({ kind, resourceId, pageIds }: ResourceActivityCellProps) {
+export function ResourceMetricsCell({ kind, resourceId, pageIds }: ResourceMetricsCellProps) {
   const { t } = useTranslation("publicMetrics");
-  const { data } = useResourceActivity(kind, pageIds);
+  const { data } = useResourceMetrics(kind, pageIds);
 
   const resource = data?.resources.find((entry) => entry.id === resourceId);
   if (resource === undefined) {
@@ -30,7 +30,7 @@ export function ResourceActivityCell({ kind, resourceId, pageIds }: ResourceActi
   return (
     <ActivityStrip
       days={resource.days}
-      label={t("resourceActivity.strip", { days: data?.windowDays ?? 0 })}
+      label={t("resourceMetrics.strip", { days: data?.windowDays ?? 0 })}
     />
   );
 }

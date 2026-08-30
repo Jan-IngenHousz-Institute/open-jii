@@ -1,4 +1,4 @@
-import { ResourceActivityCell } from "@/components/overview-table/resource-activity-cell";
+import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
 import { Users } from "lucide-react";
@@ -147,7 +147,7 @@ export function getExperimentColumns(
       header: t("columns.activity"),
       className: "w-32",
       cell: (experiment) => (
-        <ResourceActivityCell kind="experiment" resourceId={experiment.id} pageIds={pageIds} />
+        <ResourceMetricsCell kind="experiment" resourceId={experiment.id} pageIds={pageIds} />
       ),
     },
     {

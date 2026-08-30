@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { ResourceActivityCell } from "./resource-activity-cell";
+import { ResourceMetricsCell } from "./resource-metrics-cell";
 
 const activity = {
   kind: "protocol" as const,
@@ -24,25 +24,25 @@ const activity = {
   computedAt: null,
 };
 
-describe("ResourceActivityCell", () => {
+describe("ResourceMetricsCell", () => {
   it("draws the strip for its own row", async () => {
-    server.mount(contract.metrics.getResourceActivity, { body: activity });
+    server.mount(contract.metrics.getResourceMetrics, { body: activity });
 
     const { container } = render(
-      <ResourceActivityCell kind="protocol" resourceId="p1" pageIds={["p1"]} />,
+      <ResourceMetricsCell kind="protocol" resourceId="p1" pageIds={["p1"]} />,
     );
 
-    expect(await screen.findByRole("img", { name: "resourceActivity.strip" })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: "resourceMetrics.strip" })).toBeInTheDocument();
     await waitFor(() => {
       expect(container.querySelectorAll("rect")).toHaveLength(2);
     });
   });
 
   it("stays empty for a row with no recorded activity", async () => {
-    server.mount(contract.metrics.getResourceActivity, { body: activity });
+    server.mount(contract.metrics.getResourceMetrics, { body: activity });
 
     const { container } = render(
-      <ResourceActivityCell kind="protocol" resourceId="other" pageIds={["other"]} />,
+      <ResourceMetricsCell kind="protocol" resourceId="other" pageIds={["other"]} />,
     );
 
     await waitFor(() => {

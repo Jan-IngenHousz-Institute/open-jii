@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { ResourceActivitySummary } from "./resource-activity-summary";
+import { ResourceMetricsSummary } from "./resource-metrics-summary";
 
 const activity = {
   kind: "protocol" as const,
@@ -24,23 +24,23 @@ const activity = {
   computedAt: null,
 };
 
-describe("ResourceActivitySummary", () => {
+describe("ResourceMetricsSummary", () => {
   it("states what the reader's own resources recorded", async () => {
-    server.mount(contract.metrics.getResourceActivity, { body: activity });
+    server.mount(contract.metrics.getResourceMetrics, { body: activity });
 
-    render(<ResourceActivitySummary kind="protocol" />);
+    render(<ResourceMetricsSummary kind="protocol" />);
 
     expect(await screen.findByText("4.2K")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.getByText("resourceActivity.protocol.active")).toBeInTheDocument();
+    expect(screen.getByText("resourceMetrics.protocol.active")).toBeInTheDocument();
   });
 
   it("renders nothing when no resource has recorded anything", async () => {
-    server.mount(contract.metrics.getResourceActivity, {
+    server.mount(contract.metrics.getResourceMetrics, {
       body: { ...activity, resources: [], totalMeasurements: 0, activeCount: 0 },
     });
 
-    const { container } = render(<ResourceActivitySummary kind="protocol" />);
+    const { container } = render(<ResourceMetricsSummary kind="protocol" />);
 
     await waitFor(() => {
       expect(container).toBeEmptyDOMElement();

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { useResourceActivity } from "./useResourceActivity";
+import { useResourceMetrics } from "./useResourceMetrics";
 
 const activity = (kind: "protocol" | "macro") => ({
   kind,
@@ -24,11 +24,11 @@ const activity = (kind: "protocol" | "macro") => ({
   computedAt: null,
 });
 
-describe("useResourceActivity", () => {
+describe("useResourceMetrics", () => {
   it("returns the daily series per resource", async () => {
-    server.mount(contract.metrics.getResourceActivity, { body: activity("protocol") });
+    server.mount(contract.metrics.getResourceMetrics, { body: activity("protocol") });
 
-    const { result } = renderHook(() => useResourceActivity("protocol"));
+    const { result } = renderHook(() => useResourceMetrics("protocol"));
 
     await waitFor(() => {
       expect(result.current.data?.resources).toHaveLength(1);
@@ -39,9 +39,9 @@ describe("useResourceActivity", () => {
   });
 
   it("asks for the kind it was given", async () => {
-    const spy = server.mount(contract.metrics.getResourceActivity, { body: activity("macro") });
+    const spy = server.mount(contract.metrics.getResourceMetrics, { body: activity("macro") });
 
-    const { result } = renderHook(() => useResourceActivity("macro"));
+    const { result } = renderHook(() => useResourceMetrics("macro"));
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -51,9 +51,9 @@ describe("useResourceActivity", () => {
   });
 
   it("surfaces an unavailable endpoint as an error rather than stale data", async () => {
-    server.mount(contract.metrics.getResourceActivity, { status: 500 });
+    server.mount(contract.metrics.getResourceMetrics, { status: 500 });
 
-    const { result } = renderHook(() => useResourceActivity("protocol"));
+    const { result } = renderHook(() => useResourceMetrics("protocol"));
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true);

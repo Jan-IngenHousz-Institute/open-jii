@@ -1,6 +1,6 @@
 "use client";
 
-import { ResourceActivityCell } from "@/components/overview-table/resource-activity-cell";
+import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
 import { useLocale } from "@/hooks/useLocale";
@@ -182,7 +182,7 @@ export function getWorkbookColumns(
       header: t("workbooks.columns.activity"),
       className: "w-32",
       cell: (workbook) => (
-        <ResourceActivityCell kind="workbook" resourceId={workbook.id} pageIds={pageIds} />
+        <ResourceMetricsCell kind="workbook" resourceId={workbook.id} pageIds={pageIds} />
       ),
     },
     {
