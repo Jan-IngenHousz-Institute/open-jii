@@ -32,8 +32,11 @@ RESOURCE_TYPE_MACRO = "macro"
 PARAMETER_CATEGORY_DERIVED = "derived"
 PARAMETER_CATEGORY_SENSOR = "sensor"
 
-# Values a macro computes from the measurement.
+# Values a macro computes from the measurement. Each instrument family names
+# its own outputs, so both vocabularies are listed: a parameter is counted
+# under its own name, and differing units never share a median.
 DERIVED_PARAMETER_ALLOWLIST = (
+    # MultispeQ, from the fluorescence macro.
     "Phi2",
     "PhiNPQ",
     "PhiNO",
@@ -43,16 +46,29 @@ DERIVED_PARAMETER_ALLOWLIST = (
     "qP",
     "RFd",
     "SPAD",
+    # Ambit, computed from the spectrum and orientation sensors.
+    "red_fraction",
+    "green_fraction",
+    "blue_fraction",
+    "tilt_angle_deg",
 )
 
 # Raw instrument readings echoed into the macro output.
 SENSOR_PARAMETER_ALLOWLIST = (
+    # MultispeQ.
     "humidity",
     "pressure",
     "temperature",
     "light_intensity",
     "PAR",
     "thickness",
+    # Ambit.
+    "par_umol_m2_s",
+    "relative_humidity_pct",
+    "air_temperature_c",
+    "contactless_temperature_c",
+    "pressure_hpa",
+    "spectrum_clear_raw",
 )
 
 ACTIVITY_WINDOW_DAYS = 30
