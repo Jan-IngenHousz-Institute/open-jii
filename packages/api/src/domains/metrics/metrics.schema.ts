@@ -123,6 +123,13 @@ export const zResourceKind = z.enum(["experiment", "protocol", "macro", "workboo
 
 export const zResourceActivityQuery = z.object({
   kind: zResourceKind,
+  /**
+   * The rows on screen. Series are returned only for these, so a page of 20
+   * does not carry the whole workspace; the totals still cover everything the
+   * caller may see. Ids are intersected with that same visibility, so listing
+   * an id reveals nothing about it.
+   */
+  ids: z.array(z.string().uuid()).max(200).optional(),
 });
 
 export const zResourceActivity = z.object({

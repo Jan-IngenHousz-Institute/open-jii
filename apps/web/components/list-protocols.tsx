@@ -29,6 +29,9 @@ export function ListProtocols() {
   const locale = useLocale();
   const hasSearch = debouncedSearch.trim() !== "";
 
+  // The rows this page renders, so every strip shares one request.
+  const pageIds = (data?.items ?? []).map((item) => item.id);
+
   return (
     <div className="space-y-4">
       <OverviewToolbar
@@ -51,7 +54,7 @@ export function ListProtocols() {
         className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
       >
         <OverviewTable
-          columns={getProtocolColumns(t, locale)}
+          columns={getProtocolColumns(t, locale, pageIds)}
           items={data?.items}
           isLoading={isLoading}
           error={error}
