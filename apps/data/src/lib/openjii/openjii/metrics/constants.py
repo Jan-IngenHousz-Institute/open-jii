@@ -17,6 +17,13 @@ POOL_FACTS_TABLE = "pool_facts"
 # the backend unaggregated; the public endpoint must not expose them.
 DAILY_ACTIVITY_BY_EXPERIMENT_TABLE = "daily_activity_by_experiment"
 EXPERIMENT_CONTRIBUTORS_WINDOW_TABLE = "experiment_contributors_window"
+DAILY_ACTIVITY_BY_RESOURCE_TABLE = "daily_activity_by_resource"
+
+# Resource kinds the list-page activity strips cover. Workbooks are keyed by
+# version because that is what a measurement records.
+RESOURCE_TYPE_PROTOCOL = "protocol"
+RESOURCE_TYPE_WORKBOOK_VERSION = "workbook_version"
+RESOURCE_TYPE_MACRO = "macro"
 
 # Parameters eligible for the public "most measured" lines, keyed into
 # macro_output. Only vetted names may surface publicly, and each name must be
