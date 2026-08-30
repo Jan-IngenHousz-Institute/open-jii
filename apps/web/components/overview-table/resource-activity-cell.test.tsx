@@ -28,7 +28,9 @@ describe("ResourceActivityCell", () => {
   it("draws the strip for its own row", async () => {
     server.mount(contract.metrics.getResourceActivity, { body: activity });
 
-    const { container } = render(<ResourceActivityCell kind="protocol" resourceId="p1" />);
+    const { container } = render(
+      <ResourceActivityCell kind="protocol" resourceId="p1" pageIds={["p1"]} />,
+    );
 
     expect(await screen.findByRole("img", { name: "resourceActivity.strip" })).toBeInTheDocument();
     await waitFor(() => {
@@ -39,7 +41,9 @@ describe("ResourceActivityCell", () => {
   it("stays empty for a row with no recorded activity", async () => {
     server.mount(contract.metrics.getResourceActivity, { body: activity });
 
-    const { container } = render(<ResourceActivityCell kind="protocol" resourceId="other" />);
+    const { container } = render(
+      <ResourceActivityCell kind="protocol" resourceId="other" pageIds={["other"]} />,
+    );
 
     await waitFor(() => {
       expect(container).toBeEmptyDOMElement();

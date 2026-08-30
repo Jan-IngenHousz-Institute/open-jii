@@ -17,7 +17,11 @@ export class ResourceActivityController {
   @Implement(metricsContract.getResourceActivity)
   getResourceActivity(@Session() session: UserSession) {
     return implement(metricsContract.getResourceActivity).handler(async ({ input }) => {
-      const result = await this.getResourceActivityUseCase.execute(input.kind, session.user.id);
+      const result = await this.getResourceActivityUseCase.execute(
+        input.kind,
+        session.user.id,
+        input.ids,
+      );
 
       if (result.isFailure()) {
         return throwOrpcFailure(result, this.logger, "getResourceActivity");

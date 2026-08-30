@@ -9,6 +9,8 @@ import { useTranslation } from "@repo/i18n";
 interface ResourceActivityCellProps {
   kind: ResourceKind;
   resourceId: string;
+  /** Every row on the page, so the table issues one request rather than one per row. */
+  pageIds: string[];
 }
 
 /**
@@ -16,9 +18,9 @@ interface ResourceActivityCellProps {
  * Query dedupes by key, so the table reads a single response rather than
  * fanning out per row.
  */
-export function ResourceActivityCell({ kind, resourceId }: ResourceActivityCellProps) {
+export function ResourceActivityCell({ kind, resourceId, pageIds }: ResourceActivityCellProps) {
   const { t } = useTranslation("publicMetrics");
-  const { data } = useResourceActivity(kind);
+  const { data } = useResourceActivity(kind, pageIds);
 
   const resource = data?.resources.find((entry) => entry.id === resourceId);
   if (resource === undefined) {
