@@ -5,6 +5,7 @@ import { useLocale } from "~/hooks/useLocale";
 
 import type { ResourceKind } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
+import { Card } from "@repo/ui/components/card";
 
 interface ResourceMetricsSummaryProps {
   kind: ResourceKind;
@@ -47,8 +48,6 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
   );
 
   return (
-    <section className="border-border flex flex-wrap gap-x-10 gap-y-3 border-b pb-4">
-      {stats.map(renderStat)}
-    </section>
+    <Card className="flex flex-row flex-wrap gap-x-10 gap-y-3 p-5">{stats.map(renderStat)}</Card>
   );
 }

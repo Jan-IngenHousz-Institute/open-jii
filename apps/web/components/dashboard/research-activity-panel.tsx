@@ -4,6 +4,7 @@ import { useMyScopedMetrics } from "@/hooks/metrics/useMyScopedMetrics/useMyScop
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
 
 import { useTranslation } from "@repo/i18n";
+import { Card } from "@repo/ui/components/card";
 import { AreaChart } from "@repo/ui/components/charts/area-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import { detectAxisType } from "@repo/ui/components/charts/utils";
@@ -87,7 +88,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   );
 
   return (
-    <section className="border-border bg-card flex flex-col gap-4 rounded-lg border p-4 sm:p-5">
+    <Card className="flex flex-col gap-4 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
@@ -111,6 +112,6 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
       </div>
 
       {hasTrend ? renderTrend() : null}
-    </section>
+    </Card>
   );
 }
