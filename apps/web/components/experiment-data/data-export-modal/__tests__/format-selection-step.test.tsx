@@ -14,9 +14,11 @@ describe("FormatSelectionStep", () => {
     renderStep();
 
     expect(screen.getByRole("button", { name: /common\.back/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /experimentData\.exportModal\.createExport/i }),
-    ).toBeInTheDocument();
+    const createButton = screen.getByRole("button", {
+      name: /experimentData\.exportModal\.createExport/i,
+    });
+    expect(createButton).toBeInTheDocument();
+    expect(createButton.querySelector(".lucide-plus")).toBeInTheDocument();
   });
 
   it("calls onBack when back button is clicked", async () => {

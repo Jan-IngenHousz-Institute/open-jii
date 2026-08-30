@@ -1,118 +1,82 @@
 "use client";
 
+import { ListPagination } from "@/components/list-pagination";
+import { getOrganizationColumns } from "@/components/overview-table/organization-columns";
+import { OverviewTable } from "@/components/overview-table/overview-table";
+import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useOrganizationsList } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { useLocale } from "@/hooks/useLocale";
-import { Building2, Plus } from "lucide-react";
-import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
 import { SearchInput } from "@repo/ui/components/search-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
 
-import { OrganizationOverviewCards } from "./organization-overview-cards";
-import { newOrganizationPath } from "./organization-routes";
+import { organizationPath } from "./organization-routes";
 
 /**
- * One listing for both readings of "organizations": the ones the caller belongs to
- * and the public directory. They were two routes and are now one filter, because
- * they answer the same question and differ only in which set is being searched.
+ * One ownership-ranked organization directory. Membership is shown by ordering
+ * and card metadata instead of making the reader switch between two partial lists.
  */
 export function ListOrganizations() {
   const { t } = useTranslation();
+  const locale = useLocale();
   const {
-    filter,
-    setFilter,
     search,
     setSearch,
     isSearching,
     debouncedSearch,
     organizations,
     isPending,
+    isPlaceholderData,
     isError,
+    error,
+    refetch,
+    page,
+    totalPages,
+    setPage,
   } = useOrganizationsList();
+  const hasSearch = debouncedSearch.trim() !== "";
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-8">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          isLoading={isSearching}
-          placeholder={t("organizations.searchPlaceholder")}
-          aria-label={t("organizations.searchLabel")}
-          className="w-full md:w-56"
+      <OverviewToolbar
+        search={
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            isLoading={isSearching}
+            placeholder={t("organizations.searchPlaceholder")}
+            aria-label={t("organizations.searchLabel")}
+            clearLabel={t("common.clear")}
+            loadingLabel={t("common.loading")}
+            className="w-full md:w-56"
+          />
+        }
+      />
+
+      <div
+        aria-busy={isPlaceholderData}
+        inert={isPlaceholderData}
+        className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+      >
+        <OverviewTable
+          columns={getOrganizationColumns(t)}
+          items={isError ? undefined : organizations}
+          isLoading={isPending}
+          error={error}
+          onRetry={() => void refetch()}
+          errorMessage={t("organizations.directory.loadFailed")}
+          retryLabel={t("common.errors.tryAgain")}
+          getRowKey={(organization) => organization.id}
+          getRowHref={(organization) => organizationPath(locale, organization.id)}
+          emptyMessage={t(
+            hasSearch ? "organizations.noMatches" : "organizations.directory.emptyTitle",
+          )}
         />
-        <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-8">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger
-              aria-label={t("organizations.filter.label")}
-              className="md:min-w-45 w-full md:w-auto"
-            >
-              <SelectValue placeholder={t("organizations.filter.label")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="my">{t("organizations.filter.my")}</SelectItem>
-              <SelectItem value="all">{t("organizations.filter.all")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+
+        {organizations.length > 0 && (
+          <ListPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        )}
       </div>
-
-      {isError ? (
-        <p className="text-destructive text-sm">
-          {filter === "my"
-            ? t("organizations.mine.loadFailed")
-            : t("organizations.directory.loadFailed")}
-        </p>
-      ) : !isPending && organizations.length === 0 ? (
-        <EmptyState filter={filter} isSearch={debouncedSearch.trim() !== ""} />
-      ) : (
-        // Unpaged: both reads come back whole, so there is nothing below the grid.
-        <OrganizationOverviewCards organizations={organizations} isPending={isPending} />
-      )}
-    </div>
-  );
-}
-
-/** Nothing to show, which is a different thing from nothing matching. */
-function EmptyState({ filter, isSearch }: { filter: "my" | "all"; isSearch: boolean }) {
-  const { t } = useTranslation();
-  const locale = useLocale();
-
-  const isMine = filter === "my";
-
-  return (
-    <div className="border-border rounded-lg border px-6 py-12 text-center">
-      <div className="text-muted-foreground bg-muted mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full">
-        <Building2 className="h-5 w-5" />
-      </div>
-      <p className="text-foreground text-sm font-semibold">
-        {isSearch
-          ? t("organizations.noMatches")
-          : isMine
-            ? t("organizations.mine.emptyTitle")
-            : t("organizations.directory.emptyTitle")}
-      </p>
-      {!isSearch && (
-        <p className="text-muted-foreground mx-auto mt-1 max-w-[380px] text-xs leading-relaxed">
-          {isMine ? t("organizations.mine.emptyHint") : t("organizations.directory.emptyHint")}
-        </p>
-      )}
-      {isMine && !isSearch && (
-        <Button asChild className="mt-4">
-          <Link href={newOrganizationPath(locale)}>
-            <Plus className="h-4 w-4" />
-            {t("organizations.createAction")}
-          </Link>
-        </Button>
-      )}
     </div>
   );
 }

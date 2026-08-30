@@ -83,37 +83,46 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
       className="bg-background hover:bg-muted/50 has-data-[state=open]:bg-muted/50 group cursor-pointer"
       onClick={() => router.push(viewHref)}
     >
-      <TableCell className="px-6 py-3">
-        <div className="flex flex-col items-start gap-0.5">
-          <div className="flex items-center gap-2">
+      <TableCell className="min-w-0 overflow-hidden px-6 py-3">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
             <Link
               href={viewHref}
+              title={displayName}
               onClick={(e) => e.stopPropagation()}
-              className="focus-visible:ring-primary/40 focus-visible:outline-hidden text-foreground text-[13px] font-semibold hover:underline focus-visible:ring-2"
+              className="focus-visible:ring-primary/40 focus-visible:outline-hidden text-foreground min-w-0 truncate text-[13px] font-semibold hover:underline focus-visible:ring-2"
             >
               {displayName}
             </Link>
             {/* Only when private: "public" is the unremarkable default. */}
-            <VisibilityBadge visibility={device.visibility} privateOnly />
+            <VisibilityBadge visibility={device.visibility} privateOnly className="shrink-0" />
           </div>
           {roleLabels.length > 0 && (
-            <span className="text-muted-foreground text-[11px]">{roleLabels.join(" · ")}</span>
+            <span
+              title={roleLabels.join(" · ")}
+              className="text-muted-foreground block truncate text-[11px]"
+            >
+              {roleLabels.join(" · ")}
+            </span>
           )}
         </div>
       </TableCell>
-      <TableCell className="px-6 py-3">
+      <TableCell className="min-w-0 overflow-hidden px-6 py-3">
         <IotDeviceStatusBadge status={device.status} />
       </TableCell>
-      <TableCell className="text-muted-foreground px-6 py-3 text-[13px]">
+      <TableCell className="text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px]">
         {getSensorFamilyLabel(device.deviceType)}
       </TableCell>
-      <TableCell className="text-muted-foreground px-6 py-3 font-mono text-xs">
+      <TableCell
+        title={device.serialNumber}
+        className="text-muted-foreground min-w-0 truncate px-6 py-3 font-mono text-xs"
+      >
         {device.serialNumber}
       </TableCell>
-      <TableCell className="text-muted-foreground px-6 py-3 text-[13px]">
+      <TableCell className="text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px]">
         {formatLastSeen(device.connectivity)}
       </TableCell>
-      <TableCell className="text-muted-foreground px-6 py-3 text-[13px] tabular-nums">
+      <TableCell className="text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px] tabular-nums">
         {formatDate(device.createdAt)}
       </TableCell>
       <TableCell className="w-12 px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>

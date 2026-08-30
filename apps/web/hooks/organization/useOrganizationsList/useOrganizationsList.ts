@@ -2,13 +2,13 @@
 
 import { useOrganizations } from "@/hooks/organization/useOrganizations/useOrganizations";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useSearchPending } from "@/hooks/useSearchPending";
 import { useUrlState } from "@/hooks/useUrlState";
+import { useEffect, useState } from "react";
 
 import type { OrganizationVisibility } from "@repo/api/domains/organization/organization.schema";
 
-export type OrganizationFilter = "my" | "all";
-
-/** One card's worth of organization, whichever slice of the listing produced it. */
+/** One organization row, whichever slice of the listing produced it. */
 export interface OrganizationListItem {
   id: string;
   name: string;
@@ -20,35 +20,38 @@ export interface OrganizationListItem {
   isMember: boolean;
 }
 
+const PAGE_SIZE = 20;
+
 /**
- * The organizations listing: the caller's memberships or the whole directory, chosen by
- * a filter the URL carries — the same `?filter=all` the experiments and macros use.
- *
- * One endpoint serves both, the filter riding along as `scope`. It used to be two reads,
- * the memberships filtered here by substring, so "my" missed location, type, stemming
- * and typos that "all" found. Personal workspaces are excluded server-side.
+ * One ownership-ranked organization directory. The server returns the caller's
+ * organizations first, followed by the rest of the searchable public directory.
+ * Personal workspaces are excluded server-side.
  */
 export function useOrganizationsList() {
-  const [filter, setFilter] = useUrlState<OrganizationFilter>({
-    key: "filter",
-    serialize: (value) => (value === "all" ? "all" : null),
-    parse: (raw) => (raw === "all" ? "all" : "my"),
-  });
-  const [search, setSearch] = useUrlState<string>({
+  const [search, setSearchState] = useUrlState<string>({
     key: "q",
     serialize: (value) => (value === "" ? null : value),
     parse: (raw) => raw ?? "",
   });
-  const [debouncedSearch, isDebounced] = useDebounce(search);
+  const [page, setPage] = useState(1);
+  const [debouncedSearch] = useDebounce(search);
 
-  const isMine = filter === "my";
+  const setSearch = (value: string) => {
+    setSearchState(value);
+    setPage(1);
+  };
 
   const directory = useOrganizations({
     search: debouncedSearch,
-    scope: isMine ? "related" : "all",
+    scope: "all",
+  });
+  const isSearchPending = useSearchPending({
+    search,
+    debouncedSearch,
+    isFetching: directory.isFetching,
   });
 
-  const organizations: OrganizationListItem[] = (directory.data?.organizations ?? []).map(
+  const allOrganizations: OrganizationListItem[] = (directory.data?.organizations ?? []).map(
     (organization) => ({
       id: organization.id,
       name: organization.name,
@@ -62,18 +65,32 @@ export function useOrganizationsList() {
       isMember: organization.membershipStatus === "member",
     }),
   );
+  const totalPages = Math.max(1, Math.ceil(allOrganizations.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const organizations = allOrganizations.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   return {
-    filter,
-    setFilter,
     search,
     setSearch,
     /** The search box's own spinner: a pending term, or the request it triggered. */
-    isSearching: !isDebounced || directory.isFetching,
+    isSearching: isSearchPending,
     debouncedSearch,
     organizations,
     isPending: directory.isPending,
+    isPlaceholderData: directory.isPlaceholderData,
     isError: directory.isError,
+    error: directory.error,
+    refetch: directory.refetch,
     isFetching: directory.isFetching,
+    page: currentPage,
+    totalPages,
+    setPage,
   };
 }

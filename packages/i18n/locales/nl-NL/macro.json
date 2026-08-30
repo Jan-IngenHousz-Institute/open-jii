@@ -12,13 +12,13 @@
     "updatedAt": "Bijgewerkt op",
     "loadingMacros": "Macro's laden...",
     "noMacros": "Geen macro's gevonden",
+    "noMatches": "Geen macro's komen overeen met uw zoekopdracht",
     "viewDetails": "Details bekijken",
     "macroCreated": "Macro succesvol aangemaakt",
     "macroUpdated": "Macro succesvol bijgewerkt",
     "macroDeleted": "Macro succesvol verwijderd",
     "nameAlreadyExists": "Er bestaat al een macro met deze naam. Kies een andere naam.",
     "createError": "Aanmaken van macro mislukt. Probeer het opnieuw.",
-    "listDescription": "Bekijk en beheer uw code-macro's voor gegevensverwerking.",
     "manageMacroDescription": "Bekijk en beheer de details en instellingen van uw macro.",
     "settings": "Macro-instellingen",
     "settingsDescription": "Beheer instellingen voor deze macro.",
@@ -98,7 +98,9 @@
     "compatibleProtocols": "Compatibele protocollen",
     "compatibleProtocolsDescription": "Protocollen waarvan bekend is dat ze werken met deze macro.",
     "noCompatibleProtocols": "Nog geen compatibele protocollen gekoppeld.",
-    "addCompatibleProtocol": "Zoek en voeg een compatibel protocol toe..."
+    "addCompatibleProtocol": "Zoek en voeg een compatibel protocol toe...",
+    "openCompatibleProtocol": "{{name}} openen in een nieuw tabblad",
+    "removeCompatibleProtocol": "{{name}} verwijderen"
   },
   "errors": {
     "failedToLoadMacro": "Macro kon niet worden geladen"

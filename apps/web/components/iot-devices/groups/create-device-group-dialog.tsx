@@ -2,6 +2,7 @@
 
 import { useCreateIotDeviceGroup } from "@/hooks/iot/useCreateIotDeviceGroup/useCreateIotDeviceGroup";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -110,6 +111,11 @@ export function CreateDeviceGroupDialog({
                 {tCommon("common.cancel")}
               </Button>
               <Button type="submit" disabled={createGroup.isPending}>
+                {createGroup.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" aria-hidden />
+                )}
                 {t("iot.groups.create")}
               </Button>
             </DialogFooter>

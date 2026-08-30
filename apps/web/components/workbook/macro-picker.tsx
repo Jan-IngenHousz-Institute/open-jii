@@ -181,7 +181,11 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
                   onClick={() => void handleCreate()}
                   disabled={!newName.trim() || isCreating}
                 >
-                  {isCreating && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                  {isCreating ? (
+                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                  ) : (
+                    <Plus className="size-3.5" aria-hidden />
+                  )}
                   Create
                 </Button>
               </div>

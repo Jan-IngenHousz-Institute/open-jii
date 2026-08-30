@@ -16,6 +16,17 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
 });
 
 describe("ListMacros", () => {
+  it("keeps the language filter with search and route-wide create out of the toolbar", () => {
+    server.mount(contract.macros.listMacros, { body: envelope([]) });
+    render(<ListMacros />);
+
+    const toolbar = screen
+      .getByPlaceholderText("macros.searchPlaceholder")
+      .closest("div.flex.flex-col");
+    expect(toolbar).toContainElement(screen.getByRole("combobox"));
+    expect(screen.queryByRole("link", { name: "macros.create" })).toBeNull();
+  });
+
   it("renders search input and language filter, but no my/all toggle", async () => {
     server.mount(contract.macros.listMacros, { body: envelope([]) });
     render(<ListMacros />);
@@ -34,6 +45,8 @@ describe("ListMacros", () => {
 
     const link = await screen.findByRole("link", { name: "M1" });
     expect(link.getAttribute("href")).toContain("/platform/macros/1");
+    expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "pagination.next" })).toBeDisabled();
   });
 
   it("sends search query to the API", async () => {
@@ -47,6 +60,18 @@ describe("ListMacros", () => {
       const lastCall = spy.calls[spy.calls.length - 1];
       expect(lastCall.query.search).toBe("test");
     });
+  });
+
+  it("distinguishes a search with no matches from an empty macro collection", async () => {
+    server.mount(contract.macros.listMacros, { body: envelope([]) });
+    const user = userEvent.setup();
+    render(<ListMacros />);
+
+    await screen.findByText("macros.noMacros");
+    await user.type(screen.getByPlaceholderText("macros.searchPlaceholder"), "missing");
+
+    expect(await screen.findByText("macros.noMatches")).toBeInTheDocument();
+    expect(screen.queryByText("macros.noMacros")).not.toBeInTheDocument();
   });
 
   it("navigates pages via the pagination controls", async () => {

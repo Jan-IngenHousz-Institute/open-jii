@@ -87,6 +87,27 @@ describe("OrganizationController", () => {
       });
     });
 
+    it("ranks owned and joined organizations ahead of the public directory", async () => {
+      const owned = await testApp.createOrganization("Zulu Owned Lab", { visibility: "public" });
+      await testApp.addOrganizationMember(owned, ownerId, "owner");
+      const joined = await testApp.createOrganization("Yankee Joined Lab", {
+        visibility: "public",
+      });
+      await testApp.addOrganizationMember(joined, ownerId, "member");
+      await testApp.createOrganization("Alpha Public Lab", { visibility: "public" });
+
+      const response: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(path())
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.organizations.map((organization) => organization.name)).toEqual([
+        "Zulu Owned Lab",
+        "Yankee Joined Lab",
+        "Alpha Public Lab",
+      ]);
+    });
+
     it("reports a pending request so the CTA can render 'Requested'", async () => {
       const publicOrg = await seedPublicOrg();
       await testApp.addOrganizationJoinRequest(publicOrg, outsiderId);

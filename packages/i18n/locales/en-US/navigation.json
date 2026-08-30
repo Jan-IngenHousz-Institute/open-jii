@@ -42,9 +42,7 @@
     "otherDevices": "Other devices",
     "otherDevice1": "Other device 1",
     "organizations": "Organizations",
-    "newOrganization": "New organization",
-    "myOrganizations": "My organizations",
-    "organizationDirectory": "Directory"
+    "newOrganization": "New organization"
   },
   "breadcrumbs": {
     "home": "Home",

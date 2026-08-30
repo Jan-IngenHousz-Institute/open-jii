@@ -13,6 +13,10 @@
     "languageDrawer": "Taallade schakelen",
     "regionalSettings": "Regionale instellingen",
     "loading": "Laden...",
+    "clear": "Wissen",
+    "toggleTheme": "Thema wisselen",
+    "switchToLightMode": "Naar lichte modus wisselen",
+    "switchToDarkMode": "Naar donkere modus wisselen",
     "error": "Fout",
     "success": "Succes",
     "save": "Opslaan",
@@ -82,6 +86,8 @@
     "home": "Home",
     "openJII": "openJII",
     "support": null,
+    "documentation": null,
+    "breadcrumbs": null,
     "faq": null
   },
   "experiments": {
@@ -100,14 +106,13 @@
     "updatedAt": "Bijgewerkt op",
     "loadingExperiments": null,
     "noExperiments": "Geen experimenten gevonden",
+    "noMatches": "Geen experimenten komen overeen met uw zoekopdracht",
     "noExperimentsDescription": null,
     "viewDetails": null,
     "experimentCreated": "Experiment succesvol aangemaakt",
     "experimentUpdated": "Experiment succesvol bijgewerkt",
     "experimentUpdateFailed": "Bijwerken van experiment mislukt",
     "experimentDeleted": "Experiment succesvol verwijderd",
-    "listDescription": "Deze pagina toont een lijst van bestaande experimenten.",
-    "archiveDescription": null,
     "experiment": "Experiment",
     "settings": "Experiment instellingen",
     "settingsDescription": "Beheer instellingen en leden voor dit experiment.",
@@ -452,11 +457,6 @@
     "searchPlaceholder": "Organisaties zoeken…",
     "searchLabel": "Organisaties doorzoeken",
     "noMatches": "Geen organisatie past bij je zoekopdracht",
-    "filter": {
-      "label": "Organisaties filteren",
-      "my": "Mijn organisaties",
-      "all": "Alle organisaties"
-    },
     "tabs": {
       "members": "Leden",
       "teams": "Teams",
@@ -543,15 +543,9 @@
         "failed": "De organisatie is aangemaakt, maar {{names}} kon niet worden uitgenodigd. Probeer het opnieuw via het tabblad Leden."
       }
     },
-    "mine": {
-      "emptyTitle": "Je zit nog in geen enkele organisatie",
-      "emptyHint": "Maak er een aan om experimenten, protocollen, macro's en werkmappen met een groep te delen, of zoek er een in het overzicht.",
-      "loadFailed": "Je organisaties konden niet worden geladen."
-    },
     "directory": {
-      "emptyTitle": "Nog geen openbare organisaties",
-      "emptyHint": "Hier staan alleen organisaties die zichzelf openbaar hebben gemaakt.",
-      "loadFailed": "Het overzicht kon niet worden geladen."
+      "emptyTitle": "Nog geen organisaties",
+      "loadFailed": "Organisaties konden niet worden geladen."
     },
     "join": {
       "requestAction": "Lidmaatschap aanvragen",
@@ -1173,13 +1167,13 @@
     "updatedAt": "Bijgewerkt op",
     "loadingProtocols": null,
     "noProtocols": "Geen protocollen gevonden",
+    "noMatches": "Geen protocollen komen overeen met uw zoekopdracht",
     "viewDetails": null,
     "protocolCreated": "Protocol succesvol aangemaakt",
     "protocolUpdated": "Protocol succesvol bijgewerkt",
     "protocolDeleted": "Protocol succesvol verwijderd",
     "nameAlreadyExists": "Er bestaat al een protocol met deze naam. Kies een andere naam.",
     "createError": "Aanmaken van protocol mislukt. Probeer het opnieuw.",
-    "listDescription": "Deze pagina toont een lijst van bestaande protocollen.",
     "protocol": "Protocol",
     "settings": "Protocol instellingen",
     "settingsDescription": "Beheer instellingen voor dit protocol.",
@@ -1272,6 +1266,8 @@
     "compatibleMacrosDescription": "Macro's waarvan bekend is dat ze werken met dit protocol. Deze worden aanbevolen in de flow builder.",
     "noCompatibleMacros": "Nog geen compatibele macro's gekoppeld.",
     "addCompatibleMacro": "Zoek en voeg een compatibele macro toe...",
+    "openCompatibleMacro": "{{name}} openen in een nieuw tabblad",
+    "removeCompatibleMacro": "{{name}} verwijderen",
     "detailsTitle": "Protocoldetails",
     "testerTitle": "Verbinden & Testen"
   },

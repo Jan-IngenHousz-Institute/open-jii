@@ -30,15 +30,15 @@ export default async function VerifyRequestPage(props: {
 
       <AuthBackground alt="Verify request background" />
 
-      {/* Foreground content */}
-      <div className="relative z-10 flex h-[calc(100vh-4rem)] w-full items-center">
+      {/* Foreground content; see the note on the login page for `svh`. */}
+      <div className="relative z-10 flex min-h-[calc(100svh-4rem)] w-full items-center px-4 py-8 sm:px-6 md:py-12">
         <div className="mx-auto w-full max-w-7xl">
-          <div className="grid h-full grid-cols-1 md:grid-cols-2">
+          <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
             {/* Left side: Verify request card */}
-            <div className="flex flex-col p-0 md:p-10">
-              <div className="flex h-full w-full flex-col justify-center">
+            <div className="flex flex-col md:px-10">
+              <div className="flex w-full flex-col justify-center">
                 <div className="w-full max-w-none md:mx-0 md:max-w-md">
-                  <div className="bg-card text-card-foreground ring-border flex h-full min-h-[420px] w-full flex-col rounded-2xl p-6 shadow-lg ring-1 md:min-h-[600px] lg:p-14">
+                  <div className="bg-card text-card-foreground flex w-full flex-col rounded-2xl p-5 shadow-2xl sm:p-6 md:p-10">
                     {/* Icon */}
                     <div className="mb-4 flex justify-center">
                       <span className="bg-primary/10 inline-flex items-center justify-center rounded-full p-3">

@@ -4,7 +4,7 @@ import { isEditableTarget } from "@/components/shortcuts/is-editable-target";
 import { showShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import type { OnChangeFn, PaginationState, RowSelectionState } from "@tanstack/react-table";
-import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
+import { useTable } from "@tanstack/react-table";
 import React, { useCallback, useMemo, useState } from "react";
 
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
@@ -31,6 +31,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { createTableColumns, sortColumnsForDisplay } from "./data-table-columns";
 import type { DataRow } from "./data-table-columns";
+import { dataTableFeatures } from "./data-table-features";
 import { DataTableHeader, DataTableRows, formatValue, LoadingRows } from "./data-table-utils";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -164,14 +165,13 @@ export function DataTable({
       : Math.max(1, Math.ceil(rows.length / pageState.pageSize));
   const pageSizeOptions = pagination?.pageSizeOptions ?? PAGE_SIZE_OPTIONS;
 
-  const table = useReactTable<DataRow>({
+  const table = useTable({
+    features: dataTableFeatures,
     data: rows,
     columns: tableColumns,
-    getCoreRowModel: getCoreRowModel(),
-    // Without a paging model every row renders. Supplying one unpaged would
-    // silently cut the table at tanstack's default page size.
-    ...(isPaged ? { getPaginationRowModel: getPaginationRowModel() } : {}),
-    manualPagination: isServerPaged,
+    // The static feature set includes pagination for paged consumers. Manual
+    // mode bypasses that model for server-driven and deliberately unpaged data.
+    manualPagination: !isPaged || isServerPaged,
     enableRowSelection: selection !== undefined,
     getRowId: (row) => String(row.id),
     onRowSelectionChange: selection?.onChange,

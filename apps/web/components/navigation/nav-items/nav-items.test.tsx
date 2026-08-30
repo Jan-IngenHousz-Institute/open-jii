@@ -1,13 +1,14 @@
-import { render, screen, userEvent } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { FlaskConical } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 
-import { SidebarProvider } from "@repo/ui/components/sidebar";
+import { SidebarProvider, useSidebar } from "@repo/ui/components/sidebar";
 
 import { NavItems } from "./nav-items";
 
 const items = [
-  { title: "Experiments", url: "/en-US/platform/experiments" },
+  { title: "Experiments", url: "/en-US/platform/experiments", icon: FlaskConical },
   { title: "Macros", url: "/en-US/platform/macros" },
   { title: "Dashboard", url: "/en-US/platform" },
 ];
@@ -30,6 +31,20 @@ function renderNav(nav: React.ReactNode) {
   return render(<SidebarProvider>{nav}</SidebarProvider>);
 }
 
+function MobileDrawerState() {
+  const { isMobile, openMobile, setOpenMobile } = useSidebar();
+
+  return (
+    <>
+      <span data-testid="is-mobile">{String(isMobile)}</span>
+      <span data-testid="mobile-drawer-state">{openMobile ? "open" : "closed"}</span>
+      <button type="button" onClick={() => setOpenMobile(true)}>
+        Open mobile drawer
+      </button>
+    </>
+  );
+}
+
 describe("NavItems", () => {
   it("renders all items with links", () => {
     renderNav(<NavItems items={items} />);
@@ -38,6 +53,13 @@ describe("NavItems", () => {
       const link = screen.getByText(item.title).closest("a");
       expect(link).toHaveAttribute("href", item.url);
     }
+  });
+
+  it("keeps navigation icons visible on desktop and mobile", () => {
+    renderNav(<NavItems items={items} />);
+
+    const experimentsLink = screen.getByRole("link", { name: "Experiments" });
+    expect(experimentsLink.querySelector("svg")).not.toHaveClass("md:hidden");
   });
 
   it("marks exact match as active", () => {
@@ -66,6 +88,41 @@ describe("NavItems", () => {
     renderNav(<NavItems items={items} />);
 
     expect(screen.getByText("Dashboard").closest("a")).toHaveAttribute("data-active", "false");
+  });
+
+  it("closes the mobile drawer immediately when a navigation link is selected", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = (query: string) => ({
+      matches: query.includes("max-width"),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    });
+
+    try {
+      const user = userEvent.setup();
+      renderNav(
+        <>
+          <MobileDrawerState />
+          <NavItems items={items} />
+        </>,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("is-mobile")).toHaveTextContent("true"));
+      await user.click(screen.getByRole("button", { name: "Open mobile drawer" }));
+      expect(screen.getByTestId("mobile-drawer-state")).toHaveTextContent("open");
+
+      const experimentsLink = screen.getByRole("link", { name: "Experiments" });
+      experimentsLink.addEventListener("click", (event) => event.preventDefault());
+      await user.click(experimentsLink);
+      expect(screen.getByTestId("mobile-drawer-state")).toHaveTextContent("closed");
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
   });
 });
 

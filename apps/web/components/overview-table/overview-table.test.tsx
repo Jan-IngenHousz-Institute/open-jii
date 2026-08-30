@@ -95,6 +95,23 @@ describe("OverviewTable", () => {
     await user.click(row);
     expect(router.push).toHaveBeenCalledWith("/platform/stubs/b");
   });
+
+  it("uses a fixed, bordered layout and clips cell content before it can crowd later columns", () => {
+    renderStubTable([{ id: "a", name: "A name that is deliberately much wider than its cell" }]);
+
+    const table = screen.getByRole("table");
+    expect(table).toHaveClass("table-fixed");
+    expect(table.parentElement?.parentElement).toHaveClass(
+      "border",
+      "overflow-hidden",
+      "rounded-md",
+    );
+    expect(table.parentElement?.parentElement).not.toHaveClass("border-y");
+
+    for (const cell of table.querySelectorAll("tbody td")) {
+      expect(cell).toHaveClass("min-w-0", "overflow-hidden");
+    }
+  });
 });
 
 describe("experiment overview columns", () => {
@@ -115,8 +132,12 @@ describe("experiment overview columns", () => {
       createExperiment({ id: "e-1", name: "Photosynthesis", description: "Light reactions" }),
     ]);
 
-    expect(screen.getByRole("link", { name: "Photosynthesis" })).toBeInTheDocument();
-    expect(screen.getByText("Light reactions")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Photosynthesis" })).toHaveAttribute(
+      "title",
+      "Photosynthesis",
+    );
+    expect(screen.getByRole("link", { name: "Photosynthesis" })).toHaveClass("min-w-0", "truncate");
+    expect(screen.getByText("Light reactions")).toHaveClass("break-words", "whitespace-normal");
   });
 
   it("shows the visibility badge only for private experiments", () => {
@@ -134,6 +155,14 @@ describe("experiment overview columns", () => {
     expect(
       within(publicRow).queryByText("resourceVisibility.privateStatus"),
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps the full localized status available when the fixed column truncates it", () => {
+    renderExperiments([createExperiment({ id: "e-1", status: "archived" })]);
+
+    const label = screen.getByText("status.archived");
+    expect(label).toHaveClass("truncate");
+    expect(label.parentElement).toHaveAttribute("title", "status.archived");
   });
 });
 
@@ -160,10 +189,23 @@ describe("protocol overview columns", () => {
     if (!preferredRow) throw new Error("row not found");
     expect(within(preferredRow).getByText("common.preferred")).toBeInTheDocument();
     expect(within(preferredRow).getByText("multispeq")).toBeInTheDocument();
+    expect(within(preferredRow).getByRole("link", { name: "Preferred P" })).toHaveAttribute(
+      "title",
+      "Preferred P",
+    );
 
     const plainRow = screen.getByText("Plain P").closest("tr");
     if (!plainRow) throw new Error("row not found");
     expect(within(plainRow).queryByText("common.preferred")).not.toBeInTheDocument();
+  });
+
+  it("reserves a bounded responsive column for compatible macros", () => {
+    renderProtocols([createProtocol({ id: "p-1", name: "Protocol" })]);
+
+    expect(screen.getByRole("columnheader", { name: "protocols.columns.macros" })).toHaveClass(
+      "w-56",
+      "md:table-cell",
+    );
   });
 });
 
@@ -181,6 +223,24 @@ describe("macro overview columns", () => {
 
     expect(screen.getByText("Python")).toBeInTheDocument();
     expect(screen.getByText("common.preferred")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "M1" })).toHaveAttribute("title", "M1");
+  });
+
+  it("reserves a bounded responsive column for compatible protocols", () => {
+    render(
+      <OverviewTable
+        columns={getMacroColumns(t, "en-US")}
+        items={[createMacro({ id: "m-1", name: "M1" })]}
+        getRowKey={(macro) => macro.id}
+        getRowHref={(macro) => `/platform/macros/${macro.id}`}
+        emptyMessage="macros.noMacros"
+      />,
+    );
+
+    expect(screen.getByRole("columnheader", { name: "macros.columns.protocols" })).toHaveClass(
+      "w-56",
+      "md:table-cell",
+    );
   });
 });
 
@@ -229,11 +289,22 @@ describe("workbook overview columns", () => {
 
     const row = screen.getByText("Unused WB").closest("tr");
     if (!row) throw new Error("row not found");
+    expect(within(row).getByRole("link", { name: "Unused WB" })).toHaveAttribute(
+      "title",
+      "Unused WB",
+    );
     await user.click(within(row).getByLabelText("workbooks.actions.more"));
     await screen.findByRole("menuitem", { name: "workbooks.actions.open" });
     expect(
       screen.queryByRole("menuitem", { name: "workbooks.actions.delete" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("reserves enough padded width for the workbook row-actions hit target", () => {
+    renderWorkbooks([unused]);
+
+    const actionButton = screen.getByLabelText("workbooks.actions.more");
+    expect(actionButton.closest("td")).toHaveClass("w-14", "px-3");
   });
 
   it("duplicates a workbook from the row menu", async () => {

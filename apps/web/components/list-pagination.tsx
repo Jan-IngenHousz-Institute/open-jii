@@ -12,8 +12,6 @@ interface ListPaginationProps {
 export function ListPagination({ page, totalPages, onPageChange }: ListPaginationProps) {
   const { t } = useTranslation();
 
-  if (totalPages <= 1) return null;
-
   return (
     <div className="flex items-center justify-between">
       <span className="text-muted-foreground text-sm">

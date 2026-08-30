@@ -1,6 +1,6 @@
 "use client";
 
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
@@ -107,6 +107,7 @@ export function QuestionPicker({ existingCells, onSelect, children }: QuestionPi
               Cancel
             </Button>
             <Button size="sm" onClick={handleCreate} disabled={!isValid}>
+              <Plus className="size-4" aria-hidden />
               Create
             </Button>
           </div>

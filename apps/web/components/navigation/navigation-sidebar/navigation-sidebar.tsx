@@ -1,14 +1,18 @@
 "use client";
 
+import { ActivityPopover } from "@/components/activity/activity-popover";
 import { CommandKHint } from "@/components/command/kbd";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
 import { WhatsNewFooterItem } from "@/components/whats-new/whats-new-footer-item";
 import { Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
+import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
   Sidebar,
@@ -17,12 +21,17 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
   SidebarRail,
-  SidebarTrigger,
+  useSidebar,
 } from "@repo/ui/components/sidebar";
+import { ThemeToggle } from "@repo/ui/components/theme";
 
 import { NavItems } from "../nav-items/nav-items";
+import { NavUser } from "../nav-user/nav-user";
 import { iconMap } from "../navigation-config";
+import { DocsNavLink } from "./docs-nav-link";
 
 function openCommandPalette() {
   if (typeof window === "undefined") return;
@@ -65,14 +74,30 @@ export function AppSidebar({
   locale,
   navigationData,
   translations,
+  user,
   releaseNotes = [],
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   locale: string;
   navigationData: NavigationData;
   translations: Translations;
+  user: {
+    id: string;
+    email: string;
+  };
   releaseNotes?: ReleaseNoteFields[];
 }) {
+  const { t } = useTranslation("common");
+  const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  // The shared mobile Sheet persists across client navigations. Close it after
+  // any route change so the destination is visible immediately, regardless of
+  // whether navigation came from the main rows, the logo, or the user menu.
+  React.useEffect(() => {
+    if (isMobile) setOpenMobile(false);
+  }, [isMobile, pathname, setOpenMobile]);
+
   // Convert string-based icons to actual icon components
   type MappedNavItem = Omit<NavigationItem, "icon" | "children"> & {
     icon?: (typeof iconMap)[keyof typeof iconMap];
@@ -97,12 +122,22 @@ export function AppSidebar({
     { key: "library", items: navigationData.navLibrary.map(mapItem) },
   ];
 
+  // dashboard-01 composition: one inset sidebar at every breakpoint. Offcanvas
+  // collapse keeps openJII's edge peek while the compact header trigger provides
+  // the permanent reopen action; on mobile the same sidebar renders as the
+  // primitive's Sheet, so there is no second mobile navigation.
   return (
-    <Sidebar collapsible="hidden" className="hidden md:flex" {...props}>
+    <Sidebar variant="inset" collapsible="offcanvas" {...props}>
       <SidebarHeader className="gap-3 p-4 pb-2">
         {/* SidebarHeader is a column, so the brand row is laid out here. */}
         <div className="flex items-center gap-2">
-          <Link href={`/${locale}/platform`} className="flex min-w-0 items-center gap-2">
+          <Link
+            href={`/${locale}/platform`}
+            onClick={() => {
+              if (isMobile) setOpenMobile(false);
+            }}
+            className="flex min-w-0 items-center gap-2"
+          >
             <Image
               src="/openJII_logo_RGB_horizontal_green_yellow_trimmed.svg"
               alt={translations.logoAlt}
@@ -118,7 +153,6 @@ export function AppSidebar({
               className="hidden h-7 w-auto dark:block"
             />
           </Link>
-          <SidebarTrigger className="ml-auto shrink-0" />
         </div>
 
         <Button
@@ -141,10 +175,41 @@ export function AppSidebar({
             <NavItems items={sections.flatMap((section) => section.items)} />
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Secondary utilities, pinned to the bottom of the scroll area like
+            dashboard-01's NavSecondary: activity hub and release notes. */}
+        <SidebarGroup className="mt-auto p-0">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <ActivityPopover variant="row" />
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <WhatsNewFooterItem entries={releaseNotes} onOpen={() => setOpenMobile(false)} />
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <DocsNavLink />
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4 pt-2">
-        <WhatsNewFooterItem entries={releaseNotes} />
+        <div className="flex min-w-0 items-center gap-1">
+          <LanguageSwitcher locale={locale} />
+          <ThemeToggle
+            className="text-sidebar-foreground/70 hover:text-sidebar-foreground shrink-0"
+            labels={{
+              toggle: t("common.toggleTheme"),
+              switchToLight: t("common.switchToLightMode"),
+              switchToDark: t("common.switchToDarkMode"),
+            }}
+          />
+          <div className="min-w-0 flex-1">
+            <NavUser user={user} locale={locale} />
+          </div>
+        </div>
       </SidebarFooter>
       <SidebarRail resizable />
     </Sidebar>

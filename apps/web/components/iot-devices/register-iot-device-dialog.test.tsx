@@ -18,6 +18,11 @@ describe("RegisterIotDeviceDialog", () => {
 
     render(<RegisterIotDeviceDialog open onOpenChange={onOpenChange} />);
 
+    expect(
+      screen
+        .getByRole("button", { name: "iot.devices.dialog.submit" })
+        .querySelector(".lucide-plus"),
+    ).toBeInTheDocument();
     await user.type(
       screen.getByPlaceholderText("iot.devices.dialog.serialPlaceholder"),
       "AA:BB:CC",

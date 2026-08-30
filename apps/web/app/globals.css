@@ -9,7 +9,7 @@
  * Replace the contract from a tweakcn export in BOTH blocks, which are authored
  * independently, then:
  *
- *   keep       --status-*, --node-*, --slab-*, --canvas-*  (ours; no theme has them)
+ *   keep       --status-*, --node-*, --brand-*, --canvas-*  (ours; no theme has them)
  *   re-derive  --canvas-*                                  (relative to the theme)
  *   re-apply   --shadow-2xs/xs/sm: none, --font-* as var(), --radius from light
  *   check      --input reads as a field edge, --accent ≠ any hover foreground  
@@ -52,7 +52,7 @@
   --chart-5: oklch(0.71 0.115 135);
   /* References, never literals: the sidebar is the card layer stood on end, so a
      swap carries it for free. Giving one a literal is what previously turned this
-     block into the app's dark-chrome palette — use --slab-* for that. */
+     block into the app's dark-chrome palette; use --brand-chrome-* for that. */
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
   --sidebar-primary: var(--primary);
@@ -62,14 +62,17 @@
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 
-  /* The public navbar and footer are dark in both modes by decision — the brand
-     look. Declared identically in `:root` and `.dark` so a theme toggle does not
-     move them. #002F2F chrome, #1A4444 edge, #49e06d accent. */
-  --slab: oklch(0.2763 0.0472 194.7689);
-  --slab-foreground: oklch(0.98 0.005 195);
-  --slab-primary: oklch(0.8022 0.2017 147.7498);
-  --slab-accent: oklch(0.3573 0.0464 195.276);
-  --slab-border: oklch(0.3573 0.0464 195.276);
+  /* The public navbar and footer are a deep-teal brand surface in both modes by
+     decision. Declared identically in `:root` and `.dark` so a theme toggle does
+     not move them. #002828 chrome, #FAF8F3 foreground, #FFD32E logo gold,
+     #1C4B4B raised surface and edge. Gold is an accent: interaction colour,
+     active state and focus ring on the chrome, never a large fill or body text.
+     Mirrored verbatim into apps/docs/app/global.css. */
+  --brand-chrome: oklch(0.2507 0.0428 194.77);
+  --brand-chrome-foreground: oklch(0.9793 0.007 88.64);
+  --brand-accent: oklch(0.88 0.1701 92.44);
+  --brand-chrome-accent: oklch(0.3809 0.0506 195.24);
+  --brand-chrome-border: oklch(0.3809 0.0506 195.24);
 
   /* The workbook / dashboard / visualization canvas, with cells floating on it as
      cards. Two rules on a swap: stay below --card in both modes, or cells sink
@@ -166,12 +169,12 @@
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 
-  /* Identical to light on purpose — see the note there. */
-  --slab: oklch(0.2763 0.0472 194.7689);
-  --slab-foreground: oklch(0.98 0.005 195);
-  --slab-primary: oklch(0.8022 0.2017 147.7498);
-  --slab-accent: oklch(0.3573 0.0464 195.276);
-  --slab-border: oklch(0.3573 0.0464 195.276);
+  /* Identical to light on purpose; see the note there. */
+  --brand-chrome: oklch(0.2507 0.0428 194.77);
+  --brand-chrome-foreground: oklch(0.9793 0.007 88.64);
+  --brand-accent: oklch(0.88 0.1701 92.44);
+  --brand-chrome-accent: oklch(0.3809 0.0506 195.24);
+  --brand-chrome-border: oklch(0.3809 0.0506 195.24);
 
   --canvas-from: oklch(0.168 0.016 148);
   --canvas-to: oklch(0.162 0.013 240);
@@ -250,11 +253,11 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --color-slab: var(--slab);
-  --color-slab-foreground: var(--slab-foreground);
-  --color-slab-primary: var(--slab-primary);
-  --color-slab-accent: var(--slab-accent);
-  --color-slab-border: var(--slab-border);
+  --color-brand-chrome: var(--brand-chrome);
+  --color-brand-chrome-foreground: var(--brand-chrome-foreground);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-chrome-accent: var(--brand-chrome-accent);
+  --color-brand-chrome-border: var(--brand-chrome-border);
 
   --color-status-active: var(--status-active);
   --color-status-active-foreground: var(--status-active-foreground);

@@ -56,7 +56,7 @@ type SidebarContextProps = {
   setPeeking: (peeking: boolean) => void;
 };
 
-type StoredSidebarState = { width?: number; collapsed?: boolean };
+type StoredSidebarState = { width?: number; collapsed?: boolean; defaultWidth?: number };
 
 function clampWidth(width: number) {
   return Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, width));
@@ -99,6 +99,7 @@ const SidebarProvider = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
     defaultOpen?: boolean;
+    defaultWidth?: number;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }
@@ -106,6 +107,7 @@ const SidebarProvider = React.forwardRef<
   (
     {
       defaultOpen = true,
+      defaultWidth = SIDEBAR_WIDTH_DEFAULT,
       open: openProp,
       onOpenChange: setOpenProp,
       className,
@@ -122,7 +124,7 @@ const SidebarProvider = React.forwardRef<
     // We use openProp and setOpenProp for control from outside the component.
     const [_open, _setOpen] = React.useState(defaultOpen);
     const open = openProp ?? _open;
-    const [width, _setWidth] = React.useState(SIDEBAR_WIDTH_DEFAULT);
+    const [width, _setWidth] = React.useState(() => clampWidth(defaultWidth));
     const [dragging, setDragging] = React.useState(false);
     const [peeking, setPeeking] = React.useState(false);
 
@@ -131,7 +133,15 @@ const SidebarProvider = React.forwardRef<
       const stored = readStoredSidebar();
       if (!stored) return;
       if (typeof stored.width === "number") {
-        _setWidth(clampWidth(stored.width));
+        // Migrate an untouched old default once. Persisting which default the
+        // stored width came from lets a person later resize back to that exact
+        // number without having their choice mistaken for an old default.
+        const storedDefaultWidth = stored.defaultWidth ?? SIDEBAR_WIDTH_DEFAULT;
+        const nextWidth =
+          stored.width === storedDefaultWidth && defaultWidth !== storedDefaultWidth
+            ? defaultWidth
+            : stored.width;
+        _setWidth(clampWidth(nextWidth));
       }
       if (typeof stored.collapsed === "boolean") {
         if (setOpenProp) {
@@ -140,7 +150,7 @@ const SidebarProvider = React.forwardRef<
           _setOpen(!stored.collapsed);
         }
       }
-    }, [setOpenProp]);
+    }, [defaultWidth, setOpenProp]);
 
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
@@ -164,8 +174,8 @@ const SidebarProvider = React.forwardRef<
     // Persist width on pointer-up only (not on every move).
     React.useEffect(() => {
       if (dragging) return;
-      writeStoredSidebar({ width });
-    }, [dragging, width]);
+      writeStoredSidebar({ width, defaultWidth });
+    }, [defaultWidth, dragging, width]);
 
     // Toggle the sidebar. The ⌘/Ctrl+B shortcut is registered app-side, not here.
     const toggleSidebar = React.useCallback(() => {
@@ -285,7 +295,7 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
+            className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) [&>button]:text-sidebar-foreground/70 [&>button]:hover:bg-sidebar-accent [&>button]:hover:text-sidebar-foreground p-0"
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -303,10 +313,15 @@ const Sidebar = React.forwardRef<
       );
     }
 
-    // When the sidebar is collapsed in `hidden` mode but the user is hovering
-    // the edge peek strip, slide it in as an overlay (no layout shift). This
-    // matches Linear's "hover the edge to peek" pattern.
-    const isPeeking = peeking && collapsible === "hidden" && state === "collapsed";
+    // When the sidebar is fully collapsed (`hidden` or `offcanvas`, both park it
+    // off-screen) but the user is hovering the edge peek strip, slide it in as an
+    // overlay (no layout shift). This matches Linear's "hover the edge to peek"
+    // pattern.
+    const isPeeking =
+      side === "left" &&
+      peeking &&
+      (collapsible === "hidden" || collapsible === "offcanvas") &&
+      state === "collapsed";
 
     return (
       <div
@@ -348,7 +363,7 @@ const Sidebar = React.forwardRef<
             "group-data-[peeking=true]:!left-0 group-data-[peeking=true]:!right-auto group-data-[peeking=true]:z-50 group-data-[peeking=true]:shadow-xl",
             // Keep z-50 through the slide-out too (peeking flips off instantly,
             // but `left` animates 200ms); parked off-screen, so it's harmless.
-            "group-data-[collapsible=hidden]:z-50",
+            "group-data-[collapsible=hidden]:z-50 group-data-[collapsible=offcanvas]:z-50",
             // Adjust the padding for floating and inset variants.
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
@@ -378,7 +393,8 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar, state } = useSidebar();
+  const { toggleSidebar, state, isMobile, openMobile } = useSidebar();
+  const isExpanded = isMobile ? openMobile : state === "expanded";
 
   return (
     <Button
@@ -393,10 +409,10 @@ const SidebarTrigger = React.forwardRef<
       }}
       {...props}
     >
-      {state === "collapsed" ? (
-        <PanelLeftOpen className="size-[18px]" />
-      ) : (
+      {isExpanded ? (
         <PanelLeftClose className="size-[18px]" />
+      ) : (
+        <PanelLeftOpen className="size-[18px]" />
       )}
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
@@ -559,9 +575,10 @@ const SidebarRail = React.forwardRef<HTMLDivElement, SidebarRailProps>(
 SidebarRail.displayName = "SidebarRail";
 
 /**
- * Floating reopen affordance shown when the sidebar is collapsed in "hidden" mode.
- * Mount once at the layout level alongside `<Sidebar collapsible="hidden" />`.
- * Hidden while the user is peeking (the sidebar itself is already visible).
+ * Floating reopen affordance shown while the sidebar is fully collapsed
+ * (`hidden` or `offcanvas`). Mount once at the layout level alongside the
+ * `<Sidebar />`. Hidden while the user is peeking (the sidebar itself is
+ * already visible).
  */
 const SidebarFloatingReopen = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
   ({ className, onClick, ...props }, ref) => {
@@ -598,8 +615,7 @@ SidebarFloatingReopen.displayName = "SidebarFloatingReopen";
 
 /**
  * Invisible left-edge strip that triggers a sidebar "peek" on hover when the
- * sidebar is collapsed. Renders nothing when the sidebar is open, on mobile,
- * or in any collapsible mode other than `hidden`.
+ * sidebar is collapsed. Renders nothing when the sidebar is open or on mobile.
  */
 const SidebarEdgePeek = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(
   ({ className, ...props }, ref) => {
@@ -631,7 +647,7 @@ const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProps<"div"
         ref={ref}
         className={cn(
           "bg-background relative flex w-full min-w-0 flex-1 flex-col",
-          "md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm",
+          "[--sidebar-inset-offset:0px] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:[--sidebar-inset-offset:0.5rem]",
           className,
         )}
         {...props}

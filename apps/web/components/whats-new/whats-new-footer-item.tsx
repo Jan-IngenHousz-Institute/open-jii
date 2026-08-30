@@ -1,19 +1,18 @@
 "use client";
 
+import { sidebarUtilityRow } from "@/components/navigation/navigation-sidebar/sidebar-utility-row";
 import { useWhatsNewLastSeen } from "@/hooks/whats-new/useWhatsNewLastSeen/useWhatsNewLastSeen";
 import { Sparkles } from "lucide-react";
 
 import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
 
 import { WHATS_NEW_OPEN_EVENT, countUnread } from "./whats-new-shared";
 
 /**
- * Row that opens the What's new sheet, in the sidebar footer and in the mobile nav
- * sheet. Shaped like a stock sidebar row but not built from one — the mobile sheet
- * is not inside a `Sidebar`, so `SidebarMenuButton` would throw there. Shows an accent
- * unread dot when there are new entries.
+ * Row that opens the What's new sheet from the sidebar's secondary navigation
+ * group. It shares the same navigation-row treatment as Activity and
+ * Documentation, and shows an accent dot when there are new entries.
  */
 export function WhatsNewFooterItem({
   entries,
@@ -31,9 +30,8 @@ export function WhatsNewFooterItem({
   const label = t("whatsNew.navLabel");
 
   return (
-    <Button
+    <button
       type="button"
-      variant="ghost"
       onClick={() => {
         onOpen?.();
         window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT));
@@ -41,13 +39,13 @@ export function WhatsNewFooterItem({
       aria-label={
         hasUnread ? `${label} (${t("whatsNew.unreadBadge", { count: unreadCount })})` : label
       }
-      className="w-full justify-start gap-2 rounded-lg p-2 font-normal"
+      className={sidebarUtilityRow()}
     >
       <Sparkles className="size-4 shrink-0" />
       <span className="flex-1 truncate text-left">{label}</span>
       {hasUnread && (
         <span className="bg-primary ml-auto size-2 shrink-0 rounded-full" aria-hidden="true" />
       )}
-    </Button>
+    </button>
   );
 }

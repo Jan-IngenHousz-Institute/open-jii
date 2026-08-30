@@ -6,6 +6,7 @@ import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import { isPaginatedList } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
+import { useSearchPending } from "../../useSearchPending";
 
 export function useMacros({
   initialSearch = "",
@@ -42,6 +43,11 @@ export function useMacros({
 
   // `page` is always sent, so the response is the envelope; narrow the union.
   const data = query.data && isPaginatedList(query.data) ? query.data : undefined;
+  const isSearchPending = useSearchPending({
+    search,
+    debouncedSearch,
+    isFetching: query.isFetching,
+  });
 
   // A mutation or background update can shrink the result set under the current
   // page; snap back into range once a real (non-placeholder) response says so.
@@ -55,9 +61,11 @@ export function useMacros({
     data,
     isLoading: query.isLoading,
     isPlaceholderData: query.isPlaceholderData,
+    isSearchPending,
     error: query.error,
     refetch: query.refetch,
     search,
+    debouncedSearch,
     setSearch,
     language,
     setLanguage,

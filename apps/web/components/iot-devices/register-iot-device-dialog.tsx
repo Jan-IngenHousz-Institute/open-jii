@@ -4,7 +4,7 @@ import { useRegisterIotDevice } from "@/hooks/iot/useRegisterIotDevice/useRegist
 import { useLocale } from "@/hooks/useLocale";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -212,7 +212,11 @@ export function RegisterIotDeviceDialog({
                 {tCommon("common.cancel")}
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" aria-hidden />
+                )}
                 {t("iot.devices.dialog.submit")}
               </Button>
             </DialogFooter>

@@ -8,6 +8,8 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 
+import { cn } from "@repo/ui/lib/utils";
+
 import type { FooterFieldsFragment, ButtonFieldsFragment } from "../lib/__generated/sdk";
 
 interface HomeFooterProps {
@@ -18,6 +20,9 @@ interface HomeFooterProps {
   // inside the footer layout without touching the Contentful content model.
   newsletterSlot?: React.ReactNode;
 }
+
+const brandChromeLink =
+  "rounded-sm transition-colors hover:text-brand-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-accent";
 
 export const HomeFooter: React.FC<HomeFooterProps> = ({
   footerData,
@@ -61,10 +66,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
 
         return (
           <li key={`${button.url}-${idx}`} {...buttonInspectorProps({ fieldId: "label" })}>
-            <Link
-              href={buildHref(button.url)}
-              className="hover:text-slab-primary transition-colors"
-            >
+            <Link href={buildHref(button.url)} className={brandChromeLink}>
               {button.label}
             </Link>
           </li>
@@ -74,7 +76,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
   );
 
   return (
-    <footer className="bg-slab text-slab-foreground w-full py-12">
+    <footer className="bg-brand-chrome text-brand-chrome-foreground w-full py-12">
       <div className="mx-auto w-full max-w-7xl px-4">
         <div className="mb-8 flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           {/* openJII Brand/Description aligned left */}
@@ -122,23 +124,17 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
           </div>
         </div>
 
-        <div className="border-slab-border/40 w-full border-t pt-8 text-center">
+        <div className="border-brand-chrome-border/40 w-full border-t pt-8 text-center">
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <p className="text-sm" {...inspectorProps({ fieldId: "copyright" })}>
               {currentFooter.copyright}
             </p>
             <span className="hidden sm:inline">•</span>
-            <Link
-              href={buildHref("/releases")}
-              className="hover:text-slab-primary text-sm transition-colors"
-            >
+            <Link href={buildHref("/releases")} className={cn(brandChromeLink, "text-sm")}>
               Releases
             </Link>
             <span className="hidden sm:inline">•</span>
-            <Link
-              href={buildHref("/cookie-settings")}
-              className="hover:text-slab-primary text-sm transition-colors"
-            >
+            <Link href={buildHref("/cookie-settings")} className={cn(brandChromeLink, "text-sm")}>
               Cookie Settings
             </Link>
             <span className="hidden sm:inline">•</span>
@@ -146,7 +142,7 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
               href="https://github.com/Jan-IngenHousz-Institute/open-jii"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-slab-primary flex items-center gap-2 text-sm transition-colors"
+              className={cn(brandChromeLink, "flex items-center gap-2 text-sm")}
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path

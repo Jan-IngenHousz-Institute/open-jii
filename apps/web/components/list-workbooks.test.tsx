@@ -1,6 +1,7 @@
+import { OPEN_WORKBOOK_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
 import { createWorkbook } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor, userEvent } from "@/test/test-utils";
+import { act, render, screen, waitFor, userEvent } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -15,7 +16,24 @@ const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
   totalCount: items.length,
 });
 
+function openCreateDialog() {
+  return act(() => {
+    window.dispatchEvent(new Event(OPEN_WORKBOOK_CREATE_EVENT));
+  });
+}
+
 describe("ListWorkbooks", () => {
+  it("opens create from the contextual header event instead of a collection-toolbar button", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+    render(<ListWorkbooks />);
+
+    expect(screen.getByPlaceholderText("workbooks.searchPlaceholder")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "workbooks.create" })).toBeNull();
+
+    openCreateDialog();
+    expect(await screen.findByText("workbooks.createDescription")).toBeInTheDocument();
+  });
+
   it("renders the search input without a my/all filter toggle", () => {
     server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
@@ -23,6 +41,29 @@ describe("ListWorkbooks", () => {
 
     expect(screen.getByPlaceholderText("workbooks.searchPlaceholder")).toBeInTheDocument();
     expect(screen.queryByText("workbooks.filterWorkbooks")).not.toBeInTheDocument();
+  });
+
+  it("renders the collection empty state and docs help link without a search", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+
+    render(<ListWorkbooks />);
+
+    expect(await screen.findByText("workbooks.noWorkbooks")).toBeInTheDocument();
+    expect(screen.getByRole("link").getAttribute("href")).toContain("/guide/experiments/workbooks");
+  });
+
+  it("distinguishes a search with no matches from an empty workbook collection", async () => {
+    server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
+
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    await screen.findByText("workbooks.noWorkbooks");
+    await user.type(screen.getByPlaceholderText("workbooks.searchPlaceholder"), "missing");
+
+    expect(await screen.findByText("workbooks.noMatches")).toBeInTheDocument();
+    expect(screen.queryByText("workbooks.noWorkbooks")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("renders workbooks as table rows linking to their detail pages", async () => {
@@ -35,6 +76,31 @@ describe("ListWorkbooks", () => {
     expect(link.getAttribute("href")).toContain("/platform/workbooks/wb-1");
   });
 
+  it("navigates pages when the server reports more than one page", async () => {
+    const spy = server.mount(contract.workbooks.listWorkbooks, {
+      body: (call: { query: Record<string, string> }) =>
+        envelope([createWorkbook({ id: "wb-1", name: "Test WB" })], Number(call.query.page), 2),
+    });
+    const user = userEvent.setup();
+
+    render(<ListWorkbooks />);
+
+    await user.click(await screen.findByRole("button", { name: "pagination.next" }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query.page).toBe("2"));
+  });
+
+  it("keeps pagination visible and disabled when the server reports one page", async () => {
+    server.mount(contract.workbooks.listWorkbooks, {
+      body: envelope([createWorkbook({ id: "wb-1", name: "Test WB" })]),
+    });
+
+    render(<ListWorkbooks />);
+
+    expect(await screen.findByRole("link", { name: "Test WB" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "pagination.next" })).toBeDisabled();
+  });
+
   it("shows clear button when search has value", async () => {
     server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
@@ -44,7 +110,7 @@ describe("ListWorkbooks", () => {
     const searchInput = screen.getByPlaceholderText("workbooks.searchPlaceholder");
     await user.type(searchInput, "test");
 
-    expect(screen.getByLabelText("workbooks.clearSearch")).toBeInTheDocument();
+    expect(await screen.findByLabelText("workbooks.clearSearch")).toBeInTheDocument();
   });
 
   it("clears the search via the clear button", async () => {
@@ -55,7 +121,7 @@ describe("ListWorkbooks", () => {
 
     const searchInput = screen.getByPlaceholderText("workbooks.searchPlaceholder");
     await user.type(searchInput, "wheat");
-    await user.click(screen.getByLabelText("workbooks.clearSearch"));
+    await user.click(await screen.findByLabelText("workbooks.clearSearch"));
 
     expect(searchInput).toHaveValue("");
   });
@@ -66,7 +132,7 @@ describe("ListWorkbooks", () => {
     const user = userEvent.setup();
     render(<ListWorkbooks />);
 
-    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    openCreateDialog();
     expect(await screen.findByText("workbooks.createDescription")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "workbooks.cancel" }));
 
@@ -81,11 +147,11 @@ describe("ListWorkbooks", () => {
     const user = userEvent.setup();
     render(<ListWorkbooks />);
 
-    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    openCreateDialog();
     await user.type(await screen.findByPlaceholderText("workbooks.namePlaceholder"), "Draft");
     await user.keyboard("{Escape}");
 
-    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    openCreateDialog();
     expect(await screen.findByPlaceholderText("workbooks.namePlaceholder")).toHaveValue("");
   });
 
@@ -99,7 +165,7 @@ describe("ListWorkbooks", () => {
     const user = userEvent.setup();
     render(<ListWorkbooks />);
 
-    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    openCreateDialog();
     const nameInput = await screen.findByPlaceholderText("workbooks.namePlaceholder");
     await user.type(nameInput, "  My New WB  {Enter}");
 
@@ -110,10 +176,9 @@ describe("ListWorkbooks", () => {
   it("gives the visibility select an accessible name", async () => {
     server.mount(contract.workbooks.listWorkbooks, { body: envelope([]) });
 
-    const user = userEvent.setup();
     render(<ListWorkbooks />);
 
-    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    openCreateDialog();
 
     // A placeholder is not an accessible name: the control needs a real label,
     // like the macro and protocol create forms have.
@@ -132,7 +197,7 @@ describe("ListWorkbooks", () => {
     const user = userEvent.setup();
     render(<ListWorkbooks />);
 
-    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    openCreateDialog();
     await user.click(await screen.findByRole("combobox", { name: "workbooks.visibility" }));
     await user.click(screen.getByRole("option", { name: "workbooks.private" }));
 
@@ -153,7 +218,7 @@ describe("ListWorkbooks", () => {
     const user = userEvent.setup();
     render(<ListWorkbooks />);
 
-    await user.click(screen.getByRole("button", { name: "workbooks.create" }));
+    openCreateDialog();
     const nameInput = await screen.findByPlaceholderText("workbooks.namePlaceholder");
     await user.type(nameInput, "   {Enter}");
 

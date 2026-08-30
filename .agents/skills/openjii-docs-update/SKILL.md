@@ -54,15 +54,36 @@ After the user authorizes resetting local data, bring the stack up (`pnpm db:set
 `pnpm --filter database db:seed`, `pnpm dev:fb`), obtain a development session with
 `pnpm local:login`, and capture the real authenticated UI rather than a login wall.
 
-Same privacy rules apply: seeded data only, no real user content.
+Use the capture tool rather than ad-hoc Playwright, so every asset lands on the one
+published frame:
+
+```bash
+pnpm --filter @repo/e2e capture-docs-media --list
+pnpm --filter @repo/e2e capture-docs-media --only <slug,slug>
+```
+
+Shots are declared in `apps/e2e/docs-media/shots.ts`; add one there instead of writing a
+throwaway script. The frame, the viewport classes and why they are what they are live in
+`apps/docs/media/web/README.md` — read it before choosing a viewport, and never crop a
+capture to fake a detail shot.
+
+Same staging and privacy rules as mobile: captures land in `apps/docs/.capture/web`, a
+human reviews every frame, and the checksum goes in `apps/docs/media/web/manifest.json`.
 
 ## Validate before you finish
 
-`apps/docs/scripts` holds the checks the site expects — at minimum run the internal-link check, and
-the local validation script, after editing. Broken relative links are the most common breakage when
-pages move, and they will not show up by eye.
+`apps/docs/scripts` holds the checks the site expects — at minimum run the internal-link check, the
+media-reference check, and the local validation script, after editing. Broken relative links are the
+most common breakage when pages move, and they will not show up by eye.
 
-Check that any image you referenced actually exists at the path you used.
+```bash
+pnpm --filter docs check-links
+pnpm --filter docs check-media-references
+pnpm --filter docs validate:local   # needs a build first
+```
+
+`check-media-references` is what catches an image path that no longer resolves, and a published web
+capture that drifted off the standard frame. The link crawler only follows anchors, so it will not.
 
 ## What to report
 

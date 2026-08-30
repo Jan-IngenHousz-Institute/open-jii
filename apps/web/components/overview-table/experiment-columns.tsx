@@ -39,20 +39,28 @@ export function getExperimentColumns(
       header: t("columns.name"),
       cell: (experiment, href) => (
         <>
-          <Link
-            href={href}
-            onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "focus-visible:ring-primary/40 focus-visible:outline-hidden text-[13px] font-semibold hover:underline focus-visible:ring-2",
-              overviewTableText.strong,
-            )}
-          >
-            {experiment.name}
-          </Link>
-          {/* Only when private: "public" is the unremarkable default. */}
-          <VisibilityBadge visibility={experiment.visibility} privateOnly className="ml-2" />
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              href={href}
+              title={experiment.name}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                "focus-visible:ring-primary/40 focus-visible:outline-hidden min-w-0 truncate text-[13px] font-semibold hover:underline focus-visible:ring-2",
+                overviewTableText.strong,
+              )}
+            >
+              {experiment.name}
+            </Link>
+            {/* Only when private: "public" is the unremarkable default. */}
+            <VisibilityBadge visibility={experiment.visibility} privateOnly className="shrink-0" />
+          </div>
           <div className={cn("mt-0.5 overflow-hidden text-[13px]", overviewTableText.muted)}>
-            <RichTextRenderer content={experiment.description ?? " "} truncate maxLines={2} />
+            <RichTextRenderer
+              content={experiment.description ?? " "}
+              className="whitespace-normal break-words"
+              truncate
+              maxLines={2}
+            />
           </div>
         </>
       ),
@@ -60,17 +68,24 @@ export function getExperimentColumns(
     {
       header: t("columns.status"),
       className: "hidden w-28 sm:table-cell",
-      cell: (experiment) => (
-        <span
-          className={cn("inline-flex items-center gap-1.5 text-[13px]", overviewTableText.muted)}
-        >
+      cell: (experiment) => {
+        const label = t(`status.${experiment.status}`);
+        return (
           <span
-            className={cn("size-1.5 shrink-0 rounded-full", STATUS_DOT[experiment.status])}
-            aria-hidden
-          />
-          {t(`status.${experiment.status}`)}
-        </span>
-      ),
+            title={label}
+            className={cn(
+              "inline-flex min-w-0 items-center gap-1.5 text-[13px]",
+              overviewTableText.muted,
+            )}
+          >
+            <span
+              className={cn("size-1.5 shrink-0 rounded-full", STATUS_DOT[experiment.status])}
+              aria-hidden
+            />
+            <span className="truncate">{label}</span>
+          </span>
+        );
+      },
     },
     {
       header: t("columns.owner"),
@@ -84,7 +99,12 @@ export function getExperimentColumns(
                 {ownerInitials(experiment)}
               </AvatarFallback>
             </Avatar>
-            <span className={cn("truncate text-[13px]", overviewTableText.muted)}>{name}</span>
+            <span
+              title={name}
+              className={cn("min-w-0 truncate text-[13px]", overviewTableText.muted)}
+            >
+              {name}
+            </span>
           </span>
         ) : (
           <span className={cn("text-[13px]", overviewTableText.muted)}>{"\u2014"}</span>
@@ -95,7 +115,10 @@ export function getExperimentColumns(
       header: t("columns.organization"),
       className: "hidden w-44 xl:table-cell",
       cell: (experiment) => (
-        <span className={cn("block truncate text-[13px]", overviewTableText.muted)}>
+        <span
+          title={experiment.organizationName ?? undefined}
+          className={cn("block truncate text-[13px]", overviewTableText.muted)}
+        >
           {experiment.organizationName ?? "\u2014"}
         </span>
       ),

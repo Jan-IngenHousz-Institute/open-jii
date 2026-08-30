@@ -24,6 +24,7 @@ export function CompatibleMacrosCell({ protocolId }: { protocolId: string }) {
       {macros.map((entry) => (
         <span
           key={entry.macro.id}
+          title={entry.macro.name}
           className="bg-muted text-muted-foreground inline-block max-w-40 truncate rounded px-1.5 py-0.5 text-[11px]"
         >
           {entry.macro.name}

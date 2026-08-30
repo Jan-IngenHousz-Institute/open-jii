@@ -80,6 +80,9 @@ describe("MacroPicker", () => {
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/macro name/i)).toBeInTheDocument();
     });
+    expect(
+      screen.getByRole("button", { name: /^create$/i }).querySelector(".lucide-plus"),
+    ).toBeInTheDocument();
   });
 
   it("creates a new macro and calls onSelect with the result", async () => {

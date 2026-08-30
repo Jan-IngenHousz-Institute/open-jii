@@ -22,23 +22,33 @@ export function getProtocolColumns(
       header: t("protocols.columns.name"),
       cell: (protocol, href) => (
         <>
-          <Link
-            href={href}
-            onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "focus-visible:ring-primary/40 focus-visible:outline-hidden text-[13px] font-semibold hover:underline focus-visible:ring-2",
-              overviewTableText.strong,
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              href={href}
+              title={protocol.name}
+              onClick={(e) => e.stopPropagation()}
+              className={cn(
+                "focus-visible:ring-primary/40 focus-visible:outline-hidden min-w-0 truncate text-[13px] font-semibold hover:underline focus-visible:ring-2",
+                overviewTableText.strong,
+              )}
+            >
+              {protocol.name}
+            </Link>
+            {protocol.sortOrder !== null && (
+              <Badge className="bg-secondary/30 text-primary shrink-0">
+                {t("common.preferred")}
+              </Badge>
             )}
-          >
-            {protocol.name}
-          </Link>
-          {protocol.sortOrder !== null && (
-            <Badge className="bg-secondary/30 text-primary ml-2">{t("common.preferred")}</Badge>
-          )}
-          {/* Only when private: "public" is the unremarkable default. */}
-          <VisibilityBadge visibility={protocol.visibility} privateOnly className="ml-2" />
+            {/* Only when private: "public" is the unremarkable default. */}
+            <VisibilityBadge visibility={protocol.visibility} privateOnly className="shrink-0" />
+          </div>
           <div className={cn("mt-0.5 overflow-hidden text-[13px]", overviewTableText.muted)}>
-            <RichTextRenderer content={protocol.description ?? " "} truncate maxLines={2} />
+            <RichTextRenderer
+              content={protocol.description ?? " "}
+              className="whitespace-normal break-words"
+              truncate
+              maxLines={2}
+            />
           </div>
         </>
       ),
@@ -54,6 +64,7 @@ export function getProtocolColumns(
     },
     {
       header: t("protocols.columns.macros"),
+      className: "hidden w-56 md:table-cell",
       cell: (protocol) => <CompatibleMacrosCell protocolId={protocol.id} />,
     },
     {

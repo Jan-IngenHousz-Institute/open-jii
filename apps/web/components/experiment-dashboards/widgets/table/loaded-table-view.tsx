@@ -1,5 +1,6 @@
 "use client";
 
+import { dataTableFeatures } from "@/components/data-table/data-table-features";
 import {
   DataTableRows,
   DataTableHeader,
@@ -8,7 +9,7 @@ import {
 } from "@/components/data-table/data-table-utils";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { useTable } from "@tanstack/react-table";
 import { AlertCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -83,12 +84,13 @@ export function LoadedTableView({
     [tableMetadata?.columns, selectedColumns],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: dataTableFeatures,
     data: rows,
     columns,
-    getCoreRowModel: getCoreRowModel(),
     // Pagination is server-side (`page` state + query), so react-table's
     // page auto-reset is both redundant and the trigger for the loop above.
+    manualPagination: true,
     autoResetPageIndex: false,
   });
 
