@@ -95,6 +95,25 @@ export class MetricsRepository {
    * pages filter with. Activity is only ever reported for these, so a caller
    * cannot learn how busy a resource they cannot see is.
    */
+  async getVisibleExperimentIds(userId: string): Promise<Result<string[]>> {
+    return tryCatch(async () => {
+      const accessScope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        visibilityColumn: experiments.visibility,
+        userId,
+      });
+
+      const rows = await this.database
+        .select({ id: experiments.id })
+        .from(experiments)
+        .where(accessScope);
+      return rows.map((row) => row.id);
+    });
+  }
+
   async getVisibleProtocolIds(userId: string): Promise<Result<string[]>> {
     return this.visibleIds(userId, "protocol", protocols);
   }
