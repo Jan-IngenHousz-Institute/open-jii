@@ -4,6 +4,7 @@ import { formatShortDate } from "@/util/date";
 import { Users } from "lucide-react";
 import Link from "next/link";
 
+import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
 import type { Experiment, ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
@@ -34,7 +35,7 @@ function ownerInitials(experiment: Experiment): string {
 export function getExperimentColumns(
   t: (key: string) => string,
   locale: string,
-): OverviewTableColumn<Experiment>[] {
+): OverviewTableColumn<ExperimentListItem>[] {
   return [
     {
       header: t("columns.name"),
@@ -145,7 +146,9 @@ export function getExperimentColumns(
     {
       header: t("columns.activity"),
       className: "w-48",
-      cell: (experiment) => <ResourceMetricsCell kind="experiment" resourceId={experiment.id} />,
+      cell: (experiment) => (
+        <ResourceMetricsCell activity={experiment.activity ?? null} windowDays={30} />
+      ),
     },
     {
       header: t("columns.updated"),

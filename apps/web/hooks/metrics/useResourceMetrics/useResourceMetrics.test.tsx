@@ -6,18 +6,8 @@ import { contract } from "@repo/api/contract";
 
 import { useResourceMetrics } from "./useResourceMetrics";
 
-const activity = (kind: "protocol" | "macro") => ({
+const totals = (kind: "protocol" | "macro") => ({
   kind,
-  resources: [
-    {
-      id: "r-1",
-      measurements: 60,
-      days: [
-        { date: "2026-08-27", measurements: 20 },
-        { date: "2026-08-28", measurements: 40 },
-      ],
-    },
-  ],
   totalMeasurements: 60,
   activeCount: 1,
   windowDays: 30,
@@ -25,21 +15,19 @@ const activity = (kind: "protocol" | "macro") => ({
 });
 
 describe("useResourceMetrics", () => {
-  it("returns the daily series per resource", async () => {
-    server.mount(contract.metrics.getResourceMetrics, { body: activity("protocol") });
+  it("returns the totals a list header states", async () => {
+    server.mount(contract.metrics.getResourceMetrics, { body: totals("protocol") });
 
     const { result } = renderHook(() => useResourceMetrics("protocol"));
 
     await waitFor(() => {
-      expect(result.current.data?.resources).toHaveLength(1);
+      expect(result.current.data?.totalMeasurements).toBe(60);
     });
-
-    expect(result.current.data?.resources[0]?.days).toHaveLength(2);
-    expect(result.current.data?.totalMeasurements).toBe(60);
+    expect(result.current.data?.activeCount).toBe(1);
   });
 
   it("asks for the kind it was given", async () => {
-    const spy = server.mount(contract.metrics.getResourceMetrics, { body: activity("macro") });
+    const spy = server.mount(contract.metrics.getResourceMetrics, { body: totals("macro") });
 
     const { result } = renderHook(() => useResourceMetrics("macro"));
 

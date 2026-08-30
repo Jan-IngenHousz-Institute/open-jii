@@ -1,34 +1,28 @@
 "use client";
 
 import { ActivityStrip } from "@/components/metrics/activity-strip";
-import { useResourceMetrics } from "@/hooks/metrics/useResourceMetrics/useResourceMetrics";
 
-import type { ResourceKind } from "@repo/api/domains/metrics/metrics.schema";
+import type { ResourceSeries } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
 
 interface ResourceMetricsCellProps {
-  kind: ResourceKind;
-  resourceId: string;
+  /** The series the list response carried on this row. */
+  activity: ResourceSeries | null;
+  windowDays: number;
 }
 
 /**
- * A row's measurement activity. One query serves every row on the page: React
- * Query dedupes by key, so the table reads a single response rather than
- * fanning out per row.
+ * A row's measurement activity, drawn from the data its own list response
+ * carried. Nothing is fetched here, so a table of any size costs one request.
  */
-export function ResourceMetricsCell({ kind, resourceId }: ResourceMetricsCellProps) {
+export function ResourceMetricsCell({ activity, windowDays }: ResourceMetricsCellProps) {
   const { t } = useTranslation("publicMetrics");
-  const { data } = useResourceMetrics(kind);
 
-  const resource = data?.resources.find((entry) => entry.id === resourceId);
-  if (resource === undefined) {
+  if (activity === null) {
     return null;
   }
 
   return (
-    <ActivityStrip
-      days={resource.days}
-      label={t("resourceMetrics.strip", { days: data?.windowDays ?? 0 })}
-    />
+    <ActivityStrip days={activity.days} label={t("resourceMetrics.strip", { days: windowDays })} />
   );
 }

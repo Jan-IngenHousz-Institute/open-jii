@@ -1,17 +1,25 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import type { ResourceSeries } from "@repo/api/domains/metrics/metrics.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 
-import { AppError, Result } from "../../../../common/utils/fp-utils";
+import { AppError, Result, success } from "../../../../common/utils/fp-utils";
+import { ResourceMetricsService } from "../../../../metrics/application/resource-metrics.service";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+
+/** A listed resource plus the measurement series its row draws. */
+type ExperimentWithActivity = ExperimentDto & { activity: ResourceSeries | null };
 
 @Injectable()
 export class ListExperimentsUseCase {
   private readonly logger = new Logger(ListExperimentsUseCase.name);
 
-  constructor(private readonly experimentRepository: ExperimentRepository) {}
+  constructor(
+    private readonly experimentRepository: ExperimentRepository,
+    private readonly resourceMetrics: ResourceMetricsService,
+  ) {}
 
   async execute(
     userId: string,
@@ -60,7 +68,7 @@ export class ListExperimentsUseCase {
     scope?: ResourceScope,
     status?: ExperimentStatus,
     search?: string,
-  ): Promise<Result<{ items: ExperimentDto[]; totalCount: number }>> {
+  ): Promise<Result<{ items: ExperimentWithActivity[]; totalCount: number }>> {
     this.logger.log({
       msg: "Listing experiments",
       operation: "listPaginated",
@@ -72,6 +80,31 @@ export class ListExperimentsUseCase {
       search,
     });
 
-    return this.experimentRepository.findPage(userId, page, pageSize, scope, status, search);
+    const paged = await this.experimentRepository.findPage(
+      userId,
+      page,
+      pageSize,
+      scope,
+      status,
+      search,
+    );
+    if (paged.isFailure()) {
+      return paged;
+    }
+
+    // The page has already passed the access check, so the series are read
+    // for exactly these rows rather than for the whole workspace.
+    const series = await this.resourceMetrics.seriesFor(
+      "experiment",
+      paged.value.items.map((item) => item.id),
+    );
+
+    return success({
+      items: paged.value.items.map((item) => ({
+        ...item,
+        activity: series.get(item.id) ?? null,
+      })),
+      totalCount: paged.value.totalCount,
+    });
   }
 }

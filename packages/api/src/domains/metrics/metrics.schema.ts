@@ -125,20 +125,19 @@ export const zResourceMetricsQuery = z.object({
   kind: zResourceKind,
 });
 
-export const zResourceMetrics = z.object({
-  id: z.string(),
+/** A resource's daily measurements, carried on the row it belongs to. */
+export const zResourceSeries = z.object({
   measurements: z.number(),
   days: z.array(z.object({ date: z.string(), measurements: z.number() })),
 });
 
 /**
- * Per-resource activity for a list page, covering only resources the caller may
- * read. `resources` carries one entry per resource with recorded activity; the
- * totals describe the same visible set, so the header and the rows agree.
+ * What a list page's header states: totals over every resource of this kind the
+ * caller may read. The per-row series ride on the rows themselves, so this
+ * response stays the same size whatever the workspace holds.
  */
 export const zResourceMetricsResponse = z.object({
   kind: zResourceKind,
-  resources: z.array(zResourceMetrics),
   totalMeasurements: z.number(),
   activeCount: z.number(),
   windowDays: z.number(),
@@ -158,6 +157,6 @@ export type MetricsScope = z.infer<typeof zMetricsScope>;
 export type ScopedMetricsQuery = z.infer<typeof zScopedMetricsQuery>;
 export type ScopedMetricsResponse = z.infer<typeof zScopedMetricsResponse>;
 export type ResourceKind = z.infer<typeof zResourceKind>;
-export type ResourceMetrics = z.infer<typeof zResourceMetrics>;
+export type ResourceSeries = z.infer<typeof zResourceSeries>;
 export type ResourceMetricsQuery = z.infer<typeof zResourceMetricsQuery>;
 export type ResourceMetricsResponse = z.infer<typeof zResourceMetricsResponse>;

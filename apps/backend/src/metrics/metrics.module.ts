@@ -6,6 +6,7 @@ import { CacheAdapter } from "../common/modules/cache/cache.adapter";
 import { CacheModule } from "../common/modules/cache/cache.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
+import { ResourceMetricsService } from "./application/resource-metrics.service";
 import { GetPublicMetricsUseCase } from "./application/use-cases/get-public-metrics/get-public-metrics";
 import { GetResourceMetricsUseCase } from "./application/use-cases/get-resource-metrics/get-resource-metrics";
 import { GetScopedMetricsUseCase } from "./application/use-cases/get-scoped-metrics/get-scoped-metrics";
@@ -24,6 +25,7 @@ import { ScopedMetricsController } from "./presentation/scoped-metrics.controlle
     GetPublicMetricsUseCase,
     GetScopedMetricsUseCase,
     GetResourceMetricsUseCase,
+    ResourceMetricsService,
     {
       provide: METRICS_DATABRICKS_PORT,
       useExisting: DatabricksAdapter,
@@ -37,5 +39,6 @@ import { ScopedMetricsController } from "./presentation/scoped-metrics.controlle
       inject: [CACHE_MANAGER],
     },
   ],
+  exports: [ResourceMetricsService],
 })
 export class MetricsModule {}

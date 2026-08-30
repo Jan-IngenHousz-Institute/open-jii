@@ -4,6 +4,7 @@ import { Module } from "@nestjs/common";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 import { MacroModule } from "../macros/macro.module";
+import { MetricsModule } from "../metrics/metrics.module";
 // Use Cases
 import { AddCompatibleMacrosUseCase } from "./application/use-cases/add-compatible-macros/add-compatible-macros";
 import { CreateProtocolUseCase } from "./application/use-cases/create-protocol/create-protocol";
@@ -22,7 +23,7 @@ import { ProtocolRepository } from "./core/repositories/protocol.repository";
 import { ProtocolController } from "./presentation/protocol.controller";
 
 @Module({
-  imports: [AnalyticsModule, MacroModule],
+  imports: [MetricsModule, AnalyticsModule, MacroModule],
   controllers: [ProtocolController],
   providers: [
     // Port implementations

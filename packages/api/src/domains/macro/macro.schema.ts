@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
+import { zResourceSeries } from "../metrics/metrics.schema";
 import { zVisibility } from "../visibility/visibility.schema";
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -46,7 +47,12 @@ export const zMacro = z.object({
   organizationName: z.string().nullish(),
   visibility: z.enum(["private", "public"]),
 });
-export const zMacroList = z.array(zMacro);
+const zMacroListEntry = zMacro.extend({
+  /** Present on the paginated list, which reads it for the rows it returns. */
+  activity: zResourceSeries.nullable().optional(),
+});
+
+export const zMacroList = z.array(zMacroListEntry);
 
 /**
  * A single macro plus the caller's effective capabilities on it. Only the detail
@@ -68,7 +74,7 @@ export const zMacroFilterQuery = z
   })
   .merge(zPaginationQuery);
 
-export const zMacroPaginatedList = zPaginated(zMacro);
+export const zMacroPaginatedList = zPaginated(zMacroListEntry);
 
 /** Array when the caller sent no `page`, envelope when they did. */
 export const zMacroListResponse = z.union([zMacroList, zMacroPaginatedList]);
@@ -202,6 +208,7 @@ export const zMacroBatchWebhookErrorResponse = z.object({
 export type MacroLanguage = z.infer<typeof zMacroLanguage>;
 export type Macro = z.infer<typeof zMacro>;
 export type MacroDetail = z.infer<typeof zMacroDetail>;
+export type MacroListItem = z.infer<typeof zMacroListEntry>;
 export type MacroList = z.infer<typeof zMacroList>;
 export type MacroFilterQuery = z.infer<typeof zMacroFilterQuery>;
 export type MacroFilter = MacroFilterQuery["search"];
