@@ -9,6 +9,7 @@ import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
 import { CacheAdapter } from "../common/modules/cache/cache.adapter";
 import { CacheModule } from "../common/modules/cache/cache.module";
+import { MetricsModule } from "../metrics/metrics.module";
 // Use Cases
 import { AddCompatibleProtocolsUseCase } from "./application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "./application/use-cases/create-macro/create-macro";
@@ -33,7 +34,7 @@ import { MacroWebhookController } from "./presentation/macro-webhook.controller"
 import { MacroController } from "./presentation/macro.controller";
 
 @Module({
-  imports: [AnalyticsModule, AwsModule, CacheModule],
+  imports: [MetricsModule, AnalyticsModule, AwsModule, CacheModule],
   controllers: [MacroController, MacroWebhookController],
   providers: [
     // Ports and Adapters

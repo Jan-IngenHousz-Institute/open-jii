@@ -1,10 +1,9 @@
-import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
-import { AppError, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
-import { TestHarness } from "../../../../test/test-harness";
-import { CACHE_PORT } from "../../../core/ports/cache.port";
-import type { CachePort } from "../../../core/ports/cache.port";
-import { resourceMetricsCacheKey } from "../../resource-metrics.service";
-import { GetResourceMetricsUseCase } from "./get-resource-metrics";
+import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
+import { AppError, failure, success } from "../../common/utils/fp-utils";
+import { TestHarness } from "../../test/test-harness";
+import { CACHE_PORT } from "../core/ports/cache.port";
+import type { CachePort } from "../core/ports/cache.port";
+import { ResourceMetricsService, resourceMetricsCacheKey } from "./resource-metrics.service";
 
 /** Dates relative to today: the window slides, so fixed ones would age out. */
 const daysAgo = (offset: number) =>
@@ -13,9 +12,9 @@ const daysAgo = (offset: number) =>
 const YESTERDAY = daysAgo(1);
 const TWO_DAYS_AGO = daysAgo(2);
 
-describe("GetResourceMetricsUseCase", () => {
+describe("ResourceMetricsService", () => {
   const testApp = TestHarness.App;
-  let useCase: GetResourceMetricsUseCase;
+  let service: ResourceMetricsService;
   let adapter: DatabricksAdapter;
   let ownerId: string;
   let outsiderId: string;
@@ -30,7 +29,7 @@ describe("GetResourceMetricsUseCase", () => {
     await testApp.beforeEach();
 
     adapter = testApp.module.get(DatabricksAdapter);
-    useCase = testApp.module.get(GetResourceMetricsUseCase);
+    service = testApp.module.get(ResourceMetricsService);
     ownerId = await testApp.createTestUser({});
     outsiderId = await testApp.createTestUser({});
 
@@ -84,25 +83,32 @@ describe("GetResourceMetricsUseCase", () => {
     await testApp.teardown();
   });
 
-  it("totals only the resources the caller may read", async () => {
-    const result = await useCase.execute("protocol", ownerId);
+  it("returns a dense daily series for the rows it was given", async () => {
+    const series = await service.seriesFor("protocol", [visibleProtocolId]);
 
-    assertSuccess(result);
-    // The private protocol's 999 measurements must not reach the header.
-    expect(result.value.totalMeasurements).toBe(102);
-    expect(result.value.activeCount).toBe(1);
-    expect(result.value.windowDays).toBe(30);
+    const resource = series.get(visibleProtocolId);
+    expect(resource?.measurements).toBe(102);
+    // The window is complete so every row's sparkline is the same length.
+    expect(resource?.days).toHaveLength(30);
+    expect(resource?.days.filter((day) => day.measurements > 0)).toEqual([
+      { date: TWO_DAYS_AGO, measurements: 40 },
+      { date: YESTERDAY, measurements: 62 },
+    ]);
   });
 
-  it("reports nothing when the warehouse is unavailable", async () => {
+  it("returns nothing for a resource the caller did not ask about", async () => {
+    const series = await service.seriesFor("protocol", [visibleProtocolId]);
+
+    expect(series.has(privateProtocolId)).toBe(false);
+  });
+
+  it("returns no series at all when the warehouse is unavailable", async () => {
     vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
       failure(AppError.internal("warehouse down")),
     );
 
-    const result = await useCase.execute("protocol", ownerId);
+    const series = await service.seriesFor("protocol", [visibleProtocolId]);
 
-    assertSuccess(result);
-    expect(result.value.totalMeasurements).toBe(0);
-    expect(result.value.activeCount).toBe(0);
+    expect(series.size).toBe(0);
   });
 });
