@@ -19364,6 +19364,9 @@
                         {
                           "type": "object",
                           "properties": {
+                            "label": {
+                              "type": "string"
+                            },
                             "name": {
                               "type": "string"
                             },
@@ -19375,6 +19378,7 @@
                             }
                           },
                           "required": [
+                            "label",
                             "name",
                             "observations",
                             "median"
@@ -19390,6 +19394,9 @@
                         {
                           "type": "object",
                           "properties": {
+                            "label": {
+                              "type": "string"
+                            },
                             "name": {
                               "type": "string"
                             },
@@ -19401,6 +19408,7 @@
                             }
                           },
                           "required": [
+                            "label",
                             "name",
                             "observations",
                             "median"
@@ -19768,6 +19776,116 @@
                     "scope",
                     "scoped",
                     "baseline",
+                    "computedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metrics/resource-activity": {
+      "get": {
+        "operationId": "metrics.getResourceActivity",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "experiment",
+                "protocol",
+                "macro",
+                "workbook"
+              ],
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "experiment",
+                        "protocol",
+                        "macro",
+                        "workbook"
+                      ],
+                      "type": "string"
+                    },
+                    "resources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "measurements": {
+                            "type": "number"
+                          },
+                          "days": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "date": {
+                                  "type": "string"
+                                },
+                                "measurements": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "date",
+                                "measurements"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "measurements",
+                          "days"
+                        ]
+                      }
+                    },
+                    "totalMeasurements": {
+                      "type": "number"
+                    },
+                    "activeCount": {
+                      "type": "number"
+                    },
+                    "windowDays": {
+                      "type": "number"
+                    },
+                    "computedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "resources",
+                    "totalMeasurements",
+                    "activeCount",
+                    "windowDays",
                     "computedAt"
                   ]
                 }

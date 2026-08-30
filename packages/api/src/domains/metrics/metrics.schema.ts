@@ -36,6 +36,8 @@ export const zMetricsFamily = z.object({
 });
 
 export const zMetricsParameter = z.object({
+  /** Display copy for the parameter; the pipeline ships it ready to render. */
+  label: z.string(),
   name: z.string(),
   observations: z.number(),
   median: z.number(),
@@ -117,6 +119,32 @@ export const zScopedMetricsResponse = z.object({
   computedAt: z.string().nullable(),
 });
 
+export const zResourceKind = z.enum(["experiment", "protocol", "macro", "workbook"]);
+
+export const zResourceActivityQuery = z.object({
+  kind: zResourceKind,
+});
+
+export const zResourceActivity = z.object({
+  id: z.string(),
+  measurements: z.number(),
+  days: z.array(z.object({ date: z.string(), measurements: z.number() })),
+});
+
+/**
+ * Per-resource activity for a list page, covering only resources the caller may
+ * read. `resources` carries one entry per resource with recorded activity; the
+ * totals describe the same visible set, so the header and the rows agree.
+ */
+export const zResourceActivityResponse = z.object({
+  kind: zResourceKind,
+  resources: z.array(zResourceActivity),
+  totalMeasurements: z.number(),
+  activeCount: z.number(),
+  windowDays: z.number(),
+  computedAt: z.string().nullable(),
+});
+
 export type MetricsHero = z.infer<typeof zMetricsHero>;
 export type MetricsLiveness = z.infer<typeof zMetricsLiveness>;
 export type MetricsCommunity = z.infer<typeof zMetricsCommunity>;
@@ -129,3 +157,7 @@ export type PublicMetricsResponse = z.infer<typeof zPublicMetricsResponse>;
 export type MetricsScope = z.infer<typeof zMetricsScope>;
 export type ScopedMetricsQuery = z.infer<typeof zScopedMetricsQuery>;
 export type ScopedMetricsResponse = z.infer<typeof zScopedMetricsResponse>;
+export type ResourceKind = z.infer<typeof zResourceKind>;
+export type ResourceActivity = z.infer<typeof zResourceActivity>;
+export type ResourceActivityQuery = z.infer<typeof zResourceActivityQuery>;
+export type ResourceActivityResponse = z.infer<typeof zResourceActivityResponse>;

@@ -42,6 +42,7 @@ export interface ActivityWindowsRow {
 export type ParameterCategory = "derived" | "sensor";
 
 export interface ParameterStatsRow {
+  label: string;
   name: string;
   observations: number;
   median: number;
@@ -55,6 +56,13 @@ export interface PoolFactsRow {
   simultaneityPeakDevices: number | null;
   timezonesAllTime: number | null;
   timezonesPeakDay: number | null;
+}
+
+export interface ResourceDailyRow {
+  date: string;
+  resourceType: string;
+  resourceId: string;
+  measurements: number;
 }
 
 export interface ScopedDailyRow {
@@ -87,5 +95,6 @@ export interface DatabricksPort {
   getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>>;
   getPoolFacts(): Promise<Result<PoolFactsRow | null>>;
   getScopedDailyActivity(days: number): Promise<Result<ScopedDailyRow[]>>;
+  getResourceDailyActivity(resourceType: string, days: number): Promise<Result<ResourceDailyRow[]>>;
   getContributorPairs(): Promise<Result<ContributorPairRow[]>>;
 }

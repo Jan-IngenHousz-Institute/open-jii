@@ -36,8 +36,18 @@ const metrics: PublicMetricsResponse = {
     { family: "multispeq", measurements: 812_000 },
     { family: "unattributed", measurements: 46_000 },
   ],
-  derivedParameter: { name: "Phi2", observations: 4_214, median: 0.62 },
-  sensorParameter: { name: "humidity", observations: 4_797, median: 42.85 },
+  derivedParameter: {
+    label: "Photosystem II efficiency",
+    name: "Phi2",
+    observations: 4_214,
+    median: 0.62,
+  },
+  sensorParameter: {
+    label: "Relative humidity",
+    name: "humidity",
+    observations: 4_797,
+    median: 42.85,
+  },
   captions: [
     { kind: "streak", days: 312 },
     { kind: "milestone", ordinal: 1_000_000, date: "2026-06-12" },

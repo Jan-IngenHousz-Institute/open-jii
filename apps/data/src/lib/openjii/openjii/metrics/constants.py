@@ -32,9 +32,9 @@ RESOURCE_TYPE_MACRO = "macro"
 PARAMETER_CATEGORY_DERIVED = "derived"
 PARAMETER_CATEGORY_SENSOR = "sensor"
 
-# Values a macro computes from the measurement. Each instrument family names
-# its own outputs, so both vocabularies are listed: a parameter is counted
-# under its own name, and differing units never share a median.
+# Provenance decides the category. A macro wrote everything in macro_output, so
+# those are derived whatever they describe; a sensor reading is one the device
+# put in its own payload before any macro ran.
 DERIVED_PARAMETER_ALLOWLIST = (
     # MultispeQ, from the fluorescence macro.
     "Phi2",
@@ -51,25 +51,53 @@ DERIVED_PARAMETER_ALLOWLIST = (
     "green_fraction",
     "blue_fraction",
     "tilt_angle_deg",
-)
-
-# Raw instrument readings echoed into the macro output.
-SENSOR_PARAMETER_ALLOWLIST = (
-    # MultispeQ.
-    "humidity",
-    "pressure",
-    "temperature",
-    "light_intensity",
-    "PAR",
-    "thickness",
-    # Ambit.
     "par_umol_m2_s",
     "relative_humidity_pct",
     "air_temperature_c",
     "contactless_temperature_c",
     "pressure_hpa",
-    "spectrum_clear_raw",
 )
+
+# Scalars the device records in its own payload, read from the measurement
+# rather than from a macro's output.
+SENSOR_PARAMETER_ALLOWLIST = (
+    "par",
+    "temperature",
+    "humidity",
+    "pressure",
+    "light_intensity",
+    "thickness",
+)
+
+# Public copy for the parameter lines. A key the instrument wrote reads as a
+# column name on a landing page, so the pipeline ships the label with the
+# figure and the frontend renders what it is given.
+PARAMETER_LABELS = {
+    "Phi2": "Photosystem II efficiency (Phi2)",
+    "PhiNPQ": "Regulated heat dissipation (PhiNPQ)",
+    "PhiNO": "Unregulated dissipation (PhiNO)",
+    "NPQt": "Non-photochemical quenching (NPQt)",
+    "LEF": "Linear electron flow (LEF)",
+    "qL": "Open reaction centres (qL)",
+    "qP": "Photochemical quenching (qP)",
+    "RFd": "Fluorescence decline ratio (RFd)",
+    "SPAD": "Relative chlorophyll (SPAD)",
+    "red_fraction": "Red reflectance fraction",
+    "green_fraction": "Green reflectance fraction",
+    "blue_fraction": "Blue reflectance fraction",
+    "tilt_angle_deg": "Leaf tilt angle (degrees)",
+    "par_umol_m2_s": "Light intensity, PAR (umol/m2/s)",
+    "relative_humidity_pct": "Relative humidity (%)",
+    "air_temperature_c": "Air temperature (C)",
+    "contactless_temperature_c": "Leaf temperature, contactless (C)",
+    "pressure_hpa": "Air pressure (hPa)",
+    "par": "Light intensity, PAR",
+    "temperature": "Temperature",
+    "humidity": "Relative humidity",
+    "pressure": "Air pressure",
+    "light_intensity": "Light intensity",
+    "thickness": "Leaf thickness",
+}
 
 ACTIVITY_WINDOW_DAYS = 30
 
