@@ -3,7 +3,7 @@ import { AppError, assertSuccess, failure, success } from "../../../../common/ut
 import { TestHarness } from "../../../../test/test-harness";
 import { CACHE_PORT } from "../../../core/ports/cache.port";
 import type { CachePort } from "../../../core/ports/cache.port";
-import { GetResourceActivityUseCase, resourceActivityCacheKey } from "./get-resource-activity";
+import { GetResourceMetricsUseCase, resourceMetricsCacheKey } from "./get-resource-metrics";
 
 /** Dates relative to today: the window slides, so fixed ones would age out. */
 const daysAgo = (offset: number) =>
@@ -12,9 +12,9 @@ const daysAgo = (offset: number) =>
 const YESTERDAY = daysAgo(1);
 const TWO_DAYS_AGO = daysAgo(2);
 
-describe("GetResourceActivityUseCase", () => {
+describe("GetResourceMetricsUseCase", () => {
   const testApp = TestHarness.App;
-  let useCase: GetResourceActivityUseCase;
+  let useCase: GetResourceMetricsUseCase;
   let adapter: DatabricksAdapter;
   let ownerId: string;
   let outsiderId: string;
@@ -29,7 +29,7 @@ describe("GetResourceActivityUseCase", () => {
     await testApp.beforeEach();
 
     adapter = testApp.module.get(DatabricksAdapter);
-    useCase = testApp.module.get(GetResourceActivityUseCase);
+    useCase = testApp.module.get(GetResourceMetricsUseCase);
     ownerId = await testApp.createTestUser({});
     outsiderId = await testApp.createTestUser({});
 
@@ -72,9 +72,7 @@ describe("GetResourceActivityUseCase", () => {
 
     // The cached rows key on the previous test's resource ids, so the clear
     // has to follow the fixtures rather than precede them.
-    await testApp.module
-      .get<CachePort>(CACHE_PORT)
-      .invalidate(resourceActivityCacheKey("protocol"));
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
   });
 
   afterEach(() => {

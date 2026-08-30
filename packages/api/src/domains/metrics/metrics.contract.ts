@@ -2,8 +2,8 @@ import { oc } from "@orpc/contract";
 
 import {
   zPublicMetricsResponse,
-  zResourceActivityQuery,
-  zResourceActivityResponse,
+  zResourceMetricsQuery,
+  zResourceMetricsResponse,
   zScopedMetricsQuery,
   zScopedMetricsResponse,
 } from "./metrics.schema";
@@ -18,8 +18,8 @@ export const metricsContract = {
     .input(zScopedMetricsQuery)
     .output(zScopedMetricsResponse),
 
-  getResourceActivity: oc
-    .route({ method: "GET", path: "/api/v1/metrics/resource-activity", successStatus: 200 })
-    .input(zResourceActivityQuery)
-    .output(zResourceActivityResponse),
+  getResourceMetrics: oc
+    .route({ method: "GET", path: "/api/v1/metrics/resource-metrics", successStatus: 200 })
+    .input(zResourceMetricsQuery)
+    .output(zResourceMetricsResponse),
 };

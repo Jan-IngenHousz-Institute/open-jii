@@ -12,9 +12,9 @@ import type { ResourceKind } from "@repo/api/domains/metrics/metrics.schema";
  * describe everything visible. Every cell on a page passes the same ids, so
  * React Query hashes one key and the table makes a single request.
  */
-export function useResourceActivity(kind: ResourceKind, ids?: string[]) {
+export function useResourceMetrics(kind: ResourceKind, ids?: string[]) {
   return useQuery(
-    orpc.metrics.getResourceActivity.queryOptions({
+    orpc.metrics.getResourceMetrics.queryOptions({
       input: ids === undefined ? { kind } : { kind, ids },
     }),
   );

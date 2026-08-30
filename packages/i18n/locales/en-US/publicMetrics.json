@@ -64,7 +64,7 @@
     "quiet": "No measurements recorded here in the last 30 days",
     "trend": "Daily measurements"
   },
-  "resourceActivity": {
+  "resourceMetrics": {
     "strip": "Daily measurements over {{days}} days",
     "experiment": {
       "active": "experiments with data",

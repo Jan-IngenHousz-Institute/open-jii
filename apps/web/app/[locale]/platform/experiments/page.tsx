@@ -1,5 +1,5 @@
 import { ListExperiments } from "@/components/list-experiments";
-import { ResourceActivitySummary } from "@/components/metrics/resource-activity-summary";
+import { ResourceMetricsSummary } from "@/components/metrics/resource-metrics-summary";
 import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: ExperimentPageProps): Promise
 export default function ExperimentPage() {
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <ResourceActivitySummary kind="experiment" />
+      <ResourceMetricsSummary kind="experiment" />
       <ListExperiments />
     </PageContainer>
   );

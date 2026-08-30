@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import type {
-  ResourceActivityResponse,
+  ResourceMetricsResponse,
   ResourceKind,
 } from "@repo/api/domains/metrics/metrics.schema";
 
@@ -25,7 +25,7 @@ const WAREHOUSE_TYPE: Record<ResourceKind, string> = {
   workbook: "workbook_version",
 };
 
-export const resourceActivityCacheKey = (kind: ResourceKind) => `resource-activity-${kind}`;
+export const resourceMetricsCacheKey = (kind: ResourceKind) => `resource-metrics-${kind}`;
 
 /**
  * Per-resource activity for a list page. Warehouse rows are intersected with
@@ -33,8 +33,8 @@ export const resourceActivityCacheKey = (kind: ResourceKind) => `resource-activi
  * never reveal a resource the list itself would not show.
  */
 @Injectable()
-export class GetResourceActivityUseCase {
-  private readonly logger = new Logger(GetResourceActivityUseCase.name);
+export class GetResourceMetricsUseCase {
+  private readonly logger = new Logger(GetResourceMetricsUseCase.name);
 
   constructor(
     @Inject(METRICS_DATABRICKS_PORT)
@@ -48,17 +48,17 @@ export class GetResourceActivityUseCase {
     kind: ResourceKind,
     userId: string,
     ids?: string[],
-  ): Promise<Result<ResourceActivityResponse>> {
+  ): Promise<Result<ResourceMetricsResponse>> {
     const visible = await this.visibleIds(kind, userId);
     if (visible.isFailure()) {
       return visible;
     }
 
-    const rows = await this.cachePort.tryCache(resourceActivityCacheKey(kind), () =>
+    const rows = await this.cachePort.tryCache(resourceMetricsCacheKey(kind), () =>
       this.loadRows(kind),
     );
 
-    const empty: ResourceActivityResponse = {
+    const empty: ResourceMetricsResponse = {
       kind,
       resources: [],
       totalMeasurements: 0,
@@ -169,7 +169,7 @@ export class GetResourceActivityUseCase {
     rows: ResourceDailyRow[],
     visible: Set<string>,
     requested: string[] | undefined,
-  ): ResourceActivityResponse {
+  ): ResourceMetricsResponse {
     const byResource = new Map<string, Map<string, number>>();
 
     for (const row of rows) {
