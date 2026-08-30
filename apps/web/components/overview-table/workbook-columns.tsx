@@ -114,7 +114,6 @@ function initialsOf(name: string): string {
 export function getWorkbookColumns(
   t: (key: string, options?: Record<string, unknown>) => string,
   locale: string,
-  pageIds: string[],
 ): OverviewTableColumn<WorkbookListItem>[] {
   return [
     {
@@ -180,10 +179,8 @@ export function getWorkbookColumns(
     },
     {
       header: t("workbooks.columns.activity"),
-      className: "w-32",
-      cell: (workbook) => (
-        <ResourceMetricsCell kind="workbook" resourceId={workbook.id} pageIds={pageIds} />
-      ),
+      className: "w-48",
+      cell: (workbook) => <ResourceMetricsCell kind="workbook" resourceId={workbook.id} />,
     },
     {
       header: t("workbooks.columns.updated"),

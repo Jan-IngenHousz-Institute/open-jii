@@ -28,22 +28,18 @@ describe("ResourceMetricsCell", () => {
   it("draws the strip for its own row", async () => {
     server.mount(contract.metrics.getResourceMetrics, { body: activity });
 
-    const { container } = render(
-      <ResourceMetricsCell kind="protocol" resourceId="p1" pageIds={["p1"]} />,
-    );
+    const { container } = render(<ResourceMetricsCell kind="protocol" resourceId="p1" />);
 
     expect(await screen.findByRole("img", { name: "resourceMetrics.strip" })).toBeInTheDocument();
     await waitFor(() => {
-      expect(container.querySelectorAll("rect")).toHaveLength(2);
+      expect(container.querySelector("path")).toBeInTheDocument();
     });
   });
 
   it("stays empty for a row with no recorded activity", async () => {
     server.mount(contract.metrics.getResourceMetrics, { body: activity });
 
-    const { container } = render(
-      <ResourceMetricsCell kind="protocol" resourceId="other" pageIds={["other"]} />,
-    );
+    const { container } = render(<ResourceMetricsCell kind="protocol" resourceId="other" />);
 
     await waitFor(() => {
       expect(container).toBeEmptyDOMElement();

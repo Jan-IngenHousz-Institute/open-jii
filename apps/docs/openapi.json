@@ -19804,23 +19804,6 @@
             },
             "allowEmptyValue": true,
             "allowReserved": true
-          },
-          {
-            "name": "ids",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "maxItems": 200
-            },
-            "style": "deepObject",
-            "explode": true,
-            "allowEmptyValue": true,
-            "allowReserved": true
           }
         ],
         "responses": {

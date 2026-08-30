@@ -17,7 +17,6 @@ import { overviewTableText } from "./overview-table";
 export function getProtocolColumns(
   t: (key: string) => string,
   locale: string,
-  pageIds: string[],
 ): OverviewTableColumn<ProtocolListItem>[] {
   return [
     {
@@ -71,10 +70,8 @@ export function getProtocolColumns(
     },
     {
       header: t("protocols.columns.activity"),
-      className: "w-32",
-      cell: (protocol) => (
-        <ResourceMetricsCell kind="protocol" resourceId={protocol.id} pageIds={pageIds} />
-      ),
+      className: "w-48",
+      cell: (protocol) => <ResourceMetricsCell kind="protocol" resourceId={protocol.id} />,
     },
     {
       header: t("protocols.columns.updated"),

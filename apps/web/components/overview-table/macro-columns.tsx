@@ -17,7 +17,6 @@ import { overviewTableText } from "./overview-table";
 export function getMacroColumns(
   t: (key: string) => string,
   locale: string,
-  pageIds: string[],
 ): OverviewTableColumn<Macro>[] {
   return [
     {
@@ -71,8 +70,8 @@ export function getMacroColumns(
     },
     {
       header: t("macros.columns.activity"),
-      className: "w-32",
-      cell: (macro) => <ResourceMetricsCell kind="macro" resourceId={macro.id} pageIds={pageIds} />,
+      className: "w-48",
+      cell: (macro) => <ResourceMetricsCell kind="macro" resourceId={macro.id} />,
     },
     {
       header: t("macros.columns.updated"),

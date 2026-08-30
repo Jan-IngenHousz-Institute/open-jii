@@ -44,11 +44,7 @@ export class GetResourceMetricsUseCase {
     private readonly metricsRepository: MetricsRepository,
   ) {}
 
-  async execute(
-    kind: ResourceKind,
-    userId: string,
-    ids?: string[],
-  ): Promise<Result<ResourceMetricsResponse>> {
+  async execute(kind: ResourceKind, userId: string): Promise<Result<ResourceMetricsResponse>> {
     const visible = await this.visibleIds(kind, userId);
     if (visible.isFailure()) {
       return visible;
@@ -77,7 +73,7 @@ export class GetResourceMetricsUseCase {
       return failure(owned.error);
     }
 
-    return success(this.aggregate(kind, owned.value, new Set(visible.value), ids));
+    return success(this.aggregate(kind, owned.value, new Set(visible.value)));
   }
 
   private async visibleIds(kind: ResourceKind, userId: string): Promise<Result<string[]>> {
@@ -168,7 +164,6 @@ export class GetResourceMetricsUseCase {
     kind: ResourceKind,
     rows: ResourceDailyRow[],
     visible: Set<string>,
-    requested: string[] | undefined,
   ): ResourceMetricsResponse {
     const byResource = new Map<string, Map<string, number>>();
 
@@ -195,14 +190,9 @@ export class GetResourceMetricsUseCase {
       };
     });
 
-    // The header describes everything visible; only the series are narrowed to
-    // the rows that asked for them.
-    const onScreen =
-      requested === undefined ? resources : resources.filter((r) => requested.includes(r.id));
-
     return {
       kind,
-      resources: onScreen,
+      resources,
       totalMeasurements: resources.reduce((sum, resource) => sum + resource.measurements, 0),
       activeCount: resources.length,
       windowDays: WINDOW_DAYS,
