@@ -32,6 +32,8 @@ import {
 } from "./commands";
 import { AMBIT_FRAMING } from "./config";
 import type { AmbitDriverConfig } from "./config";
+import { parseAmbitBootDump } from "./device-info";
+import type { AmbitDeviceInfo } from "./device-info";
 import type { AmbitStreamEvents } from "./interface";
 import { AMBIT_REPLY_PARSERS } from "./response-parsers";
 
@@ -294,6 +296,44 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
       family: this.family,
       ...(this.sensorId ? { deviceId: this.sensorId } : {}),
       raw: { helloReply: text, ...(this.sensorId ? { sensor_id: this.sensorId } : {}) },
+    };
+  }
+
+  /**
+   * Reboot the device and parse the configuration dump it prints.
+   *
+   * The text console reports the MAC, the firmware build, and the stored
+   * calibration coefficients nowhere else, so this is how a connected unit is
+   * resolved to a registered device, how a calibration write-back learns the
+   * value it may have to restore, and how a readback is verified. Costs a
+   * reboot, so callers take it once before a bench session and once after.
+   */
+  async readDeviceInfo(): Promise<AmbitDeviceInfo> {
+    const result = await this.execute<unknown>(AMBIT_COMMANDS.REBOOT);
+    // A failed command and a truncated dump need different handling at the
+    // bench (reconnect versus retry the reboot), so the transport failure is
+    // thrown rather than flattened into an invalid-looking info.
+    if (!result.success) {
+      throw result.error ?? new Error("Ambit did not answer the reboot");
+    }
+    const dump = typeof result.data === "string" ? result.data : "";
+    return parseAmbitBootDump(dump);
+  }
+
+  /**
+   * Identity including the hardware MAC, which `getDeviceIdentity()` can only
+   * report after a measurement has carried the trace's `sensor_id`. Reboots
+   * the device, so it is the bench path rather than the connect path.
+   */
+  async getDeviceIdentityFromBootDump(): Promise<DeviceIdentity> {
+    const info = await this.readDeviceInfo();
+    if (info.mac) {
+      this.sensorId = info.mac;
+    }
+    return {
+      family: this.family,
+      ...(info.mac ? { deviceId: info.mac } : {}),
+      raw: { ...info },
     };
   }
 

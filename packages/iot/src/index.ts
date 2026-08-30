@@ -97,6 +97,13 @@ export { AmbitDriver } from "./driver/ambit/driver";
 export type { AmbitDriverConfig } from "./driver/ambit/config";
 export { AMBIT_SERIAL_DEFAULTS, AMBIT_FRAMING } from "./driver/ambit/config";
 export { AMBIT_COMMANDS, AMBIT_SILENT_COMMANDS } from "./driver/ambit/commands";
+export {
+  parseAmbitBootDump,
+  applyAmbitBootLine,
+  ambitStoredCoefficients,
+  AMBIT_BOOT_DUMP_MAX_LINES,
+} from "./driver/ambit/device-info";
+export type { AmbitDeviceInfo, AmbitMetadata } from "./driver/ambit/device-info";
 export type {
   AmbitParReading,
   AmbitTempReading,

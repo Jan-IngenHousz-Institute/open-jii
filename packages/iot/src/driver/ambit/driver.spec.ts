@@ -326,6 +326,74 @@ describe("AmbitDriver sensor_id", () => {
     expect(result.data?.device_id).toBe("10:91:A8:4F:53:48");
   });
 
+  describe("boot dump", () => {
+    const BOOT_DUMP = [
+      "rst:0x1 boot:0x13",
+      "ADPD Found, chip version: 192",
+      "Calibration: ADPD: 1021\t987\t1103\t954\t1200\t1015",
+      "Calibration: Name:AmbitV004 Actinic:0.2412 Spec:1.1893 Emit:0.9910",
+      "FW: MAC:A0:B1:C2:D3:E4:F5\tSize:1245184\tDate:Mar  5 2026",
+      "FW: 1.1.3",
+      "",
+    ].join("\n");
+
+    it("reads identity and stored coefficients from the reboot dump", async () => {
+      const transport = tableTransport({ "hello\n": HELLO_REPLY, "reboot\n": BOOT_DUMP });
+      const driver = fastDriver();
+      await driver.initialize(transport);
+
+      const info = await driver.readDeviceInfo();
+
+      expect(info.mac).toBe("A0:B1:C2:D3:E4:F5");
+      expect(info.firmwareVersion).toBe("1.1.3");
+      expect(info.lightSlope).toBeCloseTo(1.1893, 4);
+      expect(info.adpdCalibration).toEqual([1021, 987, 1103, 954, 1200, 1015]);
+      expect(info.isValid).toBe(true);
+    });
+
+    // getDeviceIdentity() can only report a MAC once a measurement has carried
+    // the trace's sensor_id; the dump is how a bench session gets it up front.
+    it("resolves a hardware identity the hello reply cannot supply", async () => {
+      const transport = tableTransport({ "hello\n": HELLO_REPLY, "reboot\n": BOOT_DUMP });
+      const driver = fastDriver();
+      await driver.initialize(transport);
+
+      const beforeDump = await driver.getDeviceIdentity();
+      expect(beforeDump.deviceId).toBeUndefined();
+
+      const identity = await driver.getDeviceIdentityFromBootDump();
+
+      expect(identity.family).toBe("ambit");
+      expect(identity.deviceId).toBe("A0:B1:C2:D3:E4:F5");
+      expect((await driver.getDeviceIdentity()).deviceId).toBe("A0:B1:C2:D3:E4:F5");
+    });
+
+    // "The port died" and "the dump was truncated" need different handling at
+    // the bench, so a failed command must not read as an empty device.
+    it("throws when the reboot command itself fails", async () => {
+      const transport = tableTransport({ "hello\n": HELLO_REPLY });
+      const driver = fastDriver();
+      await driver.initialize(transport);
+      vi.mocked(transport.send).mockRejectedValue(new Error("port closed"));
+
+      await expect(driver.readDeviceInfo()).rejects.toThrow(/port closed/);
+    });
+
+    it("reports an invalid dump rather than inventing coefficients", async () => {
+      const transport = tableTransport({
+        "hello\n": HELLO_REPLY,
+        "reboot\n": "rst:0x1 boot:0x13\n",
+      });
+      const driver = fastDriver();
+      await driver.initialize(transport);
+
+      const info = await driver.readDeviceInfo();
+
+      expect(info.isValid).toBe(false);
+      expect(info.lightSlope).toBe(0);
+    });
+  });
+
   it("leaves a firmware-supplied device_id alone", async () => {
     const protocol = [{ label: "arrun,1,0,2,0,0,9,0,1,0,1" }];
     const withDeviceId = TRACE.replace('"device_name"', '"device_id":"FW-SET","device_name"');
