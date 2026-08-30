@@ -32,9 +32,6 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
   const locale = useLocale();
   const hasSearch = debouncedSearch.trim() !== "";
 
-  // The rows this page renders, so every strip shares one request.
-  const pageIds = (data?.items ?? []).map((item) => item.id);
-
   return (
     <div className="space-y-4">
       <OverviewToolbar
@@ -57,7 +54,7 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
         className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
       >
         <OverviewTable
-          columns={getExperimentColumns(t, locale, pageIds)}
+          columns={getExperimentColumns(t, locale)}
           items={data?.items}
           isLoading={isLoading}
           error={error}

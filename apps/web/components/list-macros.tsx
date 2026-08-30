@@ -39,9 +39,6 @@ export function ListMacros() {
   const locale = useLocale();
   const hasSearch = debouncedSearch.trim() !== "";
 
-  // The rows this page renders, so every strip shares one request.
-  const pageIds = (macros?.items ?? []).map((item) => item.id);
-
   return (
     <div className="space-y-4">
       <OverviewToolbar
@@ -82,7 +79,7 @@ export function ListMacros() {
         className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
       >
         <OverviewTable
-          columns={getMacroColumns(t, locale, pageIds)}
+          columns={getMacroColumns(t, locale)}
           items={macros?.items}
           isLoading={isLoading}
           error={error}

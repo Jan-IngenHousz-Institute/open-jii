@@ -10,16 +10,16 @@ const days = [
 ];
 
 describe("ActivityStrip", () => {
-  it("draws one cell per day, banded against the busiest", () => {
+  it("draws one point per day, scaled between the quietest and busiest", () => {
     const { container } = render(<ActivityStrip days={days} label="Activity" />);
 
-    const cells = container.querySelectorAll("rect");
-    expect(cells).toHaveLength(3);
-    expect(cells[0]).toHaveClass("fill-muted");
-    expect(cells[2]).toHaveClass("fill-primary");
-    // The busiest day sits at full strength, a quiet one stays visible.
-    expect(cells[2].getAttribute("opacity")).toBe("1");
-    expect(Number(cells[1].getAttribute("opacity"))).toBeGreaterThan(0);
+    const path = container.querySelector("path")?.getAttribute("d") ?? "";
+    const points = path.replace("M ", "").split(" L ");
+    expect(points).toHaveLength(3);
+
+    // SVG y grows downward, so the busiest day sits highest: smallest y.
+    const yOf = (point: string) => Number(point.split(",")[1]);
+    expect(yOf(points[2])).toBeLessThan(yOf(points[0]));
   });
 
   it("describes itself for readers who cannot see it", () => {
@@ -28,8 +28,17 @@ describe("ActivityStrip", () => {
     expect(screen.getByRole("img", { name: "Measurements over 30 days" })).toBeInTheDocument();
   });
 
-  it("renders nothing without days", () => {
-    const { container } = render(<ActivityStrip days={[]} label="Activity" />);
+  it("draws a flat series along the baseline rather than dividing by zero", () => {
+    const flat = days.map((day) => ({ ...day, measurements: 7 }));
+
+    const { container } = render(<ActivityStrip days={flat} label="Activity" />);
+
+    const path = container.querySelector("path")?.getAttribute("d");
+    expect(path).toContain("31.0");
+  });
+
+  it("renders nothing when a single day cannot make a line", () => {
+    const { container } = render(<ActivityStrip days={days.slice(0, 1)} label="Activity" />);
 
     expect(container).toBeEmptyDOMElement();
   });

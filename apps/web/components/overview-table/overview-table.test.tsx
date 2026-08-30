@@ -118,7 +118,7 @@ describe("experiment overview columns", () => {
   function renderExperiments(experiments: ReturnType<typeof createExperiment>[]) {
     return render(
       <OverviewTable
-        columns={getExperimentColumns(t, "en-US", [])}
+        columns={getExperimentColumns(t, "en-US")}
         items={experiments}
         getRowKey={(experiment) => experiment.id}
         getRowHref={(experiment) => `/platform/experiments/${experiment.id}`}
@@ -170,7 +170,7 @@ describe("protocol overview columns", () => {
   function renderProtocols(protocols: ReturnType<typeof createProtocol>[]) {
     return render(
       <OverviewTable
-        columns={getProtocolColumns(t, "en-US", [])}
+        columns={getProtocolColumns(t, "en-US")}
         items={protocols}
         getRowKey={(protocol) => protocol.id}
         getRowHref={(protocol) => `/platform/protocols/${protocol.id}`}
@@ -213,7 +213,7 @@ describe("macro overview columns", () => {
   it("renders the language label and marks preferred macros", () => {
     render(
       <OverviewTable
-        columns={getMacroColumns(t, "en-US", [])}
+        columns={getMacroColumns(t, "en-US")}
         items={[createMacro({ id: "m-1", name: "M1", language: "python", sortOrder: 0 })]}
         getRowKey={(macro) => macro.id}
         getRowHref={(macro) => `/platform/macros/${macro.id}`}
@@ -229,7 +229,7 @@ describe("macro overview columns", () => {
   it("reserves a bounded responsive column for compatible protocols", () => {
     render(
       <OverviewTable
-        columns={getMacroColumns(t, "en-US", [])}
+        columns={getMacroColumns(t, "en-US")}
         items={[createMacro({ id: "m-1", name: "M1" })]}
         getRowKey={(macro) => macro.id}
         getRowHref={(macro) => `/platform/macros/${macro.id}`}
@@ -263,7 +263,7 @@ function makeWorkbook(overrides: Partial<Workbook> & Pick<Workbook, "id" | "name
 function renderWorkbooks(workbooks: Workbook[]) {
   return render(
     <OverviewTable
-      columns={getWorkbookColumns(t, "en-US", [])}
+      columns={getWorkbookColumns(t, "en-US")}
       items={workbooks}
       getRowKey={(workbook) => workbook.id}
       getRowHref={(workbook) => `/en-US/platform/workbooks/${workbook.id}`}

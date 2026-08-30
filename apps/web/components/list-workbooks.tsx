@@ -69,9 +69,6 @@ export function ListWorkbooks() {
     return () => window.removeEventListener(OPEN_WORKBOOK_CREATE_EVENT, openCreate);
   }, []);
 
-  // The rows this page renders, so every strip shares one request.
-  const pageIds = (workbooks?.items ?? []).map((item) => item.id);
-
   const handleCreate = () => {
     if (isCreating) return;
     const name = newName.trim();
@@ -101,7 +98,7 @@ export function ListWorkbooks() {
         className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
       >
         <OverviewTable
-          columns={getWorkbookColumns(t, locale, pageIds)}
+          columns={getWorkbookColumns(t, locale)}
           items={workbooks?.items}
           isLoading={isLoading}
           error={error}

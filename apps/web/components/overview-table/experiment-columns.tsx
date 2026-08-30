@@ -34,7 +34,6 @@ function ownerInitials(experiment: Experiment): string {
 export function getExperimentColumns(
   t: (key: string) => string,
   locale: string,
-  pageIds: string[],
 ): OverviewTableColumn<Experiment>[] {
   return [
     {
@@ -145,10 +144,8 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.activity"),
-      className: "w-32",
-      cell: (experiment) => (
-        <ResourceMetricsCell kind="experiment" resourceId={experiment.id} pageIds={pageIds} />
-      ),
+      className: "w-48",
+      cell: (experiment) => <ResourceMetricsCell kind="experiment" resourceId={experiment.id} />,
     },
     {
       header: t("columns.updated"),
