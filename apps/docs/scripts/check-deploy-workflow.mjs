@@ -238,13 +238,20 @@ for (const requiredPath of [
 ]) {
   assert.ok(contractStep.run.includes(requiredPath), `MQTT contract guard omits ${requiredPath}`);
 }
+// A base it cannot diff against must fail the step, not record "unchanged".
+assert.match(contractStep.run, /::error::/, "MQTT contract detection fails open");
 const contractCheckStep = stepByName(driftSteps, "Check MQTT ingest contract");
 assert.match(contractCheckStep.run, /pnpm --filter docs check-mqtt-contract/);
 assert.equal(contractCheckStep.if, "steps.contract.outputs.changed == 'true'");
+const setupStep = stepByName(driftSteps, "Setup Node.js and pnpm");
 assert.match(
-  stepByName(driftSteps, "Setup Node.js and pnpm").if,
+  setupStep.if,
   /steps\.contract\.outputs\.changed == 'true'/,
   "MQTT contract check would run without a Node.js setup",
+);
+assert.ok(
+  driftSteps.indexOf(setupStep) < driftSteps.indexOf(contractCheckStep),
+  "MQTT contract check would run before pnpm is installed",
 );
 
 const runbook = await readFile(path.join(appRoot, "ROLLBACK.md"), "utf8");
