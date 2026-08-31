@@ -167,11 +167,17 @@ jobs:
         shell: bash
         run: |
           BASE_SHA=${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
-          if git diff --name-only "$BASE_SHA" HEAD -- \
+          # Fail closed: an unresolvable base would otherwise land in the "no
+          # changes" branch and silently skip the gate below.
+          if ! CONTRACT_CHANGES=$(git diff --name-only "$BASE_SHA" HEAD -- \
               asyncapi.yaml \
               apps/data/src/lib/openjii/openjii/centrum/schemas.py \
               apps/data/src/pipelines/centrum/bronze/raw_data.py \
-              apps/docs/scripts/check-mqtt-contract.mjs | grep -q .; then
+              apps/docs/scripts/check-mqtt-contract.mjs); then
+            echo "::error::Could not diff against base $BASE_SHA; refusing to skip the MQTT ingest contract check."
+            exit 1
+          fi
+          if [ -n "$CONTRACT_CHANGES" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "✅ MQTT ingest contract changes detected"
           else
