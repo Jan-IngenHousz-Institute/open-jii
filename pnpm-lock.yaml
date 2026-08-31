@@ -47,11 +47,11 @@ catalogs:
       specifier: 9.0.1
       version: 9.0.1
     posthog-js:
-      specifier: 1.386.8
-      version: 1.386.8
+      specifier: 1.422.5
+      version: 1.422.5
     posthog-node:
-      specifier: 5.28.8
-      version: 5.28.8
+      specifier: 5.51.4
+      version: 5.51.4
     prettier:
       specifier: 3.5.3
       version: 3.5.3
@@ -287,7 +287,7 @@ importers:
         version: 11.0.0
       posthog-node:
         specifier: 'catalog:'
-        version: 5.28.8(rxjs@7.8.2)
+        version: 5.51.4(rxjs@7.8.2)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -699,8 +699,8 @@ importers:
         specifier: ^2.1.0
         version: 2.2.0
       posthog-react-native:
-        specifier: ^4.46.16
-        version: 4.54.4(7ca0d5268695723309f57302bfd6a8ce)
+        specifier: ^4.66.2
+        version: 4.66.2(7ca0d5268695723309f57302bfd6a8ce)
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -1006,10 +1006,10 @@ importers:
         version: 5.5.4
       posthog-js:
         specifier: 'catalog:'
-        version: 1.386.8
+        version: 1.422.5(@types/react@19.2.14)(react@19.2.3)
       posthog-node:
         specifier: 'catalog:'
-        version: 5.28.8(rxjs@7.8.2)
+        version: 5.51.4(rxjs@7.8.2)
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -1140,10 +1140,10 @@ importers:
         version: 13.1.3
       posthog-js:
         specifier: 'catalog:'
-        version: 1.386.8
+        version: 1.422.5(@types/react@19.2.14)(react@19.2.3)
       posthog-node:
         specifier: 'catalog:'
-        version: 5.28.8(rxjs@7.8.2)
+        version: 5.51.4(rxjs@7.8.2)
       prettier:
         specifier: 'catalog:'
         version: 3.5.3
@@ -5007,14 +5007,14 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@posthog/core@1.24.3':
-    resolution: {integrity: sha512-nTyL1R/8V5vfdH37MbjXDYWFnUoxVijb2TnfJSNHz0+RBLtNnq0hNnBDCwWLl5yh1bzeJBYTT8UF+dV7D8y03w==}
+  '@posthog/browser-common@0.7.0':
+    resolution: {integrity: sha512-Kr6j9sH7NisT3fC3w7jZlonYeCFjPXZrDwHl3usFpjNEdgbHUrxPAmekEkTt+zRAa2huldFPIAmibZ3KC4hXoQ==}
 
-  '@posthog/core@1.39.6':
-    resolution: {integrity: sha512-o6ajIwN5zXoNP0D4H/QPmOyibNTUkSyOR6ya7AG5U2ywXx4awo72L2KnCoiZPQM5x/bXv6jPBdimH8M18Ax0aw==}
+  '@posthog/core@1.49.2':
+    resolution: {integrity: sha512-AXHDo/4nisUg7OPG1TQNgREK7n+chBQXLQyttp7bDTDsDg2k9lV06TmnpvuNbwJs53q9mP9hjezKEZu4fYadfg==}
 
-  '@posthog/types@1.392.1':
-    resolution: {integrity: sha512-Qg6Gl7/1vlr8+gPtBi5gwnLgAgiyFoKOVmTvTtDcvya9cpTwZfna7rQmkGQ4B63CunUYNNbOlqcwiUwUDyTK6w==}
+  '@posthog/types@1.407.1':
+    resolution: {integrity: sha512-WhbkXPC2rgylXqmxHqv70ffI3k+KxyR6s7DBIfr5NvIqHkxp6v0pk31D/jbz0DNVbzwkLjyll2pxr4FNbJiYzg==}
 
   '@radix-ui/number@1.1.2':
     resolution: {integrity: sha512-ceTwaxc4I5IOi97DgCotl3pqiyRGvffcc0oOsE2dQYaJOFIDsDt4VWG6xEbg1QePv9QWausCEIppud/tJ1wNig==}
@@ -13570,11 +13570,19 @@ packages:
     resolution: {integrity: sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw==}
     engines: {node: '>=12'}
 
-  posthog-js@1.386.8:
-    resolution: {integrity: sha512-L4cJD1sleUULE7K4mZQI5wpS24NHGtNmFw1rPHruc579unVzHuooHiVDEHp/qyNnhNxtNE6alBTiVORbYnRTSw==}
+  posthog-js@1.422.5:
+    resolution: {integrity: sha512-p1CLXsGoHwNkdElxXtd1KzNP/df8sIrp8CRII+lAPRhaHdpi1HfNxrybqLSzWvJLw2w5Nou5vpXfGABUI5BVwA==}
+    peerDependencies:
+      '@types/react': 19.2.14
+      react: 19.2.3
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
 
-  posthog-node@5.28.8:
-    resolution: {integrity: sha512-UD55SdSbgUvoOb3HkvNC22ZgpdeNknDrao8+yYTB/rDnwgaibPB7pJJzgn4j7MIUw7DOTEHEmJRqza1EDtK2Zw==}
+  posthog-node@5.51.4:
+    resolution: {integrity: sha512-gI6JMBnU3vjDNclUBWonw3y7k8Y0UPIAVO4AQ2zu9eyW+7sY8UQRofx4JIA7IGYLMEbs4gykfogOmXp16+oUdg==}
     engines: {node: ^20.20.0 || >=22.22.0}
     peerDependencies:
       rxjs: ^7.0.0
@@ -13582,10 +13590,11 @@ packages:
       rxjs:
         optional: true
 
-  posthog-react-native@4.54.4:
-    resolution: {integrity: sha512-rgllgjHs8lNLlXLnxiXG9Fyg6WSZopCP0pF8nkpvRIEwd92Ef2kco9YRJCoYbur/BJG/c65+W1jtgktjdoAGIg==}
+  posthog-react-native@4.66.2:
+    resolution: {integrity: sha512-fQlrIK6Qj+Y8DI2Vmwfr/iu9GXxjoTNUdQ0dXXA9AiIbmubI8a4QWbceOQXTAmkGY1cLdvCmn/QqV2UZB3XWQw==}
+    hasBin: true
     peerDependencies:
-      '@posthog/react-native-plugin': '>= 2.1.2'
+      '@posthog/react-native-plugin': '>= 2.4.3'
       '@react-native-async-storage/async-storage': '>=1.0.0'
       '@react-navigation/native': '>= 5.0.0'
       expo-application: '>= 4.0.0'
@@ -15946,6 +15955,9 @@ packages:
 
   web-vitals@5.3.0:
     resolution: {integrity: sha512-q6LWsLatGYZp5VGBIOvbTj6JBV2nOmC8KvWztXBmwJcfFAzhwKwbOxhUH306XY3CcaZDUlSmSuNPBsCn0bFu+g==}
+
+  web-vitals@6.0.0:
+    resolution: {integrity: sha512-Guaibvy/+uNtL6Bsu4jmMJGzuSl91oeRH5iO9pPRbYftnFUr3yqT1TUNX/OE4o9HexuEMU3Kb/Wg7iKhlffZUA==}
 
   web-worker@1.5.0:
     resolution: {integrity: sha512-RiMReJrTAiA+mBjGONMnjVDP2u3p9R1vkcGz6gDIrOMT3oGuYwX2WRMYI9ipkphSuE5XKEhydbhNEJh4NY9mlw==}
@@ -20296,15 +20308,16 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@posthog/core@1.24.3':
+  '@posthog/browser-common@0.7.0':
     dependencies:
-      cross-spawn: 7.0.6
+      '@posthog/core': 1.49.2
+      '@posthog/types': 1.407.1
 
-  '@posthog/core@1.39.6':
+  '@posthog/core@1.49.2':
     dependencies:
-      '@posthog/types': 1.392.1
+      '@posthog/types': 1.407.1
 
-  '@posthog/types@1.392.1': {}
+  '@posthog/types@1.407.1': {}
 
   '@radix-ui/number@1.1.2': {}
 
@@ -30262,27 +30275,32 @@ snapshots:
 
   postgres@3.4.9: {}
 
-  posthog-js@1.386.8:
+  posthog-js@1.422.5(@types/react@19.2.14)(react@19.2.3):
     dependencies:
-      '@posthog/core': 1.39.6
-      '@posthog/types': 1.392.1
+      '@posthog/browser-common': 0.7.0
+      '@posthog/core': 1.49.2
+      '@posthog/types': 1.407.1
       core-js: 3.49.0
       dompurify: 3.4.13
       fflate: 0.4.8
       preact: 10.29.4
       query-selector-shadow-dom: 1.0.1
       web-vitals: 5.3.0
+      web-vitals-soft-navs: web-vitals@6.0.0
+    optionalDependencies:
+      '@types/react': 19.2.14
+      react: 19.2.3
 
-  posthog-node@5.28.8(rxjs@7.8.2):
+  posthog-node@5.51.4(rxjs@7.8.2):
     dependencies:
-      '@posthog/core': 1.24.3
+      '@posthog/core': 1.49.2
     optionalDependencies:
       rxjs: 7.8.2
 
-  posthog-react-native@4.54.4(7ca0d5268695723309f57302bfd6a8ce):
+  posthog-react-native@4.66.2(7ca0d5268695723309f57302bfd6a8ce):
     dependencies:
-      '@posthog/core': 1.39.6
-      '@posthog/types': 1.392.1
+      '@posthog/core': 1.49.2
+      '@posthog/types': 1.407.1
     optionalDependencies:
       '@react-native-async-storage/async-storage': 2.2.0(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))
       '@react-navigation/native': 7.3.7(react-native@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.14)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
@@ -33140,6 +33158,8 @@ snapshots:
   web-streams-polyfill@3.3.3: {}
 
   web-vitals@5.3.0: {}
+
+  web-vitals@6.0.0: {}
 
   web-worker@1.5.0: {}
 
