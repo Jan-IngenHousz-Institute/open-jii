@@ -3,7 +3,8 @@ For Work In Progress Pull Requests, please use the Draft PR feature.
 Before submitting a Pull Request, please ensure you've done the following:
 - Create small, focused PRs when possible
 - Provide tests for your changes
-- Use descriptive commit messages
+- Format the PR title as a Conventional Commit with its primary Linear issue,
+  e.g. "feat(web): add filters shelf (OJD-1541)"
 - Update relevant documentation and include screenshots if needed
 -->
 
@@ -22,9 +23,21 @@ Before submitting a Pull Request, please ensure you've done the following:
 
 <!-- Provide a clear and concise description of your changes -->
 
-## Related Issues
+## Linear issues
 
-<!-- Link any related issues using "closes #123" or "relates to #123" -->
+<!--
+Required for human-authored PRs unless the `no-linear` label applies.
+Use one relation per issue so Linear attaches every issue to this PR:
+- `Closes OJD-1541` when this PR completes the issue.
+- `Contributes to OJD-1602` when this PR is only part of the issue.
+The primary issue must also appear in the PR title.
+-->
+
+- Closes OJD-####
+
+## GitHub issues
+
+<!-- If applicable, link GitHub issues using "Closes #123" or "Related to #123" -->
 
 - Closes #
 - Related to #
@@ -51,6 +64,7 @@ Before submitting a Pull Request, please ensure you've done the following:
 - [ ] I have tested these changes locally
 - [ ] My changes generate no new warnings
 - [ ] I have reviewed my own code
+- [ ] My PR title and Linear relation lines follow the release metadata contract
 
 ## Screenshots/Recordings
 

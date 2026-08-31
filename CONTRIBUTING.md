@@ -54,7 +54,39 @@ This is a pnpm + Turborepo monorepo — see the [README](README.md#monorepo-layo
 
    Common scopes are the app or package name (`web`, `backend`, `mobile`, `data`, `docs`, `ui`, ...).
 
-5. Open a pull request against `main`. Describe the problem and the solution, and link the relevant issue if there is one. CI must pass before review.
+5. Open a pull request against `main`. Describe the problem and the solution, and follow the release metadata contract below. CI must pass before review.
+
+## Pull request and release metadata
+
+GitHub squash merges use the pull request title as the commit subject on `main`. That subject drives semantic-release versioning and is scanned by the Linear release workflow. Every human-authored PR must use a Conventional Commit title; unless the PR is exempt from Linear tracking, append its primary issue:
+
+```text
+<type>(<optional-scope>): <description> (OJD-1234)
+```
+
+For example:
+
+```text
+feat(web): add experiment archive filter (OJD-1541)
+fix(backend): reject expired API keys (OJD-1602)
+```
+
+Use one of the Conventional Commit types configured in [`.releaserc.js`](.releaserc.js): `feat`, `fix`, `perf`, `revert`, `docs`, `style`, `chore`, `refactor`, `test`, `build`, or `ci`.
+
+In the PR body's **Linear issues** section, add one relation line for every issue represented by the PR:
+
+```text
+Closes OJD-1541
+Contributes to OJD-1602
+```
+
+- Use `Closes` when merging the PR completes the issue.
+- Use `Contributes to` when the PR is only part of the issue and should not close it.
+- Put each issue on its own line. These magic-word relations attach the PR to every Linear issue, allowing the release workflow to recover them from the merged PR number.
+- A Linear-generated branch name is encouraged, but it does not replace the issue ID in the PR title or the relation lines in the body.
+- For work that genuinely has no Linear issue, add the `no-linear` label and explain why in **Additional Notes**. Dependency update PRs and bot-authored PRs are exempt automatically.
+
+Before requesting review, confirm the `Linear ref check` passes. It validates the Conventional Commit title and, unless exempt, the title issue ID and matching body relation.
 
 ## Documentation contributions
 
