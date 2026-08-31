@@ -216,10 +216,8 @@ for (const prerequisite of ["deploy-backend", "deploy-frontend", "deploy-databri
 }
 
 const prWorkflow = load(await readFile(prWorkflowPath, "utf8"));
-const driftStep = stepByName(
-  workflowSteps(prWorkflow, "docs_spec_drift"),
-  "Detect docs-relevant spec changes",
-);
+const driftSteps = workflowSteps(prWorkflow, "docs_spec_drift");
+const driftStep = stepByName(driftSteps, "Detect docs-relevant spec changes");
 for (const requiredPath of [
   "package.json",
   "pnpm-lock.yaml",
@@ -229,6 +227,25 @@ for (const requiredPath of [
 ]) {
   assert.ok(driftStep.run.includes(requiredPath), `spec drift guard omits ${requiredPath}`);
 }
+
+// asyncapi.yaml has no generator, so the MQTT contract guard has to trigger on
+// the pipeline sources it is checked against, not just on the spec itself.
+const contractStep = stepByName(driftSteps, "Detect MQTT ingest contract changes");
+for (const requiredPath of [
+  "asyncapi.yaml",
+  "apps/data/src/lib/openjii/openjii/centrum/schemas.py",
+  "apps/data/src/pipelines/centrum/bronze/raw_data.py",
+]) {
+  assert.ok(contractStep.run.includes(requiredPath), `MQTT contract guard omits ${requiredPath}`);
+}
+const contractCheckStep = stepByName(driftSteps, "Check MQTT ingest contract");
+assert.match(contractCheckStep.run, /pnpm --filter docs check-mqtt-contract/);
+assert.equal(contractCheckStep.if, "steps.contract.outputs.changed == 'true'");
+assert.match(
+  stepByName(driftSteps, "Setup Node.js and pnpm").if,
+  /steps\.contract\.outputs\.changed == 'true'/,
+  "MQTT contract check would run without a Node.js setup",
+);
 
 const runbook = await readFile(path.join(appRoot, "ROLLBACK.md"), "utf8");
 for (const requiredCommand of [
