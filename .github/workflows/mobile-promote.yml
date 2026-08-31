@@ -104,7 +104,6 @@ jobs:
           version: "mobile-v${{ steps.version.outputs.version }}"
           stage: production
           include_paths: "apps/mobile/**"
-          issue_pattern: '\b(OJD-\d+)\b'
           dry_run: ${{ inputs.dry_run }}
 
       - name: Job summary

@@ -58,17 +58,17 @@ This is a pnpm + Turborepo monorepo — see the [README](README.md#monorepo-layo
 
 ## Pull request and release metadata
 
-GitHub squash merges use the pull request title as the commit subject on `main`. That subject drives semantic-release versioning and is scanned by the Linear release workflow. Every human-authored PR must use a Conventional Commit title; unless the PR is exempt from Linear tracking, append its primary issue:
+GitHub squash merges use the pull request title as the commit subject on `main`. That subject drives semantic-release versioning, so every human-authored PR must use this format:
 
 ```text
-<type>(<optional-scope>): <description> (OJD-1234)
+<type>(<optional-scope>): <description>
 ```
 
 For example:
 
 ```text
-feat(web): add experiment archive filter (OJD-1541)
-fix(backend): reject expired API keys (OJD-1602)
+feat(web): add experiment archive filter
+fix(backend): reject expired API keys
 ```
 
 Use one of the Conventional Commit types configured in [`.releaserc.js`](.releaserc.js): `feat`, `fix`, `perf`, `revert`, `docs`, `style`, `chore`, `refactor`, `test`, `build`, or `ci`.
@@ -82,11 +82,11 @@ Contributes to OJD-1602
 
 - Use `Closes` when merging the PR completes the issue.
 - Use `Contributes to` when the PR is only part of the issue and should not close it.
-- Put each issue on its own line. These magic-word relations attach the PR to every Linear issue, allowing the release workflow to recover them from the merged PR number.
-- A Linear-generated branch name is encouraged, but it does not replace the issue ID in the PR title or the relation lines in the body.
+- Put each issue on its own line. These magic-word relations attach the PR to every Linear issue. The release workflow reads the merged PR number from the squash commit and adds the linked issues to the release.
+- A Linear-generated branch name is encouraged, but it does not replace the relation lines in the body.
 - For work that genuinely has no Linear issue, add the `no-linear` label and explain why in **Additional Notes**. Dependency update PRs and bot-authored PRs are exempt automatically.
 
-Before requesting review, confirm the `Linear ref check` passes. It validates the Conventional Commit title and, unless exempt, the title issue ID and matching body relation.
+Before requesting review, confirm the `Linear ref check` passes. It validates the Conventional Commit title and, unless exempt, the body relations.
 
 ## Documentation contributions
 

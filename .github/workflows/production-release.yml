@@ -120,7 +120,6 @@ jobs:
           base_ref: ${{ steps.prev.outputs.base_ref }}
           stage: production
           include_paths: "apps/web/**,apps/backend/**,apps/data/**,infrastructure/**"
-          issue_pattern: '\b(OJD-\d+)\b'
           dry_run: ${{ inputs.dry_run }}
 
       - name: Complete Linear release
