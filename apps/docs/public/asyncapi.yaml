@@ -268,9 +268,43 @@ components:
             description: >
               Battery reading as the device reports it; the unit is
               device-defined (volts on some families, percent on others).
+          device_family:
+            type: string
+            description: >
+              Canonical driver family of the sensor (e.g. "multispeq",
+              "ambit", "minipar"), resolved by the publisher's identification
+              handshake. Lets consumers tell families apart without
+              interpreting a device-reported display name.
+          device_address:
+            type: string
+            description: >
+              The sensor's hardware address as the publisher reached it
+              (Bluetooth MAC). Reported alongside device_id, never instead of
+              it: MultispeQ firmware answers device_info with a truncated id
+              (4 of 6 octets), so the complete value only exists at the
+              transport.
           output:
             type: string
             description: Device-native output block, passed through as text.
+          client_model:
+            type: string
+            description: >
+              The publishing phone, as opposed to the sensor's device_*
+              fields. Best-effort: omitted rather than invented when the
+              platform will not report a value. (Distinct from client_id,
+              which the broker rule stamps on the stored envelope.)
+          client_manufacturer:
+            type: string
+            description: Manufacturer of the publishing phone.
+          client_os:
+            type: string
+            description: OS name of the publishing phone (e.g. "Android", "iOS").
+          client_os_version:
+            type: string
+            description: OS version of the publishing phone.
+          client_app_version:
+            type: string
+            description: Native app version of the publishing mobile build.
           latitude:
             type: number
             description: GPS latitude at measurement time, if available.
@@ -287,6 +321,10 @@ components:
             sample: '{"moisture": 30.5, "temperature": 22.1}'
             device_version: "1.1.0"
             device_battery: 4.1
+            device_family: "multispeq"
+            device_address: "AA:BB:CC:DD:EE:FF"
+            client_os: "Android"
+            client_app_version: "1.1.0"
 
     DeviceScriptMessage:
       contentType: application/json

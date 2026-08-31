@@ -9,6 +9,7 @@
     "check-links": "node scripts/check-internal-links.mjs",
     "check-media-references": "node scripts/check-media-references.mjs",
     "check-media-tooling": "node scripts/check-media-tooling.mjs",
+    "check-mqtt-contract": "node scripts/check-mqtt-contract.mjs",
     "check-routing": "node scripts/check-cloudfront-function.mjs",
     "check-types": "tsc --noEmit",
     "clean": "git clean -xdf .cache .next .source .turbo out node_modules",
