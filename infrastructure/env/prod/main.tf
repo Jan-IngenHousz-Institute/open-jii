@@ -579,6 +579,30 @@ module "databricks_catalog" {
         "USE_SCHEMA"
       ]
     }
+
+    # Read-only access for the jii-data-platform deploy SP, which runs the
+    # analyst gold pipelines in the sandbox workspace. Those pipelines read
+    # centrum.enriched_experiment_raw_data cross-catalog.
+    #
+    # Declared at CATALOG level on purpose. `databricks_grants.centrum_schema`
+    # below is authoritative over the schema, so a schema-scoped grant to any
+    # principal it does not list is deleted on the next apply. That is exactly
+    # what happened on 2026-08-20: the SP had been granted USE_SCHEMA on centrum
+    # by hand, an apply reclaimed it, and maize-ambit-2026-gold and
+    # barley-nergena-2026-gold then failed every 15 minutes for eight days.
+    #
+    # The catalog module uses `databricks_grant` (singular, additive), so a grant
+    # here is not subject to that, and USE_SCHEMA cascades down to centrum. This
+    # mirrors how dev has always worked — which is why dev never broke.
+    data_platform_deploy_sp = {
+      principal = var.data_platform_sp_application_id
+      privileges = [
+        "BROWSE",
+        "SELECT",
+        "USE_CATALOG",
+        "USE_SCHEMA"
+      ]
+    }
   }
 
   providers = {
