@@ -987,10 +987,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     return success(uploads);
   }
 
-  /**
-   * Read row counts and (optionally) schemas from the experiment_table_metadata
-   * cache table in a single query.
-   */
+  /** Read cached metadata, replacing upload rows with a live count/schema snapshot. */
   async getExperimentTableMetadata(
     experimentId: string,
     options?: {
@@ -1047,30 +1044,79 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return failure(AppError.internal("Invalid query result format", "INVALID_QUERY_RESULT"));
     }
 
-    const metadata: ExperimentTableMetadata[] = result.value.rows.map((row) => {
-      // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
-      const identifier = row[0] as string;
-      const tableType = (row[1] ?? "static") as "static" | "macro" | "upload";
-      const displayName = row[2] ?? null;
-      const rowCount = row[3] ? parseInt(row[3], 10) : 0;
+    const mapRows = (rows: (string | null)[][]): ExperimentTableMetadata[] =>
+      rows.map((row) => {
+        // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
+        const identifier = row[0] as string;
+        const tableType = (row[1] ?? "static") as "static" | "macro" | "upload";
+        const displayName = row[2] ?? null;
+        const rowCount = row[3] ? parseInt(row[3], 10) : 0;
 
-      if (includeSchemas) {
-        return {
-          identifier,
-          tableType,
-          displayName,
-          rowCount,
-          macroSchema: row[4],
-          questionsSchema: row[5],
-          customMetadataSchema: row[6],
-          uploadSchema: row[7],
-        };
-      }
+        if (includeSchemas) {
+          return {
+            identifier,
+            tableType,
+            displayName,
+            rowCount,
+            macroSchema: row[4],
+            questionsSchema: row[5],
+            customMetadataSchema: row[6],
+            uploadSchema: row[7],
+          };
+        }
 
-      return { identifier, tableType, displayName, rowCount };
-    });
+        return { identifier, tableType, displayName, rowCount };
+      });
 
-    return success(metadata);
+    const metadata = mapRows(result.value.rows);
+    const identifierIsKnownNonUpload =
+      options?.identifier !== undefined &&
+      metadata.length > 0 &&
+      metadata.every((entry) => entry.tableType !== "upload");
+
+    if (identifierIsKnownNonUpload) {
+      return success(metadata);
+    }
+
+    const liveColumns = includeSchemas
+      ? [
+          "upload_table_id AS identifier",
+          "'upload' AS table_type",
+          "MAX_BY(upload_table_name, uploaded_at) AS display_name",
+          "COUNT(*) AS row_count",
+          "CAST(NULL AS STRING) AS macro_schema",
+          "CAST(NULL AS STRING) AS questions_schema",
+          "CAST(NULL AS STRING) AS custom_metadata_schema",
+          "NULLIF(schema_of_variant_agg(uploaded_data), 'VOID') AS upload_schema",
+        ]
+      : [
+          "upload_table_id AS identifier",
+          "'upload' AS table_type",
+          "MAX_BY(upload_table_name, uploaded_at) AS display_name",
+          "COUNT(*) AS row_count",
+        ];
+    const liveBuilder = this.queryBuilder
+      .query()
+      .selectRaw(liveColumns.join(", "))
+      .from(`${catalog}.${schema}.${this.UPLOADED_DATA_TABLE_NAME}`)
+      .whereEquals("experiment_id", experimentId)
+      .groupBy("upload_table_id");
+    if (options?.identifier) {
+      liveBuilder.whereEquals("upload_table_id", options.identifier);
+    }
+
+    const liveResult = await this.sqlService.executeSqlQuery(schema, liveBuilder.build());
+    if (liveResult.isFailure()) {
+      return failure(liveResult.error);
+    }
+    if (!("rows" in liveResult.value)) {
+      return failure(AppError.internal("Invalid query result format", "INVALID_QUERY_RESULT"));
+    }
+
+    const nonUploadMetadata = metadata.filter((entry) => entry.tableType !== "upload");
+    const liveUploadMetadata = mapRows(liveResult.value.rows);
+
+    return success([...nonUploadMetadata, ...liveUploadMetadata]);
   }
 
   /**

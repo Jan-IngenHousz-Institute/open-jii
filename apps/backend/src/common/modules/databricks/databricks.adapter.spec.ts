@@ -185,6 +185,118 @@ describe("DatabricksAdapter", () => {
   describe("getExperimentTableMetadata", () => {
     const experimentId = "exp-123";
 
+    it("replaces stale cached upload metadata with one live count and schema snapshot", async () => {
+      const sqlService = testApp.module.get(DatabricksSqlService);
+      const cachedSchema =
+        "OBJECT<genotype: STRING, par: DECIMAL(2,1), quantum_yield: DECIMAL(7,6)>";
+      const liveSchema =
+        "OBJECT<genotype: STRING, par: DECIMAL(5,1), quantum_yield: DECIMAL(9,8), treatment: STRING>";
+      const columns = [
+        "identifier",
+        "table_type",
+        "display_name",
+        "row_count",
+        "macro_schema",
+        "questions_schema",
+        "custom_metadata_schema",
+        "upload_schema",
+      ].map((name) => ({ name, type_name: "string", type_text: "string" }));
+
+      const executeSpy = vi
+        .spyOn(sqlService, "executeSqlQuery")
+        .mockResolvedValueOnce(
+          success({
+            columns,
+            rows: [
+              ["upload-table-1", "upload", "leaf_response", "2", null, null, null, cachedSchema],
+            ],
+            totalRows: 1,
+            truncated: false,
+          }),
+        )
+        .mockResolvedValueOnce(
+          success({
+            columns,
+            rows: [
+              ["upload-table-1", "upload", "leaf_response", "3", null, null, null, liveSchema],
+            ],
+            totalRows: 1,
+            truncated: false,
+          }),
+        );
+
+      const result = await databricksAdapter.getExperimentTableMetadata(experimentId, {
+        identifier: "upload-table-1",
+        includeSchemas: true,
+      });
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          identifier: "upload-table-1",
+          tableType: "upload",
+          displayName: "leaf_response",
+          rowCount: 3,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+          uploadSchema: liveSchema,
+        },
+      ]);
+      expect(executeSpy).toHaveBeenCalledTimes(2);
+      const liveSql = executeSpy.mock.calls[1]?.[1];
+      expect(liveSql).toContain("experiment_uploaded_data");
+      expect(liveSql).toContain("COUNT(*) AS row_count");
+      expect(liveSql).toContain("schema_of_variant_agg(uploaded_data)");
+      expect(liveSql).toContain("`upload_table_id` = 'upload-table-1'");
+      expect(liveSql).not.toContain("uploaded_data IS NOT NULL");
+    });
+
+    it("uses live upload counts for listing without scanning the variant schema", async () => {
+      const sqlService = testApp.module.get(DatabricksSqlService);
+      const columns = ["identifier", "table_type", "display_name", "row_count"].map((name) => ({
+        name,
+        type_name: "string",
+        type_text: "string",
+      }));
+      const executeSpy = vi
+        .spyOn(sqlService, "executeSqlQuery")
+        .mockResolvedValueOnce(
+          success({
+            columns,
+            rows: [["upload-table-1", "upload", "leaf_response", "2"]],
+            totalRows: 1,
+            truncated: false,
+          }),
+        )
+        .mockResolvedValueOnce(
+          success({
+            columns,
+            rows: [["upload-table-1", "upload", "leaf_response", "4"]],
+            totalRows: 1,
+            truncated: false,
+          }),
+        );
+
+      const result = await databricksAdapter.getExperimentTableMetadata(experimentId, {
+        includeSchemas: false,
+      });
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          identifier: "upload-table-1",
+          tableType: "upload",
+          displayName: "leaf_response",
+          rowCount: 4,
+        },
+      ]);
+      const liveSql = executeSpy.mock.calls[1]?.[1];
+      expect(liveSql).toContain("COUNT(*) AS row_count");
+      expect(liveSql).not.toContain("schema_of_variant_agg");
+      expect(liveSql).not.toContain("uploaded_data IS NOT NULL");
+    });
+
     it("should successfully retrieve table metadata with schemas", async () => {
       const mockMetadata = {
         columns: [
@@ -242,6 +354,21 @@ describe("DatabricksAdapter", () => {
           result: {
             data_array: mockMetadata.rows,
           },
+        });
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-live-upload-metadata-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: mockMetadata.columns.length,
+              columns: mockMetadata.columns.map((col, i) => ({ ...col, position: i })),
+            },
+            total_row_count: 0,
+            truncated: false,
+          },
+          result: { data_array: [] },
         });
 
       // Execute getExperimentTableMetadata
@@ -398,6 +525,22 @@ describe("DatabricksAdapter", () => {
         });
 
       // Execute getExperimentTableMetadata without schemas
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-live-upload-metadata-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: mockMetadata.columns.length,
+              columns: mockMetadata.columns.map((col, i) => ({ ...col, position: i })),
+            },
+            total_row_count: 0,
+            truncated: false,
+          },
+          result: { data_array: [] },
+        });
+
       const result = await databricksAdapter.getExperimentTableMetadata(experimentId, {
         includeSchemas: false,
       });

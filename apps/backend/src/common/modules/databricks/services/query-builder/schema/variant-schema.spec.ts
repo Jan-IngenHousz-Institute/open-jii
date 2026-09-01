@@ -45,6 +45,18 @@ describe("VariantSchema.topLevelFieldNames", () => {
     expect(VariantSchema.topLevelFieldNames("  object<a: INT>  ")).toEqual(["a"]);
   });
 
+  it("does not rewrite type-like text inside quoted field names", () => {
+    expect(
+      VariantSchema.forFromJson("OBJECT<`BIGINT`: BIGINT, `DECIMAL(2,1)`: DECIMAL(2,1)>"),
+    ).toBe("STRUCT<`BIGINT`: DOUBLE, `DECIMAL(2,1)`: DOUBLE>");
+  });
+
+  it("leaves JSON-encoded Spark schemas unchanged", () => {
+    expect(VariantSchema.forFromJson('{"type":"struct","fields":[{"type":"bigint"}]}')).toBe(
+      '{"type":"struct","fields":[{"type":"bigint"}]}',
+    );
+  });
+
   it("drops empty segments produced by trailing commas", () => {
     expect(VariantSchema.topLevelFieldNames("OBJECT<a: INT,>")).toEqual(["a"]);
   });

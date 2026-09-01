@@ -82,7 +82,7 @@ describe("QueryBuilderService", () => {
       );
 
       expect(sql).toContain("from_json(data::string");
-      expect(sql).toContain("STRUCT<id:INT>");
+      expect(sql).toContain("STRUCT<id:DOUBLE>");
     });
 
     it("should build variant query with exceptColumns", () => {

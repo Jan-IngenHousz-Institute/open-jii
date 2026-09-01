@@ -6,6 +6,29 @@
  * introspection can land here without adding more loose helpers.
  */
 export class VariantSchema {
+  static forFromJson(schema: string): string {
+    if (!/^\s*(?:OBJECT|STRUCT)\s*</i.test(schema)) {
+      return schema;
+    }
+
+    let transformed = "";
+    let segmentStart = 0;
+    let inQuotedIdentifier = false;
+
+    for (let index = 0; index < schema.length; index++) {
+      if (schema[index] !== "`") continue;
+
+      const segment = schema.slice(segmentStart, index);
+      transformed += inQuotedIdentifier ? segment : VariantSchema.transformTypes(segment);
+      transformed += "`";
+      segmentStart = index + 1;
+      inQuotedIdentifier = !inQuotedIdentifier;
+    }
+
+    const remainder = schema.slice(segmentStart);
+    return transformed + (inQuotedIdentifier ? remainder : VariantSchema.transformTypes(remainder));
+  }
+
   static topLevelFieldNames(schema: string): string[] {
     const inner = VariantSchema.unwrap(schema);
     if (inner === null) return [];
@@ -67,5 +90,15 @@ export class VariantSchema {
     }
     const colon = trimmed.indexOf(":");
     return colon >= 0 ? trimmed.slice(0, colon).trim() : trimmed;
+  }
+
+  private static transformTypes(segment: string): string {
+    return segment
+      .replaceAll("OBJECT<", "STRUCT<")
+      .replaceAll(": VOID", ": STRING")
+      .replace(
+        /DECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\)|\b(?:TINYINT|SMALLINT|INT|INTEGER|BIGINT|FLOAT)\b/gi,
+        "DOUBLE",
+      );
   }
 }

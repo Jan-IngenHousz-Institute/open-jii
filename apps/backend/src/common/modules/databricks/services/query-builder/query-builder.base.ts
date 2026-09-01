@@ -114,6 +114,8 @@ export abstract class BaseQueryBuilder {
    * - VOID to STRING: schema_of_variant_agg emits VOID for fields that exist on the JSON but are
    *   null across every aggregated row, and from_json rejects VOID inside a STRUCT. Coercing to
    *   STRING is safe; those fields parse back as null.
+   * - Numeric leaves to DOUBLE: inferred integral/decimal types reflect observed rows. Later
+   *   scientific values can otherwise overflow, become null, or be silently rounded.
    *
    * Example:
    *   Input:  "OBJECT<phi2: DOUBLE, messages: OBJECT<text: STRING>, dead: VOID>"
@@ -123,9 +125,7 @@ export abstract class BaseQueryBuilder {
     if (!variantSchema) {
       return "";
     }
-    // ": VOID" is unambiguous as a type token: DDL field identifiers can't contain
-    // ":" or spaces, so this only matches the type position, never a field name.
-    return variantSchema.replaceAll("OBJECT<", "STRUCT<").replaceAll(": VOID", ": STRING");
+    return VariantSchema.forFromJson(variantSchema);
   }
 }
 
