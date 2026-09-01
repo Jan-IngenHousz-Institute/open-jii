@@ -918,7 +918,8 @@ module "data_upload_job" {
       spec = {
         environment_version = "4"
         dependencies = [
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/ambyte-0.1.0-py3-none-any.whl"
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/ambyte-0.1.0-py3-none-any.whl",
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
         ]
       }
     }
@@ -926,7 +927,7 @@ module "data_upload_job" {
 
   # Configure task retries
   task_retry_config = {
-    retries                   = 2
+    retries                   = 0
     min_retry_interval_millis = 60000
     retry_on_timeout          = true
   }

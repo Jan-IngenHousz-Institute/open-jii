@@ -25,6 +25,12 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import LongType, StringType, StructField, StructType, TimestampType
 
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
+from openjii.centrum.upload_queryability import (
+    UploadQueryability,
+    build_queryability_query,
+    run_upload_lifecycle,
+    wait_until_queryable,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -52,6 +58,9 @@ UPLOAD_ID = _optional_widget("UPLOAD_ID")
 EXPERIMENT_NAME = _optional_widget("EXPERIMENT_NAME")
 YEAR_PREFIX = _optional_widget("YEAR_PREFIX")
 USER_ID = _optional_widget("USER_ID")
+ENVIRONMENT = _optional_widget("ENVIRONMENT")
+QUERYABILITY_TIMEOUT_SECONDS = 3600 if ENVIRONMENT == "DEV" else 900
+QUERYABILITY_POLL_SECONDS = 15
 
 # Mirrors the export-side history table; backend reads this to render an upload history.
 UPLOAD_METADATA_TABLE = f"{CATALOG_NAME}.centrum.experiment_upload_metadata"
@@ -427,13 +436,52 @@ def process_ambyte_upload() -> dict:
 
 # COMMAND ----------
 
+# DBTITLE 1,Queryability Boundary
+def wait_for_upload_queryability(expected_upload_rows: int) -> None:
+    if not UPLOAD_ID or not UPLOAD_TABLE_ID:
+        raise ValueError("UPLOAD_ID and UPLOAD_TABLE_ID are required to verify queryability")
+
+    count_query = build_queryability_query(
+        CATALOG_NAME,
+        EXPERIMENT_ID,
+        UPLOAD_TABLE_ID,
+        UPLOAD_ID,
+        include_schema=False,
+    )
+    schema_query = build_queryability_query(CATALOG_NAME, EXPERIMENT_ID, UPLOAD_TABLE_ID, UPLOAD_ID)
+
+    def observe() -> UploadQueryability:
+        current = UploadQueryability.from_row(spark.sql(count_query).first().asDict())
+        if current.counts_match(expected_upload_rows):
+            current = UploadQueryability.from_row(spark.sql(schema_query).first().asDict())
+        logger.info("Upload queryability observation: %s", current)
+        return current
+
+    try:
+        wait_until_queryable(
+            observe,
+            expected_upload_rows,
+            QUERYABILITY_TIMEOUT_SECONDS,
+            QUERYABILITY_POLL_SECONDS,
+        )
+    except TimeoutError as error:
+        schedule_context = (
+            " The DEV Centrum pipeline is scheduled every 30 minutes from 06:00 through 18:30 UTC "
+            "on weekdays; uploads outside that window require a later retry."
+            if ENVIRONMENT == "DEV"
+            else " The continuously running Centrum pipeline did not publish the upload in time."
+        )
+        raise TimeoutError(f"{error}.{schedule_context}") from error
+
+
+# COMMAND ----------
+
 # DBTITLE 1,Upload Metadata Record
 def write_upload_metadata(status: str, result: dict | None, error_message: str | None) -> None:
-    """Append a completion record into experiment_upload_metadata.
+    """Upsert the upload's terminal record after processing and queryability finish.
 
-    Mirrors the export task's create_export_metadata. Backend reads from this
-    table to render an upload history; in-flight runs are tracked via the
-    Databricks job-runs API and joined on job_run_id.
+    One row per upload_id makes terminal state durable and retry-safe. In-flight
+    state remains sourced from the Databricks job-runs API.
     """
     if not UPLOAD_ID:
         return
@@ -446,29 +494,34 @@ def write_upload_metadata(status: str, result: dict | None, error_message: str |
             return "NULL"
         return "'" + value.replace("'", "''") + "'"
 
-    try:
-        completed_at = datetime.now(timezone.utc)
-        file_count = int(result.get("files_processed", 0)) if result else 0
-        row_count = int(result.get("rows_written", 0)) if result else 0
+    completed_at = datetime.now(timezone.utc)
+    file_count = int(result.get("files_processed", 0)) if result else 0
+    row_count = int(result.get("rows_written", 0)) if result else 0
 
-        spark.sql(
-            f"""
-            INSERT INTO {UPLOAD_METADATA_TABLE}
-              (upload_id, experiment_id, upload_table_id, upload_table_name, source_kind, status,
-               file_count, row_count, created_by, created_at, completed_at, error_message)
-            VALUES (
-              {quote(UPLOAD_ID)}, {quote(EXPERIMENT_ID)},
-              {quote(UPLOAD_TABLE_ID or "")}, {quote(UPLOAD_TABLE_NAME or "")},
-              {quote(SOURCE_KIND)}, {quote(status)},
-              {file_count}, {row_count}, {quote(USER_ID or "")},
-              {quote(completed_at.isoformat())}, {quote(completed_at.isoformat())}, {quote(error_message)}
-            )
-            """
-        )
-        logger.info(f"Wrote upload metadata record (status={status}, upload_id={UPLOAD_ID})")
-    except Exception as e:
-        # Don't fail the job if metadata write fails; surfacing the upstream error matters more.
-        logger.error(f"Failed to write upload metadata: {e}")
+    spark.sql(
+        f"""
+        MERGE INTO {UPLOAD_METADATA_TABLE} AS target
+        USING (
+          SELECT
+            {quote(UPLOAD_ID)} AS upload_id,
+            {quote(EXPERIMENT_ID)} AS experiment_id,
+            {quote(UPLOAD_TABLE_ID or "")} AS upload_table_id,
+            {quote(UPLOAD_TABLE_NAME or "")} AS upload_table_name,
+            {quote(SOURCE_KIND)} AS source_kind,
+            {quote(status)} AS status,
+            {file_count} AS file_count,
+            {row_count} AS row_count,
+            {quote(USER_ID or "")} AS created_by,
+            {quote(completed_at.isoformat())} AS created_at,
+            {quote(completed_at.isoformat())} AS completed_at,
+            {quote(error_message)} AS error_message
+        ) AS source
+        ON target.upload_id = source.upload_id
+        WHEN MATCHED THEN UPDATE SET *
+        WHEN NOT MATCHED THEN INSERT *
+        """
+    )
+    logger.info(f"Wrote upload metadata record (status={status}, upload_id={UPLOAD_ID})")
 
 # COMMAND ----------
 
@@ -486,42 +539,30 @@ PROCESSORS = {
 def main() -> dict:
     processor = PROCESSORS.get(SOURCE_KIND)
     if processor is None:
-        write_upload_metadata("failed", None, f"Unsupported source kind: {SOURCE_KIND}")
-        return {
-            "status": "error",
-            "error_message": f"Unsupported source kind: {SOURCE_KIND}",
-            "experiment_id": EXPERIMENT_ID,
-            "source_kind": SOURCE_KIND,
-        }
-    try:
-        result = processor()
-        # A processor can finish with files_failed > 0 — surface that as
-        # "partial" instead of pretending we're done with a clean success.
-        files_failed = int(result.get("files_failed", 0)) if result else 0
-        status = "partial" if files_failed > 0 else "completed"
-        run_status = "partial" if files_failed > 0 else "success"
-        write_upload_metadata(status, result, None)
-        return {
-            "status": run_status,
-            "experiment_id": EXPERIMENT_ID,
-            "source_kind": SOURCE_KIND,
-            "upload_table_name": UPLOAD_TABLE_NAME,
-            "upload_id": UPLOAD_ID,
-            **result,
-        }
-    except Exception as e:
-        logger.error(f"Task execution failed: {e}")
-        write_upload_metadata("failed", None, str(e))
-        return {
-            "status": "error",
-            "error_message": str(e),
-            "experiment_id": EXPERIMENT_ID,
-            "source_kind": SOURCE_KIND,
-            "upload_table_name": UPLOAD_TABLE_NAME,
-            "upload_id": UPLOAD_ID,
-        }
+        def unsupported_processor() -> dict:
+            raise ValueError(f"Unsupported source kind: {SOURCE_KIND}")
 
-result = main()
+        processor = unsupported_processor
+
+    result, run_status = run_upload_lifecycle(
+        processor,
+        wait_for_upload_queryability,
+        write_upload_metadata,
+    )
+    return {
+        "status": run_status,
+        "experiment_id": EXPERIMENT_ID,
+        "source_kind": SOURCE_KIND,
+        "upload_table_name": UPLOAD_TABLE_NAME,
+        "upload_id": UPLOAD_ID,
+        **result,
+    }
+
+try:
+    result = main()
+except Exception:
+    logger.exception("Task execution failed")
+    raise
 logger.info(f"Status: {result['status']}")
 # notebook.exit serialises whatever it's given via repr(), which produces a
 # Python-literal blob that downstream callers (jobs API, runs.get) can't parse.
