@@ -114,18 +114,22 @@ export abstract class BaseQueryBuilder {
    * - VOID to STRING: schema_of_variant_agg emits VOID for fields that exist on the JSON but are
    *   null across every aggregated row, and from_json rejects VOID inside a STRUCT. Coercing to
    *   STRING is safe; those fields parse back as null.
-   * - Numeric leaves to DOUBLE: inferred integral/decimal types reflect observed rows. Later
-   *   scientific values can otherwise overflow, become null, or be silently rounded.
+   * - Numeric leaves to DOUBLE when explicitly requested: inferred integral/decimal types reflect
+   *   observed rows. Later scientific values can otherwise overflow, become null, or be silently
+   *   rounded.
    *
    * Example:
    *   Input:  "OBJECT<phi2: DOUBLE, messages: OBJECT<text: STRING>, dead: VOID>"
    *   Output: "STRUCT<phi2: DOUBLE, messages: STRUCT<text: STRING>, dead: STRING>"
    */
-  transformSchemaForFromJson(variantSchema: string): string {
+  transformSchemaForFromJson(
+    variantSchema: string,
+    options: { widenNumericTypes?: boolean } = {},
+  ): string {
     if (!variantSchema) {
       return "";
     }
-    return VariantSchema.forFromJson(variantSchema);
+    return VariantSchema.forFromJson(variantSchema, options);
   }
 }
 
@@ -249,7 +253,12 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
 export class VariantQueryBuilder extends BaseQueryBuilder {
   private selectClause = "*";
   private fromClause = "";
-  private variantColumns: { column: string; schema: string; alias: string }[] = [];
+  private variantColumns: {
+    column: string;
+    schema: string;
+    alias: string;
+    widenNumericTypes: boolean;
+  }[] = [];
   private whereConditions: string[] = [];
   /**
    * WHERE conditions that must run *after* VARIANT flattening, i.e. they
@@ -278,11 +287,17 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  parseVariant(column: string, schema: string, alias?: string): this {
+  parseVariant(
+    column: string,
+    schema: string,
+    alias?: string,
+    options: { widenNumericTypes?: boolean } = {},
+  ): this {
     this.variantColumns.push({
       column,
       schema,
       alias: alias ?? `parsed_${column}`,
+      widenNumericTypes: options.widenNumericTypes ?? false,
     });
     return this;
   }
@@ -405,7 +420,9 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
 
     const parsedColumns = this.variantColumns
       .map((v) => {
-        const transformedSchema = this.transformSchemaForFromJson(v.schema);
+        const transformedSchema = this.transformSchemaForFromJson(v.schema, {
+          widenNumericTypes: v.widenNumericTypes,
+        });
         return `from_json(${v.column}::string, '${transformedSchema}') as ${v.alias}`;
       })
       .join(",\n          ");

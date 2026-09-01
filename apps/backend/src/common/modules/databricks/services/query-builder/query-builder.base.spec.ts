@@ -118,7 +118,7 @@ describe("QueryBuilder Base", () => {
     it("should transform schema for from_json", () => {
       const schema = "OBJECT<a: STRING, b: OBJECT<c: INT>>";
       const transformed = builder.transformSchemaForFromJson(schema);
-      expect(transformed).toBe("STRUCT<a: STRING, b: STRUCT<c: DOUBLE>>");
+      expect(transformed).toBe("STRUCT<a: STRING, b: STRUCT<c: INT>>");
     });
 
     it("should coerce VOID fields to STRING for from_json", () => {
@@ -133,7 +133,7 @@ describe("QueryBuilder Base", () => {
       const staleSchema =
         "OBJECT<cycle_offset: BIGINT, par: DECIMAL(2,1), quantum_yield: DECIMAL(7,6), raw_trace: ARRAY<INT>>";
 
-      expect(builder.transformSchemaForFromJson(staleSchema)).toBe(
+      expect(builder.transformSchemaForFromJson(staleSchema, { widenNumericTypes: true })).toBe(
         "STRUCT<cycle_offset: DOUBLE, par: DOUBLE, quantum_yield: DOUBLE, raw_trace: ARRAY<DOUBLE>>",
       );
     });
@@ -152,7 +152,7 @@ describe("QueryBuilder Base", () => {
       expect(query).toContain("`ts`");
       expect(query).toContain("* EXCEPT (payload, data)");
       expect(query).toContain("data.*");
-      expect(query).toContain("from_json(payload::string, 'STRUCT<x:DOUBLE>') as data");
+      expect(query).toContain("from_json(payload::string, 'STRUCT<x:INT>') as data");
       expect(query).toContain("FROM events");
       expect(query).toContain("WHERE ts > 0");
       expect(query).toContain("ORDER BY `ts` DESC");

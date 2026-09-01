@@ -153,8 +153,8 @@ export class QueryBuilderService {
       builder.distinct();
     }
 
-    variants.forEach(({ columnName, schema }) => {
-      builder.parseVariant(columnName, schema, `parsed_${columnName}`);
+    variants.forEach(({ columnName, schema, widenNumericTypes }) => {
+      builder.parseVariant(columnName, schema, `parsed_${columnName}`, { widenNumericTypes });
     });
 
     if (exceptColumns && exceptColumns.length > 0) {

@@ -77,7 +77,7 @@ export interface AggregationSpec {
 export interface QueryParams {
   table: string;
   columns?: string[];
-  variants?: { columnName: string; schema: string }[];
+  variants?: { columnName: string; schema: string; widenNumericTypes?: boolean }[];
   exceptColumns?: string[];
   whereClause?: string;
   whereConditions?: [string, string][];

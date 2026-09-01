@@ -82,7 +82,24 @@ describe("QueryBuilderService", () => {
       );
 
       expect(sql).toContain("from_json(data::string");
-      expect(sql).toContain("STRUCT<id:DOUBLE>");
+      expect(sql).toContain("STRUCT<id:INT>");
+    });
+
+    it("widens numeric upload fields only when requested", () => {
+      const sql = unwrap(
+        service.buildQuery({
+          table: "experiment_uploaded_data",
+          variants: [
+            {
+              columnName: "uploaded_data",
+              schema: "OBJECT<int: BIGINT, trace: ARRAY<DECIMAL(2,1)>>",
+              widenNumericTypes: true,
+            },
+          ],
+        }),
+      );
+
+      expect(sql).toContain("STRUCT<int: DOUBLE, trace: ARRAY<DOUBLE>>");
     });
 
     it("should build variant query with exceptColumns", () => {

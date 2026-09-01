@@ -329,7 +329,7 @@ export class ExperimentDataRepository {
     }
 
     const exceptColumns = [...config.exceptColumns];
-    const variants: { columnName: string; schema: string }[] = [];
+    const variants: { columnName: string; schema: string; widenNumericTypes?: boolean }[] = [];
 
     if (config.variantColumns.includes("macro_output")) {
       if (macroSchema) {
@@ -357,7 +357,11 @@ export class ExperimentDataRepository {
 
     if (config.variantColumns.includes("uploaded_data")) {
       if (uploadSchema) {
-        variants.push({ columnName: "uploaded_data", schema: uploadSchema });
+        variants.push({
+          columnName: "uploaded_data",
+          schema: uploadSchema,
+          widenNumericTypes: true,
+        });
       } else {
         exceptColumns.push("uploaded_data");
       }

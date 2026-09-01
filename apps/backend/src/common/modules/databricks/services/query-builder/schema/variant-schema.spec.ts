@@ -47,8 +47,27 @@ describe("VariantSchema.topLevelFieldNames", () => {
 
   it("does not rewrite type-like text inside quoted field names", () => {
     expect(
-      VariantSchema.forFromJson("OBJECT<`BIGINT`: BIGINT, `DECIMAL(2,1)`: DECIMAL(2,1)>"),
+      VariantSchema.forFromJson("OBJECT<`BIGINT`: BIGINT, `DECIMAL(2,1)`: DECIMAL(2,1)>", {
+        widenNumericTypes: true,
+      }),
     ).toBe("STRUCT<`BIGINT`: DOUBLE, `DECIMAL(2,1)`: DOUBLE>");
+  });
+
+  it("widens types without rewriting unquoted type-keyword field names", () => {
+    expect(
+      VariantSchema.forFromJson("OBJECT<int: BIGINT, float: DECIMAL(2,1), bigint: BIGINT>", {
+        widenNumericTypes: true,
+      }),
+    ).toBe("STRUCT<int: DOUBLE, float: DOUBLE, bigint: DOUBLE>");
+  });
+
+  it("preserves type-keyword field names nested inside arrays", () => {
+    expect(
+      VariantSchema.forFromJson(
+        "OBJECT<samples: ARRAY<STRUCT<bigint: BIGINT, decimal: DECIMAL(2,1)>>>",
+        { widenNumericTypes: true },
+      ),
+    ).toBe("STRUCT<samples: ARRAY<STRUCT<bigint: DOUBLE, decimal: DOUBLE>>>");
   });
 
   it("leaves JSON-encoded Spark schemas unchanged", () => {

@@ -137,6 +137,46 @@ describe("ExperimentDataRepository", () => {
       });
     });
 
+    it("requests numeric widening for uploaded data only", async () => {
+      const uploadTableId = "upload-table-1";
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([
+          {
+            identifier: uploadTableId,
+            tableType: "upload",
+            rowCount: 2,
+            uploadSchema: "OBJECT<int: BIGINT, trace: ARRAY<DECIMAL(2,1)>>",
+            customMetadataSchema: null,
+            displayName: "leaf_response",
+          },
+        ]),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({ columns: [], rows: [], totalRows: 0, truncated: false }),
+      );
+
+      const result = await repository.getTableData({
+        ...baseParams,
+        tableName: uploadTableId,
+      });
+
+      assertSuccess(result);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tableName: uploadTableId,
+          tableType: "upload",
+          variants: [
+            {
+              columnName: "uploaded_data",
+              schema: "OBJECT<int: BIGINT, trace: ARRAY<DECIMAL(2,1)>>",
+              widenNumericTypes: true,
+            },
+          ],
+        }),
+      );
+    });
+
     it("tags contributor id filters with the pseudonym salt when anonymizing", async () => {
       const pseudo = new ContributorAnonymizerService().pseudonymFor(mockExperiment.id, "u1");
 

@@ -6,27 +6,12 @@
  * introspection can land here without adding more loose helpers.
  */
 export class VariantSchema {
-  static forFromJson(schema: string): string {
+  static forFromJson(schema: string, options: { widenNumericTypes?: boolean } = {}): string {
     if (!/^\s*(?:OBJECT|STRUCT)\s*</i.test(schema)) {
       return schema;
     }
 
-    let transformed = "";
-    let segmentStart = 0;
-    let inQuotedIdentifier = false;
-
-    for (let index = 0; index < schema.length; index++) {
-      if (schema[index] !== "`") continue;
-
-      const segment = schema.slice(segmentStart, index);
-      transformed += inQuotedIdentifier ? segment : VariantSchema.transformTypes(segment);
-      transformed += "`";
-      segmentStart = index + 1;
-      inQuotedIdentifier = !inQuotedIdentifier;
-    }
-
-    const remainder = schema.slice(segmentStart);
-    return transformed + (inQuotedIdentifier ? remainder : VariantSchema.transformTypes(remainder));
+    return VariantSchema.transformType(schema, options.widenNumericTypes ?? false);
   }
 
   static topLevelFieldNames(schema: string): string[] {
@@ -92,13 +77,76 @@ export class VariantSchema {
     return colon >= 0 ? trimmed.slice(0, colon).trim() : trimmed;
   }
 
-  private static transformTypes(segment: string): string {
-    return segment
-      .replaceAll("OBJECT<", "STRUCT<")
-      .replaceAll(": VOID", ": STRING")
-      .replace(
-        /DECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\)|\b(?:TINYINT|SMALLINT|INT|INTEGER|BIGINT|FLOAT)\b/gi,
-        "DOUBLE",
-      );
+  private static transformType(type: string, widenNumericTypes: boolean): string {
+    const trimmed = type.trim();
+    const open = trimmed.indexOf("<");
+    const close = trimmed.lastIndexOf(">");
+    const container = open > 0 ? trimmed.slice(0, open).trim().toUpperCase() : "";
+
+    if (close === trimmed.length - 1 && close > open) {
+      const inner = trimmed.slice(open + 1, close);
+
+      if (container === "OBJECT" || container === "STRUCT") {
+        const fields = VariantSchema.splitTopLevel(inner).map((field) =>
+          VariantSchema.transformField(field, widenNumericTypes),
+        );
+        return `STRUCT<${fields.join(",")}>`;
+      }
+
+      if (container === "ARRAY") {
+        return `ARRAY<${VariantSchema.transformType(inner, widenNumericTypes)}>`;
+      }
+
+      if (container === "MAP") {
+        const entries = VariantSchema.splitTopLevel(inner).map((entry) =>
+          VariantSchema.transformType(entry, widenNumericTypes),
+        );
+        return `MAP<${entries.join(",")}>`;
+      }
+    }
+
+    if (/^VOID$/i.test(trimmed)) {
+      return "STRING";
+    }
+
+    if (
+      widenNumericTypes &&
+      (/^DECIMAL\s*\(\s*\d+\s*,\s*\d+\s*\)$/i.test(trimmed) ||
+        /^(?:TINYINT|SMALLINT|INT|INTEGER|BIGINT|FLOAT)$/i.test(trimmed))
+    ) {
+      return "DOUBLE";
+    }
+
+    return trimmed;
+  }
+
+  private static transformField(field: string, widenNumericTypes: boolean): string {
+    const colon = VariantSchema.findTopLevelColon(field);
+    if (colon < 0) {
+      return field;
+    }
+
+    const type = field.slice(colon + 1);
+    const leadingWhitespace = /^\s*/.exec(type)?.[0] ?? "";
+    return `${field.slice(0, colon + 1)}${leadingWhitespace}${VariantSchema.transformType(type, widenNumericTypes)}`;
+  }
+
+  private static findTopLevelColon(field: string): number {
+    let depth = 0;
+    let inQuotes = false;
+
+    for (let index = 0; index < field.length; index++) {
+      const char = field[index];
+      if (char === "`") {
+        inQuotes = !inQuotes;
+        continue;
+      }
+      if (inQuotes) continue;
+      if (char === "<" || char === "(") depth++;
+      else if (char === ">" || char === ")") depth--;
+      else if (char === ":" && depth === 0) return index;
+    }
+
+    return -1;
   }
 }

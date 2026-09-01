@@ -62,7 +62,7 @@ export interface DatabricksPort {
     tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
-    variants?: { columnName: string; schema: string }[];
+    variants?: { columnName: string; schema: string; widenNumericTypes?: boolean }[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
     aggregation?: AggregationSpec;

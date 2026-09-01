@@ -621,6 +621,42 @@ describe("DatabricksAdapter", () => {
       expect(query).toContain(databricksAdapter.MACRO_DATA_TABLE_NAME);
     });
 
+    it("preserves macro and question integer wire types", () => {
+      const result = databricksAdapter.buildExperimentQuery({
+        tableName: "some_macro_id",
+        tableType: "macro",
+        experimentId: "exp-123",
+        variants: [
+          { columnName: "macro_output", schema: "OBJECT<value: INT>" },
+          { columnName: "questions_data", schema: "OBJECT<answer: BIGINT>" },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(result.value).toContain("from_json(macro_output::string, 'STRUCT<value: INT>')");
+      expect(result.value).toContain("from_json(questions_data::string, 'STRUCT<answer: BIGINT>')");
+    });
+
+    it("widens upload numeric fields when requested", () => {
+      const result = databricksAdapter.buildExperimentQuery({
+        tableName: "upload-table-1",
+        tableType: "upload",
+        experimentId: "exp-123",
+        variants: [
+          {
+            columnName: "uploaded_data",
+            schema: "OBJECT<int: BIGINT, trace: ARRAY<DECIMAL(2,1)>>",
+            widenNumericTypes: true,
+          },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(result.value).toContain(
+        "from_json(uploaded_data::string, 'STRUCT<int: DOUBLE, trace: ARRAY<DOUBLE>>')",
+      );
+    });
+
     it("should handle VARIANT columns parsing", () => {
       const result = databricksAdapter.buildExperimentQuery({
         tableName: "device",
