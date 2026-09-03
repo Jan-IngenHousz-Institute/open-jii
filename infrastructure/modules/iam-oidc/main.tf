@@ -392,6 +392,10 @@ locals {
         "logs:CreateLogGroup",
         "logs:DeleteLogGroup",
         "logs:DescribeLogGroups",
+        # Log streams (Terraform)
+        "logs:CreateLogStream",
+        "logs:DeleteLogStream",
+        "logs:DescribeLogStreams",
         "logs:PutRetentionPolicy",
         "logs:DeleteRetentionPolicy",
         "logs:TagResource",
@@ -746,6 +750,9 @@ locals {
         "iot:ListTagsForResource",
         # Endpoint (data source)
         "iot:DescribeEndpoint",
+        # Fleet indexing (account-level singleton; update + read for refresh)
+        "iot:UpdateIndexingConfiguration",
+        "iot:GetIndexingConfiguration",
         # Topic rule listing (Terraform provider reads)
         "iot:ListTopicRules",
       ]
@@ -918,6 +925,21 @@ locals {
     sts = {
       actions = [
         "sts:GetCallerIdentity",
+      ]
+      resource = "*"
+    }
+
+    firehose = {
+      actions = [
+        "firehose:CreateDeliveryStream",
+        "firehose:DeleteDeliveryStream",
+        "firehose:DescribeDeliveryStream",
+        "firehose:UpdateDestination",
+        "firehose:StartDeliveryStreamEncryption",
+        "firehose:StopDeliveryStreamEncryption",
+        "firehose:TagDeliveryStream",
+        "firehose:UntagDeliveryStream",
+        "firehose:ListTagsForDeliveryStream",
       ]
       resource = "*"
     }

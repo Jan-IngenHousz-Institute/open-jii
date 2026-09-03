@@ -5,7 +5,7 @@ import { ChevronsUpDown, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 
-import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverTrigger } from "@repo/ui/components/popover";
@@ -13,7 +13,7 @@ import { Popover, PopoverTrigger } from "@repo/ui/components/popover";
 import { ProtocolSearchPopover } from "./protocol-search-popover";
 
 export interface ProtocolSearchWithDropdownProps {
-  availableProtocols: Protocol[];
+  availableProtocols: ProtocolListItem[];
   value: string;
   placeholder?: string;
   loading?: boolean;
@@ -40,7 +40,7 @@ export function ProtocolSearchWithDropdown({
   const { t } = useTranslation("common");
 
   // Snapshot the selected protocol when it’s visible in the current list.
-  const selectedSnapshotRef = useRef<Protocol | undefined>(undefined);
+  const selectedSnapshotRef = useRef<ProtocolListItem | undefined>(undefined);
 
   const currentMatch = value ? availableProtocols.find((p) => p.id === value) : undefined;
 
@@ -67,7 +67,7 @@ export function ProtocolSearchWithDropdown({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="hover:bg-surface-light w-full justify-between py-6 text-left font-normal"
+          className="hover:bg-muted w-full justify-between py-6 text-left font-normal"
         >
           <div className="min-w-0 flex-1">
             {selectedProtocol ? (

@@ -34,14 +34,10 @@ function normaliseTier(stored: string | null): InvitationTier {
   return stored === "admin" ? "admin" : "viewer";
 }
 
-/** Store the lower tier in the spelling older application instances can accept. */
-function storeTier(tier: InvitationTier): "admin" | "member" {
-  return tier === "admin" ? "admin" : "member";
-}
-
 /**
- * `tier` lives in the `invitations.role` column, unrenamed. Every read goes through
- * this projection, so the rest of the app only sees the current names.
+ * `tier` lives in the `invitations.role` column, which stores the grant-role
+ * spelling. Reads go through {@link normaliseTier} so an unresolvable stored value
+ * still renders as an invitation rather than throwing.
  */
 const invitationColumns = {
   id: invitations.id,
@@ -86,7 +82,7 @@ export class InvitationRepository {
           resourceType,
           resourceId,
           email: email.toLowerCase(),
-          role: storeTier(invite.tier),
+          role: invite.tier,
           invitedBy,
         })
         .returning(invitationColumns);

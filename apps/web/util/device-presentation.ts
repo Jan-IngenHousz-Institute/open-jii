@@ -1,4 +1,4 @@
-import type { DisplayRole } from "@repo/api/domains/device/device-profile";
+import type { DisplayRole } from "@repo/api/domains/iot/device-profile";
 import type {
   DevicePresentation,
   DevicePresentationInput,
@@ -29,6 +29,21 @@ export { presentDevice };
  */
 export function resolveDevicePrimaryLabel(present: DevicePresentation, t: TranslateFn): string {
   return present.provenance === "fallback" ? t("iot.deviceIdentity.unknown") : present.primary;
+}
+
+/**
+ * The one label a device answers to, for any surface that renders a row. Wraps
+ * the presenter so the resolution is not re-spelled per surface; every copy of
+ * it is a chance for one device to be called two things.
+ */
+export function resolveDeviceLabel(
+  device: { name: string | null; deviceType: string; serialNumber: string },
+  t: TranslateFn,
+): string {
+  return resolveDevicePrimaryLabel(
+    presentDevice({ name: device.name, family: device.deviceType, id: device.serialNumber }),
+    t,
+  );
 }
 
 /** Translate the presenter's known display-role identifiers to secondary copy. */

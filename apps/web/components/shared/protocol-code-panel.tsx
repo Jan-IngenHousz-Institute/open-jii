@@ -5,10 +5,14 @@ import ProtocolCodeEditor from "@/components/protocol-code-editor";
 import { CodeEditorHeaderActions } from "@/components/shared/code-editor-header-actions";
 import type { AutosaveStatus } from "@/hooks/useAutosave";
 
-export type ProtocolCode = Record<string, unknown>[] | string | undefined;
+import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
+
+// `string` covers the editor's mid-keystroke raw text; otherwise any JSON
+// document, since a protocol's shape is device-defined.
+export type ProtocolCode = JsonValue | undefined;
 
 interface ProtocolCodePanelProps {
-  code: Record<string, unknown>[];
+  code: JsonValue;
   /** `can(update)`: gating here moved from creator-identity to capability. */
   canEdit: boolean;
   isEditing: boolean;

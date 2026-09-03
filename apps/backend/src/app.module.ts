@@ -16,6 +16,7 @@ import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
 import emailConfig from "./common/config/email.config";
+import githubConfig from "./common/config/github.config";
 import mailchimpConfig from "./common/config/mailchimp.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
@@ -24,7 +25,9 @@ import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
 import { IotModule } from "./iot/iot.module";
 import { MacroModule } from "./macros/macro.module";
+import { MetricsModule } from "./metrics/metrics.module";
 import { NewsletterModule } from "./newsletter/newsletter.module";
+import { OrganizationModule } from "./organizations/organization.module";
 import { ProtocolModule } from "./protocols/protocol.module";
 import { SearchModule } from "./search/search.module";
 import { SharingModule } from "./sharing/sharing.module";
@@ -45,6 +48,7 @@ const orpcLogger = new Logger("ORPC");
         emailConfig,
         mailchimpConfig,
         analyticsConfig,
+        githubConfig,
       ],
     }),
     LoggerModule.forRoot({
@@ -67,7 +71,9 @@ const orpcLogger = new Logger("ORPC");
     ExperimentModule,
     IotModule,
     MacroModule,
+    MetricsModule,
     NewsletterModule,
+    OrganizationModule,
     ProtocolModule,
     SearchModule,
     SharingModule,

@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from "react";
 
 export function useEverLoaded(experimentId: string, mounted: boolean): boolean {
   const fetchingCount = useIsFetching({
-    predicate: (query) => query.queryKey.includes(experimentId),
+    // oRPC nests the id inside an input object, so `queryKey.includes` — which
+    // only scans the key's top level — never matches.
+    predicate: (query) => JSON.stringify(query.queryKey).includes(experimentId),
   });
   const sawFetchingRef = useRef(false);
   const [everLoaded, setEverLoaded] = useState(false);

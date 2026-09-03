@@ -18,17 +18,17 @@ vi.mock("~/shared/composition/upload", () => ({
   getOutbox: () => ({ enqueueMany }),
 }));
 // Keeps the environment store out; the template shape is all that matters.
+vi.mock("~/shared/stores/device-identity-store", () => ({
+  whenDeviceIdentityLoaded: () => Promise.resolve(),
+}));
 vi.mock("~/shared/measurements/measurement-topic", () => ({
-  getMeasurementMqttTopic: ({
-    experimentId,
-    protocolId,
-  }: {
-    experimentId: string;
-    protocolId: string;
-  }) => `topic/${experimentId}/${protocolId}`,
+  getMeasurementMqttTopic: ({ experimentId }: { experimentId: string }) => `topic/${experimentId}`,
 }));
 vi.mock("~/features/recent-measurements/services/export-measurements", () => ({
   exportSingleMeasurementToFile: vi.fn(),
+}));
+vi.mock("~/shared/measurements/client-metadata", () => ({
+  getClientMetadata: () => ({ client_model: "NX789J", client_os: "Android" }),
 }));
 vi.mock("~/shared/ui/AlertDialog", () => ({ showAlert: vi.fn() }));
 vi.mock("sonner-native", () => ({ toast: { error: vi.fn() } }));
@@ -48,6 +48,8 @@ const SHARED = {
   userId: "user-1",
   macro: null,
   questions: [],
+  workbookRunId: "run-attempt-1",
+  workbookVersionId: "version-1",
 };
 
 type SavedCall = [
@@ -55,8 +57,11 @@ type SavedCall = [
     topic: string;
     measurementResult: {
       workbook_run_id?: string;
+      protocol_id?: string;
       workbook_version_id?: string;
       macro_context?: string;
+      device_family?: string;
+      device_firmware?: string;
     };
     metadata: { protocolName: string };
   },
@@ -86,14 +91,19 @@ describe("useMeasurementUpload", () => {
         results: [
           {
             rawMeasurement: { a: 1 },
-            device: { id: "d1", name: "A" },
+            device: {
+              id: "d1",
+              name: "A",
+              family: "multispeq",
+              firmwareVersion: "2.311",
+            },
             protocolId: "proto-a",
             protocolName: "Proto A",
             macroContext: { measurement: { a: 1 } },
           },
           {
             rawMeasurement: { b: 2 },
-            device: { id: "d2", name: "B" },
+            device: { id: "d2", name: "B", family: "minipar", firmwareVersion: "1.04" },
             protocolId: "proto-b",
             protocolName: "Proto B",
           },
@@ -104,16 +114,27 @@ describe("useMeasurementUpload", () => {
     });
 
     const calls = saveMeasurement.mock.calls as SavedCall[];
-    expect(calls.map(([m]) => m.topic)).toEqual([
-      "topic/exp-1/proto-a",
-      "topic/exp-1/proto-b",
-      "topic/exp-1/proto-shared",
+    // One lean topic per experiment; per-result attribution rides the payload.
+    expect(calls.map(([m]) => m.topic)).toEqual(["topic/exp-1", "topic/exp-1", "topic/exp-1"]);
+    expect(calls.map(([m]) => m.measurementResult.protocol_id)).toEqual([
+      "proto-a",
+      "proto-b",
+      "proto-shared",
     ]);
     expect(calls.map(([m]) => m.metadata.protocolName)).toEqual(["Proto A", "Proto B", "Shared"]);
+    expect(calls.map(([m]) => m.measurementResult.device_firmware)).toEqual([
+      "2.311",
+      "1.04",
+      undefined,
+    ]);
+    expect(calls.map(([m]) => m.measurementResult.device_family)).toEqual([
+      "multispeq",
+      "minipar",
+      undefined,
+    ]);
 
     const runIds = calls.map(([m]) => m.measurementResult.workbook_run_id);
-    expect(runIds[0]).toBeTruthy();
-    expect(new Set(runIds).size).toBe(1);
+    expect(runIds).toEqual(["run-attempt-1", "run-attempt-1", "run-attempt-1"]);
     expect(calls[0][0].measurementResult).toMatchObject({
       workbook_version_id: "version-1",
       macro_context: JSON.stringify({ measurement: { a: 1 } }),
@@ -122,7 +143,7 @@ describe("useMeasurementUpload", () => {
     expect(enqueueMany).toHaveBeenCalledWith(["saved-1", "saved-2", "saved-3"]);
   });
 
-  it("omits workbook_run_id for a single-device round", async () => {
+  it("stamps the attempt workbook_run_id for a single-device round", async () => {
     const { result } = renderHook(() => useMeasurementUpload(), { wrapper });
 
     await act(async () => {
@@ -133,7 +154,8 @@ describe("useMeasurementUpload", () => {
     });
 
     const [measurement] = saveMeasurement.mock.calls[0] as SavedCall;
-    expect(measurement.topic).toBe("topic/exp-1/proto-shared");
-    expect(measurement.measurementResult).not.toHaveProperty("workbook_run_id");
+    expect(measurement.topic).toBe("topic/exp-1");
+    expect(measurement.measurementResult).toMatchObject({ protocol_id: "proto-shared" });
+    expect(measurement.measurementResult.workbook_run_id).toBe("run-attempt-1");
   });
 });

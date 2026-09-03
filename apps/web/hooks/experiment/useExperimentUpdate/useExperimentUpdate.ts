@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -19,7 +20,9 @@ export const useExperimentUpdate = () => {
 
         // Cancel any outgoing refetches to avoid overwrites
         await queryClient.cancelQueries({ queryKey: experimentKey });
-        await queryClient.cancelQueries({ queryKey: orpc.experiments.listExperiments.key() });
+        for (const queryKey of listQueryKeys.experiments()) {
+          await queryClient.cancelQueries({ queryKey });
+        }
 
         // Get the current experiment data
         const previousExperiment = queryClient.getQueryData<Experiment>(experimentKey);
@@ -54,9 +57,9 @@ export const useExperimentUpdate = () => {
         await queryClient.invalidateQueries({
           queryKey: orpc.experiments.getExperimentAccess.queryKey({ input: { id: variables.id } }),
         });
-        await queryClient.invalidateQueries({
-          queryKey: orpc.experiments.listExperiments.key(),
-        });
+        for (const queryKey of listQueryKeys.experiments()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
 
         // Toggling contributor anonymization re-pseudonymizes distinct values
         // and row data server-side; drop the cached reads so filters and

@@ -4,7 +4,8 @@ import type { SQL, SQLWrapper } from "@repo/database";
 /**
  * Shared helpers for PostgreSQL full-text search (tsvector/tsquery) + pg_trgm fuzzy matching.
  *
- * Searchable entities (experiments, protocols, macros) have a generated `search_vector` weighting
+ * Searchable entities (experiments, protocols, macros, workbooks, organizations) have a generated
+ * `search_vector` weighting
  * name (A) above description (B). Queries combine FTS prefix matching on the vector (stemming +
  * "photo" -> "photosynthesis") with trigram similarity on the name (typos, "experimnt" ->
  * "experiment"). `ts_rank` + `setweight` make name hits outrank description hits; callers add small
@@ -73,4 +74,37 @@ export function ftsMatch(vector: SQLWrapper, name: SQLWrapper, raw: string): SQL
  */
 export function ftsRank(vector: SQLWrapper, name: SQLWrapper, raw: string): SQL<number> {
   return sql<number>`(ts_rank(${vector}, ${tsQuery(raw)}) + 0.3 * similarity(${name}, ${raw}))`;
+}
+
+/** Score added per relationship tier. Relevance dominates; tier breaks near-ties. */
+export const TIER_WEIGHT = 0.15;
+
+/** Per-match increment and the uniform ceiling on the summed cross-table bonus. */
+const CROSS_TABLE_BONUS_STEP = 0.05;
+export const CROSS_TABLE_BONUS_CAP = 0.1;
+
+/**
+ * Capped bonus for matches on related tables (creator, members, linked entities). One shared
+ * ceiling across every entity keeps scores comparable in cross-type global search, where entities
+ * differ in how many related tables they can match. The ceiling bounds the skew rather than
+ * erasing it: protocols and macros have a single probe so they top out at one step (0.05), while
+ * experiments and workbooks can reach the full cap. Bounded was preferred over identical because
+ * a flat any-match bonus would flatten within-entity ordering.
+ */
+export function crossTableBonus(...matches: SQL[]): SQL<number> {
+  // No probes means no bonus. Falling through would join an empty term list into
+  // `LEAST(, 0.1)`, which Postgres rejects at parse time.
+  if (matches.length === 0) {
+    return sql<number>`0::numeric`;
+  }
+
+  const terms = matches.map(
+    (match) => sql`(CASE WHEN ${match} THEN ${sql.raw(String(CROSS_TABLE_BONUS_STEP))} ELSE 0 END)`,
+  );
+  return sql<number>`LEAST(${sql.join(terms, sql` + `)}, ${sql.raw(String(CROSS_TABLE_BONUS_CAP))})`;
+}
+
+/** Lexical relevance plus the tier bonus: the single key both browse and search order by. */
+export function searchScore(rank: SQL<number>, tier: SQL<number>): SQL<number> {
+  return sql<number>`(${rank} + ${sql.raw(String(TIER_WEIGHT))} * ${tier})`;
 }

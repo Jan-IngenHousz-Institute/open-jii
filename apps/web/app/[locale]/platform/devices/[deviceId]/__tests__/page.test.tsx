@@ -1,6 +1,6 @@
-import { createIotDeviceDetail, readOnlyCapabilities } from "@/test/factories";
+import { createIotDeviceDetail } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { render, screen } from "@/test/test-utils";
 import { use } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,12 +34,18 @@ describe("generateMetadata", () => {
 describe("DeviceOverviewPage", () => {
   beforeEach(() => {
     vi.mocked(use).mockReturnValue({ deviceId: DEVICE_ID });
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.iot.getIotDeviceActivity, {
+      body: { lastDataAt: null, pipelineUnavailable: false },
+    });
+    server.mount(contract.iot.getDeviceFirmwareHistory, { body: { versions: [] } });
   });
 
-  it("renders the device's registry metadata", async () => {
+  it("renders the stitched hub with the About sidebar carrying the identity facts", async () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({
         id: DEVICE_ID,
+        status: "active",
         serialNumber: "SN-42",
         thingName: "ambyte_SN-42",
       }),
@@ -47,41 +53,23 @@ describe("DeviceOverviewPage", () => {
 
     renderPage();
 
-    expect(await screen.findByText("SN-42")).toBeInTheDocument();
+    expect(
+      await screen.findByText("iot.devices.detail.cards.experimentsTitle"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.detail.cards.activityTitle")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.detail.about.title")).toBeInTheDocument();
+    expect(screen.getByText("SN-42")).toBeInTheDocument();
     expect(screen.getByText("ambyte_SN-42")).toBeInTheDocument();
   });
 
-  it("deletes from the danger zone and navigates back to the registry", async () => {
+  it("offers no delete affordance on the tab body; that action lives in the header menu", async () => {
     server.mount(contract.iot.getIotDevice, {
-      body: createIotDeviceDetail({ id: DEVICE_ID, name: "Doomed" }),
-    });
-    const deleteSpy = server.mount(contract.iot.deleteIotDevice);
-    const user = userEvent.setup();
-
-    const { router } = renderPage();
-
-    await user.click(await screen.findByRole("button", { name: "iot.devices.actions.delete" }));
-    const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "iot.devices.actions.delete" }));
-
-    await waitFor(() => expect(deleteSpy.called).toBe(true));
-    expect(deleteSpy.params.deviceId).toBe(DEVICE_ID);
-    await waitFor(() => expect(router.push).toHaveBeenCalled());
-  });
-
-  it("offers no danger zone below manage — deleting a device tears down real AWS hardware", async () => {
-    server.mount(contract.iot.getIotDevice, {
-      body: createIotDeviceDetail({
-        id: DEVICE_ID,
-        serialNumber: "SN-9",
-        capabilities: { ...readOnlyCapabilities, canLeave: true },
-      }),
+      body: createIotDeviceDetail({ id: DEVICE_ID }),
     });
 
     renderPage();
 
-    // The metadata is still theirs to read; the teardown affordance is not.
-    expect(await screen.findByText("SN-9")).toBeInTheDocument();
+    await screen.findByText("iot.devices.detail.cards.activityTitle");
     expect(
       screen.queryByRole("button", { name: "iot.devices.actions.delete" }),
     ).not.toBeInTheDocument();

@@ -263,7 +263,7 @@ describe("DropdownMenu", () => {
       await user.click(screen.getByText("Open"));
       const separator = screen.getByTestId("separator");
       expect(separator).toBeInTheDocument();
-      expect(separator).toHaveClass("bg-muted");
+      expect(separator).toHaveClass("bg-border");
     });
   });
 

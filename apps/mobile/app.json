@@ -3,6 +3,7 @@
     "scheme": ["openjii"],
     "name": "openJII",
     "slug": "openjii",
+    "platforms": ["ios", "android"],
     "version": "1.1.0",
     "orientation": "default",
     "icon": "./assets/adaptive-icon.png",
@@ -33,10 +34,6 @@
       ],
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "package": "com.openjii.app"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
     },
     "plugins": [
       "react-native-ble-plx",

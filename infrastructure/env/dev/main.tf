@@ -167,6 +167,46 @@ module "large_iot_s3" {
   }
 }
 
+module "iot_firehose" {
+  source = "../../modules/firehose"
+
+  delivery_stream_name   = "open-jii-${var.environment}-iot-raw-archive"
+  destination_bucket_arn = module.iot_raw_archive_s3.bucket_arn
+  s3_prefix              = "raw-iot/!{timestamp:yyyy/MM/dd}/"
+  error_output_prefix    = "raw-iot-errors/!{firehose:error-output-type}/!{timestamp:yyyy/MM/dd}/"
+
+  role_name   = "open_jii_${var.environment}_firehose_raw_archive_role"
+  policy_name = "open_jii_${var.environment}_firehose_raw_archive_policy"
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot"
+  }
+}
+
+module "firmware_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-firmware-${var.environment}"
+
+  # Versioned: a released artifact is immutable evidence of what a device was
+  # told to install, and AWS IoT presigns a specific object at delivery.
+  enable_versioning = true
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot-firmware"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
 module "iot_core" {
   source      = "../../modules/iot-core"
   environment = var.environment
@@ -183,7 +223,28 @@ module "iot_core" {
   iot_s3_role_name       = "open_jii_${var.environment}_iot_s3_role"
   iot_s3_policy_name     = "open_jii_${var.environment}_iot_s3_policy"
 
+  firehose_delivery_stream_name = module.iot_firehose.delivery_stream_name
+  firehose_delivery_stream_arn  = module.iot_firehose.delivery_stream_arn
+  iot_firehose_role_name        = "open_jii_${var.environment}_iot_firehose_role"
+  iot_firehose_policy_name      = "open_jii_${var.environment}_iot_firehose_policy"
+
   large_iot_bucket_arn = module.large_iot_s3.bucket_arn
+
+  enable_fleet_indexing            = true
+  enable_databricks_lifecycle_read = true
+
+  firmware_bucket_arn  = module.firmware_s3.bucket_arn
+  enable_firmware_jobs = true
+}
+
+module "firmware_rollout_role" {
+  source = "../../modules/iam-firmware-rollout"
+
+  aws_region          = var.aws_region
+  environment         = var.environment
+  oidc_provider_arn   = module.iam_oidc.oidc_provider_arn
+  firmware_bucket_arn = module.firmware_s3.bucket_arn
+  presign_role_arn    = module.iot_core.jobs_presign_role_arn
 }
 
 module "cognito" {
@@ -403,12 +464,15 @@ module "event_hooks_secret_scope" {
 module "storage_credential" {
   source = "../../modules/databricks/workspace-storage-credential"
 
-  credential_name        = "open-jii-${var.environment}-metastore-access"
-  role_name              = "open-jii-${var.environment}-uc-access"
-  environment            = var.environment
-  bucket_name            = var.centralized_metastore_bucket_name
-  isolation_mode         = "ISOLATION_MODE_OPEN"
-  additional_policy_arns = [module.iot_core.databricks_large_iot_read_policy_arn]
+  credential_name = "open-jii-${var.environment}-metastore-access"
+  role_name       = "open-jii-${var.environment}-uc-access"
+  environment     = var.environment
+  bucket_name     = var.centralized_metastore_bucket_name
+  isolation_mode  = "ISOLATION_MODE_OPEN"
+  additional_policy_arns = [
+    module.iot_core.databricks_large_iot_read_policy_arn,
+    module.iot_core.databricks_device_lifecycle_read_policy_arn,
+  ]
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -472,6 +536,32 @@ module "large_iot_external_location" {
   depends_on = [module.storage_credential]
 }
 
+module "device_lifecycle_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "device-lifecycle-events-${var.environment}"
+  bucket_name             = module.iot_raw_archive_s3.bucket_id
+  external_location_path  = "device-lifecycle-events"
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for AWS IoT lifecycle (presence) events archived by the lifecycle topic rule"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+  read_only               = true
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_FILES"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
+}
+
 module "experiment_secret_scope" {
   source = "../../modules/databricks/secret_scope"
 
@@ -511,6 +601,27 @@ module "databricks_catalog" {
         "CREATE_TABLE",
         "CREATE_VOLUME",
         "READ_VOLUME",
+        "SELECT",
+        "USE_CATALOG",
+        "USE_SCHEMA"
+      ]
+    }
+
+    # Read-only access for the jii-data-platform deploy SP, which runs the
+    # analyst gold pipelines in the sandbox workspace. grebbedijk-ambit-2026-gold
+    # reads centrum.enriched_experiment_raw_data from here cross-catalog.
+    #
+    # These privileges are already live — this block only stops them being
+    # undeclared drift. They were granted by hand and have survived purely
+    # because nothing authoritative covers the catalog securable. The equivalent
+    # prod grant lived at SCHEMA level instead, where the authoritative
+    # `databricks_grants.centrum_schema` reclaimed it on 2026-08-20 and took two
+    # pipelines down for eight days. Same access, different level, opposite
+    # outcome — so it is written down here before someone rediscovers that.
+    data_platform_deploy_sp = {
+      principal = var.data_platform_sp_application_id
+      privileges = [
+        "BROWSE",
         "SELECT",
         "USE_CATALOG",
         "USE_SCHEMA"
@@ -557,9 +668,12 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_imported_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_uploaded_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_large_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_device_lifecycle_events",
     # silver
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/silver/clean_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/silver/clean_device_lifecycle_events",
     # gold
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/device_last_activity",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_status",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_device_data",
@@ -578,17 +692,18 @@ module "centrum_pipeline" {
   ]
 
   configuration = {
-    "CATALOG_NAME"               = module.databricks_catalog.catalog_name
-    "BRONZE_TABLE"               = "raw_data"
-    "SILVER_TABLE"               = "clean_data"
-    "RAW_KINESIS_TABLE"          = "raw_kinesis_data"
-    "KINESIS_STREAM_NAME"        = module.kinesis.kinesis_stream_name
-    "SERVICE_CREDENTIAL_NAME"    = "unity-catalog-kinesis-role-${var.environment}"
-    "CHECKPOINT_PATH"            = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
-    "ENVIRONMENT"                = var.environment
-    "MONITORING_SLACK_CHANNEL"   = var.slack_channel
-    "pipelines.trigger.interval" = "120 seconds"
-    "LARGE_IOT_S3_PATH"          = "s3://${module.large_iot_s3.bucket_id}/"
+    "CATALOG_NAME"                    = module.databricks_catalog.catalog_name
+    "BRONZE_TABLE"                    = "raw_data"
+    "SILVER_TABLE"                    = "clean_data"
+    "RAW_KINESIS_TABLE"               = "raw_kinesis_data"
+    "KINESIS_STREAM_NAME"             = module.kinesis.kinesis_stream_name
+    "SERVICE_CREDENTIAL_NAME"         = "unity-catalog-kinesis-role-${var.environment}"
+    "CHECKPOINT_PATH"                 = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
+    "ENVIRONMENT"                     = var.environment
+    "MONITORING_SLACK_CHANNEL"        = var.slack_channel
+    "pipelines.trigger.interval"      = "120 seconds"
+    "LARGE_IOT_S3_PATH"               = "s3://${module.large_iot_s3.bucket_id}/"
+    "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
@@ -669,6 +784,116 @@ module "pipeline_scheduler" {
   }
 
   depends_on = [module.centrum_pipeline]
+}
+
+module "metrics_pipeline" {
+  source = "../../modules/databricks/pipeline"
+
+  name         = "Metrics-DLT-Pipeline-DEV"
+  schema_name  = "metrics"
+  catalog_name = module.databricks_catalog.catalog_name
+
+  notebook_paths = [
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/platform_totals",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/family_totals",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/hourly_activity",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/activity_windows",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/parameter_stats",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/pool_facts",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity_by_experiment",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_contributors_window",
+  ]
+
+  environment_dependencies = [
+    "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
+  ]
+
+  configuration = {
+    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME" = "centrum"
+    "SILVER_TABLE"        = "clean_data"
+  }
+
+  continuous_mode  = false
+  development_mode = true
+  serverless       = true
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_RUN"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "metrics_pipeline_scheduler" {
+  source = "../../modules/databricks/job"
+
+  name        = "Metrics-Pipeline-Scheduler-DEV"
+  description = "Triggers the public metrics pipeline refresh"
+
+  # Schedule: every 15 minutes
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0/15 * * * ?"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key         = "trigger_metrics_pipeline"
+      task_type   = "pipeline"
+      pipeline_id = module.metrics_pipeline.pipeline_id
+    }
+  ]
+
+  # The metrics pipeline only ever runs through this job, so job-level failure
+  # notifications cover every run; no in-pipeline event hook needed.
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.metrics_pipeline]
 }
 
 module "centrum_backup_job" {
@@ -1846,6 +2071,10 @@ module "backend_ecs" {
       value = "centrum"
     },
     {
+      name  = "DATABRICKS_METRICS_SCHEMA_NAME"
+      value = "metrics"
+    },
+    {
       name  = "DATABRICKS_RAW_DATA_TABLE_NAME"
       value = "enriched_experiment_raw_data"
     },
@@ -1912,6 +2141,29 @@ module "backend_ecs" {
     {
       name  = "AWS_IOT_POLICY_NAMES"
       value = join(",", module.iot_core.iot_policy_names)
+    },
+    {
+      name  = "AWS_IOT_JOBS_POLICY_NAME"
+      value = module.iot_core.jobs_policy_name
+    },
+    {
+      # A family left unset renders the Firmware tab as "JII does not publish
+      # firmware for this device family yet" rather than an error.
+      #
+      # GITHUB_TOKEN is deliberately NOT set: these repositories are public, so
+      # reads work anonymously, but that shares a 60-requests-per-hour budget
+      # across this account's egress IP. Add the token to the app secret and
+      # wire it here if the Firmware tab ever gets heavy use.
+      name  = "FIRMWARE_REPO_AMBYTE"
+      value = "Jan-IngenHousz-Institute/ambyte-iot"
+    },
+    {
+      name  = "FIRMWARE_REPO_AMBIT"
+      value = "Jan-IngenHousz-Institute/ambit"
+    },
+    {
+      name  = "FIRMWARE_REPO_MINIPAR"
+      value = ""
     },
     {
       name  = "AWS_IOT_DEVICE_THING_TYPE_NAME"

@@ -1,7 +1,7 @@
+import { SettingsCard } from "@/components/shared/settings-card";
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { RichTextarea } from "@repo/ui/components/rich-textarea";
 
 interface InstructionPanelProps {
@@ -12,18 +12,13 @@ interface InstructionPanelProps {
 export function InstructionPanel({ value, onChange, disabled = false }: InstructionPanelProps) {
   const { t } = useTranslation("experiments");
   return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle className="text-jii-dark-green">{t("instructionPanel.title")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <RichTextarea
-          value={value}
-          onChange={onChange}
-          placeholder={t("instructionPanel.placeholder")}
-          isDisabled={disabled}
-        />
-      </CardContent>
-    </Card>
+    <SettingsCard title={t("instructionPanel.title")}>
+      <RichTextarea
+        value={value}
+        onChange={onChange}
+        placeholder={t("instructionPanel.placeholder")}
+        isDisabled={disabled}
+      />
+    </SettingsCard>
   );
 }

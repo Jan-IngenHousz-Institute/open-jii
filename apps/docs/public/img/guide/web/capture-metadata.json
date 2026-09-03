@@ -53,31 +53,6 @@
       ]
     },
     {
-      "asset": "collaborators.png",
-      "sha256": "179a3b1f56beee2c62d1d52ffd89aa59f0d35797149e8191f30a071fdf730668",
-      "script": "apps/web/e2e/docs_media/capture_members_roles.py",
-      "environment": "dev.openjii.org",
-      "route": "/en-US/platform/experiments/<experiment-id>/collaborators",
-      "captured_at": "2026-07-19T22:05:28.655479+00:00",
-      "viewport": {
-        "width": 1440,
-        "height": 1024
-      },
-      "color_scheme": "light",
-      "locale": "en-US",
-      "review_status": "approved",
-      "reviewed_at": "2026-07-19T22:17:35.797417+00:00",
-      "reviewer": "ticket-06-media-pass",
-      "review_notes": "Collaborators view shows Invite, member tabs, and Admin role; account email redacted and testing-account authorization confirmed.",
-      "redactions": [
-        "visible email addresses replaced with [email hidden]",
-        "testing-account avatar hidden"
-      ],
-      "live_checks_observed": [
-        "Collaborators list, admin/member roles, and invite affordance observed on dev."
-      ]
-    },
-    {
       "asset": "create-experiment-details.png",
       "sha256": "06b5677838f26b0bb6e66fb63eacc1793d1829bed8f66c1a6681a1f5d2278b23",
       "script": "apps/web/e2e/docs_media/capture_create_experiment.py",
@@ -479,6 +454,176 @@
       "redactions": [],
       "live_checks_observed": [
         "Version history and current pinned version observed on dev; no restore performed."
+      ]
+    },
+    {
+      "asset": "collaborators.png",
+      "sha256": "d6ca6af17207104e4aee70d9ca70ae932f8b723b2add37a120d9885fdf3ac9e9",
+      "script": "openjii-e2e (separate repo, ~/Projects/openjii-e2e): capture/docs-media.spec.ts, run with playwright.capture.config.ts",
+      "environment": "local e2e harness (seeded Phase 4 fixtures, backend :3120 / web :3100)",
+      "route": "/en-US/platform/experiments/<experiment-id>/collaborators",
+      "captured_at": "2026-08-17T00:00:00+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-08-17T00:00:00+00:00",
+      "reviewer": "p4-5-b-iam-docs",
+      "review_notes": "Re-captured to remove internal jargon: the previous frame named 'P4 Helix Lab' in its synthesized summary rows and showed .p4@example.test addresses, both of which are our rollout-phase vocabulary rather than anything a reader can interpret. Shows every collaborator row kind on one experiment - a named owner (Owner via organization), the admins and members summary rows, a team grantee, an Outside Collaborator, and a member broken out with both 'Member via organization' and 'Redundant grant'. Fixtures are created by the capture spec itself, not the shared P4 e2e cast.",
+      "redactions": [
+        "none required - every account, organization and resource in frame is created by the capture run on the local e2e harness; addresses are @example.org, which is IANA-reserved"
+      ],
+      "live_checks_observed": [
+        "Collaborators tab rendered all row kinds; reviewed for real data and for internal jargon, and no phase number, codename or fixture marker appears."
+      ]
+    },
+    {
+      "asset": "organization-members.png",
+      "sha256": "ca651d039abc370f39fa076bbfa6d5ab7adf6913a654d5c1d76efd6315869781",
+      "script": "openjii-e2e (separate repo, ~/Projects/openjii-e2e): capture/docs-media.spec.ts, run with playwright.capture.config.ts",
+      "environment": "local e2e harness (seeded Phase 4 fixtures, backend :3120 / web :3100)",
+      "route": "/en-US/platform/organizations/<organization-id>/members",
+      "captured_at": "2026-08-17T00:00:00+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-08-17T00:00:00+00:00",
+      "reviewer": "p4-5-b-iam-docs",
+      "review_notes": "Re-captured to remove internal jargon: the previous frame showed 'P4 Helix Lab' and four .p4@example.test addresses. All three segments carry live counts - Members, Invited and Requests - over the roster, each row showing its role control and team badge. Captured as the organization's Owner, which is what makes the segment strip visible at all; a plain member is not offered it.",
+      "redactions": [
+        "none required - accounts, organization and team are created by the capture run; addresses are @example.org"
+      ],
+      "live_checks_observed": [
+        "All three segments rendered non-zero counts, from a seeded pending invitation and a seeded join request rather than real ones.",
+        "Reviewed against both bars: no real data, and no phase number or fixture vocabulary in frame."
+      ]
+    },
+    {
+      "asset": "organization-create-visibility.png",
+      "sha256": "efcb467e801ad8ca71a4cbe69621e26536a6d2972f110062af82dd7709df819a",
+      "script": "openjii-e2e (separate repo, ~/Projects/openjii-e2e): capture/docs-media.spec.ts, run with playwright.capture.config.ts",
+      "environment": "local e2e harness (seeded Phase 4 fixtures, backend :3120 / web :3100)",
+      "route": "/en-US/platform/organizations/new",
+      "captured_at": "2026-08-17T00:00:00+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-08-17T00:00:00+00:00",
+      "reviewer": "p4-5-b-iam-docs",
+      "review_notes": "Step 2 of 4 of the create-organization wizard, titled 'Profile & visibility'. There is no separate visibility step: the two radio cards share the step with the profile card, and both carry their full consequence copy. Private is selected, which is the default. Nothing was submitted, so no organization was created; the name and slug typed to pass step 1 are not in frame.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Reached by filling the identity step and waiting for the slug-availability check to settle; the wizard was closed rather than submitted, so no organization exists as a result of this frame."
+      ]
+    },
+    {
+      "asset": "organization-team.png",
+      "sha256": "af416429cd8865463b6d4870bfde25e304f5e60d989c78e55ea81bbad1173609",
+      "script": "openjii-e2e (separate repo, ~/Projects/openjii-e2e): capture/docs-media.spec.ts, run with playwright.capture.config.ts",
+      "environment": "local e2e harness (seeded Phase 4 fixtures, backend :3120 / web :3100)",
+      "route": "/en-US/platform/organizations/<organization-id>/teams/<team-id>",
+      "captured_at": "2026-08-17T00:00:00+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-08-17T00:00:00+00:00",
+      "reviewer": "p4-5-b-iam-docs",
+      "review_notes": "Re-captured to remove internal jargon: the previous frame's organization header read 'P4 Helix Lab' and the member rows carried .p4@example.test addresses. Shows a team's two members above 'What this team can reach', which lists the two grants held by the team itself - an experiment at Can view and a macro at Can edit - and the delete-team note explaining that deleting the team withdraws exactly those.",
+      "redactions": [
+        "none required - team, members, experiment and macro are all created by the capture run; addresses are @example.org"
+      ],
+      "live_checks_observed": [
+        "Both team grants rendered with their resource type and access level; the list is the team's own grants, not its members' access.",
+        "Reviewed against both bars; no phase vocabulary in frame."
+      ]
+    },
+    {
+      "asset": "organizations-list.png",
+      "sha256": "b9ac8c595db81cafa50810b0b719f36581ca5cb4da8b9bd18c2b34716b178728",
+      "script": "openjii-e2e (separate repo, ~/Projects/openjii-e2e): capture/docs-media.spec.ts, run with playwright.capture.config.ts",
+      "environment": "local e2e harness (seeded Phase 4 fixtures, backend :3120 / web :3100)",
+      "route": "/en-US/platform/organizations",
+      "captured_at": "2026-08-17T00:00:00+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-08-17T00:00:00+00:00",
+      "reviewer": "p4-5-b-iam-docs",
+      "review_notes": "Re-captured to remove internal jargon: the previous frame was twelve cards of which ten were named 'P4 <something>', and eleven read 'No description provided'. Now nine plausibly-named research groups, each with a description, its member and resource counts, and its Private badge where it is private, plus the search box, the filter and the Create organization action. Filter is on 'My organizations'; the '?filter=all' directory reading is deliberately not published - this persona belongs to every organization seeded here, so that frame renders the same grid with a different label and would teach the opposite of what the directory page is about.",
+      "redactions": ["none required - every organization in frame is created by the capture run"],
+      "live_checks_observed": [
+        "Member and resource counts rendered per card; a mix of public and private, which is correct for a listing that shows the caller's own organizations whatever their visibility.",
+        "Reviewed against both bars; no phase numbers and no 'No description provided' placeholders remain."
+      ]
+    },
+    {
+      "asset": "resource-transfer.png",
+      "sha256": "0d493acfe08a9c5a53ffcac421f4a6b6be29d65dd8d304d8b204078019ddf677",
+      "script": "openjii-e2e (separate repo, ~/Projects/openjii-e2e): capture/docs-media.spec.ts, run with playwright.capture.config.ts",
+      "environment": "local e2e harness (seeded Phase 4 fixtures, backend :3120 / web :3100)",
+      "route": "/en-US/platform/experiments/<experiment-id>",
+      "captured_at": "2026-08-17T00:00:00+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-08-17T00:00:00+00:00",
+      "reviewer": "p4-5-b-iam-docs",
+      "review_notes": "Re-captured to remove internal jargon: the previous frame's Description field read 'p4 fixture', which is the seed helper's default marker and was visible in the published asset. Shows the transfer dialog with its destination list open - the one other organization the caller belongs to above a separately grouped 'Personal workspace' carrying its 'Only you. No organization members come with it.' caption, the distinction the page is about. Behind it the details sidebar shows the 'Owning organization' value with the Transfer affordance that opens this. Captured as an owner of two organizations rather than the main persona, who belongs to nine and would have pushed the personal-workspace group out of frame.",
+      "redactions": [
+        "none - no redaction applied. Every name in frame is created by the capture run. The experiment's UUID is visible in the details sidebar; it identifies a throwaway row on a database that is dropped and re-migrated before every run, so it is not an identifier of anything."
+      ],
+      "live_checks_observed": [
+        "Destination list rendered the shared organization and the personal workspace as separate groups; no transfer was performed.",
+        "The details sidebar reads '1 collaborator' - the pluralization fix this frame's predecessor exposed.",
+        "Reviewed against both bars; the description now reads as a real experiment rather than a fixture marker."
+      ]
+    },
+    {
+      "asset": "delete-account-blockers.png",
+      "sha256": "06b0e0dc209d5de6ff1d3ba752125ad35c21fc3e2fd614d290077dd22e8b22ae",
+      "script": "openjii-e2e (separate repo, ~/Projects/openjii-e2e): capture/docs-media.spec.ts, run with playwright.capture.config.ts",
+      "environment": "local e2e harness (seeded Phase 4 fixtures, backend :3120 / web :3100)",
+      "route": "/en-US/platform/account",
+      "captured_at": "2026-08-17T00:00:00+00:00",
+      "viewport": {
+        "width": 1440,
+        "height": 1024
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-08-17T00:00:00+00:00",
+      "reviewer": "p4-5-b-iam-docs",
+      "review_notes": "Re-captured for the copy change, not for jargon - the previous frame rendered the old wording, which said 'You're the only admin of the items below' and named the wrong cause. Now shows all three reworked strings in one frame: the description naming both causes (sole full-control share, or sole owner of the owning organization), the replacement empty-state hint, and the new cross-reference in the organization section saying that promoting another owner clears the resource rows too. Both blocker kinds are present at once, which is what that cross-reference requires. Delete Account is correctly disabled. Nothing was deleted.",
+      "redactions": [
+        "none required - the account, organization and experiment were all created by the capture run; the address is @example.org"
+      ],
+      "live_checks_observed": [
+        "Both blocker sections rendered together before the frame was taken; the resource row offers no transfer candidate because nobody else holds a grant on it, which is the honest state for this scenario and is what makes the empty-state hint visible.",
+        "The disabled 'Transfer admin rights' and 'Delete Account' buttons render at close to full saturation and do not read as disabled. Reported separately; unchanged."
       ]
     }
   ]

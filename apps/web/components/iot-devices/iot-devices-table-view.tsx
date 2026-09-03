@@ -1,15 +1,19 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { BulkRegisterIotDevicesDialog } from "@/components/iot-devices/bulk-register-iot-devices-dialog";
+import {
+  OPEN_DEVICE_BULK_REGISTER_EVENT,
+  OPEN_DEVICE_REGISTER_EVENT,
+} from "@/components/navigation/site-header/platform-header-events";
+import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
-import { Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import type { IotDevice, IotDeviceStatus } from "@repo/api/domains/iot/iot.schema";
+import type { IotDeviceStatus, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { Input } from "@repo/ui/components/input";
-import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import {
   Pagination,
   PaginationContent,
@@ -17,6 +21,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@repo/ui/components/pagination";
+import { SearchInput } from "@repo/ui/components/search-input";
 
 import { useDevicesRegister } from "./devices-register-context";
 import { IotDevicesEmptyState } from "./iot-devices-empty-state";
@@ -25,15 +30,32 @@ import { IotDevicesTable } from "./iot-devices-table";
 const PAGE_SIZE = 25;
 type StatusFilter = "all" | IotDeviceStatus;
 
+// One-of chips in the group monitoring filter's language, not a tab strip:
+// a filter narrows the same list, it does not navigate. Rotating and its kin
+// are transient states, not filter axes, so the chips stay at these four.
+const CHIP_STATUSES = ["all", "active", "pending", "revoked"] as const;
+type ChipStatus = (typeof CHIP_STATUSES)[number];
+
 export function IotDevicesTableView() {
-  const { t } = useTranslation("iot");
+  const { t } = useTranslation(["iot", "common"]);
   const { openRegister } = useDevicesRegister();
-  const { data, isLoading, isError, error } = useIotDevices();
-  const devices = useMemo<IotDevice[]>(() => data ?? [], [data]);
+  const { data, isLoading, isFetching, isError, error } = useIotDevices();
+  const devices = useMemo<IotDeviceWithConnectivity[]>(() => data ?? [], [data]);
 
   const [status, setStatus] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  useEffect(() => {
+    const openBulkRegister = () => setBulkOpen(true);
+    window.addEventListener(OPEN_DEVICE_BULK_REGISTER_EVENT, openBulkRegister);
+    window.addEventListener(OPEN_DEVICE_REGISTER_EVENT, openRegister);
+    return () => {
+      window.removeEventListener(OPEN_DEVICE_BULK_REGISTER_EVENT, openBulkRegister);
+      window.removeEventListener(OPEN_DEVICE_REGISTER_EVENT, openRegister);
+    };
+  }, [openRegister]);
 
   const counts = useMemo(
     () => ({
@@ -63,8 +85,8 @@ export function IotDevicesTableView() {
   const currentPage = Math.min(page, totalPages);
   const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const changeStatus = (value: string) => {
-    setStatus(value as StatusFilter);
+  const changeStatus = (value: StatusFilter) => {
+    setStatus(value);
     setPage(1);
   };
   const changeSearch = (value: string) => {
@@ -77,84 +99,99 @@ export function IotDevicesTableView() {
     setPage(1);
   };
 
+  function renderStatusChip(chipStatus: ChipStatus) {
+    const isActive = status === chipStatus;
+    const label =
+      chipStatus === "all" ? t("iot.devices.tabs.all") : t(`iot.devices.status.${chipStatus}`);
+
+    return (
+      <Button
+        key={chipStatus}
+        size="sm"
+        variant={isActive ? "default" : "outline"}
+        className="h-8"
+        onClick={() => {
+          changeStatus(chipStatus);
+        }}
+      >
+        {label}
+        <span className="ml-1.5 tabular-nums opacity-70">{counts[chipStatus]}</span>
+      </Button>
+    );
+  }
+
   if (isError) {
     return <ErrorDisplay error={error} title={t("iot.devices.loadError")} />;
   }
 
-  if (!isLoading && devices.length === 0) {
-    return <IotDevicesEmptyState onRegister={openRegister} />;
+  if (!isLoading && devices.length === 0 && search.trim() === "" && status === "all") {
+    return (
+      <>
+        <IotDevicesEmptyState onRegister={openRegister} />
+        <BulkRegisterIotDevicesDialog open={bulkOpen} onOpenChange={setBulkOpen} />
+      </>
+    );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <NavTabs value={status} onValueChange={changeStatus}>
-          <NavTabsList>
-            <NavTabsTrigger value="all" count={counts.all}>
-              {t("iot.devices.tabs.all")}
-            </NavTabsTrigger>
-            <NavTabsTrigger value="active" count={counts.active}>
-              {t("iot.devices.status.active")}
-            </NavTabsTrigger>
-            <NavTabsTrigger value="pending" count={counts.pending}>
-              {t("iot.devices.status.pending")}
-            </NavTabsTrigger>
-            <NavTabsTrigger value="revoked" count={counts.revoked}>
-              {t("iot.devices.status.revoked")}
-            </NavTabsTrigger>
-          </NavTabsList>
-        </NavTabs>
-        <div className="relative w-full md:w-[280px]">
-          <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-          <Input
+      <OverviewToolbar
+        search={
+          <SearchInput
             value={search}
-            onChange={(e) => changeSearch(e.target.value)}
+            onChange={changeSearch}
+            isLoading={search.trim() !== "" && isFetching}
             placeholder={t("iot.devices.searchPlaceholder")}
-            className="pl-9"
+            clearLabel={t("common.clear")}
+            loadingLabel={t("common.loading")}
+            className="w-full md:w-[280px]"
           />
-        </div>
-      </div>
+        }
+        filters={<>{CHIP_STATUSES.map(renderStatusChip)}</>}
+      />
 
       {!isLoading && filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#CDD5DB] p-10 text-center text-sm text-[#68737B]">
-          <p className="font-medium text-[#011111]">{t("iot.devices.zeroResults.title")}</p>
-          <p className="mt-1">{t("iot.devices.zeroResults.description")}</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
-            {t("iot.devices.zeroResults.clear")}
-          </Button>
-        </div>
+        <EmptyState
+          title={t("iot.devices.zeroResults.title")}
+          description={t("iot.devices.zeroResults.description")}
+          action={
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              {t("iot.devices.zeroResults.clear")}
+            </Button>
+          }
+        />
       ) : (
         <>
           <IotDevicesTable devices={pageRows} isLoading={isLoading} />
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-xs">
-                {t("iot.devices.pageOf", { page: currentPage, total: totalPages })}
-              </span>
-              <Pagination className="m-0 w-auto">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      size="sm"
-                      onClick={() => setPage(Math.max(1, currentPage - 1))}
-                      aria-disabled={currentPage <= 1}
-                      className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationNext
-                      size="sm"
-                      onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-                      aria-disabled={currentPage >= totalPages}
-                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-xs">
+              {t("iot.devices.pageOf", { page: currentPage, total: totalPages })}
+            </span>
+            <Pagination className="m-0 w-auto">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    size="sm"
+                    onClick={() => setPage(Math.max(1, currentPage - 1))}
+                    aria-disabled={currentPage <= 1}
+                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    size="sm"
+                    onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                    aria-disabled={currentPage >= totalPages}
+                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </>
       )}
+
+      <BulkRegisterIotDevicesDialog open={bulkOpen} onOpenChange={setBulkOpen} />
     </div>
   );
 }

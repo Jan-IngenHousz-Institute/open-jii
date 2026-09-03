@@ -1,8 +1,10 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
-import { ExperimentFilter, ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import type { ResourceScope } from "@repo/api/shared/listing";
 import {
+  asc,
   desc,
   eq,
   and,
@@ -28,13 +30,24 @@ import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
-import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
+import {
+  crossTableBonus,
+  escapeLike,
+  ftsMatch,
+  ftsRank,
+  searchScore,
+} from "../../../common/utils/fts";
+import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedAvatarUrl,
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import {
+  accessibleResourceCondition,
+  relatedResourceCondition,
+  resourceTierExpression,
+} from "../../../common/utils/resource-access-scope";
 import { userIsSelectableGrantee } from "../../../sharing/core/grantee-selectability";
 import {
   findOwningOrgOwnerIds,
@@ -46,6 +59,9 @@ import {
   UpdateExperimentDto,
   ExperimentDto,
 } from "../models/experiment.model";
+
+/** A listing row plus its relevance score, which global search merges on across types. */
+export type ExperimentSearchRow = ExperimentDto & { score: number };
 
 /**
  * Contributors plus the experiment's anonymization setting, so no caller can publish
@@ -74,7 +90,7 @@ export class ExperimentRepository {
 
   /**
    * Insert, seed creator control, and grant the picked collaborators in one
-   * transaction — a failure anywhere leaves no experiment at all. An unselectable
+   * transaction; a failure anywhere leaves no experiment at all. An unselectable
    * `collaboratorUserIds` entry fails the whole create with a 400.
    */
   async create(
@@ -109,7 +125,7 @@ export class ExperimentRepository {
   /**
    * Direct `viewer` grants for collaborators picked at create time. Grantees are
    * validated first: `resource_grants` has no FK on `grantee_id`, so an unchecked
-   * write would store a row for a uuid naming nobody. Non-destructive — an existing
+   * write would store a row for a uuid naming nobody. Non-destructive: an existing
    * grant is left alone, so it never lowers access and needs no staffing guard.
    */
   private async grantCollaborators(
@@ -167,7 +183,7 @@ export class ExperimentRepository {
           createdBy: experiments.createdBy,
           userId: resourceGrants.granteeId,
           // Whether the profile join matched. The name columns below can't answer
-          // that — they fall back to "Unknown"/"User" for a NULL row.
+          // that; they fall back to "Unknown"/"User" for a NULL row.
           profileUserId: profiles.userId,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
@@ -238,13 +254,22 @@ export class ExperimentRepository {
     });
   }
 
-  async findAll(
+  /**
+   * Shared shape behind the array and paginated listings, so both apply identical
+   * scoping, ranking and ordering and the count matches the rows exactly.
+   */
+  private buildListing(
     userId: string,
-    filter?: ExperimentFilter,
+    scope?: ResourceScope,
     status?: ExperimentStatus,
     search?: string,
-    limit?: number,
-  ): Promise<Result<ExperimentDto[]>> {
+    options?: {
+      organizationId?: string;
+      includeArchived?: boolean;
+    },
+  ) {
+    const { organizationId, includeArchived = false } = options ?? {};
+
     const experimentFields = {
       id: experiments.id,
       name: experiments.name,
@@ -259,34 +284,29 @@ export class ExperimentRepository {
       createdAt: experiments.createdAt,
       createdBy: experiments.createdBy,
       updatedAt: experiments.updatedAt,
+      ownerFirstName: getAnonymizedFirstName(),
+      ownerLastName: getAnonymizedLastName(),
+      organizationName: owningOrganizationNameSql("experiments"),
+      // Direct collaborator grants only; org/team reach is unbounded and not a count.
+      membersCount: sql<number>`(select count(*)::int from ${resourceGrants}
+        where ${resourceGrants.resourceType} = 'experiment'
+        and ${resourceGrants.resourceId} = ${experiments.id}
+        and ${resourceGrants.granteeType} = 'user')`,
     };
 
-    return tryCatch(async () => {
+    {
       const conditions: (SQL | undefined)[] = [];
 
-      // Always exclude archived experiments unless explicitly requested
-      if (status !== "archived") {
+      // Archived rows are hidden unless asked for, either by filtering to them or by
+      // opting in: a listing is a place to work, and archived means finished.
+      if (!includeArchived && status !== "archived") {
         conditions.push(ne(experiments.status, "archived"));
       }
 
-      const userGrantExists = exists(
-        this.database
-          .select()
-          .from(resourceGrants)
-          .where(
-            and(
-              eq(resourceGrants.resourceType, "experiment"),
-              eq(resourceGrants.resourceId, experiments.id),
-              eq(resourceGrants.granteeType, "user"),
-              eq(resourceGrants.granteeId, userId),
-            ),
-          ),
-      );
-
-      // Unconditional, "member" included: a view may narrow what the caller sees but
+      // Unconditional, `related` included: a view may narrow what the caller sees but
       // never widen it. Authorship is not an access path, so a creator since removed
       // from the owning org must not get the body back through a listing.
-      const scope = accessibleResourceCondition({
+      const accessScope = accessibleResourceCondition({
         database: this.database,
         resourceType: "experiment",
         resourceIdColumn: experiments.id,
@@ -294,14 +314,28 @@ export class ExperimentRepository {
         visibilityColumn: experiments.visibility,
         userId,
       });
-      if (scope) {
-        conditions.push(scope);
+      if (accessScope) {
+        conditions.push(accessScope);
       }
 
-      if (filter === "member") {
-        // "Mine": made or explicitly given, narrowed out of what I can already see.
-        // Authorship counts because a creator holds no grant on their own work.
-        conditions.push(or(userGrantExists, eq(experiments.createdBy, userId)));
+      // Narrow to one owning organization (the org profile's resources showcase).
+      // Applied on top of the access scope, never instead of it: an org's page shows
+      // each viewer exactly the rows they could already reach.
+      if (organizationId) {
+        conditions.push(eq(experiments.organizationId, organizationId));
+      }
+
+      if (scope === "related") {
+        // Every personal path counts (grants, org/team access, authorship); only
+        // purely-public rows drop out. No caller: the scope admits nothing.
+        const related = relatedResourceCondition({
+          database: this.database,
+          resourceType: "experiment",
+          resourceIdColumn: experiments.id,
+          organizationIdColumn: experiments.organizationId,
+          userId,
+        });
+        conditions.push(userId ? or(related, eq(experiments.createdBy, userId)) : sql`false`);
       }
 
       if (status) {
@@ -364,27 +398,115 @@ export class ExperimentRepository {
         );
       }
 
+      const tier = resourceTierExpression({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        createdByColumn: experiments.createdBy,
+        userId,
+      });
+
       // Relevance: vector/name rank dominates; cross-table matches add a small capped bonus, so a
-      // name match always outranks one matched only by a related field.
-      const rank = sql<number>`(${ftsRank(experiments.searchVector, experiments.name, search ?? "")} + 0.05 * (CASE WHEN ${creatorMatch(search ?? "")} THEN 1 ELSE 0 END) + 0.05 * (CASE WHEN (${memberMatch(search ?? "")} OR ${locationMatch(search ?? "")}) THEN 1 ELSE 0 END))`;
+      // name match always outranks one matched only by a related field. Browsing has no term to
+      // rank against, so it selects a constant rather than paying for empty-term probes per row.
+      const score = search
+        ? searchScore(
+            sql<number>`(${ftsRank(experiments.searchVector, experiments.name, search)} + ${crossTableBonus(
+              creatorMatch(search),
+              sql`(${memberMatch(search)} OR ${locationMatch(search)})`,
+            )})`,
+            tier,
+          )
+        : sql<number>`0::int`;
+
+      // Browse keeps tiers strict and recency within them; search folds tier into one
+      // score so a strong public match can still beat a weak owned one. Both end on
+      // `id` so paging never drops or repeats a row on ties.
+      const orderBy = search
+        ? [desc(score), asc(experiments.id)]
+        : [desc(tier), desc(experiments.updatedAt), asc(experiments.id)];
+
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+      return { where, orderBy, score, fields: { ...experimentFields, score } };
+    }
+  }
+
+  async findAll(
+    userId: string,
+    scope?: ResourceScope,
+    status?: ExperimentStatus,
+    search?: string,
+    limit?: number,
+    options?: {
+      organizationId?: string;
+      includeArchived?: boolean;
+    },
+  ): Promise<Result<ExperimentSearchRow[]>> {
+    return tryCatch(async () => {
+      const { where, orderBy, fields } = this.buildListing(userId, scope, status, search, options);
 
       let query = this.database
-        .select(experimentFields)
+        .select(fields)
         .from(experiments)
         .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
         .$dynamic();
 
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+      if (where) {
+        query = query.where(where);
       }
-
-      query = query.orderBy(search ? desc(rank) : desc(experiments.updatedAt));
+      query = query.orderBy(...orderBy);
 
       if (limit !== undefined) {
         query = query.limit(limit);
       }
 
       return query;
+    });
+  }
+
+  /** One page plus the total, counted separately so an out-of-range page still reports it. */
+  async findPage(
+    userId: string,
+    page: number,
+    pageSize: number,
+    scope?: ResourceScope,
+    status?: ExperimentStatus,
+    search?: string,
+    options?: {
+      organizationId?: string;
+      includeArchived?: boolean;
+    },
+  ): Promise<Result<{ items: ExperimentSearchRow[]; totalCount: number }>> {
+    return tryCatch(async () => {
+      const { where, orderBy, fields } = this.buildListing(userId, scope, status, search, options);
+
+      let rows = this.database
+        .select(fields)
+        .from(experiments)
+        .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
+        .$dynamic();
+      let total = this.database
+        .select({ count: sql<number>`count(*)::int` })
+        .from(experiments)
+        .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
+        .$dynamic();
+
+      if (where) {
+        rows = rows.where(where);
+        total = total.where(where);
+      }
+
+      const [items, [{ count }]] = await Promise.all([
+        rows
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset((page - 1) * pageSize),
+        total,
+      ]);
+
+      return { items, totalCount: count };
     });
   }
 
@@ -441,7 +563,7 @@ export class ExperimentRepository {
       await this.database.transaction(async (tx) => {
         await lockStaffedResource(tx, "experiment", id, "update");
 
-        // Referential only — the roster carries no access, but the FK still blocks.
+        // Referential only: the roster carries no access, but the FK still blocks.
         await tx.delete(experimentMembers).where(eq(experimentMembers.experimentId, id));
 
         await deleteResourceGrants(tx, "experiment", id);
@@ -480,6 +602,7 @@ export class ExperimentRepository {
         updatedAt: experiments.updatedAt,
         ownerFirstName: getAnonymizedFirstName(),
         ownerLastName: getAnonymizedLastName(),
+        organizationName: owningOrganizationNameSql("experiments"),
       };
 
       const result = await this.database

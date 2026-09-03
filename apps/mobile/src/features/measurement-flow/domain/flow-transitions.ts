@@ -9,7 +9,18 @@ export type ScanResult = Record<string, unknown>;
 
 /** One device's scan output; device is absent for legacy single-device results. */
 export interface ScanResultEntry {
-  device?: { id: string; name: string };
+  device?: {
+    id: string;
+    name: string;
+    family?: string;
+    firmwareVersion?: string;
+    /**
+     * The sensor's hardware address as seen by this phone, set only when the
+     * transport gives a real one (Bluetooth MAC). USB device ids are transient
+     * across replugs, so they are not an identity and are left out.
+     */
+    address?: string;
+  };
   result: ScanResult;
   /** Dispatch rounds: the protocol this device actually ran (per-device upload). */
   protocolId?: string;
@@ -43,6 +54,13 @@ export interface FlowState {
   // Immutable workbook version whose protocol/macro snapshots this run uses.
   // Uploaded with measurements so cloud macro execution resolves the same code.
   workbookVersionId?: string;
+  // The workbook that version belongs to. Uploaded alongside so a stored
+  // measurement can re-run its macro against the producing workbook even if
+  // the experiment is later detached or re-attached elsewhere.
+  workbookId?: string;
+  // One stable UUID for the complete workbook attempt. Every measurement in
+  // the attempt carries it, including sequential single-device nodes.
+  workbookRunId?: string;
   currentStep: number;
   flowNodes: FlowNode[];
   currentFlowStep: number;
@@ -79,6 +97,8 @@ export const initialFlowState: FlowState = {
   experimentId: undefined,
   experimentLabel: undefined,
   workbookVersionId: undefined,
+  workbookId: undefined,
+  workbookRunId: undefined,
   currentStep: 0,
   flowNodes: [],
   currentFlowStep: 0,
@@ -123,20 +143,6 @@ export function flowMode(state: FlowState): FlowMode {
 
 function firstMeasurementStep(flowNodes: FlowNode[]): number {
   return flowNodes.findIndex((n) => n.type === "measurement");
-}
-
-// The flow's protocol comes from its measurement node (the flow model
-// assumes at most one). Derived from the persisted flowNodes, so it
-// survives pause/resume and can never go stale across flows.
-export function flowProtocolId(flowNodes: FlowNode[]): string | undefined {
-  // A command cell also rides a "measurement" node but carries no protocolId, so
-  // match the first node that actually has one; otherwise a leading command node
-  // would shadow the real protocol and the upload would fail with "Missing protocol id".
-  const node = flowNodes.find(
-    (n) =>
-      n.type === "measurement" && (n.content as { protocolId?: string } | undefined)?.protocolId,
-  );
-  return (node?.content as { protocolId?: string } | undefined)?.protocolId;
 }
 
 export function nextStepState(state: FlowState): Partial<FlowState> {
@@ -203,6 +209,8 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
       experimentId: undefined,
       experimentLabel: undefined,
       workbookVersionId: undefined,
+      workbookId: undefined,
+      workbookRunId: undefined,
       currentStep: 0,
       flowNodes: [],
       currentFlowStep: 0,
@@ -223,20 +231,6 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
 
 export function resetFlowState(): Partial<FlowState> {
   return { ...initialFlowState };
-}
-
-export function startNewIterationState(state: FlowState): Partial<FlowState> {
-  return {
-    currentFlowStep: 0,
-    iterationCount: state.iterationCount + 1,
-    isQuestionsSubmitPending: false,
-    scanResult: undefined,
-    scanResults: undefined,
-    producerCellId: undefined,
-    cellOutputs: {},
-    isFromOverview: false,
-    ...clearedBranchIteration,
-  };
 }
 
 export function retryIterationState(): Partial<FlowState> {

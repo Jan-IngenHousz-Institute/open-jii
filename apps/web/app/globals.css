@@ -2,84 +2,221 @@
 @import "tw-animate-css";
 @config "../tailwind.config.ts";
 
+/* Every colour, font and radius in apps/web is declared here and surfaced as a
+ * Tailwind utility by `@theme inline` below. Nothing else defines one.
+ *
+ * A theme swap is a values edit in this file — no component changes, no rebuild.
+ * Replace the contract from a tweakcn export in BOTH blocks, which are authored
+ * independently, then:
+ *
+ *   keep       --status-*, --node-*, --brand-*, --canvas-*  (ours; no theme has them)
+ *   re-derive  --canvas-*                                  (relative to the theme)
+ *   re-apply   --shadow-2xs/xs/sm: none, --font-* as var(), --radius from light
+ *   check      --input reads as a field edge, --accent ≠ any hover foreground  
+ */
+
 /* Leaflet CSS for map components */
 /* @import "leaflet/dist/leaflet.css"; */
 
-/* Force remove border and shadow from React Flow nodes (strongest override) */
-.react-flow__node,
-.react-flow__node-default {
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
 :root {
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(240 10% 3.9%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(240 10% 3.9%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(240 10% 3.9%);
-  --primary: hsl(180 100% 18.4%);
-  --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(180 36% 90%);
-  --secondary-foreground: hsl(180 91% 17%);
-  --tertiary: hsl(110 29% 55%);
-  --tertiary-foreground: hsl(0 0% 100%);
-  --muted: hsl(240 4.8% 95.9%);
-  --muted-foreground: hsl(240 3.8% 46.1%);
-  --accent: hsl(206 77% 82%);
-  --accent-foreground: hsl(0 0% 0%);
-  --highlight: hsl(56 100% 75%);
-  --highlight-foreground: hsl(0 0% 0%);
-  --destructive: hsl(0 89% 53.73%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(240 5.9% 90%);
-  --input: hsl(240 5.9% 90%);
-  --ring: hsl(180 100% 18.4%);
-  --radius: 0.5rem;
-  --sidebar-background: hsl(180 100% 9%);
-  --sidebar-foreground: hsl(0 0% 100%);
-  --sidebar-primary: hsl(136 74% 58%);
-  --sidebar-primary-foreground: hsl(0 0% 0%);
-  --sidebar-accent: hsl(180 45% 18%);
-  --sidebar-accent-foreground: hsl(0 0% 100%);
-  --sidebar-border: hsl(180 30% 25%);
-  --sidebar-ring: hsl(136 74% 58%);
+  --background: oklch(0.9888 0.0055 195);
+  --foreground: oklch(0.245 0.03 195);
+  --card: oklch(0.9985 0.0015 195);
+  --card-foreground: oklch(0.245 0.03 195);
+  --popover: oklch(0.9985 0.0015 195);
+  --popover-foreground: oklch(0.245 0.03 195);
+  --primary: oklch(0.4363 0.0745 194.7689);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.03 196.7158);
+  --secondary-foreground: oklch(0.3938 0.0672 194.7689);
+  --muted: oklch(0.96 0.01 195);
+  --muted-foreground: oklch(0.53 0.027 195);
+  /* A hover wash changes the fill and leaves the text alone, so
+     --accent-foreground equals --foreground. Re-differentiating them makes a
+     hover read as a state change. */
+  --accent: oklch(0.935 0.018 195);
+  --accent-foreground: oklch(0.245 0.03 195);
+  --destructive: oklch(0.59 0.225 28.0171);
+  --destructive-foreground: oklch(1 0 0);
+  /* --input sits darker than --border so a field announces itself more than a
+     card edge. It is also the Switch off-track and the dark `bg-input/30` wash,
+     so it cannot go arbitrarily dark. */
+  --border: oklch(0.895 0.012 195);
+  --input: oklch(0.835 0.017 195);
+  --ring: oklch(0.4363 0.0745 194.7689);
+  /* Brand hues taken to a lightness that reads as a data mark, not a poster. */
+  --chart-1: oklch(0.4363 0.0745 194.7689);
+  --chart-2: oklch(0.66 0.19 148);
+  --chart-3: oklch(0.63 0.115 240);
+  --chart-4: oklch(0.75 0.14 95);
+  --chart-5: oklch(0.71 0.115 135);
+  /* References, never literals: the sidebar is the card layer stood on end, so a
+     swap carries it for free. Giving one a literal is what previously turned this
+     block into the app's dark-chrome palette; use --brand-chrome-* for that. */
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--card-foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* The public navbar and footer are a deep-teal brand surface in both modes by
+     decision. Declared identically in `:root` and `.dark` so a theme toggle does
+     not move them. #002828 chrome, #FAF8F3 foreground, #FFD32E logo gold,
+     #1C4B4B raised surface and edge. Gold is an accent: interaction colour,
+     active state and focus ring on the chrome, never a large fill or body text.
+     Mirrored verbatim into apps/docs/app/global.css. */
+  --brand-chrome: oklch(0.2507 0.0428 194.77);
+  --brand-chrome-foreground: oklch(0.9793 0.007 88.64);
+  --brand-accent: oklch(0.88 0.1701 92.44);
+  --brand-chrome-accent: oklch(0.3809 0.0506 195.24);
+  --brand-chrome-border: oklch(0.3809 0.0506 195.24);
+
+  /* The workbook / dashboard / visualization canvas, with cells floating on it as
+     cards. Two rules on a swap: stay below --card in both modes, or cells sink
+     into it; and separate the two stops by hue, not lightness, or it reads as a
+     coloured slab rather than a page. */
+  --canvas-from: oklch(0.984 0.013 148);
+  --canvas-to: oklch(0.977 0.01 240);
+  --font-sans: var(--font-inter), Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-serif: Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
+  --radius: 0.4rem;
+  --shadow-color: #15262a;
+  --shadow-opacity: 0.05;
+  --shadow-blur: 4px;
+  --shadow-spread: 0px;
+  --shadow-offset-x: 0px;
+  --shadow-offset-y: 8px;
+  --letter-spacing: 0em;
+  /* Flat at the small end on purpose: cards and inputs define themselves with a
+     border. --shadow-md and up keep their lift, so dialogs still float. */
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow:
+    0px 8px 4px 0px hsl(194.7689 25% 11% / 0.05), 0px 1px 2px -1px hsl(194.7689 25% 11% / 0.05);
+  --shadow-md:
+    0px 8px 4px 0px hsl(194.7689 25% 11% / 0.05), 0px 2px 4px -1px hsl(194.7689 25% 11% / 0.05);
+  --shadow-lg:
+    0px 8px 4px 0px hsl(194.7689 25% 11% / 0.05), 0px 4px 6px -1px hsl(194.7689 25% 11% / 0.05);
+  --shadow-xl:
+    0px 8px 4px 0px hsl(194.7689 25% 11% / 0.05), 0px 8px 10px -1px hsl(194.7689 25% 11% / 0.05);
+  --shadow-2xl: 0px 8px 4px 0px hsl(194.7689 25% 11% / 0.13);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  /* The five original badge fills, unchanged. Foregrounds clear AA on each. */
+  --status-active: oklch(0.9481 0.0688 152.5705);
+  --status-active-foreground: oklch(0.43 0.09 152);
+  --status-stale: oklch(0.9213 0.0687 77.4932);
+  --status-stale-foreground: oklch(0.47 0.085 65);
+  --status-archived: oklch(0.943 0.0093 242.841);
+  --status-archived-foreground: oklch(0.51 0.027 195);
+  --status-published: oklch(0.9452 0.0305 222.8809);
+  --status-published-foreground: oklch(0.45 0.08 226);
+  --status-featured: oklch(0.9723 0.027 196.7158);
+  --status-featured-foreground: oklch(0.4363 0.0745 194.7689);
+
+  /* Identity accents for the six flow-node / workbook-cell types. Not --chart-*:
+     five slots for six categories, and that ramp carries two greens. Hues sit 50
+     degrees apart and are deliberately off the brand hue — telling them apart is
+     the whole job. */
+  --node-instruction: oklch(0.55 0.09 245);
+  --node-question: oklch(0.58 0.095 350);
+  --node-measurement: oklch(0.53 0.09 120);
+  --node-command: oklch(0.55 0.085 195);
+  --node-analysis: oklch(0.55 0.11 300);
+  --node-branch: oklch(0.6 0.1 65);
 }
 
 .dark {
-  --background: hsl(240 10% 3.9%);
-  --foreground: hsl(0 0% 98%);
-  --card: hsl(240 10% 3.9%);
-  --card-foreground: hsl(0 0% 98%);
-  --popover: hsl(240 10% 3.9%);
-  --popover-foreground: hsl(0 0% 98%);
-  --primary: hsl(180 80% 15%);
-  --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(180 37% 21%);
-  --secondary-foreground: hsl(180 35% 86%);
-  --tertiary: hsl(110 29% 40%);
-  --tertiary-foreground: hsl(0 0% 100%);
-  --muted: hsl(240 3.7% 15.9%);
-  --muted-foreground: hsl(240 5% 64.9%);
-  --accent: hsl(206 40% 60%);
-  --accent-foreground: hsl(0 0% 100%);
-  --highlight: hsl(56 70% 65%);
-  --highlight-foreground: hsl(0 0% 0%);
-  --destructive: hsl(0 62.8% 30.6%);
-  --destructive-foreground: hsl(0 85.7% 97.3%);
-  --border: hsl(240 3.7% 15.9%);
-  --input: hsl(240 3.7% 15.9%);
-  --ring: hsl(180 80% 15%);
-  --sidebar-background: hsl(180 100% 9%);
-  --sidebar-foreground: hsl(0 0% 100%);
-  --sidebar-primary: hsl(136 60% 45%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(180 45% 18%);
-  --sidebar-accent-foreground: hsl(0 0% 100%);
-  --sidebar-border: hsl(180 30% 20%);
-  --sidebar-ring: hsl(136 60% 45%);
+  --background: oklch(0.175 0.019 195);
+  --foreground: oklch(0.945 0.006 195);
+  --card: oklch(0.215 0.022 195);
+  --card-foreground: oklch(0.945 0.006 195);
+  --popover: oklch(0.215 0.022 195);
+  --popover-foreground: oklch(0.945 0.006 195);
+  --primary: oklch(0.755 0.115 192);
+  --primary-foreground: oklch(0.16 0.026 195);
+  --secondary: oklch(0.285 0.026 195);
+  --secondary-foreground: oklch(0.945 0.006 195);
+  --muted: oklch(0.255 0.023 195);
+  --muted-foreground: oklch(0.715 0.026 195);
+  /* Same rule as light. */
+  --accent: oklch(0.32 0.026 195);
+  --accent-foreground: oklch(0.945 0.006 195);
+  --destructive: oklch(0.71 0.175 22);
+  --destructive-foreground: oklch(0.175 0.019 195);
+  /* Same rule as light. */
+  --border: oklch(0.34 0.029 195);
+  --input: oklch(0.405 0.033 195);
+  --ring: oklch(0.755 0.115 192);
+  --chart-1: oklch(0.755 0.115 192);
+  --chart-2: oklch(0.79 0.19 148);
+  --chart-3: oklch(0.72 0.11 240);
+  --chart-4: oklch(0.85 0.14 98);
+  --chart-5: oklch(0.78 0.11 135);
+  /* Same references as light, against this block's values. */
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--card-foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Identical to light on purpose; see the note there. */
+  --brand-chrome: oklch(0.2507 0.0428 194.77);
+  --brand-chrome-foreground: oklch(0.9793 0.007 88.64);
+  --brand-accent: oklch(0.88 0.1701 92.44);
+  --brand-chrome-accent: oklch(0.3809 0.0506 195.24);
+  --brand-chrome-border: oklch(0.3809 0.0506 195.24);
+
+  --canvas-from: oklch(0.168 0.016 148);
+  --canvas-to: oklch(0.162 0.013 240);
+  --font-sans: var(--font-inter), Inter, ui-sans-serif, sans-serif, system-ui;
+  --font-serif: Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
+  --radius: 0.4rem;
+  --shadow-color: #000000;
+  --shadow-opacity: 0.4;
+  --shadow-blur: 8px;
+  --shadow-spread: 0px;
+  --shadow-offset-x: 0px;
+  --shadow-offset-y: 8px;
+  --letter-spacing: 0em;
+  --spacing: 0.25rem;
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow: 0px 8px 8px 0px hsl(0 0% 0% / 0.4), 0px 1px 2px -1px hsl(0 0% 0% / 0.4);
+  --shadow-md: 0px 8px 8px 0px hsl(0 0% 0% / 0.4), 0px 2px 4px -1px hsl(0 0% 0% / 0.4);
+  --shadow-lg: 0px 8px 8px 0px hsl(0 0% 0% / 0.4), 0px 4px 6px -1px hsl(0 0% 0% / 0.4);
+  --shadow-xl: 0px 8px 8px 0px hsl(0 0% 0% / 0.4), 0px 8px 10px -1px hsl(0 0% 0% / 0.4);
+  --shadow-2xl: 0px 8px 8px 0px hsl(0 0% 0% / 1);
+
+  --status-active: oklch(0.31 0.055 152);
+  --status-active-foreground: oklch(0.85 0.11 152);
+  --status-stale: oklch(0.32 0.052 70);
+  --status-stale-foreground: oklch(0.865 0.08 80);
+  --status-archived: oklch(0.255 0.023 195);
+  --status-archived-foreground: oklch(0.715 0.026 195);
+  --status-published: oklch(0.305 0.045 226);
+  --status-published-foreground: oklch(0.84 0.07 224);
+  --status-featured: oklch(0.308 0.048 196);
+  --status-featured-foreground: oklch(0.85 0.075 194);
+
+  /* Same hues, lifted so they carry on a dark card. */
+  --node-instruction: oklch(0.74 0.09 245);
+  --node-question: oklch(0.76 0.09 350);
+  --node-measurement: oklch(0.74 0.1 120);
+  --node-command: oklch(0.74 0.08 195);
+  --node-analysis: oklch(0.74 0.11 300);
+  --node-branch: oklch(0.78 0.1 65);
 }
 
 @theme inline {
@@ -93,20 +230,21 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-tertiary: var(--tertiary);
-  --color-tertiary-foreground: var(--tertiary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-highlight: var(--highlight);
-  --color-highlight-foreground: var(--highlight-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-sidebar-background: var(--sidebar-background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
@@ -114,10 +252,88 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-brand-chrome: var(--brand-chrome);
+  --color-brand-chrome-foreground: var(--brand-chrome-foreground);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-chrome-accent: var(--brand-chrome-accent);
+  --color-brand-chrome-border: var(--brand-chrome-border);
+
+  --color-status-active: var(--status-active);
+  --color-status-active-foreground: var(--status-active-foreground);
+  --color-status-stale: var(--status-stale);
+  --color-status-stale-foreground: var(--status-stale-foreground);
+  --color-status-archived: var(--status-archived);
+  --color-status-archived-foreground: var(--status-archived-foreground);
+  --color-status-published: var(--status-published);
+  --color-status-published-foreground: var(--status-published-foreground);
+  --color-status-featured: var(--status-featured);
+  --color-status-featured-foreground: var(--status-featured-foreground);
+
+  --color-node-instruction: var(--node-instruction);
+  --color-node-question: var(--node-question);
+  --color-node-measurement: var(--node-measurement);
+  --color-node-command: var(--node-command);
+  --color-node-analysis: var(--node-analysis);
+  --color-node-branch: var(--node-branch);
+
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+
+  --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
+  --tracking-tight: calc(var(--tracking-normal) - 0.025em);
+  --tracking-normal: var(--tracking-normal);
+  --tracking-wide: calc(var(--tracking-normal) + 0.025em);
+  --tracking-wider: calc(var(--tracking-normal) + 0.05em);
+  --tracking-widest: calc(var(--tracking-normal) + 0.1em);
+}
+
+/* Every `Collapsible` expands and collapses with this. `tw-animate-css` ships a
+   `collapsible-*` pair, but it slides height alone; the fade is what stops rows
+   appearing fully drawn inside a zero-height box. */
+@theme {
+  --animate-collapse-down: collapse-down 150ms cubic-bezier(0.45, 0, 0.55, 1);
+  --animate-collapse-up: collapse-up 150ms cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+@keyframes collapse-down {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
+
+@keyframes collapse-up {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+/* A utility, not a --color-* mapping: a gradient has no single value. */
+@utility bg-canvas {
+  background-image: linear-gradient(270.03deg, var(--canvas-from) 0%, var(--canvas-to) 100%);
 }
 
 @layer base {
@@ -126,5 +342,12 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    letter-spacing: var(--tracking-normal);
+  }
+  /* Tailwind v4 preflight dropped the v3 `button { cursor: pointer }` rule. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 }

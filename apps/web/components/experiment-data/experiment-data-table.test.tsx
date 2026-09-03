@@ -1,3 +1,4 @@
+import type { DataTableFeatures } from "@/components/data-table/data-table-features";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { describe, it, expect, vi } from "vitest";
@@ -25,15 +26,15 @@ vi.mock("./table-chart/experiment-data-table-chart", () => ({
   ExperimentDataTableChart: () => <div>Chart</div>,
 }));
 
-vi.mock("~/components/experiment-data/experiment-data-utils", () => ({
-  ExperimentTableHeader: ({ headerGroups }: { headerGroups: unknown[] }) => (
+vi.mock("~/components/data-table/data-table-utils", () => ({
+  DataTableHeader: ({ headerGroups }: { headerGroups: unknown[] }) => (
     <thead>
       <tr>
         <th>Header ({headerGroups.length} groups)</th>
       </tr>
     </thead>
   ),
-  ExperimentDataRows: ({ rows }: { rows: unknown[] }) => (
+  DataTableRows: ({ rows }: { rows: unknown[] }) => (
     <tr>
       <td>{rows.length} data rows</td>
     </tr>
@@ -46,7 +47,7 @@ vi.mock("~/components/experiment-data/experiment-data-utils", () => ({
   formatValue: (v: unknown) => v,
 }));
 
-const mockColumns: ColumnDef<Record<string, unknown>>[] = [
+const mockColumns: ColumnDef<DataTableFeatures, Record<string, unknown>>[] = [
   { id: "name", accessorKey: "name", header: "Name" },
   { id: "value", accessorKey: "value", header: "Value" },
 ];
@@ -109,7 +110,7 @@ describe("ExperimentDataTable", () => {
     setupHook();
     render(<ExperimentDataTable {...defaultProps} />);
     expect(screen.getByText("Test Table")).toBeInTheDocument();
-    expect(screen.getByText(/experimentDataTable.totalRows.*50/)).toBeInTheDocument();
+    expect(screen.getByText(/dataTable.totalRows.*50/)).toBeInTheDocument();
     expect(screen.getByText("2 data rows")).toBeInTheDocument();
   });
 
@@ -131,10 +132,10 @@ describe("ExperimentDataTable", () => {
     render(<ExperimentDataTable {...defaultProps} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByTitle("experimentDataTable.next"));
+    await user.click(screen.getByTitle("dataTable.next"));
     expect(mockUseExperimentData).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
 
-    await user.click(screen.getByTitle("experimentDataTable.previous"));
+    await user.click(screen.getByTitle("dataTable.previous"));
     expect(mockUseExperimentData).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }));
   });
 
@@ -142,11 +143,8 @@ describe("ExperimentDataTable", () => {
     setupHook({ tableMetadata: { ...mockTableMetadata, totalPages: 1, totalRows: 5 } });
     render(<ExperimentDataTable {...defaultProps} />);
 
-    expect(screen.getByTitle("experimentDataTable.previous")).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-    expect(screen.getByTitle("experimentDataTable.next")).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByTitle("dataTable.previous")).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByTitle("dataTable.next")).toHaveAttribute("aria-disabled", "true");
   });
 
   it("navigates pages via Arrow keys", async () => {
@@ -174,8 +172,6 @@ describe("ExperimentDataTable", () => {
   it("displays page info text", () => {
     setupHook();
     render(<ExperimentDataTable {...defaultProps} />);
-    expect(
-      screen.getByText(/experimentDataTable.page.*1.*experimentDataTable.pageOf.*5/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/dataTable.page.*1.*dataTable.pageOf.*5/)).toBeInTheDocument();
   });
 });

@@ -102,6 +102,34 @@ const fetchDeviceSummary = cache(async (deviceId: string) => {
   }
 });
 
+const fetchOrganizationSummary = cache(async (id: string) => {
+  try {
+    const client = await createServerOrpcClient();
+    return await client.organizations.getOrganization({ id });
+  } catch {
+    return null;
+  }
+});
+
+const fetchOrganizationTeamName = cache(async (organizationId: string, teamId: string) => {
+  try {
+    const client = await createServerOrpcClient();
+    const teams = await client.organizations.listOrganizationTeams({ id: organizationId });
+    return teams.find((team) => team.id === teamId)?.name ?? null;
+  } catch {
+    return null;
+  }
+});
+
+const fetchDeviceGroupSummary = cache(async (groupId: string) => {
+  try {
+    const client = await createServerOrpcClient();
+    return await client.iot.getIotDeviceGroup({ groupId });
+  } catch {
+    return null;
+  }
+});
+
 // --- experiment overview + sections -----------------------------------------
 
 /** Localized experiment section labels, mapped to `t()` keys. */
@@ -300,6 +328,52 @@ export async function buildWorkbookMetadata({
   return { title: joinTitleParts([sectionLabel, lead]) };
 }
 
+// --- organizations ----------------------------------------------------------
+
+/** Localized organization tab labels, mapped to `t()` keys (the strip's own copy). */
+type OrganizationSection = "overview" | "members" | "teams" | "settings";
+
+const ORGANIZATION_SECTION_KEY: Record<Exclude<OrganizationSection, "overview">, string> = {
+  members: "common:organizations.tabs.members",
+  teams: "common:organizations.tabs.teams",
+  settings: "common:organizations.tabs.settings",
+};
+
+/**
+ * Title for an organization overview or section route.
+ *
+ * - overview: `{name}` (or the generic `Organization` noun when inaccessible)
+ * - section: `{Section} · {name}` (or `{Section}` alone when inaccessible)
+ *
+ * A private organization answers 404 for a non-member, so an inaccessible one
+ * yields no name — which is the point: the title must not disclose that an
+ * organization with that id exists.
+ */
+export async function buildOrganizationMetadata({
+  locale,
+  id,
+  section = "overview",
+  teamId,
+}: {
+  locale: string;
+  id: string;
+  section?: OrganizationSection;
+  /** A team detail route: its own name leads instead of the section label. */
+  teamId?: string;
+}): Promise<Metadata> {
+  const { t } = await initTranslations({ locale, namespaces: ["common"] });
+  const organization = await fetchOrganizationSummary(id);
+
+  const teamName = teamId ? nonEmpty(await fetchOrganizationTeamName(id, teamId)) : null;
+  const sectionLabel =
+    teamName ?? (section === "overview" ? null : t(ORGANIZATION_SECTION_KEY[section]));
+  const lead =
+    nonEmpty(organization?.name) ??
+    (section === "overview" && !teamName ? t("common:organizations.organization") : null);
+
+  return { title: joinTitleParts([sectionLabel, lead]) };
+}
+
 // --- devices ----------------------------------------------------------------
 
 type DeviceSummary = NonNullable<Awaited<ReturnType<typeof fetchDeviceSummary>>>;
@@ -309,6 +383,7 @@ type DeviceSection =
   | "overview"
   | "collaborators"
   | "credentials"
+  | "firmware"
   | "lineage"
   | "monitoring"
   | "onboarding";
@@ -316,6 +391,7 @@ type DeviceSection =
 const DEVICE_SECTION_KEY: Record<Exclude<DeviceSection, "overview">, string> = {
   collaborators: "iot:iot.devices.detailTabs.collaborators",
   credentials: "iot:iot.devices.detailTabs.credentials",
+  firmware: "iot:iot.devices.detailTabs.firmware",
   lineage: "iot:iot.devices.detailTabs.lineage",
   monitoring: "iot:iot.devices.detailTabs.monitoring",
   onboarding: "iot:iot.devices.detailTabs.onboarding",
@@ -360,6 +436,43 @@ export async function buildDeviceMetadata({
   // own label so an inaccessible device never surfaces as a bare marketing title
   // and never leaks a name.
   const lead = identity ?? (section === "overview" ? t("iot:iot.protocolRunner.device") : null);
+
+  return { title: joinTitleParts([sectionLabel, lead]) };
+}
+
+// --- device groups ----------------------------------------------------------
+
+/** Group tab labels reuse the device strip's copy (the strips are twins). */
+type DeviceGroupSection =
+  | "overview"
+  | "collaborators"
+  | "credentials"
+  | "monitoring"
+  | "onboarding";
+
+const DEVICE_GROUP_SECTION_KEY: Record<Exclude<DeviceGroupSection, "overview">, string> = {
+  collaborators: "iot:iot.devices.detailTabs.collaborators",
+  credentials: "iot:iot.devices.detailTabs.credentials",
+  monitoring: "iot:iot.devices.detailTabs.monitoring",
+  onboarding: "iot:iot.devices.detailTabs.onboarding",
+};
+
+/** Title for a device-group overview or section route; see {@link buildDeviceMetadata}. */
+export async function buildDeviceGroupMetadata({
+  locale,
+  groupId,
+  section = "overview",
+}: {
+  locale: string;
+  groupId: string;
+  section?: DeviceGroupSection;
+}): Promise<Metadata> {
+  const { t } = await initTranslations({ locale, namespaces: ["iot"] });
+  const group = await fetchDeviceGroupSummary(groupId);
+
+  const sectionLabel = section === "overview" ? null : t(DEVICE_GROUP_SECTION_KEY[section]);
+  const lead =
+    nonEmpty(group?.name) ?? (section === "overview" ? t("iot:iot.groups.pageTitle") : null);
 
   return { title: joinTitleParts([sectionLabel, lead]) };
 }

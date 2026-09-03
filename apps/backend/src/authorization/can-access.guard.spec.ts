@@ -93,7 +93,11 @@ describe("CanAccessGuard", () => {
     const userId = crypto.randomUUID();
     const resourceId = crypto.randomUUID();
     setMetadata({ resource: "experiment", action: "manage" });
-    vi.mocked(authorizationService.can).mockResolvedValue({ allow: true, reason: "org-role" });
+    vi.mocked(authorizationService.can).mockResolvedValue({
+      allow: true,
+      reason: "org-role",
+      organizationId: null,
+    });
 
     await expect(
       guard.canActivate(createContext({ userId, params: { id: resourceId } })),
@@ -109,7 +113,11 @@ describe("CanAccessGuard", () => {
     const userId = crypto.randomUUID();
     const resourceId = crypto.randomUUID();
     setMetadata({ resource: "experiment", action: "update", param: "experimentId" });
-    vi.mocked(authorizationService.can).mockResolvedValue({ allow: true, reason: "org-role" });
+    vi.mocked(authorizationService.can).mockResolvedValue({
+      allow: true,
+      reason: "org-role",
+      organizationId: null,
+    });
 
     await expect(
       guard.canActivate(createContext({ userId, params: { experimentId: resourceId } })),
@@ -126,7 +134,11 @@ describe("CanAccessGuard", () => {
 
     beforeEach(() => {
       setMetadata({ resource: "experiment", action: "read" });
-      vi.mocked(authorizationService.can).mockResolvedValue({ allow: true, reason: "org-role" });
+      vi.mocked(authorizationService.can).mockResolvedValue({
+        allow: true,
+        reason: "org-role",
+        organizationId: null,
+      });
     });
 
     it("rejects a query param that replaces the authorized path id", async () => {
@@ -223,7 +235,11 @@ describe("CanAccessGuard", () => {
 
   it("maps a missing resource decision to not-found", async () => {
     setMetadata({ resource: "experiment", action: "read" });
-    vi.mocked(authorizationService.can).mockResolvedValue({ allow: false, reason: "not-found" });
+    vi.mocked(authorizationService.can).mockResolvedValue({
+      allow: false,
+      reason: "not-found",
+      organizationId: null,
+    });
 
     await expect(
       guard.canActivate(
@@ -234,7 +250,11 @@ describe("CanAccessGuard", () => {
 
   it("maps an authorization denial to forbidden", async () => {
     setMetadata({ resource: "experiment", action: "manage" });
-    vi.mocked(authorizationService.can).mockResolvedValue({ allow: false, reason: "forbidden" });
+    vi.mocked(authorizationService.can).mockResolvedValue({
+      allow: false,
+      reason: "forbidden",
+      organizationId: null,
+    });
 
     await expect(
       guard.canActivate(

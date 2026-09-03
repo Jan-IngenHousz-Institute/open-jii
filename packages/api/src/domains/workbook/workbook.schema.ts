@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zVisibility } from "../visibility/visibility.schema";
 import { zWorkbookCellArray, zWorkbookCellArrayInput } from "./workbook-cells.schema";
@@ -11,6 +12,12 @@ export const zWorkbook = z.object({
   cells: zWorkbookCellArray,
   metadata: z.record(z.string(), z.unknown()),
   organizationId: z.string().uuid().nullable(),
+  /**
+   * Display name of the owning organization, `null` for a personal workspace.
+   * Populated by the detail read only — the lists have no room for it — which is
+   * why it is optional rather than required.
+   */
+  organizationName: z.string().nullish(),
   visibility: z.enum(["private", "public"]),
   createdBy: z.string().uuid(),
   createdByName: z.string().optional(),
@@ -39,10 +46,19 @@ export const zWorkbookDetail = zWorkbook.extend({
   capabilities: zResourceCapabilities,
 });
 
-export const zWorkbookFilterQuery = z.object({
-  search: z.string().optional(),
-  filter: z.enum(["my"]).optional(),
-});
+export const zWorkbookFilterQuery = z
+  .object({
+    search: z.string().optional(),
+    /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
+    filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
+    scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
+  })
+  .merge(zPaginationQuery);
+
+export const zWorkbookPaginatedList = zPaginated(zWorkbookListItem);
+
+/** Array when the caller sent no `page`, envelope when they did. */
+export const zWorkbookListResponse = z.union([zWorkbookList, zWorkbookPaginatedList]);
 
 export const zWorkbookIdPathParam = z.object({
   id: z.string().uuid(),
@@ -90,6 +106,8 @@ export type WorkbookDetail = z.infer<typeof zWorkbookDetail>;
 export type WorkbookListItem = z.infer<typeof zWorkbookListItem>;
 export type WorkbookList = z.infer<typeof zWorkbookList>;
 export type WorkbookFilterQuery = z.infer<typeof zWorkbookFilterQuery>;
+export type WorkbookPaginatedList = z.infer<typeof zWorkbookPaginatedList>;
+export type WorkbookListResponse = z.infer<typeof zWorkbookListResponse>;
 export type WorkbookIdPathParam = z.infer<typeof zWorkbookIdPathParam>;
 export type CreateWorkbookRequestBody = z.infer<typeof zCreateWorkbookRequestBody>;
 export type UpdateWorkbookRequestBody = z.infer<typeof zUpdateWorkbookRequestBody>;

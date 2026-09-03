@@ -15,13 +15,19 @@ import { experimentUploadsContract } from "./domains/experiment/uploads/experime
 import { experimentVisualizationsContract } from "./domains/experiment/visualizations/experiment-visualizations.contract";
 import { experimentWorkbooksContract } from "./domains/experiment/workbooks/experiment-workbooks.contract";
 import { healthContract } from "./domains/health/health.contract";
+import { iotDeviceGroupContract } from "./domains/iot/device-group/iot-device-group.contract";
+import { iotFirmwareContract } from "./domains/iot/firmware/iot-firmware.contract";
 import { iotContract } from "./domains/iot/iot.contract";
 import { macroContract } from "./domains/macro/macro.contract";
+import { metricsContract } from "./domains/metrics/metrics.contract";
 import { newsletterContract } from "./domains/newsletter/newsletter.contract";
+import { organizationJoinRequestsContract } from "./domains/organization/join-requests/organization-join-requests.contract";
+import { organizationContract } from "./domains/organization/organization.contract";
 import { protocolContract } from "./domains/protocol/protocol.contract";
 import { searchContract } from "./domains/search/search.contract";
 import { sharingContract } from "./domains/sharing/sharing.contract";
 import { sharingTransferAdminContract } from "./domains/sharing/transfer-admin/sharing-transfer-admin.contract";
+import { sharingTransferOrgContract } from "./domains/sharing/transfer-org/sharing-transfer-org.contract";
 import { userContract } from "./domains/user/user.contract";
 import { workbookContract } from "./domains/workbook/workbook.contract";
 
@@ -49,12 +55,14 @@ export const contract = {
     ...experimentProjectTransferWebhookContract,
   },
   health: healthContract,
-  iot: iotContract,
+  iot: { ...iotContract, ...iotDeviceGroupContract, ...iotFirmwareContract },
   macros: macroContract,
+  metrics: metricsContract,
   newsletter: newsletterContract,
+  organizations: { ...organizationContract, ...organizationJoinRequestsContract },
   protocols: protocolContract,
   search: searchContract,
-  sharing: { ...sharingContract, ...sharingTransferAdminContract },
+  sharing: { ...sharingContract, ...sharingTransferAdminContract, ...sharingTransferOrgContract },
   users: userContract,
   workbooks: workbookContract,
 };

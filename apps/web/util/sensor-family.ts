@@ -1,4 +1,6 @@
-import { DEVICE_PROFILES } from "@repo/api/domains/device/device-profile";
+import type { StatusTone } from "@/components/shared/status-badge";
+
+import { DEVICE_PROFILES } from "@repo/api/domains/iot/device-profile";
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 
@@ -8,8 +10,9 @@ export interface SensorFamilyOption {
   disabled: boolean;
 }
 
-/** Display label for the generic family, which has no product name. */
+/** Display labels for families without a trademarked product name. */
 const GENERIC_LABEL = "Generic";
+const MOBILE_LABEL = "Mobile";
 
 /**
  * Families not offered as a local-connection target in this authoring selector.
@@ -17,7 +20,7 @@ const GENERIC_LABEL = "Generic";
  * (Web protocol testing separately preserves a generic-driver compatibility
  * path for existing Ambyte-family protocols.)
  */
-const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte"]);
+const DISABLED_FAMILIES: ReadonlySet<SensorFamily> = new Set(["ambyte", "mobile"]);
 
 /**
  * Selectable sensor family options derived from the API enum.
@@ -37,23 +40,26 @@ export const SENSOR_FAMILY_OPTIONS: SensorFamilyOption[] = zSensorFamily.options
  * name and falls back to a neutral label.
  */
 export function getSensorFamilyLabel(family: SensorFamily): string {
+  if (family === "mobile") {
+    return MOBILE_LABEL;
+  }
   return DEVICE_PROFILES[family].productName ?? GENERIC_LABEL;
 }
 
 /**
- * Badge color class for a sensor family. Unknown values fall back to the
- * neutral badge, so this accepts the raw `family` string carried on a protocol.
+ * Badge tone for a sensor family. Unknown values fall back to the neutral
+ * tone, so this accepts the raw `family` string carried on a protocol.
  */
-export function getSensorFamilyBadgeColor(family: string): string {
+export function getSensorFamilyBadgeTone(family: string): StatusTone {
   switch (family) {
     case "multispeq":
-      return "bg-badge-published";
+      return "published";
     case "ambyte":
     case "ambit":
-      return "bg-badge-active";
+      return "active";
     case "minipar":
-      return "bg-badge-stale";
+      return "stale";
     default:
-      return "bg-badge-archived";
+      return "archived";
   }
 }

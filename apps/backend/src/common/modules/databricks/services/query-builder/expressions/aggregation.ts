@@ -67,6 +67,8 @@ export function buildAggregateExpression(
  * Two SELECT shapes:
  *   - GROUP BY path:    `SELECT <groupBy>, <row aggs>, <windows> FROM (...) GROUP BY ...`
  *   - Window-only path: `SELECT *, <windows> FROM (...)`, preserving raw rows.
+ * Both accept an `explode` (`LATERAL VIEW EXPLODE`) so array elements can
+ * be grouped by.
  * The window-only path activates only with no groupBy entries and no
  * row-aggregating functions (cumsum alone), so a no-aggregate series can
  * coexist with a cumsum sibling.
@@ -92,7 +94,7 @@ export function wrapWithAggregation(
     for (const item of opts.aggregation.groupBy ?? []) {
       const expr = item.timeBucket
         ? builder.buildTimeBucketExpression(item.column, item.timeBucket)
-        : { sql: builder.escapeIdentifier(item.column), alias: item.column };
+        : { sql: builder.escapeIdentifier(item.column), alias: item.alias ?? item.column };
 
       selectClauses.push(`${expr.sql} AS ${builder.escapeIdentifier(expr.alias)}`);
       groupByClauses.push(expr.sql);
@@ -129,14 +131,22 @@ export function wrapWithAggregation(
     throw new Error("wrapWithAggregation called without aggregation content");
   }
 
+  // Explode belongs to the outer FROM: the inner query reads whole rows,
+  // the aggregates count elements.
+  const explode = opts.aggregation?.explode;
+  const from =
+    explode === undefined
+      ? `(${innerSql})`
+      : `(${innerSql}) LATERAL VIEW EXPLODE(${builder.escapeIdentifier(explode.column)}) AS ${builder.escapeIdentifier(explode.alias)}`;
+
   let sql: string;
   if (groupByClauses.length === 0 && selectClauses.length === 0) {
     // Window-only path: keep every raw column from the inner subquery so
     // non-aggregated series still have their values to plot.
-    sql = `SELECT *, ${windowProjections.join(", ")} FROM (${innerSql})`;
+    sql = `SELECT *, ${windowProjections.join(", ")} FROM ${from}`;
   } else {
     const projections = [...selectClauses, ...windowProjections];
-    sql = `SELECT ${projections.join(", ")} FROM (${innerSql})`;
+    sql = `SELECT ${projections.join(", ")} FROM ${from}`;
 
     if (groupByClauses.length > 0) {
       sql += ` GROUP BY ${groupByClauses.join(", ")}`;

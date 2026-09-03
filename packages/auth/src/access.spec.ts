@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { GRANT_ROLES, STAFFING_GRANT_ROLES } from "@repo/database";
 
-import { RESOURCE_ACTIONS, RESOURCE_TYPES, grantRoleCan, orgRoleCan } from "./access";
+import { RESOURCE_ACTIONS, RESOURCE_TYPES, grantRoleCan, orgRoleCan, roles } from "./access";
 import type { ResourceAction, ResourceType } from "./access";
 
 /**
- * The capability matrix, pinned action by action. Two asymmetries to hold: a grant
- * of "Can view" carries `contribute` where an org `member` role does not, and
- * `contribute` exists on experiments only.
+ * The capability matrix, pinned action by action. The asymmetry to hold: `contribute`
+ * exists on experiments only, and there both the lowest grant tier and plain org
+ * membership carry it — on every other type both are read-only.
  *
  * The action and resource-type lists come from the matrix itself rather than being
- * restated here. A copied list would let a sixth resource type be added to
+ * restated here. A copied list would let a new resource type be added to
  * `RESOURCE_TYPES` and the `statement`, forgotten in `grantRoles`, and still leave
  * this suite green — while every grantee was silently read-only on it.
  */
@@ -48,15 +48,10 @@ describe("grant roles", () => {
     expectExactly((a) => grantRoleCan("owner", "experiment", a), ALL_ACTIONS);
   });
 
-  it("treats an old-pod-written 'member' grant exactly like 'viewer'", () => {
-    expectExactly((a) => grantRoleCan("member", "experiment", a), ["read", "contribute"]);
-    for (const resourceType of TYPES_WITHOUT_DATA) {
-      expectExactly((a) => grantRoleCan("member", resourceType, a), ["read"]);
-    }
-  });
-
   it("refuses an unknown role outright", () => {
-    for (const role of ["bogus"]) {
+    // `member` is in here as an unknown role, which is what it is: the matrix knows
+    // three grant roles and no stored row can carry the retired spelling.
+    for (const role of ["bogus", "member"]) {
       for (const resourceType of RESOURCE_TYPES) {
         expectExactly((a) => grantRoleCan(role, resourceType, a), []);
       }
@@ -88,8 +83,16 @@ describe("grant roles", () => {
 });
 
 describe("organization roles", () => {
-  it("keeps the plain 'member' role read-only — org membership is not contribution", () => {
-    expectExactly((a) => orgRoleCan("member", "experiment", a), ["read"]);
+  it("lets a plain 'member' contribute to the organization's own experiments", () => {
+    // A lab's members can add measurements to the lab's experiments: being handed the
+    // lowest grant tier should not beat belonging to the organization that owns it.
+    expectExactly((a) => orgRoleCan("member", "experiment", a), ["read", "contribute"]);
+  });
+
+  it("keeps 'member' read-only on every type with no data to contribute to", () => {
+    for (const resourceType of TYPES_WITHOUT_DATA) {
+      expectExactly((a) => orgRoleCan("member", resourceType, a), ["read"]);
+    }
   });
 
   it("gives 'admin' every action", () => {
@@ -102,20 +105,45 @@ describe("organization roles", () => {
 
   it("honours a multi-role string", () => {
     expectExactly((a) => orgRoleCan("member,admin", "experiment", a), ALL_ACTIONS);
-    expectExactly((a) => orgRoleCan("member,bogus", "experiment", a), ["read"]);
+    expectExactly((a) => orgRoleCan("member,bogus", "experiment", a), ["read", "contribute"]);
+  });
+
+  it("keeps the organization's own settings to its owners", () => {
+    // `/organization/update` is gated on exactly this statement, and Better Auth's
+    // default admin role carries it — which would let an admin rename the
+    // organization or change its slug and directory visibility.
+    expect(roles.owner.authorize({ organization: ["update"] }).success).toBe(true);
+    expect(roles.admin.authorize({ organization: ["update"] }).success).toBe(false);
+    expect(roles.member.authorize({ organization: ["update"] }).success).toBe(false);
+  });
+
+  it("leaves the rest of an admin's organization management intact", () => {
+    expect(roles.admin.authorize({ member: ["create", "update", "delete"] }).success).toBe(true);
+    expect(roles.admin.authorize({ invitation: ["create", "cancel"] }).success).toBe(true);
+    expect(roles.admin.authorize({ team: ["create", "update", "delete"] }).success).toBe(true);
+  });
+
+  it("still refuses an admin the organization delete owners hold", () => {
+    expect(roles.owner.authorize({ organization: ["delete"] }).success).toBe(true);
+    expect(roles.admin.authorize({ organization: ["delete"] }).success).toBe(false);
   });
 });
 
-describe("the grant and organization matrices disagree only about the middle tier", () => {
-  it("splits the middle tier: a grant contributes, an org role does not", () => {
+describe("the grant and organization middle tiers", () => {
+  it("agrees on an experiment: the lowest grant tier and membership both contribute", () => {
+    for (const action of ALL_ACTIONS) {
+      expect(grantRoleCan("viewer", "experiment", action)).toBe(
+        orgRoleCan("member", "experiment", action),
+      );
+    }
     expect(grantRoleCan("viewer", "experiment", "contribute")).toBe(true);
-    expect(orgRoleCan("member", "experiment", "contribute")).toBe(false);
-    // ...and agree on everything else about that tier.
-    expect(grantRoleCan("viewer", "experiment", "read")).toBe(true);
-    expect(orgRoleCan("member", "experiment", "read")).toBe(true);
-    for (const action of ["update", "share", "manage"] as const) {
-      expect(grantRoleCan("viewer", "experiment", action)).toBe(false);
-      expect(orgRoleCan("member", "experiment", action)).toBe(false);
+    expect(orgRoleCan("member", "experiment", "contribute")).toBe(true);
+  });
+
+  it("agrees on the other types too, where both are read-only", () => {
+    for (const resourceType of TYPES_WITHOUT_DATA) {
+      expectExactly((a) => grantRoleCan("viewer", resourceType, a), ["read"]);
+      expectExactly((a) => orgRoleCan("member", resourceType, a), ["read"]);
     }
   });
 
@@ -149,15 +177,17 @@ describe("GRANT_ROLES agrees with the matrix", () => {
     }
   });
 
-  it("recognizes only the write vocabulary plus the mixed-version read alias", () => {
+  it("holds every role the matrix recognizes", () => {
+    // The other direction: a tier added to `grantRoles` that the writers cannot express
+    // is a tier nothing can ever be granted.
     const recognized = ["owner", "admin", "viewer", "member", "bogus"].filter((role) =>
       grantRoleCan(role, "experiment", "read"),
     );
 
-    expect([...recognized].sort()).toEqual([...GRANT_ROLES, "member"].sort());
+    expect([...recognized].sort()).toEqual([...GRANT_ROLES].sort());
   });
 
-  it("does not let writers mint the compatibility 'member' spelling", () => {
+  it("does not carry the retired 'member' spelling", () => {
     expect(GRANT_ROLES).not.toContain("member");
   });
 });

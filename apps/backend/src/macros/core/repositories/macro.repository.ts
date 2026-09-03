@@ -1,5 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
   asc,
@@ -10,6 +11,7 @@ import {
   isNull,
   inArray,
   macros,
+  or,
   profiles,
   sql,
   getTableColumns,
@@ -18,12 +20,23 @@ import {
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
-import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
+import {
+  crossTableBonus,
+  escapeLike,
+  ftsMatch,
+  ftsRank,
+  searchScore,
+} from "../../../common/utils/fts";
+import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import {
+  accessibleResourceCondition,
+  relatedResourceCondition,
+  resourceTierExpression,
+} from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateMacroDto,
@@ -37,12 +50,30 @@ import { CACHE_PORT, CachePort } from "../ports/cache.port";
 export interface MacroFilter {
   search?: string;
   language?: "python" | "r" | "javascript";
-  filter?: "my";
+  scope?: ResourceScope;
   userId?: string;
+  /** Narrow to one owning organization (the org profile's resources showcase). */
+  organizationId?: string;
 }
 
 // All macro columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _macroSearchVector, ...macroColumns } = getTableColumns(macros);
+
+/** A listing row plus its relevance score, which global search merges on across types. */
+export type MacroSearchRow = MacroDto & { score: number };
+
+function toMacroRow(result: {
+  macros: unknown;
+  firstName: string | null;
+  lastName: string | null;
+  score: number;
+}): MacroSearchRow {
+  const augmentedResult = result.macros as MacroSearchRow;
+  const { firstName, lastName } = result;
+  augmentedResult.createdByName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
+  augmentedResult.score = result.score;
+  return augmentedResult;
+}
 
 @Injectable()
 export class MacroRepository {
@@ -84,19 +115,12 @@ export class MacroRepository {
     });
   }
 
-  async findAll(filter?: MacroFilter, limit?: number): Promise<Result<MacroDto[]>> {
-    return tryCatch(async () => {
-      let query = this.database
-        .select({
-          macros: macroColumns,
-          firstName: getAnonymizedFirstName(),
-          lastName: getAnonymizedLastName(),
-        })
-        .from(macros)
-        .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
-        .$dynamic();
-
-      // Build array of conditions for filters
+  /**
+   * Shared shape behind the array and paginated listings, so both apply identical
+   * scoping, ranking and ordering and the count matches the rows exactly.
+   */
+  private buildListing(filter?: MacroFilter) {
+    {
       const conditions: (SQL | undefined)[] = [];
 
       const search = filter?.search;
@@ -117,7 +141,7 @@ export class MacroRepository {
         conditions.push(eq(macros.language, filter.language));
       }
 
-      const scope = accessibleResourceCondition({
+      const accessScope = accessibleResourceCondition({
         database: this.database,
         resourceType: "macro",
         resourceIdColumn: macros.id,
@@ -125,39 +149,121 @@ export class MacroRepository {
         visibilityColumn: macros.visibility,
         userId: filter?.userId,
       });
-      if (scope) {
-        conditions.push(scope);
+      if (accessScope) {
+        conditions.push(accessScope);
       }
 
-      if (filter?.filter === "my" && filter.userId) {
-        conditions.push(eq(macros.createdBy, filter.userId));
+      // Applied on top of the access scope, never instead of it: an org's page shows
+      // each viewer exactly the rows they could already reach.
+      if (filter?.organizationId) {
+        conditions.push(eq(macros.organizationId, filter.organizationId));
       }
 
-      // Apply all conditions with AND logic if there are any
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+      if (filter?.scope === "related") {
+        // "Mine": authorship plus every path tying the caller to the row personally.
+        // Without a caller nothing resolves, so the scope admits nothing.
+        const related = relatedResourceCondition({
+          database: this.database,
+          resourceType: "macro",
+          resourceIdColumn: macros.id,
+          organizationIdColumn: macros.organizationId,
+          userId: filter.userId,
+        });
+        conditions.push(
+          filter.userId ? or(related, eq(macros.createdBy, filter.userId)) : sql`false`,
+        );
       }
 
-      if (search) {
-        const rank = sql<number>`(${ftsRank(macros.searchVector, macros.name, search)} + 0.05 * (CASE WHEN (${creatorMatch(search)} OR ${ilike(languageText, `%${escapeLike(search)}%`)}) THEN 1 ELSE 0 END))`;
-        query = query.orderBy(desc(rank), asc(macros.name));
-      } else {
-        query = query.orderBy(asc(macros.sortOrder), asc(macros.name));
-      }
+      const tier = resourceTierExpression({
+        database: this.database,
+        resourceType: "macro",
+        resourceIdColumn: macros.id,
+        organizationIdColumn: macros.organizationId,
+        createdByColumn: macros.createdBy,
+        userId: filter?.userId,
+      });
+      // Browsing has no term to rank against, so it skips the scoring probes entirely.
+      const score = search
+        ? searchScore(
+            sql<number>`(${ftsRank(macros.searchVector, macros.name, search)} + ${crossTableBonus(
+              sql`(${creatorMatch(search)} OR ${ilike(languageText, `%${escapeLike(search)}%`)})`,
+            )})`,
+            tier,
+          )
+        : sql<number>`0::int`;
 
+      // Browse keeps tiers strict, with the curated `sortOrder` surviving as a
+      // within-tier tiebreak. Both orderings end on `id` so paging is stable.
+      const orderBy = search
+        ? [desc(score), asc(macros.id)]
+        : [desc(tier), asc(macros.sortOrder), asc(macros.name), asc(macros.id)];
+
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+      return { where, orderBy, score };
+    }
+  }
+
+  private baseQuery(score: SQL<number>) {
+    return this.database
+      .select({
+        macros: macroColumns,
+        firstName: getAnonymizedFirstName(),
+        lastName: getAnonymizedLastName(),
+        score,
+      })
+      .from(macros)
+      .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
+      .$dynamic();
+  }
+
+  async findAll(filter?: MacroFilter, limit?: number): Promise<Result<MacroSearchRow[]>> {
+    return tryCatch(async () => {
+      const { where, orderBy, score } = this.buildListing(filter);
+
+      let query = this.baseQuery(score);
+      if (where) {
+        query = query.where(where);
+      }
+      query = query.orderBy(...orderBy);
       if (limit !== undefined) {
         query = query.limit(limit);
       }
 
-      const results = await query;
-      return results.map((result) => {
-        const augmentedResult = result.macros as MacroDto;
-        const firstName = result.firstName;
-        const lastName = result.lastName;
-        augmentedResult.createdByName =
-          firstName && lastName ? `${firstName} ${lastName}` : undefined;
-        return augmentedResult;
-      });
+      return (await query).map(toMacroRow);
+    });
+  }
+
+  /** One page plus the total, counted separately so an out-of-range page still reports it. */
+  async findPage(
+    page: number,
+    pageSize: number,
+    filter?: MacroFilter,
+  ): Promise<Result<{ items: MacroSearchRow[]; totalCount: number }>> {
+    return tryCatch(async () => {
+      const { where, orderBy, score } = this.buildListing(filter);
+
+      let rows = this.baseQuery(score);
+      let total = this.database
+        .select({ count: sql<number>`count(*)::int` })
+        .from(macros)
+        .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
+        .$dynamic();
+
+      if (where) {
+        rows = rows.where(where);
+        total = total.where(where);
+      }
+
+      const [items, [{ count }]] = await Promise.all([
+        rows
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset((page - 1) * pageSize),
+        total,
+      ]);
+
+      return { items: items.map(toMacroRow), totalCount: count };
     });
   }
 
@@ -168,6 +274,7 @@ export class MacroRepository {
           macros: macroColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
+          organizationName: owningOrganizationNameSql("macros"),
         })
         .from(macros)
         .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
@@ -183,6 +290,7 @@ export class MacroRepository {
       const lastName = result[0].lastName;
       augmentedResult.createdByName =
         firstName && lastName ? `${firstName} ${lastName}` : undefined;
+      augmentedResult.organizationName = result[0].organizationName;
       return augmentedResult;
     });
   }

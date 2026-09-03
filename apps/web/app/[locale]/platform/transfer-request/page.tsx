@@ -1,3 +1,4 @@
+import { InsetPanel } from "@/components/shared/inset-panel";
 import type { Metadata } from "next";
 import { DocsHelpLink } from "~/components/docs-help-link";
 import { TransferRequestForm } from "~/components/transfer-request-form";
@@ -24,7 +25,7 @@ export default async function TransferRequestPage({ params }: TransferRequestPag
 
   return (
     <div className="space-y-8">
-      <div className="bg-surface-light rounded-xl border p-4">
+      <InsetPanel padding="lg">
         <h2 className="mb-2 font-medium">{t("transferRequest.importantNote")}</h2>
         <ul className="text-muted-foreground list-outside list-disc space-y-1 pl-3 text-sm">
           <li>{t("transferRequest.note1")}</li>
@@ -34,7 +35,7 @@ export default async function TransferRequestPage({ params }: TransferRequestPag
         <div className="mt-3">
           <DocsHelpLink path="/guide/sharing/project-transfers" />
         </div>
-      </div>
+      </InsetPanel>
 
       <TransferRequestForm />
     </div>

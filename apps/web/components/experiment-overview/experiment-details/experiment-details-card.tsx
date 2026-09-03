@@ -12,11 +12,13 @@ import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader } from "@repo/ui/components/card";
+import { Separator } from "@repo/ui/components/separator";
 import { cn, cva } from "@repo/ui/lib/utils";
 
 import { ExperimentRequestToJoin } from "../../experiment-settings/collaborators/experiment-request-to-join";
 import { ExperimentInfoCard } from "../../experiment-settings/experiment-info-card";
 import { ExperimentVisibilityCard } from "../../experiment-settings/experiment-visibility-card";
+import { OwningOrganizationField } from "../../organizations/owning-organization-field";
 import { ExperimentMembersTrail } from "../experiment-members-trail";
 import { ExperimentLocationsSection } from "./experiment-locations-section";
 
@@ -49,10 +51,19 @@ interface ExperimentDetailsCardProps {
   experiment: Experiment;
   locations: ExperimentLocation[];
   contributors: ExperimentContributor[];
+  /** Every collaborator row, not just the creditable faces — see the trail. */
+  collaboratorCount: number;
+  /** The contributors read failed; the trail must not claim a zero. */
+  isContributorsError?: boolean;
   isContributorsLoading: boolean;
   hasAccess?: boolean;
   /** `can(manage)` from the experiment-access response — gates the admin-only cards. */
   canManage?: boolean;
+  /**
+   * `can(transfer)` — narrower than `canManage`: moving the experiment out of its
+   * organization also takes authority over that organization.
+   */
+  canTransfer?: boolean;
   /** `can(contribute)` — whether this person is already a collaborator. */
   canContribute?: boolean;
   isArchived?: boolean;
@@ -63,9 +74,12 @@ export function ExperimentDetailsCard({
   experiment,
   locations,
   contributors,
+  collaboratorCount,
+  isContributorsError = false,
   isContributorsLoading,
   hasAccess = false,
   canManage = false,
+  canTransfer = false,
   canContribute = false,
   isArchived = false,
 }: ExperimentDetailsCardProps) {
@@ -168,6 +182,8 @@ export function ExperimentDetailsCard({
                   <h4 className="text-sm font-medium">{tSettings("sharing.collaboratorsTab")}</h4>
                   <ExperimentMembersTrail
                     contributors={contributors}
+                    collaboratorCount={collaboratorCount}
+                    isError={isContributorsError}
                     isLoading={isContributorsLoading}
                     href={`/${locale}/platform/experiments${isArchived ? "-archive" : ""}/${experimentId}/collaborators`}
                   />
@@ -187,6 +203,14 @@ export function ExperimentDetailsCard({
                   </p>
                 </div>
 
+                <OwningOrganizationField
+                  resourceType="experiment"
+                  resourceId={experimentId}
+                  organizationId={experiment.organizationId}
+                  organizationName={experiment.organizationName}
+                  canTransfer={canTransfer}
+                />
+
                 <div className="space-y-1">
                   <h4 className="text-sm font-medium">{t("createdBy")}</h4>
                   <p className="text-muted-foreground text-sm">
@@ -195,11 +219,7 @@ export function ExperimentDetailsCard({
                 </div>
               </CardContent>
 
-              <div
-                role="separator"
-                aria-orientation="horizontal"
-                className="text-muted-foreground mx-4 border-t"
-              />
+              <Separator decorative={false} className="mx-4 my-4 w-auto" />
 
               {canManage ? (
                 <ExperimentVisibilityCard

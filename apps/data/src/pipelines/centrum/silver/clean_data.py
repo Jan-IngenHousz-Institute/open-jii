@@ -70,19 +70,22 @@ def clean_data():
         )
         .withColumn("output", F.col("parsed_data.output"))
         .withColumn("user_id", F.col("parsed_data.user_id"))
-        # Which protocol produced the row. Only the legacy 8-segment topic
-        # (.../{sensorId}/{protocolId}) carries it, as its trailing segment; the
-        # lean 7-segment shape has no protocol in the topic. The previous
-        # extraction read segment 4, which is the sensor family, not a protocol.
+        # Which protocol produced the row. The legacy 8-segment topic carries it
+        # as its trailing segment; lean publishers carry it in the payload. The
+        # topic wins when both exist (broker-visible beats self-reported).
         .withColumn(
             "protocol_id",
-            F.expr(
-                r"CASE WHEN size(split(parsed_data.topic, '/')) = 8 "
-                r"THEN element_at(split(parsed_data.topic, '/'), 8) ELSE NULL END"
+            F.coalesce(
+                F.expr(
+                    r"CASE WHEN size(split(parsed_data.topic, '/')) = 8 "
+                    r"THEN element_at(split(parsed_data.topic, '/'), 8) ELSE NULL END"
+                ),
+                F.col("parsed_data.protocol_id"),
             )
         )
-        # Null on single-device uploads; rows of one multi-device workbook
-        # run share it and can be joined back on it.
+        # Present on new workbook-flow uploads. Historical, imported, and
+        # legacy rows may remain NULL. Rows from one workbook attempt share it
+        # across devices and steps.
         .withColumn("workbook_run_id", F.col("parsed_data.workbook_run_id"))
         .withColumn("workbook_version_id", F.col("workbook_version_id"))
         .withColumn("macro_context", F.col("macro_context"))

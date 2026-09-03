@@ -5,7 +5,9 @@ import { LeaveResourceUseCase } from "./application/use-cases/leave-resource/lea
 import { ListGrantsUseCase } from "./application/use-cases/list-grants/list-grants";
 import { RevokeGrantUseCase } from "./application/use-cases/revoke-grant/revoke-grant";
 import { SearchGranteeOrganizationsUseCase } from "./application/use-cases/search-grantee-organizations/search-grantee-organizations";
+import { SearchGranteeUsersUseCase } from "./application/use-cases/search-grantee-users/search-grantee-users";
 import { TransferResourceAdminUseCase } from "./application/use-cases/transfer-resource-admin/transfer-resource-admin";
+import { TransferResourceOrgUseCase } from "./application/use-cases/transfer-resource-org/transfer-resource-org";
 import { UpdateGrantUseCase } from "./application/use-cases/update-grant/update-grant";
 import { SharingRepository } from "./core/repositories/sharing.repository";
 import { SharingController } from "./presentation/sharing.controller";
@@ -24,7 +26,12 @@ import { SharingController } from "./presentation/sharing.controller";
     LeaveResourceUseCase,
     RevokeGrantUseCase,
     TransferResourceAdminUseCase,
+    TransferResourceOrgUseCase,
     SearchGranteeOrganizationsUseCase,
+    SearchGranteeUsersUseCase,
   ],
+  // For the organization showcase's collaborator counts, read from the same place the
+  // collaborators surface does.
+  exports: [SharingRepository],
 })
 export class SharingModule {}

@@ -1,5 +1,5 @@
 import type { Layout } from "plotly.js";
-import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import type { PlotlyChartConfig } from "../../charts/types";
 import {
@@ -18,6 +18,12 @@ import {
   applyReferenceLines,
 } from "../../charts/utils";
 import type { ReferenceLineSpec } from "../../charts/utils";
+
+/** Tokens this suite stubs, and the sRGB the repo's converter produces for them. */
+const FOREGROUND_TOKEN = "oklch(0.245 0.03 195)";
+const FOREGROUND_HEX = "#0d2525";
+const POPOVER_TOKEN = "oklch(0.99 0.002 195)";
+const POPOVER_HEX = "#fafcfc";
 
 // Mock DOM APIs
 Object.defineProperty(window, "WebGLRenderingContext", {
@@ -204,7 +210,7 @@ describe("utils", () => {
         plot_bgcolor: "rgba(0,0,0,0)",
         paper_bgcolor: "#ffffff",
         font: {
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
           color: "#000000",
           size: 12,
         },
@@ -237,7 +243,7 @@ describe("utils", () => {
         text: "Test Chart",
         font: {
           size: 14,
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
           color: "#000000",
         },
       });
@@ -257,7 +263,7 @@ describe("utils", () => {
         font: {
           size: 14,
           color: "#000000",
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
         },
       });
 
@@ -266,7 +272,7 @@ describe("utils", () => {
         font: {
           size: 14,
           color: "#000000",
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
         },
       });
     });
@@ -361,6 +367,16 @@ describe("utils", () => {
     });
 
     it("includes annotations with proper styling", () => {
+      // jsdom applies no stylesheet, so `readThemeColor` finds nothing and the
+      // call sites fall through to their `?? "#literal"` — asserting those would
+      // pass even with the token plumbing broken. Stub so the real chain runs.
+      const root = document.documentElement;
+      root.style.setProperty("--foreground", FOREGROUND_TOKEN);
+      root.style.setProperty("--popover", POPOVER_TOKEN);
+      onTestFinished(() => {
+        root.style.removeProperty("--foreground");
+        root.style.removeProperty("--popover");
+      });
       const config: PlotlyChartConfig = {
         ...baseConfig,
         annotations: [
@@ -380,11 +396,11 @@ describe("utils", () => {
         x: 1,
         y: 1,
         font: {
-          color: "#000000",
+          color: FOREGROUND_HEX,
           size: 12,
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
         },
-        bgcolor: "rgba(255,255,255,0.8)",
+        bgcolor: `${POPOVER_HEX}cc`,
       });
     });
 

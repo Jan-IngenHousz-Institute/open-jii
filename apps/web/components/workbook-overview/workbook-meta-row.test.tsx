@@ -31,6 +31,8 @@ describe("WorkbookMetaRow", () => {
     // Default: an unpublished workbook (no versions). Tests that need a
     // published version re-mount the handler.
     server.mount(contract.workbooks.listWorkbookVersions, { body: [] });
+    // The transfer control's target picker reads the caller's memberships.
+    server.mount(contract.organizations.listMyOrganizations, { body: [] });
   });
 
   function renderRow(overrides: Partial<typeof workbook> = {}) {
@@ -216,6 +218,28 @@ describe("WorkbookMetaRow", () => {
       "workbooks.actions.fork",
       "workbooks.actions.delete",
     ]);
+  });
+
+  it("offers Transfer from the owning-organization field, not the action row", () => {
+    renderRow({ visibility: "private" });
+
+    // The value and the way to change it are one field; the action row carries the
+    // actions that belong to the workbook itself.
+    const transfer = screen.getByRole("button", { name: "organizations.transfer.action" });
+    expect(transfer).toBeVisible();
+    expect(transfer.closest("div")?.textContent).toContain("organizations.owningOrganization");
+  });
+
+  it("hides Transfer from a caller who may manage but not transfer", () => {
+    // `canTransfer` is narrower than `canManage`: moving a workbook out of its
+    // organization also takes authority over that organization.
+    renderRow({ capabilities: { ...workbook.capabilities, canTransfer: false } });
+
+    expect(
+      screen.queryByRole("button", { name: "organizations.transfer.action" }),
+    ).not.toBeInTheDocument();
+    // The value itself stays: only the affordance is gated.
+    expect(screen.getByText("organizations.owningOrganization")).toBeVisible();
   });
 
   it("hides Delete from a caller who cannot manage", () => {

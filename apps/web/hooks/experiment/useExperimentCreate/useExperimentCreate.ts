@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -12,13 +13,15 @@ export const useExperimentCreate = (props: ExperimentCreateProps) => {
     orpc.experiments.createExperiment.mutationOptions({
       onMutate: async () => {
         // Cancel any outgoing refetches so they don't overwrite our optimistic update
-        await queryClient.cancelQueries({ queryKey: orpc.experiments.listExperiments.key() });
+        for (const queryKey of listQueryKeys.experiments()) {
+          await queryClient.cancelQueries({ queryKey });
+        }
       },
       onSettled: async () => {
         // Always refetch after error or success to make sure cache is in sync with server
-        await queryClient.invalidateQueries({
-          queryKey: orpc.experiments.listExperiments.key(),
-        });
+        for (const queryKey of listQueryKeys.experiments()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
       },
       onSuccess: (data) => {
         props.onSuccess?.(data.id);

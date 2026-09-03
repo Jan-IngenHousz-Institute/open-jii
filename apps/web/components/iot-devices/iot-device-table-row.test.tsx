@@ -1,17 +1,14 @@
 import { createIotDevice } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { render, screen, userEvent } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
 import { describe, expect, it, vi } from "vitest";
 
-import { contract } from "@repo/api/contract";
-import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
+import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { Table, TableBody } from "@repo/ui/components/table";
-import { toast } from "@repo/ui/hooks/use-toast";
 
 import { IotDeviceTableRow } from "./iot-device-table-row";
 
-function renderRow(device: IotDevice) {
+function renderRow(device: IotDeviceWithConnectivity) {
   return render(
     <Table>
       <TableBody>
@@ -27,6 +24,23 @@ describe("IotDeviceTableRow", () => {
 
     expect(screen.getByRole("link", { name: "Greenhouse 1" })).toBeInTheDocument();
     expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
+  });
+
+  it("shows since-when in the last-seen cell for an online device", () => {
+    renderRow(
+      createIotDevice({
+        name: "Greenhouse 1",
+        connectivity: { connected: true, lastSeenAt: "2026-08-13T08:00:00.000Z" },
+      }),
+    );
+
+    expect(screen.getByText("iot.devices.connectivity.onlineSince")).toBeInTheDocument();
+  });
+
+  it("shows the unknown last-seen fallback when the fleet index is unavailable", () => {
+    renderRow(createIotDevice({ name: "Greenhouse 1", connectivity: null }));
+
+    expect(screen.getByText("iot.devices.connectivity.unknown")).toBeInTheDocument();
   });
 
   it("badges a private device, the way the other resource lists do", () => {
@@ -72,6 +86,19 @@ describe("IotDeviceTableRow", () => {
     expect(screen.queryByText("iot.deviceIdentity.role.measurementDevice")).not.toBeInTheDocument();
   });
 
+  it("navigates to the device when the row itself is clicked", async () => {
+    const router = vi.mocked(useRouter)();
+    const user = userEvent.setup();
+    const device = createIotDevice({ name: "Field gateway", serialNumber: "SN-CLICK" });
+    renderRow(device);
+
+    await user.click(screen.getByText("SN-CLICK"));
+
+    expect(router.push).toHaveBeenCalledWith(
+      expect.stringContaining(`/platform/devices/${device.id}`),
+    );
+  });
+
   it("keeps link clicks from also triggering row navigation", async () => {
     const router = vi.mocked(useRouter)();
     const user = userEvent.setup();
@@ -84,24 +111,47 @@ describe("IotDeviceTableRow", () => {
     expect(router.push).not.toHaveBeenCalled();
   });
 
-  it("deletes the device and toasts on confirm", async () => {
-    const device = createIotDevice({ name: "Sensor A" });
-    const spy = server.mount(contract.iot.deleteIotDevice);
+  it("leads the menu with issue-certificate for a pending device", async () => {
     const user = userEvent.setup();
-
-    renderRow(device);
+    renderRow(createIotDevice({ status: "pending" }));
 
     await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
-    await user.click(await screen.findByRole("menuitem", { name: "iot.devices.actions.delete" }));
-    const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "iot.devices.actions.delete" }));
 
-    await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.params.deviceId).toBe(device.id);
-    await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "iot.devices.remove.success" }),
-      ),
-    );
+    expect(
+      await screen.findByRole("menuitem", { name: /iot.devices.nextAction.issueCredentials/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("leads the menu with onboarding for an active device", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ status: "active" }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    expect(
+      await screen.findByRole("menuitem", { name: /iot.devices.nextAction.onboard/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no next step for a phone, which sets itself up", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ deviceType: "mobile" }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    await screen.findByRole("menuitem", { name: /iot.devices.actions.view/ });
+    expect(
+      screen.queryByRole("menuitem", { name: /iot.devices.nextAction/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers no delete: the list payload cannot gate one", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ status: "active" }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    await screen.findByRole("menuitem", { name: /iot.devices.actions.view/ });
+    expect(screen.queryByRole("menuitem", { name: /iot.devices.actions.delete/ })).toBeNull();
   });
 });

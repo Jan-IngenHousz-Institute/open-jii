@@ -20,6 +20,14 @@
     "archived": "Gearchiveerd",
     "stale": "Verlopen"
   },
+  "columns": {
+    "name": "Naam",
+    "updated": "Bijgewerkt",
+    "status": "Status",
+    "owner": "Eigenaar",
+    "organization": "Organisatie",
+    "members": "Leden"
+  },
   "visibility": {
     "private": "Privé",
     "public": "Publiek"
@@ -109,7 +117,10 @@
       "viewDiff": "Verschillen tonen",
       "macroCaveat": "Alleen structurele controles. Macrologica wordt niet geverifieerd; test de flow na het upgraden.",
       "lastChanged": "gewijzigd {{when}}",
-      "kind": { "protocol": "Protocol", "macro": "Macro" },
+      "kind": {
+        "protocol": "Protocol",
+        "macro": "Macro"
+      },
       "status": {
         "added": "Toegevoegd",
         "changed": "Gewijzigd",

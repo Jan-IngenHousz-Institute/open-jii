@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  zBulkRegisterIotDevicesBody,
   zIotCredentials,
   zIotDevice,
+  zIotDeviceActivity,
   zIotDeviceDetail,
   zIotDeviceList,
   zRegisterIotDeviceBody,
@@ -10,6 +12,8 @@ import {
   zOnboardDeviceBody,
   zDeviceOnboardingConfig,
   zDeviceExperiment,
+  zMonitoringRangeQuery,
+  zEnsureMobileDeviceBody,
 } from "./iot.schema";
 
 describe("Iot Schema", () => {
@@ -130,6 +134,50 @@ describe("Iot Schema", () => {
     });
   });
 
+  describe("zBulkRegisterIotDevicesBody", () => {
+    const base = { devices: [{ serialNumber: "S-1" }], deviceType: "ambyte" };
+
+    it("accepts a plain batch and each group flavor", () => {
+      expect(zBulkRegisterIotDevicesBody.safeParse(base).success).toBe(true);
+      expect(
+        zBulkRegisterIotDevicesBody.safeParse({
+          ...base,
+          group: { groupId: "11111111-1111-4111-8111-111111111111" },
+        }).success,
+      ).toBe(true);
+      expect(
+        zBulkRegisterIotDevicesBody.safeParse({ ...base, group: { name: "Fresh batch" } }).success,
+      ).toBe(true);
+    });
+
+    it("rejects duplicate serials within the batch", () => {
+      expect(
+        zBulkRegisterIotDevicesBody.safeParse({
+          ...base,
+          devices: [{ serialNumber: "S-1" }, { serialNumber: "S-1" }],
+        }).success,
+      ).toBe(false);
+    });
+
+    it("bounds the batch to 1..100 devices", () => {
+      expect(zBulkRegisterIotDevicesBody.safeParse({ ...base, devices: [] }).success).toBe(false);
+      const many = Array.from({ length: 101 }, (_, i) => ({ serialNumber: `S-${String(i)}` }));
+      expect(zBulkRegisterIotDevicesBody.safeParse({ ...base, devices: many }).success).toBe(false);
+    });
+
+    it("rejects the mobile family like the single register", () => {
+      expect(zBulkRegisterIotDevicesBody.safeParse({ ...base, deviceType: "mobile" }).success).toBe(
+        false,
+      );
+    });
+
+    it("rejects a blank new-group name", () => {
+      expect(
+        zBulkRegisterIotDevicesBody.safeParse({ ...base, group: { name: "   " } }).success,
+      ).toBe(false);
+    });
+  });
+
   describe("zIotDevice", () => {
     const validDevice = {
       id: "11111111-1111-4111-8111-111111111111",
@@ -202,19 +250,44 @@ describe("Iot Schema", () => {
       canManage: true,
       canShare: true,
       canLeave: false,
+      // A device is never transferable: its cloud identity belongs to its org.
+      canTransfer: false,
     };
+    const connectivity = { connected: true, lastSeenAt: "2025-01-10T00:00:00.000Z" };
 
     it("accepts a device with its caller capabilities", () => {
-      expect(zIotDeviceDetail.safeParse({ ...validDevice, capabilities }).success).toBe(true);
+      expect(
+        zIotDeviceDetail.safeParse({ ...validDevice, capabilities, connectivity }).success,
+      ).toBe(true);
     });
 
     it("requires the capabilities object — the Collaborators tab is gated on it", () => {
-      expect(zIotDeviceDetail.safeParse(validDevice).success).toBe(false);
+      expect(zIotDeviceDetail.safeParse({ ...validDevice, connectivity }).success).toBe(false);
+    });
+
+    it("requires connectivity, nullable for a degraded fleet index", () => {
+      expect(zIotDeviceDetail.safeParse({ ...validDevice, capabilities }).success).toBe(false);
+      expect(
+        zIotDeviceDetail.safeParse({ ...validDevice, capabilities, connectivity: null }).success,
+      ).toBe(true);
     });
 
     it("keeps the list response free of capabilities, which cost a resolution per row", () => {
       expect(zIotDevice.safeParse({ ...validDevice, capabilities }).success).toBe(true);
-      expect(zIotDeviceList.safeParse([validDevice]).success).toBe(true);
+      expect(zIotDeviceList.safeParse([{ ...validDevice, connectivity }]).success).toBe(true);
+    });
+
+    it("accepts a device without connectivity, which the list response then rejects", () => {
+      expect(zIotDevice.safeParse(validDevice).success).toBe(true);
+      expect(zIotDeviceList.safeParse([validDevice]).success).toBe(false);
+    });
+
+    it("accepts a never-connected device in connectivity", () => {
+      expect(
+        zIotDeviceList.safeParse([
+          { ...validDevice, connectivity: { connected: false, lastSeenAt: null } },
+        ]).success,
+      ).toBe(true);
     });
   });
 
@@ -359,6 +432,119 @@ describe("Iot Schema", () => {
         addedAt: "yesterday",
       };
       expect(zDeviceExperiment.safeParse(binding).success).toBe(false);
+    });
+  });
+
+  describe("zRegisterIotDeviceBody deviceType", () => {
+    it("rejects the mobile family at the contract: phones self-register via ensure", () => {
+      const body = { serialNumber: "AA:BB", deviceType: "mobile" };
+      expect(zRegisterIotDeviceBody.safeParse(body).success).toBe(false);
+    });
+
+    it("accepts an instrument family", () => {
+      const body = { serialNumber: "AA:BB", deviceType: "ambyte" };
+      expect(zRegisterIotDeviceBody.safeParse(body).success).toBe(true);
+    });
+  });
+
+  describe("zIotDeviceActivity", () => {
+    it("accepts a datetime lastDataAt", () => {
+      expect(
+        zIotDeviceActivity.safeParse({
+          lastDataAt: "2025-01-10T00:00:00.000Z",
+          pipelineUnavailable: false,
+        }).success,
+      ).toBe(true);
+    });
+
+    it("accepts null when no data has landed", () => {
+      expect(
+        zIotDeviceActivity.safeParse({ lastDataAt: null, pipelineUnavailable: false }).success,
+      ).toBe(true);
+    });
+
+    it("accepts null marked unavailable when the lookup itself failed", () => {
+      expect(
+        zIotDeviceActivity.safeParse({ lastDataAt: null, pipelineUnavailable: true }).success,
+      ).toBe(true);
+    });
+
+    it("rejects a missing lastDataAt or availability flag", () => {
+      expect(zIotDeviceActivity.safeParse({}).success).toBe(false);
+      expect(zIotDeviceActivity.safeParse({ lastDataAt: null }).success).toBe(false);
+    });
+  });
+
+  describe("zMonitoringRangeQuery", () => {
+    const validRange = {
+      deviceId: "11111111-1111-4111-8111-111111111111",
+      from: "2026-08-13T00:00:00.000Z",
+      to: "2026-08-14T00:00:00.000Z",
+      bucket: "hour",
+    };
+
+    it("accepts an ordered range", () => {
+      expect(zMonitoringRangeQuery.safeParse(validRange).success).toBe(true);
+    });
+
+    it("accepts a span exactly at the ceiling", () => {
+      expect(
+        zMonitoringRangeQuery.safeParse({
+          ...validRange,
+          from: "2026-07-14T00:00:00.000Z",
+          to: "2026-08-14T00:00:00.000Z",
+        }).success,
+      ).toBe(true);
+    });
+
+    it("rejects a span past the preset ceiling", () => {
+      expect(
+        zMonitoringRangeQuery.safeParse({
+          ...validRange,
+          from: "2026-06-01T00:00:00.000Z",
+          to: "2026-08-14T00:00:00.000Z",
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a reversed or empty range", () => {
+      expect(zMonitoringRangeQuery.safeParse({ ...validRange, from: validRange.to }).success).toBe(
+        false,
+      );
+      expect(
+        zMonitoringRangeQuery.safeParse({
+          ...validRange,
+          from: "2026-08-15T00:00:00.000Z",
+        }).success,
+      ).toBe(false);
+    });
+  });
+
+  describe("zEnsureMobileDeviceBody", () => {
+    // The phone reports Settings.Secure.ANDROID_ID verbatim. It is a serial,
+    // not a minted uuid, and the column behind it is text.
+    it("accepts a raw Android SSAID", () => {
+      const parsed = zEnsureMobileDeviceBody.safeParse({ installId: "9774d56d682e549c" });
+
+      expect(parsed.success).toBe(true);
+    });
+
+    it("still accepts a uuid, which older installs and iOS keep using", () => {
+      const parsed = zEnsureMobileDeviceBody.safeParse({
+        installId: "59fcd852-7dfe-44a5-9bfe-5179d2d5f7cf",
+      });
+
+      expect(parsed.success).toBe(true);
+    });
+
+    it("rejects characters AWS CreateThing would refuse", () => {
+      const parsed = zEnsureMobileDeviceBody.safeParse({ installId: "not a serial!" });
+
+      expect(parsed.success).toBe(false);
+    });
+
+    it("rejects an empty install id", () => {
+      expect(zEnsureMobileDeviceBody.safeParse({ installId: "" }).success).toBe(false);
     });
   });
 });

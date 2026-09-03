@@ -5,6 +5,7 @@ import { strToU8, zipSync } from "fflate";
 import { Check, Copy, Download } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import type { IssueIotCredentialsResponse } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
@@ -29,6 +30,22 @@ export function downloadZip(filename: string, files: { filename: string; content
   triggerDownload(new Blob([zipSync(entries)], { type: "application/zip" }), filename);
 }
 
+/** The device's own files of a credential bundle; root CAs ride alongside. */
+export function deviceCredentialFiles(
+  thingName: string,
+  credentials: IssueIotCredentialsResponse,
+): { filename: string; content: string }[] {
+  return [
+    { filename: `${thingName}.cert.pem`, content: credentials.certificatePem },
+    { filename: `${thingName}.public.key`, content: credentials.publicKey },
+    { filename: `${thingName}.private.key`, content: credentials.privateKey },
+  ];
+}
+
+export function credentialBundleZipName(thingName: string): string {
+  return `${thingName}-credentials.zip`;
+}
+
 interface IotCredentialFileProps {
   icon: LucideIcon;
   label: string;
@@ -36,6 +53,8 @@ interface IotCredentialFileProps {
   filename: string;
   content: string;
   copyable?: boolean;
+  /** Lets the show-once dialog know something reached disk before closing. */
+  onDownload?: () => void;
 }
 
 export function IotCredentialFile({
@@ -45,17 +64,18 @@ export function IotCredentialFile({
   filename,
   content,
   copyable = false,
+  onDownload,
 }: IotCredentialFileProps) {
   const { t } = useTranslation("iot");
   const { copy, copied } = useCopyToClipboard();
 
   return (
     <div className="flex items-center gap-3 py-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#F6F8FA] text-[#68737B]">
+      <div className="bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-md">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-[#011111]">{label}</p>
+        <p className="text-foreground truncate text-sm font-medium">{label}</p>
         <p className="text-muted-foreground truncate text-xs">{sublabel}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
@@ -69,14 +89,21 @@ export function IotCredentialFile({
             aria-label={t("iot.devices.credentials.copy")}
             onClick={() => copy(content)}
           >
-            {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+            {copied ? (
+              <Check className="text-status-active-foreground h-4 w-4" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
           </Button>
         )}
         <Button
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => downloadText(filename, content)}
+          onClick={() => {
+            downloadText(filename, content);
+            onDownload?.();
+          }}
         >
           <Download className="mr-1.5 h-3.5 w-3.5" />
           {t("iot.devices.credentials.download")}

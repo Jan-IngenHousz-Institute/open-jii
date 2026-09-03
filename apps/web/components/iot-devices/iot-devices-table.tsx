@@ -1,6 +1,6 @@
 "use client";
 
-import type { IotDevice } from "@repo/api/domains/iot/iot.schema";
+import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {
@@ -14,10 +14,9 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 import { IotDeviceTableRow } from "./iot-device-table-row";
-import { LIST_HEADER_BG, LIST_TABLE_BORDER, LIST_TEXT_MUTED } from "./iot-devices-list-tokens";
 
 interface IotDevicesTableProps {
-  devices: IotDevice[];
+  devices: IotDeviceWithConnectivity[];
   isLoading?: boolean;
 }
 
@@ -25,15 +24,16 @@ export function IotDevicesTable({ devices, isLoading }: IotDevicesTableProps) {
   const { t } = useTranslation("iot");
 
   return (
-    <div className={cn("overflow-hidden rounded-lg border", LIST_TABLE_BORDER)}>
-      <Table>
+    <div className="border-border overflow-hidden rounded-md border">
+      <Table className="table-fixed">
         <TableHeader>
-          <TableRow className={cn("hover:bg-transparent", LIST_HEADER_BG, LIST_TABLE_BORDER)}>
-            <ColumnHead>{t("iot.devices.columns.name")}</ColumnHead>
-            <ColumnHead>{t("iot.devices.columns.status")}</ColumnHead>
-            <ColumnHead>{t("iot.devices.columns.type")}</ColumnHead>
-            <ColumnHead>{t("iot.devices.columns.serial")}</ColumnHead>
-            <ColumnHead>{t("iot.devices.columns.created")}</ColumnHead>
+          <TableRow className="bg-muted/50 border-border hover:bg-transparent">
+            <ColumnHead className="w-[30%]">{t("iot.devices.columns.name")}</ColumnHead>
+            <ColumnHead className="w-28">{t("iot.devices.columns.status")}</ColumnHead>
+            <ColumnHead className="w-28">{t("iot.devices.columns.type")}</ColumnHead>
+            <ColumnHead className="w-36">{t("iot.devices.columns.serial")}</ColumnHead>
+            <ColumnHead className="w-32">{t("iot.devices.columns.lastSeen")}</ColumnHead>
+            <ColumnHead className="w-32">{t("iot.devices.columns.created")}</ColumnHead>
             <TableHead aria-hidden className="w-12" />
           </TableRow>
         </TableHeader>
@@ -47,12 +47,12 @@ export function IotDevicesTable({ devices, isLoading }: IotDevicesTableProps) {
   );
 }
 
-function ColumnHead({ children }: { children: React.ReactNode }) {
+function ColumnHead({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <TableHead
       className={cn(
-        "h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
-        LIST_TEXT_MUTED,
+        "text-muted-foreground h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
+        className,
       )}
     >
       {children}
@@ -62,8 +62,8 @@ function ColumnHead({ children }: { children: React.ReactNode }) {
 
 function SkeletonRow() {
   return (
-    <TableRow className={cn("hover:bg-transparent", LIST_TABLE_BORDER)}>
-      <TableCell className="px-6 py-3">
+    <TableRow className="border-border hover:bg-transparent">
+      <TableCell className="min-w-0 overflow-hidden px-6 py-3">
         <Skeleton className="h-4 w-40" />
       </TableCell>
       <TableCell className="px-6 py-3">
@@ -74,6 +74,9 @@ function SkeletonRow() {
       </TableCell>
       <TableCell className="px-6 py-3">
         <Skeleton className="h-4 w-28" />
+      </TableCell>
+      <TableCell className="px-6 py-3">
+        <Skeleton className="h-4 w-20" />
       </TableCell>
       <TableCell className="px-6 py-3">
         <Skeleton className="h-4 w-24" />

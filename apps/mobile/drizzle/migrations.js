@@ -1,8 +1,12 @@
 // This file is required for Expo/React Native SQLite migrations - https://orm.drizzle.team/quick-sqlite/expo
+// Metro resolves `.ts` before `.js`, so migrations.ts is the file the app
+// actually loads; drizzle-kit regenerates this one. Keep both lists identical.
 import m0000 from "./0000_outgoing_firebird.sql";
 import m0001 from "./0001_add_pending_status.sql";
 import m0002 from "./0002_dashing_lenny_balinger.sql";
 import m0003 from "./0003_drop_uploading_status.sql";
+import m0004 from "./0004_add_day_key.sql";
+import m0005 from "./0005_add_workbook_run_id.sql";
 import journal from "./meta/_journal.json";
 
 export default {
@@ -12,5 +16,7 @@ export default {
     m0001,
     m0002,
     m0003,
+    m0004,
+    m0005,
   },
 };

@@ -23,6 +23,14 @@
     "published": "Published"
   },
   "lastUpdate": "Last update",
+  "columns": {
+    "name": "Name",
+    "updated": "Updated",
+    "status": "Status",
+    "owner": "Owner",
+    "organization": "Organization",
+    "members": "Members"
+  },
   "visibility": {
     "private": "Private",
     "public": "Public"
@@ -140,14 +148,22 @@
       "viewDiff": "View diff",
       "macroCaveat": "Structural checks only. Macro logic is not verified, so test the flow after upgrading.",
       "lastChanged": "updated {{when}}",
-      "kind": { "protocol": "Protocol", "macro": "Macro" },
+      "kind": {
+        "protocol": "Protocol",
+        "macro": "Macro"
+      },
       "status": {
         "added": "Added",
         "changed": "Changed",
         "unchanged": "Unchanged",
         "removed": "Removed"
       },
-      "change": { "added": "Added", "removed": "Removed", "changed": "Edited", "moved": "Moved" },
+      "change": {
+        "added": "Added",
+        "removed": "Removed",
+        "changed": "Edited",
+        "moved": "Moved"
+      },
       "verdict": {
         "ok": "No structural issues found",
         "warnings": "Upgrade is possible, with warnings",

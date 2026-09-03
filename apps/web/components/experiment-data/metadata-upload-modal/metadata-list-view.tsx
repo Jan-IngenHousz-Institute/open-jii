@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import { DialogFooter } from "@repo/ui/components/dialog";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 
@@ -73,17 +74,17 @@ export function MetadataListView({
   return (
     <div className="flex flex-col gap-4 pt-4">
       {isEmpty ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border bg-gray-50 py-8 dark:bg-gray-900">
+        <Card className="items-center justify-center gap-0 py-8">
           <div className="bg-muted mb-3 flex h-16 w-16 items-center justify-center rounded-full">
             <FileSpreadsheet className="text-muted-foreground h-8 w-8" />
           </div>
           <p className="text-muted-foreground text-center text-sm">
             {t("uploadModal.metadata.noMetadata", { defaultValue: "No metadata uploaded yet." })}
           </p>
-        </div>
+        </Card>
       ) : (
         <>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground text-sm">
             {records.length} metadata record{records.length !== 1 ? "s" : ""}
           </p>
           <ScrollArea className="max-h-[320px]">

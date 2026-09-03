@@ -1,6 +1,6 @@
 import { createIotDevice } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
+import { render, screen, waitFor, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -58,6 +58,13 @@ describe("ExperimentDevicesPanel", () => {
     await waitFor(() => {
       expect(screen.getByText("iot.experimentDevices.loadError")).toBeInTheDocument();
     });
+
+    // The retry refetches; a recovered read replaces the error with the rows.
+    server.mount(contract.experiments.listExperimentDevices, { body: [binding] });
+    await userEvent.click(screen.getByRole("button", { name: "iot.onboarding.retry" }));
+    await waitFor(() => {
+      expect(screen.getByText("Bench sensor")).toBeInTheDocument();
+    });
   });
 
   it("detaches a device", async () => {
@@ -71,6 +78,14 @@ describe("ExperimentDevicesPanel", () => {
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
     await user.click(await screen.findByRole("button", { name: "iot.experimentDevices.detach" }));
+    // The X only nominates; the confirm names the consequence before anything fires.
+    expect(spy.called).toBe(false);
+    await screen.findByText("iot.experimentDevices.detachConfirmBody");
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "iot.experimentDevices.detach",
+      }),
+    );
 
     await waitFor(() => expect(spy.called).toBe(true));
   });
@@ -86,6 +101,12 @@ describe("ExperimentDevicesPanel", () => {
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
     await user.click(await screen.findByRole("button", { name: "iot.experimentDevices.detach" }));
+    await screen.findByText("iot.experimentDevices.detachConfirmBody");
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "iot.experimentDevices.detach",
+      }),
+    );
 
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" }));

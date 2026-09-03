@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { zSensorFamily } from "../protocol/protocol.schema";
+import { zProtocolFamily } from "../protocol/protocol.schema";
 import { zWorkbookCellArray } from "./workbook-cells.schema";
 
 // `family` is captured at publish so the pinned snapshot renders fully without
@@ -9,7 +9,7 @@ import { zWorkbookCellArray } from "./workbook-cells.schema";
 export const zEntitySnapshots = z.object({
   protocols: z.record(
     z.string(),
-    z.object({ code: z.unknown(), family: zSensorFamily.optional() }),
+    z.object({ code: z.unknown(), family: zProtocolFamily.optional() }),
   ),
   macros: z.record(z.string(), z.object({ code: z.string() })),
 });

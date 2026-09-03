@@ -22,11 +22,11 @@ There is no `uploading` status — in-flight state lives in the Outbox's in-memo
 
 ### Topic
 
-The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMeasurementMqttTopic({ experimentId, protocolId })`. The `protocolId` value `"questions"` is a sentinel for question-only uploads (no device sample).
+The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMeasurementMqttTopic({ experimentId })` on the lean 7-segment ingest shape: the shared `@repo/api` prefix transform plus `mobile/{appVersion}/{thingName}`, where the thing name is this phone's registered device identity (also the MQTT client id). Protocol attribution rides in the payload as `protocol_id`, which is optional — question-only uploads (no device sample) omit it entirely. Topics are frozen per row at save time, so rows queued by older builds keep their legacy 8-segment topics and drain through the transitional channel.
 
 ### Workbook run
 
-N Measurements produced by one Multi-scan round, correlated only by a shared `workbook_run_id` (one uuid per round) embedded in each otherwise-ordinary wire payload. There is no run entity locally or server-side — an unlinked measurement simply has no `workbook_run_id`. There is no batched publish either; the Outbox still sends N independent messages.
+Every upload made from a workbook flow carries a `workbook_run_id`. One UUID identifies one complete workbook attempt, so sequential measurement nodes and every device result in a Multi-scan round share it until the flow starts its next iteration. Retrying or revisiting a step keeps the current run ID and can produce multiple rows for the same position; `(workbook_run_id, macro_id)` is therefore not a unique key. There is no run entity locally or server-side and no batched publish; the Outbox still sends independent messages whose shared ID provides the correlation.
 
 ---
 

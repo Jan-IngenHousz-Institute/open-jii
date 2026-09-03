@@ -1,0 +1,72 @@
+"use client";
+
+import { DocsHelpLink } from "@/components/docs-help-link";
+import { BookOpen, ChevronDown } from "lucide-react";
+
+import { useTranslation } from "@repo/i18n";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@repo/ui/components/collapsible";
+import { CopyButton } from "@repo/ui/components/copy-button";
+
+const JOB_DOCUMENT_EXAMPLE = `{
+  "operation": "firmware-update",
+  "family": "ambyte",
+  "version": "v1.3.0",
+  "sha256": "<hex digest of the image>",
+  "url": "<short-lived presigned download URL>"
+}`;
+
+const STEP_KEYS = ["step1", "step2", "step3", "step4"] as const;
+
+/**
+ * How an update actually reaches a device. Rollouts are started by JII from a
+ * reviewed workflow, never from this page, so this panel documents rather than
+ * offers controls.
+ */
+interface FirmwareDeliveryGuideProps {
+  /** Open from the start where the guide is the surface's whole right rail. */
+  defaultOpen?: boolean;
+}
+
+export function FirmwareDeliveryGuide({ defaultOpen = false }: FirmwareDeliveryGuideProps) {
+  const { t } = useTranslation("iot");
+  const { t: tCommon } = useTranslation("common");
+
+  return (
+    <Collapsible defaultOpen={defaultOpen} className="bg-card rounded-lg border">
+      <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium">
+        <BookOpen className="h-4 w-4" aria-hidden />
+        {t("iot.devices.firmware.guide.title")}
+        <ChevronDown className="text-muted-foreground ml-auto h-4 w-4" aria-hidden />
+      </CollapsibleTrigger>
+
+      <CollapsibleContent className="space-y-3 px-3 pb-3">
+        <p className="text-muted-foreground text-xs">{t("iot.devices.firmware.guide.intro")}</p>
+
+        <ol className="text-muted-foreground list-decimal space-y-1 pl-4 text-xs">
+          {STEP_KEYS.map((step) => (
+            <li key={step}>{t(`iot.devices.firmware.guide.${step}`)}</li>
+          ))}
+        </ol>
+
+        <div className="relative">
+          <pre className="bg-muted/30 whitespace-pre-wrap break-words rounded border p-3 pr-20 text-xs">
+            {JOB_DOCUMENT_EXAMPLE}
+          </pre>
+          <CopyButton
+            value={JOB_DOCUMENT_EXAMPLE}
+            label={tCommon("common.copy")}
+            copiedLabel={tCommon("common.copied")}
+            variant="outline"
+            className="bg-background hover:bg-accent shadow-xs absolute right-2 top-2 size-7 border"
+          />
+        </div>
+
+        <DocsHelpLink path="/developers/device-integration" />
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}

@@ -21,7 +21,6 @@ import type { ForceUpdateGateStatus } from "~/features/force-update/hooks/use-fo
 import { AllowedAppServices } from "~/shared/composition/allowed-app-services";
 import { AppProviders } from "~/shared/composition/app-providers";
 import { db } from "~/shared/db/client";
-import { backfillDerivedColumns } from "~/shared/db/measurements-backfill";
 import { shouldHideSplash } from "~/shared/device/should-hide-splash";
 import { useI18nReady } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
@@ -124,13 +123,6 @@ function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
       void SplashScreen.hideAsync();
     }
   }, [loaded, migrationsReady, i18nReady, migrationsError]);
-
-  useEffect(() => {
-    if (!migrationsReady) return;
-    void backfillDerivedColumns().catch((e) =>
-      log.warn("db backfill failed", { err: (e as Error)?.message }),
-    );
-  }, [migrationsReady]);
 
   if (migrationsError) {
     // Recovery fallback. i18n init runs in the same wrapper, so when the

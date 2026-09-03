@@ -29,6 +29,7 @@ describe("ExperimentDashboardsEmptyState", () => {
     );
     const createLink = screen.getByRole("link", { name: /overview\.createDashboard/ });
     expect(createLink).toHaveAttribute("href", dashboardsHref);
+    expect(createLink.querySelector(".lucide-plus")).toBeInTheDocument();
   });
 
   it("hides the createDashboard CTA when hasAccess is false", () => {

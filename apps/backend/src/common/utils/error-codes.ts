@@ -52,6 +52,8 @@ export enum ErrorCodes {
   AWS_IOT_ATTACH_CERT_POLICY_FAILED = "AWS_IOT_ATTACH_CERT_POLICY_FAILED", // IoT AttachPolicy to certificate failed
   AWS_IOT_UPDATE_CERT_FAILED = "AWS_IOT_UPDATE_CERT_FAILED", // IoT UpdateCertificate status failed
   AWS_IOT_DESCRIBE_ENDPOINT_FAILED = "AWS_IOT_DESCRIBE_ENDPOINT_FAILED", // IoT DescribeEndpoint failed
+  AWS_IOT_LIST_PRINCIPALS_FAILED = "AWS_IOT_LIST_PRINCIPALS_FAILED", // IoT ListThingPrincipals failed
+  AWS_IOT_SEARCH_INDEX_FAILED = "AWS_IOT_SEARCH_INDEX_FAILED", // IoT fleet-index connectivity search failed
   AWS_S3_PRESIGN_FAILED = "AWS_S3_PRESIGN_FAILED", // S3 pre-signed URL generation failed
   AWS_OPERATION_FAILED = "AWS_OPERATION_FAILED", // Other AWS operations failed
 
@@ -110,10 +112,12 @@ export enum ErrorCodes {
   IOT_DEVICE_DELETE_FAILED = "IOT_DEVICE_DELETE_FAILED", // Failed to delete device
   IOT_DEVICE_NOT_FOUND = "IOT_DEVICE_NOT_FOUND", // Device not found
   IOT_DEVICE_ALREADY_EXISTS = "IOT_DEVICE_ALREADY_EXISTS", // Device serial number or thing name already registered
+  IOT_DEVICE_OWNED_BY_ANOTHER_USER = "IOT_DEVICE_OWNED_BY_ANOTHER_USER", // Install id registered by a different user
   IOT_CREDENTIALS_INVALID_STATE = "IOT_CREDENTIALS_INVALID_STATE", // Credential op not allowed from the device's current status
   IOT_CREDENTIALS_ISSUE_FAILED = "IOT_CREDENTIALS_ISSUE_FAILED", // Failed to issue device certificate
   IOT_CREDENTIALS_REVOKE_FAILED = "IOT_CREDENTIALS_REVOKE_FAILED", // Failed to revoke device certificate
   IOT_CREDENTIALS_ROTATE_FAILED = "IOT_CREDENTIALS_ROTATE_FAILED", // Failed to rotate device certificate
+  GITHUB_RELEASES_FAILED = "GITHUB_RELEASES_FAILED", // Failed to read firmware releases from GitHub
 
   // ==================== Domain Operations - Users ====================
   // Location: src/users/application/use-cases/
@@ -123,6 +127,7 @@ export enum ErrorCodes {
   USER_NOT_FOUND = "USER_NOT_FOUND", // User not found
   USER_PROFILE_NOT_FOUND = "USER_PROFILE_NOT_FOUND", // User profile not found
   USER_IS_ONLY_ADMIN = "USER_IS_ONLY_ADMIN", // Cannot delete sole admin
+  USER_IS_ONLY_ORG_OWNER = "USER_IS_ONLY_ORG_OWNER", // Cannot delete the sole owner of a shared organization
 
   // ==================== Domain Operations - Experiments Core ====================
   // Location: src/experiments/application/use-cases/

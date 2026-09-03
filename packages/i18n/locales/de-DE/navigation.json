@@ -40,7 +40,9 @@
     "otherDevice1": "Anderes Gerät 1",
     "hardware": "Hardware",
     "macros": "Makros",
-    "workbooks": "Arbeitsmappen"
+    "workbooks": "Arbeitsmappen",
+    "organizations": "Organisationen",
+    "newOrganization": "Neue Organisation"
   },
   "breadcrumbs": {
     "home": "Startseite",
@@ -51,10 +53,11 @@
   },
   "commandPalette": {
     "title": "Befehlspalette",
-    "placeholder": "Seiten und Aktionen suchen...",
+    "placeholder": "Seiten, Aktionen und Ressourcen suchen...",
     "groups": {
       "pages": "Seiten",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "searchResults": "Suchergebnisse"
     },
     "entries": {
       "home": "Startseite",
@@ -62,18 +65,13 @@
       "workbooks": "Arbeitsmappen",
       "protocols": "Protokolle",
       "macros": "Makros",
+      "organizations": "Organisationen",
       "transferRequests": "Transferanfragen",
       "settings": "Einstellungen",
       "createExperiment": "Experiment erstellen",
       "openWhatsNew": "Neuigkeiten öffnen",
       "showKeyboardShortcuts": "Tastenkürzel anzeigen",
       "openDocumentation": "Dokumentation öffnen"
-    },
-    "results": {
-      "experiments": "Experimente",
-      "protocols": "Protokolle",
-      "macros": "Makros",
-      "workbooks": "Arbeitsmappen"
     },
     "status": {
       "searching": "Suche...",

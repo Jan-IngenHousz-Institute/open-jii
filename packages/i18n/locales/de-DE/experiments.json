@@ -21,6 +21,14 @@
     "stale": "Veraltet"
   },
   "lastUpdate": "Letzte Aktualisierung",
+  "columns": {
+    "name": "Name",
+    "updated": "Aktualisiert",
+    "status": "Status",
+    "owner": "Eigentümer",
+    "organization": "Organisation",
+    "members": "Mitglieder"
+  },
   "visibility": {
     "private": "Privat",
     "public": "Publik"
@@ -112,7 +120,10 @@
       "viewDiff": "Unterschiede anzeigen",
       "macroCaveat": "Nur strukturelle Prüfungen. Makro-Logik wird nicht überprüft; testen Sie den Ablauf nach der Aktualisierung.",
       "lastChanged": "geändert {{when}}",
-      "kind": { "protocol": "Protokoll", "macro": "Makro" },
+      "kind": {
+        "protocol": "Protokoll",
+        "macro": "Makro"
+      },
       "status": {
         "added": "Hinzugefügt",
         "changed": "Geändert",

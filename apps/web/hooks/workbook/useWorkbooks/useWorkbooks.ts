@@ -1,84 +1,59 @@
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+
+import { isPaginatedList } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
+import { useSearchPending } from "../../useSearchPending";
 
-export type WorkbookFilter = "my" | "all";
-
-export function useWorkbooks({
-  initialFilter = "my",
-  initialSearch = "",
-}: {
-  initialFilter?: WorkbookFilter;
-  initialSearch?: string;
-} = {}) {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-
-  const rawFilter = searchParams.get("filter");
-
-  const [filter, setFilterState] = useState<WorkbookFilter>(
-    rawFilter === "all" ? "all" : rawFilter === "my" ? "my" : initialFilter,
-  );
-  const [search, setSearch] = useState<string>(initialSearch);
+export function useWorkbooks({ initialSearch = "" }: { initialSearch?: string } = {}) {
+  const [search, setSearchState] = useState<string>(initialSearch);
+  const [page, setPage] = useState(1);
   const [debouncedSearch] = useDebounce(search, 300);
 
-  const createQueryString = useCallback(
-    (name: string, value: string | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (value === null) {
-        params.delete(name);
-      } else {
-        params.set(name, value);
-      }
-      return params.toString();
-    },
-    [searchParams],
-  );
-
-  const setFilter = useCallback(
-    (value: WorkbookFilter) => {
-      setFilterState(value);
-      const queryString = createQueryString("filter", value === "all" ? "all" : null);
-      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-      router.push(newUrl, { scroll: false });
-    },
-    [pathname, router, createQueryString],
-  );
+  const setSearch = (value: string) => {
+    setSearchState(value);
+    setPage(1);
+  };
 
   const query = useQuery(
     orpc.workbooks.listWorkbooks.queryOptions({
       input: {
-        filter: filter === "all" ? undefined : "my",
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
+        page,
       },
+      placeholderData: (prev) => prev,
     }),
   );
 
-  // Auto-switch to "all" if user has no workbooks of their own on initial load
-  const hasAutoSwitched = useRef(false);
+  // `page` is always sent, so the response is the envelope; narrow the union.
+  const data = query.data && isPaginatedList(query.data) ? query.data : undefined;
+  const isSearchPending = useSearchPending({
+    search,
+    debouncedSearch,
+    isFetching: query.isFetching,
+  });
+
+  // A mutation or background update can shrink the result set under the current
+  // page; snap back into range once a real (non-placeholder) response says so.
   useEffect(() => {
-    if (
-      !hasAutoSwitched.current &&
-      filter === "my" &&
-      query.data?.length === 0 &&
-      !debouncedSearch
-    ) {
-      hasAutoSwitched.current = true;
-      setFilter("all");
-    }
-  }, [filter, query.data, setFilter, debouncedSearch]);
+    if (!data || query.isPlaceholderData) return;
+    const maxPage = Math.max(1, data.totalPages);
+    if (page > maxPage) setPage(maxPage);
+  }, [data, query.isPlaceholderData, page]);
 
   return {
-    data: query.data,
+    data,
     isLoading: query.isLoading,
+    isPlaceholderData: query.isPlaceholderData,
+    isSearchPending,
     error: query.error,
-    filter,
-    setFilter,
+    refetch: query.refetch,
     search,
+    debouncedSearch,
     setSearch,
+    page,
+    setPage,
   };
 }

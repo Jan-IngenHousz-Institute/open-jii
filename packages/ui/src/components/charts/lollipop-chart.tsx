@@ -4,6 +4,7 @@ import React from "react";
 
 import { DotPlot, type DotSeriesData } from "./dot-plot";
 import type { BaseChartProps } from "./types";
+import { readThemeColor } from "./utils";
 
 export interface LollipopChartProps extends BaseChartProps {
   categories: string[];
@@ -27,7 +28,7 @@ export function LollipopChart({
   categories,
   values,
   name,
-  color = "#636EFA",
+  color = readThemeColor("--chart-1") ?? "#636EFA",
   orientation = "v",
   stemWidth = 2,
   dotSize = 12,

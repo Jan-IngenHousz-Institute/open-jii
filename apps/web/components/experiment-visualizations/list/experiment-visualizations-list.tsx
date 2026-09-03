@@ -5,6 +5,7 @@ import { DocsHelpLink } from "~/components/docs-help-link";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
+import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import {
   Table,
@@ -14,7 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui/components/table";
+import { cn } from "@repo/ui/lib/utils";
 
+import {
+  LIST_HEADER_BG,
+  LIST_TABLE_BORDER,
+  LIST_TEXT_MUTED,
+} from "../../experiment-dashboards/list/table/experiment-dashboards-list-tokens";
 import { VisualizationTableRow } from "./visualization-table-row";
 
 interface ExperimentVisualizationsListProps {
@@ -51,22 +58,24 @@ export default function ExperimentVisualizationsList({
   const isEmpty = !isLoading && sorted.length === 0;
   if (isEmpty) {
     return (
-      <div className="rounded-lg border border-dashed border-[#CDD5DB] p-10 text-center text-sm text-[#68737B]">
+      <Card
+        className={cn("border-dashed p-10 text-center text-sm", LIST_TABLE_BORDER, LIST_TEXT_MUTED)}
+      >
         {t("ui.messages.noVisualizations")}
         {!isArchived && (
           <div className="mt-2">
             <DocsHelpLink path="/guide/data-analysis/viewing-data" />
           </div>
         )}
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[#CDD5DB]">
+    <div className={cn("overflow-hidden rounded-lg border", LIST_TABLE_BORDER)}>
       <Table>
-        <TableHeader className="bg-[#F6F8FA]">
-          <TableRow className="border-[#CDD5DB] hover:bg-transparent">
+        <TableHeader className={LIST_HEADER_BG}>
+          <TableRow className={cn("hover:bg-transparent", LIST_TABLE_BORDER)}>
             <ColumnHead>{t("ui.labels.columns.name")}</ColumnHead>
             <ColumnHead>{t("ui.labels.columns.type")}</ColumnHead>
             <ColumnHead>{t("ui.labels.columns.user")}</ColumnHead>
@@ -95,7 +104,12 @@ export default function ExperimentVisualizationsList({
 
 function ColumnHead({ children }: { children: React.ReactNode }) {
   return (
-    <TableHead className="h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em] text-[#68737B]">
+    <TableHead
+      className={cn(
+        "h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
+        LIST_TEXT_MUTED,
+      )}
+    >
       {children}
     </TableHead>
   );
@@ -103,7 +117,7 @@ function ColumnHead({ children }: { children: React.ReactNode }) {
 
 function SkeletonRow() {
   return (
-    <TableRow className="border-[#CDD5DB] hover:bg-transparent">
+    <TableRow className={cn("hover:bg-transparent", LIST_TABLE_BORDER)}>
       <TableCell className="px-6 py-3">
         <Skeleton className="h-4 w-48" />
       </TableCell>

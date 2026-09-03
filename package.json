@@ -20,6 +20,7 @@
     "test:coverage": "turbo run test:coverage",
     "test:projects": "vitest run",
     "test:projects:watch": "vitest --watch",
+    "e2e": "pnpm --filter @repo/e2e e2e",
     "view-report": "turbo run view-report",
     "tf": "pnpm run tf:dev",
     "tf:fmt": "cd infrastructure && tofu fmt --recursive",
@@ -30,7 +31,8 @@
     "db:setup": "turbo db:setup",
     "typecheck": "turbo run typecheck",
     "ui-add": "turbo run ui-add",
-    "dev:fb": "turbo run dev --filter=backend --filter=web"
+    "dev:fb": "turbo run dev --filter=backend --filter=web",
+    "local:login": "pnpm --filter @repo/devkit login --"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",

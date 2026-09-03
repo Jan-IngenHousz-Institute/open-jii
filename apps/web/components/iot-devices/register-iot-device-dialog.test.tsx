@@ -18,6 +18,11 @@ describe("RegisterIotDeviceDialog", () => {
 
     render(<RegisterIotDeviceDialog open onOpenChange={onOpenChange} />);
 
+    expect(
+      screen
+        .getByRole("button", { name: "iot.devices.dialog.submit" })
+        .querySelector(".lucide-plus"),
+    ).toBeInTheDocument();
     await user.type(
       screen.getByPlaceholderText("iot.devices.dialog.serialPlaceholder"),
       "AA:BB:CC",
@@ -32,6 +37,16 @@ describe("RegisterIotDeviceDialog", () => {
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({ title: "iot.devices.dialog.createSuccess" }),
     );
+  });
+
+  it("does not offer the mobile family, phones register themselves via the app", async () => {
+    const user = userEvent.setup();
+
+    render(<RegisterIotDeviceDialog open onOpenChange={vi.fn()} />);
+
+    await user.click(screen.getByRole("combobox"));
+    await screen.findByRole("option", { name: "Ambyte" });
+    expect(screen.queryByRole("option", { name: "Mobile" })).not.toBeInTheDocument();
   });
 
   it("does not submit when required fields are empty", async () => {

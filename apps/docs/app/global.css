@@ -8,27 +8,56 @@
 @source "../node_modules/fumadocs-openapi/dist/**/*.js";
 
 @theme {
-  --color-jii-teal: #005e5e;
-  --color-jii-green: #49e06d;
   --font-sans: "Overpass", ui-sans-serif, system-ui, sans-serif;
   --font-heading: "Poppins", "Overpass", sans-serif;
 }
 
-/* JII brand tokens mapped onto Fumadocs theme variables. */
+/* Fumadocs theme values mirror the platform workspace tokens in
+   apps/web/app/globals.css. The public navbar/footer use a separate invariant
+   teal-and-gold brand chrome; docs follows the application surfaces and controls
+   instead, while the logo artwork retains its gold identity. */
 :root {
-  --color-fd-primary: #005e5e;
+  --color-fd-primary: oklch(0.4363 0.0745 194.7689);
   --color-fd-primary-foreground: #ffffff;
-  --color-fd-ring: #005e5e;
+  --color-fd-ring: oklch(0.4363 0.0745 194.7689);
 }
 
 .dark {
-  --color-fd-primary: #49e06d;
-  --color-fd-primary-foreground: #04231a;
-  --color-fd-ring: #49e06d;
+  --color-fd-background: oklch(0.175 0.019 195);
+  --color-fd-foreground: oklch(0.945 0.006 195);
+  --color-fd-muted: oklch(0.255 0.023 195);
+  --color-fd-muted-foreground: oklch(0.715 0.026 195);
+  --color-fd-popover: oklch(0.215 0.022 195);
+  --color-fd-popover-foreground: oklch(0.945 0.006 195);
+  --color-fd-card: oklch(0.215 0.022 195);
+  --color-fd-card-foreground: oklch(0.945 0.006 195);
+  --color-fd-border: oklch(0.34 0.029 195);
+  --color-fd-primary: oklch(0.755 0.115 192);
+  --color-fd-primary-foreground: oklch(0.16 0.026 195);
+  --color-fd-secondary: oklch(0.285 0.026 195);
+  --color-fd-secondary-foreground: oklch(0.945 0.006 195);
+  --color-fd-accent: oklch(0.32 0.026 195);
+  --color-fd-accent-foreground: oklch(0.945 0.006 195);
+  --color-fd-ring: oklch(0.755 0.115 192);
+  --color-fd-overlay: oklch(0 0 0 / 35%);
+}
+
+/* neutral.css raises these three values on the sidebar with an ID selector.
+   Match that selector so docs navigation uses the same teal ramp as the page. */
+.dark #nd-sidebar {
+  --color-fd-muted: oklch(0.255 0.023 195);
+  --color-fd-secondary: oklch(0.285 0.026 195);
+  --color-fd-muted-foreground: oklch(0.715 0.026 195);
 }
 
 body {
   font-family: var(--font-sans);
+}
+
+/* Tailwind v4 preflight dropped the v3 `button { cursor: pointer }` rule. */
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+  cursor: pointer;
 }
 
 h1,
@@ -38,6 +67,18 @@ h4,
 h5,
 h6 {
   font-family: var(--font-heading);
+}
+
+/* Desktop captures publish on one 1920x1200 frame; see apps/e2e/docs-media/frames.ts.
+   Reserving the ratio stops the article reflowing as they decode. The
+   /img/guide/web/ selector is excluded until its last pre-refresh capture is
+   re-recorded, because forcing a ratio on the files still at 1.41 would
+   stretch them. */
+img[src^="/img/chrome-refresh/"],
+img[src^="/img/workbooks/"] {
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  height: auto;
 }
 
 /* Keep portrait mobile captures readable without letting them fill the page. */

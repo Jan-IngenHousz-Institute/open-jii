@@ -60,8 +60,52 @@ variable "iot_s3_policy_name" {
   type        = string
 }
 
+variable "firehose_delivery_stream_name" {
+  description = "Name of the Firehose delivery stream that buffers the raw IoT archive"
+  type        = string
+}
+
+variable "firehose_delivery_stream_arn" {
+  description = "ARN of the Firehose delivery stream that buffers the raw IoT archive"
+  type        = string
+}
+
+variable "iot_firehose_role_name" {
+  description = "Name for the IAM role that allows IoT Core to put records to Firehose"
+  type        = string
+}
+
+variable "iot_firehose_policy_name" {
+  description = "Name for the IAM policy that allows IoT Core to put records to Firehose"
+  type        = string
+}
+
 variable "large_iot_bucket_arn" {
   description = "ARN of the dedicated S3 bucket for large IoT payloads (>128 KB)"
   type        = string
   default     = ""
+}
+
+variable "enable_fleet_indexing" {
+  description = "Enable AWS IoT Fleet Indexing with thing-connectivity status (account/region singleton; enable once per account)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_databricks_lifecycle_read" {
+  description = "Create the IAM policy granting the Databricks storage-credential role read access to the raw archive's device-lifecycle-events prefix"
+  type        = bool
+  default     = false
+}
+
+variable "firmware_bucket_arn" {
+  description = "ARN of the firmware artifact bucket AWS IoT Jobs presigns objects from; read only when enable_firmware_jobs is set"
+  type        = string
+  default     = ""
+}
+
+variable "enable_firmware_jobs" {
+  description = "Create the IAM role AWS IoT Jobs assumes to presign firmware objects. A static flag, not derived from the bucket ARN, so a first apply can plan it"
+  type        = bool
+  default     = false
 }

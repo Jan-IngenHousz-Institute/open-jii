@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Fingerprint, Loader2 } from "lucide-react";
+import { CheckCircle2, Fingerprint, Loader2, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAddPasskey } from "~/hooks/auth/useAddPasskey/useAddPasskey";
 import { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
@@ -102,7 +102,7 @@ export function PasskeyCreatePrompt({ userId, sessionId }: { userId: string; ses
           <>
             <DialogHeader>
               <div className="flex justify-center py-2">
-                <CheckCircle2 className="text-jii-dark-green h-10 w-10" />
+                <CheckCircle2 className="text-primary h-10 w-10" />
               </div>
               <DialogTitle className="text-center">{t("passkeys.promptSuccessTitle")}</DialogTitle>
               <DialogDescription className="text-center">
@@ -128,7 +128,11 @@ export function PasskeyCreatePrompt({ userId, sessionId }: { userId: string; ses
             </DialogHeader>
             <DialogFooter className="flex-col gap-2 sm:flex-col">
               <Button className="w-full" onClick={handleCreate} disabled={addPasskey.isPending}>
-                {addPasskey.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {addPasskey.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" aria-hidden />
+                )}
                 {t("passkeys.promptAction")}
               </Button>
               <Button variant="ghost" className="w-full" onClick={handleDismiss}>

@@ -125,6 +125,124 @@ resource "aws_iot_policy" "iot_policy" {
   })
 }
 
+# ------------------------------------------------------------------
+# AWS IoT Jobs (firmware delivery)
+# ------------------------------------------------------------------
+# Hand-written rather than derived from asyncapi.yaml: that file is our own
+# message contract, while `$aws/*` is AWS's reserved namespace with a fixed
+# shape. Every statement is scoped by the thing policy variable, so a device
+# can only read and update the job executions addressed to itself.
+# https://docs.aws.amazon.com/iot/latest/developerguide/iot-data-plane-jobs.html
+locals {
+  jobs_thing_topic = "$${iot:Connection.Thing.ThingName}/jobs"
+
+  # notify-next carries the next queued execution; $next/get and +/update are
+  # request/response pairs, so the device also needs their accepted/rejected
+  # replies (the trailing +).
+  #
+  # Subscribe resources are topic FILTERS, where + is the MQTT single-level
+  # wildcard. Publish and Receive resolve against a concrete topic, where the
+  # IoT policy wildcard is *; a + there risks matching the literal character
+  # and denying every status report, which surfaces only as executions that
+  # sit QUEUED forever.
+  jobs_subscribe_topics = [
+    "${local.jobs_thing_topic}/notify-next",
+    "${local.jobs_thing_topic}/$next/get/+",
+    "${local.jobs_thing_topic}/+/update/+",
+  ]
+
+  jobs_receive_topics = [
+    "${local.jobs_thing_topic}/notify-next",
+    "${local.jobs_thing_topic}/$next/get/*",
+    "${local.jobs_thing_topic}/*/update/*",
+  ]
+
+  jobs_publish_topics = [
+    "${local.jobs_thing_topic}/$next/get",
+    "${local.jobs_thing_topic}/*/update",
+  ]
+}
+
+resource "aws_iot_policy" "jobs" {
+  name = "open_jii_${var.environment}_iot_policy_jobs"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = "iot:Connect",
+        Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:client/$${iot:Connection.Thing.ThingName}"
+      },
+      {
+        Effect = "Allow",
+        Action = "iot:Subscribe",
+        Resource = [
+          for topic in local.jobs_subscribe_topics :
+          "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topicfilter/$aws/things/${topic}"
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = "iot:Receive",
+        Resource = [
+          for topic in local.jobs_receive_topics :
+          "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/$aws/things/${topic}"
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = "iot:Publish",
+        Resource = [
+          for topic in local.jobs_publish_topics :
+          "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/$aws/things/${topic}"
+        ]
+      }
+    ]
+  })
+}
+
+# Lets AWS IoT presign the firmware object when it substitutes the job
+# document's `${aws:iot:s3-presigned-url:...}` placeholder at delivery time.
+# https://docs.aws.amazon.com/iot/latest/apireference/API_PresignedUrlConfig.html
+# count keys off a static flag, never off firmware_bucket_arn: on a first apply
+# the bucket does not exist yet, so its ARN is unknown at plan time and cannot
+# decide how many instances to create.
+resource "aws_iam_role" "jobs_presign" {
+  count = var.enable_firmware_jobs ? 1 : 0
+
+  name = "open_jii_${var.environment}_iot_jobs_presign"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "iot.amazonaws.com" },
+      Action    = "sts:AssumeRole",
+      # Scope the service principal to this account so the role cannot be
+      # assumed on behalf of someone else's IoT resources.
+      Condition = {
+        StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "jobs_presign" {
+  count = var.enable_firmware_jobs ? 1 : 0
+
+  name = "open_jii_${var.environment}_iot_jobs_presign"
+  role = aws_iam_role.jobs_presign[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect   = "Allow",
+      Action   = "s3:GetObject",
+      Resource = "${var.firmware_bucket_arn}/*"
+    }]
+  })
+}
+
 # --------------------------------------------------
 # Managed device registry (Thing type + group)
 # --------------------------------------------------
@@ -205,14 +323,50 @@ resource "aws_iam_policy" "iot_s3_policy" {
     Statement = [{
       Effect   = "Allow",
       Action   = ["s3:PutObject"],
-      Resource = "${var.s3_archive_bucket_arn}/*"
+      Resource = "${var.s3_archive_bucket_arn}/device-lifecycle-events/*"
     }]
   })
+
+  # Narrow only after the ingest rules stop writing raw-iot/*, so in-flight
+  # archive writes are never denied while the old S3 action is still live.
+  depends_on = [aws_iot_topic_rule.iot_rules]
 }
 
 resource "aws_iam_role_policy_attachment" "iot_s3_attach" {
   role       = aws_iam_role.iot_s3_role.name
   policy_arn = aws_iam_policy.iot_s3_policy.arn
+}
+
+# --------------------------------------------------
+# IAM Role and Policy for Firehose raw archive
+# --------------------------------------------------
+resource "aws_iam_role" "iot_firehose_role" {
+  name = var.iot_firehose_role_name
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "iot.amazonaws.com" },
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_policy" "iot_firehose_policy" {
+  name = var.iot_firehose_policy_name
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect   = "Allow",
+      Action   = ["firehose:PutRecord", "firehose:PutRecordBatch"],
+      Resource = var.firehose_delivery_stream_arn
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "iot_firehose_attach" {
+  role       = aws_iam_role.iot_firehose_role.name
+  policy_arn = aws_iam_policy.iot_firehose_policy.arn
 }
 
 # IAM policy that allows the ECS backend task role to generate pre-signed
@@ -255,8 +409,8 @@ resource "aws_iam_policy" "databricks_large_iot_read" {
 resource "aws_iot_topic_rule" "iot_rules" {
   for_each = local.ingest_channels
 
-  name    = local.iot_rule_names[each.key]
-  enabled = true
+  name        = local.iot_rule_names[each.key]
+  enabled     = true
   sql         = "SELECT topic() as topic, clientid() as client_id, * FROM '${local.iot_topic_filters[each.key]}'"
   sql_version = "2016-03-23"
 
@@ -266,9 +420,80 @@ resource "aws_iot_topic_rule" "iot_rules" {
     partition_key = "$${newuuid()}"
   }
 
+  # Raw archive goes through Firehose so messages are buffered into large
+  # objects instead of one S3 PUT per message.
+  firehose {
+    role_arn             = aws_iam_role.iot_firehose_role.arn
+    delivery_stream_name = var.firehose_delivery_stream_name
+    separator            = "\n"
+  }
+}
+
+# --------------------------------------------------
+# Device connectivity: lifecycle events + fleet index
+# --------------------------------------------------
+# Presence lifecycle events ($aws/events/presence/...) are archived to S3 only.
+# They must never reach the Kinesis measurement stream: bronze consumes the
+# whole stream unconditionally and is non-resettable.
+resource "aws_iot_topic_rule" "device_lifecycle_events" {
+  name        = "open_jii_${var.environment}_iot_rule_device_lifecycle_events"
+  enabled     = true
+  sql         = "SELECT *, topic() as topic FROM '$aws/events/presence/#'"
+  sql_version = "2016-03-23"
+
   s3 {
     role_arn    = aws_iam_role.iot_s3_role.arn
     bucket_name = var.s3_archive_bucket_name
-    key         = "raw-iot/$${parse_time(\"yyyy/MM/dd\", timestamp())}/$${newuuid()}.json"
+    key         = "device-lifecycle-events/$${parse_time(\"yyyy/MM/dd\", timestamp())}/$${newuuid()}.json"
   }
+}
+
+# Account/region singleton: dev and prod live in separate accounts, but the
+# variable gate keeps additional environments in a shared account safe.
+resource "aws_iot_indexing_configuration" "fleet_indexing" {
+  count = var.enable_fleet_indexing ? 1 : 0
+
+  thing_indexing_configuration {
+    thing_indexing_mode              = "REGISTRY"
+    thing_connectivity_indexing_mode = "STATUS"
+  }
+}
+
+# Read access for the Databricks storage-credential role to the device-lifecycle-events
+# prefix of the raw archive (Auto Loader source for connectivity history).
+resource "aws_iam_policy" "databricks_device_lifecycle_read" {
+  count = var.enable_databricks_lifecycle_read ? 1 : 0
+
+  name = "open_jii_${var.environment}_databricks_device_lifecycle_read"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = ["s3:GetObject"]
+        Resource = [
+          # S3A HEADs the bare prefix key first; denied it gets a fatal 403
+          # where a permitted probe gets a harmless 404.
+          "${var.s3_archive_bucket_arn}/device-lifecycle-events",
+          "${var.s3_archive_bucket_arn}/device-lifecycle-events/*",
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = var.s3_archive_bucket_arn
+        # Scoped to this prefix: the archive also holds raw measurement
+        # payloads. Both slash forms, because the probe tries both.
+        Condition = {
+          StringLike = {
+            "s3:prefix" = [
+              "device-lifecycle-events",
+              "device-lifecycle-events/",
+              "device-lifecycle-events/*",
+            ]
+          }
+        }
+      }
+    ]
+  })
 }

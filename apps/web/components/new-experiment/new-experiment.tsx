@@ -41,7 +41,7 @@ export function NewExperimentForm() {
   const [hasFormData, setHasFormData] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // Helper to create FormStep with specific cards
   const createFormStep = (cards: Parameters<typeof FormStep>[0]["cards"]) => {
@@ -131,16 +131,33 @@ export function NewExperimentForm() {
 
     // Intercept internal Next.js link clicks
     const handleLinkClick = (e: MouseEvent) => {
+      if (
+        e.defaultPrevented ||
+        e.button !== 0 ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.shiftKey ||
+        e.altKey
+      ) {
+        return;
+      }
+
       const target = e.target as HTMLElement;
       const link = target.closest("a");
+      // Same-document controls such as Leaflet's zoom anchors do not leave the form.
+      const staysOnCurrentDocument =
+        link?.pathname === window.location.pathname && link.search === window.location.search;
 
-      if (link?.href && !link.target && link.origin === window.location.origin) {
+      if (
+        link?.href &&
+        !link.target &&
+        link.origin === window.location.origin &&
+        !staysOnCurrentDocument
+      ) {
         e.preventDefault();
         e.stopPropagation();
 
-        setPendingNavigation(() => () => {
-          window.location.href = link.href;
-        });
+        setPendingNavigation(link.pathname + link.search + link.hash);
         setShowDialog(true);
       }
     };
@@ -169,7 +186,8 @@ export function NewExperimentForm() {
   const handleConfirmNavigation = () => {
     setShowDialog(false);
     if (pendingNavigation) {
-      pendingNavigation();
+      router.push(pendingNavigation);
+      setPendingNavigation(null);
     }
   };
 

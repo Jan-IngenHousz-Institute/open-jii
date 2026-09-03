@@ -178,7 +178,11 @@ describe("Outbox", () => {
   describe("worker - happy path", () => {
     it("publishes the row payload with _client_id and marks the row successful", async () => {
       mockGetMeasurementById.mockResolvedValueOnce(
-        row({ id: "row-1", topic: "exp/p", result: { v: 42 } }),
+        row({
+          id: "row-1",
+          topic: "exp/p",
+          result: { v: 42, device_family: "multispeq", device_firmware: "2.311" },
+        }),
       );
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
@@ -190,7 +194,12 @@ describe("Outbox", () => {
       for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
       expect(transport.calls).toHaveLength(1);
       expect(transport.calls[0].topic).toBe("exp/p");
-      expect(transport.calls[0].payload).toEqual({ v: 42, _client_id: "row-1" });
+      expect(transport.calls[0].payload).toEqual({
+        v: 42,
+        device_family: "multispeq",
+        device_firmware: "2.311",
+        _client_id: "row-1",
+      });
 
       transport.resolveNext();
       await flushMicrotasks(20);

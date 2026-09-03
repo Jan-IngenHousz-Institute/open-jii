@@ -1,4 +1,5 @@
 import React from "react";
+import { MeasurementMacroPreview } from "~/features/recent-measurements/components/measurement-macro-preview";
 import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { parseQuestions } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { getCommentFromMeasurementResult } from "~/shared/measurements/measurement-annotations";
@@ -25,7 +26,11 @@ export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
         measurement={m}
         onClose={onClose}
         onSaveComment={(text) => onSaveComment(m, text)}
-      />
+      >
+        {/* Mounted with the sheet, so the macro is fetched and re-run only
+            once a measurement is actually opened. */}
+        <MeasurementMacroPreview measurement={m} />
+      </MeasurementQuestionsModal>
     );
   }
 
@@ -34,9 +39,7 @@ export function MeasurementsModals({ state, onClose, onSaveComment }: Props) {
     return (
       <CommentModal
         visible
-        initialText={getCommentFromMeasurementResult(
-          m.data.measurementResult as Record<string, unknown>,
-        )}
+        initialText={getCommentFromMeasurementResult(m.data.measurementResult)}
         experimentName={m.data.metadata.experimentName}
         questions={parseQuestions(m.data.measurementResult)}
         timestamp={m.data.metadata.timestamp}

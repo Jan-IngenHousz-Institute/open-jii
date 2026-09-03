@@ -138,6 +138,54 @@ describe("AwsAdapter", () => {
     });
   });
 
+  describe("getCognitoIdentityId", () => {
+    it("resolves the identity id through the developer-identity path", async () => {
+      vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(
+        success({ identityId: "eu-central-1:identity-id-123", token: "mock-openid-token" }),
+      );
+
+      const result = await awsAdapter.getCognitoIdentityId("user-1");
+
+      assertSuccess(result);
+      expect(result.value).toBe("eu-central-1:identity-id-123");
+    });
+
+    it("propagates a token failure", async () => {
+      vi.spyOn(cognitoService, "getOpenIdToken").mockResolvedValue(
+        failure(AppError.internal("Token failed", ErrorCodes.AWS_COGNITO_TOKEN_FAILED)),
+      );
+
+      const result = await awsAdapter.getCognitoIdentityId("user-1");
+
+      assertFailure(result);
+    });
+  });
+
+  describe("thing principals", () => {
+    it("passes list, attach and detach through to the IoT service", async () => {
+      const list = vi
+        .spyOn(awsIotService, "listThingPrincipals")
+        .mockResolvedValue(success(["arn:principal"]));
+      const attach = vi
+        .spyOn(awsIotService, "attachThingPrincipal")
+        .mockResolvedValue(success(undefined));
+      const detach = vi
+        .spyOn(awsIotService, "detachThingPrincipal")
+        .mockResolvedValue(success(undefined));
+
+      const listed = await awsAdapter.listThingPrincipals("thing-a");
+      assertSuccess(listed);
+      expect(listed.value).toEqual(["arn:principal"]);
+      expect(list).toHaveBeenCalledWith("thing-a");
+
+      assertSuccess(await awsAdapter.attachThingPrincipal("thing-a", "arn:principal"));
+      expect(attach).toHaveBeenCalledWith("thing-a", "arn:principal");
+
+      assertSuccess(await awsAdapter.detachThingPrincipal("thing-a", "arn:principal"));
+      expect(detach).toHaveBeenCalledWith("thing-a", "arn:principal");
+    });
+  });
+
   describe("getIotCredentials", () => {
     it("should return IoT credentials when both cognito steps succeed", async () => {
       const userId = "test-user-123";
@@ -408,10 +456,34 @@ describe("AwsAdapter", () => {
       const result = await awsAdapter.attachDevicePolicies("arn:cert");
 
       assertSuccess(result);
-      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length);
       for (const policyName of awsConfigService.iotPolicyNames) {
         expect(attachSpy).toHaveBeenCalledWith(policyName, "arn:cert");
       }
+    });
+
+    it("also attaches the Jobs policy, which Cognito identities never receive", async () => {
+      const attachSpy = vi
+        .spyOn(awsIotService, "attachPolicy")
+        .mockResolvedValue(success(undefined));
+      vi.spyOn(awsConfigService, "iotJobsPolicyName", "get").mockReturnValue("jobs-policy");
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertSuccess(result);
+      expect(attachSpy).toHaveBeenCalledWith("jobs-policy", "arn:cert");
+      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length + 1);
+    });
+
+    it("skips the Jobs policy until an environment configures one", async () => {
+      const attachSpy = vi
+        .spyOn(awsIotService, "attachPolicy")
+        .mockResolvedValue(success(undefined));
+      vi.spyOn(awsConfigService, "iotJobsPolicyName", "get").mockReturnValue("");
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertSuccess(result);
+      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length);
     });
 
     it("stops and propagates the first policy attachment failure", async () => {
@@ -488,6 +560,32 @@ describe("AwsAdapter", () => {
 
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED);
+    });
+  });
+
+  describe("searchThingsConnectivity", () => {
+    it("delegates to AwsIotService and returns the connectivity map", async () => {
+      const connectivity = new Map([
+        ["AMBYTE_A", { thingName: "AMBYTE_A", connected: true, lastSeenAt: null }],
+      ]);
+      vi.spyOn(awsIotService, "searchThingsConnectivity").mockResolvedValue(success(connectivity));
+
+      const result = await awsAdapter.searchThingsConnectivity(["AMBYTE_A"]);
+
+      assertSuccess(result);
+      expect(result.value).toBe(connectivity);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(awsIotService.searchThingsConnectivity).toHaveBeenCalledWith(["AMBYTE_A"]);
+    });
+
+    it("propagates failure from AwsIotService", async () => {
+      const error = AppError.internal("index down", ErrorCodes.AWS_IOT_SEARCH_INDEX_FAILED);
+      vi.spyOn(awsIotService, "searchThingsConnectivity").mockResolvedValue(failure(error));
+
+      const result = await awsAdapter.searchThingsConnectivity(["AMBYTE_A"]);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_SEARCH_INDEX_FAILED);
     });
   });
 });

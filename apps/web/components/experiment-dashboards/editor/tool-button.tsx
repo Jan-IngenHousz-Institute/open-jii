@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 
+import { Button } from "@repo/ui/components/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -25,24 +26,23 @@ export function ToolButton({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           aria-label={label}
           aria-pressed={active}
           disabled={disabled}
           onClick={onClick}
           className={cn(
             "text-muted-foreground hover:text-foreground hover:bg-accent",
-            "focus-visible:ring-primary/40 inline-flex size-9 items-center justify-center rounded-full",
-            "focus-visible:outline-hidden focus-visible:ring-2",
             active &&
               "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-            disabled && "cursor-not-allowed opacity-40 hover:bg-transparent",
             className,
           )}
         >
           <Icon className="size-4" />
-        </button>
+        </Button>
       </TooltipTrigger>
       <TooltipContent side="top">{label}</TooltipContent>
     </Tooltip>

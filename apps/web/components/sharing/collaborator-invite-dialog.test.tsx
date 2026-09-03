@@ -1,4 +1,4 @@
-import { createUserProfile } from "@/test/factories";
+import { createGranteeUser } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
@@ -36,9 +36,9 @@ async function pickUser(name: string) {
 
 describe("<CollaboratorInviteDialog />", () => {
   it("grants the chosen tier to a picked user", async () => {
-    server.mount(contract.users.searchUsers, {
+    server.mount(contract.sharing.searchGranteeUsers, {
       body: [
-        createUserProfile({
+        createGranteeUser({
           userId: "u-1",
           firstName: "Lin",
           lastName: "Zhao",
@@ -69,8 +69,8 @@ describe("<CollaboratorInviteDialog />", () => {
   });
 
   it("grants 'Can edit' when the tier is raised", async () => {
-    server.mount(contract.users.searchUsers, {
-      body: [createUserProfile({ userId: "u-2", firstName: "Asha", lastName: "Okafor" })],
+    server.mount(contract.sharing.searchGranteeUsers, {
+      body: [createGranteeUser({ userId: "u-2", firstName: "Asha", lastName: "Okafor" })],
     });
     const createSpy = server.mount(contract.sharing.createGrant, { body: [] });
 
@@ -84,6 +84,36 @@ describe("<CollaboratorInviteDialog />", () => {
 
     await waitFor(() => expect(createSpy.called).toBe(true));
     expect(createSpy.body).toMatchObject({ granteeId: "u-2", role: "admin" });
+  });
+
+  it("refuses a tier lowered onto a grantee it would no longer raise", async () => {
+    server.mount(contract.sharing.searchGranteeUsers, {
+      body: [
+        createGranteeUser({
+          userId: "u-1",
+          firstName: "Lin",
+          lastName: "Zhao",
+          existingGrantRole: "viewer",
+        }),
+      ],
+    });
+    const createSpy = server.mount(contract.sharing.createGrant, { body: [] });
+
+    renderDialog();
+
+    // Picked while "Can edit" would raise her, then the tier is dropped back to
+    // what she already holds — the picker's own verdict is stale by then.
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("sharing.newShareRoleLabel"));
+    await user.click(screen.getByRole("option", { name: "sharing.roleCanEdit" }));
+    await pickUser("Lin Zhao");
+
+    await user.click(screen.getByLabelText("sharing.newShareRoleLabel"));
+    await user.click(screen.getByRole("option", { name: "sharing.roleCanView" }));
+
+    expect(screen.getByText("sharing.granteeTierAddsNothing")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "common.add" })).toBeDisabled();
+    expect(createSpy.called).toBe(false);
   });
 
   it("shares with an organization grantee", async () => {
@@ -107,7 +137,7 @@ describe("<CollaboratorInviteDialog />", () => {
   });
 
   it("sends a typed address to the host's invitation handler with the chosen tier", async () => {
-    server.mount(contract.users.searchUsers, { body: [] });
+    server.mount(contract.sharing.searchGranteeUsers, { body: [] });
     const onEmailInvite = vi.fn().mockResolvedValue(undefined);
     const createSpy = server.mount(contract.sharing.createGrant, { body: [] });
 
@@ -129,8 +159,8 @@ describe("<CollaboratorInviteDialog />", () => {
   });
 
   it("keeps the dialog and the picked grantee open when the share is refused", async () => {
-    server.mount(contract.users.searchUsers, {
-      body: [createUserProfile({ userId: "u-1", firstName: "Lin", lastName: "Zhao" })],
+    server.mount(contract.sharing.searchGranteeUsers, {
+      body: [createGranteeUser({ userId: "u-1", firstName: "Lin", lastName: "Zhao" })],
     });
     server.mount(contract.sharing.createGrant, {
       status: 403,
@@ -155,8 +185,8 @@ describe("<CollaboratorInviteDialog />", () => {
 
   describe("while a submission is in flight", () => {
     it("refuses every dismissal route, not just the Cancel button", async () => {
-      server.mount(contract.users.searchUsers, {
-        body: [createUserProfile({ userId: "u-1", firstName: "Lin", lastName: "Zhao" })],
+      server.mount(contract.sharing.searchGranteeUsers, {
+        body: [createGranteeUser({ userId: "u-1", firstName: "Lin", lastName: "Zhao" })],
       });
       // Never settles: the dialog stays mid-submission for the whole test.
       server.mount(contract.sharing.createGrant, { delay: "infinite", body: [] });
@@ -181,7 +211,7 @@ describe("<CollaboratorInviteDialog />", () => {
     });
 
     it("closes exactly once — on completion, not on the attempted dismissal", async () => {
-      server.mount(contract.users.searchUsers, { body: [] });
+      server.mount(contract.sharing.searchGranteeUsers, { body: [] });
 
       // The email path's pending state is a prop, so the whole submission is
       // driven from the test: no timing to race against.
@@ -239,8 +269,8 @@ describe("<CollaboratorInviteDialog />", () => {
   });
 
   it("stays inert on a frozen resource", () => {
-    server.mount(contract.users.searchUsers, {
-      body: [createUserProfile({ userId: "u-1", firstName: "Lin", lastName: "Zhao" })],
+    server.mount(contract.sharing.searchGranteeUsers, {
+      body: [createGranteeUser({ userId: "u-1", firstName: "Lin", lastName: "Zhao" })],
     });
 
     renderDialog({ disabled: true });

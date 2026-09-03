@@ -110,7 +110,14 @@ export interface DatabricksPort {
   streamExport(
     exportId: string,
     experimentId: string,
-  ): Promise<Result<{ stream: Readable; filePath: string; tableName: string }>>;
+  ): Promise<
+    Result<{
+      stream: Readable;
+      filePath: string;
+      tableName: string;
+      completedAt: string | null;
+    }>
+  >;
 
   /** Completed export metadata for an experiment table from Delta Lake. */
   getExportMetadata(experimentId: string, tableName: string): Promise<Result<SchemaData>>;

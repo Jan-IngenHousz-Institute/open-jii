@@ -8,6 +8,7 @@ from __future__ import annotations
 from pyspark.sql.types import (
     ArrayType,
     DoubleType,
+    LongType,
     StringType,
     StructField,
     StructType,
@@ -75,6 +76,10 @@ sensor_schema = StructType(
         # One uuid per multi-device workbook run; the round's rows share it.
         # Nullable: absent on single-device uploads and all older payloads.
         StructField("workbook_run_id", StringType(), True),
+        # Per-result protocol attribution ("questions" sentinel on question-only
+        # uploads). Lean-topic rows are unattributed without it; the legacy
+        # topic's trailing segment takes precedence when both exist.
+        StructField("protocol_id", StringType(), True),
         # GPS fix at measurement time; absent on older payloads and when the
         # app had no location permission or fix.
         StructField("latitude", DoubleType(), True),
@@ -107,9 +112,26 @@ large_iot_schema = StructType(
         # macro_context stays a JSON string because its keys are dynamic.
         StructField("workbook_run_id", StringType(), True),
         StructField("workbook_version_id", StringType(), True),
+        StructField("protocol_id", StringType(), True),
         StructField("macro_context", StringType(), True),
         # GPS fix at measurement time; absent without permission or fix.
         StructField("latitude", DoubleType(), True),
         StructField("longitude", DoubleType(), True),
+    ]
+)
+
+# Schema for AWS IoT presence lifecycle events archived by the lifecycle topic
+# rule ($aws/events/presence/connected|disconnected/{clientId}). The timestamp
+# is epoch milliseconds; disconnectReason is present on disconnect events only.
+device_lifecycle_event_schema = StructType(
+    [
+        StructField("clientId", StringType(), True),
+        StructField("timestamp", LongType(), True),
+        StructField("eventType", StringType(), True),
+        StructField("sessionIdentifier", StringType(), True),
+        StructField("principalIdentifier", StringType(), True),
+        StructField("disconnectReason", StringType(), True),
+        StructField("versionNumber", LongType(), True),
+        StructField("topic", StringType(), True),
     ]
 )

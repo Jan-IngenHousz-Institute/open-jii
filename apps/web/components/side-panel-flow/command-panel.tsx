@@ -1,11 +1,11 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useMemo } from "react";
 
 import type { CommandFormat } from "@repo/api/domains/experiment/experiment.schema";
 import { validateInlineCommand } from "@repo/api/transforms/command-payload";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 import {
   Select,
   SelectContent,
@@ -76,10 +76,10 @@ export function CommandPanel({ command, onChange, disabled = false }: CommandPan
   );
 
   return (
-    <Card className="mb-6">
-      <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-jii-dark-green">{t("experiments.commandPanelTitle")}</CardTitle>
-        {!disabled ? (
+    <SettingsCard
+      title={t("experiments.commandPanelTitle")}
+      action={
+        !disabled ? (
           <Select
             value={format}
             onValueChange={(v) => onChange({ format: v as CommandFormat, content })}
@@ -96,22 +96,23 @@ export function CommandPanel({ command, onChange, disabled = false }: CommandPan
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-xs uppercase text-[#68737B]">{FORMAT_LABELS[format]}</span>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <WorkbookCodeEditor
-          value={content}
-          onChange={disabled ? undefined : (v) => onChange({ format, content: v })}
-          language={FORMAT_LANGUAGE[format]}
-          minHeight={format === "string" ? "44px" : "120px"}
-          maxHeight="400px"
-          readOnly={disabled}
-          extraExtensions={commandExtensions}
-          basicSetup={commandBasicSetup}
-        />
-        {!validation.ok ? <p className="text-xs text-red-500">{validation.error}</p> : null}
-      </CardContent>
-    </Card>
+          <span className="text-muted-foreground text-xs uppercase">{FORMAT_LABELS[format]}</span>
+        )
+      }
+      className="mb-6"
+      contentClassName="space-y-2"
+    >
+      <WorkbookCodeEditor
+        value={content}
+        onChange={disabled ? undefined : (v) => onChange({ format, content: v })}
+        language={FORMAT_LANGUAGE[format]}
+        minHeight={format === "string" ? "44px" : "120px"}
+        maxHeight="400px"
+        readOnly={disabled}
+        extraExtensions={commandExtensions}
+        basicSetup={commandBasicSetup}
+      />
+      {!validation.ok ? <p className="text-destructive text-xs">{validation.error}</p> : null}
+    </SettingsCard>
   );
 }

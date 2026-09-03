@@ -76,8 +76,8 @@ describe("ListExperimentsUseCase", () => {
       userId: otherUserId,
     });
 
-    // Act - filter by "member" to only get experiments where mainUserId is a member
-    const result = await useCase.execute(mainUserId, "member");
+    // Act - scope to "related" to only get experiments tied to mainUserId
+    const result = await useCase.execute(mainUserId, "related");
 
     expect(result.isSuccess()).toBe(true);
 
@@ -162,8 +162,8 @@ describe("ListExperimentsUseCase", () => {
       status: "active",
     });
 
-    // Act - filter by "member" and "active" status
-    const result = await useCase.execute(mainUserId, "member", "active");
+    // Act - scope to "related" with "active" status
+    const result = await useCase.execute(mainUserId, "related", "active");
 
     expect(result.isSuccess()).toBe(true);
 
@@ -258,7 +258,7 @@ describe("ListExperimentsUseCase", () => {
     });
 
     // Act
-    const result = await useCase.execute(mainUserId, "member", "active", "Searchable");
+    const result = await useCase.execute(mainUserId, "related", "active", "Searchable");
 
     // Assert
     expect(result.isSuccess()).toBe(true);

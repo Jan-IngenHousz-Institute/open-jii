@@ -1,8 +1,7 @@
+import DeviceLineageContent from "@/components/iot-devices/lineage/device-lineage-content";
 import { buildDeviceMetadata } from "@/lib/platform-metadata";
 import { safeMetadata } from "@/lib/safe-metadata";
 import type { Metadata } from "next";
-
-import DeviceLineageContent from "./device-lineage-content";
 
 interface DeviceLineagePageProps {
   params: Promise<{ locale: string; deviceId: string }>;

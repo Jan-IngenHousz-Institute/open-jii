@@ -5,13 +5,6 @@ import * as posthogServer from "~/lib/posthog-server";
 
 import Layout from "../[locale]/layout";
 
-vi.mock("next/font/google", () => ({
-  Poppins: () => ({ variable: "--font-poppins" }),
-  Overpass: () => ({ variable: "--font-overpass" }),
-  Inter: () => ({ variable: "--font-inter" }),
-  Noto_Sans: () => ({ variable: "--font-noto-sans" }),
-}));
-
 vi.mock("~/lib/posthog-server", () => ({
   isFeatureFlagEnabled: vi.fn().mockResolvedValue(true),
 }));

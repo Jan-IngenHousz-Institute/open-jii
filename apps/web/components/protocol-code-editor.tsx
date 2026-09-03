@@ -21,6 +21,7 @@ import {
   getErrorMessage,
   validateProtocolJson,
 } from "@repo/api/domains/protocol/protocol-validator";
+import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import { Button } from "@repo/ui/components/button";
 import { Label } from "@repo/ui/components/label";
 import {
@@ -32,8 +33,10 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 interface ProtocolCodeEditorProps {
-  value: Record<string, unknown>[] | string;
-  onChange: (value: Record<string, unknown>[] | string | undefined) => void;
+  // Anything JSON-serializable: a protocol's shape is device-defined. Parsed
+  // documents leave through `onChange`; unparseable text arrives as undefined.
+  value: unknown;
+  onChange: (value: JsonValue | undefined) => void;
   onValidationChange?: (isValid: boolean) => void;
   label: string;
   placeholder?: string;
@@ -111,8 +114,9 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
     useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING) ??
     FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING];
 
-  // Convert array to JSON string for editor if needed
-  const initialEditorValue = typeof value === "string" ? value : formatJson(value, { style });
+  // Props are stored JSON values, so even a string document is serialized with
+  // quotes. Raw mid-typing text lives in editorCode and is never re-serialized.
+  const initialEditorValue = formatJson(value, { style });
 
   // Initialize editor code from props only once. This must happen on the very
   // first effect flush: `onChange` feeds back into `value`, so a deferred seed
@@ -157,10 +161,16 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
   const stats = getJsonStats();
 
   useEffect(() => {
+    // Not seeded yet (debounce window after mount): nothing to report — an
+    // "invalid" verdict here would flash red on every open before text exists.
+    if (debouncedEditorCode === undefined) return;
+
+    // Seeded but empty: the user cleared the editor. Report no value and
+    // invalid, so a cleared editor can never silently persist "".
     if (!debouncedEditorCode) {
-      onChangeRef.current(debouncedEditorCode);
-      setIsValidJson(true);
-      onValidationChangeRef.current?.(true);
+      onChangeRef.current(undefined);
+      setIsValidJson(false);
+      onValidationChangeRef.current?.(false);
       return;
     }
 
@@ -187,12 +197,9 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
       // Always set valid in warning mode, or when validation passes
       onValidationChangeRef.current?.(true);
 
-      // Return parsed value
-      if (Array.isArray(parsedValue)) {
-        onChangeRef.current(parsedValue as Record<string, unknown>[]);
-      } else {
-        onChangeRef.current(debouncedEditorCode);
-      }
+      // Emit the parsed document for every valid JSON, including string values.
+      // Emitting the editor source instead would add another encoding layer.
+      onChangeRef.current(parsedValue as JsonValue);
     } catch {
       setIsValidJson(false);
       setValidationWarnings(["Invalid JSON syntax"]);
@@ -244,23 +251,26 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
           "overflow-hidden",
           borderless
             ? "flex h-full flex-col"
-            : "shadow-xs rounded-md border border-slate-200 transition-shadow duration-200 hover:shadow-md",
+            : "shadow-xs border-border rounded-md border transition-shadow duration-200 hover:shadow-md",
           error && !borderless && "border-destructive",
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-4 py-2">
+        <div className="border-border bg-muted flex items-center justify-between border-b px-4 py-2">
           <div className="flex items-center gap-3">
-            {title && <span className="text-sm font-medium text-slate-700">{title}</span>}
-            {title && <span className="text-slate-300">|</span>}
-            <span className="text-xs font-medium text-slate-600">JSON</span>
-            <span className="text-xs text-slate-500">
+            {title && <span className="text-foreground text-sm font-medium">{title}</span>}
+            {title && <span className="text-muted-foreground/50">|</span>}
+            <span className="text-muted-foreground text-xs font-medium">JSON</span>
+            <span className="text-muted-foreground text-xs">
               {stats.lines} lines - {stats.size}
             </span>
-            {!isValidJson && <span className="text-xs text-red-600">Invalid JSON</span>}
+            {!isValidJson && <span className="text-destructive text-xs">Invalid JSON</span>}
             {validationWarnings.length > 0 && isValidJson && (
               <span
-                className={cn("text-xs", validationAsWarning ? "text-yellow-600" : "text-red-600")}
+                className={cn(
+                  "text-xs",
+                  validationAsWarning ? "text-status-stale-foreground" : "text-destructive",
+                )}
               >
                 {validationWarnings[0]}
                 {validationWarnings.length > 1 && ` (+${validationWarnings.length - 1} more)`}
@@ -282,10 +292,10 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleCopy}
-                    className="h-7 w-7 p-0 hover:bg-slate-200"
+                    className="hover:bg-muted h-7 w-7 p-0"
                   >
                     {copied ? (
-                      <Check className="h-3 w-3 text-green-600" />
+                      <Check className="text-status-active-foreground h-3 w-3" />
                     ) : (
                       <Copy className="h-3 w-3" />
                     )}
@@ -301,7 +311,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
         <div className={cn("relative", borderless && "flex-1")}>
           {/* Placeholder overlay */}
           {!editorValue && placeholder && (
-            <div className="pointer-events-none absolute left-12 top-4 z-10 text-sm text-slate-400">
+            <div className="text-muted-foreground pointer-events-none absolute left-12 top-4 z-10 text-sm">
               {placeholder}
             </div>
           )}

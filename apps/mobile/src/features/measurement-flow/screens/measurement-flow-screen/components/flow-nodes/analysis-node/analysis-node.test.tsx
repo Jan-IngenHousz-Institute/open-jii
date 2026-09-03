@@ -70,7 +70,7 @@ vi.mock("~/shared/i18n", () => ({
 }));
 
 vi.mock("./analysis-summary-card", () => ({
-  AnalysisSummaryCard: (props: { experimentName: string }) => {
+  AnalysisSummaryCard: (props: { experimentName: string; protocolName?: string }) => {
     summaryProps(props);
     return null;
   },
@@ -105,11 +105,14 @@ vi.mock("~/shared/ui/measurement/measurement-questions-modal", () => ({
 const CONTENT = { params: {}, macroId: "macro-1" } as AnalysisContent;
 
 const resolvedName = () => summaryProps.mock.calls.at(-1)?.[0]?.experimentName as string;
+const resolvedProtocolName = () => summaryProps.mock.calls.at(-1)?.[0]?.protocolName as string;
 
 beforeEach(() => {
   useMeasurementFlowStore.setState({
     experimentId: undefined,
     experimentLabel: undefined,
+    workbookRunId: undefined,
+    workbookVersionId: undefined,
     flowNodes: [],
     currentFlowStep: 0,
     iterationCount: 0,
@@ -172,6 +175,51 @@ describe("AnalysisNode experiment name", () => {
     useMeasurementFlowStore.setState({ experimentId: "exp-missing", experimentLabel: undefined });
     render(<AnalysisNode content={CONTENT} nodeId="m1" />);
     expect(resolvedName()).toBe("Experiment");
+  });
+});
+
+describe("AnalysisNode protocol cell", () => {
+  it("shows the protocol name from the cell that produced the current scan", () => {
+    const repeatedProtocolNodes = [
+      {
+        id: "ground-protocol",
+        type: "measurement",
+        name: "Ground position",
+        isStart: true,
+        content: { protocolId: "proto-shared", protocol: { name: "Shared protocol resource" } },
+      },
+      {
+        id: "ground-macro",
+        type: "analysis",
+        name: "Ground analysis",
+        isStart: false,
+        content: { macroId: "macro-ground" },
+      },
+      {
+        id: "ambit-2-protocol",
+        type: "measurement",
+        name: "Ambit 2 position",
+        isStart: false,
+        content: { protocolId: "proto-shared", protocol: { name: "Shared protocol resource" } },
+      },
+      {
+        id: "ambit-2-macro",
+        type: "analysis",
+        name: "Ambit 2 analysis",
+        isStart: false,
+        content: { macroId: "macro-ambit-2" },
+      },
+    ] as unknown as FlowNode[];
+    useMeasurementFlowStore.setState({
+      flowNodes: repeatedProtocolNodes,
+      currentFlowStep: 3,
+      producerCellId: "ambit-2-protocol",
+      scanResult: { sample: [{ phi2: 0.8 }] },
+    });
+
+    render(<AnalysisNode content={CONTENT} nodeId="ambit-2-macro" />);
+
+    expect(resolvedProtocolName()).toBe("Ambit 2 position");
   });
 });
 
@@ -292,9 +340,9 @@ describe("AnalysisNode upload with a command in the flow", () => {
   } as AnalysisContent;
 
   // Command → Protocol → Macro: the command rides a "measurement" node with no
-  // protocolId. Regression (Vlad, on device): flowProtocolId picked the command
-  // node, so the upload threw "Missing protocol id" (swallowed by .catch) and no
-  // local measurement was created. It must now resolve the real protocol.
+  // protocolId. Regression (Vlad, on device): the protocol lookup picked the
+  // command node, so the upload threw "Missing protocol id" (swallowed by
+  // .catch) and no local measurement was created. It must resolve the real protocol.
   const commandProtocolMacroNodes = [
     {
       id: "cmd1",
@@ -325,6 +373,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       experimentLabel: "Trial",
+      workbookRunId: "run-1",
       workbookVersionId: "version-1",
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
@@ -343,9 +392,66 @@ describe("AnalysisNode upload with a command in the flow", () => {
     expect(uploadMeasurements).toHaveBeenCalledTimes(1);
     expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
       protocolId: "proto-1",
+      workbookRunId: "run-1",
       workbookVersionId: "version-1",
       results: [{ rawMeasurement: { sample: [{ phi2: 0.8 }] } }],
     });
+  });
+
+  it("does not upload when the workbook version id is missing", async () => {
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      experimentLabel: "Trial",
+      workbookRunId: "run-1",
+      workbookVersionId: undefined,
+      flowNodes: commandProtocolMacroNodes,
+      currentFlowStep: 2,
+      scanResult: { sample: [{ phi2: 0.8 }] },
+    });
+
+    render(<AnalysisNode content={withMacro} nodeId="m1" />);
+
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    // Assert the action bar rendered before invoking: with optional chaining a
+    // missing bar would no-op and the negative assertion below would pass
+    // vacuously.
+    expect(props).toBeDefined();
+    if (!props) {
+      throw new Error("AnalysisActionBar did not render");
+    }
+    await act(async () => {
+      await props.onUpload();
+    });
+
+    expect(uploadMeasurements).not.toHaveBeenCalled();
+  });
+
+  it("does not upload when the workbook run id is missing", async () => {
+    const uploadMeasurements = vi.fn().mockResolvedValue(undefined);
+    useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
+    useMeasurementFlowStore.setState({
+      experimentId: "exp-1",
+      experimentLabel: "Trial",
+      workbookRunId: undefined,
+      flowNodes: commandProtocolMacroNodes,
+      currentFlowStep: 2,
+      scanResult: { sample: [{ phi2: 0.8 }] },
+    });
+
+    render(<AnalysisNode content={withMacro} nodeId="m1" />);
+
+    const props = actionBarProps.mock.calls.at(-1)?.[0] as
+      | { onUpload: () => Promise<void> }
+      | undefined;
+    await act(async () => {
+      await props?.onUpload();
+    });
+
+    expect(uploadMeasurements).not.toHaveBeenCalled();
   });
 
   it("renders per-device results and uploads a linked multi-device round", async () => {
@@ -354,13 +460,30 @@ describe("AnalysisNode upload with a command in the flow", () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       experimentLabel: "Trial",
+      workbookRunId: "run-1",
       workbookVersionId: "version-1",
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },
       scanResults: [
-        { device: { id: "1", name: "MultispeQ #1" }, result: { sample: [{ phi2: 0.8 }] } },
-        { device: { id: "2", name: "MultispeQ #2" }, result: { sample: [{ phi2: 0.7 }] } },
+        {
+          device: {
+            id: "1",
+            name: "MultispeQ #1",
+            family: "multispeq",
+            firmwareVersion: "2.311",
+          },
+          result: { sample: [{ phi2: 0.8 }] },
+        },
+        {
+          device: {
+            id: "2",
+            name: "MultispeQ #2",
+            family: "multispeq",
+            firmwareVersion: "2.312",
+          },
+          result: { sample: [{ phi2: 0.7 }] },
+        },
       ],
       producerCellId: "p1",
       cells: [
@@ -398,16 +521,17 @@ describe("AnalysisNode upload with a command in the flow", () => {
 
     expect(uploadMeasurements).toHaveBeenCalledTimes(1);
     expect(uploadMeasurements.mock.calls[0][0]).toMatchObject({
+      workbookRunId: "run-1",
       workbookVersionId: "version-1",
       results: [
         {
           rawMeasurement: { sample: [{ phi2: 0.8 }] },
-          device: { id: "1" },
+          device: { id: "1", family: "multispeq", firmwareVersion: "2.311" },
           macroContext: { measurement: { phi2: 0.8 } },
         },
         {
           rawMeasurement: { sample: [{ phi2: 0.7 }] },
-          device: { id: "2" },
+          device: { id: "2", family: "multispeq", firmwareVersion: "2.312" },
           macroContext: { measurement: { phi2: 0.7 } },
         },
       ],
@@ -420,6 +544,8 @@ describe("AnalysisNode upload with a command in the flow", () => {
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
       experimentLabel: "Trial",
+      workbookRunId: "run-1",
+      workbookVersionId: "version-1",
       flowNodes: commandProtocolMacroNodes,
       currentFlowStep: 2,
       scanResult: { sample: [{ phi2: 0.8 }] },

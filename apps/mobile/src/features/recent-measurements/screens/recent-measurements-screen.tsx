@@ -1,7 +1,7 @@
 import { FlashList } from "@shopify/flash-list";
 import { useIsFocused } from "expo-router";
 import { useNavigation } from "expo-router";
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, InteractionManager, View } from "react-native";
 import { MeasurementsDayHeader } from "~/features/recent-measurements/components/measurements-day-header";
 import { MeasurementsHeaderActions } from "~/features/recent-measurements/components/measurements-header-actions";
@@ -9,6 +9,7 @@ import { MeasurementsListEmpty } from "~/features/recent-measurements/components
 import { MeasurementsModals } from "~/features/recent-measurements/components/measurements-modals";
 import type { ModalState } from "~/features/recent-measurements/components/measurements-modals";
 import { MeasurementsRow } from "~/features/recent-measurements/components/measurements-row";
+import { MeasurementsRunRow } from "~/features/recent-measurements/components/measurements-run-row";
 import { MeasurementsToolbar } from "~/features/recent-measurements/components/measurements-toolbar";
 import type {
   MeasurementFilter,
@@ -17,6 +18,8 @@ import type {
 import { useRecentMeasurementsActions } from "~/features/recent-measurements/hooks/use-recent-measurements-actions";
 import type { MeasurementDaySection } from "~/features/recent-measurements/utils/group-measurements-by-day";
 import { groupMeasurementsByDay } from "~/features/recent-measurements/utils/group-measurements-by-day";
+import type { MeasurementRunEntry } from "~/features/recent-measurements/utils/group-measurements-by-run";
+import { groupMeasurementsByRun } from "~/features/recent-measurements/utils/group-measurements-by-run";
 import { getMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
@@ -26,7 +29,9 @@ const log = createLogger("recent-measurements");
 
 type ListRow =
   | { kind: "header"; key: string; section: MeasurementDaySection }
-  | { kind: "row"; key: string; item: MeasurementItem };
+  | { kind: "row"; key: string; item: MeasurementItem }
+  | { kind: "run"; key: string; entry: MeasurementRunEntry; expanded: boolean }
+  | { kind: "child"; key: string; item: MeasurementItem };
 
 const FLASHLIST_CONTENT_STYLE = { paddingTop: 12, paddingBottom: 16 };
 
@@ -49,16 +54,26 @@ export function RecentMeasurementsScreen() {
     confirmDelete,
     confirmSyncAll,
     confirmDeleteAllSynced,
+    confirmSyncRun,
+    confirmDeleteRun,
     saveComment,
   } = useRecentMeasurementsActions(filter);
 
-  // [perf] Defer the first heavy list commit (50 rows × a gesture-handler +
-  // reanimated swipeable each ≈ 200 ms on the shared JS thread) until the
-  // tab-transition interaction settles. paho parses PUBACKs on that same JS
-  // thread, so committing the list synchronously on focus stalls the in-flight
-  // acks ~1 s and inflates upload times. Yielding first lets paho drain the
-  // queued acks, then the list mounts. Stays true after the first paint so
-  // returning to the tab is instant. See OJD-1470.
+  // Which workbook runs are open. Collapsed is the default: the point of the
+  // run row is to keep one attempt to one list entry.
+  const [expandedRuns, setExpandedRuns] = useState<Record<string, boolean>>({});
+  const toggleRun = useCallback((runKey: string) => {
+    setExpandedRuns((prev) => ({ ...prev, [runKey]: !prev[runKey] }));
+  }, []);
+
+  // Expansion is per-filter-view: switching tabs resets it instead of letting
+  // keys accumulate across deletes and day rollovers for the whole session.
+  useEffect(() => setExpandedRuns({}), [filter]);
+
+  // [perf] Defer the first heavy list commit (50 gesture-handler + reanimated
+  // swipeables cost ~200 ms on the JS thread paho acks PUBACKs on) until the
+  // tab transition settles, then stay mounted so return visits are instant.
+  // See OJD-1470.
   const [listReady, setListReady] = useState(false);
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => setListReady(true));
@@ -83,7 +98,7 @@ export function RecentMeasurementsScreen() {
   }, [navigation, confirmSyncAll, confirmDeleteAllSynced]);
 
   // The list row is lean (no `measurement_result`). Loading the full payload
-  // on tap is fast (~5–20 ms locally) — see Scenario J in measurements-perf.
+  // on tap is fast (~5-20 ms locally); see Scenario J in measurements-perf.
   const openModal = useCallback(async (kind: "questions" | "comment", id: string) => {
     const full = await getMeasurement(id);
     if (full) setModal({ kind, measurement: full });
@@ -97,14 +112,35 @@ export function RecentMeasurementsScreen() {
 
   const locale = i18n.language === "nl-NL" ? "nl-NL" : "en-GB";
 
+  // Day sections + run entries, keyed on the measurements alone: expanding a
+  // run must not re-run the day bucketing (Luxon, per-item) that OJD-1470
+  // keeps off the interaction path.
+  const sectionEntries = useMemo(() => {
+    // Runs collapse within a day, so a run that straddles midnight still
+    // lands under both day headers rather than jumping out of one. The day
+    // scopes the run key, keeping those two rows independent.
+    return groupMeasurementsByDay(measurements, undefined, locale).map((section) => ({
+      section,
+      entries: groupMeasurementsByRun(section.data, section.key),
+    }));
+  }, [measurements, locale]);
+
   const data = useMemo<ListRow[]>(() => {
     const t0 = Date.now();
-    const sections = groupMeasurementsByDay(measurements, undefined, locale);
     const out: ListRow[] = [];
-    for (const section of sections) {
+    for (const { section, entries } of sectionEntries) {
       out.push({ kind: "header", key: `h:${section.key}`, section });
-      for (const item of section.data) {
-        out.push({ kind: "row", key: item.key, item });
+      for (const entry of entries) {
+        if (!entry.runId) {
+          out.push({ kind: "row", key: entry.key, item: entry.items[0] });
+          continue;
+        }
+        const expanded = !!expandedRuns[entry.key];
+        out.push({ kind: "run", key: entry.key, entry, expanded });
+        if (!expanded) continue;
+        for (const item of entry.items) {
+          out.push({ kind: "child", key: item.key, item });
+        }
       }
     }
     const build_ms = Date.now() - t0;
@@ -116,14 +152,25 @@ export function RecentMeasurementsScreen() {
       });
     }
     return out;
-  }, [measurements, locale]);
+  }, [sectionEntries, expandedRuns, measurements.length]);
 
-  const firstRowKey = useMemo(() => data.find((r) => r.kind === "row")?.key, [data]);
+  const firstRowKey = useMemo(
+    () => data.find((r) => r.kind === "row" || r.kind === "run")?.key,
+    [data],
+  );
 
-  // Peek the most-recent row each time the screen gains focus (once the
-  // deferred list is ready) so the swipe action stays discoverable.
+  // Peek the most-recent row once per focus gain (when the deferred list is
+  // ready) so the swipe action stays discoverable. Data churn while focused —
+  // syncs settling, filter changes — must NOT re-fire the nudge.
+  const wasFocused = useRef(false);
+  const peekedThisFocus = useRef(false);
   useEffect(() => {
-    if (isFocused && listReady && firstRowKey) setPeekToken((t) => t + 1);
+    if (isFocused && !wasFocused.current) peekedThisFocus.current = false;
+    wasFocused.current = isFocused;
+    if (isFocused && listReady && firstRowKey && !peekedThisFocus.current) {
+      peekedThisFocus.current = true;
+      setPeekToken((t) => t + 1);
+    }
   }, [isFocused, listReady, firstRowKey]);
 
   const itemsById = useMemo(() => {
@@ -131,6 +178,22 @@ export function RecentMeasurementsScreen() {
     for (const item of measurements) map.set(item.key, item);
     return map;
   }, [measurements]);
+
+  // Run rows hand back their `run:<dayKey>:<id>` key; the actions take the
+  // entry's run id (and experiment name for the confirmation copy) and resolve
+  // the full membership from storage — the rendered slice is not authoritative.
+  const runsByKey = useMemo(() => {
+    const map = new Map<string, MeasurementRunEntry>();
+    for (const row of data) {
+      if (row.kind === "run") map.set(row.key, row.entry);
+    }
+    return map;
+  }, [data]);
+
+  // Read through a ref so the run callbacks keep a stable identity: they feed
+  // renderItem, and a new identity re-renders every visible row on each toggle.
+  const runsByKeyRef = useRef(runsByKey);
+  runsByKeyRef.current = runsByKey;
 
   const onRowPress = useCallback(
     (id: string) => {
@@ -158,11 +221,39 @@ export function RecentMeasurementsScreen() {
     },
     [itemsById, confirmSync],
   );
+  const onRunDelete = useCallback(
+    (runKey: string) => {
+      const entry = runsByKeyRef.current.get(runKey);
+      // Run actions resolve membership from storage by run id; the entry only
+      // supplies the id and the experiment name for the confirmation copy.
+      if (entry?.runId) void confirmDeleteRun(entry.runId, entry.items[0].experimentName);
+    },
+    [confirmDeleteRun],
+  );
+  const onRunSync = useCallback(
+    (runKey: string) => {
+      const entry = runsByKeyRef.current.get(runKey);
+      if (entry?.runId) void confirmSyncRun(entry.runId, entry.items[0].experimentName);
+    },
+    [confirmSyncRun],
+  );
 
   const renderItem = useCallback(
     ({ item: row }: { item: ListRow }) => {
       if (row.kind === "header") {
         return <MeasurementsDayHeader section={row.section} />;
+      }
+      if (row.kind === "run") {
+        return (
+          <MeasurementsRunRow
+            entry={row.entry}
+            expanded={row.expanded}
+            onToggle={toggleRun}
+            onSync={onRunSync}
+            onDelete={onRunDelete}
+            peekToken={row.key === firstRowKey ? peekToken : 0}
+          />
+        );
       }
       return (
         <MeasurementsRow
@@ -172,10 +263,21 @@ export function RecentMeasurementsScreen() {
           onDelete={onRowDelete}
           onSync={onRowSync}
           peekToken={row.key === firstRowKey ? peekToken : 0}
+          indented={row.kind === "child"}
         />
       );
     },
-    [onRowPress, onRowComment, onRowDelete, onRowSync, peekToken, firstRowKey],
+    [
+      onRowPress,
+      onRowComment,
+      onRowDelete,
+      onRowSync,
+      onRunSync,
+      onRunDelete,
+      toggleRun,
+      peekToken,
+      firstRowKey,
+    ],
   );
 
   const keyExtractor = useCallback((row: ListRow) => row.key, []);

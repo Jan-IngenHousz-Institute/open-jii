@@ -1,14 +1,18 @@
 "use client";
 
 import { useProtocolCreate } from "@/hooks/protocol/useProtocolCreate/useProtocolCreate";
-import { useProtocols } from "@/hooks/protocol/useProtocols/useProtocols";
+import { useDebounce } from "@/hooks/useDebounce";
+import { orpc } from "@/lib/orpc";
 import { SENSOR_FAMILY_OPTIONS } from "@/util/sensor-family";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, Microscope, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolFamily, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { ProtocolCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
@@ -36,16 +40,29 @@ export function ProtocolPicker({
   children,
 }: ProtocolPickerProps) {
   const [open, setOpen] = useState(false);
-  // Drive search from the hook's own state so the input actually filters the
-  // query (passing it as `initialSearch` is read only once).
-  const { protocols, search, setSearch } = useProtocols({ initialFilter: "all" });
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 300);
+  const {
+    data: protocolsData,
+    isPending: isProtocolsPending,
+    isError: isProtocolsError,
+    refetch: refetchProtocols,
+  } = useQuery(
+    orpc.protocols.listProtocols.queryOptions({
+      input: { search: debouncedSearch.trim() || undefined },
+    }),
+  );
+  // No `page` is sent, so the response is the bare list.
+  const protocols = protocolsData ? listItems(protocolsData) : undefined;
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   // Protocols can only be created for a locally-runnable family; an ingest-only
   // (disabled) sensorFamily falls back to the default creatable one.
-  const creatableFamily: SensorFamily = isDisabledFamily(sensorFamily) ? "multispeq" : sensorFamily;
-  const [newFamily, setNewFamily] = useState<SensorFamily>(creatableFamily);
+  const creatableFamily: ProtocolFamily = isDisabledFamily(sensorFamily)
+    ? "multispeq"
+    : zProtocolFamily.parse(sensorFamily);
+  const [newFamily, setNewFamily] = useState<ProtocolFamily>(creatableFamily);
   const [isCreating, setIsCreating] = useState(false);
   const createProtocol = useProtocolCreate();
 
@@ -124,7 +141,10 @@ export function ProtocolPicker({
                 }}
                 autoFocus
               />
-              <Select value={newFamily} onValueChange={(v) => setNewFamily(v as SensorFamily)}>
+              <Select
+                value={newFamily}
+                onValueChange={(v) => setNewFamily(zProtocolFamily.parse(v))}
+              >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -145,7 +165,11 @@ export function ProtocolPicker({
                   onClick={() => void handleCreate()}
                   disabled={!newName.trim() || isCreating}
                 >
-                  {isCreating && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                  {isCreating ? (
+                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                  ) : (
+                    <Plus className="size-3.5" aria-hidden />
+                  )}
                   Create
                 </Button>
               </div>
@@ -157,7 +181,7 @@ export function ProtocolPicker({
                 className="w-full justify-start gap-2 text-sm"
                 onClick={() => setShowCreate(true)}
               >
-                <Plus className="h-4 w-4 text-[#2D3142]" />
+                <Plus className="text-node-measurement h-4 w-4" />
                 Create new protocol
               </Button>
 
@@ -172,15 +196,31 @@ export function ProtocolPicker({
               </div>
 
               <div className="max-h-[240px] space-y-0.5 overflow-y-auto">
-                {protocols && protocols.length > 0 ? (
+                {isProtocolsPending ? (
+                  <div
+                    role="status"
+                    className="text-muted-foreground flex items-center justify-center gap-2 py-3 text-xs"
+                  >
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Loading protocols...
+                  </div>
+                ) : isProtocolsError ? (
+                  <div role="alert" className="space-y-2 py-3 text-center text-xs">
+                    <p className="text-muted-foreground">Unable to load protocols.</p>
+                    <Button variant="outline" size="sm" onClick={() => void refetchProtocols()}>
+                      Try again
+                    </Button>
+                  </div>
+                ) : protocols && protocols.length > 0 ? (
                   protocols.map((p) => (
-                    <button
+                    <Button
                       type="button"
                       key={p.id}
-                      className="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors"
+                      variant="ghost"
+                      className="h-auto w-full justify-start gap-2 px-2 py-1.5 text-left font-normal"
                       onClick={() => handleSelect(p)}
                     >
-                      <Microscope className="h-3.5 w-3.5 shrink-0 text-[#2D3142]" />
+                      <Microscope className="text-node-measurement h-3.5 w-3.5 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm">{p.name}</p>
                         {p.createdByName && (
@@ -192,7 +232,7 @@ export function ProtocolPicker({
                       <Badge variant="outline" className="shrink-0 text-[10px]">
                         {p.family}
                       </Badge>
-                    </button>
+                    </Button>
                   ))
                 ) : (
                   <p className="text-muted-foreground py-3 text-center text-xs">

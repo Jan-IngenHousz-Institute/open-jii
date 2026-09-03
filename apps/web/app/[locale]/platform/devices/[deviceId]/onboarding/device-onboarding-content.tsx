@@ -20,14 +20,14 @@ export default function DeviceOnboardingPage({ params }: DeviceOnboardingPagePro
   const detailPath = `/${locale}/platform/devices/${deviceId}`;
   // Only once the capabilities are actually in hand: "not yet known" must not read
   // as "nothing to show here".
-  const hasNoSurface = !!data && !data.capabilities.canManage;
+  const hasNoSurface = !!data && (!data.capabilities.canManage || data.deviceType === "mobile");
 
   useEffect(() => {
     // `replace`, not `push`: this route is not somewhere to come back to.
     if (hasNoSurface) router.replace(detailPath);
   }, [hasNoSurface, detailPath, router]);
 
-  if (!data?.capabilities.canManage) return null;
+  if (!data?.capabilities.canManage || data.deviceType === "mobile") return null;
 
   // Keyed so an issued config never survives a device-to-device navigation.
   return <DeviceOnboardingPanel key={data.id} device={data} />;

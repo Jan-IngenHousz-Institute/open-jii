@@ -7,7 +7,6 @@ import { MOBILE_PRE_IDENTITY_FAMILY } from "~/features/connection/services/mobil
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { resolveExperimentName } from "~/features/measurement-flow/domain/experiment-name";
-import { flowProtocolId } from "~/features/measurement-flow/domain/flow-transitions";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import type { MacroOutput } from "~/features/measurement-flow/utils/process-scan/process-scan";
@@ -60,17 +59,24 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     producerCellId,
     cellOutputs,
     workbookVersionId,
+    workbookId,
+    workbookRunId,
     setCellOutput,
   } = useMeasurementFlowStore();
-  const protocolId = flowProtocolId(flowNodes);
   const { experiments } = useExperiments();
   const { session } = useSession();
   const executors = useScannerCommandExecutorStore((s) => s.executors);
 
-  // Name of the active measurement's protocol, read off its hydrated flow node.
-  const activeProtocolName = flowNodes.find(
-    (n) => n.type === "measurement" && n.content?.protocolId === protocolId,
-  )?.content?.protocol?.name as string | undefined;
+  // producerCellId identifies the exact protocol cell that yielded this scan.
+  // Multiple workbook cells may intentionally reference the same protocol id,
+  // so resolving by protocol id alone would always display the first cell.
+  const activeProtocolNode =
+    flowNodes.find(
+      (node) =>
+        node.id === producerCellId && node.type === "measurement" && node.content?.protocolId,
+    ) ?? flowNodes.find((node) => node.type === "measurement" && node.content?.protocolId);
+  const protocolId = activeProtocolNode?.content?.protocolId;
+  const activeProtocolName = activeProtocolNode?.name;
 
   const experimentName = resolveExperimentName({
     experimentLabel,
@@ -205,6 +211,14 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       throw new Error("Missing protocol id");
     }
 
+    if (!workbookRunId) {
+      throw new Error("Missing workbook run id");
+    }
+
+    if (!workbookVersionId) {
+      throw new Error("Missing workbook version id");
+    }
+
     if (!session?.data?.user?.id) {
       throw new Error("Missing user id");
     }
@@ -242,6 +256,8 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         filename: macro.filename,
       },
       workbookVersionId,
+      workbookId,
+      workbookRunId,
       questions,
       commentText: measurementComment.trim() || undefined,
       protocolName: activeProtocolName ?? protocolId,

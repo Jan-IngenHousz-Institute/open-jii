@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -21,7 +22,9 @@ export const useMacroUpdate = (macroId: string, props: MacroUpdateProps = {}) =>
     orpc.macros.updateMacro.mutationOptions({
       onMutate: async () => {
         await queryClient.cancelQueries({ queryKey: macroKey });
-        await queryClient.cancelQueries({ queryKey: orpc.macros.listMacros.key() });
+        for (const queryKey of listQueryKeys.macros()) {
+          await queryClient.cancelQueries({ queryKey });
+        }
 
         const previousMacro = queryClient.getQueryData(macroKey);
         return { previousMacro };
@@ -33,7 +36,9 @@ export const useMacroUpdate = (macroId: string, props: MacroUpdateProps = {}) =>
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({ queryKey: macroKey });
-        await queryClient.invalidateQueries({ queryKey: orpc.macros.listMacros.key() });
+        for (const queryKey of listQueryKeys.macros()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
         // Editing shared macro code changes workbook drift; refetch so an attached
         // experiment's upgrade prompt reacts immediately.
         await queryClient.invalidateQueries({ queryKey: orpc.workbooks.key() });

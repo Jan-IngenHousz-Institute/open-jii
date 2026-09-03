@@ -1,5 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
   asc,
@@ -14,6 +15,7 @@ import {
   isNull,
   macros,
   ne,
+  or,
   profiles,
   protocols,
   sql,
@@ -22,12 +24,23 @@ import {
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
-import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
+import {
+  crossTableBonus,
+  escapeLike,
+  ftsMatch,
+  ftsRank,
+  searchScore,
+} from "../../../common/utils/fts";
+import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import {
+  accessibleResourceCondition,
+  relatedResourceCondition,
+  resourceTierExpression,
+} from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
   CreateWorkbookDto,
@@ -38,9 +51,14 @@ import {
 
 export interface WorkbookFilter {
   search?: string;
-  filter?: "my";
+  scope?: ResourceScope;
   userId?: string;
+  /** Narrow to one owning organization (the org profile's resources showcase). */
+  organizationId?: string;
 }
+
+/** A listing row plus its relevance score, which global search merges on across types. */
+export type WorkbookSearchRow = WorkbookListItemDto & { score: number };
 
 // All workbook columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _workbookSearchVector, ...workbookColumns } = getTableColumns(workbooks);
@@ -85,6 +103,23 @@ function cellRefIds(cellType: "protocol" | "macro", idKey: "protocolId" | "macro
   )`;
 }
 
+function toWorkbookRow(result: {
+  workbooks: unknown;
+  firstName: string | null;
+  lastName: string | null;
+  experimentCount: number;
+  cellTypeCounts: WorkbookListItemDto["cellTypeCounts"];
+  score: number;
+}): WorkbookSearchRow {
+  const augmented = result.workbooks as WorkbookSearchRow;
+  const { firstName, lastName } = result;
+  augmented.createdByName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
+  augmented.experimentCount = result.experimentCount;
+  augmented.cellTypeCounts = result.cellTypeCounts;
+  augmented.score = result.score;
+  return augmented;
+}
+
 @Injectable()
 export class WorkbookRepository {
   constructor(
@@ -118,20 +153,12 @@ export class WorkbookRepository {
     });
   }
 
-  async findAll(filter?: WorkbookFilter, limit?: number): Promise<Result<WorkbookListItemDto[]>> {
-    return tryCatch(async () => {
-      let query = this.database
-        .select({
-          workbooks: workbookListColumns,
-          firstName: getAnonymizedFirstName(),
-          lastName: getAnonymizedLastName(),
-          experimentCount: experimentCountSql(),
-          cellTypeCounts: cellTypeCountsSql(),
-        })
-        .from(workbooks)
-        .innerJoin(profiles, eq(workbooks.createdBy, profiles.userId))
-        .$dynamic();
-
+  /**
+   * Shared shape behind the array and paginated listings, so both apply identical
+   * scoping, ranking and ordering and the count matches the rows exactly.
+   */
+  private buildListing(filter?: WorkbookFilter) {
+    {
       const conditions: (SQL | undefined)[] = [];
 
       const search = filter?.search;
@@ -219,11 +246,10 @@ export class WorkbookRepository {
         );
       }
 
-      // Unconditional, the "my" view included: a view may narrow what the caller
-      // sees but must never widen it. Authorship is not an access path (`can()`
-      // does not consult `created_by`), so a creator since removed from the owning
-      // org, holding no grant, must not get the workbook's body back through a listing.
-      const scope = accessibleResourceCondition({
+      // Unconditional, the `related` view included: a view may narrow what the caller
+      // sees but must never widen it. Authorship is not an access path, so a creator
+      // since removed from the owning org must not get the body back through a listing.
+      const accessScope = accessibleResourceCondition({
         database: this.database,
         resourceType: "workbook",
         resourceIdColumn: workbooks.id,
@@ -231,40 +257,126 @@ export class WorkbookRepository {
         visibilityColumn: workbooks.visibility,
         userId: filter?.userId,
       });
-      if (scope) {
-        conditions.push(scope);
+      if (accessScope) {
+        conditions.push(accessScope);
       }
 
-      if (filter?.filter === "my" && filter.userId) {
-        // "My workbooks" narrows that down to what the caller authored.
-        conditions.push(eq(workbooks.createdBy, filter.userId));
+      // Applied on top of the access scope, never instead of it: an org's page shows
+      // each viewer exactly the rows they could already reach.
+      if (filter?.organizationId) {
+        conditions.push(eq(workbooks.organizationId, filter.organizationId));
       }
 
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+      if (filter?.scope === "related") {
+        // "Mine": authorship plus every path tying the caller to the row personally.
+        // Without a caller nothing resolves, so the scope admits nothing.
+        const related = relatedResourceCondition({
+          database: this.database,
+          resourceType: "workbook",
+          resourceIdColumn: workbooks.id,
+          organizationIdColumn: workbooks.organizationId,
+          userId: filter.userId,
+        });
+        conditions.push(
+          filter.userId ? or(related, eq(workbooks.createdBy, filter.userId)) : sql`false`,
+        );
       }
 
-      if (search) {
-        const rank = sql<number>`(${ftsRank(workbooks.searchVector, workbooks.name, search)} + 0.05 * (CASE WHEN ${creatorMatch(search)} THEN 1 ELSE 0 END) + 0.05 * (CASE WHEN ${linkedExperimentMatch(search)} THEN 1 ELSE 0 END) + 0.05 * (CASE WHEN ${linkedProtocolMatch(search)} THEN 1 ELSE 0 END) + 0.05 * (CASE WHEN ${linkedMacroMatch(search)} THEN 1 ELSE 0 END))`;
-        query = query.orderBy(desc(rank), asc(workbooks.name));
-      } else {
-        query = query.orderBy(asc(workbooks.name));
-      }
+      const tier = resourceTierExpression({
+        database: this.database,
+        resourceType: "workbook",
+        resourceIdColumn: workbooks.id,
+        organizationIdColumn: workbooks.organizationId,
+        createdByColumn: workbooks.createdBy,
+        userId: filter?.userId,
+      });
+      // Browsing has no term to rank against. Skipping the score here matters most for
+      // workbooks: its rank re-runs four correlated linked-entity probes per row.
+      const score = search
+        ? searchScore(
+            sql<number>`(${ftsRank(workbooks.searchVector, workbooks.name, search)} + ${crossTableBonus(
+              creatorMatch(search),
+              linkedExperimentMatch(search),
+              linkedProtocolMatch(search),
+              linkedMacroMatch(search),
+            )})`,
+            tier,
+          )
+        : sql<number>`0::int`;
 
+      // Both orderings end on `id` so paging never drops or repeats a row on ties.
+      const orderBy = search
+        ? [desc(score), asc(workbooks.id)]
+        : [desc(tier), asc(workbooks.name), asc(workbooks.id)];
+
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+      return { where, orderBy, score };
+    }
+  }
+
+  private baseQuery(score: SQL<number>) {
+    return this.database
+      .select({
+        workbooks: workbookListColumns,
+        firstName: getAnonymizedFirstName(),
+        lastName: getAnonymizedLastName(),
+        experimentCount: experimentCountSql(),
+        cellTypeCounts: cellTypeCountsSql(),
+        score,
+      })
+      .from(workbooks)
+      .innerJoin(profiles, eq(workbooks.createdBy, profiles.userId))
+      .$dynamic();
+  }
+
+  async findAll(filter?: WorkbookFilter, limit?: number): Promise<Result<WorkbookSearchRow[]>> {
+    return tryCatch(async () => {
+      const { where, orderBy, score } = this.buildListing(filter);
+
+      let query = this.baseQuery(score);
+      if (where) {
+        query = query.where(where);
+      }
+      query = query.orderBy(...orderBy);
       if (limit !== undefined) {
         query = query.limit(limit);
       }
 
-      const results = await query;
-      return results.map((result) => {
-        const augmented = result.workbooks as WorkbookListItemDto;
-        const firstName = result.firstName;
-        const lastName = result.lastName;
-        augmented.createdByName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
-        augmented.experimentCount = result.experimentCount;
-        augmented.cellTypeCounts = result.cellTypeCounts;
-        return augmented;
-      });
+      return (await query).map(toWorkbookRow);
+    });
+  }
+
+  /** One page plus the total, counted separately so an out-of-range page still reports it. */
+  async findPage(
+    page: number,
+    pageSize: number,
+    filter?: WorkbookFilter,
+  ): Promise<Result<{ items: WorkbookSearchRow[]; totalCount: number }>> {
+    return tryCatch(async () => {
+      const { where, orderBy, score } = this.buildListing(filter);
+
+      let rows = this.baseQuery(score);
+      let total = this.database
+        .select({ count: sql<number>`count(*)::int` })
+        .from(workbooks)
+        .innerJoin(profiles, eq(workbooks.createdBy, profiles.userId))
+        .$dynamic();
+
+      if (where) {
+        rows = rows.where(where);
+        total = total.where(where);
+      }
+
+      const [items, [{ count }]] = await Promise.all([
+        rows
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset((page - 1) * pageSize),
+        total,
+      ]);
+
+      return { items: items.map(toWorkbookRow), totalCount: count };
     });
   }
 
@@ -275,6 +387,7 @@ export class WorkbookRepository {
           workbooks: workbookColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
+          organizationName: owningOrganizationNameSql("workbooks"),
           experimentCount: experimentCountSql(),
         })
         .from(workbooks)
@@ -291,6 +404,7 @@ export class WorkbookRepository {
       const lastName = result[0].lastName;
       augmented.createdByName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
       augmented.experimentCount = result[0].experimentCount;
+      augmented.organizationName = result[0].organizationName;
       return augmented;
     });
   }

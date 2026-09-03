@@ -109,12 +109,14 @@ describe("RegistrationForm", () => {
     });
   });
 
-  it("renders the submit button with correct styling", () => {
+  it("renders a full-width submit button on the stock button shape", () => {
     render(<RegistrationForm {...defaultProps} />);
 
     const button = screen.getByRole("button", { name: "registration.register" });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass("h-12", "w-full", "rounded-xl");
+    // Width is the form's layout decision; height and radius are the button's
+    // own and come from the primitive.
+    expect(button).toHaveClass("w-full", "h-9", "rounded-md");
     expect(button).toHaveAttribute("type", "submit");
   });
 
@@ -298,8 +300,9 @@ describe("RegistrationForm", () => {
     const termsTrigger = screen.getByText("auth.terms");
     const closestAnchorOrButton = termsTrigger.closest("a,button");
     expect(closestAnchorOrButton).toBeTruthy();
-    // It should have the cursor-pointer and underline classes regardless of tag
-    expect(closestAnchorOrButton).toHaveClass("cursor-pointer", "underline");
+    // The link treatment comes from the button primitive's `link` variant, so
+    // assert that recipe rather than the classes the call site used to carry.
+    expect(closestAnchorOrButton).toHaveClass("text-primary", "underline-offset-4");
   });
 
   it("renders custom terms data when provided", async () => {

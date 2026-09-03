@@ -21,6 +21,7 @@ import type {
   CreatedThing,
   CertificateResult,
   CertificateStatus,
+  ThingConnectivity,
 } from "./services/iot/iot.types";
 import { AwsLambdaService } from "./services/lambda/lambda.service";
 import type { InvokeLambdaResponse } from "./services/lambda/lambda.types";
@@ -153,6 +154,24 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
   }
 
   /**
+   * The caller's Cognito identity id, resolved through the same
+   * developer-identity path the credentials flow uses. This is the principal a
+   * mobile device's Thing is bound to.
+   */
+  async getCognitoIdentityId(userId: string): Promise<Result<string>> {
+    const tokenResult = await this.cognitoService.getOpenIdToken(userId);
+    if (tokenResult.isFailure()) {
+      return failure(tokenResult.error);
+    }
+
+    return success(tokenResult.value.identityId);
+  }
+
+  async listThingPrincipals(thingName: string): Promise<Result<string[]>> {
+    return this.awsIotService.listThingPrincipals(thingName);
+  }
+
+  /**
    * Register an AWS IoT Thing for a device (no certificate attached).
    */
   async createThing(input: CreateThingInput): Promise<Result<CreatedThing>> {
@@ -171,12 +190,12 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
     return this.awsIotService.createKeysAndCertificate();
   }
 
-  async attachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>> {
-    return this.awsIotService.attachThingPrincipal(thingName, certificateArn);
+  async attachThingPrincipal(thingName: string, principal: string): Promise<Result<void>> {
+    return this.awsIotService.attachThingPrincipal(thingName, principal);
   }
 
-  async detachThingPrincipal(thingName: string, certificateArn: string): Promise<Result<void>> {
-    return this.awsIotService.detachThingPrincipal(thingName, certificateArn);
+  async detachThingPrincipal(thingName: string, principal: string): Promise<Result<void>> {
+    return this.awsIotService.detachThingPrincipal(thingName, principal);
   }
 
   /**
@@ -184,7 +203,13 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
    * ingest channel, so a device cert carries all of them.
    */
   async attachDevicePolicies(certificateArn: string): Promise<Result<void>> {
-    for (const policyName of this.awsConfigService.iotPolicyNames) {
+    const jobsPolicyName = this.awsConfigService.iotJobsPolicyName;
+    const policyNames =
+      jobsPolicyName === ""
+        ? this.awsConfigService.iotPolicyNames
+        : [...this.awsConfigService.iotPolicyNames, jobsPolicyName];
+
+    for (const policyName of policyNames) {
       const result = await this.awsIotService.attachPolicy(policyName, certificateArn);
       if (result.isFailure()) {
         return result;
@@ -206,6 +231,16 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
    */
   async getIotDataEndpoint(): Promise<Result<string>> {
     return this.awsIotService.describeDataEndpoint();
+  }
+
+  /**
+   * Live broker connectivity per thing from the fleet index. Callers treat a
+   * failure as "connectivity unknown", never as a failed request.
+   */
+  async searchThingsConnectivity(
+    thingNames: string[],
+  ): Promise<Result<Map<string, ThingConnectivity>>> {
+    return this.awsIotService.searchThingsConnectivity(thingNames);
   }
 
   /**

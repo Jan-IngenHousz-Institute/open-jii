@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
 import { useProtocolCompatibleMacros } from "@/hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -9,8 +10,8 @@ import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
-import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/components/card";
 
 import { MacroSearchWithDropdown } from "../macro-search-with-dropdown";
 
@@ -32,11 +33,15 @@ export function AnalysisPanel({
   // Macro search state
   const [macroSearch, setMacroSearch] = useState("");
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
-  const { data: macroData } = useQuery(
+  const { data: macroResponse } = useQuery(
     orpc.macros.listMacros.queryOptions({
       input: { search: debouncedMacroSearch || undefined },
     }),
   );
+
+  // Narrowed to the array shape: no `page` is sent here, so the response is always
+  // the bare list. Deletable once this caller migrates to the envelope.
+  const macroData = macroResponse ? listItems(macroResponse) : undefined;
   const macroList = macroData;
 
   // Fetch the upstream protocol name for recommendation context
@@ -84,34 +89,29 @@ export function AnalysisPanel({
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="text-jii-dark-green">{t("experiments.analysisPanelTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <MacroSearchWithDropdown
-          availableMacros={availableMacros}
-          value={selectedMacroId}
-          placeholder={t("experiments.searchMacros")}
-          loading={!isDebounced}
-          searchValue={macroSearch}
-          onSearchChange={setMacroSearch}
-          onAddMacro={handleAddMacro}
-          isAddingMacro={false}
-          disabled={disabled}
-          recommendedMacroIds={
-            hasCompatibilityData && compatibleMacroIds.size > 0 ? compatibleMacroIds : undefined
-          }
-          recommendedReason={recommendedReason}
-        />
+    <SettingsCard title={t("experiments.analysisPanelTitle")} contentClassName="space-y-3">
+      <MacroSearchWithDropdown
+        availableMacros={availableMacros}
+        value={selectedMacroId}
+        placeholder={t("experiments.searchMacros")}
+        loading={!isDebounced}
+        searchValue={macroSearch}
+        onSearchChange={setMacroSearch}
+        onAddMacro={handleAddMacro}
+        isAddingMacro={false}
+        disabled={disabled}
+        recommendedMacroIds={
+          hasCompatibilityData && compatibleMacroIds.size > 0 ? compatibleMacroIds : undefined
+        }
+        recommendedReason={recommendedReason}
+      />
 
-        {showIncompatibilityWarning && (
-          <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>{t("experiments.macroIncompatibilityWarning")}</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {showIncompatibilityWarning && (
+        <div className="border-status-stale-foreground/30 bg-status-stale text-status-stale-foreground flex items-center gap-2 rounded-md border p-3 text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>{t("experiments.macroIncompatibilityWarning")}</span>
+        </div>
+      )}
+    </SettingsCard>
   );
 }

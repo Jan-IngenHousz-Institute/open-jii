@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
-import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { JsonValue, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { ProtocolCell as ProtocolCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
 import { protocolRequiresInteraction } from "@repo/iot";
@@ -72,12 +72,13 @@ export function ProtocolCellComponent({
   const protocolLoading = !useSnapshot && liveLoading;
   const protocolName = protocolData?.name;
   // Newly-created protocols have an empty code array; render that as "[]" so owners can fill it in
-  // rather than treating it as a load failure.
+  // rather than treating it as a load failure. Presence, not truthiness: 0 and
+  // false are valid stored JSON documents under the widened contract (OJD-1711).
   const protocolCode = useSnapshot
     ? formatJson(snapshot.code ?? [], { style })
-    : protocolData?.code
-      ? formatJson(protocolData.code, { style })
-      : null;
+    : protocolData?.code === null || protocolData?.code === undefined
+      ? null
+      : formatJson(protocolData.code, { style });
 
   const protocolFamily = useSnapshot ? snapshot.family : protocolData?.family;
   // Capability, not ownership: see the macro cell, the detail payload
@@ -117,14 +118,14 @@ export function ProtocolCellComponent({
 
   // Mirror the standalone protocol/macro editors: persist via the shared
   // `useAutosave` hook so debounce, status and flush behave identically across
-  // all three editors. Protocol code is a JSON array; `isValid` skips saves
+  // all three editors. Protocol code is a JSON document; `isValid` skips saves
   // while the editor is mid-keystroke with text that does not yet parse.
   const save = useCallback(
     async (code: string) => {
       try {
         await saveProtocol({
           id: protocolId,
-          code: JSON.parse(code) as Record<string, unknown>[],
+          code: JSON.parse(code) as JsonValue,
         });
         onEntitySaved();
       } catch (err) {
@@ -148,7 +149,10 @@ export function ProtocolCellComponent({
 
   const isValidCode = useCallback((code: string) => {
     try {
-      return Array.isArray(JSON.parse(code));
+      // Any successfully parsed JSON document is saveable. Execution keeps its
+      // own array-of-records check.
+      JSON.parse(code);
+      return true;
     } catch {
       return false;
     }
@@ -277,7 +281,7 @@ export function ProtocolCellComponent({
         />
       }
       labelText={displayName}
-      accentColor="#2D3142"
+      accentColor="var(--node-measurement)"
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
       onDelete={onDelete}
@@ -292,14 +296,14 @@ export function ProtocolCellComponent({
         forkedFrom ? (
           <div className="flex items-center gap-2">
             {protocolFamily ? (
-              <span className="text-xs capitalize text-[#68737B]">
+              <span className="text-muted-foreground text-xs capitalize">
                 {getSensorFamilyLabel(protocolFamily)}
               </span>
             ) : null}
             {forkedFrom ? (
               <Link
                 href={`/platform/protocols/${forkedFrom}`}
-                className="text-xs text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+                className="text-primary hover:text-primary text-xs underline underline-offset-2"
               >
                 {tWorkbook("cells.forkedFrom")}
               </Link>
@@ -315,7 +319,7 @@ export function ProtocolCellComponent({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-muted-foreground h-6 w-6 shrink-0 p-0 hover:text-[#005E5E]"
+                        className="text-muted-foreground hover:text-primary h-6 w-6 shrink-0 p-0"
                         aria-label={tWorkbook("cells.fork")}
                         onClick={() => void handleFork()}
                         disabled={isForking}
@@ -355,7 +359,7 @@ export function ProtocolCellComponent({
             asChild
             variant="ghost"
             size="sm"
-            className="text-muted-foreground h-7 w-7 p-0 hover:text-[#005E5E]"
+            className="text-muted-foreground hover:text-primary h-7 w-7 p-0"
             title="Open protocol in new tab"
           >
             <Link
@@ -373,7 +377,11 @@ export function ProtocolCellComponent({
             className="text-muted-foreground h-7 w-7 p-0"
             onClick={handleCopy}
           >
-            {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+            {copied ? (
+              <Check className="text-status-active-foreground h-3 w-3" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
           </Button>
         </div>
       }

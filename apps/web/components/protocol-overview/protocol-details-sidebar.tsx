@@ -11,7 +11,8 @@ import { parseApiError } from "~/util/apiError";
 import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "~/util/sensor-family";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
-import type { ProtocolDetail, SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
+import { zProtocolFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -30,10 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { Separator } from "@repo/ui/components/separator";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
 import { useProtocolDelete } from "../../hooks/protocol/useProtocolDelete/useProtocolDelete";
+import { OwningOrganizationField } from "../organizations/owning-organization-field";
 import { ProtocolCompatibleMacrosCard } from "../protocol-settings/protocol-compatible-macros-card";
 import { DetailsSidebarCard } from "../shared/details-sidebar-card";
 import { ResourcePublishControl } from "../visibility/resource-publish-control";
@@ -50,7 +53,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
   const router = useRouter();
 
   // Capability, not ownership — see the macro sidebar.
-  const { canUpdate, canManage } = protocol.capabilities;
+  const { canUpdate, canManage, canTransfer } = protocol.capabilities;
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_DELETION);
 
   const { mutateAsync: updateProtocol, isPending: isUpdating } = useProtocolUpdate(protocolId);
@@ -64,7 +67,9 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
     await updateProtocol(
       {
         id: protocolId,
-        family: newFamily as SensorFamily,
+        // Parsed, not cast: the select lists selectable families only, the
+        // contract confirms it.
+        family: zProtocolFamily.parse(newFamily),
       },
       {
         onSuccess: () => {
@@ -130,12 +135,20 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
         <p className="text-muted-foreground text-sm">{protocol.createdByName ?? "-"}</p>
       </div>
 
+      <OwningOrganizationField
+        resourceType="protocol"
+        resourceId={protocolId}
+        organizationId={protocol.organizationId}
+        organizationName={protocol.organizationName}
+        canTransfer={canTransfer}
+      />
+
       {protocol.forkedFrom ? (
         <div className="space-y-1">
           <h4 className="text-sm font-medium">{tCommon("common.forkedFrom")}</h4>
           <Link
             href={`/${locale}/platform/protocols/${protocol.forkedFrom}`}
-            className="text-sm text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+            className="text-primary hover:text-primary/80 text-sm underline underline-offset-2"
           >
             {tCommon("common.viewOriginal")}
           </Link>
@@ -151,11 +164,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       />
 
       {/* Compatible Macros Section */}
-      <div
-        role="separator"
-        aria-orientation="horizontal"
-        className="text-muted-foreground border-t"
-      />
+      <Separator decorative={false} />
 
       {canUpdate ? (
         <ProtocolCompatibleMacrosCard protocolId={protocolId} embedded />
@@ -173,11 +182,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       {/* Danger Zone */}
       {canManage && isDeletionEnabled && (
         <>
-          <div
-            role="separator"
-            aria-orientation="horizontal"
-            className="text-muted-foreground border-t"
-          />
+          <Separator decorative={false} />
           <div>
             <h5 className="text-destructive mb-2 text-base font-medium">
               {t("protocolSettings.dangerZone")}

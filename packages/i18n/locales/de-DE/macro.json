@@ -12,13 +12,13 @@
     "updatedAt": "Aktualisiert am",
     "loadingMacros": "Lade Makros...",
     "noMacros": "Keine Makros gefunden",
+    "noMatches": "Keine Makros entsprechen Ihrer Suche",
     "viewDetails": "Details anzeigen",
     "macroCreated": "Makro erfolgreich erstellt",
     "macroUpdated": "Makro erfolgreich aktualisiert",
     "macroDeleted": "Makro erfolgreich gelöscht",
     "nameAlreadyExists": "Ein Makro mit diesem Namen existiert bereits. Bitte wählen Sie einen anderen Namen.",
     "createError": "Makro konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
-    "listDescription": "Anzeigen und verwalten Sie Ihre Code-Makros für die Datenverarbeitung.",
     "manageMacroDescription": "Anzeigen und verwalten Sie die Details und Einstellungen Ihres Makros.",
     "settings": "Makro-Einstellungen",
     "settingsDescription": "Verwalten Sie Einstellungen für dieses Makro.",
@@ -40,14 +40,16 @@
     "deleteMacro": "Makro löschen",
     "deleteMacroDescription": "Sobald Sie ein Makro löschen, gibt es kein Zurück mehr. Bitte seien Sie sicher.",
     "onlyCreatorCanEdit": "Nur der Makro-Ersteller kann auf die Einstellungen zugreifen",
-    "filterMy": "Meine Makros",
-    "filterAll": "Alle Makros",
-    "filterMacros": "Makros filtern",
     "clearSearch": "Suche löschen",
     "descriptionPlaceholder": "Beschreibung hinzufügen...",
     "codeNotAvailable": "Kein Code verfügbar",
     "detailsTitle": "Details",
-    "lastUpdate": "Letzte Aktualisierung"
+    "columns": {
+      "name": "Name",
+      "language": "Sprache",
+      "protocols": "Protokolle",
+      "updated": "Aktualisiert"
+    }
   },
   "newMacro": {
     "description": "Beschreibung",
@@ -96,7 +98,9 @@
     "compatibleProtocols": "Kompatible Protokolle",
     "compatibleProtocolsDescription": "Protokolle, die bekanntermaßen mit diesem Makro funktionieren.",
     "noCompatibleProtocols": "Noch keine kompatiblen Protokolle verknüpft.",
-    "addCompatibleProtocol": "Kompatibles Protokoll suchen und hinzufügen..."
+    "addCompatibleProtocol": "Kompatibles Protokoll suchen und hinzufügen...",
+    "openCompatibleProtocol": "{{name}} in einem neuen Tab öffnen",
+    "removeCompatibleProtocol": "{{name}} entfernen"
   },
   "errors": {
     "failedToLoadMacro": "Makro konnte nicht geladen werden"

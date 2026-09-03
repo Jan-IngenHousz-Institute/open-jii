@@ -1,15 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
-import { v4 as uuidv4 } from "uuid";
+import type { ScanResultEntry } from "~/features/measurement-flow/domain/flow-transitions";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { getMeasurementLocation } from "~/shared/location/measurement-location";
+import { getClientMetadata } from "~/shared/measurements/client-metadata";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { getMeasurementMqttTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
+import { whenDeviceIdentityLoaded } from "~/shared/stores/device-identity-store";
 import { showAlert } from "~/shared/ui/AlertDialog";
 
 const log = createLogger("measurement-upload");
@@ -56,7 +58,11 @@ interface SharedUploadArgs {
   macro: { id: string; name: string; filename: string } | null;
   questions: AnswerData[];
   commentText?: string;
-  workbookVersionId?: string;
+  workbookVersionId: string;
+  /** The workbook that version belongs to; stored so re-runs survive re-linking. */
+  workbookId?: string;
+  /** Stable UUID for the complete workbook attempt, across sequential nodes. */
+  workbookRunId: string;
 }
 
 export function useMeasurementUpload() {
@@ -80,10 +86,12 @@ export function useMeasurementUpload() {
       questions,
       commentText,
       workbookVersionId,
+      workbookId,
+      workbookRunId,
     }: SharedUploadArgs & {
       results: {
         rawMeasurement: any;
-        device?: { id: string; name: string };
+        device?: ScanResultEntry["device"];
         // Dispatch rounds: the protocol this device actually ran; overrides
         // the batch-level protocolId/protocolName for this result only.
         protocolId?: string;
@@ -106,11 +114,9 @@ export function useMeasurementUpload() {
         throw new Error("No measurements to upload");
       }
 
-      // Measurements taken together ARE one run: every multi-device round is
-      // stamped with one shared workbook_run_id. Each row is still its own
-      // MQTT message in the ordinary envelope (see CONTEXT.md: Workbook run),
-      // published on ITS protocol's topic when the round was heterogeneous.
-      const workbookRunId = results.length > 1 ? uuidv4() : undefined;
+      // Topics carry the phone's thing name; await rehydration structurally
+      // rather than relying on upload always happening late in the session.
+      await whenDeviceIdentityLoaded();
 
       // One fix per round: all devices measured at the same physical spot.
       const location = await getMeasurementLocation();
@@ -120,13 +126,11 @@ export function useMeasurementUpload() {
 
       for (const result of results) {
         const { rawMeasurement, device, macroContext } = result;
-        const topic = getMeasurementMqttTopic({
-          experimentId,
-          protocolId: result.protocolId ?? protocolId,
-        });
+        const topic = getMeasurementMqttTopic({ experimentId });
         const measurementData = buildUploadPayload({
           rawMeasurement,
           userId,
+          protocolId: result.protocolId ?? protocolId,
           macro,
           timestamp,
           timezone,
@@ -134,9 +138,14 @@ export function useMeasurementUpload() {
           commentText,
           workbookRunId,
           workbookVersionId,
+          workbookId,
           macroContext,
           fallbackDeviceId: device?.id,
+          fallbackDeviceAddress: device?.address,
+          fallbackDeviceFamily: device?.family,
+          fallbackDeviceFirmware: device?.firmwareVersion,
           location,
+          client: getClientMetadata(),
         });
 
         const measurement = {

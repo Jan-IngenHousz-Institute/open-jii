@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { sanitizeQuestionLabel } from "../../../transforms/label-sanitization";
 import { RESERVED_EXPERIMENT_COLUMN_NAMES } from "../experiment.schema";
 
 /** Measurement columns custom metadata may match against directly. */
@@ -65,7 +66,8 @@ export const zExperimentCustomMetadataPayload = z
     // Reserved names: would collide with system columns once `custom_metadata`
     // is flattened to top-level by an export sink that requires unique columns.
     blob.columns.forEach((col, idx) => {
-      if (RESERVED_EXPERIMENT_COLUMN_NAMES.has(col.name)) {
+      const canonicalName = col.name.toLowerCase();
+      if (RESERVED_EXPERIMENT_COLUMN_NAMES.has(canonicalName)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["columns", idx, "name"],
@@ -79,7 +81,8 @@ export const zExperimentCustomMetadataPayload = z
     // each other (last write wins, first column's data is lost).
     const seen = new Map<string, number>();
     blob.columns.forEach((col, idx) => {
-      const prev = seen.get(col.name);
+      const canonicalName = col.name.toLowerCase();
+      const prev = seen.get(canonicalName);
       if (prev !== undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -87,7 +90,7 @@ export const zExperimentCustomMetadataPayload = z
           message: `Column name "${col.name}" is duplicated`,
         });
       } else {
-        seen.set(col.name, idx);
+        seen.set(canonicalName, idx);
       }
     });
 
@@ -129,7 +132,7 @@ export function makeCustomMetadataFormSchema(reservedQuestionLabels: ReadonlySet
   return zExperimentCustomMetadataPayload.superRefine((blob, ctx) => {
     blob.columns.forEach((col, idx) => {
       if (col.id === blob.identifierColumnId) return;
-      if (reservedQuestionLabels.has(col.name)) {
+      if (reservedQuestionLabels.has(sanitizeQuestionLabel(col.name))) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["columns", idx, "name"],

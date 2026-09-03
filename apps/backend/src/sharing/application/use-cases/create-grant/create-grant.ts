@@ -43,7 +43,14 @@ export class CreateGrantUseCase {
     // Validated against the grantee pickers' visibility rules, not mere existence:
     // a grantee the sharer could not have discovered would otherwise have their
     // details disclosed back through the collaborators list.
-    const granteeOk = await this.repo.granteeIsSelectable(body.granteeType, body.granteeId, userId);
+    // The owning organization the decision was resolved against, not a fresh read:
+    // it is what a team grantee has to belong to.
+    const granteeOk = await this.repo.granteeIsSelectable(
+      body.granteeType,
+      body.granteeId,
+      userId,
+      decision.organizationId,
+    );
     if (!granteeOk) {
       return failure(AppError.badRequest("Grantee not found"));
     }

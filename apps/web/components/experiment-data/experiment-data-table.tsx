@@ -1,52 +1,22 @@
 "use client";
 
-import { isEditableTarget } from "@/components/shortcuts/is-editable-target";
-import { showShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
-import type {
-  DataRow,
-  TableMetadata,
-} from "@/hooks/experiment/useExperimentData/useExperimentData";
+import { DataTable } from "@/components/data-table/data-table";
+import type { TableMetadata } from "@/components/data-table/data-table-columns";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useHotkey } from "@tanstack/react-hotkeys";
-import type { PaginationState, Updater } from "@tanstack/react-table";
-import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
+import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import React, { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
 import { BulkActionsBar } from "~/components/experiment-data/annotations/bulk-actions-bar";
 import { DeleteAnnotationsDialog } from "~/components/experiment-data/annotations/delete-annotations-dialog";
-import {
-  ExperimentDataRows,
-  ExperimentTableHeader,
-  formatValue,
-  LoadingRows,
-} from "~/components/experiment-data/experiment-data-utils";
 import { useUrlDataFilters } from "~/hooks/useUrlDataFilters";
 
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { useTranslation } from "@repo/i18n";
-import { Checkbox } from "@repo/ui/components/checkbox";
 import { Form } from "@repo/ui/components/form";
-import { Label } from "@repo/ui/components/label";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@repo/ui/components/pagination";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { Table, TableBody } from "@repo/ui/components/table";
-import { cn } from "@repo/ui/lib/utils";
 
 import { FilterChipBar } from "../data-filters/filter-chip-bar";
 import { DataExportModal } from "./data-export-modal/data-export-modal";
@@ -64,6 +34,11 @@ const bulkSelectionFormSchema = z.object({
 });
 type BulkSelectionFormType = z.infer<typeof bulkSelectionFormSchema>;
 
+/**
+ * An experiment's data table: the shared {@link DataTable} plus everything
+ * that is experiment-specific, namely the filters, annotations, bulk actions
+ * and export around it.
+ */
 export function ExperimentDataTable({
   experimentId,
   tableName,
@@ -98,7 +73,7 @@ export function ExperimentDataTable({
   const [deleteAnnotationType, setDeleteAnnotationType] =
     useState<ExperimentAnnotationType>("comment");
 
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const selectionForm = useForm<BulkSelectionFormType>({
     resolver: zodResolver(bulkSelectionFormSchema),
@@ -110,10 +85,6 @@ export function ExperimentDataTable({
     columnName: string;
     isPinned: boolean;
   } | null>(null);
-
-  const [expandedCell, setExpandedCell] = useState<{ rowId: string; columnName: string } | null>(
-    null,
-  );
 
   const { t } = useTranslation();
 
@@ -129,19 +100,6 @@ export function ExperimentDataTable({
   const closePinnedChart = useCallback(() => {
     setChartDisplay(null);
   }, []);
-
-  const toggleCellExpansion = useCallback((rowId: string, columnName: string) => {
-    setExpandedCell((prev) =>
-      prev?.rowId === rowId && prev.columnName === columnName ? null : { rowId, columnName },
-    );
-  }, []);
-
-  const isCellExpanded = useCallback(
-    (rowId: string, columnName: string) => {
-      return expandedCell?.rowId === rowId && expandedCell.columnName === columnName;
-    },
-    [expandedCell],
-  );
 
   const openAddAnnotationDialog = useCallback(
     (rowIds: string[], type: ExperimentAnnotationType = "comment") => {
@@ -182,14 +140,6 @@ export function ExperimentDataTable({
     orderBy: sortColumn,
     orderDirection: sortDirection,
     filters: activeFilters,
-    formatFunction: formatValue,
-    onChartClick: toggleChartPin,
-    // Withheld without `can(contribute)`: the cells hide their add/remove controls
-    // when the handler is absent.
-    onAddAnnotation: canContribute ? openAddAnnotationDialog : undefined,
-    onDeleteAnnotations: canContribute ? openDeleteAnnotationsDialog : undefined,
-    onToggleCellExpansion: toggleCellExpansion,
-    isCellExpanded,
     errorColumn,
   });
 
@@ -201,23 +151,10 @@ export function ExperimentDataTable({
     setRowSelection({});
   }, [filtersKey]);
 
-  const onPaginationChange = useCallback(
-    (updaterOrValue: Updater<PaginationState>) => {
-      if (typeof updaterOrValue === "function") {
-        const newPagination = updaterOrValue(pagination);
-        setPagination(newPagination);
-      } else {
-        setPagination(updaterOrValue);
-      }
-      setRowSelection({});
-    },
-    [pagination],
-  );
-
-  function changePageSize(pageSize: number) {
-    const newPagination = { pageIndex: 0, pageSize };
-    setPagination(newPagination);
-  }
+  const handlePaginationChange = useCallback<typeof setPagination>((updaterOrValue) => {
+    setPagination(updaterOrValue);
+    setRowSelection({});
+  }, []);
 
   useEffect(() => {
     if (tableMetadata) {
@@ -225,103 +162,10 @@ export function ExperimentDataTable({
     }
   }, [tableMetadata]);
 
-  const columnCount = persistedMetaData?.columns.length ?? 0;
+  const columns = persistedMetaData?.rawColumns ?? [];
   const totalPages = persistedMetaData?.totalPages ?? 0;
   const totalRows = persistedMetaData?.totalRows ?? 0;
-
-  const columns = React.useMemo(() => {
-    if (!persistedMetaData?.columns) {
-      return [];
-    }
-
-    return [
-      {
-        id: "select",
-        size: 50,
-        header: ({
-          table,
-        }: {
-          table: {
-            getIsAllPageRowsSelected: () => boolean;
-            getIsSomePageRowsSelected: () => boolean;
-            toggleAllPageRowsSelected: (value: boolean) => void;
-          };
-        }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected()
-                ? true
-                : table.getIsSomePageRowsSelected()
-                  ? "indeterminate"
-                  : false
-            }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-          />
-        ),
-        cell: ({
-          row,
-        }: {
-          row: { getIsSelected: () => boolean; toggleSelected: (value: boolean) => void };
-        }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-      ...persistedMetaData.columns,
-    ];
-  }, [persistedMetaData?.columns]);
-
-  const table = useReactTable<DataRow>({
-    data: tableRows ?? [],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    manualPagination: true,
-    enableRowSelection: true,
-    getRowId: (row) => String(row.id),
-    onRowSelectionChange: setRowSelection,
-    onPaginationChange,
-    state: {
-      pagination,
-      rowSelection,
-    },
-    rowCount: totalRows,
-    defaultColumn: {
-      size: 180,
-    },
-  });
-
   const selectedRowIds = Object.keys(rowSelection);
-
-  useHotkey(
-    "ArrowRight",
-    (event) => {
-      if (isEditableTarget(document.activeElement) || isEditableTarget(event.target)) return;
-      if (!table.getCanNextPage()) return;
-      event.preventDefault();
-      table.nextPage();
-      showShortcutHint({ keys: ["→"], label: "Next page" });
-    },
-    { preventDefault: false, stopPropagation: false },
-  );
-
-  useHotkey(
-    "ArrowLeft",
-    (event) => {
-      if (isEditableTarget(document.activeElement) || isEditableTarget(event.target)) return;
-      if (!table.getCanPreviousPage()) return;
-      event.preventDefault();
-      table.previousPage();
-      showShortcutHint({ keys: ["←"], label: "Previous page" });
-    },
-    { preventDefault: false, stopPropagation: false },
-  );
 
   if (isLoading && !persistedMetaData) {
     return (
@@ -349,112 +193,66 @@ export function ExperimentDataTable({
     return <div>{t("experimentDataTable.noData")}</div>;
   }
 
-  const loadingRowCount =
-    pagination.pageIndex + 1 == totalPages ? totalRows % pagination.pageSize : pagination.pageSize;
+  // A last page holds the remainder, except when the total divides evenly and
+  // it is as full as any other.
+  const remainder = totalRows % pagination.pageSize;
+  const isLastPage = pagination.pageIndex + 1 === totalPages;
+  const loadingRowCount = isLastPage && remainder > 0 ? remainder : pagination.pageSize;
 
   return (
     <Form {...selectionForm}>
       <form className="grid max-w-full">
         <h5 className="mb-3 text-base font-medium">{displayName}</h5>
-        {persistedMetaData?.rawColumns && persistedMetaData.rawColumns.length > 0 && (
-          <div className="mb-4">
-            <FilterChipBar
-              experimentId={experimentId}
-              tableName={tableName}
-              columns={persistedMetaData.rawColumns}
-              value={filters}
-              onChange={setFilters}
-            />
-          </div>
-        )}
-        <BulkActionsBar
-          rowIds={selectedRowIds}
-          tableRows={tableRows}
-          downloadTable={() => setDownloadModalOpen(true)}
-          onAddAnnotation={openAddAnnotationDialog}
-          onDeleteAnnotations={openDeleteAnnotationsDialog}
-          canContribute={canContribute}
+
+        <DataTable
+          columns={columns}
+          rows={tableRows ?? []}
+          isLoading={isLoading}
+          loadingRowCount={loadingRowCount}
+          errorColumn={errorColumn}
+          toolbar={
+            <>
+              {columns.length > 0 && (
+                <div className="mb-4">
+                  <FilterChipBar
+                    experimentId={experimentId}
+                    tableName={tableName}
+                    columns={columns}
+                    value={filters}
+                    onChange={setFilters}
+                  />
+                </div>
+              )}
+              <BulkActionsBar
+                rowIds={selectedRowIds}
+                tableRows={tableRows}
+                downloadTable={() => {
+                  setDownloadModalOpen(true);
+                }}
+                onAddAnnotation={openAddAnnotationDialog}
+                onDeleteAnnotations={openDeleteAnnotationsDialog}
+                canContribute={canContribute}
+              />
+            </>
+          }
+          pagination={{
+            mode: "server",
+            state: pagination,
+            onChange: handlePaginationChange,
+            totalRows,
+            totalPages,
+          }}
+          sorting={{ column: sortColumn, direction: sortDirection, onSort: handleSort }}
+          selection={{ state: rowSelection, onChange: setRowSelection }}
+          cellHandlers={{
+            onChartClick: toggleChartPin,
+            // Withheld without `can(contribute)`: the cells hide their
+            // add/remove controls when the handler is absent.
+            onAddAnnotation: canContribute ? openAddAnnotationDialog : undefined,
+            onDeleteAnnotations: canContribute ? openDeleteAnnotationsDialog : undefined,
+          }}
         />
-        <div className="text-muted-foreground relative -mt-px overflow-x-auto rounded-b-lg border">
-          <Table className="w-max min-w-full">
-            <ExperimentTableHeader
-              headerGroups={table.getHeaderGroups()}
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-            />
-            <TableBody>
-              {isLoading && persistedMetaData && (
-                <LoadingRows columnCount={columnCount} rowCount={loadingRowCount} />
-              )}
-              {!isLoading && (
-                <ExperimentDataRows
-                  rows={table.getRowModel().rows}
-                  columnCount={columnCount}
-                  expandedCell={expandedCell}
-                  tableRows={tableRows}
-                  columns={persistedMetaData?.rawColumns ?? []}
-                  errorColumn={errorColumn}
-                />
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
-          <div className="flex-1 whitespace-nowrap">
-            {t("experimentDataTable.totalRows")}: {totalRows}
-          </div>
-          <div className="flex items-center space-x-2">
-            <Label className="whitespace-nowrap">{t("experimentDataTable.rowsPerPage")}:</Label>
-            <Select
-              value={pagination.pageSize.toString()}
-              onValueChange={(rowsPerPage) => changePageSize(+rowsPerPage)}
-            >
-              <SelectTrigger className="w-[65px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Pagination className="max-w-72">
-            <PaginationContent className="w-full justify-between">
-              <PaginationItem>
-                <PaginationPrevious
-                  className={cn(
-                    "border",
-                    !table.getCanPreviousPage() &&
-                      "pointer-events-none cursor-not-allowed opacity-50",
-                  )}
-                  onClick={() => table.previousPage()}
-                  aria-disabled={!table.getCanPreviousPage()}
-                  title={t("experimentDataTable.previous")}
-                />
-              </PaginationItem>
-              <PaginationItem>
-                <span className="">
-                  {t("experimentDataTable.page")} {pagination.pageIndex + 1}{" "}
-                  {t("experimentDataTable.pageOf")} {totalPages}
-                </span>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext
-                  className={cn(
-                    "border",
-                    !table.getCanNextPage() && "pointer-events-none cursor-not-allowed opacity-50",
-                  )}
-                  onClick={() => table.nextPage()}
-                  aria-disabled={!table.getCanNextPage()}
-                  title={t("experimentDataTable.next")}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+
         <DataExportModal
           experimentId={experimentId}
           tableName={tableName}
@@ -481,7 +279,9 @@ export function ExperimentDataTable({
         type={addAnnotationType}
         open={addAnnotationDialogOpen}
         setOpen={setAddAnnotationDialogOpen}
-        clearSelection={() => setRowSelection({})}
+        clearSelection={() => {
+          setRowSelection({});
+        }}
       />
       <DeleteAnnotationsDialog
         experimentId={experimentId}
@@ -490,7 +290,9 @@ export function ExperimentDataTable({
         type={deleteAnnotationType}
         open={deleteAnnotationsDialogOpen}
         setOpen={setDeleteAnnotationsDialogOpen}
-        clearSelection={() => setRowSelection({})}
+        clearSelection={() => {
+          setRowSelection({});
+        }}
       />
     </Form>
   );

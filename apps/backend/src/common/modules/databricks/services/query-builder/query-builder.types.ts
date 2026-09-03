@@ -44,6 +44,14 @@ export type TimeBucketUnit = "minute" | "hour" | "day" | "week" | "month" | "qua
 export interface GroupByExpression {
   column: string;
   timeBucket?: TimeBucketUnit;
+  // Required for struct paths: a dotted alias is not a valid SQL identifier.
+  alias?: string;
+}
+
+/** Expand an array column into one row per element; `alias` names the element. */
+export interface ExplodeSpec {
+  column: string;
+  alias: string;
 }
 
 export interface AggregateExpression {
@@ -63,6 +71,7 @@ export interface AggregateExpression {
 export interface AggregationSpec {
   groupBy?: GroupByExpression[];
   functions?: AggregateExpression[];
+  explode?: ExplodeSpec;
 }
 
 export interface QueryParams {

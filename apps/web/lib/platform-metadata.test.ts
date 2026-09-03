@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildDashboardMetadata,
+  buildDeviceGroupMetadata,
   buildDeviceMetadata,
   buildExperimentMetadata,
   buildMacroMetadata,
+  buildOrganizationMetadata,
   buildProtocolMetadata,
   buildProtocolRunMetadata,
   buildVisualizationMetadata,
@@ -21,6 +23,9 @@ const remote = vi.hoisted(() => ({
   getProtocol: vi.fn(),
   getWorkbook: vi.fn(),
   getIotDevice: vi.fn(),
+  getOrganization: vi.fn(),
+  listOrganizationTeams: vi.fn(),
+  getIotDeviceGroup: vi.fn(),
 }));
 
 // The global test setup stubs initTranslations to an identity `t`; these title
@@ -37,7 +42,11 @@ vi.mock("./server-orpc", () => ({
     macros: { getMacro: remote.getMacro },
     protocols: { getProtocol: remote.getProtocol },
     workbooks: { getWorkbook: remote.getWorkbook },
-    iot: { getIotDevice: remote.getIotDevice },
+    iot: { getIotDevice: remote.getIotDevice, getIotDeviceGroup: remote.getIotDeviceGroup },
+    organizations: {
+      getOrganization: remote.getOrganization,
+      listOrganizationTeams: remote.listOrganizationTeams,
+    },
   })),
 }));
 
@@ -236,7 +245,9 @@ describe("device titles", () => {
       deviceType: "unknown",
     });
     const titles = await Promise.all(
-      (["collaborators", "credentials", "lineage", "monitoring", "onboarding"] as const).map(
+      (
+        ["collaborators", "credentials", "firmware", "lineage", "monitoring", "onboarding"] as const
+      ).map(
         async (section) =>
           (await buildDeviceMetadata({ locale: EN, deviceId: "dev-1", section })).title,
       ),
@@ -245,6 +256,7 @@ describe("device titles", () => {
     expect(titles).toEqual([
       "Collaborators · Greenhouse Sensor",
       "Credentials · Greenhouse Sensor",
+      "Firmware · Greenhouse Sensor",
       "Lineage · Greenhouse Sensor",
       "Monitoring · Greenhouse Sensor",
       "Onboarding · Greenhouse Sensor",
@@ -274,6 +286,56 @@ describe("device titles", () => {
   });
 });
 
+describe("device group titles", () => {
+  it("uses the group name for the overview", async () => {
+    remote.getIotDeviceGroup.mockResolvedValue({ id: "g-1", name: "Greenhouse A" });
+    expect((await buildDeviceGroupMetadata({ locale: EN, groupId: "g-1" })).title).toBe(
+      "Greenhouse A",
+    );
+  });
+
+  it("falls back to the generic localized noun when the group is inaccessible", async () => {
+    remote.getIotDeviceGroup.mockRejectedValue(new Error("404"));
+    expect((await buildDeviceGroupMetadata({ locale: EN, groupId: "g-1" })).title).toBe(
+      "Device group",
+    );
+  });
+
+  it("composes each tab label from the device strip's copy, before the group", async () => {
+    remote.getIotDeviceGroup.mockResolvedValue({ id: "g-1", name: "Greenhouse A" });
+    const titles = await Promise.all(
+      (["collaborators", "credentials", "monitoring", "onboarding"] as const).map(
+        async (section) =>
+          (await buildDeviceGroupMetadata({ locale: EN, groupId: "g-1", section })).title,
+      ),
+    );
+
+    expect(titles).toEqual([
+      "Collaborators · Greenhouse A",
+      "Credentials · Greenhouse A",
+      "Monitoring · Greenhouse A",
+      "Onboarding · Greenhouse A",
+    ]);
+  });
+
+  it("localizes a group tab label for de-DE", async () => {
+    remote.getIotDeviceGroup.mockResolvedValue({ id: "g-1", name: "Greenhouse A" });
+    expect(
+      (await buildDeviceGroupMetadata({ locale: DE, groupId: "g-1", section: "monitoring" })).title,
+    ).toBe("Überwachung · Greenhouse A");
+  });
+
+  it("surfaces only the tab label when the group is inaccessible", async () => {
+    remote.getIotDeviceGroup.mockRejectedValue(new Error("403"));
+    const { title } = await buildDeviceGroupMetadata({
+      locale: EN,
+      groupId: "g-1",
+      section: "collaborators",
+    });
+    expect(title).toBe("Collaborators");
+  });
+});
+
 describe("brand template contract", () => {
   it("never pre-applies the root brand suffix", async () => {
     remote.getExperimentVisualization.mockResolvedValue({ name: "Chart A" });
@@ -289,5 +351,52 @@ describe("brand template contract", () => {
       expect(title as string).not.toContain("openJII");
       expect(title as string).not.toContain("|");
     }
+  });
+});
+
+describe("organization titles", () => {
+  it("uses the organization name for the overview", async () => {
+    remote.getOrganization.mockResolvedValue({ name: "Greenhouse Lab" });
+    expect((await buildOrganizationMetadata({ locale: EN, id: "o1" })).title).toBe(
+      "Greenhouse Lab",
+    );
+  });
+
+  it("composes a localized section label before the name", async () => {
+    remote.getOrganization.mockResolvedValue({ name: "Greenhouse Lab" });
+    expect(
+      (await buildOrganizationMetadata({ locale: EN, id: "o1", section: "members" })).title,
+    ).toBe("Members · Greenhouse Lab");
+    expect(
+      (await buildOrganizationMetadata({ locale: DE, id: "o1", section: "members" })).title,
+    ).toBe("Mitglieder · Greenhouse Lab");
+  });
+
+  it("leads with the team's own name on a team route", async () => {
+    remote.getOrganization.mockResolvedValue({ name: "Greenhouse Lab" });
+    remote.listOrganizationTeams.mockResolvedValue([{ id: "t1", name: "Imaging" }]);
+    expect(
+      (await buildOrganizationMetadata({ locale: EN, id: "o1", section: "teams", teamId: "t1" }))
+        .title,
+    ).toBe("Imaging · Greenhouse Lab");
+  });
+
+  it("falls back to the section label when the team is gone", async () => {
+    remote.getOrganization.mockResolvedValue({ name: "Greenhouse Lab" });
+    remote.listOrganizationTeams.mockResolvedValue([]);
+    expect(
+      (await buildOrganizationMetadata({ locale: EN, id: "o1", section: "teams", teamId: "t9" }))
+        .title,
+    ).toBe("Teams · Greenhouse Lab");
+  });
+
+  it("discloses no name for an organization the caller cannot see", async () => {
+    // A private organization answers 404 for a non-member; the title must not
+    // confirm that an organization with that id exists.
+    remote.getOrganization.mockRejectedValue(new Error("404"));
+    expect((await buildOrganizationMetadata({ locale: EN, id: "o1" })).title).toBe("Organization");
+    expect(
+      (await buildOrganizationMetadata({ locale: EN, id: "o1", section: "settings" })).title,
+    ).toBe("Settings");
   });
 });

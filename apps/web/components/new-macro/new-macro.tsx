@@ -15,7 +15,7 @@ import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserP
 
 import type { CreateMacroRequestBody } from "@repo/api/domains/macro/macro.schema";
 import { zCreateMacroRequestBody } from "@repo/api/domains/macro/macro.schema";
-import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -39,6 +39,7 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { useProtocolSearch } from "../../hooks/protocol/useProtocolSearch/useProtocolSearch";
 import MacroCodeEditor from "../macro-code-editor";
 import { getMacroCodeTemplate } from "../macro-code-template";
+import { OrganizationPicker } from "../organizations/organization-picker";
 import { ProtocolSearchWithDropdown } from "../protocol-search-with-dropdown";
 import { NewMacroDetailsCard } from "./new-macro-details-card";
 
@@ -52,7 +53,7 @@ export function NewMacroForm() {
   );
 
   // Selected protocols (local state before macro creation)
-  const [selectedProtocols, setSelectedProtocols] = useState<Protocol[]>([]);
+  const [selectedProtocols, setSelectedProtocols] = useState<ProtocolListItem[]>([]);
 
   // Protocol search
   const [protocolSearch, setProtocolSearch] = useState("");
@@ -126,6 +127,7 @@ export function NewMacroForm() {
       language: data.language,
       code: code,
       visibility: data.visibility,
+      organizationId: data.organizationId,
     });
   }
 
@@ -134,7 +136,7 @@ export function NewMacroForm() {
     [selectedProtocols],
   );
 
-  const availableProtocols: Protocol[] = useMemo(
+  const availableProtocols: ProtocolListItem[] = useMemo(
     () => (protocolList ?? []).filter((p) => !selectedProtocolIds.has(p.id)),
     [protocolList, selectedProtocolIds],
   );
@@ -210,6 +212,22 @@ export function NewMacroForm() {
               )}
             />
 
+            {/* Owning organization */}
+            <FormField
+              control={form.control}
+              name="organizationId"
+              render={({ field }) => (
+                <FormItem>
+                  <OrganizationPicker
+                    id="new-macro-organization"
+                    value={field.value ?? undefined}
+                    onChange={(organizationId) => field.onChange(organizationId ?? undefined)}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Compatible Protocols */}
             <div className="space-y-2">
               <ProtocolSearchWithDropdown
@@ -228,7 +246,7 @@ export function NewMacroForm() {
                   {selectedProtocols.map((protocol) => (
                     <div
                       key={protocol.id}
-                      className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+                      className="border-border flex items-center justify-between rounded-md border px-3 py-2"
                     >
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-sm font-medium">{protocol.name}</span>

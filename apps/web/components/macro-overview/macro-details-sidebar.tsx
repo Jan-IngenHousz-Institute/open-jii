@@ -30,10 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { Separator } from "@repo/ui/components/separator";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
 import { MacroCompatibleProtocolsCard } from "../macro-settings/macro-compatible-protocols-card";
+import { OwningOrganizationField } from "../organizations/owning-organization-field";
 import { DetailsSidebarCard } from "../shared/details-sidebar-card";
 import { ResourcePublishControl } from "../visibility/resource-publish-control";
 
@@ -50,7 +52,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
 
   // Capability, not ownership: an `admin` grantee edits, a `viewer` does
   // not, and deletion/publishing follow `manage` — all decided by the backend.
-  const { canUpdate, canManage } = macro.capabilities;
+  const { canUpdate, canManage, canTransfer } = macro.capabilities;
   const isDeletionEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION);
 
   const { mutateAsync: updateMacro, isPending: isUpdating } = useMacroUpdate(macroId);
@@ -126,12 +128,20 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
         <p className="text-muted-foreground text-sm">{macro.createdByName ?? "-"}</p>
       </div>
 
+      <OwningOrganizationField
+        resourceType="macro"
+        resourceId={macroId}
+        organizationId={macro.organizationId}
+        organizationName={macro.organizationName}
+        canTransfer={canTransfer}
+      />
+
       {macro.forkedFrom ? (
         <div className="space-y-1">
           <h4 className="text-sm font-medium">{tCommon("common.forkedFrom")}</h4>
           <Link
             href={`/${locale}/platform/macros/${macro.forkedFrom}`}
-            className="text-sm text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+            className="text-primary hover:text-primary/80 text-sm underline underline-offset-2"
           >
             {tCommon("common.viewOriginal")}
           </Link>
@@ -147,11 +157,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       />
 
       {/* Compatible Protocols Section */}
-      <div
-        role="separator"
-        aria-orientation="horizontal"
-        className="text-muted-foreground border-t"
-      />
+      <Separator decorative={false} />
 
       {canUpdate ? (
         <MacroCompatibleProtocolsCard macroId={macroId} embedded />
@@ -169,11 +175,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       {/* Danger Zone */}
       {canManage && isDeletionEnabled && (
         <>
-          <div
-            role="separator"
-            aria-orientation="horizontal"
-            className="text-muted-foreground border-t"
-          />
+          <Separator decorative={false} />
           <div>
             <h5 className="text-destructive mb-2 text-base font-medium">
               {t("macroSettings.dangerZone")}

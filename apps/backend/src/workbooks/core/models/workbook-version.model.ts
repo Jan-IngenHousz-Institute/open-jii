@@ -24,3 +24,10 @@ export const selectWorkbookVersionSchema = createSelectSchema(workbookVersions).
 
 export type CreateWorkbookVersionDto = z.infer<typeof createWorkbookVersionSchema>;
 export type WorkbookVersionDto = z.infer<typeof selectWorkbookVersionSchema>;
+
+/** Version identity only: which workbook it belongs to and which version it is. */
+export interface WorkbookVersionRef {
+  id: string;
+  workbookId: string;
+  version: number;
+}

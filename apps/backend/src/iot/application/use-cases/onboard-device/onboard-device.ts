@@ -54,6 +54,17 @@ export class OnboardDeviceUseCase {
       return failure(AppError.notFound(`IotDevice with ID ${deviceId} not found`));
     }
 
+    // Phones are not onboarded: the app picks its experiment per upload and
+    // never consumes a delivered config.
+    if (device.deviceType === "mobile") {
+      return failure(
+        AppError.badRequest(
+          "Mobile devices choose their experiments in the app and cannot be onboarded",
+          ErrorCodes.IOT_CREDENTIALS_INVALID_STATE,
+        ),
+      );
+    }
+
     // The config only works over an authenticated MQTT connection, so a device
     // without live credentials cannot be onboarded.
     if (device.status !== "active") {

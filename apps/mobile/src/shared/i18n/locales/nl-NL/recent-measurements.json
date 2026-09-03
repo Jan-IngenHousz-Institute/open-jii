@@ -28,7 +28,11 @@
     "emptyHintSynced": "Nog geen gesynchroniseerde metingen",
     "emptyHintUnsynced": "Alle metingen zijn gesynchroniseerd",
     "exportButton": "Metingen exporteren",
-    "noQuestionsAnswered": "Geen vragen beantwoord"
+    "noQuestionsAnswered": "Geen vragen beantwoord",
+    "runMeasurementCount_one": "{{count}} meting",
+    "runMeasurementCount_other": "{{count}} metingen",
+    "expandRun": "Workbookrun uitklappen",
+    "collapseRun": "Workbookrun inklappen"
   },
   "swipe": {
     "uploadButton": "Uploaden",
@@ -56,6 +60,16 @@
     "questionsHeading": "Vragen & Antwoorden",
     "noQuestionsAnswered": "Geen vragen beantwoord voor deze meting"
   },
+  "macroPreview": {
+    "heading": "Macroresultaat",
+    "no-workbook-version": "Deze meting is opgeslagen voordat macroversies werden vastgelegd, dus de macro kan niet opnieuw worden uitgevoerd.",
+    "unknown-experiment": "Deze meting is niet aan een experiment gekoppeld, dus de macro kan niet opnieuw worden uitgevoerd.",
+    "decode-failed": "De opgeslagen gegevens van deze meting konden niet worden gelezen, dus de macro kan niet opnieuw worden uitgevoerd.",
+    "experiment-unavailable": "Het experiment waarbij deze meting hoort, is niet meer beschikbaar op dit apparaat, dus de macro kan niet opnieuw worden uitgevoerd.",
+    "version-unavailable": "De workbookversie die deze meting heeft gemaakt, is niet gevonden, dus de macro kan niet opnieuw worden uitgevoerd.",
+    "macro-not-found": "De macro die deze meting heeft gemaakt, hoort niet meer bij deze workbookversie.",
+    "offline": "Kon de macro niet laden. Maak verbinding met internet en open deze meting opnieuw."
+  },
   "alerts": {
     "uploadMeasurementTitle": "Meting uploaden",
     "uploadMeasurementMessage": "Weet je zeker dat je \"{{name}}\" wilt uploaden?",
@@ -67,6 +81,12 @@
     "removeMeasurementMessage": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Dit verwijdert het uit lokale opslag.",
     "removeButton": "Verwijderen",
     "deleteMeasurementError": "Kon meting niet verwijderen. Probeer het opnieuw.",
+    "uploadRunTitle": "Workbookrun uploaden",
+    "uploadRunMessage_one": "{{count}} niet-gesynchroniseerde meting uit deze \"{{name}}\"-run uploaden?",
+    "uploadRunMessage_other": "{{count}} niet-gesynchroniseerde metingen uit deze \"{{name}}\"-run uploaden?",
+    "deleteRunTitle": "Workbookrun verwijderen",
+    "deleteRunMessage_one": "Deze meting van de \"{{name}}\"-run uit lokale opslag verwijderen?",
+    "deleteRunMessage_other": "Deze {{count}} metingen van de \"{{name}}\"-run uit lokale opslag verwijderen?",
     "uploadAllTitle": "Alle metingen uploaden",
     "uploadAllMessage_one": "Weet je zeker dat je {{count}} niet-gesynchroniseerde meting wilt synchroniseren?",
     "uploadAllMessage_other": "Weet je zeker dat je {{count}} niet-gesynchroniseerde metingen wilt synchroniseren?",
@@ -79,7 +99,14 @@
     "saveErrorTitle": "Er ging iets mis",
     "saveErrorMessage": "Kon de meting niet opslaan. Wil je deze in plaats daarvan als bestand opslaan?",
     "saveToFileButton": "Opslaan als bestand",
-    "saveToFileError": "Kon meting niet opslaan. Probeer het opnieuw."
+    "saveToFileError": "Kon meting niet opslaan. Probeer het opnieuw.",
+    "commentSaveError": "Kon de opmerking niet opslaan. Probeer het opnieuw."
+  },
+  "accessibility": {
+    "expandRun_one": "Workbookrun uitklappen: {{name}}, {{count}} meting",
+    "expandRun_other": "Workbookrun uitklappen: {{name}}, {{count}} metingen",
+    "collapseRun_one": "Workbookrun inklappen: {{name}}, {{count}} meting",
+    "collapseRun_other": "Workbookrun inklappen: {{name}}, {{count}} metingen"
   },
   "toasts": {
     "uploadFailed": "Upload mislukt. Probeer het opnieuw.",

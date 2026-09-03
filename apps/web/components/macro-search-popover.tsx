@@ -24,8 +24,8 @@ const macroItemVariants = cva(
   {
     variants: {
       featured: {
-        true: "border-secondary/30 from-badge-featured bg-gradient-to-br to-white shadow-xs data-[selected=true]:from-badge-featured/80 data-[selected=true]:to-surface",
-        false: "border-gray-200 bg-white",
+        true: "border-secondary/30 from-status-featured bg-gradient-to-br to-card shadow-xs data-[selected=true]:from-status-featured/80 data-[selected=true]:to-muted",
+        false: "border-border bg-card",
       },
     },
     defaultVariants: {
@@ -144,7 +144,7 @@ function SearchStatus({ loading, hasMacros, hasSearchQuery, searchValue }: Searc
   if (loading) {
     return (
       <div className="text-muted-foreground flex items-center justify-center py-4 text-sm">
-        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+        <div className="border-border border-t-primary mr-2 h-4 w-4 animate-spin rounded-full border-2"></div>
         {t("experiments.searchingMacros")}
       </div>
     );

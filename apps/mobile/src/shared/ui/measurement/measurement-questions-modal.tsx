@@ -21,6 +21,8 @@ interface MeasurementQuestionsModalProps {
   onClose: () => void;
   /** Persists an edited comment; the caller owns where it is stored. */
   onSaveComment: (text: string) => Promise<void>;
+  /** Extra sections appended below the answers, e.g. a macro re-run preview. */
+  children?: React.ReactNode;
 }
 
 export function MeasurementQuestionsModal({
@@ -28,6 +30,7 @@ export function MeasurementQuestionsModal({
   measurement,
   onClose,
   onSaveComment,
+  children,
 }: MeasurementQuestionsModalProps) {
   const colors = useThemeColors();
   const { t } = useTranslation(["common", "recentMeasurements"]);
@@ -35,7 +38,7 @@ export function MeasurementQuestionsModal({
   const [commentModalVisible, setCommentModalVisible] = useState(false);
   const { sheetRef, renderBackdrop } = useBottomSheetController({ visible });
 
-  const measurementResult = measurement.data.measurementResult as Record<string, unknown>;
+  const measurementResult = measurement.data.measurementResult;
   const questions = parseQuestions(measurement.data.measurementResult);
   const experimentName = measurement.data.metadata.experimentName;
   const protocolName = measurement.data.metadata.protocolName;
@@ -205,6 +208,8 @@ export function MeasurementQuestionsModal({
               ))}
             </View>
           )}
+
+          {children}
         </BottomSheetScrollView>
       </BottomSheetModal>
 

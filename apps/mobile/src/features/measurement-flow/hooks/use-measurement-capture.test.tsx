@@ -24,6 +24,24 @@ const mocks = vi.hoisted(() => {
   const useMeasurementFlowStore = vi.fn(() => flowState);
   Object.assign(useMeasurementFlowStore, { getState: () => flowState });
 
+  const executorState = {
+    executors: new Map<
+      string,
+      {
+        identity?: { family?: string; firmwareVersion?: string };
+        progress?: number;
+        scanStartedAt?: number;
+      }
+    >(),
+    progress: 0,
+    scanStartedAt: 0,
+    estimatedMs: 0,
+  };
+  const useScannerCommandExecutorStore = vi.fn(
+    (selector: (state: typeof executorState) => unknown) => selector(executorState),
+  );
+  Object.assign(useScannerCommandExecutorStore, { getState: () => executorState });
+
   return {
     devices: [] as Device[],
     refetchConnectedDevices: vi.fn(),
@@ -39,6 +57,8 @@ const mocks = vi.hoisted(() => {
     resolveInlineCommand: vi.fn(),
     flowState,
     useMeasurementFlowStore,
+    executorState,
+    useScannerCommandExecutorStore,
     isScanning: false,
   };
 });
@@ -65,9 +85,7 @@ vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({
     selector({ open: mocks.openDeviceSheet }),
 }));
 vi.mock("~/features/connection/stores/use-scanner-command-executor-store", () => ({
-  useScannerCommandExecutorStore: (
-    selector: (state: { progress: number; scanStartedAt: number; estimatedMs: number }) => unknown,
-  ) => selector({ progress: 0, scanStartedAt: 0, estimatedMs: 0 }),
+  useScannerCommandExecutorStore: mocks.useScannerCommandExecutorStore,
 }));
 vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
   useMeasurementFlowStore: mocks.useMeasurementFlowStore,
@@ -116,6 +134,10 @@ describe("useMeasurementCapture", () => {
       devicePlan: undefined,
       flowNodes: [],
     });
+    mocks.executorState.executors = new Map([
+      ["usb-a", { identity: { family: "multispeq", firmwareVersion: "2.311" } }],
+      ["usb-b", { identity: { family: "minipar", firmwareVersion: "1.04" } }],
+    ]);
   });
 
   it("records a successful broadcast round in connection order and advances", async () => {
@@ -133,14 +155,45 @@ describe("useMeasurementCapture", () => {
     expect(mocks.executeScanAll).toHaveBeenCalledWith(CONTENT.protocol, [DEVICE_A, DEVICE_B]);
     expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
       [
-        { device: { id: "usb-a", name: "Device A" }, result: { value: 1 } },
-        { device: { id: "usb-b", name: "Device B" }, result: { value: 2 } },
+        {
+          device: {
+            id: "usb-a",
+            name: "Device A",
+            family: "multispeq",
+            firmwareVersion: "2.311",
+          },
+          result: { value: 1 },
+        },
+        {
+          device: {
+            id: "usb-b",
+            name: "Device B",
+            family: "minipar",
+            firmwareVersion: "1.04",
+          },
+          result: { value: 2 },
+        },
       ],
       "measurement-cell",
     );
     expect(mocks.resetScan).toHaveBeenCalledOnce();
     expect(mocks.playSound).toHaveBeenCalledOnce();
     expect(mocks.flowState.nextStep).toHaveBeenCalledOnce();
+  });
+
+  it("does not dispatch a non-array protocol document to the scanner", async () => {
+    const content: MeasurementContent = {
+      protocolId: "string-protocol",
+      protocol: { code: "device-defined source", name: "String protocol" },
+    };
+    const { result } = renderHook(() => useMeasurementCapture(content, "measurement-cell"));
+
+    await act(async () => result.current.startScan());
+
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "measurementFlow:measurementNode.toast.protocolUnavailable",
+    );
+    expect(mocks.executeScanAll).not.toHaveBeenCalled();
   });
 
   it("resolves each dispatch target independently and preserves payload provenance", async () => {
@@ -223,13 +276,23 @@ describe("useMeasurementCapture", () => {
     expect(mocks.flowState.setScanResults).toHaveBeenCalledWith(
       [
         {
-          device: { id: "usb-a", name: "Device A" },
+          device: {
+            id: "usb-a",
+            name: "Device A",
+            family: "multispeq",
+            firmwareVersion: "2.311",
+          },
           result: { value: 1 },
           protocolId: "proto-a",
           protocolName: "Protocol A",
         },
         {
-          device: { id: "usb-b", name: "Device B" },
+          device: {
+            id: "usb-b",
+            name: "Device B",
+            family: "minipar",
+            firmwareVersion: "1.04",
+          },
           result: { value: 2 },
           protocolId: undefined,
           protocolName: "Command target",

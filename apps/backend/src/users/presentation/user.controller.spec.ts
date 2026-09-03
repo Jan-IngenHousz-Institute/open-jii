@@ -523,7 +523,7 @@ describe("UserController", () => {
         .withAuth(testUserId)
         .expect(StatusCodes.OK);
 
-      expect(response.body).toEqual({ resources: [] });
+      expect(response.body).toEqual({ resources: [], organizations: [] });
     });
 
     it("lists resources where the user is the only admin, with their collaborators as candidates", async () => {
@@ -559,6 +559,27 @@ describe("UserController", () => {
       });
       expect(byType.experiment.candidates.map((c) => c.userId)).toEqual([memberId]);
       expect(byType.macro).toMatchObject({ id: macro.id, name: macro.name, status: null });
+    });
+
+    // A sibling key, not a pseudo resource: an organization is cleared by promoting
+    // another owner or deleting it, never by the dialog's admin hand-off.
+    it("lists shared organizations the user is the sole owner of, separately from resources", async () => {
+      const org = await testApp.createOrganization("Solo Lab", { slug: "solo-lab" });
+      await testApp.addOrganizationMember(org, testUserId, "owner");
+
+      const path = testApp.resolveOrpcPath(contract.users.getDeletionBlockers, {
+        id: testUserId,
+      });
+
+      const response: SuperTestResponse<DeletionBlockersResponse> = await testApp
+        .get(path)
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual({
+        resources: [],
+        organizations: [{ id: org, name: "Solo Lab", slug: "solo-lab" }],
+      });
     });
 
     it("returns 403 when requesting another user's deletion blockers", async () => {

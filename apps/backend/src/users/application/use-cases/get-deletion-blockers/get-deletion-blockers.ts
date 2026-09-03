@@ -1,18 +1,13 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
-import type { DeletionBlocker } from "../../../core/models/user.model";
+import type { DeletionBlocker, DeletionBlockers } from "../../../core/models/user.model";
 import { UserRepository } from "../../../core/repositories/user.repository";
 
 /**
- * Lists the resources where the user is the only admin (the blockers for account
- * deletion), each enriched with that resource's other collaborators as transfer
- * candidates. The delete-account dialog uses this to let the user hand admin off —
- * per resource — before deleting.
- *
- * Every shareable type can block, because every one is owned by an organization
- * somebody has to answer for — including devices, whose orphaning would leave live
- * AWS hardware nobody can tear down.
+ * Everything standing between this user and account deletion. Resources come with
+ * their other collaborators as transfer candidates, so the dialog can hand admin off
+ * per resource; organizations cannot be cleared from the dialog at all.
  */
 @Injectable()
 export class GetDeletionBlockersUseCase {
@@ -20,12 +15,17 @@ export class GetDeletionBlockersUseCase {
 
   constructor(private readonly userRepository: UserRepository) {}
 
-  async execute(userId: string): Promise<Result<DeletionBlocker[]>> {
+  async execute(userId: string): Promise<Result<DeletionBlockers>> {
     this.logger.log({
       msg: "Getting account-deletion blockers",
       operation: "getDeletionBlockers",
       userId,
     });
+
+    const organizationsResult = await this.userRepository.findSoleOwnedOrganizations(userId);
+    if (organizationsResult.isFailure()) {
+      return organizationsResult;
+    }
 
     const blockersResult = await this.userRepository.findSoleAdminResources(userId);
     if (blockersResult.isFailure()) {
@@ -57,8 +57,9 @@ export class GetDeletionBlockersUseCase {
       operation: "getDeletionBlockers",
       userId,
       blockerCount: result.length,
+      organizationCount: organizationsResult.value.length,
     });
 
-    return success(result);
+    return success({ resources: result, organizations: organizationsResult.value });
   }
 }

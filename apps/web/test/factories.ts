@@ -37,10 +37,30 @@ import type {
 } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
-import type { IotDevice, IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
+import type {
+  IotDeviceGroupDetail,
+  IotDeviceGroupListItem,
+  IotDeviceGroupMember,
+  IotDeviceGroupMemberHealth,
+} from "@repo/api/domains/iot/device-group/iot-device-group.schema";
+import type { IotDeviceDetail, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import type { Macro, MacroDetail } from "@repo/api/domains/macro/macro.schema";
+import type { OrganizationJoinRequest } from "@repo/api/domains/organization/join-requests/organization-join-requests.schema";
+import type {
+  MyOrganization,
+  OrganizationDirectoryEntry,
+  OrganizationMember,
+  OrganizationProfile,
+  OrganizationResource,
+  OrganizationTeam,
+  OrganizationTeamGrant,
+} from "@repo/api/domains/organization/organization.schema";
 import type { Protocol, ProtocolDetail } from "@repo/api/domains/protocol/protocol.schema";
-import type { ResourceGrantDto, ResourceOwnerDto } from "@repo/api/domains/sharing/sharing.schema";
+import type {
+  GranteeUserDto,
+  ResourceGrantDto,
+  ResourceOwnerDto,
+} from "@repo/api/domains/sharing/sharing.schema";
 import type { Invitation, UserProfile } from "@repo/api/domains/user/user.schema";
 import type {
   BranchCell,
@@ -120,6 +140,7 @@ export function createExperimentAccess(
       canManage: false,
       canShare: false,
       canLeave: false,
+      canTransfer: false,
     },
     ...accessOverrides,
   };
@@ -247,6 +268,20 @@ export function createUserProfile(overrides: Partial<UserProfile> = {}): UserPro
   };
 }
 
+/** A grantee-picker candidate: outside the owning org and ungranted unless overridden. */
+export function createGranteeUser(overrides: Partial<GranteeUserDto> = {}): GranteeUserDto {
+  return {
+    userId: "user-1",
+    firstName: "Test",
+    lastName: "User",
+    email: "test@example.com",
+    avatarUrl: null,
+    organizationRole: null,
+    existingGrantRole: null,
+    ...overrides,
+  };
+}
+
 // ── Capability signal (detail responses) ────────────────────────
 
 /**
@@ -262,6 +297,7 @@ export function createCapabilities(
     canManage: true,
     canShare: true,
     canLeave: true,
+    canTransfer: true,
     ...overrides,
   };
 }
@@ -273,6 +309,7 @@ export const readOnlyCapabilities: ResourceCapabilities = {
   canManage: false,
   canShare: false,
   canLeave: false,
+  canTransfer: false,
 };
 
 export function createMacroDetail(overrides: Partial<MacroDetail> = {}): MacroDetail {
@@ -309,33 +346,213 @@ export function createResourceGrant(overrides: Partial<ResourceGrantDto> = {}): 
     createdAt: "2026-01-01T00:00:00.000Z",
     createdBy: "owner-1",
     isOutsideCollaborator: false,
+    owningOrganization: null,
     grantee: {
       type: "user",
       displayName: "Grace Hopper",
       email: "grace@example.com",
       avatarUrl: null,
+      memberCount: null,
     },
     ...overrides,
   };
 }
 
 /**
- * An owner row as the collaborators endpoint synthesizes it from the resource's
+ * An org-derived row as the collaborators endpoint synthesizes it from the resource's
  * owning organization. Carries no grant id and no role — there is nothing to
- * change or revoke on it.
+ * change or revoke on it, beyond an `inertGrant` when one is left over.
  */
 export function createResourceOwner(overrides: Partial<ResourceOwnerDto> = {}): ResourceOwnerDto {
   grantSeq++;
   return {
     kind: "owner",
     granteeType: "user",
+    organizationName: "Greenhouse Lab",
     granteeId: `owner-${grantSeq}`,
+    inertGrant: null,
     grantee: {
       type: "user",
       displayName: "Ada Lovelace",
       email: "ada@example.com",
       avatarUrl: null,
+      memberCount: null,
     },
+    ...overrides,
+  };
+}
+
+// ── Organizations ───────────────────────────────────────────────
+
+let organizationSeq = 0;
+
+/** An organization profile as `GET /organizations/{id}` returns it. */
+export function createOrganizationProfile(
+  overrides: Partial<OrganizationProfile> = {},
+): OrganizationProfile {
+  organizationSeq++;
+  return {
+    id: `org-${organizationSeq}`,
+    name: "Greenhouse Lab",
+    slug: "greenhouse-lab",
+    logo: null,
+    type: "research_institute",
+    description: null,
+    website: null,
+    location: null,
+    visibility: "private",
+    memberCount: 3,
+    resourceCount: 7,
+    createdAt: "2024-03-04T09:00:00.000Z",
+    role: "owner",
+    membershipStatus: "member",
+    ...overrides,
+  };
+}
+
+/** A directory row. Defaults to an organization the caller does not belong to. */
+export function createOrganizationDirectoryEntry(
+  overrides: Partial<OrganizationDirectoryEntry> = {},
+): OrganizationDirectoryEntry {
+  organizationSeq++;
+  return {
+    id: `org-${organizationSeq}`,
+    name: "Greenhouse Lab",
+    slug: "greenhouse-lab",
+    logo: null,
+    type: "university",
+    description: null,
+    location: null,
+    memberCount: 4,
+    resourceCount: 0,
+    visibility: "public",
+    membershipStatus: "none",
+    ...overrides,
+  };
+}
+
+/** A my-organizations row. Personal workspaces are flagged, not excluded. */
+export function createMyOrganization(overrides: Partial<MyOrganization> = {}): MyOrganization {
+  organizationSeq++;
+  return {
+    id: `org-${organizationSeq}`,
+    name: "Greenhouse Lab",
+    slug: "greenhouse-lab",
+    description: null,
+    visibility: "private",
+    role: "member",
+    isPersonal: false,
+    memberCount: 4,
+    resourceCount: 0,
+    ...overrides,
+  };
+}
+
+/** A roster row. `role` is stored verbatim by Better Auth, hence the plain string. */
+export function createOrganizationMember(
+  overrides: Partial<OrganizationMember> = {},
+): OrganizationMember {
+  organizationSeq++;
+  return {
+    userId: `user-${organizationSeq}`,
+    firstName: "Grace",
+    lastName: "Hopper",
+    email: `grace-${organizationSeq}@example.com`,
+    avatarUrl: null,
+    role: "member",
+    joinedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function createOrganizationTeam(
+  overrides: Partial<OrganizationTeam> = {},
+): OrganizationTeam {
+  organizationSeq++;
+  return {
+    id: `team-${organizationSeq}`,
+    name: "Imaging",
+    organizationId: "org-1",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    members: [],
+    ...overrides,
+  };
+}
+
+/**
+ * A showcase row. Defaults to an experiment, since that is the only type carrying
+ * meta a caller is likely to want to override; pass `type` for the others.
+ *
+ * Per-type meta is picked by type, not merged: a `device` with no `deviceType` reaches
+ * `getSensorFamilyLabel(undefined)`, which throws rather than degrading.
+ */
+export function createOrganizationResource(
+  overrides: Partial<OrganizationResource> = {},
+): OrganizationResource {
+  organizationSeq++;
+  const type = overrides.type ?? "experiment";
+  const meta =
+    type === "experiment"
+      ? { status: "active" }
+      : type === "protocol"
+        ? { family: "multispeq" }
+        : type === "macro"
+          ? { language: "python" }
+          : type === "device"
+            ? { deviceType: "multispeq" }
+            : type === "device_group"
+              ? { memberCount: 3 }
+              : {};
+
+  return {
+    type,
+    id: `resource-${organizationSeq}`,
+    name: `Canopy series ${organizationSeq}`,
+    description: null,
+    visibility: "public",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    collaboratorCount: 1,
+    ...meta,
+    ...overrides,
+  } as OrganizationResource;
+}
+
+/** A grant naming one of the organization's teams. */
+export function createOrganizationTeamGrant(
+  overrides: Partial<OrganizationTeamGrant> = {},
+): OrganizationTeamGrant {
+  organizationSeq++;
+  return {
+    id: `grant-${organizationSeq}`,
+    teamId: "team-1",
+    resourceType: "experiment",
+    resourceId: `resource-${organizationSeq}`,
+    resourceName: `Canopy series ${organizationSeq}`,
+    role: "viewer",
+    ...overrides,
+  };
+}
+
+export function createOrganizationJoinRequest(
+  overrides: Partial<OrganizationJoinRequest> = {},
+): OrganizationJoinRequest {
+  organizationSeq++;
+  return {
+    id: `request-${organizationSeq}`,
+    organizationId: "org-1",
+    user: {
+      id: `user-${organizationSeq}`,
+      firstName: "Alan",
+      lastName: "Turing",
+      email: `alan-${organizationSeq}@example.com`,
+      avatarUrl: null,
+    },
+    message: null,
+    status: "pending",
+    decidedBy: null,
+    decidedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
 }
@@ -833,7 +1050,9 @@ export function createUpload(
 
 let iotDeviceSeq = 0;
 
-export function createIotDevice(overrides: Partial<IotDevice> = {}): IotDevice {
+export function createIotDevice(
+  overrides: Partial<IotDeviceWithConnectivity> = {},
+): IotDeviceWithConnectivity {
   iotDeviceSeq++;
   const thingName = `ambyte_${iotDeviceSeq}`;
   return {
@@ -851,6 +1070,8 @@ export function createIotDevice(overrides: Partial<IotDevice> = {}): IotDevice {
     visibility: "private",
     createdAt: "2025-01-01T00:00:00.000Z",
     updatedAt: "2025-01-10T00:00:00.000Z",
+    // Unknown by default: the fleet index is an enrichment, not a given.
+    connectivity: null,
     ...overrides,
   };
 }
@@ -892,4 +1113,65 @@ export function resetFactories() {
   dashboardSeq = 0;
   dashboardWidgetSeq = 0;
   grantSeq = 0;
+  organizationSeq = 0;
+  deviceGroupSeq = 0;
+}
+
+let deviceGroupSeq = 0;
+
+export function createIotDeviceGroup(
+  overrides: Partial<IotDeviceGroupListItem> = {},
+): IotDeviceGroupListItem {
+  deviceGroupSeq++;
+  return {
+    id: crypto.randomUUID(),
+    name: `Group ${String(deviceGroupSeq)}`,
+    description: null,
+    organizationId: crypto.randomUUID(),
+    visibility: "private",
+    createdBy: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    memberCount: 0,
+    ...overrides,
+  };
+}
+
+export function createDeviceGroupDetail(
+  overrides: Partial<IotDeviceGroupDetail> = {},
+): IotDeviceGroupDetail {
+  return {
+    ...createIotDeviceGroup(),
+    capabilities: createCapabilities(),
+    ...overrides,
+  };
+}
+
+export function createDeviceGroupMemberHealth(
+  overrides: Partial<IotDeviceGroupMemberHealth> = {},
+): IotDeviceGroupMemberHealth {
+  return {
+    deviceId: crypto.randomUUID(),
+    name: null,
+    serialNumber: "AA:BB:CC:DD",
+    deviceType: "ambyte",
+    connectivity: null,
+    lastDataAt: null,
+    ...overrides,
+  };
+}
+
+export function createDeviceGroupMember(
+  overrides: Partial<IotDeviceGroupMember> = {},
+): IotDeviceGroupMember {
+  return {
+    deviceId: crypto.randomUUID(),
+    name: null,
+    serialNumber: "AA:BB:CC:DD",
+    deviceType: "ambyte",
+    status: "active",
+    connected: null,
+    addedAt: new Date().toISOString(),
+    ...overrides,
+  };
 }

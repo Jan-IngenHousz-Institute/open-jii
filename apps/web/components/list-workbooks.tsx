@@ -1,11 +1,16 @@
 "use client";
 
+import { OPEN_WORKBOOK_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
+import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
-import { X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
-import { WorkbookList } from "~/components/workbook-list";
+import React, { useEffect, useState } from "react";
+import { ListPagination } from "~/components/list-pagination";
+import { OrganizationPicker } from "~/components/organizations/organization-picker";
+import { OverviewTable } from "~/components/overview-table/overview-table";
+import { getWorkbookColumns } from "~/components/overview-table/workbook-columns";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
 import { useTranslation } from "@repo/i18n";
@@ -20,6 +25,7 @@ import {
 } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import { Label } from "@repo/ui/components/label";
+import { SearchInput } from "@repo/ui/components/search-input";
 import {
   Select,
   SelectContent,
@@ -29,63 +35,86 @@ import {
 } from "@repo/ui/components/select";
 
 export function ListWorkbooks() {
-  const { data: workbooks, isLoading, filter, setFilter, search, setSearch } = useWorkbooks({});
-  const { t } = useTranslation("workbook");
+  const {
+    data: workbooks,
+    isLoading,
+    isPlaceholderData,
+    isSearchPending,
+    error,
+    refetch,
+    search,
+    debouncedSearch,
+    setSearch,
+    page,
+    setPage,
+  } = useWorkbooks({});
+  const { t } = useTranslation(["workbook", "common"]);
   const router = useRouter();
   const locale = useLocale();
+  const hasSearch = debouncedSearch.trim() !== "";
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newVisibility, setNewVisibility] = useState<"public" | "private">("public");
+  // Undefined is the default target: the creator's personal workspace.
+  const [newOrganizationId, setNewOrganizationId] = useState<string | undefined>(undefined);
   const { mutate: createWorkbook, isPending: isCreating } = useWorkbookCreate({
     onSuccess: (data) => {
       router.push(`/${locale}/platform/workbooks/${data.id}`);
     },
   });
 
+  useEffect(() => {
+    const openCreate = () => setCreateOpen(true);
+    window.addEventListener(OPEN_WORKBOOK_CREATE_EVENT, openCreate);
+    return () => window.removeEventListener(OPEN_WORKBOOK_CREATE_EVENT, openCreate);
+  }, []);
+
   const handleCreate = () => {
     if (isCreating) return;
     const name = newName.trim();
     if (!name) return;
-    createWorkbook({ name, visibility: newVisibility });
+    createWorkbook({ name, visibility: newVisibility, organizationId: newOrganizationId });
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-4">
-        <div className="relative w-full md:w-[220px]">
-          <Input
-            type="text"
+      <OverviewToolbar
+        search={
+          <SearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
+            isLoading={isSearchPending}
             placeholder={t("workbooks.searchPlaceholder")}
-            className="w-full pr-8"
+            clearLabel={t("workbooks.clearSearch")}
+            loadingLabel={t("common.loading")}
+            className="w-full md:w-[220px]"
           />
-          {search && (
-            <button
-              type="button"
-              aria-label={t("workbooks.clearSearch")}
-              onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 flex -translate-y-1/2 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-4">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-full md:w-[160px]">
-              <SelectValue placeholder={t("workbooks.filterWorkbooks")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="my">{t("workbooks.filterMy")}</SelectItem>
-              <SelectItem value="all">{t("workbooks.filterAll")}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => setCreateOpen(true)}>{t("workbooks.create")}</Button>
-        </div>
-      </div>
+        }
+      />
 
-      <WorkbookList workbooks={workbooks} isLoading={isLoading} showEmptyHelp={!search} />
+      <div
+        aria-busy={isPlaceholderData}
+        inert={isPlaceholderData}
+        className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+      >
+        <OverviewTable
+          columns={getWorkbookColumns(t, locale)}
+          items={workbooks?.items}
+          isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+          errorMessage={t("workbooks.errorLoading")}
+          retryLabel={t("common.errors.tryAgain")}
+          getRowKey={(workbook) => workbook.id}
+          getRowHref={(workbook) => `/${locale}/platform/workbooks/${workbook.id}`}
+          emptyMessage={t(hasSearch ? "workbooks.noMatches" : "workbooks.noWorkbooks")}
+          emptyHelpPath={!hasSearch ? "/guide/experiments/workbooks" : undefined}
+        />
+
+        {workbooks && workbooks.items.length > 0 && (
+          <ListPagination page={page} totalPages={workbooks.totalPages} onPageChange={setPage} />
+        )}
+      </div>
 
       <Dialog
         open={createOpen}
@@ -94,6 +123,7 @@ export function ListWorkbooks() {
           if (!open) {
             setNewName("");
             setNewVisibility("public");
+            setNewOrganizationId(undefined);
           }
         }}
       >
@@ -132,11 +162,18 @@ export function ListWorkbooks() {
               </SelectContent>
             </Select>
           </div>
+          <OrganizationPicker
+            id="new-workbook-organization"
+            value={newOrganizationId}
+            onChange={setNewOrganizationId}
+            disabled={isCreating}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={isCreating}>
               {t("workbooks.cancel")}
             </Button>
             <Button onClick={handleCreate} disabled={!newName.trim() || isCreating}>
+              <Plus className="size-4" aria-hidden />
               {t("workbooks.create")}
             </Button>
           </DialogFooter>

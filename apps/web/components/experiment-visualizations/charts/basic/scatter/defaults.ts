@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function scatterDefaultConfig(): ChartFormConfig {
@@ -13,7 +12,6 @@ export function scatterDefaultConfig(): ChartFormConfig {
     showGrid: true,
     useWebGL: false,
     mode: "markers",
-    color: [DEFAULT_PRIMARY_COLOR],
     colorMode: "continuous",
     colorMap: {},
     marker: {

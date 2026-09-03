@@ -22,6 +22,13 @@ interface UseAutosaveReturn {
   hasError: boolean;
   error: unknown;
   flush: () => Promise<void>;
+  /**
+   * `toKey` of the last value persisted. Compare against the current key to test
+   * for unsaved work without the commit lag `status` has.
+   */
+  savedKey: string;
+  /** Treat the current value as saved, for hosts that adopt a server copy. */
+  rebase: () => void;
 }
 
 /**
@@ -137,6 +144,21 @@ export function useAutosave<T>({
     };
   }, [key, enabled, delayMs, runSave]);
 
+  // Call after the adopting `setState`; `keyRef` is assigned during render.
+  // Supersedes any in-flight save, whose late resolve would otherwise restore
+  // the pre-adoption baseline and leave the adopted value unsaved with no timer.
+  const rebase = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    pendingFlushRef.current = false;
+    latestAppliedSeqRef.current = ++seqRef.current;
+    lastSavedKeyRef.current = keyRef.current;
+    setStatus("idle");
+    setError(null);
+  }, []);
+
   const flush = useCallback(async (): Promise<void> => {
     if (timerRef.current || pendingFlushRef.current) {
       if (timerRef.current) {
@@ -166,5 +188,7 @@ export function useAutosave<T>({
     hasError: status === "error",
     error,
     flush,
+    savedKey: lastSavedKeyRef.current,
+    rebase,
   };
 }

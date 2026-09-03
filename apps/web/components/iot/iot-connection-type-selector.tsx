@@ -27,6 +27,8 @@ interface ConnectionTypeSelectorProps {
    * Bluetooth cannot reach it. Shows accurate Classic-vs-BLE guidance.
    */
   bluetoothClassicOnly?: boolean;
+  /** Locks the row while connected: the active pipe stays visible, never hidden. */
+  disabled?: boolean;
 }
 
 export function ConnectionTypeSelector({
@@ -34,6 +36,7 @@ export function ConnectionTypeSelector({
   onConnectionTypeChange,
   browserSupport,
   bluetoothClassicOnly = false,
+  disabled = false,
 }: ConnectionTypeSelectorProps) {
   const { t } = useTranslation("iot");
 
@@ -72,7 +75,7 @@ export function ConnectionTypeSelector({
                       ? "bg-background text-foreground hover:bg-background shadow-xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-transparent",
                   )}
-                  disabled={!browserSupport.bluetooth}
+                  disabled={disabled || !browserSupport.bluetooth}
                 >
                   <Bluetooth className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{t("iot.protocolRunner.bluetooth")}</span>
@@ -101,7 +104,7 @@ export function ConnectionTypeSelector({
                       ? "bg-background text-foreground hover:bg-background shadow-xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-transparent",
                   )}
-                  disabled={!browserSupport.serial}
+                  disabled={disabled || !browserSupport.serial}
                 >
                   <Usb className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{t("iot.protocolRunner.serial")}</span>
@@ -116,6 +119,11 @@ export function ConnectionTypeSelector({
           </Tooltip>
         </TooltipProvider>
       </div>
+      {!disabled && !browserSupport.bluetooth && !browserSupport.serial && (
+        <p className="text-muted-foreground text-xs">
+          {serialTooltip ?? bluetoothTooltip ?? t("iot.protocolRunner.webSerialNotSupported")}
+        </p>
+      )}
     </div>
   );
 }

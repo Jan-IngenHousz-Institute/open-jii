@@ -29,7 +29,10 @@ export const useCollaboratorRevoke = () => {
           (row) => row.kind === "grant" && row.id === variables.grantId,
         );
         const revokedSelf =
-          !!userId && revoked?.granteeType === "user" && revoked.granteeId === userId;
+          !!userId &&
+          revoked?.kind === "grant" &&
+          revoked.granteeType === "user" &&
+          revoked.granteeId === userId;
 
         if (previousGrants) {
           queryClient.setQueryData(

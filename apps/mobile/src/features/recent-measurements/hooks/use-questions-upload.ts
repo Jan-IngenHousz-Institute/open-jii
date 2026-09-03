@@ -6,11 +6,9 @@ import { useTranslation } from "~/shared/i18n";
 import { getMeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
-import {
-  getMeasurementMqttTopic,
-  QUESTIONS_PROTOCOL_ID,
-} from "~/shared/measurements/measurement-topic";
+import { getMeasurementMqttTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
+import { whenDeviceIdentityLoaded } from "~/shared/stores/device-identity-store";
 
 import type { ExperimentAnnotationFlagType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
@@ -31,6 +29,8 @@ export function useQuestionsUpload() {
       questions,
       commentText,
       flagType,
+      workbookRunId,
+      workbookVersionId,
     }: {
       timestamp: string;
       timezone: string;
@@ -40,18 +40,21 @@ export function useQuestionsUpload() {
       questions: AnswerData[];
       commentText?: string;
       flagType?: ExperimentAnnotationFlagType | null;
+      workbookRunId: string;
+      workbookVersionId: string;
     }) => {
-      const topic = getMeasurementMqttTopic({ experimentId, protocolId: QUESTIONS_PROTOCOL_ID });
+      await whenDeviceIdentityLoaded();
+      const topic = getMeasurementMqttTopic({ experimentId });
 
       const location = await getMeasurementLocation();
 
       const payload = {
         questions,
-        macros: null,
-        device_id: null,
         timestamp,
         timezone,
         user_id: userId,
+        workbook_run_id: workbookRunId,
+        workbook_version_id: workbookVersionId,
         annotations: buildAnnotations(commentText, flagType),
         ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
       };

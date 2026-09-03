@@ -96,13 +96,15 @@ export function DashboardLayoutContent({
               onChange={handleDescriptionChange}
               placeholder={t("form.descriptionPlaceholder")}
               rows={1}
-              className="min-h-0 resize-none border-0 bg-transparent p-0 text-base text-[#68737B] shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="text-muted-foreground min-h-0 resize-none border-0 bg-transparent p-0 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
             />
           )}
-          {showStaticDescription && <p className="text-base text-[#68737B]">{description}</p>}
+          {showStaticDescription && (
+            <p className="text-muted-foreground text-base">{description}</p>
+          )}
         </div>
 
-        <div className="flex items-start gap-10 border-b border-[#EDF2F6] pb-8">
+        <div className="border-border flex items-start gap-10 border-b pb-8">
           <MetaField label={tCommon("common.created")} value={formatDate(dashboard.createdAt)} />
           <MetaField label={tCommon("common.updated")} value={formatDate(dashboard.updatedAt)} />
           <MetaField label={tCommon("common.createdBy")} value={createdByDisplay} />

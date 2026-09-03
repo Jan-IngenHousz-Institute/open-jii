@@ -13,7 +13,8 @@ import { useUserInvitationCreate } from "../../../hooks/user-invitation/useUserI
 interface ExperimentInviteModalProps {
   experimentId: string;
   invitations: Invitation[];
-  /** Grantees already on the experiment — not offered again by the picker. */
+  /** Grantees already on the experiment; teams and organizations among them are not
+   * offered again. People are, annotated with the access they already hold. */
   existingGranteeIds?: string[];
   isArchived: boolean;
   /** `can(share)`: losing it mid-session takes the form away, not just the button. */

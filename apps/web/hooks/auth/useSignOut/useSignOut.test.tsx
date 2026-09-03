@@ -1,5 +1,6 @@
 import { myJoinRequestQueryKey } from "@/hooks/experiment/join-request/useMyJoinRequest/useMyJoinRequest";
 import { experimentAccessQueryKey } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { myOrganizationInvitationsQueryKey } from "@/hooks/organization/organization-cache";
 import {
   collaboratorsQueryKey,
   granteeOrganizationsQueryKey,
@@ -40,6 +41,10 @@ describe("useSignOut", () => {
     const deletionBlockersKey = orpc.users.getDeletionBlockers.queryKey({
       input: { id: "user-a" },
     });
+    const globalSearchKey = orpc.search.globalSearch.queryKey({
+      input: { query: "photosynthesis", limit: 20 },
+    });
+    const myInvitationsKey = myOrganizationInvitationsQueryKey("user-a");
     queryClient.setQueryData(grantsKey, []);
     queryClient.setQueryData(orgsKey, []);
     queryClient.setQueryData(invitationsKey, []);
@@ -61,7 +66,19 @@ describe("useSignOut", () => {
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
     });
-    queryClient.setQueryData(deletionBlockersKey, { resources: [] });
+    queryClient.setQueryData(deletionBlockersKey, { resources: [], organizations: [] });
+    queryClient.setQueryData(globalSearchKey, {
+      results: [
+        {
+          type: "organization",
+          id: "org-1",
+          title: "Private Lab",
+          subtitle: null,
+          meta: "research_institute",
+        },
+      ],
+    });
+    queryClient.setQueryData(myInvitationsKey, [{ id: "invitation-1" }]);
 
     const { result } = renderHook(() => useSignOut(), { queryClient });
     await result.current.mutateAsync();
@@ -75,6 +92,11 @@ describe("useSignOut", () => {
     expect(queryClient.getQueryData(accessKey)).toBeUndefined();
     expect(queryClient.getQueryData(joinRequestKey)).toBeUndefined();
     expect(queryClient.getQueryData(deletionBlockersKey)).toBeUndefined();
+    expect(queryClient.getQueryData(globalSearchKey)).toBeUndefined();
+    // Better Auth reads only get invalidated with the rest of the `auth` namespace,
+    // which leaves their data in place; the organizations that invited this account
+    // are removed outright.
+    expect(queryClient.getQueryData(myInvitationsKey)).toBeUndefined();
   });
 
   it("drops the resource detail and list caches, which carry no principal at all", async () => {

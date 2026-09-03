@@ -32,7 +32,7 @@ function renderComponent(
 describe("ExperimentTitle", () => {
   it("renders experiment title", () => {
     renderComponent({ name: "My Experiment" });
-    expect(screen.getByText("My Experiment")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "My Experiment", level: 1 })).toBeInTheDocument();
   });
 
   it("does not render the active / public pills anymore", () => {

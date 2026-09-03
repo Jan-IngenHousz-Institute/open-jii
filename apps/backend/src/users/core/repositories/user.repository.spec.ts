@@ -9,6 +9,8 @@ import {
   passkeys,
   sessions,
   experimentMembers,
+  organizationInvitations,
+  organizationJoinRequests,
   organizations,
   organizationMembers,
   personalOrgSlug,
@@ -20,11 +22,14 @@ import {
   inArray,
   resourceGrants,
   sql,
+  teamMembers,
+  teams,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
+import { IotDeviceGroupRepository } from "../../../iot/core/repositories/iot-device-group.repository";
 import { CACHE_PORT } from "../../../macros/core/ports/cache.port";
 import { MacroRepository } from "../../../macros/core/repositories/macro.repository";
 import {
@@ -40,15 +45,22 @@ describe("UserRepository", () => {
   let repository: UserRepository;
   let testUserId: string;
 
-  /** A macro/protocol/workbook/device authored by `creatorId`, owned by their personal org. */
-  const createAuthoredResource = (
-    resourceType: "macro" | "protocol" | "workbook" | "device",
+  /** A resource authored by `creatorId`, owned by their personal org. */
+  const createAuthoredResource = async (
+    resourceType: "macro" | "protocol" | "workbook" | "device" | "device_group",
     creatorId: string,
   ) => {
     const name = `${resourceType} ${faker.string.uuid()}`;
     if (resourceType === "macro") return testApp.createMacro({ name, createdBy: creatorId });
     if (resourceType === "protocol") return testApp.createProtocol({ name, createdBy: creatorId });
     if (resourceType === "device") return testApp.createIotDevice({ name, createdBy: creatorId });
+    if (resourceType === "device_group") {
+      const created = await testApp.module
+        .get(IotDeviceGroupRepository)
+        .create({ name, description: null }, creatorId);
+      assertSuccess(created);
+      return created.value[0];
+    }
     return testApp.createWorkbook({ name, createdBy: creatorId });
   };
 
@@ -251,24 +263,25 @@ describe("UserRepository", () => {
 
     it("should search users with partial name match", async () => {
       // Arrange
+      const firstName = `Alice${faker.string.alphanumeric(8)}`;
       await testApp.createTestUser({
-        name: "Alice Smith",
-        email: "alice@example.com",
+        name: `${firstName} Smith`,
+        email: `${firstName.toLowerCase()}@example.com`,
       });
       await testApp.createTestUser({
-        name: "Alice Johnson",
-        email: "alice.johnson@example.com",
+        name: `${firstName} Johnson`,
+        email: `${firstName.toLowerCase()}.johnson@example.com`,
       });
 
       // Act
-      const result = await repository.search({ query: "Alice" });
+      const result = await repository.search({ query: firstName });
 
       // Assert
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       const foundUsers = result.value;
       expect(foundUsers.length).toBe(2);
-      expect(foundUsers.every((u) => u.firstName.includes("Alice"))).toBe(true);
+      expect(foundUsers.every((u) => u.firstName === firstName)).toBe(true);
     });
 
     it("should apply limit and offset for pagination", async () => {
@@ -687,7 +700,7 @@ describe("UserRepository", () => {
 
     // The blocker covers every shareable type: each is owned by an organization, so
     // each can be left with nobody answerable for it.
-    it.each(["macro", "protocol", "workbook", "device"] as const)(
+    it.each(["macro", "protocol", "workbook", "device", "device_group"] as const)(
       "blocks on a sole-admin %s, and stops blocking once a second admin exists",
       async (resourceType) => {
         const creatorId = await testApp.createTestUser({ email: `${resourceType}@example.com` });
@@ -755,6 +768,128 @@ describe("UserRepository", () => {
       expect(result.value).toEqual([
         { resourceType: "device", id: device.id, name: "SN-UNNAMED-1", status: null },
       ]);
+    });
+  });
+
+  describe("findSoleOwnedOrganizations", () => {
+    it("names a shared organization whose only living owner is the user", async () => {
+      const org = await testApp.createOrganization("Sole Owned Lab", { slug: "sole-owned-lab" });
+      await testApp.addOrganizationMember(org, testUserId, "owner");
+
+      const result = await repository.findSoleOwnedOrganizations(testUserId);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([{ id: org, name: "Sole Owned Lab", slug: "sole-owned-lab" }]);
+    });
+
+    // Parity with the last-owner protection on leaving an organization, which fires
+    // regardless of what the organization holds. Always actionable: promote another
+    // owner, or delete the (empty) organization.
+    it("names an organization that owns nothing at all", async () => {
+      const org = await testApp.createOrganization();
+      await testApp.addOrganizationMember(org, testUserId, "owner");
+
+      const result = await repository.findSoleOwnedOrganizations(testUserId);
+
+      assertSuccess(result);
+      expect(result.value.map((o) => o.id)).toEqual([org]);
+    });
+
+    it("does not name an organization that has a second living owner", async () => {
+      const org = await testApp.createOrganization();
+      const coOwner = await testApp.createTestUser({ email: "co-owner-lives@example.com" });
+      await testApp.addOrganizationMember(org, testUserId, "owner");
+      await testApp.addOrganizationMember(org, coOwner, "owner");
+
+      const result = await repository.findSoleOwnedOrganizations(testUserId);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+
+    // The co-owner's account is closed, so nobody answerable is left but this user.
+    it("names it again once the second owner's account is closed", async () => {
+      const org = await testApp.createOrganization();
+      const closedCoOwner = await testApp.createTestUser({
+        email: "co-owner-closed@example.com",
+        deletedAt: new Date(),
+      });
+      await testApp.addOrganizationMember(org, testUserId, "owner");
+      await testApp.addOrganizationMember(org, closedCoOwner, "owner");
+
+      const result = await repository.findSoleOwnedOrganizations(testUserId);
+
+      assertSuccess(result);
+      expect(result.value.map((o) => o.id)).toEqual([org]);
+    });
+
+    // Admins can act on everything the organization holds, but only an owner can hand
+    // out the owner role — so an organization left with admins alone could never
+    // regain one. Answerability is what this blocker is about, not access.
+    it("still names it when the only other members are admins", async () => {
+      const org = await testApp.createOrganization();
+      const orgAdmin = await testApp.createTestUser({ email: "org-admin-only@example.com" });
+      const plainMember = await testApp.createTestUser({ email: "org-plain-member@example.com" });
+      await testApp.addOrganizationMember(org, testUserId, "owner");
+      await testApp.addOrganizationMember(org, orgAdmin, "admin");
+      await testApp.addOrganizationMember(org, plainMember, "member");
+
+      const result = await repository.findSoleOwnedOrganizations(testUserId);
+
+      assertSuccess(result);
+      expect(result.value.map((o) => o.id)).toEqual([org]);
+    });
+
+    // Everyone permanently and solely owns their own personal organization, and it can
+    // never gain a second member — counting them would block every deletion forever.
+    it("never names a personal organization", async () => {
+      await testApp.personalOrganizationId(testUserId);
+
+      const result = await repository.findSoleOwnedOrganizations(testUserId);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+
+    // The owner counting runs as a correlated subquery, so it has to answer per
+    // organization. Bound to the wrong row it would return both of these or neither,
+    // and every single-organization case above would still pass.
+    it("names only the organization this user owns, not another person's", async () => {
+      const mine = await testApp.createOrganization();
+      const theirs = await testApp.createOrganization();
+      const stranger = await testApp.createTestUser({ email: "other-sole-owner@example.com" });
+      await testApp.addOrganizationMember(mine, testUserId, "owner");
+      await testApp.addOrganizationMember(theirs, stranger, "owner");
+
+      const result = await repository.findSoleOwnedOrganizations(testUserId);
+
+      assertSuccess(result);
+      expect(result.value.map((o) => o.id)).toEqual([mine]);
+    });
+
+    it("ignores organizations the user only administers or belongs to", async () => {
+      const administered = await testApp.createOrganization();
+      const joined = await testApp.createOrganization();
+      await testApp.addOrganizationMember(administered, testUserId, "admin");
+      await testApp.addOrganizationMember(joined, testUserId, "member");
+
+      const result = await repository.findSoleOwnedOrganizations(testUserId);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+
+    // `organization_members.role` may carry several comma-separated tokens, and the
+    // canonical evaluator accepts the row if any of them grants — so a `member,owner`
+    // membership is an ownership here too.
+    it("reads a comma-joined 'member,owner' membership as ownership", async () => {
+      const org = await testApp.createOrganization();
+      await testApp.addOrganizationMember(org, testUserId, "member,owner" as "owner");
+
+      const result = await repository.findSoleOwnedOrganizations(testUserId);
+
+      assertSuccess(result);
+      expect(result.value.map((o) => o.id)).toEqual([org]);
     });
   });
 
@@ -923,6 +1058,189 @@ describe("UserRepository", () => {
       expect(await grantsForUser(doomed)).toHaveLength(0);
       // Other users' grants are untouched.
       expect(await grantsForUser(survivor)).toHaveLength(1);
+    });
+
+    /**
+     * Every organization association goes, the way every grant does. A membership left
+     * behind is not dormant: Better Auth's own guards count owner rows out of the
+     * table and know nothing of `profiles.deleted_at`, so a closed account keeps
+     * voting as a living owner, renders on the roster as "Deleted User", and holds a
+     * seat against the membership limit.
+     */
+    describe("organization associations", () => {
+      /** A shared organization the doomed user co-owns, so the sole-owner block passes. */
+      async function sharedOrganization(doomed: string) {
+        const coOwner = await testApp.createTestUser({ name: "Co Owner" });
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationMember(organizationId, coOwner, "owner");
+        await testApp.addOrganizationMember(organizationId, doomed, "owner");
+        return { organizationId, coOwner };
+      }
+
+      const membersOf = (organizationId: string) =>
+        testApp.database
+          .select({ userId: organizationMembers.userId })
+          .from(organizationMembers)
+          .where(eq(organizationMembers.organizationId, organizationId));
+
+      it("removes the deleted user from every shared organization's roster", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const { organizationId, coOwner } = await sharedOrganization(doomed);
+
+        assertSuccess(await repository.delete(doomed));
+
+        // The co-owner's own membership is untouched — this sweeps one account's
+        // associations, not the organization.
+        expect(await membersOf(organizationId)).toEqual([{ userId: coOwner }]);
+      });
+
+      it("leaves no owner row Better Auth would count as living", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const { organizationId, coOwner } = await sharedOrganization(doomed);
+
+        assertSuccess(await repository.delete(doomed));
+
+        // The count Better Auth's last-owner guards actually run: raw rows spelling
+        // `owner`, with no reference to the profile that marks an account closed. A
+        // ghost here lets the remaining real owner leave and empty the organization.
+        const owners = await testApp.database
+          .select({ userId: organizationMembers.userId })
+          .from(organizationMembers)
+          .where(
+            and(
+              eq(organizationMembers.organizationId, organizationId),
+              eq(organizationMembers.role, "owner"),
+            ),
+          );
+        expect(owners).toEqual([{ userId: coOwner }]);
+      });
+
+      it("keeps the personal-workspace membership, which has no second owner to fall back on", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const personalId = await testApp.personalOrganizationId(doomed);
+
+        assertSuccess(await repository.delete(doomed));
+
+        // The personal organization survives the soft-delete by design and still owns
+        // whatever it owned, so stripping its only owner would strand all of it.
+        expect(await membersOf(personalId)).toEqual([{ userId: doomed }]);
+      });
+
+      it("gives up every team membership", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const survivor = await testApp.createTestUser({ name: "Survivor" });
+        const { organizationId } = await sharedOrganization(doomed);
+        const teamId = await testApp.createTeam(organizationId);
+        await testApp.addTeamMember(teamId, doomed);
+        await testApp.addTeamMember(teamId, survivor);
+
+        assertSuccess(await repository.delete(doomed));
+
+        expect(
+          await testApp.database
+            .select({ userId: teamMembers.userId })
+            .from(teamMembers)
+            .where(eq(teamMembers.teamId, teamId)),
+        ).toEqual([{ userId: survivor }]);
+      });
+
+      it("has no personal-workspace team to carve out", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const personalId = await testApp.personalOrganizationId(doomed);
+
+        // Asserted rather than assumed, because the team sweep above has no personal
+        // carve-out: the plugin refuses team creation in a personal workspace and
+        // Better Auth's `defaultTeam` is off, so there is never one to lose.
+        expect(
+          await testApp.database
+            .select({ id: teams.id })
+            .from(teams)
+            .where(eq(teams.organizationId, personalId)),
+        ).toEqual([]);
+      });
+
+      it("withdraws a pending join request and keeps the decided ones", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const pendingOrg = await testApp.createOrganization();
+        const rejectedOrg = await testApp.createOrganization();
+        await testApp.addOrganizationJoinRequest(pendingOrg, doomed);
+        await testApp.addOrganizationJoinRequest(rejectedOrg, doomed, { status: "rejected" });
+
+        assertSuccess(await repository.delete(doomed));
+
+        // A decided request is history and reads correctly against a closed account;
+        // a pending one is a queue item nobody can act on any more.
+        expect(
+          await testApp.database
+            .select({ organizationId: organizationJoinRequests.organizationId })
+            .from(organizationJoinRequests)
+            .where(eq(organizationJoinRequests.userId, doomed)),
+        ).toEqual([{ organizationId: rejectedOrg }]);
+      });
+
+      it("cancels a pending invitation to the address it is about to scrub", async () => {
+        const inviter = await testApp.createTestUser({ name: "Inviter" });
+        const doomedEmail = `doomed-${crypto.randomUUID()}@example.com`;
+        const doomed = await testApp.createTestUser({ name: "Doomed", email: doomedEmail });
+        const organizationId = await testApp.createOrganization();
+        const other = `someone-${crypto.randomUUID()}@example.com`;
+        await testApp.addOrganizationInvitation({
+          organizationId,
+          email: doomedEmail,
+          inviterId: inviter,
+        });
+        await testApp.addOrganizationInvitation({
+          organizationId,
+          email: other,
+          inviterId: inviter,
+        });
+
+        assertSuccess(await repository.delete(doomed));
+
+        // The address becomes `deleted-<id>@example.com` two steps later, so a
+        // surviving invitation is a slot held against `invitationLimit` for a mailbox
+        // that can never claim it. Everyone else's invitations stay.
+        expect(
+          await testApp.database
+            .select({ email: organizationInvitations.email })
+            .from(organizationInvitations)
+            .where(eq(organizationInvitations.organizationId, organizationId)),
+        ).toEqual([{ email: other }]);
+      });
+
+      it("keeps an invitation the user already decided on", async () => {
+        const inviter = await testApp.createTestUser({ name: "Inviter" });
+        const doomedEmail = `doomed-${crypto.randomUUID()}@example.com`;
+        const doomed = await testApp.createTestUser({ name: "Doomed", email: doomedEmail });
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationInvitation({
+          organizationId,
+          email: doomedEmail,
+          inviterId: inviter,
+          status: "accepted",
+        });
+
+        assertSuccess(await repository.delete(doomed));
+
+        expect(
+          await testApp.database
+            .select({ status: organizationInvitations.status })
+            .from(organizationInvitations)
+            .where(eq(organizationInvitations.organizationId, organizationId)),
+        ).toEqual([{ status: "accepted" }]);
+      });
+
+      it("still refuses the deletion outright when the user is an organization's only owner", async () => {
+        const doomed = await testApp.createTestUser({ name: "Doomed" });
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationMember(organizationId, doomed, "owner");
+
+        // The sweep is only safe because this refusal comes first: it is what
+        // guarantees every organization it strips a membership from keeps another
+        // living owner.
+        assertFailure(await repository.delete(doomed));
+        expect(await membersOf(organizationId)).toEqual([{ userId: doomed }]);
+      });
     });
 
     it("leaves the deleted user without access through can()", async () => {
@@ -1398,8 +1716,10 @@ describe("UserRepository", () => {
       expect(await isStillLive(soleOwner)).toBe(true);
     });
 
-    // The re-check is polymorphic over all four types, so a sole-owned macro is as
-    // unclearable a blocker as a sole-owned experiment.
+    // The re-check spans every staffed type — its query reads `ALL_STAFFED_RESOURCES`,
+    // built from a total map — so a sole-owned macro is as unclearable a blocker as a
+    // sole-owned experiment. These three stand in for the set: devices and device groups
+    // reach the same predicate and are not exercised here.
     it.each(["macro", "protocol", "workbook"] as const)(
       "refuses a deletion that would leave a %s with no answerable owner",
       async (resourceType) => {
@@ -1542,6 +1862,78 @@ describe("UserRepository", () => {
       expect(result.error.message).toContain("only admin");
     });
 
+    // The organization blocker, enforced in the same transaction. It fires on the
+    // organization itself, so an empty one refuses just as an inhabited one does —
+    // there is no resource here for the per-resource prongs to catch.
+    it("refuses the sole owner of a shared organization that owns nothing", async () => {
+      const soleOwner = await testApp.createTestUser({ email: "sole-org-owner@example.com" });
+      const org = await testApp.createOrganization();
+      await testApp.addOrganizationMember(org, soleOwner, "owner");
+
+      const result = await repository.delete(soleOwner);
+
+      assertFailure(result);
+      expect(result.error.message).toContain("only owner of one or more organizations");
+      expect(await isStillLive(soleOwner)).toBe(true);
+    });
+
+    // The gap this blocker closes: a grantee's admin rights on the resource used to
+    // let the organization's last owner walk away, leaving the organization itself
+    // with nobody who could ever hand out the owner role again.
+    it("refuses the sole owner even when a grantee administers what the organization owns", async () => {
+      const soleOwner = await testApp.createTestUser({ email: "husk-maker@example.com" });
+      const org = await testApp.createOrganization();
+      await testApp.addOrganizationMember(org, soleOwner, "owner");
+      const { experiment } = await testApp.createExperiment({
+        name: "Would-be Husk",
+        userId: soleOwner,
+        organizationId: org,
+      });
+      const grantee = await testApp.createTestUser({ email: "husk-grantee@example.com" });
+      await testApp.addResourceAdmin("experiment", experiment.id, grantee);
+
+      const result = await repository.delete(soleOwner);
+
+      assertFailure(result);
+      expect(result.error.message).toContain("only owner of one or more organizations");
+      expect(await isStillLive(soleOwner)).toBe(true);
+    });
+
+    // Admins can act on everything the organization holds but cannot grant ownership,
+    // so they are not cover for the owner leaving.
+    it("refuses the sole owner when the only other members are admins", async () => {
+      const soleOwner = await testApp.createTestUser({ email: "owner-among-admins@example.com" });
+      const org = await testApp.createOrganization();
+      await testApp.addOrganizationMember(org, soleOwner, "owner");
+      const orgAdmin = await testApp.createTestUser({ email: "only-an-admin@example.com" });
+      await testApp.addOrganizationMember(org, orgAdmin, "admin");
+
+      const result = await repository.delete(soleOwner);
+
+      assertFailure(result);
+      expect(result.error.message).toContain("only owner of one or more organizations");
+      expect(await isStillLive(soleOwner)).toBe(true);
+    });
+
+    it("allows the deletion while a second living owner remains", async () => {
+      const leaving = await testApp.createTestUser({ email: "leaving-co-owner@example.com" });
+      const staying = await testApp.createTestUser({ email: "staying-co-owner@example.com" });
+      const org = await testApp.createOrganization();
+      await testApp.addOrganizationMember(org, leaving, "owner");
+      await testApp.addOrganizationMember(org, staying, "owner");
+
+      assertSuccess(await repository.delete(leaving));
+    });
+
+    // Everybody is the permanent sole owner of their own personal organization, so a
+    // blocker that counted them would refuse every account deletion on the platform.
+    it("never blocks on the user's own personal organization", async () => {
+      const ordinary = await testApp.createTestUser({ email: "just-personal@example.com" });
+      await testApp.personalOrganizationId(ordinary);
+
+      assertSuccess(await repository.delete(ordinary));
+    });
+
     /**
      * Block until some backend is waiting on a lock. Both cases below hold the
      * organization's owner rows from a third connection and assert the operation
@@ -1629,12 +2021,49 @@ describe("UserRepository", () => {
         await holding;
         assertSuccess(await deletion);
 
-        // With A gone, B is the sole living owner of the organization that owns the
-        // macro, and nobody else administers it — so B is now refused. Without the
-        // lock above the two could have decided simultaneously and both left.
+        // With A gone, B is the sole living owner of the organization — so B is now
+        // refused. Without the lock above the two could have decided simultaneously
+        // and both left, and the organization would own a macro nobody answers for.
         const second = await repository.delete(ownerB);
         assertFailure(second);
-        expect(second.error.message).toContain("only admin");
+        expect(second.error.message).toContain("only owner of one or more organizations");
+      } finally {
+        await Promise.all([blocker.close(), deleter.close()]);
+      }
+    });
+
+    /**
+     * The same anchor, for an organization holding nothing at all. There are no
+     * resources and therefore no grant rows anywhere in this scenario, so the owner
+     * rows are the only thing the two deletions can contend on — without them both
+     * co-owners would read two living owners and both commit, leaving an
+     * organization nobody could ever grant ownership of again.
+     */
+    it("waits on the owner lock even when the organization owns nothing", async () => {
+      const blocker = createSecondaryDatabase();
+      const deleter = createSecondaryDatabase();
+      try {
+        const deleterRepo = new UserRepository(deleter.database);
+
+        const org = await testApp.createOrganization();
+        const ownerA = await testApp.createTestUser({ email: "empty-co-owner-a@example.com" });
+        const ownerB = await testApp.createTestUser({ email: "empty-co-owner-b@example.com" });
+        await testApp.addOrganizationMember(org, ownerA, "owner");
+        await testApp.addOrganizationMember(org, ownerB, "owner");
+
+        const deleterPid = await backendPidOf(deleter.database);
+        const { release, holding } = await holdOrgOwnerLock(blocker.database, org);
+        const deletion = deleterRepo.delete(ownerA);
+        await waitUntilBlocked(deleterPid);
+
+        release();
+        await holding;
+        assertSuccess(await deletion);
+
+        // B now reads the world A left behind, and is the last owner standing.
+        const second = await repository.delete(ownerB);
+        assertFailure(second);
+        expect(second.error.message).toContain("only owner of one or more organizations");
       } finally {
         await Promise.all([blocker.close(), deleter.close()]);
       }

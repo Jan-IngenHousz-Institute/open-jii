@@ -84,7 +84,7 @@ describe("VisualizationsPage", () => {
 
       await waitFor(() => {
         const button = screen.getByRole("button", { name: /ui.actions.create/ });
-        expect(button.querySelector("svg")).toBeInTheDocument();
+        expect(button.querySelector(".lucide-plus")).toBeInTheDocument();
       });
     });
   });

@@ -2,12 +2,15 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { hasManagedFirmware } from "@/util/firmware-family";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 
+import { ConnectivityDot } from "./device-connectivity";
+import { DeviceHeaderActions } from "./device-header-actions";
 import { IotDeviceDetailTabs } from "./iot-device-detail-tabs";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 
@@ -44,8 +47,12 @@ export function IotDeviceLayoutContent({
         </Link>
 
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-[#011111]">{displayName}</h1>
+          <h1 className="text-foreground text-2xl font-semibold">{displayName}</h1>
           <IotDeviceStatusBadge status={device.status} />
+          <ConnectivityDot connectivity={device.connectivity} />
+          <div className="ml-auto">
+            <DeviceHeaderActions device={device} />
+          </div>
         </div>
       </div>
 
@@ -54,6 +61,8 @@ export function IotDeviceLayoutContent({
         canShare={device.capabilities.canShare}
         canLeave={device.capabilities.canLeave}
         canManage={device.capabilities.canManage}
+        isMobileFamily={device.deviceType === "mobile"}
+        hasManagedFirmware={hasManagedFirmware(device.deviceType)}
       >
         {children}
       </IotDeviceDetailTabs>

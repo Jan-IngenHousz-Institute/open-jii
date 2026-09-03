@@ -36,6 +36,11 @@ describe("ExperimentVisualizationsDisplay", () => {
     );
 
     expect(screen.getByText("selector.noVisualizations")).toBeInTheDocument();
+    expect(
+      screen
+        .getByRole("button", { name: "selector.createVisualization" })
+        .querySelector(".lucide-plus"),
+    ).toBeInTheDocument();
   });
 
   it("auto-selects the first visualization so its name appears in the selector trigger", () => {

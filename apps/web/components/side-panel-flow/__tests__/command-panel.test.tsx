@@ -27,7 +27,7 @@ describe("CommandPanel", () => {
 
   it("shows a validation error for malformed JSON content", () => {
     render(<CommandPanel command={{ format: "json", content: "{not json" }} onChange={vi.fn()} />);
-    expect(screen.getByText(/.+/, { selector: "p.text-red-500" })).toBeInTheDocument();
+    expect(screen.getByText(/.+/, { selector: "p.text-destructive" })).toBeInTheDocument();
   });
 
   it("changes the command format via the selector, preserving content", async () => {

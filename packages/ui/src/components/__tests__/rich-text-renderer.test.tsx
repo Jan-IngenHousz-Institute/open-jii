@@ -44,6 +44,49 @@ describe("RichTextRenderer", () => {
       const { container } = render(<RichTextRenderer content={plainText} />);
       expect(container.querySelector(".ql-editor")).not.toBeInTheDocument();
     });
+
+    /**
+     * Plain text used to ignore `truncate` and `maxLines` outright, so whether a
+     * caller's clamp held came down to whether the author had happened to type into a
+     * rich editor. Both halves are asserted: the clamp when asked for, and the absence
+     * of any of it when not — a consumer that never passes `truncate` has to keep
+     * rendering exactly as it did.
+     */
+    it("should clamp plain text to maxLines when truncate is passed", () => {
+      const plainText = "A long plain-text description with no markup in it at all.";
+      const { container } = render(
+        <RichTextRenderer content={plainText} truncate={true} maxLines={3} />,
+      );
+      const paragraph = container.querySelector("p") as HTMLElement;
+
+      // The properties -webkit-line-clamp needs to do anything; the ellipsis comes from
+      // the clamp itself. `-webkit-box-orient` is set alongside these but jsdom drops
+      // it as an unknown property, so it cannot be asserted here.
+      expect(paragraph.style.display).toBe("-webkit-box");
+      expect(paragraph.style.overflow).toBe("hidden");
+      expect(paragraph.style.getPropertyValue("-webkit-line-clamp")).toBe("3");
+    });
+
+    it("should leave plain text unclamped when truncate is not passed", () => {
+      const plainText = "A long plain-text description with no markup in it at all.";
+      const { container } = render(<RichTextRenderer content={plainText} maxLines={3} />);
+      const paragraph = container.querySelector("p") as HTMLElement;
+
+      expect(paragraph.style.display).toBe("");
+      expect(paragraph.style.overflow).toBe("");
+      expect(paragraph.style.getPropertyValue("-webkit-line-clamp")).toBe("");
+    });
+
+    it("should clamp plain text with the same default maxLines the caller left unset", () => {
+      const plainText = "A long plain-text description with no markup in it at all.";
+      const { container } = render(<RichTextRenderer content={plainText} truncate={true} />);
+      const paragraph = container.querySelector("p") as HTMLElement;
+
+      // No `maxLines` means none is set here either, exactly as on the rich-text
+      // branch — the CSS class is what supplies the fallback there.
+      expect(paragraph.style.display).toBe("-webkit-box");
+      expect(paragraph.style.getPropertyValue("-webkit-line-clamp")).toBe("");
+    });
   });
 
   describe("Rich text content", () => {

@@ -1,12 +1,15 @@
-import { fireEvent, render, screen, waitFor } from "@/test/test-utils";
+import { act, fireEvent, render, screen, waitFor } from "@/test/test-utils";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
 
 import ProtocolCodeEditor from "../protocol-code-editor";
 
 const PROTOCOL = [{ label: "PAM", pulses: [10, 20, 30], detectors: [[1], [1]] }];
 
-type Code = Record<string, unknown>[] | string | undefined;
+type Code = JsonValue | undefined;
 
 /**
  * Mirrors `protocol-overview-content.tsx`: the editor's `onChange` feeds straight
@@ -14,8 +17,16 @@ type Code = Record<string, unknown>[] | string | undefined;
  * what made a deferred initial seed destroy the protocol, so the seeding tests
  * have to run against it rather than against a static prop.
  */
-function FeedbackParent({ onChange }: { onChange?: (value: Code) => void }) {
-  const [editedCode, setEditedCode] = useState<Code>(PROTOCOL);
+function FeedbackParent({
+  initialValue = PROTOCOL,
+  onChange,
+  onValidationChange,
+}: {
+  initialValue?: JsonValue;
+  onChange?: (value: Code) => void;
+  onValidationChange?: (valid: boolean) => void;
+}) {
+  const [editedCode, setEditedCode] = useState<Code>(initialValue);
   return (
     <ProtocolCodeEditor
       value={editedCode ?? []}
@@ -23,6 +34,7 @@ function FeedbackParent({ onChange }: { onChange?: (value: Code) => void }) {
         onChange?.(value);
         setEditedCode(value);
       }}
+      onValidationChange={onValidationChange}
       label="Protocol Code"
     />
   );
@@ -33,6 +45,7 @@ const editorText = () => screen.getByTestId<HTMLTextAreaElement>("code-editor-te
 describe("ProtocolCodeEditor seeding", () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(false);
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
@@ -83,10 +96,49 @@ describe("ProtocolCodeEditor seeding", () => {
     expect(editorText()).toBe(typed);
   });
 
-  it("leaves a string value untouched instead of reformatting it", async () => {
-    const raw = '[{"label":"as typed"}]';
-    render(<ProtocolCodeEditor value={raw} onChange={vi.fn()} label="Protocol Code" />);
+  it("seeds a stored string document as quoted JSON", async () => {
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+    const storedString = '[{"label":"stored string"}]';
+    const onChange = vi.fn();
+    render(<FeedbackParent initialValue={storedString} onChange={onChange} />);
 
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+
+    expect(editorText()).toBe(JSON.stringify(storedString));
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(storedString));
+  });
+
+  it("distinguishes an empty string document from an empty editor", async () => {
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
+    const onChange = vi.fn();
+    const onValidationChange = vi.fn();
+    render(
+      <FeedbackParent
+        initialValue=""
+        onChange={onChange}
+        onValidationChange={onValidationChange}
+      />,
+    );
+
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+
+    expect(editorText()).toBe('""');
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(""));
+    await waitFor(() => expect(onValidationChange).toHaveBeenLastCalledWith(true));
+
+    fireEvent.change(screen.getByTestId("code-editor-textarea"), { target: { value: "" } });
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+
+    expect(editorText()).toBe("");
+    expect(onChange).toHaveBeenLastCalledWith(undefined);
+    expect(onValidationChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("keeps raw user text untouched while editing", async () => {
+    render(<ProtocolCodeEditor value="stored" onChange={vi.fn()} label="Protocol Code" />);
+
+    const raw = '[{"label":"as typed"}]';
+    fireEvent.change(screen.getByTestId("code-editor-textarea"), { target: { value: raw } });
     await vi.advanceTimersByTimeAsync(500);
 
     expect(editorText()).toBe(raw);

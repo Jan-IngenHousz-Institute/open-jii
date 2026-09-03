@@ -34,27 +34,30 @@ import { stripHtml } from "~/util/strip-html";
 
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 /** Accent color per cell type, matching the cell components. */
 const cellColors: Record<string, string> = {
-  question: "#C58AAE",
-  protocol: "#2D3142",
-  command: "#119DA4",
-  macro: "#6C5CE7",
-  branch: "#F29D38",
-  markdown: "#6F8596",
-  output: "#94A3B8",
+  question: "var(--node-question)",
+  protocol: "var(--node-measurement)",
+  command: "var(--node-command)",
+  macro: "var(--node-analysis)",
+  branch: "var(--node-branch)",
+  markdown: "var(--node-instruction)",
+  output: "var(--muted-foreground)",
 };
 
 /** Active/selected background per cell type (light tint of accent). */
+// The active row wears a wash of its own cell-type accent, so the two stay in
+// step through a theme swap instead of drifting apart.
 const cellActiveBg: Record<string, string> = {
-  question: "#F9F3F6",
-  protocol: "#EAEBEE",
-  command: "#E7F6F6",
-  macro: "#F1EFFD",
-  branch: "#FBF3EA",
-  markdown: "#F1F3F5",
+  question: "color-mix(in srgb, var(--node-question) 10%, transparent)",
+  protocol: "color-mix(in srgb, var(--node-measurement) 10%, transparent)",
+  command: "color-mix(in srgb, var(--node-command) 10%, transparent)",
+  macro: "color-mix(in srgb, var(--node-analysis) 10%, transparent)",
+  branch: "color-mix(in srgb, var(--node-branch) 10%, transparent)",
+  markdown: "color-mix(in srgb, var(--node-instruction) 10%, transparent)",
 };
 
 const cellTypeLabels: Record<string, string> = {
@@ -135,7 +138,7 @@ function SidebarRow({
     disabled: !draggable,
   });
 
-  const color = cellColors[cell.type] ?? "#94A3B8";
+  const color = cellColors[cell.type] ?? "var(--muted-foreground)";
   const isRequiredQuestion = cell.type === "question" && cell.question.required === true;
   const Icon = cellIcons[cell.type];
   // Show the question's label (its data column name) rather than repeating the
@@ -144,13 +147,14 @@ function SidebarRow({
     cell.type === "question" ? cell.name : (cellTypeLabels[cell.type] ?? cell.type);
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       ref={setNodeRef}
       {...(draggable ? attributes : {})}
       {...(draggable ? listeners : {})}
       className={cn(
-        "flex h-[55px] w-full items-center justify-between rounded-[7px] text-left transition-colors",
+        "h-[55px] w-full justify-between rounded-[7px] text-left font-normal",
         isDragging && "opacity-40",
         draggable && "cursor-grab active:cursor-grabbing",
       )}
@@ -185,21 +189,21 @@ function SidebarRow({
                 "truncate text-[13px] leading-[18px] tracking-[0.02em]",
                 isActive ? "font-semibold" : "font-medium",
               )}
-              style={{ color: isActive ? color : "#011111" }}
+              style={{ color: isActive ? color : "var(--foreground)" }}
             >
               {primaryText}
             </span>
             {isRequiredQuestion && (
               <Asterisk
                 className="size-3 shrink-0"
-                style={{ color: "#005E5E" }}
+                style={{ color: "var(--primary)" }}
                 aria-label={requiredLabel}
               />
             )}
           </span>
           <span
             className="truncate text-[13px] font-normal leading-[21px]"
-            style={{ color: "#68737B" }}
+            style={{ color: "var(--muted-foreground)" }}
           >
             {getCellSubtitle(cell)}
           </span>
@@ -209,10 +213,10 @@ function SidebarRow({
       {/* Drag handle (visual indicator only; the whole card drags) */}
       {draggable && (
         <div className="shrink-0">
-          <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
+          <GripVertical className="h-4 w-4" style={{ color: "var(--primary)" }} />
         </div>
       )}
-    </button>
+    </Button>
   );
 }
 
@@ -250,18 +254,19 @@ export function WorkbookSidebar({
 
   if (collapsed) {
     return (
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={onToggleCollapsed}
-        className="group/collapse flex flex-col items-center gap-2 rounded-lg px-2 py-3 transition-colors"
+        className="group/collapse h-auto flex-col gap-2 px-2 py-3"
         style={{ marginTop: 20 }}
         title="Expand sidebar"
       >
-        <List className="h-4 w-4 text-[#005E5E] transition-colors group-hover/collapse:text-[#007575]" />
-        <span className="text-[11px] font-medium leading-none text-[#005E5E] transition-colors group-hover/collapse:text-[#007575]">
+        <List className="text-primary group-hover/collapse:text-primary/90 h-4 w-4 transition-colors" />
+        <span className="text-primary group-hover/collapse:text-primary/90 text-[11px] font-medium leading-none transition-colors">
           {visibleCells.length}
         </span>
-      </button>
+      </Button>
     );
   }
 
@@ -269,19 +274,21 @@ export function WorkbookSidebar({
     <div className="w-[300px] pt-6">
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between">
-        <span className="text-[13px] font-normal leading-[21px]" style={{ color: "#68737B" }}>
+        <span className="text-muted-foreground text-[13px] font-normal leading-[21px]">
           {visibleCells.length} block{visibleCells.length !== 1 ? "s" : ""}
           {requiredCount > 0 ? ` · ${requiredCount} required` : ""}
         </span>
         {onToggleCollapsed && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={onToggleCollapsed}
-            className="rounded p-1 text-[#005E5E] transition-colors hover:text-[#007575]"
+            className="text-primary hover:text-primary/90"
             title="Collapse sidebar"
           >
             <PanelRightClose className="h-4 w-4" />
-          </button>
+          </Button>
         )}
       </div>
 

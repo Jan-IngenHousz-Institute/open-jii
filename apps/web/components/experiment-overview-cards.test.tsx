@@ -51,7 +51,7 @@ describe("ExperimentOverviewCards", () => {
 
   it("links to the correct experiment page", () => {
     render(<ExperimentOverviewCards experiments={[createExperiment({ id: "abc-123" })]} />);
-    expect(screen.getByRole("link")).toHaveAttribute("href", "/platform/experiments/abc-123");
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/en-US/platform/experiments/abc-123");
   });
 
   it("links to archive path when archived", () => {
@@ -60,7 +60,7 @@ describe("ExperimentOverviewCards", () => {
     );
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
-      "/platform/experiments-archive/abc-123",
+      "/en-US/platform/experiments-archive/abc-123",
     );
   });
 

@@ -1,0 +1,46 @@
+"""Shared building blocks for the metrics DLT pipeline.
+
+Same split as ``openjii.centrum``: this ``__init__`` re-exports only the
+spark-free surface; ``openjii.metrics.runtime`` reads ``spark.conf`` eagerly
+and must only be imported inside the running pipeline.
+"""
+
+from .constants import (
+    ACTIVITY_WINDOW_DAYS,
+    ACTIVITY_WINDOWS_TABLE,
+    DAILY_ACTIVITY_BY_EXPERIMENT_TABLE,
+    DAILY_ACTIVITY_TABLE,
+    DERIVED_PARAMETER_ALLOWLIST,
+    EXPERIMENT_CONTRIBUTORS_WINDOW_TABLE,
+    FAMILY_TOTALS_TABLE,
+    HOURLY_ACTIVITY_TABLE,
+    MEASUREMENT_TIMESTAMP_FLOOR,
+    PARAMETER_CATEGORY_DERIVED,
+    PARAMETER_CATEGORY_SENSOR,
+    PARAMETER_STATS_TABLE,
+    PLATFORM_TOTALS_TABLE,
+    POOL_FACTS_TABLE,
+    SENSOR_PARAMETER_ALLOWLIST,
+    UNATTRIBUTED_FAMILY,
+)
+from .timestamps import within_plausible_range
+
+__all__ = [
+    "ACTIVITY_WINDOWS_TABLE",
+    "ACTIVITY_WINDOW_DAYS",
+    "DAILY_ACTIVITY_BY_EXPERIMENT_TABLE",
+    "DAILY_ACTIVITY_TABLE",
+    "DERIVED_PARAMETER_ALLOWLIST",
+    "EXPERIMENT_CONTRIBUTORS_WINDOW_TABLE",
+    "FAMILY_TOTALS_TABLE",
+    "HOURLY_ACTIVITY_TABLE",
+    "MEASUREMENT_TIMESTAMP_FLOOR",
+    "PARAMETER_CATEGORY_DERIVED",
+    "PARAMETER_CATEGORY_SENSOR",
+    "PARAMETER_STATS_TABLE",
+    "PLATFORM_TOTALS_TABLE",
+    "POOL_FACTS_TABLE",
+    "SENSOR_PARAMETER_ALLOWLIST",
+    "UNATTRIBUTED_FAMILY",
+    "within_plausible_range",
+]

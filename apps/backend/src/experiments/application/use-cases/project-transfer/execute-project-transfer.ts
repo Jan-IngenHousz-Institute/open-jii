@@ -84,11 +84,26 @@ export class ExecuteProjectTransferUseCase {
           protocolName: data.protocol.name,
         });
       } else {
+        // This path bypasses the protocol controller's validateProtocolCode, so
+        // guard the shape before anything reaches the jsonb column: a MultispeQ
+        // protocol runs on the device and its code must be an array of protocol
+        // sets. Other families keep generic JSON support.
+        if (data.protocol.family === "multispeq" && !Array.isArray(data.protocol.code)) {
+          this.logger.warn({
+            msg: "Rejecting non-array MultispeQ protocol code during project transfer",
+            errorCode: ErrorCodes.BAD_REQUEST,
+            operation: "executeProjectTransfer",
+            protocolName: data.protocol.name,
+          });
+          return failure(AppError.badRequest("MultispeQ protocol code must be an array"));
+        }
+
         const protocolResult = await this.createProtocolUseCase.execute(
           {
             name: data.protocol.name,
             description: data.protocol.description ?? null,
-            code: JSON.stringify(data.protocol.code),
+            // jsonb serializes this; stringifying here stored it double-encoded.
+            code: data.protocol.code,
             family: data.protocol.family,
           },
           data.protocol.createdBy,

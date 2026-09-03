@@ -148,6 +148,32 @@ describe("DeleteUserUseCase", () => {
     expect(result.error.code).toBe("FORBIDDEN");
   });
 
+  // The organization blocker fires on the organization alone — this one owns nothing,
+  // so no resource blocker could catch it.
+  it("should fail if user is the sole owner of a shared organization", async () => {
+    const userId = await testApp.createTestUser({});
+    const organizationId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(organizationId, userId, "owner");
+
+    const result = await useCase.execute(userId);
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(result.error.message).toContain("only owner of one or more organizations");
+  });
+
+  it("should allow deletion when a shared organization still has another owner", async () => {
+    const userId = await testApp.createTestUser({ email: "co-owned-org@example.com" });
+    const coOwnerId = await testApp.createTestUser({ email: "remaining-owner@example.com" });
+    const organizationId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(organizationId, userId, "owner");
+    await testApp.addOrganizationMember(organizationId, coOwnerId, "owner");
+
+    const result = await useCase.execute(userId);
+
+    assertSuccess(result);
+  });
+
   it("should handle repository deletion failure", async () => {
     const userId = await testApp.createTestUser({});
     const deleteMember = vi.spyOn(mailchimp, "deleteMember");

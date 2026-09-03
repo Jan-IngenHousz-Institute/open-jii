@@ -239,7 +239,9 @@ export class ExperimentDataExportsRepository {
   async downloadExport(params: {
     experimentId: string;
     exportId: string;
-  }): Promise<Result<{ stream: Readable; filePath: string; tableName: string }>> {
+  }): Promise<
+    Result<{ stream: Readable; filePath: string; tableName: string; completedAt: string | null }>
+  > {
     const { experimentId, exportId } = params;
 
     this.logger.log({

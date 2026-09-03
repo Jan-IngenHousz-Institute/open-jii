@@ -7,6 +7,7 @@ import {
   verifyEmailLoginOtp,
 } from "~/features/auth/api/login.api";
 import { getAuthClient } from "~/features/auth/services/auth";
+import { ensureDeviceRegistered } from "~/shared/composition/ensure-device-registered";
 import { prefetchOfflineData } from "~/shared/composition/prefetch-offline-data";
 import { useTranslation } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
@@ -24,6 +25,7 @@ export function useLoginFlow() {
       .catch(() => null);
     const userId = session?.data?.user?.id;
     void prefetchOfflineData(queryClient, userId);
+    void ensureDeviceRegistered();
   };
 
   const github = useMutation({

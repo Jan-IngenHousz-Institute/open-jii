@@ -21,6 +21,20 @@ export function collaboratorsQueryKey(
   });
 }
 
+/** Cache key for a resource's grantee-user search, scoped to the asking principal. */
+export function granteeUsersQueryKey(
+  userId: string | undefined,
+  resourceType: SharingResourceType,
+  resourceId: string,
+  query: string | undefined,
+) {
+  const input = { resourceType, id: resourceId, query };
+  return orpc.sharing.searchGranteeUsers.queryKey({
+    input,
+    queryKey: withPrincipal(orpc.sharing.searchGranteeUsers.queryKey({ input }), userId),
+  });
+}
+
 /** Cache key for the grantee-organization search, scoped to the asking principal. */
 export function granteeOrganizationsQueryKey(
   userId: string | undefined,

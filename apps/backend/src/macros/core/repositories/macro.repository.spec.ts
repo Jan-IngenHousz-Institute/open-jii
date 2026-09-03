@@ -171,7 +171,7 @@ describe("MacroRepository", () => {
         .where(eq(macrosTable.id, macro.id));
 
       // They can still see it while they belong to the organization...
-      const before = await repository.findAll({ filter: "my", userId: author });
+      const before = await repository.findAll({ scope: "related", userId: author });
       assertSuccess(before);
       expect(before.value.map((m) => m.id)).toContain(macro.id);
 
@@ -182,7 +182,7 @@ describe("MacroRepository", () => {
           and(eq(organizationMembers.organizationId, org), eq(organizationMembers.userId, author)),
         );
 
-      const after = await repository.findAll({ filter: "my", userId: author });
+      const after = await repository.findAll({ scope: "related", userId: author });
       assertSuccess(after);
       // Authorship is not an access path: "My macros" must narrow what the caller
       // can already read, never hand back a body `can(read)` would refuse.
@@ -739,6 +739,40 @@ describe("MacroRepository", () => {
         createdBy: testUserId,
         createdByName: testUserName,
       });
+    });
+
+    /**
+     * The detail read carries the owning organization's display name so the resource
+     * page can show who owns it beside who made it. A personal workspace answers
+     * `null` rather than its generated title: that name is not one anybody chose, and
+     * collapsing it here means no client has to know the slug rule.
+     */
+    it("names the owning organization, and leaves a personal workspace unnamed", async () => {
+      const organizationId = await testApp.createOrganization("Greenhouse Lab");
+      await testApp.addOrganizationMember(organizationId, testUserId, "owner");
+
+      const owned = await testApp.createMacro({
+        name: "Owned macro",
+        createdBy: testUserId,
+        organizationId,
+      });
+      // No organization given: the helper falls back to the creator's own workspace.
+      const personal = await testApp.createMacro({
+        name: "Personal macro",
+        createdBy: testUserId,
+      });
+
+      const ownedResult = await repository.findById(owned.id);
+      assertSuccess(ownedResult);
+      expect(ownedResult.value).toMatchObject({
+        organizationId,
+        organizationName: "Greenhouse Lab",
+      });
+
+      const personalResult = await repository.findById(personal.id);
+      assertSuccess(personalResult);
+      expect(personalResult.value?.organizationId).not.toBeNull();
+      expect(personalResult.value?.organizationName).toBeNull();
     });
 
     it("should return null for non-existent macro", async () => {
@@ -1518,7 +1552,7 @@ describe("MacroRepository — list access scoping", () => {
       .expect(StatusCodes.FORBIDDEN);
   });
 
-  it('keeps the "my" filter as an ownership view, unaffected by visibility', async () => {
+  it("keeps scope=related as a relationship view, unaffected by visibility", async () => {
     const other = await testApp.createTestUser({ name: "Other Author" });
     const othersMacro = await testApp.createMacro({
       name: "Someone else's macro",
@@ -1526,7 +1560,7 @@ describe("MacroRepository — list access scoping", () => {
       visibility: "public",
     });
 
-    const result = await repository.findAll({ filter: "my", userId: owner });
+    const result = await repository.findAll({ scope: "related", userId: owner });
     assertSuccess(result);
     const ids = result.value.map((m) => m.id);
 

@@ -1,6 +1,10 @@
+import { createIotDevice } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+
+import { contract } from "@repo/api/contract";
 
 import { IotProtocolRunner } from "./iot-protocol-runner";
 
@@ -14,7 +18,13 @@ let mockIsConnecting = false;
 let mockError: string | null = null;
 let mockDeviceInfo: Record<string, unknown> | null = null;
 let mockProtocol: Record<string, unknown> | null = null;
-let mockBrowserSupport = { bluetooth: true, serial: true, any: true };
+let mockBrowserSupport: {
+  bluetooth: boolean;
+  serial: boolean;
+  any: boolean;
+  bluetoothReason: "browser" | "device" | null;
+  serialReason: "browser" | "device" | null;
+} = { bluetooth: true, serial: true, any: true, bluetoothReason: null, serialReason: null };
 
 vi.mock("~/hooks/iot/useIotBrowserSupport", () => ({
   useIotBrowserSupport: () => mockBrowserSupport,
@@ -39,59 +49,6 @@ vi.mock("~/hooks/iot/useIotProtocolExecution/useIotProtocolExecution", () => ({
 }));
 
 // Mock child components
-vi.mock("./iot-connection-type-selector", () => ({
-  ConnectionTypeSelector: ({
-    connectionType,
-    onConnectionTypeChange,
-    browserSupport,
-  }: {
-    connectionType: string;
-    onConnectionTypeChange: (type: "bluetooth" | "serial") => void;
-    browserSupport: { bluetooth: boolean; serial: boolean };
-  }) => (
-    <div data-testid="connection-type-selector">
-      <span>Current: {connectionType}</span>
-      <button onClick={() => onConnectionTypeChange("bluetooth")}>Bluetooth</button>
-      <button onClick={() => onConnectionTypeChange("serial")}>Serial</button>
-      <span>
-        BT: {browserSupport.bluetooth ? "yes" : "no"}, Serial:{" "}
-        {browserSupport.serial ? "yes" : "no"}
-      </span>
-    </div>
-  ),
-}));
-
-vi.mock("./iot-device-status-card", () => ({
-  DeviceStatusCard: ({
-    isConnected,
-    isConnecting,
-    error,
-    deviceInfo,
-    connectionType,
-    onConnect,
-    onDisconnect,
-  }: {
-    isConnected: boolean;
-    isConnecting: boolean;
-    error: string | null;
-    deviceInfo: Record<string, unknown> | null;
-    connectionType: string;
-    onConnect: () => void;
-    onDisconnect: () => void;
-  }) => (
-    <div data-testid="device-status-card">
-      <span>
-        Status: {isConnected ? "connected" : isConnecting ? "connecting" : "disconnected"}
-      </span>
-      {error && <span>Error: {error}</span>}
-      {deviceInfo && <span>Device: {JSON.stringify(deviceInfo)}</span>}
-      <span>Type: {connectionType}</span>
-      <button onClick={onConnect}>Connect</button>
-      <button onClick={onDisconnect}>Disconnect</button>
-    </div>
-  ),
-}));
-
 vi.mock("./iot-protocol-results-display", () => ({
   ProtocolResultsDisplay: ({ testResult }: { testResult: unknown }) => (
     <div data-testid="protocol-results-display">
@@ -114,13 +71,19 @@ describe("IotProtocolRunner", () => {
     mockError = null;
     mockDeviceInfo = null;
     mockProtocol = null;
-    mockBrowserSupport = { bluetooth: true, serial: true, any: true };
+    mockBrowserSupport = {
+      bluetooth: true,
+      serial: true,
+      any: true,
+      bluetoothReason: null,
+      serialReason: null,
+    };
   });
 
   describe("rendering", () => {
     it("renders the component", () => {
       render(<IotProtocolRunner {...defaultProps} />);
-      expect(screen.getByTestId("device-status-card")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.device")).toBeInTheDocument();
       expect(screen.getByTestId("protocol-results-display")).toBeInTheDocument();
     });
 
@@ -139,13 +102,16 @@ describe("IotProtocolRunner", () => {
     it("shows connection type selector when not connected", () => {
       mockIsConnected = false;
       render(<IotProtocolRunner {...defaultProps} />);
-      expect(screen.getByTestId("connection-type-selector")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.connectionType")).toBeInTheDocument();
     });
 
-    it("hides connection type selector when connected", () => {
+    it("keeps the transport row visible but locked when connected", () => {
       mockIsConnected = true;
       render(<IotProtocolRunner {...defaultProps} />);
-      expect(screen.queryByTestId("connection-type-selector")).not.toBeInTheDocument();
+      // The active pipe stays on screen; hiding it left users guessing which
+      // transport they were on.
+      expect(screen.getByRole("button", { name: /iot.protocolRunner.bluetooth/ })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /iot.protocolRunner.serial/ })).toBeDisabled();
     });
 
     it("shows run protocol button when connected", () => {
@@ -175,24 +141,32 @@ describe("IotProtocolRunner", () => {
   describe("connection type management", () => {
     it("initializes with bluetooth connection type", () => {
       render(<IotProtocolRunner {...defaultProps} />);
-      expect(screen.getByText("Current: bluetooth")).toBeInTheDocument();
+      // Disconnected hint tracks the selected transport.
+      expect(screen.getByText("iot.protocolRunner.wireless")).toBeInTheDocument();
     });
 
     it("allows changing connection type", async () => {
       render(<IotProtocolRunner {...defaultProps} />);
 
       const user = userEvent.setup();
-      const serialButton = screen.getByRole("button", { name: "Serial" });
+      const serialButton = screen.getByRole("button", { name: /iot.protocolRunner.serial/ });
       await user.click(serialButton);
 
-      expect(screen.getByText("Current: serial")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.usb")).toBeInTheDocument();
     });
 
     it("passes browser support to connection type selector", () => {
-      mockBrowserSupport = { bluetooth: false, serial: true, any: true };
+      mockBrowserSupport = {
+        bluetooth: false,
+        serial: true,
+        any: true,
+        bluetoothReason: "browser",
+        serialReason: null,
+      };
       render(<IotProtocolRunner {...defaultProps} />);
 
-      expect(screen.getByText(/BT: no, Serial: yes/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /iot.protocolRunner.bluetooth/ })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /iot.protocolRunner.serial/ })).toBeEnabled();
     });
   });
 
@@ -202,7 +176,7 @@ describe("IotProtocolRunner", () => {
       mockIsConnecting = false;
       render(<IotProtocolRunner {...defaultProps} />);
 
-      expect(screen.getByText("Status: connected")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.connected")).toBeInTheDocument();
     });
 
     it("passes connecting state to device status card", () => {
@@ -210,41 +184,48 @@ describe("IotProtocolRunner", () => {
       mockIsConnecting = true;
       render(<IotProtocolRunner {...defaultProps} />);
 
-      expect(screen.getByText("Status: connecting")).toBeInTheDocument();
+      expect(screen.getAllByText(/iot.protocolRunner.connecting/).length).toBeGreaterThan(0);
     });
 
     it("passes error to device status card", () => {
       mockError = "Connection failed";
       render(<IotProtocolRunner {...defaultProps} />);
 
-      expect(screen.getByText("Error: Connection failed")).toBeInTheDocument();
+      expect(screen.getByText("Connection failed")).toBeInTheDocument();
     });
 
     it("passes device info to device status card", () => {
-      mockDeviceInfo = { name: "Test Device" };
+      mockIsConnected = true;
+      mockDeviceInfo = { device_name: "Test Device" };
       render(<IotProtocolRunner {...defaultProps} />);
 
-      expect(screen.getByText(/Device:.*Test Device/)).toBeInTheDocument();
+      expect(screen.getByText("Test Device")).toBeInTheDocument();
     });
 
     it("calls connect when connect button is clicked", async () => {
       const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
-      const connectButton = screen.getByRole("button", { name: "Connect" });
+      const connectButton = screen.getByRole("button", { name: /iot.protocolRunner.connect$/ });
       await user.click(connectButton);
 
       expect(mockConnect).toHaveBeenCalledTimes(1);
     });
 
     it("calls disconnect when disconnect button is clicked", async () => {
+      mockIsConnected = true;
       const user = userEvent.setup();
       render(<IotProtocolRunner {...defaultProps} />);
 
-      const disconnectButton = screen.getByRole("button", { name: "Disconnect" });
+      const disconnectButton = screen.getByRole("button", {
+        name: /iot.protocolRunner.disconnect/,
+      });
+      // Mounting already-connected trips the family-change effect once, which
+      // is a fixture artifact; the click's own contribution is what matters.
+      const callsBeforeClick = mockDisconnect.mock.calls.length;
       await user.click(disconnectButton);
 
-      expect(mockDisconnect).toHaveBeenCalledTimes(1);
+      expect(mockDisconnect).toHaveBeenCalledTimes(callsBeforeClick + 1);
     });
   });
 
@@ -267,6 +248,17 @@ describe("IotProtocolRunner", () => {
       await waitFor(() => {
         expect(mockExecuteProtocol).toHaveBeenCalledWith(defaultProps.protocolCode);
       });
+    });
+
+    it("normalizes a non-array protocol document to empty runner input", async () => {
+      mockExecuteProtocol.mockResolvedValueOnce({});
+
+      const user = userEvent.setup();
+      render(<IotProtocolRunner {...defaultProps} protocolCode={{ source: "text" }} />);
+
+      await user.click(screen.getByRole("button", { name: /iot\.protocolRunner\.runProtocol/i }));
+
+      await waitFor(() => expect(mockExecuteProtocol).toHaveBeenCalledWith([]));
     });
 
     it("shows running state while executing protocol", async () => {
@@ -508,7 +500,7 @@ describe("IotProtocolRunner", () => {
       const { protocolName: _, ...propsWithoutName } = defaultProps;
       render(<IotProtocolRunner {...propsWithoutName} />);
 
-      expect(screen.getByTestId("device-status-card")).toBeInTheDocument();
+      expect(screen.getByText("iot.protocolRunner.device")).toBeInTheDocument();
     });
 
     it("handles empty protocol code", async () => {
@@ -620,6 +612,45 @@ describe("IotProtocolRunner", () => {
       render(<IotProtocolRunner {...defaultProps} protocolCode={GATED_PROTOCOL} />);
 
       expect(screen.queryByText("iot.protocolRunner.interactionTitle")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("register stitch", () => {
+    it("offers registration for an unregistered serial and prefills the dialog with it", async () => {
+      const user = userEvent.setup();
+      mockIsConnected = true;
+      mockDeviceInfo = { device_id: "SN-IN-HAND" };
+      server.mount(contract.iot.listIotDevices, { body: [] });
+
+      render(<IotProtocolRunner {...defaultProps} />);
+
+      const registerButton = await screen.findByRole("button", {
+        name: "iot.protocolRunner.registerDevice",
+      });
+      expect(registerButton.querySelector(".lucide-plus")).toBeInTheDocument();
+      await user.click(registerButton);
+
+      // The dialog mounts before the serial is known, so the prefill only
+      // lands if the connect remounts it.
+      expect(screen.getByLabelText("iot.devices.dialog.serialLabel")).toHaveValue("SN-IN-HAND");
+    });
+
+    it("stays quiet when the serial is already registered", async () => {
+      mockIsConnected = true;
+      mockDeviceInfo = { device_id: "SN-KNOWN" };
+      const spy = server.mount(contract.iot.listIotDevices, {
+        body: [createIotDevice({ serialNumber: "SN-KNOWN" })],
+      });
+
+      render(<IotProtocolRunner {...defaultProps} />);
+
+      // Absence only means anything once the registry read has resolved.
+      await waitFor(() => {
+        expect(spy.calls.length).toBeGreaterThan(0);
+      });
+      expect(
+        screen.queryByRole("button", { name: "iot.protocolRunner.registerDevice" }),
+      ).not.toBeInTheDocument();
     });
   });
 });

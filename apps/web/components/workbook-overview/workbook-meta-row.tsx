@@ -1,5 +1,6 @@
 "use client";
 
+import { OwningOrganizationField } from "@/components/organizations/owning-organization-field";
 import { PublishConfirmDialog } from "@/components/visibility/publish-confirm-dialog";
 import { WorkbookDeleteAction } from "@/components/workbook-overview/workbook-delete-action";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
@@ -89,59 +90,67 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
   // latest published version is the meaningful number to surface here.
   const latestVersion = versionsData?.[0]?.version;
   // Capability, not ownership: a "Can edit" grantee renames and edits.
-  const { canManage } = workbook.capabilities;
+  const { canManage, canTransfer } = workbook.capabilities;
 
   return (
-    <div className="flex flex-wrap items-start gap-x-6 gap-y-6 border-b border-[#EDF2F6] pb-8 sm:gap-x-10">
+    <div className="border-border flex flex-wrap items-start gap-x-6 gap-y-6 border-b pb-8 sm:gap-x-10">
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
+        <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
           {tCommon("common.created")}
         </span>
-        <span className="text-sm leading-[21px] text-[#68737B]">
+        <span className="text-muted-foreground text-sm leading-[21px]">
           {formatDate(workbook.createdAt)}
         </span>
       </div>
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
+        <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
           {tCommon("common.updated")}
         </span>
-        <span className="text-sm leading-[21px] text-[#68737B]">
+        <span className="text-muted-foreground text-sm leading-[21px]">
           {formatDate(workbook.updatedAt)}
         </span>
       </div>
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
+        <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
           {tCommon("common.createdBy")}
         </span>
-        <span className="text-sm leading-[21px] text-[#68737B]">
+        <span className="text-muted-foreground text-sm leading-[21px]">
           {workbook.createdByName ?? "-"}
         </span>
       </div>
+      <OwningOrganizationField
+        resourceType="workbook"
+        resourceId={id}
+        organizationId={workbook.organizationId}
+        organizationName={workbook.organizationName}
+        canTransfer={canTransfer}
+        layout="meta"
+      />
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
+        <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
           {t("workbooks.version")}
         </span>
         {isLoadingVersions ? (
           <Skeleton className="h-[21px] w-10" />
         ) : isVersionsError ? (
           // Don't claim "Draft" when the version state is simply unknown.
-          <span className="text-sm leading-[21px] text-[#68737B]">-</span>
+          <span className="text-muted-foreground text-sm leading-[21px]">-</span>
         ) : latestVersion != null ? (
           <WorkbookVersionBadge currentVersion={latestVersion} showUpgrade={false} />
         ) : (
-          <span className="text-sm leading-[21px] text-[#68737B]">
+          <span className="text-muted-foreground text-sm leading-[21px]">
             {t("workbooks.draftVersion")}
           </span>
         )}
       </div>
       {workbook.forkedFrom ? (
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
+          <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
             {t("workbooks.forkedFrom")}
           </span>
           <Link
             href={`/platform/workbooks/${workbook.forkedFrom}`}
-            className="text-sm leading-[21px] text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+            className="text-primary hover:text-primary text-sm leading-[21px] underline underline-offset-2"
           >
             {tCommon("common.viewOriginal")}
           </Link>
@@ -150,7 +159,7 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
+          <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
             {tCommon("resourceVisibility.statusLabel")}
           </span>
           <TooltipProvider delayDuration={200}>
@@ -158,13 +167,15 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
               <TooltipTrigger asChild>
                 {/* The copy is the icon's accessible name too, so it is readable
                     without hovering. */}
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   className="text-muted-foreground"
                   aria-label={publishHelpText}
                 >
                   <Info className="h-3.5 w-3.5" />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs leading-snug">
                 {publishHelpText}
@@ -172,7 +183,7 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
             </Tooltip>
           </TooltipProvider>
         </div>
-        <span className="text-sm leading-[21px] text-[#68737B]">
+        <span className="text-muted-foreground text-sm leading-[21px]">
           {isPublic
             ? tCommon("resourceVisibility.publicStatus")
             : tCommon("resourceVisibility.privateStatus")}

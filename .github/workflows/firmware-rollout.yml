@@ -1,0 +1,109 @@
+# Firmware Rollout Workflow
+# Rolls a published firmware release out to platform-managed devices as an AWS
+# IoT Job. The environment's required reviewers ARE the authorization for
+# touching the fleet, so this workflow is the only path that creates a job.
+#
+# dry_run defaults to true: the first run of any rollout should be a preview.
+# https://docs.aws.amazon.com/iot/latest/developerguide/key-concepts-jobs.html
+#
+# BOOTSTRAP, required before the first run: the firmware-rollout-dev and
+# firmware-rollout-prod environments must be created MANUALLY with required
+# reviewers, a deployment-branch rule limiting them to main, and the
+# AWS_FIRMWARE_ROLLOUT_ROLE_ARN secret. GitHub silently creates a missing
+# environment with no protection at all, so an unconfigured environment means
+# this workflow has no human gate despite naming one.
+
+name: Firmware Rollout
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target account/fleet"
+        type: choice
+        options: [dev, prod]
+        default: dev
+      family:
+        description: "Device family to update"
+        type: choice
+        options: [ambyte]
+        default: ambyte
+      release_tag:
+        description: "Release tag to roll out (e.g. v1.3.0), or 'latest' for the newest stable"
+        type: string
+        default: latest
+      things:
+        description: "Optional comma-separated thing names; empty targets every registered device of the chosen family"
+        type: string
+        default: ""
+      max_per_minute:
+        description: "Cap on job executions started per minute"
+        type: string
+        default: "5"
+      abort_threshold_percent:
+        description: "Cancel the rollout once this percentage of executions has failed"
+        type: string
+        default: "25"
+      timeout_minutes:
+        description: "Minutes before an execution stuck IN_PROGRESS is timed out"
+        type: string
+        default: "60"
+      dry_run:
+        description: "Resolve and print the plan without creating a job"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # OIDC role assumption for AWS
+
+# One rollout at a time per environment: two concurrent jobs over an
+# overlapping target set would race each other's executions.
+concurrency:
+  group: firmware-rollout-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  rollout:
+    name: Roll out ${{ inputs.family }} ${{ inputs.release_tag }} to ${{ inputs.environment }} (${{ inputs.dry_run && 'dry run' || 'LIVE' }})
+    runs-on: ubuntu-latest
+    # Required reviewers live on this environment; it is the human gate.
+    environment: firmware-rollout-${{ inputs.environment }}
+    timeout-minutes: 120
+
+    steps:
+      # workflow_dispatch accepts any branch, the checkout below loads that
+      # branch's composite action, and the environment-scoped OIDC subject does
+      # not carry the ref. Without this, approving a rollout would also approve
+      # whatever action code the chosen branch happens to contain. Belt to the
+      # environment's own deployment-branch rule, not a replacement for it.
+      - name: Refuse to roll out from a non-default ref
+        if: github.ref != 'refs/heads/main'
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error::firmware rollouts run from main only; got $REF"
+          exit 1
+
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Roll out firmware
+        uses: ./.github/actions/firmware-rollout
+        with:
+          family: ${{ inputs.family }}
+          release-tag: ${{ inputs.release_tag }}
+          things: ${{ inputs.things }}
+          max-per-minute: ${{ inputs.max_per_minute }}
+          abort-threshold-percent: ${{ inputs.abort_threshold_percent }}
+          timeout-minutes: ${{ inputs.timeout_minutes }}
+          dry-run: ${{ inputs.dry_run }}
+          environment: ${{ inputs.environment }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Dedicated role, NOT the shared deploy role: that one also trusts
+          # pull_request and any branch ref, which must never reach the fleet.
+          # Set on the firmware-rollout-<env> GitHub environment.
+          aws-role-arn: ${{ secrets.AWS_FIRMWARE_ROLLOUT_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}

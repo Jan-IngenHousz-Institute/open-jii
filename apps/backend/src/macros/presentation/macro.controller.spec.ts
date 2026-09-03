@@ -55,6 +55,7 @@ describe("MacroController", () => {
     vi.spyOn(testApp.module.get(AuthorizationService), "can").mockResolvedValue({
       allow: true,
       reason: "org-role",
+      organizationId: null,
     });
   });
 
@@ -253,6 +254,30 @@ describe("MacroController", () => {
     });
   });
 
+  describe("listMacros paginated", () => {
+    it("returns the page envelope when a page is requested", async () => {
+      const response = await testApp
+        .get(testApp.resolveOrpcPath(contract.macros.listMacros))
+        .query({ page: 1, pageSize: 10 })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toMatchObject({ page: 1, pageSize: 10, items: [] });
+    });
+
+    it("returns 500 when the paginated use case fails", async () => {
+      vi.spyOn(listMacrosUseCase, "executePaginated").mockResolvedValue(
+        failure(AppError.internal("Database error")),
+      );
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.macros.listMacros))
+        .query({ page: 1 })
+        .withAuth(testUserId)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+  });
+
   describe("listMacros", () => {
     it("should successfully list macros", async () => {
       // Arrange
@@ -325,7 +350,7 @@ describe("MacroController", () => {
       expect(listMacrosUseCase.execute).toHaveBeenCalledWith({
         search: "test",
         language: "python",
-        filter: undefined,
+        scope: "all",
         userId: testUserId,
       });
     });
@@ -784,7 +809,7 @@ describe("MacroController", () => {
     ])("requires $action access to $name", async ({ action, request }) => {
       const canSpy = vi
         .spyOn(testApp.module.get(AuthorizationService), "can")
-        .mockResolvedValue({ allow: false, reason: "forbidden" });
+        .mockResolvedValue({ allow: false, reason: "forbidden", organizationId: null });
       const macroId = faker.string.uuid();
 
       await request(macroId, testUserId).expect(StatusCodes.FORBIDDEN);

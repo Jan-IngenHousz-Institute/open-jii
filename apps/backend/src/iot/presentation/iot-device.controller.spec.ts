@@ -3,15 +3,22 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import type { IotDevice, IotDeviceDetail, IotDeviceList } from "@repo/api/domains/iot/iot.schema";
+import type {
+  BulkRegisterIotDevicesResult,
+  IotDevice,
+  IotDeviceDetail,
+  IotDeviceList,
+} from "@repo/api/domains/iot/iot.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
+import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
 
 const RETURNED_THING = {
@@ -23,6 +30,7 @@ describe("IotDeviceController", () => {
   const testApp = TestHarness.App;
   let userId: string;
   let awsAdapter: AwsAdapter;
+  let databricksAdapter: DatabricksAdapter;
   let analyticsAdapter: MockAnalyticsAdapter;
 
   const registerBody = { serialNumber: "AA:BB:CC:DD:EE:FF", name: "Sensor", deviceType: "ambyte" };
@@ -35,10 +43,17 @@ describe("IotDeviceController", () => {
     await testApp.beforeEach();
     userId = await testApp.createTestUser({ name: "Owner" });
     awsAdapter = testApp.module.get(AwsAdapter);
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
     analyticsAdapter = testApp.module.get(AnalyticsAdapter);
     analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
     vi.spyOn(awsAdapter, "createThing").mockResolvedValue(success(RETURNED_THING));
     vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
+    vi.spyOn(awsAdapter, "getCognitoIdentityId").mockResolvedValue(
+      success("eu-central-1:identity-1"),
+    );
+    vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
   });
 
   afterEach(() => {
@@ -63,6 +78,16 @@ describe("IotDeviceController", () => {
         .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
         .withAuth(userId)
         .send(registerBody)
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.bulkRegisterIotDevices))
+        .withAuth(userId)
+        .send({ devices: [{ serialNumber: "S-1" }], deviceType: "ambyte" })
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "9f2c1a2e-1111-4111-8111-111111111111" })
         .expect(StatusCodes.FORBIDDEN);
 
       const getPath = testApp.resolveOrpcPath(contract.iot.getIotDevice, {
@@ -127,6 +152,200 @@ describe("IotDeviceController", () => {
     });
   });
 
+  describe("bulkRegisterIotDevices", () => {
+    const bulkPath = () => testApp.resolveOrpcPath(contract.iot.bulkRegisterIotDevices);
+
+    beforeEach(() => {
+      // The batch persists several rows, so each Thing must keep its own name.
+      vi.spyOn(awsAdapter, "createThing").mockImplementation((input) =>
+        Promise.resolve(
+          success({
+            thingName: input.thingName,
+            thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${input.thingName}`,
+          }),
+        ),
+      );
+    });
+
+    async function bulkRegister(
+      body: object,
+    ): Promise<SuperTestResponse<BulkRegisterIotDevicesResult>> {
+      return testApp.post(bulkPath()).withAuth(userId).send(body).expect(StatusCodes.OK);
+    }
+
+    it("registers every serial and reports per-device results", async () => {
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }, { serialNumber: "S-2", name: "Second" }],
+        deviceType: "ambyte",
+      });
+
+      expect(response.body.devices).toHaveLength(2);
+      for (const row of response.body.devices) {
+        expect(row.error).toBeNull();
+        expect(row.device?.thingName).toBe(`ambyte_${row.serialNumber}`);
+      }
+      expect(response.body.groupId).toBeNull();
+      expect(response.body.groupError).toBeNull();
+    });
+
+    it("continues past a duplicate serial and reports it inline", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
+        .withAuth(userId)
+        .send({ serialNumber: "S-1", deviceType: "ambyte" })
+        .expect(StatusCodes.CREATED);
+
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }, { serialNumber: "S-2" }],
+        deviceType: "ambyte",
+      });
+
+      const [first, second] = response.body.devices;
+      expect(first.device).toBeNull();
+      expect(first.error).toContain("already registered");
+      expect(second.device).not.toBeNull();
+      expect(second.error).toBeNull();
+    });
+
+    it("creates a group around the batch when asked", async () => {
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }, { serialNumber: "S-2" }],
+        deviceType: "ambyte",
+        group: { name: "Fresh batch" },
+      });
+
+      const groupId = response.body.groupId;
+      expect(groupId).not.toBeNull();
+      expect(response.body.groupError).toBeNull();
+
+      const members: SuperTestResponse<{ deviceId: string }[]> = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.iot.listIotDeviceGroupMembers, {
+            groupId: groupId ?? "",
+          }),
+        )
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+      expect(members.body).toHaveLength(2);
+    });
+
+    it("adds the batch to an existing group", async () => {
+      const group: SuperTestResponse<{ id: string }> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.createIotDeviceGroup))
+        .withAuth(userId)
+        .send({ name: "Existing" })
+        .expect(StatusCodes.CREATED);
+
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-9" }],
+        deviceType: "ambyte",
+        group: { groupId: group.body.id },
+      });
+
+      expect(response.body.groupId).toBe(group.body.id);
+      expect(response.body.groupError).toBeNull();
+    });
+
+    it("reports group trouble without failing the registrations", async () => {
+      const response = await bulkRegister({
+        devices: [{ serialNumber: "S-1" }],
+        deviceType: "ambyte",
+        group: { groupId: faker.string.uuid() },
+      });
+
+      expect(response.body.devices[0].device).not.toBeNull();
+      expect(response.body.groupId).toBeNull();
+      expect(response.body.groupError).toBe("Device group not found");
+    });
+
+    it("rejects duplicate serials within one batch (400)", async () => {
+      await testApp
+        .post(bulkPath())
+        .withAuth(userId)
+        .send({
+          devices: [{ serialNumber: "S-1" }, { serialNumber: "S-1" }],
+          deviceType: "ambyte",
+        })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("rejects the mobile family like the single register (400)", async () => {
+      await testApp
+        .post(bulkPath())
+        .withAuth(userId)
+        .send({ devices: [{ serialNumber: "S-1" }], deviceType: "mobile" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
+  describe("ensureMobileDevice", () => {
+    const ensureBody = { installId: "9f2c1a2e-1111-4111-8111-111111111111", name: "iPhone 15" };
+
+    it("creates on first call and returns the same active device on the second (200)", async () => {
+      const first: SuperTestResponse<IotDevice> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send(ensureBody)
+        .expect(StatusCodes.OK);
+
+      expect(first.body.deviceType).toBe("mobile");
+      expect(first.body.status).toBe("active");
+      expect(first.body.serialNumber).toBe(ensureBody.installId);
+
+      const second: SuperTestResponse<IotDevice> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send(ensureBody)
+        .expect(StatusCodes.OK);
+
+      expect(second.body.id).toBe(first.body.id);
+    });
+
+    // installId is the device's serial, not a minted uuid: a phone reports a
+    // hardware id. It is bounded by length and the AWS IoT thing-attribute
+    // charset, which is what CreateThing would otherwise 500 on.
+    it("accepts a hardware-shaped install id (200)", async () => {
+      const response: SuperTestResponse<IotDevice> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "9774d56d682e549c" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.serialNumber).toBe("9774d56d682e549c");
+    });
+
+    it("rejects an install id outside the thing-attribute charset (400)", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "not a serial!" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("rejects an empty install id (400)", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 409 when another user holds the install id", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send(ensureBody)
+        .expect(StatusCodes.OK);
+
+      const otherUser = await testApp.createTestUser({ name: "Other" });
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(otherUser)
+        .send(ensureBody)
+        .expect(StatusCodes.CONFLICT);
+    });
+  });
+
   describe("listIotDevices", () => {
     it("lists the user's devices (200)", async () => {
       await testApp.createIotDevice({ createdBy: userId });
@@ -170,13 +389,16 @@ describe("IotDeviceController", () => {
 
       expect(response.body.id).toBe(device.id);
       // The owner of the device's org holds every action through that role, and no
-      // grant of their own — so there is nothing for them to leave.
+      // grant of their own, so there is nothing for them to leave. `canTransfer`
+      // is false even for them: a device's AWS Thing and certificate are
+      // provisioned against its organization, so there is no transfer route.
       expect(response.body.capabilities).toEqual({
         canContribute: true,
         canUpdate: true,
         canManage: true,
         canShare: true,
         canLeave: false,
+        canTransfer: false,
       });
     });
 
@@ -206,6 +428,7 @@ describe("IotDeviceController", () => {
         canManage: false,
         canShare: false,
         canLeave: true,
+        canTransfer: false,
       });
     });
 
@@ -248,6 +471,265 @@ describe("IotDeviceController", () => {
       const path = testApp.resolveOrpcPath(contract.iot.deleteIotDevice, { deviceId: device.id });
 
       await testApp.delete(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("getIotDeviceActivity", () => {
+    it("returns the pipeline-computed last data arrival (200)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceLastActivity").mockResolvedValue(
+        success({ lastDataAt: "2026-08-13T09:00:00.000Z" }),
+      );
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDeviceActivity, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<{ lastDataAt: string | null }> = await testApp
+        .get(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual({
+        lastDataAt: "2026-08-13T09:00:00.000Z",
+        pipelineUnavailable: false,
+      });
+    });
+
+    it("degrades to a null lastDataAt when the warehouse is unavailable (200)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceLastActivity").mockResolvedValue(
+        failure(AppError.internal("warehouse down")),
+      );
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDeviceActivity, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<{ lastDataAt: string | null }> = await testApp
+        .get(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual({ lastDataAt: null, pipelineUnavailable: true });
+    });
+
+    it("returns 403 for another user's private device", async () => {
+      const otherUser = await testApp.createTestUser({});
+      const device = await testApp.createIotDevice({ createdBy: otherUser });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotDeviceActivity, {
+        deviceId: device.id,
+      });
+
+      await testApp.get(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("getDeviceFirmwareHistory", () => {
+    const RANGE = {
+      from: "2026-07-15T00:00:00.000Z",
+      to: "2026-08-14T00:00:00.000Z",
+      bucket: "day",
+    };
+
+    it("returns the reported versions (200)", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const useCase = testApp.module.get(GetIotDeviceFirmwareHistoryUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(
+        success([
+          {
+            version: "1.3.0",
+            firstSeen: "2026-08-01T00:00:00.000Z",
+            lastSeen: "2026-08-14T00:00:00.000Z",
+            count: 5,
+          },
+        ]),
+      );
+
+      const response: SuperTestResponse<{ versions: { version: string | null }[] }> = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.iot.getDeviceFirmwareHistory, { deviceId: device.id }),
+        )
+        .withAuth(userId)
+        .query(RANGE)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.versions[0].version).toBe("1.3.0");
+    });
+
+    it("returns 403 for a viewer without device access", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.iot.getDeviceFirmwareHistory, { deviceId: device.id }),
+        )
+        .withAuth(stranger)
+        .query(RANGE)
+        .expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("getIotFleetMonitoring", () => {
+    const RANGE = {
+      from: "2026-08-13T00:00:00.000Z",
+      to: "2026-08-13T12:00:00.000Z",
+      bucket: "hour",
+    };
+
+    const mockFleetWarehouse = () => {
+      vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
+      vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
+    };
+
+    it("returns the fleet facts for the caller's devices (200)", async () => {
+      mockFleetWarehouse();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotFleetMonitoring, {});
+
+      const response: SuperTestResponse<{
+        devices: { deviceId: string; lastDataAt: string | null }[];
+        pipelineUnavailable: boolean;
+      }> = await testApp.get(path).withAuth(userId).query(RANGE).expect(StatusCodes.OK);
+
+      expect(response.body.devices).toEqual([{ deviceId: device.id, lastDataAt: null }]);
+      expect(response.body.pipelineUnavailable).toBe(false);
+    });
+
+    it("keeps the static path out of the {deviceId} route: both resolve side by side", async () => {
+      mockFleetWarehouse();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+
+      // The literal segment "monitoring" must reach the fleet handler, never
+      // be parsed as a device id by GET /devices/{deviceId}.
+      await testApp
+        .get("/api/v1/devices/monitoring")
+        .withAuth(userId)
+        .query(RANGE)
+        .expect(StatusCodes.OK);
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.iot.getIotDevice, { deviceId: device.id }))
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+    });
+
+    it("rejects a reversed range at the contract (400)", async () => {
+      mockFleetWarehouse();
+      const path = testApp.resolveOrpcPath(contract.iot.getIotFleetMonitoring, {});
+
+      await testApp
+        .get(path)
+        .withAuth(userId)
+        .query({ ...RANGE, from: RANGE.to, to: RANGE.from })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 401 when unauthenticated", async () => {
+      const path = testApp.resolveOrpcPath(contract.iot.getIotFleetMonitoring, {});
+
+      await testApp.get(path).query(RANGE).expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("getDeviceMonitoring", () => {
+    const RANGE = {
+      from: "2026-08-13T00:00:00.000Z",
+      to: "2026-08-13T12:00:00.000Z",
+      bucket: "hour",
+    };
+
+    const mockWarehouse = () => {
+      vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(
+        success([
+          {
+            eventType: "connected",
+            eventTimestamp: "2026-08-13T01:00:00.000Z",
+            disconnectReason: null,
+            sessionIdentifier: "s-1",
+          },
+          {
+            eventType: "disconnected",
+            eventTimestamp: "2026-08-13T03:00:00.000Z",
+            disconnectReason: "CONNECTION_LOST",
+            sessionIdentifier: "s-1",
+          },
+        ]),
+      );
+      vi.spyOn(databricksAdapter, "getDeviceThroughput").mockResolvedValue(
+        success([{ bucketStart: "2026-08-13T01:00:00.000Z", experimentId: null, count: 12 }]),
+      );
+      vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceFirmwareHistory").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceRecentMeasurements").mockResolvedValue(success([]));
+    };
+
+    it("returns the full dashboard payload for one range (200)", async () => {
+      mockWarehouse();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getDeviceMonitoring, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<{
+        bucket: string;
+        sessions: unknown[];
+        uptimePercent: number | null;
+        truncated: boolean;
+      }> = await testApp.get(path).withAuth(userId).query(RANGE).expect(StatusCodes.OK);
+
+      expect(response.body.bucket).toBe("hour");
+      expect(response.body.sessions).toHaveLength(1);
+      expect(response.body.uptimePercent).not.toBeNull();
+      expect(response.body.truncated).toBe(false);
+    });
+
+    it("fails loudly when the warehouse is down, the dashboard owns the error state (500)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(
+        failure(AppError.internal("warehouse down")),
+      );
+      vi.spyOn(databricksAdapter, "getDeviceThroughput").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceFirmwareHistory").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDeviceRecentMeasurements").mockResolvedValue(success([]));
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getDeviceMonitoring, {
+        deviceId: device.id,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(userId)
+        .query(RANGE)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+
+    it("rejects a reversed range at the contract (400)", async () => {
+      mockWarehouse();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getDeviceMonitoring, {
+        deviceId: device.id,
+      });
+
+      await testApp
+        .get(path)
+        .withAuth(userId)
+        .query({ ...RANGE, from: RANGE.to, to: RANGE.from })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 403 for another user's private device", async () => {
+      mockWarehouse();
+      const otherUser = await testApp.createTestUser({});
+      const device = await testApp.createIotDevice({ createdBy: otherUser });
+      const path = testApp.resolveOrpcPath(contract.iot.getDeviceMonitoring, {
+        deviceId: device.id,
+      });
+
+      await testApp.get(path).withAuth(userId).query(RANGE).expect(StatusCodes.FORBIDDEN);
     });
   });
 
@@ -370,10 +852,9 @@ describe("IotDeviceController", () => {
 
   describe("authorization", () => {
     // Each guarded route must delegate to AuthorizationService.can() with the
-    // resource/action declared by its @CanAccess decorator (device id in the
-    // `deviceId` param), and turn a denial into a 403. Mocking can() to deny
-    // pins the {resource, action} wiring, so a missing or wrong-action decorator
-    // fails here.
+    // resource/action from its @CanAccess decorator and turn a denial into 403.
+    // Mocking can() to deny pins that wiring, so a missing or wrong-action
+    // decorator fails here.
     it.each([
       {
         name: "get device",
@@ -420,7 +901,7 @@ describe("IotDeviceController", () => {
     ])("requires $action access to $name", async ({ action, request }) => {
       const canSpy = vi
         .spyOn(testApp.module.get(AuthorizationService), "can")
-        .mockResolvedValue({ allow: false, reason: "forbidden" });
+        .mockResolvedValue({ allow: false, reason: "forbidden", organizationId: null });
       const deviceId = faker.string.uuid();
 
       await request(deviceId, userId).expect(StatusCodes.FORBIDDEN);

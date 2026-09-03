@@ -10,7 +10,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
-import type { CreateProtocolRequestBody } from "@repo/api/domains/protocol/protocol.schema";
+import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -27,6 +27,7 @@ import type { WizardStep, WizardStepProps } from "@repo/ui/components/wizard-for
 import { IotProtocolRunner } from "../iot/iot-protocol-runner";
 import ProtocolCodeEditor from "../protocol-code-editor";
 import { NewProtocolDetailsCard } from "./new-protocol-details-card";
+import type { NewProtocolFormValues } from "./new-protocol-form-values";
 import { CodeTestStep, codeSchema } from "./steps/code-test-step";
 import { DetailsStep, detailsSchema } from "./steps/details-step";
 import { ReviewStep, reviewSchema } from "./steps/review-step";
@@ -83,11 +84,7 @@ export function NewProtocolForm() {
 
   // Helper to create DetailsStep with the details card
   const createDetailsStep = () => {
-    const DetailsCardWithMacros = ({
-      form,
-    }: {
-      form: UseFormReturn<CreateProtocolRequestBody>;
-    }) => (
+    const DetailsCardWithMacros = ({ form }: { form: UseFormReturn<NewProtocolFormValues> }) => (
       <NewProtocolDetailsCard
         form={form}
         selectedMacros={selectedMacros}
@@ -102,7 +99,7 @@ export function NewProtocolForm() {
       />
     );
 
-    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => {
+    const Component = (props: WizardStepProps<NewProtocolFormValues>) => {
       return <DetailsStep {...props} cards={[DetailsCardWithMacros]} />;
     };
     return Component;
@@ -110,7 +107,7 @@ export function NewProtocolForm() {
 
   // Helper to create CodeTestStep with IoT props
   const createCodeTestStep = () => {
-    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => (
+    const Component = (props: WizardStepProps<NewProtocolFormValues>) => (
       <CodeTestStep
         {...props}
         browserSupport={browserSupport}
@@ -126,13 +123,13 @@ export function NewProtocolForm() {
 
   // Helper to create ReviewStep with macros
   const createReviewStep = () => {
-    const Component = (props: WizardStepProps<CreateProtocolRequestBody>) => (
+    const Component = (props: WizardStepProps<NewProtocolFormValues>) => (
       <ReviewStep {...props} selectedMacros={selectedMacros} />
     );
     return Component;
   };
 
-  const steps: WizardStep<CreateProtocolRequestBody>[] = useMemo(
+  const steps: WizardStep<NewProtocolFormValues>[] = useMemo(
     () => [
       {
         title: t("newProtocol.detailsStepTitle"),
@@ -157,14 +154,18 @@ export function NewProtocolForm() {
     [t, browserSupport, selectedMacros],
   );
 
-  function onSubmit(data: CreateProtocolRequestBody) {
+  function onSubmit(data: NewProtocolFormValues) {
+    const code = zJsonValue.optional().parse(data.code);
+    if (code === undefined) return;
+
     setIsSubmitting(true);
     createProtocol({
       name: data.name,
       description: data.description,
-      code: data.code,
+      code,
       family: data.family,
       visibility: data.visibility,
+      organizationId: data.organizationId,
     });
   }
 
@@ -225,7 +226,7 @@ export function NewProtocolForm() {
         <DocsHelpLink path="/guide/devices-protocols/writing-protocols" />
       </div>
       <div onChange={handleFormChange} onInput={handleFormChange}>
-        <WizardForm<CreateProtocolRequestBody>
+        <WizardForm<NewProtocolFormValues>
           steps={steps}
           defaultValues={{
             name: "",

@@ -1,9 +1,11 @@
 "use client";
 
 import { useRegisterIotDevice } from "@/hooks/iot/useRegisterIotDevice/useRegisterIotDevice";
+import { useLocale } from "@/hooks/useLocale";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -37,36 +39,58 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { OrganizationPicker } from "../organizations/organization-picker";
+
 // Name stays optional without the contract's min(1) so an empty field is valid in the form;
 // it is stripped before submit.
 const registerIotDeviceFormSchema = zRegisterIotDeviceBody.extend({
   name: z.string().max(255).optional(),
 });
 
+// Phones register themselves through the app, never through this dialog.
+const registrableFamilies = zSensorFamily.options.filter((value) => value !== "mobile");
+
 type RegisterIotDeviceFormValues = z.infer<typeof registerIotDeviceFormSchema>;
 
 interface RegisterIotDeviceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Prefill for the register stitch: hardware just seen over a local connection. */
+  defaultSerialNumber?: string;
+  defaultDeviceType?: RegisterIotDeviceFormValues["deviceType"];
 }
 
-export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDeviceDialogProps) {
+export function RegisterIotDeviceDialog({
+  open,
+  onOpenChange,
+  defaultSerialNumber,
+  defaultDeviceType,
+}: RegisterIotDeviceDialogProps) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
+  const locale = useLocale();
+  const router = useRouter();
 
   const form = useForm<RegisterIotDeviceFormValues>({
     resolver: zodResolver(registerIotDeviceFormSchema),
-    defaultValues: { serialNumber: "", deviceType: undefined, name: "" },
+    defaultValues: {
+      serialNumber: defaultSerialNumber ?? "",
+      deviceType: defaultDeviceType,
+      name: "",
+    },
   });
 
   const { mutate: registerIotDevice, isPending } = useRegisterIotDevice({
-    onSuccess: () => {
+    // Success routes onward: the fresh detail page is where the next step
+    // (issuing a certificate) lives, and the toast names it.
+    onSuccess: (created) => {
       toast({
         title: t("iot.devices.dialog.createSuccess"),
-        description: t("iot.devices.dialog.createSuccessDetail"),
+        description: t("iot.devices.dialog.createSuccessNext"),
       });
       form.reset();
       onOpenChange(false);
+      router.push(`/${locale}/platform/devices/${created.id}`);
     },
   });
 
@@ -77,6 +101,7 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
         serialNumber: values.serialNumber,
         deviceType: values.deviceType,
         ...(name ? { name } : {}),
+        organizationId: values.organizationId,
       },
       {
         onError: () => {
@@ -129,7 +154,7 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {zSensorFamily.options.map((value) => (
+                      {registrableFamilies.map((value) => (
                         <SelectItem key={value} value={value}>
                           {getSensorFamilyLabel(value)}
                         </SelectItem>
@@ -160,6 +185,23 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="organizationId"
+              disabled={isPending}
+              render={({ field }) => (
+                <FormItem>
+                  <OrganizationPicker
+                    id="register-device-organization"
+                    value={field.value ?? undefined}
+                    onChange={(organizationId) => field.onChange(organizationId ?? undefined)}
+                    disabled={isPending}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <DialogFooter>
               <Button
                 type="button"
@@ -170,7 +212,11 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
                 {tCommon("common.cancel")}
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" aria-hidden />
+                )}
                 {t("iot.devices.dialog.submit")}
               </Button>
             </DialogFooter>

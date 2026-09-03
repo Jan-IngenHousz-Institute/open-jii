@@ -250,7 +250,7 @@ describe("ApproveJoinRequestUseCase", () => {
         releaseChecks();
       }
       await bothChecked;
-      return { allow: false, reason: "forbidden" };
+      return { allow: false, reason: "forbidden", organizationId: null };
     });
 
     const results = await Promise.all([

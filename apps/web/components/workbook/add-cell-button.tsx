@@ -44,12 +44,12 @@ const cellOptions: {
   icon: typeof FileText;
   color: string;
 }[] = [
-  { type: "markdown", label: "Markdown", icon: FileText, color: "#6F8596" },
-  { type: "protocol", label: "Protocol", icon: Microscope, color: "#2D3142" },
-  { type: "macro", label: "Macro", icon: Code, color: "#6C5CE7" },
-  { type: "command", label: "Command", icon: Terminal, color: "#119DA4" },
-  { type: "question", label: "Question", icon: HelpCircle, color: "#C58AAE" },
-  { type: "branch", label: "Branch", icon: GitBranch, color: "#F29D38" },
+  { type: "markdown", label: "Markdown", icon: FileText, color: "var(--node-instruction)" },
+  { type: "protocol", label: "Protocol", icon: Microscope, color: "var(--node-measurement)" },
+  { type: "macro", label: "Macro", icon: Code, color: "var(--node-analysis)" },
+  { type: "command", label: "Command", icon: Terminal, color: "var(--node-command)" },
+  { type: "question", label: "Question", icon: HelpCircle, color: "var(--node-question)" },
+  { type: "branch", label: "Branch", icon: GitBranch, color: "var(--node-branch)" },
 ];
 
 export function AddCellButton({
@@ -98,35 +98,32 @@ export function AddCellButton({
 
   if (variant === "bottom") {
     return (
-      <div
-        className="flex flex-col items-center justify-center gap-3 rounded-lg border border-[#EDF2F6] p-4"
-        style={{
-          background: "linear-gradient(270.03deg, #F5FFF8 0.02%, #F4F9FF 100.24%)",
-          boxShadow: "inset 0px 2px 16px rgba(0, 94, 94, 0.08)",
-        }}
-      >
+      <div className="border-border bg-canvas flex flex-col items-center justify-center gap-3 rounded-lg border p-4">
         {showEmptyState ? (
           <div className="flex flex-col items-center pb-2 pt-4">
-            <BookOpen className="mb-4 size-12 text-[#CDD5DB]" />
-            <p className="mb-1 text-sm font-medium text-[#011111]">Empty workbook</p>
-            <p className="text-xs text-[#68737B]">Add a cell to get started</p>
+            <BookOpen className="text-muted-foreground/60 mb-4 size-12" />
+            <p className="text-foreground mb-1 text-sm font-medium">Empty workbook</p>
+            <p className="text-muted-foreground text-xs">Add a cell to get started</p>
           </div>
         ) : (
-          <span className="text-[13px] font-normal leading-[21px] text-[#808080]">Add new</span>
+          <span className="text-muted-foreground text-[13px] font-normal leading-[21px]">
+            Add new
+          </span>
         )}
         <div className="flex flex-wrap items-center justify-center gap-3">
           {options.map((opt) =>
             wrapWithPicker(
               opt.type,
               opt.label,
-              <button
+              <Button
                 key={opt.label}
-                className="inline-flex h-[38px] items-center justify-center gap-1 rounded-lg bg-[#EDF2F6] px-4 text-[13px] font-semibold leading-[18px] text-[#011111] transition-colors hover:bg-[#E5EBF0]"
+                type="button"
+                variant="secondary"
                 onClick={() => handleClick(opt.type)}
               >
                 <opt.icon className="size-4" style={{ color: opt.color }} />
                 {opt.label}
-              </button>,
+              </Button>,
             ),
           )}
         </div>
@@ -144,7 +141,11 @@ export function AddCellButton({
               className={cn(
                 "bg-background shadow-xs relative z-10 flex items-center gap-1 rounded-full border px-1 py-0.5",
               )}
-              style={accentColor ? { borderColor: accentColor + "40" } : undefined}
+              style={
+                accentColor
+                  ? { borderColor: `color-mix(in srgb, ${accentColor} 25%, transparent)` }
+                  : undefined
+              }
             >
               <TooltipProvider delayDuration={100}>
                 {options.map((opt) => {
@@ -152,7 +153,7 @@ export function AddCellButton({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 rounded-full p-0 hover:bg-[#EDF2F6]"
+                      className="hover:bg-muted h-7 w-7 rounded-full p-0"
                       onClick={() => handleClick(opt.type)}
                     >
                       <opt.icon className="h-3.5 w-3.5" style={{ color: opt.color }} />
