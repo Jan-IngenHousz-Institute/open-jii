@@ -1,14 +1,18 @@
 "use client";
 
+import { Tile } from "@/components/iot-devices/monitoring/tile";
 import { useExperimentDeviceRemove } from "@/hooks/experiment/useExperimentDeviceRemove/useExperimentDeviceRemove";
 import { useExperimentDevices } from "@/hooks/experiment/useExperimentDevices/useExperimentDevices";
 import { useLocale } from "@/hooks/useLocale";
 import { resolveDeviceLabel } from "@/util/device-presentation";
-import { Cpu, Loader2 } from "lucide-react";
+import { AlertTriangle, Cpu, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-import type { ExperimentDevice } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
+import type {
+  ExperimentDeviceIdentity,
+  ExperimentDevicesOverview,
+} from "@repo/api/domains/experiment/devices/experiment-devices.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   AlertDialog,
@@ -25,7 +29,8 @@ import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { ExperimentDeviceRow } from "./experiment-device-row";
+import { summarizeExperimentDevices } from "./experiment-devices-summary";
+import { ExperimentDevicesTable } from "./experiment-devices-table";
 
 export function ExperimentDevicesPanel({ experimentId }: { experimentId: string }) {
   const { t } = useTranslation("iot");
@@ -33,9 +38,8 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   const locale = useLocale();
 
   const { data, isLoading, isError, refetch } = useExperimentDevices(experimentId);
-  const bindings = useMemo(() => data ?? [], [data]);
 
-  const [detaching, setDetaching] = useState<ExperimentDevice["device"] | null>(null);
+  const [detaching, setDetaching] = useState<ExperimentDeviceIdentity | null>(null);
 
   const { mutate: detach, isPending: isDetaching } = useExperimentDeviceRemove({
     onSuccess: () => {
@@ -60,15 +64,11 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
     );
   };
 
-  const renderRow = (binding: ExperimentDevice) => (
-    <ExperimentDeviceRow key={binding.device.id} binding={binding} onRequestDetach={setDetaching} />
-  );
-
   if (isLoading) {
     return <Skeleton className="h-16 w-full rounded-lg" />;
   }
 
-  if (isError) {
+  if (isError || data === undefined) {
     return (
       <EmptyState
         variant="error"
@@ -88,7 +88,7 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
     );
   }
 
-  if (bindings.length === 0) {
+  if (data.devices.length === 0) {
     return (
       <EmptyState
         icon={<Cpu aria-hidden />}
@@ -107,7 +107,16 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
 
   return (
     <>
-      <ul className="divide-y rounded-lg border">{bindings.map(renderRow)}</ul>
+      <ExperimentDevicesStats overview={data} />
+
+      {data.pipelineUnavailable && (
+        <p className="text-status-stale-foreground flex items-center gap-1.5 text-xs">
+          <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+          {t("iot.experimentDevices.pipelineUnavailable")}
+        </p>
+      )}
+
+      <ExperimentDevicesTable overview={data} onRequestDetach={setDetaching} />
 
       <AlertDialog
         open={detaching !== null}
@@ -148,5 +157,32 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverview }) {
+  const { t } = useTranslation("iot");
+  const summary = summarizeExperimentDevices(overview);
+
+  // Warehouse facts unknown: the data-derived counts stay blank rather than
+  // claiming silence from missing data.
+  const dataValue = (value: number) =>
+    overview.pipelineUnavailable ? t("iot.experimentDevices.lastDataUnavailable") : value;
+
+  return (
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Tile label={t("iot.experimentDevices.stats.onboarded")} className="bg-card">
+        <p className="text-lg font-semibold">{summary.onboarded}</p>
+      </Tile>
+      <Tile label={t("iot.experimentDevices.stats.sending")} className="bg-card">
+        <p className="text-lg font-semibold">{dataValue(summary.sending)}</p>
+      </Tile>
+      <Tile label={t("iot.experimentDevices.stats.silent")} className="bg-card">
+        <p className="text-lg font-semibold">{dataValue(summary.onboardedSilent)}</p>
+      </Tile>
+      <Tile label={t("iot.experimentDevices.stats.unbound")} className="bg-card">
+        <p className="text-lg font-semibold">{dataValue(summary.sendingUnbound)}</p>
+      </Tile>
+    </div>
   );
 }

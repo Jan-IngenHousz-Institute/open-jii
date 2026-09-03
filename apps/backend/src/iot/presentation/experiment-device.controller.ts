@@ -8,7 +8,7 @@ import { experimentDevicesContract } from "@repo/api/domains/experiment/devices/
 import { iotContract } from "@repo/api/domains/iot/iot.contract";
 
 import { CanAccess } from "../../authorization/can-access.decorator";
-import { formatDatesList } from "../../common/utils/date-formatter";
+import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { ListDeviceExperimentsUseCase } from "../application/use-cases/list-device-experiments/list-device-experiments";
@@ -95,7 +95,7 @@ export class ExperimentDeviceController {
       const result = await this.listExperimentDevicesUseCase.execute(input.id, session.user.id);
 
       if (result.isSuccess()) {
-        return formatDatesList(result.value);
+        return formatDates(result.value);
       }
 
       return throwOrpcFailure(result, this.logger, "listExperimentDevices");

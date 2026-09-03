@@ -548,7 +548,7 @@
     "experimentDevices": {
       "tabLabel": "Apparaten",
       "title": "Apparaten",
-      "description": "Apparaten die aan dit experiment zijn gekoppeld. Een gekoppeld apparaat kan zijn metingen hiernaartoe sturen.",
+      "description": "Apparaten die aan dit experiment zijn gekoppeld en apparaten die er de afgelopen 30 dagen data naartoe stuurden.",
       "loading": "Apparaten laden...",
       "empty": "Apparaten worden ingesteld via hun eigen tabblad Instellen, waar certificaten en configuratie staan.",
       "detach": "Ontkoppelen",
@@ -558,7 +558,27 @@
       "emptyTitle": "Nog geen apparaten streamen naar dit experiment",
       "openRegistry": "Apparaatregister openen",
       "detachTitle": "{{name}} verwijderen?",
-      "detachConfirmBody": "Het streamt niet meer naar dit experiment, en zijn procedures verdwijnen uit de volgende uitgegeven configuratie."
+      "detachConfirmBody": "Het streamt niet meer naar dit experiment, en zijn procedures verdwijnen uit de volgende uitgegeven configuratie.",
+      "stats": {
+        "onboarded": "Gekoppeld",
+        "sending": "Stuurt data (30 d)",
+        "silent": "Gekoppeld, geen recente data",
+        "unbound": "Stuurt data zonder koppeling"
+      },
+      "columns": {
+        "device": "Apparaat",
+        "state": "Status",
+        "lastData": "Data in dit experiment",
+        "onboarded": "Gekoppeld"
+      },
+      "notOnboarded": "Niet gekoppeld",
+      "unregistered": "Niet-geregistreerde zender",
+      "noAccess": "Geen toegang tot dit apparaat",
+      "measurements_one": "{{count}} meting",
+      "measurements_other": "{{count}} metingen",
+      "noRecentData": "Geen data in de afgelopen 30 dagen",
+      "lastDataUnavailable": "Niet beschikbaar",
+      "pipelineUnavailable": "Meetdata kon niet worden geladen; apparaten die alleen data stuurden ontbreken mogelijk."
     },
     "groups": {
       "addDevices": "Apparaten toevoegen",
