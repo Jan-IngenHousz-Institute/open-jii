@@ -15,6 +15,24 @@ export interface ExperimentDeviceDto {
   addedAt: Date;
 }
 
+// One device on the experiment's Devices tab: bound, observed publishing into
+// the experiment, or both. `device` is null for a publisher with no registry row.
+export interface ExperimentDeviceEntryDto {
+  device: ExperimentDeviceDto["device"] | null;
+  clientId: string;
+  binding: { addedBy: string; addedAt: Date } | null;
+  connectivity: { connected: boolean; lastSeenAt: string | null } | null;
+  lastDataAt: string | null;
+  recentData: { measurementCount: number; lastDataAt: string | null } | null;
+  canView: boolean;
+}
+
+export interface ExperimentDevicesOverviewDto {
+  devices: ExperimentDeviceEntryDto[];
+  window: { from: string; to: string };
+  pipelineUnavailable: boolean;
+}
+
 // An experiment a device serves, for the device-detail view.
 export type DeviceExperimentDto = Pick<ExperimentDto, "id" | "name" | "status"> & {
   addedAt: Date;

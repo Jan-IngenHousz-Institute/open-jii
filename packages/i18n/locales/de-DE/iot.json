@@ -548,7 +548,7 @@
     "experimentDevices": {
       "tabLabel": "Geräte",
       "title": "Geräte",
-      "description": "Geräte, die diesem Experiment zugeordnet sind. Ein zugeordnetes Gerät kann seine Messungen dorthin senden.",
+      "description": "Geräte, die diesem Experiment zugeordnet sind, und Geräte, die in den letzten 30 Tagen Daten hierher gesendet haben.",
       "loading": "Geräte werden geladen...",
       "empty": "Geräte werden über ihren eigenen Einrichtungs-Tab eingerichtet, wo Zertifikate und Konfiguration liegen.",
       "detach": "Entfernen",
@@ -558,7 +558,27 @@
       "emptyTitle": "Noch keine Geräte senden in dieses Experiment",
       "openRegistry": "Geräteregister öffnen",
       "detachTitle": "{{name}} entfernen?",
-      "detachConfirmBody": "Es sendet nicht mehr in dieses Experiment, und seine Prozeduren fehlen in der nächsten ausgegebenen Konfiguration."
+      "detachConfirmBody": "Es sendet nicht mehr in dieses Experiment, und seine Prozeduren fehlen in der nächsten ausgegebenen Konfiguration.",
+      "stats": {
+        "onboarded": "Zugeordnet",
+        "sending": "Sendet Daten (30 T.)",
+        "silent": "Zugeordnet, keine aktuellen Daten",
+        "unbound": "Sendet ohne Zuordnung"
+      },
+      "columns": {
+        "device": "Gerät",
+        "state": "Zustand",
+        "lastData": "Daten in diesem Experiment",
+        "onboarded": "Zugeordnet"
+      },
+      "notOnboarded": "Nicht zugeordnet",
+      "unregistered": "Nicht registrierter Sender",
+      "noAccess": "Kein Zugriff auf dieses Gerät",
+      "measurements_one": "{{count}} Messung",
+      "measurements_other": "{{count}} Messungen",
+      "noRecentData": "Keine Daten in den letzten 30 Tagen",
+      "lastDataUnavailable": "Nicht verfügbar",
+      "pipelineUnavailable": "Messdaten konnten nicht geladen werden; Geräte, die nur Daten gesendet haben, fehlen möglicherweise."
     },
     "groups": {
       "addDevices": "Geräte hinzufügen",

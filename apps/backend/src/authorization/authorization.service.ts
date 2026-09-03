@@ -5,6 +5,7 @@ import type { ResourceAction } from "@repo/auth/access";
 import {
   and,
   eq,
+  experimentDevices,
   experiments,
   deviceGroups,
   iotDevices,
@@ -53,6 +54,7 @@ export interface AccessDecision {
     | "resource-grant:user"
     | "resource-grant:team"
     | "resource-grant:org"
+    | "experiment-binding"
     | "public"
     | "forbidden"
     | "not-found";
@@ -67,8 +69,8 @@ export interface ResourceOwnership {
 /**
  * Single authorization entry point for org-scoped, per-resource access control.
  * Attribution order — owning-org role (Better Auth access-control matrix) →
- * per-resource grants (user → team → org) → public+read — decides which source a
- * decision is credited to. Access is the strongest any source grants: a tier that
+ * per-resource grants (user → team → org) → experiment binding (device read only)
+ * → public+read — decides which source a decision is credited to. Access is the strongest any source grants: a tier that
  * does not cover the action falls through rather than denying. No platform-admin tier.
  */
 @Injectable()
@@ -176,12 +178,47 @@ export class AuthorizationService {
       }
     }
 
-    // 4. Public resources are world-readable.
+    // 4. A device bound to an experiment is readable by that experiment's
+    //    collaborators: whoever may see the data may see the hardware behind it.
+    //    Read only, and never through the public tier: devices are operational
+    //    infrastructure, not published results.
+    if (
+      req.resourceType === "device" &&
+      req.action === "read" &&
+      (await this.readableThroughExperimentBinding(userId, req.resourceId, executor))
+    ) {
+      return { allow: true, reason: "experiment-binding", organizationId };
+    }
+
+    // 5. Public resources are world-readable.
     if (ownership.visibility === "public" && req.action === "read") {
       return { allow: true, reason: "public", organizationId };
     }
 
     return { allow: false, reason: "forbidden", organizationId };
+  }
+
+  private async readableThroughExperimentBinding(
+    userId: string,
+    deviceId: string,
+    executor: DbOrTx,
+  ): Promise<boolean> {
+    const bindings = await executor
+      .select({ experimentId: experimentDevices.experimentId })
+      .from(experimentDevices)
+      .where(eq(experimentDevices.deviceId, deviceId));
+
+    for (const { experimentId } of bindings) {
+      const decision = await this.can(
+        userId,
+        { resourceType: "experiment", resourceId: experimentId, action: "read" },
+        executor,
+      );
+      if (decision.allow && decision.reason !== "public") {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
