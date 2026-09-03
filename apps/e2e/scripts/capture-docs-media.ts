@@ -119,6 +119,22 @@ function extractPoster(input: string, output: string): void {
   ], input);
 }
 
+/** Answers the SDK's flag request locally with the given flags on; nothing else is touched. */
+async function pinFeatureFlags(page: Page, flags: readonly string[]): Promise<void> {
+  const body = {
+    errorsWhileComputingFlags: false,
+    flags: Object.fromEntries(
+      flags.map((key) => [key, { key, enabled: true, variant: null, reason: { code: "pinned" } }]),
+    ),
+    featureFlags: Object.fromEntries(flags.map((key) => [key, true])),
+    featureFlagPayloads: {},
+    sessionRecording: false,
+  };
+  await page.route("**/ingest/flags/**", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) }),
+  );
+}
+
 async function preparePage(page: Page, theme: Options["theme"], freeze: boolean): Promise<void> {
   await page.addStyleTag({ content: DEV_CHROME_CSS });
   if (freeze) await page.addStyleTag({ content: STILLNESS_CSS });
@@ -139,6 +155,7 @@ async function captureShot(
   const page = await context.newPage();
   try {
     if (shot.webauthn) await enableVirtualAuthenticator(await context.newCDPSession(page));
+    if (shot.featureFlags) await pinFeatureFlags(page, shot.featureFlags);
     const route = typeof shot.route === "string" ? shot.route : await shot.route();
     await page.goto(`${baseUrl}/${locale}${route}`, { waitUntil: "networkidle" });
     await preparePage(page, options.theme, !isVideo);
