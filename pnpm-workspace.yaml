@@ -28,7 +28,7 @@ overrides:
   postcss: ">=8.5.18"
   "serialize-javascript@6": 7.0.5
   "ws@8": 8.21.0
-  "qs@6": 6.15.2
+  "qs@6": 6.16.0
   "multer@2": 2.2.0
   lightningcss: 1.30.1
 
