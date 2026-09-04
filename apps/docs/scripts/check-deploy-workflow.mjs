@@ -11,6 +11,7 @@ const repoRoot = path.resolve(appRoot, "../..");
 const deployWorkflowPath = path.join(repoRoot, ".github/workflows/deploy-docs.yml");
 const orchestratorWorkflowPath = path.join(repoRoot, ".github/workflows/deploy.yml");
 const prWorkflowPath = path.join(repoRoot, ".github/workflows/pr.yml");
+const docsPackagePath = path.join(appRoot, "package.json");
 
 function workflowSteps(workflow, job) {
   const steps = workflow.jobs?.[job]?.steps;
@@ -235,6 +236,7 @@ for (const requiredPath of [
   "asyncapi.yaml",
   "apps/data/src/lib/openjii/openjii/centrum/schemas.py",
   "apps/data/src/pipelines/centrum/bronze/raw_data.py",
+  "apps/docs/package.json",
 ]) {
   assert.ok(contractStep.run.includes(requiredPath), `MQTT contract guard omits ${requiredPath}`);
 }
@@ -252,6 +254,12 @@ assert.match(
 assert.ok(
   driftSteps.indexOf(setupStep) < driftSteps.indexOf(contractCheckStep),
   "MQTT contract check would run before pnpm is installed",
+);
+const docsPackage = JSON.parse(await readFile(docsPackagePath, "utf8"));
+assert.equal(
+  docsPackage.scripts?.["check-mqtt-contract"],
+  "node scripts/check-mqtt-contract.mjs",
+  "docs package no longer exposes the MQTT contract checker used by CI",
 );
 
 const runbook = await readFile(path.join(appRoot, "ROLLBACK.md"), "utf8");
