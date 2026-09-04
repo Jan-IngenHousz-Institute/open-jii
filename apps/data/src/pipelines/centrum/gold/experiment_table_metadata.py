@@ -8,10 +8,10 @@ import dlt
 from pyspark.sql import functions as F
 
 from openjii.centrum import (
+    ENRICHED_MACRO_DATA_VIEW,
+    ENRICHED_RAW_DATA_VIEW,
     ENRICHED_UPLOADED_DATA_VIEW,
     EXPERIMENT_DEVICE_DATA_TABLE,
-    EXPERIMENT_MACRO_DATA_TABLE,
-    EXPERIMENT_RAW_DATA_TABLE,
     EXPERIMENT_TABLE_METADATA,
     METADATA_SOURCE_TABLE,
 )
@@ -56,8 +56,7 @@ def experiment_table_metadata():
     )
 
     macro_metadata = (
-        dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
-        .filter("macro_output IS NOT NULL")
+        dlt.read(ENRICHED_MACRO_DATA_VIEW)
         .groupBy("experiment_id", "macro_id")
         .agg(
             F.count("*").alias("row_count"),
@@ -79,7 +78,7 @@ def experiment_table_metadata():
     )
 
     raw_data_metadata = (
-        dlt.read(EXPERIMENT_RAW_DATA_TABLE)
+        dlt.read(ENRICHED_RAW_DATA_VIEW)
         .groupBy("experiment_id")
         .agg(
             F.count("*").alias("row_count"),
