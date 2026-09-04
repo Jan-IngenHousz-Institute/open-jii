@@ -31,16 +31,37 @@ const PUBLISHER_ONLY = {
   workbook_id: "mobile-local macro replay aid; the pipeline keys on workbook_version_id",
 };
 
+function structFieldNames(schemaBlock) {
+  const fieldCalls = [...schemaBlock.matchAll(/\bStructField\s*\(/g)].length;
+  const names = [...schemaBlock.matchAll(/\bStructField\s*\(\s*(["'])([^"']+)\1/g)].map(
+    (match) => match[2],
+  );
+  assert.equal(
+    names.length,
+    fieldCalls,
+    `parsed ${names.length} of ${fieldCalls} StructField declarations; field names must be string literals`,
+  );
+  return names;
+}
+
 function structFields(source, schemaName) {
   const start = source.indexOf(`${schemaName} = StructType(`);
   assert.notEqual(start, -1, `${schemaName} not found in ${path.basename(schemasPath)}`);
   const end = source.indexOf("\n)\n", start);
   assert.notEqual(end, -1, `${schemaName} block is not terminated`);
-  const names = [...source.slice(start, end).matchAll(/StructField\("([^"]+)"/g)].map((m) => m[1]);
+  const names = structFieldNames(source.slice(start, end));
   // A silently-empty match set would make every assertion below pass vacuously.
   assert.ok(names.length >= 15, `${schemaName} parsed as only ${names.length} fields`);
   return names;
 }
+
+assert.deepEqual(
+  structFieldNames(`StructField(
+    'line_wrapped', StringType(), True
+  )\nStructField("same_line", StringType(), True)`),
+  ["line_wrapped", "same_line"],
+  "StructField parsing must accept line breaks and either Python quote style",
+);
 
 function jsonPathExtractions(source) {
   const names = [...source.matchAll(/"\$\.([A-Za-z0-9_]+)"/g)].map((m) => m[1]);

@@ -173,6 +173,7 @@ jobs:
               asyncapi.yaml \
               apps/data/src/lib/openjii/openjii/centrum/schemas.py \
               apps/data/src/pipelines/centrum/bronze/raw_data.py \
+              apps/docs/package.json \
               apps/docs/scripts/check-mqtt-contract.mjs); then
             echo "::error::Could not diff against base $BASE_SHA; refusing to skip the MQTT ingest contract check."
             exit 1
