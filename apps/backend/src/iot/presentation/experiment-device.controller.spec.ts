@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import type { ExperimentDeviceList } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
+import type { ExperimentDevicesOverview } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
 import type {
   DeviceExperimentList,
   DeviceOnboardingConfig,
@@ -11,6 +11,7 @@ import { eq, experiments } from "@repo/database";
 
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
+import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { success } from "../../common/utils/fp-utils";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
@@ -34,6 +35,11 @@ describe("ExperimentDeviceController", () => {
     analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
     const awsAdapter = testApp.module.get(AwsAdapter);
     vi.spyOn(awsAdapter, "getIotDataEndpoint").mockResolvedValue(success(ENDPOINT));
+    // The list is an orchestrated read; keep its enrichments quiet and offline here.
+    vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
+    const databricksAdapter = testApp.module.get(DatabricksAdapter);
+    vi.spyOn(databricksAdapter, "getExperimentPublishers").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
   });
 
   afterEach(() => {
@@ -119,12 +125,12 @@ describe("ExperimentDeviceController", () => {
     const listPath = testApp.resolveOrpcPath(contract.experiments.listExperimentDevices, {
       id: experiment.id,
     });
-    const listed: SuperTestResponse<ExperimentDeviceList> = await testApp
+    const listed: SuperTestResponse<ExperimentDevicesOverview> = await testApp
       .get(listPath)
       .withAuth(userId)
       .expect(StatusCodes.OK);
-    expect(listed.body).toHaveLength(1);
-    expect(listed.body[0].device.id).toBe(device.id);
+    expect(listed.body.devices).toHaveLength(1);
+    expect(listed.body.devices[0].device?.id).toBe(device.id);
 
     const removePath = testApp.resolveOrpcPath(contract.experiments.removeExperimentDevice, {
       id: experiment.id,
@@ -132,11 +138,11 @@ describe("ExperimentDeviceController", () => {
     });
     await testApp.delete(removePath).withAuth(userId).expect(StatusCodes.NO_CONTENT);
 
-    const after: SuperTestResponse<ExperimentDeviceList> = await testApp
+    const after: SuperTestResponse<ExperimentDevicesOverview> = await testApp
       .get(listPath)
       .withAuth(userId)
       .expect(StatusCodes.OK);
-    expect(after.body).toEqual([]);
+    expect(after.body.devices).toEqual([]);
   });
 
   it("detaches a device from a since-archived experiment (204)", async () => {
@@ -295,11 +301,11 @@ describe("ExperimentDeviceController", () => {
     const listPath = testApp.resolveOrpcPath(contract.experiments.listExperimentDevices, {
       id: experiment.id,
     });
-    const listed: SuperTestResponse<ExperimentDeviceList> = await testApp
+    const listed: SuperTestResponse<ExperimentDevicesOverview> = await testApp
       .get(listPath)
       .withAuth(orgAdmin)
       .expect(StatusCodes.OK);
-    expect(listed.body).toHaveLength(1);
+    expect(listed.body.devices).toHaveLength(1);
 
     const removePath = testApp.resolveOrpcPath(contract.experiments.removeExperimentDevice, {
       id: experiment.id,

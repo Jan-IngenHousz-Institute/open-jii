@@ -33,6 +33,13 @@ export interface GroupLifecycleEventRow {
   disconnectReason: string | null;
 }
 
+/** One publisher's volume and last arrival inside one experiment's data. */
+export interface ExperimentPublisherRow {
+  clientId: string | null;
+  count: number;
+  lastDataAt: string | null;
+}
+
 /** One time bucket of measurement volume, attributed to an experiment. */
 export interface DeviceThroughputRow {
   bucketStart: string | null;
@@ -117,6 +124,12 @@ export interface DatabricksPort {
     to: string,
     limit: number,
   ): Promise<Result<GroupFirmwareRow[]>>;
+  getExperimentPublishers(
+    experimentId: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<ExperimentPublisherRow[]>>;
   getDeviceLifecycleEvents(
     thingName: string,
     from: string,

@@ -39,6 +39,35 @@ structure, message schema, and connection details are developer material: see
 [Data ingestion](/developers/architecture/data-ingestion) in the Developers tab
 and the [MQTT API reference](/api/mqtt).
 
+## See the devices behind an experiment
+
+Every experiment has a **Devices** tab. It lists two kinds of device together:
+
+- Devices **onboarded** to the experiment from their own Onboarding tab.
+- Devices that **sent data** into the experiment in the last 30 days, whether or
+  not they were onboarded. A publisher that matches no registered device is
+  listed by its client id as an unregistered publisher.
+
+Four tiles summarize the roster: onboarded, sending data, onboarded with no
+recent data, and sending without onboarding. Each row shows the device's status,
+live broker connectivity, how many measurements it sent into this experiment in
+the window and when the last one arrived, and its onboarding date. Onboarded
+devices can be detached from here.
+
+![The experiment Devices tab: four summary tiles above a table of onboarded gateways, one gateway sending without onboarding, and an unregistered publisher listed by client id](/img/guide/web/experiment-devices.webp)
+
+Anyone who can view or edit the experiment can open an onboarded device from this
+tab, even without their own access to the device. A device that only sent data
+still appears with its facts, but opens only if you already have access to it;
+a lock marks those rows. The tab is not shown to people who reach a public
+experiment through public visibility alone.
+
+<Callout type="info">
+  The measurement counts and last-arrival times come from the data pipeline and lag behind the live
+  broker by the pipeline's cadence. If the pipeline cannot be reached, the tab says so and does not
+  count any device as silent.
+</Callout>
+
 <Callout type="info">
   `ambyte` and `ambit` are distinct stored values today, but their history is not clean: database
   migration `0037` remapped existing `ambit` rows to `ambyte`, and migration `0038` later re-added

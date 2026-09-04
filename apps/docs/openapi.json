@@ -4027,78 +4027,213 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "device": {
+                  "type": "object",
+                  "properties": {
+                    "devices": {
+                      "type": "array",
+                      "items": {
                         "type": "object",
                         "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "thingName": {
-                            "type": "string"
-                          },
-                          "serialNumber": {
-                            "type": "string"
-                          },
-                          "name": {
+                          "device": {
                             "anyOf": [
                               {
-                                "type": "string"
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "thingName": {
+                                    "type": "string"
+                                  },
+                                  "serialNumber": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "deviceType": {
+                                    "enum": [
+                                      "multispeq",
+                                      "ambyte",
+                                      "minipar",
+                                      "generic",
+                                      "ambit",
+                                      "mobile"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "enum": [
+                                      "pending",
+                                      "active",
+                                      "rotating",
+                                      "revoked"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "thingName",
+                                  "serialNumber",
+                                  "name",
+                                  "deviceType",
+                                  "status"
+                                ]
                               },
                               {
                                 "type": "null"
                               }
                             ]
                           },
-                          "deviceType": {
-                            "enum": [
-                              "multispeq",
-                              "ambyte",
-                              "minipar",
-                              "generic",
-                              "ambit",
-                              "mobile"
-                            ],
+                          "clientId": {
                             "type": "string"
                           },
-                          "status": {
-                            "enum": [
-                              "pending",
-                              "active",
-                              "rotating",
-                              "revoked"
-                            ],
-                            "type": "string"
+                          "binding": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "addedBy": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "addedAt": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                  }
+                                },
+                                "required": [
+                                  "addedBy",
+                                  "addedAt"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "connectivity": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "connected": {
+                                    "type": "boolean"
+                                  },
+                                  "lastSeenAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "connected",
+                                  "lastSeenAt"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lastDataAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "recentData": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "measurementCount": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "lastDataAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "measurementCount",
+                                  "lastDataAt"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "canView": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
-                          "id",
-                          "thingName",
-                          "serialNumber",
-                          "name",
-                          "deviceType",
-                          "status"
+                          "device",
+                          "clientId",
+                          "binding",
+                          "connectivity",
+                          "lastDataAt",
+                          "recentData",
+                          "canView"
                         ]
-                      },
-                      "addedBy": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "addedAt": {
-                        "type": "string",
-                        "format": "date-time"
                       }
                     },
-                    "required": [
-                      "device",
-                      "addedBy",
-                      "addedAt"
-                    ]
-                  }
+                    "window": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "to": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to"
+                      ]
+                    },
+                    "pipelineUnavailable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "devices",
+                    "window",
+                    "pipelineUnavailable"
+                  ]
                 }
               }
             }

@@ -20,6 +20,7 @@ import type {
   DeviceMeasurementRow,
   DevicePayloadBreakdownRow,
   DeviceThroughputRow,
+  ExperimentPublisherRow,
   GroupExperimentRow,
   GroupFirmwareRow,
   GroupLifecycleEventRow,
@@ -572,6 +573,46 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         eventType: row[index.event_type] ?? null,
         eventTimestamp: this.toIsoOrNull(row[index.event_timestamp]),
         disconnectReason: row[index.disconnect_reason] ?? null,
+      })),
+    );
+  }
+
+  /**
+   * Every client id that published into one experiment in the window, with
+   * volume and last arrival. Newest publishers first, so a hit ceiling can
+   * only shed the ones that went quiet earliest.
+   */
+  async getExperimentPublishers(
+    experimentId: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<ExperimentPublisherRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["experiment_id", experimentId]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "client_id" }],
+        functions: [
+          { column: "*", function: "count", alias: "measurement_count" },
+          { column: "timestamp", function: "max", alias: "last_data_at" },
+        ],
+      },
+      orderBy: "last_data_at",
+      orderDirection: "DESC",
+      limit,
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        clientId: row[index.client_id] ?? null,
+        count: Number(row[index.measurement_count] ?? 0),
+        lastDataAt: this.toIsoOrNull(row[index.last_data_at]),
       })),
     );
   }

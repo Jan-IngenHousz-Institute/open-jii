@@ -2458,6 +2458,35 @@ describe("DatabricksAdapter", () => {
       expect(captured.statement).toContain("LIMIT 50");
     });
 
+    it("maps one experiment's publishers, newest arrival first", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["client_id", "measurement_count", "last_data_at"],
+        [
+          ["AMBYTE_A", "12", "2026-08-17T11:00:00.000Z"],
+          [null, "3", "2026-08-17T09:00:00.000Z"],
+        ],
+        captured,
+      );
+
+      const result = await databricksAdapter.getExperimentPublishers(
+        "11111111-1111-4111-8111-111111111111",
+        FROM,
+        TO,
+        500,
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { clientId: "AMBYTE_A", count: 12, lastDataAt: "2026-08-17T11:00:00.000Z" },
+        { clientId: null, count: 3, lastDataAt: "2026-08-17T09:00:00.000Z" },
+      ]);
+      expect(captured.statement).toContain("11111111-1111-4111-8111-111111111111");
+      expect(captured.statement).toContain("GROUP BY `client_id`");
+      expect(captured.statement).toContain("ORDER BY `last_data_at` DESC");
+      expect(captured.statement).toContain("LIMIT 500");
+    });
+
     it("maps grouped experiment attribution rows", async () => {
       const captured: CapturedStatement = {};
       mockGroupSql(

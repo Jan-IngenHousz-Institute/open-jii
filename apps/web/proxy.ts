@@ -50,7 +50,9 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match i18n routes
-    "/((?!api|static|.*\\..*|_next).*)",
+    // Match i18n routes. `ingest` is the PostHog reverse proxy: its flags and
+    // capture paths carry no file extension, so without this exclusion the
+    // locale redirect turns them into 404s and no feature flag ever loads.
+    "/((?!api|ingest|static|.*\\..*|_next).*)",
   ],
 };
