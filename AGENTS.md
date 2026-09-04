@@ -62,6 +62,7 @@ Git, and `jq`; a missing `jq` prints a warning and skips the hook.
 | `openjii-mobile-device`  | Getting a dev build onto a real Android phone, over cable or Wi-Fi.       |
 | `openjii-mobile-control` | Driving a connected phone to verify or reproduce mobile behaviour.        |
 | `openjii-docs-update`    | A change alters what a user sees or does, so docs and screenshots follow. |
+| `expo-skill-lookup`      | Any Expo/EAS task: fetches the matching upstream Expo skill on demand.    |
 | `unslop`                 | Writing or editing prose a human will read: docs, PR bodies, changelogs.  |
 
 `unslop` comes from a third party rather than from this repo, so it does not open with

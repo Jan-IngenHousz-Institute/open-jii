@@ -2,6 +2,9 @@
 
 FROM public.ecr.aws/lambda/nodejs:24
 
+RUN dnf --releasever=latest upgrade -y openssl-fips-provider-latest \
+    && dnf clean all
+
 # Remove npm/corepack so sandbox code cannot install packages.
 RUN rm -rf /var/lang/lib/node_modules/npm /var/lang/lib/node_modules/corepack \
            /var/lang/bin/npm /var/lang/bin/npx /var/lang/bin/corepack
