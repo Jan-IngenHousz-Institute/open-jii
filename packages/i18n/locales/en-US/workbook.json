@@ -44,7 +44,8 @@
       "name": "Name",
       "usedBy": "Used by",
       "user": "User",
-      "updated": "Updated"
+      "updated": "Updated",
+      "activity": "Activity"
     },
     "actions": {
       "open": "Open",

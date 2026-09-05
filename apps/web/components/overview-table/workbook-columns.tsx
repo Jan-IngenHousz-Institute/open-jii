@@ -1,5 +1,6 @@
 "use client";
 
+import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
 import { useLocale } from "@/hooks/useLocale";
@@ -11,6 +12,7 @@ import { GitFork, MoreHorizontal, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import type { WorkbookListEntry } from "@repo/api/domains/workbook/workbook.schema";
 import type { WorkbookListItem } from "@repo/api/domains/workbook/workbook.schema";
 import { useTranslation } from "@repo/i18n";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
@@ -113,7 +115,7 @@ function initialsOf(name: string): string {
 export function getWorkbookColumns(
   t: (key: string, options?: Record<string, unknown>) => string,
   locale: string,
-): OverviewTableColumn<WorkbookListItem>[] {
+): OverviewTableColumn<WorkbookListEntry>[] {
   return [
     {
       header: t("workbooks.columns.name"),
@@ -175,6 +177,13 @@ export function getWorkbookColumns(
           </div>
         );
       },
+    },
+    {
+      header: t("workbooks.columns.activity"),
+      className: "w-48",
+      cell: (workbook) => (
+        <ResourceMetricsCell activity={workbook.activity ?? null} windowDays={30} />
+      ),
     },
     {
       header: t("workbooks.columns.updated"),

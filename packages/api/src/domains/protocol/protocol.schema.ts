@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
+import { zResourceSeries } from "../metrics/metrics.schema";
 import { zVisibility } from "../visibility/visibility.schema";
 
 export const zSensorFamily = z.enum([
@@ -66,7 +67,13 @@ export const zProtocol = z.object({
 // List rows intentionally skip recursive code validation. A protocol document
 // can be large, and oRPC validates every output synchronously; detail and
 // mutation responses keep the precise zJsonValue boundary through zProtocol.
-export const zProtocolList = z.array(zProtocol.extend({ code: z.unknown() }));
+const zProtocolListEntry = zProtocol.extend({
+  code: z.unknown(),
+  /** Present on the paginated list, which reads it for the rows it returns. */
+  activity: zResourceSeries.nullable().optional(),
+});
+
+export const zProtocolList = z.array(zProtocolListEntry);
 
 /**
  * A single protocol plus the caller's effective capabilities on it. Detail route
@@ -86,7 +93,7 @@ export const zProtocolFilterQuery = z
   })
   .merge(zPaginationQuery);
 
-export const zProtocolPaginatedList = zPaginated(zProtocol.extend({ code: z.unknown() }));
+export const zProtocolPaginatedList = zPaginated(zProtocolListEntry);
 
 /** Array when the caller sent no `page`, envelope when they did. */
 export const zProtocolListResponse = z.union([zProtocolList, zProtocolPaginatedList]);

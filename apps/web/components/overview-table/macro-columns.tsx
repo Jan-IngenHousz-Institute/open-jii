@@ -1,11 +1,12 @@
 import { CompatibleProtocolsCell } from "@/components/overview-table/macro-protocols-cell";
+import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
 import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
 import Link from "next/link";
 
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { MacroListItem } from "@repo/api/domains/macro/macro.schema";
 import { Badge } from "@repo/ui/components/badge";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { cn } from "@repo/ui/lib/utils";
@@ -16,7 +17,7 @@ import { overviewTableText } from "./overview-table";
 export function getMacroColumns(
   t: (key: string) => string,
   locale: string,
-): OverviewTableColumn<Macro>[] {
+): OverviewTableColumn<MacroListItem>[] {
   return [
     {
       header: t("macros.columns.name"),
@@ -66,6 +67,11 @@ export function getMacroColumns(
       header: t("macros.columns.protocols"),
       className: "hidden w-56 md:table-cell",
       cell: (macro) => <CompatibleProtocolsCell macroId={macro.id} />,
+    },
+    {
+      header: t("macros.columns.activity"),
+      className: "w-48",
+      cell: (macro) => <ResourceMetricsCell activity={macro.activity ?? null} windowDays={30} />,
     },
     {
       header: t("macros.columns.updated"),

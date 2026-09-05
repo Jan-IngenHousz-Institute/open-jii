@@ -738,6 +738,43 @@
                                 "updatedAt"
                               ]
                             }
+                          },
+                          "activity": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "measurements": {
+                                    "type": "number"
+                                  },
+                                  "days": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "date": {
+                                          "type": "string"
+                                        },
+                                        "measurements": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "date",
+                                        "measurements"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "measurements",
+                                  "days"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -993,6 +1030,43 @@
                                     "updatedAt"
                                   ]
                                 }
+                              },
+                              "activity": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "measurements": {
+                                        "type": "number"
+                                      },
+                                      "days": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "date": {
+                                              "type": "string"
+                                            },
+                                            "measurements": {
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "date",
+                                            "measurements"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "measurements",
+                                      "days"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [
@@ -17991,6 +18065,43 @@
                               "public"
                             ],
                             "type": "string"
+                          },
+                          "activity": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "measurements": {
+                                    "type": "number"
+                                  },
+                                  "days": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "date": {
+                                          "type": "string"
+                                        },
+                                        "measurements": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "date",
+                                        "measurements"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "measurements",
+                                  "days"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -18110,6 +18221,43 @@
                                   "public"
                                 ],
                                 "type": "string"
+                              },
+                              "activity": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "measurements": {
+                                        "type": "number"
+                                      },
+                                      "days": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "date": {
+                                              "type": "string"
+                                            },
+                                            "measurements": {
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "date",
+                                            "measurements"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "measurements",
+                                      "days"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [
@@ -19364,10 +19512,13 @@
                         {
                           "type": "object",
                           "properties": {
+                            "label": {
+                              "type": "string"
+                            },
                             "name": {
                               "type": "string"
                             },
-                            "count30d": {
+                            "observations": {
                               "type": "number"
                             },
                             "median": {
@@ -19375,8 +19526,9 @@
                             }
                           },
                           "required": [
+                            "label",
                             "name",
-                            "count30d",
+                            "observations",
                             "median"
                           ]
                         },
@@ -19390,10 +19542,13 @@
                         {
                           "type": "object",
                           "properties": {
+                            "label": {
+                              "type": "string"
+                            },
                             "name": {
                               "type": "string"
                             },
-                            "count30d": {
+                            "observations": {
                               "type": "number"
                             },
                             "median": {
@@ -19401,8 +19556,9 @@
                             }
                           },
                           "required": [
+                            "label",
                             "name",
-                            "count30d",
+                            "observations",
                             "median"
                           ]
                         },
@@ -19628,7 +19784,8 @@
             "schema": {
               "enum": [
                 "organization",
-                "mine"
+                "mine",
+                "experiment"
               ],
               "type": "string"
             },
@@ -19637,6 +19794,17 @@
           },
           {
             "name": "organizationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "experimentId",
             "in": "query",
             "required": false,
             "schema": {
@@ -19658,7 +19826,8 @@
                     "scope": {
                       "enum": [
                         "organization",
-                        "mine"
+                        "mine",
+                        "experiment"
                       ],
                       "type": "string"
                     },
@@ -19755,6 +19924,78 @@
                     "scope",
                     "scoped",
                     "baseline",
+                    "computedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/metrics/resource-metrics": {
+      "get": {
+        "operationId": "metrics.getResourceMetrics",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "experiment",
+                "protocol",
+                "macro",
+                "workbook"
+              ],
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "experiment",
+                        "protocol",
+                        "macro",
+                        "workbook"
+                      ],
+                      "type": "string"
+                    },
+                    "totalMeasurements": {
+                      "type": "number"
+                    },
+                    "activeCount": {
+                      "type": "number"
+                    },
+                    "windowDays": {
+                      "type": "number"
+                    },
+                    "computedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "totalMeasurements",
+                    "activeCount",
+                    "windowDays",
                     "computedAt"
                   ]
                 }
@@ -21785,6 +22026,43 @@
                               "public"
                             ],
                             "type": "string"
+                          },
+                          "activity": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "measurements": {
+                                    "type": "number"
+                                  },
+                                  "days": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "date": {
+                                          "type": "string"
+                                        },
+                                        "measurements": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "date",
+                                        "measurements"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "measurements",
+                                  "days"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -21900,6 +22178,43 @@
                                   "public"
                                 ],
                                 "type": "string"
+                              },
+                              "activity": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "measurements": {
+                                        "type": "number"
+                                      },
+                                      "days": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "date": {
+                                              "type": "string"
+                                            },
+                                            "measurements": {
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "date",
+                                            "measurements"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "measurements",
+                                      "days"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [
@@ -26663,6 +26978,43 @@
                               "type": "integer",
                               "minimum": 0
                             }
+                          },
+                          "activity": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "measurements": {
+                                    "type": "number"
+                                  },
+                                  "days": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "date": {
+                                          "type": "string"
+                                        },
+                                        "measurements": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "date",
+                                        "measurements"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "measurements",
+                                  "days"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -26774,6 +27126,43 @@
                                   "type": "integer",
                                   "minimum": 0
                                 }
+                              },
+                              "activity": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "measurements": {
+                                        "type": "number"
+                                      },
+                                      "days": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "date": {
+                                              "type": "string"
+                                            },
+                                            "measurements": {
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "date",
+                                            "measurements"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "measurements",
+                                      "days"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [

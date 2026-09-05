@@ -8,6 +8,7 @@ import { GetPublicMetricsUseCase, PUBLIC_METRICS_CACHE_KEY } from "./get-public-
 
 const totals = {
   totalMeasurements: 1_000_000,
+  totalVolumeBytes: 6_000_000,
   totalUploadedRows: 50,
   totalMacroExecutions: 200,
   devicesAllTime: 9,
@@ -45,6 +46,8 @@ const windows = {
 
 const poolFacts = {
   sessionMedianMeasurements: 45,
+  meanArrivalGapSeconds: 538.65,
+  currentStreakDays: 2,
   deviceEnduranceDays: 94,
   simultaneityPeakDevices: 14,
   timezonesAllTime: 14,
@@ -94,7 +97,6 @@ describe("GetPublicMetricsUseCase", () => {
     });
 
     totalsSpy = vi.spyOn(adapter, "getPublicPlatformTotals").mockResolvedValue(success(totals));
-    vi.spyOn(adapter, "getPublicTotalVolumeBytes").mockResolvedValue(success(6_000_000));
     vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(success(daily));
     vi.spyOn(adapter, "getPublicFamilyTotals").mockResolvedValue(
       success([{ family: "multispeq", measurements: 900 }]),
@@ -106,8 +108,18 @@ describe("GetPublicMetricsUseCase", () => {
     vi.spyOn(adapter, "getTopParameter").mockImplementation((category) =>
       Promise.resolve(
         category === "derived"
-          ? success({ name: "Phi2", count30d: 4214, median: 0.62 })
-          : success({ name: "humidity", count30d: 4797, median: 42.85 }),
+          ? success({
+              label: "Photosystem II efficiency (Phi2)",
+              name: "Phi2",
+              observations: 4214,
+              median: 0.62,
+            })
+          : success({
+              label: "Relative humidity",
+              name: "humidity",
+              observations: 4797,
+              median: 42.85,
+            }),
       ),
     );
     vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(success(poolFacts));
@@ -154,10 +166,8 @@ describe("GetPublicMetricsUseCase", () => {
 
     // 2026-08-25 is not adjacent to 08-27, so the streak is the last two days.
     expect(kinds.get("streak")).toEqual({ kind: "streak", days: 2 });
-    expect(kinds.get("pace")).toEqual({
-      kind: "pace",
-      secondsPerMeasurement: Math.round((30 * 24 * 3600) / 4_812),
-    });
+    // The measured gap between measurements, straight from the pipeline.
+    expect(kinds.get("pace")).toEqual({ kind: "pace", secondsPerMeasurement: 538.65 });
     expect(kinds.get("milestone")).toEqual({
       kind: "milestone",
       ordinal: 1_000_000,
@@ -171,6 +181,21 @@ describe("GetPublicMetricsUseCase", () => {
     expect(kinds.get("endurance")).toEqual({ kind: "endurance", days: 94 });
     expect(kinds.get("openDatasets")).toEqual({ kind: "openDatasets", count: 1 });
     expect(kinds.get("sharedExperiments")).toEqual({ kind: "sharedExperiments", count: 1 });
+  });
+
+  it("omits the pace and streak when there is no interval or run to report", async () => {
+    // Timestamps sharing a millisecond leave no measurable gap; a zero here
+    // would publish "a measurement arrives every 0 seconds".
+    vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(
+      success({ ...poolFacts, meanArrivalGapSeconds: 0, currentStreakDays: 0 }),
+    );
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    const kinds = result.value.captions.map((caption) => caption.kind);
+    expect(kinds).not.toContain("pace");
+    expect(kinds).not.toContain("streak");
   });
 
   it("serves the cached snapshot without refetching", async () => {
@@ -214,45 +239,13 @@ describe("GetPublicMetricsUseCase", () => {
   });
 
   it("hides the hero instead of inventing zeros when an input is missing", async () => {
-    vi.spyOn(adapter, "getPublicTotalVolumeBytes").mockResolvedValue(
-      failure(AppError.internal("warehouse down")),
-    );
+    vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(failure(AppError.internal("down")));
 
     const result = await useCase.execute();
 
     assertSuccess(result);
     expect(result.value.hero).toBeNull();
     expect(result.value.liveness).not.toBeNull();
-  });
-
-  it("withholds the streak once the newest daily row is stale", async () => {
-    vi.useFakeTimers({ now: new Date("2026-09-10T12:00:00Z"), toFake: ["Date"] });
-
-    const result = await useCase.execute();
-
-    assertSuccess(result);
-    const kinds = result.value.captions.map((caption) => caption.kind);
-    expect(kinds).not.toContain("streak");
-  });
-
-  it("reports no streak when the newest day is empty", async () => {
-    vi.spyOn(adapter, "getPublicDailyActivity").mockResolvedValue(
-      success([
-        {
-          date: "2026-08-27",
-          measurements: 80,
-          cumulativeMeasurements: 999_880,
-          volumeBytes: 1_600_000,
-        },
-        { date: "2026-08-28", measurements: 0, cumulativeMeasurements: 999_880, volumeBytes: 0 },
-      ]),
-    );
-
-    const result = await useCase.execute();
-
-    assertSuccess(result);
-    const kinds = result.value.captions.map((caption) => caption.kind);
-    expect(kinds).not.toContain("streak");
   });
 
   it("emits no milestone below the first threshold", async () => {

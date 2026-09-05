@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import type { MetricsScope, ScopedMetricsResponse } from "@repo/api/domains/metrics/metrics.schema";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, failure, success } from "../../../../common/utils/fp-utils";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { CACHE_PORT, CachePort } from "../../../core/ports/cache.port";
@@ -45,13 +46,62 @@ export class GetScopedMetricsUseCase {
     @Inject(CACHE_PORT)
     private readonly cachePort: CachePort,
     private readonly metricsRepository: MetricsRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
     scope: MetricsScope,
     userId: string,
     organizationId?: string,
+    experimentId?: string,
   ): Promise<Result<ScopedMetricsResponse>> {
+    const scopeIds = await this.resolveScopeIds(scope, userId, organizationId, experimentId);
+    if (scopeIds.isFailure()) {
+      return failure(scopeIds.error);
+    }
+
+    const inputs = await this.cachePort.tryCache(SCOPED_INPUTS_CACHE_KEY, () => this.loadInputs());
+
+    if (inputs === null) {
+      // A lagging or absent warehouse degrades to empty slots. Nothing is
+      // cached, so the next request retries instead of pinning the outage.
+      return success({ scope, scoped: null, baseline: null, computedAt: null });
+    }
+
+    return success(this.aggregate(scope, new Set(scopeIds.value), inputs));
+  }
+
+  /**
+   * The experiments a scope covers, refused before any cached figure is
+   * touched so a revoked caller cannot read a warm snapshot.
+   */
+  private async resolveScopeIds(
+    scope: MetricsScope,
+    userId: string,
+    organizationId: string | undefined,
+    experimentId: string | undefined,
+  ): Promise<Result<string[]>> {
+    if (scope === "experiment") {
+      if (experimentId === undefined) {
+        return failure(AppError.badRequest("experimentId is required for experiment scope"));
+      }
+
+      const access = await this.authz.can(userId, {
+        resourceType: "experiment",
+        resourceId: experimentId,
+        action: "read",
+      });
+      if (!access.allow) {
+        return failure(
+          access.reason === "not-found"
+            ? AppError.notFound(`Experiment with ID ${experimentId} not found`)
+            : AppError.forbidden("You do not have access to this experiment"),
+        );
+      }
+
+      return success([experimentId]);
+    }
+
     if (scope === "organization") {
       if (organizationId === undefined) {
         return failure(AppError.badRequest("organizationId is required for organization scope"));
@@ -64,25 +114,11 @@ export class GetScopedMetricsUseCase {
       if (!membership.value) {
         return failure(AppError.forbidden("Not a member of this organization"));
       }
+
+      return this.metricsRepository.getOrganizationExperimentIds(organizationId);
     }
 
-    const experimentIds =
-      scope === "organization" && organizationId !== undefined
-        ? await this.metricsRepository.getOrganizationExperimentIds(organizationId)
-        : await this.metricsRepository.getUserExperimentIds(userId);
-    if (experimentIds.isFailure()) {
-      return failure(experimentIds.error);
-    }
-
-    const inputs = await this.cachePort.tryCache(SCOPED_INPUTS_CACHE_KEY, () => this.loadInputs());
-
-    if (inputs === null) {
-      // A lagging or absent warehouse degrades to empty slots. Nothing is
-      // cached, so the next request retries instead of pinning the outage.
-      return success({ scope, scoped: null, baseline: null, computedAt: null });
-    }
-
-    return success(this.aggregate(scope, new Set(experimentIds.value), inputs));
+    return this.metricsRepository.getUserExperimentIds(userId);
   }
 
   private async loadInputs(): Promise<ScopedInputs | null> {

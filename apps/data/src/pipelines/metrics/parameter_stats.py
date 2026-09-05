@@ -1,9 +1,10 @@
 # Databricks notebook source
 # DBTITLE 1,Metrics - Parameter Stats
-# Public metrics: 30-day counts and medians for allowlisted parameters read
-# from the macro output variant, split into macro-derived values and raw
-# sensor readings. Only vetted parameter names may surface publicly; medians
-# (not means) so junk values and mixed conditions cannot skew the figure.
+# Public metrics: counts and medians per allowlisted parameter over the
+# parameter window. Provenance decides the category: a macro wrote everything
+# in macro_output, while a sensor reading comes from the device's own payload.
+# Only vetted names may surface publicly; medians (not means) so junk values
+# and mixed conditions cannot skew the figure.
 
 # COMMAND ----------
 import dlt
@@ -13,22 +14,23 @@ from pyspark.sql import functions as F
 
 from openjii.centrum import EXPERIMENT_MACRO_DATA_TABLE
 from openjii.metrics import (
-    ACTIVITY_WINDOW_DAYS,
     DERIVED_PARAMETER_ALLOWLIST,
     PARAMETER_CATEGORY_DERIVED,
     PARAMETER_CATEGORY_SENSOR,
+    PARAMETER_LABELS,
     PARAMETER_STATS_TABLE,
+    PARAMETER_WINDOW_DAYS,
     SENSOR_PARAMETER_ALLOWLIST,
     within_plausible_range,
 )
-from openjii.metrics.runtime import centrum_table
+from openjii.metrics.runtime import SILVER_TABLE, centrum_table
 
 # COMMAND ----------
 
 
 @dlt.table(
     name=PARAMETER_STATS_TABLE,
-    comment="Public metrics: 30-day counts and medians per allowlisted parameter, split by derived vs sensor category.",
+    comment="Public metrics: observation counts and medians per allowlisted parameter.",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
@@ -39,39 +41,62 @@ from openjii.metrics.runtime import centrum_table
 def parameter_stats():
     """One row per allowlisted parameter observed in the window.
 
-    The category column separates macro-derived values from raw sensor
-    readings so each can headline its own public line.
-
-    A parameter that never parses out of macro_output simply yields no row
-    and the frontend hides the line.
+    A parameter that never parses out of its source simply yields no row and
+    the frontend hides the line.
     """
     now = F.current_timestamp()
+    window = F.col("timestamp") >= now - F.expr(f"INTERVAL {PARAMETER_WINDOW_DAYS} DAYS")
 
-    recent = (
+    macro_outputs = (
         spark.table(centrum_table(EXPERIMENT_MACRO_DATA_TABLE))
         .filter(within_plausible_range(F.col("timestamp"), now))
-        .filter(F.col("timestamp") >= now - F.expr(f"INTERVAL {ACTIVITY_WINDOW_DAYS} DAYS"))
+        .filter(window)
         .filter(F.col("macro_output").isNotNull())
         .select("macro_output")
     )
 
-    def parameter_frame(name, category):
-        value = F.expr(f"try_variant_get(macro_output, '$.{name}', 'double')")
+    payloads = (
+        spark.table(centrum_table(SILVER_TABLE))
+        .filter(within_plausible_range(F.col("timestamp"), now))
+        .filter(window)
+        .filter(F.col("sample").isNotNull())
+        .select("sample")
+    )
+
+    def stats_frame(name, category, source, value):
         return (
-            recent.select(value.alias("value"))
+            source.select(value.alias("value"))
             .filter(F.col("value").isNotNull())
             .agg(
-                F.count("*").alias("count_30d"),
+                F.count("*").alias("observations"),
                 F.percentile_approx("value", 0.5).alias("median_value"),
             )
             .withColumn("parameter", F.lit(name))
+            .withColumn("label", F.lit(PARAMETER_LABELS.get(name, name)))
             .withColumn("category", F.lit(category))
-            .select("parameter", "category", "count_30d", "median_value")
+            .select("parameter", "label", "category", "observations", "median_value")
         )
 
     frames = [
-        parameter_frame(name, PARAMETER_CATEGORY_DERIVED) for name in DERIVED_PARAMETER_ALLOWLIST
-    ] + [parameter_frame(name, PARAMETER_CATEGORY_SENSOR) for name in SENSOR_PARAMETER_ALLOWLIST]
+        stats_frame(
+            name,
+            PARAMETER_CATEGORY_DERIVED,
+            macro_outputs,
+            F.expr(f"try_variant_get(macro_output, '$.{name}', 'double')"),
+        )
+        for name in DERIVED_PARAMETER_ALLOWLIST
+    ] + [
+        # The payload is a one-element array whose `data` object holds the
+        # device's own scalars, so the reading is two levels down.
+        stats_frame(
+            name,
+            PARAMETER_CATEGORY_SENSOR,
+            payloads,
+            F.get_json_object(F.col("sample"), f"$[0].data.{name}").cast("double"),
+        )
+        for name in SENSOR_PARAMETER_ALLOWLIST
+    ]
+
     combined = reduce(lambda a, b: a.unionByName(b), frames)
 
-    return combined.filter(F.col("count_30d") > 0).withColumn("computed_at", now)
+    return combined.filter(F.col("observations") > 0).withColumn("computed_at", now)

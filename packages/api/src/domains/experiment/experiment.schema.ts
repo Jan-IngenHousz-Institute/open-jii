@@ -3,6 +3,7 @@ import { z } from "zod";
 import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
+import { zResourceSeries } from "../metrics/metrics.schema";
 import { zExperimentData } from "./data/experiment-data.schema";
 import {
   zExperimentLocationInput,
@@ -38,7 +39,12 @@ export const zExperiment = z.object({
   locations: zExperimentLocationList.optional(),
 });
 
-export const zExperimentList = z.array(zExperiment);
+const zExperimentListEntry = zExperiment.extend({
+  /** Present on the paginated list, which reads it for the rows it returns. */
+  activity: zResourceSeries.nullable().optional(),
+});
+
+export const zExperimentList = z.array(zExperimentListEntry);
 
 export const zExperimentAccess = z.object({
   experiment: zExperiment,
@@ -272,6 +278,7 @@ export const zExperimentFlowGraph = z
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
 export type Experiment = z.infer<typeof zExperiment>;
+export type ExperimentListItem = z.infer<typeof zExperimentListEntry>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentFlowNodeType = z.infer<typeof zExperimentFlowNodeType>;
 export type ExperimentFlowGraph = z.infer<typeof zExperimentFlowGraph>;
@@ -432,7 +439,7 @@ export const zExperimentFilterQuery = z
   })
   .merge(zPaginationQuery);
 
-export const zExperimentPaginatedList = zPaginated(zExperiment);
+export const zExperimentPaginatedList = zPaginated(zExperimentListEntry);
 
 /** Array when the caller sent no `page`, envelope when they did. */
 export const zExperimentListResponse = z.union([zExperimentList, zExperimentPaginatedList]);

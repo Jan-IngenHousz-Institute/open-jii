@@ -1,0 +1,86 @@
+{
+  "title": "The platform in numbers",
+  "indicator": {
+    "active": "{{count}} measurements in the last 24 hours",
+    "quiet": "Quiet since {{date}}"
+  },
+  "hero": {
+    "sentence": "<em>{{measurements}}</em> measurements, <em>{{volume}}</em> of measurement data, recorded across <em>{{timezones}}</em> time zones."
+  },
+  "community": {
+    "sentence": "This month the community recorded <em>{{measurements}}</em> measurements across <em>{{experiments}}</em> experiments, contributed by <em>{{contributors}}</em> researchers at <em>{{institutions}}</em> institutions."
+  },
+  "activityChart": {
+    "daily": "Daily",
+    "cumulative": "Cumulative",
+    "title": {
+      "daily": "Measurements per day, last 30 days",
+      "cumulative": "Measurements collected, last 12 months"
+    }
+  },
+  "families": {
+    "title": "Measurements by instrument",
+    "unattributed": "Unattributed",
+    "unresolved": "A further {{count}} measurements come from publishers the device registry cannot yet name."
+  },
+  "parameter": {
+    "derivedSentence": "Most computed this month: <em>{{name}}</em>, {{count}} times, median <em>{{median}}</em>",
+    "sensorSentence": "Most captured sensor reading: <em>{{name}}</em>, {{count}} times, median <em>{{median}}</em>"
+  },
+  "captions": {
+    "streak": "Data recorded on {{days}} consecutive days",
+    "pace_one": "A measurement arrives every ~{{count}} second this month",
+    "pace_other": "A measurement arrives every ~{{count}} seconds this month",
+    "sessionSize_one": "A typical field session records {{count}} measurement",
+    "sessionSize_other": "A typical field session records {{count}} measurements",
+    "endurance": "One device has reported {{days}} days straight",
+    "simultaneity": "At one moment, {{devices}} devices measured at once",
+    "zonesPeakDay": "Most time zones active in one day: {{zones}}",
+    "analysesRun": "Analyses run on the platform: {{count}}",
+    "avgMeasurementSize": "An average measurement carries {{size}} of trace data",
+    "openDatasets": "Open datasets: {{count}}",
+    "sharedExperiments": "Experiments shared across organizations: {{count}}",
+    "milestone": "Measurement {{ordinal}} landed on {{date}}",
+    "paceFast_one": "{{count}} measurement arrives every second this month",
+    "paceFast_other": "{{count}} measurements arrive every second this month"
+  },
+  "dashboard": {
+    "milestone": "The community recorded measurement {{ordinal}} on {{date}}.",
+    "dismiss": "Dismiss",
+    "activity": {
+      "label": "Your experiments, last 30 days",
+      "experiments_one": "active experiment",
+      "experiments_other": "active experiments",
+      "contributors_one": "contributor",
+      "contributors_other": "contributors",
+      "context": "Across the community, {{measurements}} measurements over the same period.",
+      "trend": "Daily measurements"
+    }
+  },
+  "experiment": {
+    "measurements": "measurements in the last 30 days",
+    "byContributors_one": "recorded by {{count}} contributor",
+    "byContributors_other": "recorded by {{count}} contributors",
+    "quiet": "No measurements recorded here in the last 30 days",
+    "trend": "Daily measurements"
+  },
+  "resourceMetrics": {
+    "strip": "Daily measurements over {{days}} days",
+    "experiment": {
+      "active": "experiments with data",
+      "measurements": "measurements, {{days}} days"
+    },
+    "protocol": {
+      "active": "protocols in use",
+      "measurements": "measurements, {{days}} days"
+    },
+    "macro": {
+      "active": "macros run",
+      "measurements": "analyses, {{days}} days"
+    },
+    "workbook": {
+      "active": "workbooks collecting",
+      "measurements": "measurements, {{days}} days"
+    }
+  }
+}

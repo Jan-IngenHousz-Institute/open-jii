@@ -1,4 +1,5 @@
 import { ListMacros } from "@/components/list-macros";
+import { ResourceMetricsSummary } from "@/components/metrics/resource-metrics-summary";
 import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 
@@ -18,6 +19,7 @@ export async function generateMetadata({ params }: MacroPageProps): Promise<Meta
 export default function MacroPage() {
   return (
     <PageContainer width="fluid" className="space-y-6">
+      <ResourceMetricsSummary kind="macro" />
       <ListMacros />
     </PageContainer>
   );

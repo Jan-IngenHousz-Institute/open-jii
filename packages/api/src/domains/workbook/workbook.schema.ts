@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
+import { zResourceSeries } from "../metrics/metrics.schema";
 import { zVisibility } from "../visibility/visibility.schema";
 import { zWorkbookCellArray, zWorkbookCellArrayInput } from "./workbook-cells.schema";
 
@@ -36,7 +37,12 @@ export const zWorkbookListItem = zWorkbook.omit({ cells: true }).extend({
   cellTypeCounts: z.record(z.string(), z.number().int().nonnegative()).optional(),
 });
 
-export const zWorkbookList = z.array(zWorkbookListItem);
+const zWorkbookListEntry = zWorkbookListItem.extend({
+  /** Present on the paginated list, which reads it for the rows it returns. */
+  activity: zResourceSeries.nullable().optional(),
+});
+
+export const zWorkbookList = z.array(zWorkbookListEntry);
 
 /**
  * A single workbook plus the caller's effective capabilities on it. Detail route
@@ -55,7 +61,7 @@ export const zWorkbookFilterQuery = z
   })
   .merge(zPaginationQuery);
 
-export const zWorkbookPaginatedList = zPaginated(zWorkbookListItem);
+export const zWorkbookPaginatedList = zPaginated(zWorkbookListEntry);
 
 /** Array when the caller sent no `page`, envelope when they did. */
 export const zWorkbookListResponse = z.union([zWorkbookList, zWorkbookPaginatedList]);
@@ -103,6 +109,7 @@ export const zWorkbookErrorResponse = z.object({
 
 export type Workbook = z.infer<typeof zWorkbook>;
 export type WorkbookDetail = z.infer<typeof zWorkbookDetail>;
+export type WorkbookListEntry = z.infer<typeof zWorkbookListEntry>;
 export type WorkbookListItem = z.infer<typeof zWorkbookListItem>;
 export type WorkbookList = z.infer<typeof zWorkbookList>;
 export type WorkbookFilterQuery = z.infer<typeof zWorkbookFilterQuery>;
