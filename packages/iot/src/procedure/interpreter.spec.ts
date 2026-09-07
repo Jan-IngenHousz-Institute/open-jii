@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { MockTransport } from "../driver/testing/mock-transport";
 import { createMockTransport } from "../driver/testing/mock-transport";
 import { KIPRIM_COMMANDS } from "../instrument/kiprim/commands";
 import { KiprimDcSource } from "../instrument/kiprim/instrument";
-import { runCaptureProcedure, shutdownRig } from "./interpreter";
+import { MicroPythonParReference } from "../instrument/micropython-par/instrument";
+import { bindBenchInstrument, runCaptureProcedure, shutdownRig } from "./interpreter";
 import type { ProcedureContext, RigBinding } from "./interpreter";
 import { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./operator";
 import type { OperatorPort, ProcedureProgress } from "./operator";
@@ -660,6 +662,105 @@ describe("runCaptureProcedure", () => {
       await expect(runCaptureProcedure(headless, context())).rejects.toBeInstanceOf(
         ProcedureRigError,
       );
+    });
+  });
+
+  // The simplest procedure, automated: the operator replaced by a supply on
+  // the lamp and a reference photodiode, both real instrument classes bound
+  // into the rig rather than stubs.
+  describe("automated MiniPAR rig", () => {
+    const AUTOMATED_MINIPAR: CaptureProcedure = {
+      instruments: [
+        { role: "dut" },
+        { role: "lamp", handshake: "KIPRIM" },
+        { role: "par_ref", handshake: "raw REPL" },
+      ],
+      steps: [
+        {
+          kind: "sweep",
+          series: "par_sweep",
+          stimulus: { instrument: "lamp", set: "current_a", values: [0.5, 1.5, 0.0] },
+          read: [
+            { instrument: "dut", command: "par_raw", as: "par_raw" },
+            { instrument: "par_ref", command: "par", as: "par_ref" },
+          ],
+        },
+      ],
+    };
+
+    function supplyTransport(): MockTransport {
+      const transport = createMockTransport();
+      vi.mocked(transport.send).mockResolvedValue(undefined);
+      return transport;
+    }
+
+    function referenceTransport(values: string[]): MockTransport {
+      const transport = createMockTransport();
+      const queue = [...values];
+      vi.mocked(transport.send).mockImplementation((sent: string) => {
+        if (sent === "getPAR()\r") {
+          const value = queue.shift() ?? "0";
+          setTimeout(() => transport.simulateData(`getPAR()\r\n${value}\r\n>>> `), 0);
+        }
+        return Promise.resolve();
+      });
+      return transport;
+    }
+
+    it("drives the supply and reads the reference through real instrument bindings", async () => {
+      const lampTransport = supplyTransport();
+      const lamp = new KiprimDcSource();
+      await lamp.initialize(lampTransport);
+      const reference = new MicroPythonParReference({ readTimeoutMs: 200 });
+      await reference.initialize(referenceTransport(["143.1", "402.2", "0.7"]));
+
+      const result = await runCaptureProcedure(
+        AUTOMATED_MINIPAR,
+        context({
+          rig: {
+            dut: reader({ par_raw: 150.0 }),
+            lamp: bindBenchInstrument(lamp),
+            par_ref: bindBenchInstrument(reference),
+          },
+        }),
+      );
+
+      expect(result.payload.par_sweep.map((row) => row.par_ref)).toEqual([143.1, 402.2, 0.7]);
+      expect(vi.mocked(lampTransport.send).mock.calls.map(([payload]) => payload)).toEqual([
+        "current 0.500\r\n",
+        "current 1.500\r\n",
+        "current 0.000\r\n",
+      ]);
+    });
+
+    it("binds a reference as read-only and a supply as setpoint-only", () => {
+      const reference = bindBenchInstrument(new MicroPythonParReference());
+      const supply = bindBenchInstrument(new KiprimDcSource());
+
+      expect(reference.read).toBeDefined();
+      expect(reference.setpoint).toBeUndefined();
+      expect(supply.setpoint).toBeDefined();
+      expect(supply.read).toBeUndefined();
+    });
+
+    it("surfaces a reference fault as a failed read rather than a thrown binding", async () => {
+      const reference = new MicroPythonParReference({ readTimeoutMs: 50 });
+      await reference.initialize(createMockTransport());
+      const binding = bindBenchInstrument(reference);
+
+      const result = await binding.read?.execute("par");
+
+      expect(result?.success).toBe(false);
+      expect(result?.error?.message).toMatch(/did not answer/);
+    });
+
+    it("refuses a protocol object aimed at a reference", async () => {
+      const binding = bindBenchInstrument(new MicroPythonParReference());
+
+      const result = await binding.read?.execute({ label: "arrun" });
+
+      expect(result?.success).toBe(false);
+      expect(result?.error?.message).toMatch(/reading name, not a protocol/);
     });
   });
 });

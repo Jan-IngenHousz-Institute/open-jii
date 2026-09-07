@@ -32,6 +32,21 @@ describe("bench instrument registry", () => {
     expect(instrument?.model).toBe("kiprim-dc");
   });
 
+  // The reference answers Ctrl-A, not *IDN?, so the probe order has to reach it.
+  it("identifies a MicroPython reference by its raw-REPL banner", async () => {
+    const transport = createMockTransport();
+    vi.mocked(transport.send).mockImplementation((sent: string) => {
+      if (sent === "\x01") {
+        setTimeout(() => transport.simulateData("raw REPL; CTRL-B to exit\r\n>"), 0);
+      }
+      return Promise.resolve();
+    });
+
+    const instrument = await identifyBenchInstrument(transport);
+
+    expect(instrument?.model).toBe("micropython-par-reference");
+  });
+
   it("returns null for an instrument nothing recognises", async () => {
     const transport = respondingWith("KEITHLEY INSTRUMENTS,MODEL 2450,04123456,1.7.12b\n");
 
@@ -47,7 +62,14 @@ describe("bench instrument registry", () => {
     // nothing the platform can drive, before anyone carries a rig to a bench.
     it("resolves a declared handshake without touching hardware", () => {
       expect(benchInstrumentForHandshake("KIPRIM")?.model).toBe("kiprim-dc");
+      expect(benchInstrumentForHandshake("raw REPL")?.model).toBe("micropython-par-reference");
       expect(benchInstrumentForHandshake("Par_REF")).toBeNull();
+    });
+
+    it("declares the readings a procedure may take from a reference", () => {
+      const reference = benchInstrumentForHandshake("raw REPL");
+
+      expect(reference?.readings?.map((reading) => reading.name)).toEqual(["par"]);
     });
 
     it("declares the setpoints a procedure may drive, with their limits", () => {

@@ -312,6 +312,43 @@ function describeStep(step: ProcedureStep): string {
   }
 }
 
+/**
+ * Expose a bench instrument to a procedure as the role it fills: a supply
+ * applies setpoints, a reference reports readings, and a procedure's read
+ * `command` is the reading's name rather than a wire string.
+ */
+export function bindBenchInstrument(instrument: BenchInstrument): RigBinding {
+  const binding: RigBinding = {};
+
+  if (instrument.setpoints.length > 0) {
+    binding.setpoint = instrument;
+  }
+
+  const read = instrument.read?.bind(instrument);
+  if (read) {
+    binding.read = {
+      execute: async (command) => {
+        if (typeof command !== "string") {
+          return {
+            success: false,
+            error: new Error(`${instrument.model} takes a reading name, not a protocol`),
+          };
+        }
+        try {
+          return { success: true, data: await read(command) };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error : new Error(String(error)),
+          };
+        }
+      },
+    };
+  }
+
+  return binding;
+}
+
 /** Return every bench instrument in a rig to a safe state. */
 export async function shutdownRig(instruments: Iterable<BenchInstrument>): Promise<void> {
   for (const instrument of instruments) {

@@ -61,6 +61,27 @@ const MANUAL_MINIPAR: CaptureProcedure = {
   ],
 };
 
+/** The same procedure with the operator replaced by a supply and a reference. */
+const AUTOMATED_MINIPAR: CaptureProcedure = {
+  instruments: [
+    { role: "dut" },
+    { role: "lamp", handshake: "KIPRIM" },
+    { role: "par_ref", handshake: "raw REPL" },
+  ],
+  steps: [
+    {
+      kind: "sweep",
+      series: "par_sweep",
+      stimulus: { instrument: "lamp", set: "current_a", values: [0.5, 1.5, 3.0, 0.0] },
+      settleMs: 1000,
+      read: [
+        { instrument: "dut", command: "par_raw", as: "par_raw" },
+        { instrument: "par_ref", command: "par", as: "par_ref" },
+      ],
+    },
+  ],
+};
+
 const MULTISPEQ_COLORCAL: CaptureProcedure = {
   instruments: [{ role: "dut" }],
   protocols: {
@@ -121,6 +142,7 @@ describe("procedure types", () => {
     const procedures = [
       AMBIT_FACTORY,
       MANUAL_MINIPAR,
+      AUTOMATED_MINIPAR,
       MULTISPEQ_COLORCAL,
       AMBIT_TEMPERATURE,
       SOIL_MOISTURE,
@@ -153,6 +175,12 @@ describe("procedure types", () => {
 
     it("ignores operator and settle steps, which produce nothing", () => {
       expect(requiredSeriesNames(MANUAL_MINIPAR)).toEqual(["par_sweep"]);
+    });
+
+    // Manual and automated MiniPAR produce the same payload, so one script
+    // and one output schema serve both.
+    it("demands the same series from the manual and automated MiniPAR rigs", () => {
+      expect(requiredSeriesNames(AUTOMATED_MINIPAR)).toEqual(requiredSeriesNames(MANUAL_MINIPAR));
     });
   });
 });

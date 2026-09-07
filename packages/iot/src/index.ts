@@ -99,9 +99,16 @@ export { AMBIT_SERIAL_DEFAULTS, AMBIT_FRAMING } from "./driver/ambit/config";
 export { AMBIT_COMMANDS, AMBIT_SILENT_COMMANDS } from "./driver/ambit/commands";
 
 // Bench instruments: rig equipment a calibration drives but never measures with.
-export type { BenchInstrument, InstrumentSetpoint } from "./instrument/interface";
-export { identityMatches, findSetpoint } from "./instrument/interface";
+export type {
+  BenchInstrument,
+  InstrumentReading,
+  InstrumentSetpoint,
+} from "./instrument/interface";
+export { identityMatches, findSetpoint, findReading } from "./instrument/interface";
 export { KiprimDcSource } from "./instrument/kiprim/instrument";
+export { MicroPythonParReference } from "./instrument/micropython-par/instrument";
+export type { MicroPythonParConfig } from "./instrument/micropython-par/instrument";
+export { MICROPYTHON_COMMANDS } from "./instrument/micropython-par/commands";
 export type { KiprimConfig } from "./instrument/kiprim/instrument";
 export { KIPRIM_COMMANDS, KIPRIM_LIMITS } from "./instrument/kiprim/commands";
 export {
@@ -112,7 +119,7 @@ export {
 export type { BenchInstrumentFactory } from "./instrument/registry";
 
 // Capture procedures: the declared steps a calibration runs at a bench.
-export { runCaptureProcedure, shutdownRig } from "./procedure/interpreter";
+export { runCaptureProcedure, bindBenchInstrument, shutdownRig } from "./procedure/interpreter";
 export type {
   ProcedureContext,
   RigBinding,
