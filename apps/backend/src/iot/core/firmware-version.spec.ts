@@ -27,5 +27,15 @@ describe("compareFirmwareVersions", () => {
   it("returns null when a version cannot be parsed", () => {
     expect(compareFirmwareVersions("unknown", "1.1.3")).toBeNull();
     expect(compareFirmwareVersions("1.1.3", "")).toBeNull();
+    expect(compareFirmwareVersions("1", "1.1.3")).toBeNull();
+  });
+
+  // MiniPAR reports two parts ("1.03"); a definition may still set a
+  // three-part minimum, and the two must compare against each other.
+  it("treats a missing patch as zero", () => {
+    expect(compareFirmwareVersions("1.03", "1.03.0")).toBe(0);
+    expect(compareFirmwareVersions("1.03", "1.03.1")).toBeLessThan(0);
+    expect(compareFirmwareVersions("1.04", "1.03")).toBeGreaterThan(0);
+    expect(compareFirmwareVersions("1.1", "1.03")).toBeLessThan(0);
   });
 });
