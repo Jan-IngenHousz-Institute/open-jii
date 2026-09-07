@@ -579,7 +579,9 @@
         "device_one": "Apparaat",
         "device_other": "Apparaten",
         "device_group_one": "Apparaatgroep",
-        "device_group_other": "Apparaatgroepen"
+        "device_group_other": "Apparaatgroepen",
+        "calibration_definition_one": "Kalibratiedefinitie",
+        "calibration_definition_other": "Kalibratiedefinities"
       },
       "groupMemberCount_one": "{{count}} apparaat",
       "groupMemberCount_other": "{{count}} apparaten",
@@ -765,7 +767,9 @@
         "device_one": "apparaat",
         "device_other": "apparaten",
         "device_group_one": "apparaatgroep",
-        "device_group_other": "apparaatgroepen"
+        "device_group_other": "apparaatgroepen",
+        "calibration_definition_one": "kalibratiedefinitie",
+        "calibration_definition_other": "kalibratiedefinities"
       },
       "confirmTitle": "Organisatie verwijderen?",
       "confirmDescription": "{{name}} wordt verwijderd, samen met haar leden, uitnodigingen en teams.",
