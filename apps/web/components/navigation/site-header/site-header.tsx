@@ -28,7 +28,7 @@ interface SectionCandidate {
 
 /**
  * One label per sidebar destination: the top-level rows, the library children
- * (protocols/macros), and account. The header shows the section, not the page —
+ * (protocols/macros), and account. The header shows the section, not the page:
  * detail routes keep their section label rather than fetching a resource name.
  */
 function sectionCandidates(locale: string): SectionCandidate[] {
@@ -181,7 +181,9 @@ function overviewActions(pathname: string, locale: string, t: Translate) {
         <Button asChild variant="secondary" size="sm" title={transferLabel}>
           <Link href={`/${locale}/platform/transfer-request`} aria-label={transferLabel}>
             <ArrowRightLeft className="size-4" aria-hidden />
-            <span className="hidden md:inline">{transferLabel}</span>
+            {/* Three actions plus an open sidebar leave the section label ~30px at
+                md; the label waits for lg so the breadcrumb stays readable. */}
+            <span className="hidden lg:inline">{transferLabel}</span>
           </Link>
         </Button>
         <CreateAction

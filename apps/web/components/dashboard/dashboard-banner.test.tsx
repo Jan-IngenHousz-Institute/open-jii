@@ -60,4 +60,24 @@ describe("DashboardBanner", () => {
     render(<DashboardBanner {...baseProps} secondaryButtonLabel="Docs" />);
     expect(screen.getAllByRole("link")).toHaveLength(1);
   });
+
+  // At 768px the sidebar leaves ~29rem, too little for the copy beside two
+  // nowrap buttons, so the row must not start before lg.
+  it("keeps the banner stacked until lg", () => {
+    const { container } = render(
+      <DashboardBanner
+        {...baseProps}
+        secondaryButtonLabel="Docs"
+        secondaryButtonHref="https://docs.example.com"
+      />,
+    );
+
+    const banner = container.firstElementChild;
+    expect(banner).toHaveClass("flex-col", "lg:flex-row");
+    expect(banner?.className).not.toMatch(/\bsm:flex-row\b/);
+
+    const actions = screen.getByRole("link", { name: "Docs" }).parentElement;
+    expect(actions).toHaveClass("lg:flex-row");
+    expect(actions?.className).not.toMatch(/\bsm:/);
+  });
 });

@@ -62,7 +62,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   }
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row">
+    <div className="flex flex-col gap-6 lg:flex-row">
       {/* RIGHT SIDE — EXPERIMENT DETAILS CARD (First on mobile) */}
       <ExperimentDetailsCard
         experimentId={id}
@@ -79,7 +79,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
       />
 
       {/* LEFT SIDE CONTENT (Second on mobile) */}
-      <div className="flex-1 space-y-10 md:order-1">
+      <div className="flex-1 space-y-10 lg:order-1">
         <ExperimentDescription
           experimentId={id}
           description={experiment.description ?? ""}
