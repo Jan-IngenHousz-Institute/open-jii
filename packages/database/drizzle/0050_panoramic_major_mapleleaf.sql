@@ -1,1 +1,1 @@
-ALTER TYPE "public"."resource_type" ADD VALUE 'calibration_definition';
+ALTER TYPE "public"."resource_type" ADD VALUE IF NOT EXISTS 'calibration_definition';
