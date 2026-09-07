@@ -381,6 +381,28 @@ describe("runCaptureProcedure", () => {
       expect(result.payload.spectral[0].reading).toBe(JSON.stringify(structured));
     });
 
+    // A payload cell can hold a numeric series but not a series of anything
+    // else, so a repeated text or structured read is kept whole as text.
+    it("keeps a repeated non-numeric read whole as text", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "read",
+            series: "names",
+            read: [{ instrument: "dut", command: "get_name", as: "sampled", repeat: 2 }],
+          },
+        ],
+      };
+
+      const result = await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut: reader({ get_name: "Par_REF" }) } }),
+      );
+
+      expect(result.payload.names[0].sampled).toBe(JSON.stringify(["Par_REF", "Par_REF"]));
+    });
+
     it("aborts when a device read fails rather than recording a hole", async () => {
       const procedure: CaptureProcedure = {
         instruments: [{ role: "dut" }],
@@ -417,25 +439,6 @@ describe("runCaptureProcedure", () => {
       await expect(runCaptureProcedure(headless, context())).rejects.toBeInstanceOf(
         ProcedureRigError,
       );
-    });
-
-    it("refuses a non-numeric setpoint aimed at an instrument", async () => {
-      const procedure: CaptureProcedure = {
-        instruments: [{ role: "dut" }, { role: "lamp", handshake: "KIPRIM" }],
-        steps: [
-          {
-            kind: "sweep",
-            series: "cards",
-            stimulus: { instrument: "lamp", set: "current_a", values: ["white_a"] },
-            read: [{ instrument: "dut", command: "get_par", as: "reading" }],
-          },
-        ],
-      };
-      const lamp = setpointTarget();
-
-      await expect(
-        runCaptureProcedure(procedure, context({ rig: { dut: reader({ get_par: 1 }), lamp } })),
-      ).rejects.toThrow(/needs a numeric value/);
     });
   });
 });

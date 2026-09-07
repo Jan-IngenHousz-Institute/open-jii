@@ -172,7 +172,7 @@ class ProcedureRunner {
         value,
       });
 
-      const applied = await this.applyStimulus(step, value);
+      const applied = await this.applyStimulus(step, index);
       if (!applied) return this.skipOrFail(step, `operator declined a setpoint in ${step.series}`);
 
       if (step.settleMs) await this.sleep(step.settleMs);
@@ -185,9 +185,14 @@ class ProcedureRunner {
     this.commit(step.series, rows);
   }
 
-  /** Apply one setpoint, by instrument or by asking the operator to. */
-  private async applyStimulus(step: SweepStep, value: SetpointValue): Promise<boolean> {
+  /**
+   * Apply the setpoint at `index`, by instrument or by asking the operator
+   * to. Read off the narrowed stimulus rather than passed in, so an
+   * instrument's value is a number by type and needs no runtime check.
+   */
+  private async applyStimulus(step: SweepStep, index: number): Promise<boolean> {
     if (!isInstrumentStimulus(step.stimulus)) {
+      const value = step.stimulus.values[index];
       return this.context.operator.acknowledge(interpolate(step.stimulus.operator, value));
     }
 
@@ -197,12 +202,7 @@ class ProcedureRunner {
         `Instrument "${step.stimulus.instrument}" cannot apply setpoints`,
       );
     }
-    if (typeof value !== "number") {
-      throw new ProcedureRigError(
-        `Setpoint "${step.stimulus.set}" needs a numeric value, got ${JSON.stringify(value)}`,
-      );
-    }
-    await target.applySetpoint(step.stimulus.set, value);
+    await target.applySetpoint(step.stimulus.set, step.stimulus.values[index]);
     return true;
   }
 
@@ -232,8 +232,12 @@ class ProcedureRunner {
     }
 
     // One sample stays scalar; a repeat yields the series so a script can
-    // average, or reject, on its own terms.
-    return repeat === 1 ? samples[0] : (samples as SeriesCell);
+    // average, or reject, on its own terms. A payload cell can hold a numeric
+    // series; anything else is kept whole as text, as a structured reply is.
+    if (repeat === 1) return samples[0];
+    return samples.every((sample): sample is number => typeof sample === "number")
+      ? samples
+      : JSON.stringify(samples);
   }
 
   private async readOnce(target: ReadTarget, read: InstrumentRead): Promise<SeriesCell> {

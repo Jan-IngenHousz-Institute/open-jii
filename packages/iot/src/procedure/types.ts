@@ -24,10 +24,11 @@ export interface RigInstrument {
 /** A sweep setpoint: a scalar, a label, or a compound of several axes. */
 export type SetpointValue = number | string | Record<string, number | string>;
 
+/** An instrument takes numbers; labels and compound setpoints are for the operator. */
 export interface InstrumentStimulus {
   instrument: string;
   set: string;
-  values: SetpointValue[];
+  values: number[];
 }
 
 export interface OperatorStimulus {
