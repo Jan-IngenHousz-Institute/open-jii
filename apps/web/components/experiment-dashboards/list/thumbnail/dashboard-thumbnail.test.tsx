@@ -58,7 +58,23 @@ describe("DashboardThumbnail", () => {
     });
     render(<DashboardThumbnail dashboard={dashboard} experimentId="exp-1" maxHeight={100} />);
     const region = screen.getByRole("img", { name: dashboard.name });
-    expect(region.style.height).toBe("100px");
+    expect(region.style.maxHeight).toBe("100px");
+  });
+
+  // A measured `width * ratio` height is only correct after the ResizeObserver
+  // fires, so the frame used to open at maxHeight and collapse. The ratio makes
+  // the first paint the final size, which is what lets the card hug it.
+  it("sizes itself from the dashboard's aspect ratio, not a measured height", () => {
+    const dashboard = createExperimentDashboard({
+      // 2 rows of 80 plus one 16px gap = 176 tall against the 1280 render width.
+      widgets: [createRichTextWidget({ layout: { col: 0, row: 0, colSpan: 12, rowSpan: 2 } })],
+      layout: { rowHeight: 80, gap: 16, columns: 12 },
+    });
+    render(<DashboardThumbnail dashboard={dashboard} experimentId="exp-1" maxHeight={460} />);
+    const region = screen.getByRole("img", { name: dashboard.name });
+
+    expect(region.style.aspectRatio).toBe("1280 / 176");
+    expect(region.style.height).toBe("");
   });
 
   it("falls back to the empty thumbnail placeholder text (not the renderer) for zero widgets", () => {
