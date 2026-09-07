@@ -243,4 +243,13 @@ describe("IotDevicesTableView", () => {
     );
     expect(screen.getByRole("link", { name: "ActiveOne" })).toBeInTheDocument();
   });
+
+  // jsdom cannot measure text, so the width came from a browser measurement:
+  // the placeholder needs ~223px and w-[280px] left only 202px, cutting it
+  // mid-word at "serial numb".
+  it("gives the search box room for its own placeholder", () => {
+    render(<IotDevicesTableView />);
+    const form = screen.getByPlaceholderText("iot.devices.searchPlaceholder").closest("form");
+    expect(form).toHaveClass("md:w-[320px]");
+  });
 });

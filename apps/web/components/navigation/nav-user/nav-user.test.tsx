@@ -121,4 +121,21 @@ describe("NavUser", () => {
     });
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
+
+  // An address longer than the sidebar is wide will always truncate, so the
+  // full value has to stay reachable without opening the menu.
+  it("exposes the full name and email on the truncated sidebar rows", async () => {
+    useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
+    renderNav({ compact: false });
+
+    const name = await screen.findByText("Ada Lovelace");
+    const email = screen.getByText("ada@example.com");
+
+    expect(name).toHaveAttribute("title", "Ada Lovelace");
+    expect(email).toHaveAttribute("title", "ada@example.com");
+    expect(name).toHaveClass("truncate");
+    expect(email).toHaveClass("truncate");
+    // Without this the nowrap rows set the column's minimum and it stops shrinking.
+    expect(name.parentElement).toHaveClass("min-w-0");
+  });
 });

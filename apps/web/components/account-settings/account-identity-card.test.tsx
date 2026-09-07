@@ -80,4 +80,16 @@ describe("AccountIdentityCard", () => {
     renderCard({ avatarUrl: null });
     expect(screen.getByText("settings.AccountIdentityCard.emptyUrl")).toBeInTheDocument();
   });
+
+  // `Card` brings `py-6` and `gap-6`, which left a 24px band of card background
+  // above the accent bar instead of running it along the card's top edge.
+  it("runs the accent bar flush against the top of the card", () => {
+    renderCard();
+
+    const bar = document.body.querySelector('[class*="bg-gradient-to-r"]');
+    const card = bar?.parentElement;
+    expect(bar).not.toBeNull();
+    expect(card).toHaveClass("py-0", "gap-0", "overflow-hidden");
+    expect(card?.firstElementChild).toBe(bar);
+  });
 });

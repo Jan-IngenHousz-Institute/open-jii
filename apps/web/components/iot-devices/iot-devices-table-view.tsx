@@ -144,7 +144,9 @@ export function IotDevicesTableView() {
             placeholder={t("iot.devices.searchPlaceholder")}
             clearLabel={t("common.clear")}
             loadingLabel={t("common.loading")}
-            className="w-full md:w-[280px]"
+            // "Search by name or serial number" measures ~223px, and the icon
+            // and clear button take 78px, so 280px cut it mid-word.
+            className="w-full md:w-[320px]"
           />
         }
         filters={<>{CHIP_STATUSES.map(renderStatusChip)}</>}

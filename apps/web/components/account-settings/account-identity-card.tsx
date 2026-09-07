@@ -49,8 +49,10 @@ export function AccountIdentityCard({
     t("settings.profileCard.emptyName");
   const previewAvatarUrl = getAvatarPreviewUrl(profile.avatarUrl);
 
+  // `Card` brings `py-6` and `gap-6`, which left a 24px band of card background
+  // above the accent bar and another below it. CardContent carries the padding.
   return (
-    <Card className="border-primary/10 bg-card overflow-hidden rounded-md shadow-sm">
+    <Card className="border-primary/10 bg-card gap-0 overflow-hidden rounded-md py-0 shadow-sm">
       <div className="from-primary via-secondary to-accent h-1.5 bg-gradient-to-r" />
       <CardContent className="p-4 sm:p-6">
         <div className="flex min-w-0 flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left">

@@ -196,6 +196,12 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4 pt-2">
+        {/* Identity gets the row to itself. Sharing it with the utilities left
+            68px for the name and email inside a 216px sidebar, which truncated
+            even a short display name. */}
+        <div className="min-w-0">
+          <NavUser user={user} locale={locale} />
+        </div>
         <div className="flex min-w-0 items-center gap-1">
           <LanguageSwitcher locale={locale} />
           <ThemeToggle
@@ -206,9 +212,6 @@ export function AppSidebar({
               switchToDark: t("common.switchToDarkMode"),
             }}
           />
-          <div className="min-w-0 flex-1">
-            <NavUser user={user} locale={locale} />
-          </div>
         </div>
       </SidebarFooter>
       <SidebarRail resizable />
