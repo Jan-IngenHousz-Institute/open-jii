@@ -60,7 +60,7 @@ export function getOrganizationColumns(
     },
     {
       header: t("organizations.resources.title"),
-      className: "w-56",
+      className: "hidden w-56 lg:table-cell",
       cell: (organization) => {
         const label = organization.isMember
           ? t("organizations.resourceCount", { count: organization.resourceCount })

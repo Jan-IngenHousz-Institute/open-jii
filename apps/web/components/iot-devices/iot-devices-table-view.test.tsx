@@ -102,6 +102,26 @@ describe("IotDevicesTableView", () => {
     expect(screen.getByText("SERIAL-VISIBLE")).toBeVisible();
   });
 
+  it("keeps only device identity and actions visible at phone width", async () => {
+    server.mount(contract.iot.listIotDevices, {
+      body: [createIotDevice({ name: "Alpha", serialNumber: "SERIAL-1" })],
+    });
+
+    render(<IotDevicesTableView />);
+    await screen.findByRole("link", { name: "Alpha" });
+
+    const table = screen.getByRole("table");
+    const headers = Array.from(table.querySelectorAll("thead th"));
+    const cells = Array.from(table.querySelectorAll("tbody tr")[0].children);
+
+    expect(headers[0]).not.toHaveClass("hidden");
+    expect(headers.at(-1)).not.toHaveClass("hidden");
+    for (const index of [1, 2, 3, 4, 5]) {
+      expect(headers[index]).toHaveClass("hidden");
+      expect(cells[index]).toHaveClass("hidden");
+    }
+  });
+
   it("does not present the initial dataset fetch as a pending search", async () => {
     server.mount(contract.iot.listIotDevices, {
       body: [createIotDevice({ name: "Alpha" })],

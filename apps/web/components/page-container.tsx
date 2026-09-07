@@ -26,7 +26,7 @@ export function PageContainer({
 // rules release the cap so the table/canvas can fill the viewport without each route
 // needing to know about the parent wrapper.
 const widthClass: Record<PageContainerWidth, string> = {
-  fluid: "page-fluid flex flex-1 flex-col",
-  wide: "3xl:max-w-[1680px] 4xl:max-w-[2200px] mx-auto w-full max-w-7xl has-[.page-fluid]:flex has-[.page-fluid]:max-w-none has-[.page-fluid]:flex-1 has-[.page-fluid]:flex-col",
-  reading: "page-reading mx-auto w-full max-w-3xl",
+  fluid: "page-fluid flex min-w-0 flex-1 flex-col",
+  wide: "3xl:max-w-[1680px] 4xl:max-w-[2200px] mx-auto w-full min-w-0 max-w-7xl has-[.page-fluid]:flex has-[.page-fluid]:max-w-none has-[.page-fluid]:flex-1 has-[.page-fluid]:flex-col",
+  reading: "page-reading mx-auto w-full min-w-0 max-w-3xl",
 };

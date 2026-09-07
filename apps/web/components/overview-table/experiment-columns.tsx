@@ -143,7 +143,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.updated"),
-      className: "w-32",
+      className: "hidden w-32 lg:table-cell",
       cell: (experiment) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
           {formatShortDate(experiment.updatedAt, locale)}

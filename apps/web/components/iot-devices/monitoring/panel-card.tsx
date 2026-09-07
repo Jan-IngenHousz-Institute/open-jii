@@ -2,6 +2,8 @@
 
 import { SettingsCard } from "@/components/shared/settings-card";
 
+import { cn } from "@repo/ui/lib/utils";
+
 interface PanelCardProps {
   title: string;
   description?: string;
@@ -22,8 +24,8 @@ export function PanelCard({
     <SettingsCard
       title={title}
       description={description}
-      className={className}
-      contentClassName={contentClassName}
+      className={cn("min-w-0", className)}
+      contentClassName={cn("min-w-0", contentClassName)}
     >
       {children}
     </SettingsCard>

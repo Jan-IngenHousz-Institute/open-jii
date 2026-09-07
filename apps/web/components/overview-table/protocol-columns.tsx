@@ -55,7 +55,7 @@ export function getProtocolColumns(
     },
     {
       header: t("protocols.columns.family"),
-      className: "w-36",
+      className: "hidden w-36 sm:table-cell",
       cell: (protocol) => (
         <StatusBadge tone={getSensorFamilyBadgeTone(protocol.family)} className="capitalize">
           {protocol.family}
@@ -64,12 +64,12 @@ export function getProtocolColumns(
     },
     {
       header: t("protocols.columns.macros"),
-      className: "hidden w-56 md:table-cell",
+      className: "hidden w-56 xl:table-cell",
       cell: (protocol) => <CompatibleMacrosCell protocolId={protocol.id} />,
     },
     {
       header: t("protocols.columns.updated"),
-      className: "w-40",
+      className: "hidden w-40 lg:table-cell",
       cell: (protocol) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
           {formatShortDate(protocol.updatedAt, locale)}
