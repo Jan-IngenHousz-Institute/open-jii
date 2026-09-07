@@ -11,6 +11,8 @@ export const RESOURCE_SEGMENT: Record<SharingResourceType, string> = {
   workbook: "workbooks",
   device: "devices",
   device_group: "devices/groups",
+  // Definitions have no page of their own; a device's Calibration tab is where they are used.
+  calibration_definition: "devices",
 };
 
 /**
@@ -26,6 +28,7 @@ export const GROUP_ORDER: readonly SharingResourceType[] = [
   "workbook",
   "device",
   "device_group",
+  "calibration_definition",
 ];
 
 /**
@@ -43,4 +46,5 @@ export const RESOURCE_TYPE_COLOR: Record<SharingResourceType, string> = {
   workbook: "bg-accent",
   device: "bg-chart-3",
   device_group: "bg-secondary",
+  calibration_definition: "bg-chart-5",
 };
