@@ -34,6 +34,49 @@ submit({"par": {"status": "computed", "coefficients": {"spec": fit["coefficient"
 """
 
 
+# The simplest procedure there is: three light levels, the device read raw and
+# a handheld reference typed in, fitted with a slope and an intercept.
+MINIPAR_POINTS = [
+    {"stimulus": "bright", "par_raw": 420.0, "par_ref": 402.12},
+    {"stimulus": "medium", "par_raw": 150.0, "par_ref": 142.92},
+    {"stimulus": "dim", "par_raw": 8.33, "par_ref": 6.92},
+]
+
+MINIPAR_SCHEMA = {
+    "blocks": {
+        "par": {
+            "slope": {"type": "number", "min": 0.1, "max": 10.0},
+            "intercept": {"type": "number", "min": -100.0, "max": 100.0},
+        }
+    }
+}
+
+MINIPAR_SCRIPT = """
+from qc import assess_linear_fit
+
+points = inputs["par_sweep"]
+fit = assess_linear_fit(
+    points["par_raw"], points["par_ref"],
+    slope_min=0.1, slope_max=10.0, intercept_min=-100.0, intercept_max=100.0,
+)
+block = {"status": "computed" if fit["passed"] else "rejected", "quality": fit}
+if fit["passed"]:
+    block["coefficients"] = {"slope": fit["slope"], "intercept": fit["intercept"]}
+else:
+    block["reason"] = "; ".join(fit["reasons"])
+submit({"par": block})
+"""
+
+
+def minipar_event(points=MINIPAR_POINTS):
+    return {
+        "script": MINIPAR_SCRIPT,
+        "series": {"par_sweep": points},
+        "params": {},
+        "outputSchema": MINIPAR_SCHEMA,
+    }
+
+
 def event(script=AMBIT_SCRIPT, series=None, schema=None, params=None):
     return {
         "script": script,
@@ -44,6 +87,24 @@ def event(script=AMBIT_SCRIPT, series=None, schema=None, params=None):
 
 
 class HandlerTest(unittest.TestCase):
+    def test_minipar_manual_fit_computes(self):
+        result = handler(minipar_event(), None)
+        self.assertEqual(result["status"], "computed", result)
+        block = result["blocks"]["par"]
+        self.assertAlmostEqual(block["coefficients"]["slope"], 0.96, places=2)
+        self.assertAlmostEqual(block["coefficients"]["intercept"], -1.08, places=1)
+        self.assertTrue(block["quality"]["passed"])
+
+    def test_minipar_manual_fit_with_too_few_points_is_rejected(self):
+        # Two points fit a line exactly, so the gate refuses. The sandbox reports
+        # that per block; whether the run as a whole fails is the backend's call.
+        result = handler(minipar_event(points=MINIPAR_POINTS[:2]), None)
+        self.assertEqual(result["status"], "computed", result)
+        block = result["blocks"]["par"]
+        self.assertEqual(block["status"], "rejected")
+        self.assertNotIn("coefficients", block)
+        self.assertIn("at least three calibration points", block["reason"])
+
     def test_ambit_par_fit_computes(self):
         result = handler(event(), None)
         self.assertEqual(result["status"], "computed", result)
@@ -126,8 +187,8 @@ class HandlerTest(unittest.TestCase):
         self.assertIn("not produced", result["blocks"]["par"]["reason"])
 
     def test_partial_session_of_computed_rejected_and_skipped(self):
-        # The Calibratron bench reality: one gain fitted, one attempted and
-        # rejected on quality, one never attempted.
+        # A real bench session: one gain fitted, one attempted and rejected on
+        # quality, one never attempted.
         script = (
             'submit({'
             '"par": {"status": "computed", "coefficients": {"spec": 1.19}}, '

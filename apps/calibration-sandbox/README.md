@@ -17,8 +17,8 @@ could patch this process, including state a warm container carries into later
 invokes. Accepted for v1. If definitions ever become less trusted, the
 hardening path is one subprocess per invoke, macro-sandbox style.
 
-`functions/python/qc.py` is ported unchanged from ambit-Calibratron so bench
-and platform fits pass the same gates.
+`functions/python/qc.py` holds one set of quality gates for every definition, so
+two scripts fitting the same kind of curve cannot disagree about what passes.
 
 ## Develop
 
