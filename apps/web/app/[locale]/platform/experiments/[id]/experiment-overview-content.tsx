@@ -84,7 +84,10 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
       />
 
       {/* LEFT SIDE CONTENT (Second on mobile) */}
-      <div className="flex-1 space-y-10 lg:order-1">
+      {/* `flex-1` keeps `min-width: auto`, so a content-based minimum wins over the
+          available width. The dashboards carousel reports the sum of its slides as
+          its min-content, so enough dashboards pushed the details panel off-screen. */}
+      <div className="min-w-0 flex-1 space-y-10 lg:order-1">
         <ExperimentDescription
           experimentId={id}
           description={experiment.description ?? ""}

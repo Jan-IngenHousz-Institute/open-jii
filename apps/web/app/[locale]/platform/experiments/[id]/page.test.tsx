@@ -78,4 +78,19 @@ describe("ExperimentOverviewPage", () => {
     expect(screen.getByRole("region", { name: /workbook/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /measurements/i })).toBeInTheDocument();
   });
+
+  // `flex-1` alone keeps `min-width: auto`, so a content-based minimum beats the
+  // available width. The dashboards carousel reports the sum of its slides as its
+  // min-content, so five dashboards stretched this column past the row and pushed
+  // the 24rem details panel outside the viewport.
+  it("lets the content column shrink below its content's minimum", async () => {
+    mountDefaults();
+    const { container } = render(<ExperimentOverviewPage {...props} />);
+    await waitFor(() => {
+      expect(screen.getByRole("region", { name: /details/i })).toBeInTheDocument();
+    });
+
+    const column = container.querySelector('[class*="lg:order-1"]');
+    expect(column).toHaveClass("min-w-0", "flex-1");
+  });
 });
