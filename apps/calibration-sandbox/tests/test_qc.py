@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "functions" / "python"))
 
-from qc import assess_origin_fit
+from qc import assess_linear_fit, assess_origin_fit
 
 # A clean bench sweep: y = 1.19 * x with negligible noise.
 CLEAN_X = [1.1, 148.2, 431.7, 540.1, 715.3, 1182.4]
@@ -62,3 +62,58 @@ class AssessOriginFitTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# The simplest procedure: three light levels read by hand, y = 0.96 * x - 1.08.
+LINEAR_X = [8.33, 150.0, 420.0]
+LINEAR_Y = [6.92, 142.92, 402.12]
+LINEAR_BOUNDS = {"slope_min": 0.1, "slope_max": 10.0}
+
+
+class AssessLinearFitTest(unittest.TestCase):
+    def test_three_manual_points_pass(self):
+        record = assess_linear_fit(LINEAR_X, LINEAR_Y, **LINEAR_BOUNDS)
+        self.assertTrue(record["passed"], record["reasons"])
+        self.assertAlmostEqual(record["slope"], 0.96, places=2)
+        self.assertAlmostEqual(record["intercept"], -1.08, places=1)
+        self.assertEqual(record["fit"], "linear")
+
+    def test_stimulus_is_optional(self):
+        # A manual procedure's light levels need not be ordered or even known.
+        without = assess_linear_fit(LINEAR_X, LINEAR_Y, **LINEAR_BOUNDS)
+        with_drive = assess_linear_fit(LINEAR_X, LINEAR_Y, [1, 2, 3], **LINEAR_BOUNDS)
+        self.assertEqual(without["slope"], with_drive["slope"])
+        self.assertTrue(with_drive["passed"])
+
+    def test_two_points_are_refused(self):
+        # Two points always fit a line exactly, so R-squared proves nothing.
+        record = assess_linear_fit(LINEAR_X[:2], LINEAR_Y[:2], **LINEAR_BOUNDS)
+        self.assertFalse(record["passed"])
+        self.assertIn("at least three calibration points are required", record["reasons"])
+
+    def test_intercept_bounds_gate(self):
+        record = assess_linear_fit(
+            LINEAR_X, LINEAR_Y, **LINEAR_BOUNDS, intercept_min=0.0, intercept_max=100.0
+        )
+        self.assertFalse(record["passed"])
+        self.assertTrue(any("intercept must be" in reason for reason in record["reasons"]))
+
+    def test_noisy_points_fail_r2(self):
+        record = assess_linear_fit([8.33, 150.0, 420.0], [300.0, 10.0, 200.0], **LINEAR_BOUNDS)
+        self.assertFalse(record["passed"])
+        self.assertTrue(any("R-squared" in reason for reason in record["reasons"]))
+
+    def test_monotonicity_is_checked_when_a_stimulus_is_given(self):
+        # Reference rising while the device falls with the stimulus is a rig fault.
+        record = assess_linear_fit([10.0, 20.0, 5.0], [10.0, 20.0, 30.0], [1, 2, 3], **LINEAR_BOUNDS)
+        self.assertFalse(record["passed"])
+        self.assertTrue(any("not monotonic" in reason for reason in record["reasons"]))
+
+    def test_non_finite_input_fails_closed(self):
+        record = assess_linear_fit([1.0, 2.0, float("nan")], [1.0, 2.0, 3.0], **LINEAR_BOUNDS)
+        self.assertFalse(record["passed"])
+        self.assertIn("all calibration values must be finite", record["reasons"])
+
+    def test_mismatched_lengths_raise(self):
+        with self.assertRaises(ValueError):
+            assess_linear_fit([1.0, 2.0, 3.0], [1.0, 2.0], **LINEAR_BOUNDS)
