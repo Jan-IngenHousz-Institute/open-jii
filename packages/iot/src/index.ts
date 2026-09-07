@@ -118,6 +118,21 @@ export {
 } from "./instrument/registry";
 export type { BenchInstrumentFactory } from "./instrument/registry";
 
+// Calibration write-back: approved coefficients become family console commands.
+export {
+  CALIBRATION_WRITERS,
+  canWriteCalibration,
+  formatCoefficient,
+  writeCalibrationBlocks,
+} from "./calibration/write-back";
+export type {
+  AppliedCalibrationBlocks,
+  CalibrationWriteResults,
+  CoefficientWriteResult,
+  CoefficientWriter,
+  FamilyCalibrationWriters,
+} from "./calibration/write-back";
+
 // Capture procedures: the declared steps a calibration runs at a bench.
 export { runCaptureProcedure, bindBenchInstrument, shutdownRig } from "./procedure/interpreter";
 export type {

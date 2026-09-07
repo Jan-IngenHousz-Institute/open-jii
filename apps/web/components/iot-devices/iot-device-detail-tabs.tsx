@@ -17,6 +17,7 @@ const DEVICE_TABS = [
   { value: "credentials", segment: "credentials" },
   { value: "onboarding", segment: "onboarding" },
   { value: "firmware", segment: "firmware" },
+  { value: "calibration", segment: "calibration" },
   { value: "collaborators", segment: "collaborators" },
   { value: "lineage", segment: "lineage" },
   { value: "monitoring", segment: "monitoring" },
@@ -61,6 +62,8 @@ export function IotDeviceDetailTabs({
     // Hidden, not shown-then-redirected: gating parity with Credentials.
     if (tab.value === "onboarding") return canManage && !isMobileFamily;
     if (tab.value === "firmware") return hasManagedFirmware;
+    // Coefficients are written to hardware: manage, and never a phone.
+    if (tab.value === "calibration") return canManage && !isMobileFamily;
     return true;
   });
   // Match all routes first so a filtered-out tab does not highlight Overview.

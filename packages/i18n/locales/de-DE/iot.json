@@ -78,7 +78,8 @@
         "collaborators": "Mitwirkende",
         "lineage": "Herkunft",
         "monitoring": "Überwachung",
-        "firmware": "Firmware"
+        "firmware": "Firmware",
+        "calibration": "Kalibrierung"
       },
       "connectivity": {
         "connected": "Verbunden",
@@ -705,6 +706,114 @@
       "showFewer": "Weniger Gruppen anzeigen",
       "searchPlaceholder": "Gruppen durchsuchen",
       "searchNoMatches": "Keine Gruppen entsprechen der Suche."
+    },
+    "calibration": {
+      "title": "Kalibrierung",
+      "description": "Was dieses Gerät gegen eine Referenz misst, die gültigen Koeffizienten und jede aufgezeichnete Messbank-Sitzung.",
+      "loadError": "Die Kalibrierungsdaten konnten nicht geladen werden.",
+      "status": {
+        "running": "Läuft",
+        "computed": "Berechnet",
+        "compute_failed": "Berechnung fehlgeschlagen",
+        "error": "Fehler",
+        "approved": "Freigegeben",
+        "rejected": "Abgelehnt"
+      },
+      "block": {
+        "computed": "Berechnet",
+        "rejected": "Abgelehnt",
+        "skipped": "Übersprungen"
+      },
+      "active": {
+        "title": "Gültig",
+        "none": "Dieses Gerät wurde noch nie kalibriert.",
+        "written": "Auf das Gerät geschrieben",
+        "notWritten": "Noch nicht auf das Gerät geschrieben",
+        "validFrom": "Seit {{date}}"
+      },
+      "runs": {
+        "title": "Messbank-Sitzungen",
+        "empty": "Auf diesem Gerät wurde noch keine Kalibrierung ausgeführt.",
+        "definition": "v{{version}}"
+      },
+      "cta": {
+        "calibrate": "Kalibrieren",
+        "next": "Weiter",
+        "back": "Zurück",
+        "cancel": "Abbrechen"
+      },
+      "steps": {
+        "choose": "Verfahren",
+        "connect": "Verbinden",
+        "capture": "Erfassen",
+        "review": "Prüfen",
+        "write": "Schreiben",
+        "done": "Fertig"
+      },
+      "choose": {
+        "hint": "Wählen Sie das Verfahren für dieses Gerät. Jedes benennt die Schritte an der Messbank und was es berechnet.",
+        "empty": "Für diese Gerätefamilie ist noch kein Kalibrierverfahren veröffentlicht."
+      },
+      "connect": {
+        "hint": "Schließen Sie das Gerät per USB an und öffnen Sie den Port. Die Plattform erreicht die Hardware nie selbst; dieser Browser ist die Brücke.",
+        "action": "Gerät verbinden",
+        "connecting": "Wird verbunden…",
+        "connected": "Verbunden mit {{name}}",
+        "disconnect": "Trennen",
+        "unsupportedBrowser": "Dieser Browser hat kein Web Serial. Verwenden Sie einen Chromium-basierten Browser auf einem Desktop.",
+        "unsupportedDevice": "Diese Gerätefamilie hat keine serielle Schnittstelle.",
+        "wrongFamily": "Ein {{expected}}-Gerät wurde erwartet, aber ein {{actual}} hat geantwortet. Verbinden Sie das richtige Gerät."
+      },
+      "prompt": {
+        "confirmLabel": "Geben Sie {{token}} ein, um fortzufahren",
+        "valueLabel": "Wert",
+        "invalidNumber": "Geben Sie eine Zahl ein.",
+        "continue": "Weiter",
+        "submit": "Erfassen",
+        "decline": "Ich kann diesen Schritt nicht ausführen"
+      },
+      "capture": {
+        "step": "Schritt {{index}} von {{total}}: {{description}}",
+        "setpoint": "Sollwert {{index}} von {{total}}: {{value}}",
+        "series": "{{series}}: {{rows}} Zeilen erfasst",
+        "skipped": "{{series}} übersprungen: {{reason}}",
+        "submitting": "Koeffizienten werden berechnet…",
+        "aborted": "Das Verfahren wurde vor dem Abschluss beendet.",
+        "retry": "Erneut ausführen"
+      },
+      "review": {
+        "hint": "Die Freigabe übernimmt die berechneten Blöcke in den Datensatz dieses Geräts. Die Hardware wird erst im nächsten Schritt beschrieben.",
+        "computeFailed": "Das Skript hat keine Koeffizienten erzeugt.",
+        "approve": "Freigeben",
+        "reject": "Ablehnen",
+        "approveFailed": "Dieser Lauf konnte nicht freigegeben werden.",
+        "rejectFailed": "Dieser Lauf konnte nicht abgelehnt werden.",
+        "previousUnknown": "unbekannt",
+        "passed": "Qualitätsprüfung bestanden",
+        "failed": "Qualitätsprüfung nicht bestanden",
+        "r2": "R² {{value}}",
+        "nrmse": "NRMSE {{value}} %",
+        "points": "Erfasste Punkte",
+        "fitLine": "Angepasste Gerade",
+        "xLabel": "Gerätemesswert",
+        "yLabel": "Referenzmesswert"
+      },
+      "write": {
+        "hint": "Schreiben Sie die freigegebenen Koeffizienten auf das Gerät. Jeder Block wird durch Zurücklesen bestätigt.",
+        "action": "Auf Gerät schreiben",
+        "writing": "Wird geschrieben…",
+        "verified": "geschrieben und bestätigt",
+        "failed": "nicht bestätigt",
+        "unsupported": "Die Plattform kann für diese Gerätefamilie noch keine Koeffizienten schreiben. Die Kalibrierung ist nur im Datensatz freigegeben.",
+        "skip": "Ohne Schreiben abschließen",
+        "reportFailed": "Das Gerät wurde beschrieben, das Ergebnis konnte aber nicht gespeichert werden."
+      },
+      "done": {
+        "close": "Schließen",
+        "rejectedHint": "Der Lauf wurde abgelehnt. Seine Diagnose bleibt gespeichert; nichts wurde übernommen.",
+        "writtenHint": "Die Kalibrierung ist gültig und auf dem Gerät bestätigt.",
+        "notWrittenHint": "Die Kalibrierung ist im Datensatz gültig. Einige Blöcke wurden auf dem Gerät nicht bestätigt; prüfen Sie die Schreibergebnisse."
+      }
     },
     "workbookBar": {
       "mock": "Mock",

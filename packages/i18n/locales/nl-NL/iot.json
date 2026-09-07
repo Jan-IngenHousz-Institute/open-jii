@@ -78,7 +78,8 @@
         "collaborators": "Medewerkers",
         "lineage": "Herkomst",
         "monitoring": "Monitoring",
-        "firmware": "Firmware"
+        "firmware": "Firmware",
+        "calibration": "Kalibratie"
       },
       "connectivity": {
         "connected": "Verbonden",
@@ -705,6 +706,114 @@
       "showFewer": "Minder groepen tonen",
       "searchPlaceholder": "Groepen zoeken",
       "searchNoMatches": "Geen groepen voldoen aan de zoekopdracht."
+    },
+    "calibration": {
+      "title": "Kalibratie",
+      "description": "Wat dit apparaat meet tegenover een referentie, de geldende coëfficiënten en elke vastgelegde meetbanksessie.",
+      "loadError": "De kalibratiegegevens konden niet worden geladen.",
+      "status": {
+        "running": "Bezig",
+        "computed": "Berekend",
+        "compute_failed": "Berekening mislukt",
+        "error": "Fout",
+        "approved": "Goedgekeurd",
+        "rejected": "Afgewezen"
+      },
+      "block": {
+        "computed": "Berekend",
+        "rejected": "Afgewezen",
+        "skipped": "Overgeslagen"
+      },
+      "active": {
+        "title": "Geldend",
+        "none": "Dit apparaat is nog nooit gekalibreerd.",
+        "written": "Naar het apparaat geschreven",
+        "notWritten": "Nog niet naar het apparaat geschreven",
+        "validFrom": "Sinds {{date}}"
+      },
+      "runs": {
+        "title": "Meetbanksessies",
+        "empty": "Op dit apparaat is nog geen kalibratie uitgevoerd.",
+        "definition": "v{{version}}"
+      },
+      "cta": {
+        "calibrate": "Kalibreren",
+        "next": "Doorgaan",
+        "back": "Terug",
+        "cancel": "Annuleren"
+      },
+      "steps": {
+        "choose": "Procedure",
+        "connect": "Verbinden",
+        "capture": "Vastleggen",
+        "review": "Beoordelen",
+        "write": "Schrijven",
+        "done": "Klaar"
+      },
+      "choose": {
+        "hint": "Kies de procedure voor dit apparaat. Elke procedure benoemt de stappen op de meetbank en wat ze berekent.",
+        "empty": "Voor deze apparaatfamilie is nog geen kalibratieprocedure gepubliceerd."
+      },
+      "connect": {
+        "hint": "Sluit het apparaat aan via USB en open de poort. Het platform bereikt de hardware nooit zelf; deze browser is de brug.",
+        "action": "Apparaat verbinden",
+        "connecting": "Verbinden…",
+        "connected": "Verbonden met {{name}}",
+        "disconnect": "Verbinding verbreken",
+        "unsupportedBrowser": "Deze browser heeft geen Web Serial. Gebruik een op Chromium gebaseerde browser op een desktop.",
+        "unsupportedDevice": "Deze apparaatfamilie heeft geen seriële verbinding.",
+        "wrongFamily": "Er werd een {{expected}}-apparaat verwacht, maar een {{actual}} antwoordde. Verbind het juiste apparaat."
+      },
+      "prompt": {
+        "confirmLabel": "Typ {{token}} om door te gaan",
+        "valueLabel": "Waarde",
+        "invalidNumber": "Voer een getal in.",
+        "continue": "Doorgaan",
+        "submit": "Vastleggen",
+        "decline": "Ik kan deze stap niet uitvoeren"
+      },
+      "capture": {
+        "step": "Stap {{index}} van {{total}}: {{description}}",
+        "setpoint": "Instelpunt {{index}} van {{total}}: {{value}}",
+        "series": "{{series}}: {{rows}} rijen vastgelegd",
+        "skipped": "{{series}} overgeslagen: {{reason}}",
+        "submitting": "Coëfficiënten berekenen…",
+        "aborted": "De procedure is gestopt voordat ze klaar was.",
+        "retry": "Opnieuw uitvoeren"
+      },
+      "review": {
+        "hint": "Goedkeuren past de berekende blokken toe op het record van dit apparaat. De hardware wordt pas in de volgende stap beschreven.",
+        "computeFailed": "Het script heeft geen coëfficiënten opgeleverd.",
+        "approve": "Goedkeuren",
+        "reject": "Afwijzen",
+        "approveFailed": "Deze run kon niet worden goedgekeurd.",
+        "rejectFailed": "Deze run kon niet worden afgewezen.",
+        "previousUnknown": "onbekend",
+        "passed": "Kwaliteitscontrole geslaagd",
+        "failed": "Kwaliteitscontrole mislukt",
+        "r2": "R² {{value}}",
+        "nrmse": "NRMSE {{value}}%",
+        "points": "Vastgelegde punten",
+        "fitLine": "Gefitte lijn",
+        "xLabel": "Apparaatmeting",
+        "yLabel": "Referentiemeting"
+      },
+      "write": {
+        "hint": "Schrijf de goedgekeurde coëfficiënten naar het apparaat. Elk blok wordt bevestigd door het terug te lezen.",
+        "action": "Naar apparaat schrijven",
+        "writing": "Schrijven…",
+        "verified": "geschreven en bevestigd",
+        "failed": "niet bevestigd",
+        "unsupported": "Het platform kan voor deze apparaatfamilie nog geen coëfficiënten schrijven. De kalibratie is alleen in het record goedgekeurd.",
+        "skip": "Afronden zonder te schrijven",
+        "reportFailed": "Het apparaat is beschreven, maar het resultaat kon niet worden vastgelegd."
+      },
+      "done": {
+        "close": "Sluiten",
+        "rejectedHint": "De run is afgewezen. De diagnose blijft bewaard; er is niets toegepast.",
+        "writtenHint": "De kalibratie geldt en is op het apparaat bevestigd.",
+        "notWrittenHint": "De kalibratie geldt in het record. Sommige blokken zijn niet op het apparaat bevestigd; controleer de schrijfresultaten."
+      }
     },
     "workbookBar": {
       "mock": "Mock",

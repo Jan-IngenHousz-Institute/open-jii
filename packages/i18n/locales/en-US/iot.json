@@ -78,7 +78,8 @@
         "collaborators": "Collaborators",
         "lineage": "Lineage",
         "monitoring": "Monitoring",
-        "firmware": "Firmware"
+        "firmware": "Firmware",
+        "calibration": "Calibration"
       },
       "connectivity": {
         "connected": "Connected",
@@ -705,6 +706,114 @@
       "showFewer": "Show fewer groups",
       "searchPlaceholder": "Search groups",
       "searchNoMatches": "No groups match that search."
+    },
+    "calibration": {
+      "title": "Calibration",
+      "description": "What this device measures against a reference, the coefficients in force, and every bench session on record.",
+      "loadError": "Could not load calibration data.",
+      "status": {
+        "running": "Running",
+        "computed": "Computed",
+        "compute_failed": "Compute failed",
+        "error": "Error",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "block": {
+        "computed": "Computed",
+        "rejected": "Rejected",
+        "skipped": "Skipped"
+      },
+      "active": {
+        "title": "In force",
+        "none": "This device has never been calibrated.",
+        "written": "Written to device",
+        "notWritten": "Not yet written to device",
+        "validFrom": "Since {{date}}"
+      },
+      "runs": {
+        "title": "Bench sessions",
+        "empty": "No calibration has been run on this device yet.",
+        "definition": "v{{version}}"
+      },
+      "cta": {
+        "calibrate": "Calibrate",
+        "next": "Continue",
+        "back": "Back",
+        "cancel": "Cancel"
+      },
+      "steps": {
+        "choose": "Procedure",
+        "connect": "Connect",
+        "capture": "Capture",
+        "review": "Review",
+        "write": "Write",
+        "done": "Done"
+      },
+      "choose": {
+        "hint": "Pick the procedure for this device. Each one names the steps the bench will walk and what it computes.",
+        "empty": "No calibration procedure is published for this device family yet."
+      },
+      "connect": {
+        "hint": "Plug the device in over USB and open its port. The platform never reaches hardware itself; this browser is the bridge.",
+        "action": "Connect device",
+        "connecting": "Connecting…",
+        "connected": "Connected to {{name}}",
+        "disconnect": "Disconnect",
+        "unsupportedBrowser": "This browser has no Web Serial. Use a Chromium-based browser on a desktop.",
+        "unsupportedDevice": "This device family has no serial transport.",
+        "wrongFamily": "Expected a {{expected}} device but a {{actual}} answered. Connect the right device."
+      },
+      "prompt": {
+        "confirmLabel": "Type {{token}} to continue",
+        "valueLabel": "Value",
+        "invalidNumber": "Enter a number.",
+        "continue": "Continue",
+        "submit": "Record",
+        "decline": "I can't do this step"
+      },
+      "capture": {
+        "step": "Step {{index}} of {{total}}: {{description}}",
+        "setpoint": "Setpoint {{index}} of {{total}}: {{value}}",
+        "series": "{{series}}: {{rows}} rows captured",
+        "skipped": "{{series}} skipped: {{reason}}",
+        "submitting": "Computing coefficients…",
+        "aborted": "The procedure stopped before completing.",
+        "retry": "Run again"
+      },
+      "review": {
+        "hint": "Approving applies the computed blocks to this device's record. Nothing reaches the hardware until the next step.",
+        "computeFailed": "The script did not produce coefficients.",
+        "approve": "Approve",
+        "reject": "Reject",
+        "approveFailed": "Could not approve this run.",
+        "rejectFailed": "Could not reject this run.",
+        "previousUnknown": "unknown",
+        "passed": "Quality gates passed",
+        "failed": "Quality gates failed",
+        "r2": "R² {{value}}",
+        "nrmse": "NRMSE {{value}}%",
+        "points": "Captured points",
+        "fitLine": "Fitted line",
+        "xLabel": "Device reading",
+        "yLabel": "Reference reading"
+      },
+      "write": {
+        "hint": "Write the approved coefficients to the device. Each block is confirmed by reading it back.",
+        "action": "Write to device",
+        "writing": "Writing…",
+        "verified": "written and confirmed",
+        "failed": "not confirmed",
+        "unsupported": "The platform cannot write coefficients to this device family yet. The calibration is approved on record only.",
+        "skip": "Finish without writing",
+        "reportFailed": "The device was written but the result could not be recorded."
+      },
+      "done": {
+        "close": "Close",
+        "rejectedHint": "The run was rejected. Its diagnostics stay on record; nothing was applied.",
+        "writtenHint": "The calibration is in force and confirmed on the device.",
+        "notWrittenHint": "The calibration is in force on record. Some blocks were not confirmed on the device; check the write results."
+      }
     },
     "workbookBar": {
       "mock": "Mock",
