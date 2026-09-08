@@ -1,29 +1,15 @@
 /**
- * Parser for the Ambit boot dump.
- *
- * `reboot` makes the firmware print its configuration as free-text lines: the
- * hardware MAC, firmware version and build, the stored calibration
- * coefficients, the actinic LED curve, and the ADPD and MLX vectors. The text
- * console has no other way to report any of it, which is why the driver's
- * `hello` reply cannot identify a unit on its own.
- *
- * Line shapes, key names, and the numeric coercion rule are the firmware's,
- * not ours.
+ * Parser for the Ambit boot dump: `reboot` prints the MAC, firmware build, stored
+ * coefficients, LED curve and ADPD baseline as free-text lines, and nowhere else.
  */
 
-/** GPS and IMU snapshot; keys are whatever the firmware printed. */
 export type AmbitMetadata = Record<string, number | string>;
 
 export interface AmbitDeviceInfo {
-  /** Firmware version from the plain `FW:` line, e.g. "1.1.3". */
   firmwareVersion: string;
-  /** Hardware MAC from the `FW: MAC:...` line; the unit's stable identity. */
   mac: string;
-  /** Firmware image size in bytes, 0 when the line did not carry one. */
   firmwareSize: number;
-  /** Build date as printed, e.g. "Mar  5 2026". */
   firmwareDate: string;
-  /** Calibration "Name", e.g. "AmbitV004". */
   name: string;
   adpdChipVersion: number | null;
   metadata: AmbitMetadata;
@@ -36,16 +22,13 @@ export interface AmbitDeviceInfo {
   tempOffset: number;
   tempSlope: number;
 
-  /** Actinic LED curve, setting to measured count. */
   actinicCurve: Record<number, number>;
-  /** Six-channel ADPD dark baseline. */
   adpdCalibration: number[];
   mlxCalibration: number[];
 
   /**
-   * The dump carried the calibration line or the firmware version, so the
-   * device answered rather than the read timing out mid-boot. The write-back
-   * path must not trust coefficients read from an invalid dump.
+   * True when the dump reached the calibration or version line: the device answered
+   * rather than the read timing out mid-boot.
    */
   isValid: boolean;
 }
@@ -76,9 +59,8 @@ function emptyInfo(): AmbitDeviceInfo {
 }
 
 /**
- * Split `k:v k:v` pairs. The firmware separates with runs of whitespace and
- * sometimes commas; the `FW: MAC:` line is tab-separated because its Date
- * value contains spaces, so that caller passes a tab separator.
+ * Pairs are separated by whitespace or commas; the `FW: MAC:` line is tab-separated
+ * because its Date contains spaces.
  */
 function keyValuePairs(text: string, tabSeparated = false): Map<string, string> {
   const tokens = tabSeparated ? text.split("\t") : text.replace(/,/g, " ").split(/\s+/);
@@ -146,8 +128,7 @@ function applyCalibrationLine(info: AmbitDeviceInfo, payload: string): void {
   info.tempOffset = toFloat(pairs.get("Temp_offset"), info.tempOffset);
   info.tempSlope = toFloat(pairs.get("Temp_slope"), info.tempSlope);
 
-  // "Spec" is the PAR gain, and its presence is what proves the dump reached
-  // the calibration line rather than timing out before it.
+  // "Spec" present proves the dump reached the calibration line rather than timing out.
   const spec = pairs.get("Spec");
   if (spec !== undefined) {
     info.lightSlope = toFloat(spec, info.lightSlope);
@@ -206,11 +187,7 @@ export function applyAmbitBootLine(info: AmbitDeviceInfo, line: string): AmbitDe
   return info;
 }
 
-/**
- * Parse a whole boot dump. The firmware ends its dump with the plain `FW:`
- * version line, so anything after it belongs to the next console exchange and
- * is ignored, matching the bench tool's read loop.
- */
+/** The dump ends with the plain `FW:` version line; anything after it is the next console exchange. */
 export function parseAmbitBootDump(dump: string): AmbitDeviceInfo {
   const info = emptyInfo();
   const lines = dump.split(/\r?\n/).slice(0, AMBIT_BOOT_DUMP_MAX_LINES);

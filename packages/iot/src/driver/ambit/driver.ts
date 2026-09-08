@@ -300,19 +300,12 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
   }
 
   /**
-   * Reboot the device and parse the configuration dump it prints.
-   *
-   * The text console reports the MAC, the firmware build, and the stored
-   * calibration coefficients nowhere else, so this is how a connected unit is
-   * resolved to a registered device, how a calibration write-back learns the
-   * value it may have to restore, and how a readback is verified. Costs a
-   * reboot, so callers take it once before a bench session and once after.
+   * Reboot the device and parse its configuration dump; the MAC, build and stored
+   * coefficients are reported nowhere else.
    */
   async readDeviceInfo(): Promise<AmbitDeviceInfo> {
     const result = await this.execute<unknown>(AMBIT_COMMANDS.REBOOT);
-    // A failed command and a truncated dump need different handling at the
-    // bench (reconnect versus retry the reboot), so the transport failure is
-    // thrown rather than flattened into an invalid-looking info.
+    // A failed command and a truncated dump need different handling at the bench, so the transport failure is thrown.
     if (!result.success) {
       throw result.error ?? new Error("Ambit did not answer the reboot");
     }
@@ -321,9 +314,8 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
   }
 
   /**
-   * Identity including the hardware MAC, which `getDeviceIdentity()` can only
-   * report after a measurement has carried the trace's `sensor_id`. Reboots
-   * the device, so it is the bench path rather than the connect path.
+   * Identity with the MAC, which `getDeviceIdentity()` only has after a measurement.
+   * Reboots the device, so this is the bench path rather than the connect path.
    */
   async getDeviceIdentityFromBootDump(): Promise<DeviceIdentity> {
     const info = await this.readDeviceInfo();
