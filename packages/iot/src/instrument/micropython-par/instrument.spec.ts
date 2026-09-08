@@ -82,6 +82,37 @@ describe("MicroPythonParReference", () => {
       await expect(instrument.read("par")).rejects.toThrow(/not a number/);
     });
 
+    it("refuses to read before a transport is attached", async () => {
+      const instrument = new MicroPythonParReference();
+
+      await expect(instrument.read("par")).rejects.toThrow(/not initialized/);
+    });
+
+    it("accepts a reply that was already buffered before the wait began", async () => {
+      const transport = createMockTransport();
+      vi.mocked(transport.send).mockImplementation((sent: string) => {
+        if (sent === "getPAR()\r") transport.simulateData("getPAR()\r\n0.69\r\n>>> ");
+        return Promise.resolve();
+      });
+      const instrument = await connected(transport);
+
+      await expect(instrument.read("par")).resolves.toBe(0.69);
+    });
+
+    it("assembles a reply that arrives in pieces", async () => {
+      const transport = createMockTransport();
+      vi.mocked(transport.send).mockImplementation((sent: string) => {
+        if (sent === "getPAR()\r") {
+          setTimeout(() => transport.simulateData("getPAR()\r\n0."), 0);
+          setTimeout(() => transport.simulateData("69\r\n>>> "), 5);
+        }
+        return Promise.resolve();
+      });
+      const instrument = await connected(transport);
+
+      await expect(instrument.read("par")).resolves.toBe(0.69);
+    });
+
     it("rejects when the board stays silent", async () => {
       const instrument = await connected(createMockTransport());
 

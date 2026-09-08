@@ -754,6 +754,22 @@ describe("runCaptureProcedure", () => {
       expect(result?.error?.message).toMatch(/did not answer/);
     });
 
+    // A serial stack can reject with a bare string; the run record still
+    // needs an Error to carry.
+    it("wraps a non-Error read failure", async () => {
+      const transport = createMockTransport();
+      vi.mocked(transport.send).mockRejectedValue("port gone");
+      const reference = new MicroPythonParReference({ readTimeoutMs: 50 });
+      await reference.initialize(transport);
+      const binding = bindBenchInstrument(reference);
+
+      const result = await binding.read?.execute("par");
+
+      expect(result?.success).toBe(false);
+      expect(result?.error).toBeInstanceOf(Error);
+      expect(result?.error?.message).toBe("port gone");
+    });
+
     it("refuses a protocol object aimed at a reference", async () => {
       const binding = bindBenchInstrument(new MicroPythonParReference());
 
