@@ -5,7 +5,6 @@ import { CheckCircle2, Loader2, SkipForward } from "lucide-react";
 import { useTranslation } from "@repo/i18n";
 import type { ProcedureProgress } from "@repo/iot";
 
-/** What the procedure has done so far, as the interpreter reported it. */
 export function CalibrationCaptureProgress({
   events,
   isRunning,

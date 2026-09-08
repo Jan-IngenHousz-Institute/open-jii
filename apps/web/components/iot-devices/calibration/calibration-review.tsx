@@ -18,7 +18,6 @@ import { fitLineFromCoefficients, fitPointsFromPayload } from "./fit-points";
 interface CalibrationReviewProps {
   run: CalibrationRun;
   payload: CalibrationRunPayload;
-  /** What the device holds now, for the old-versus-new comparison. */
   active: DeviceCalibration | null;
   isApproving: boolean;
   isRejecting: boolean;
@@ -26,11 +25,6 @@ interface CalibrationReviewProps {
   onReject: () => void;
 }
 
-/**
- * The reviewer's decision point: every block the script produced, the
- * quality that justifies it, the points against the fitted line, and the
- * coefficients the device holds today beside the ones about to replace them.
- */
 export function CalibrationReview({
   run,
   payload,
@@ -72,8 +66,7 @@ export function CalibrationReview({
     );
   }
 
-  // A failed compute still carries every block's outcome and reason, which is
-  // the part a reviewer needs to act on; only the decision is withheld.
+  // A failed compute still carries each block's reason; only the decision is withheld.
   if (!isComputed) {
     return (
       <div className="space-y-6">

@@ -18,7 +18,6 @@ interface ActiveCalibrationCardProps {
   isError: boolean;
 }
 
-/** The coefficients in force on this device, and whether they reached it. */
 export function ActiveCalibrationCard({
   calibration,
   isLoading,

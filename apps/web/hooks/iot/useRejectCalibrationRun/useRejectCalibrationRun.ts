@@ -1,7 +1,6 @@
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-/** Reject a computed run; its diagnostics stay on record, nothing is applied. */
 export const useRejectCalibrationRun = () => {
   const queryClient = useQueryClient();
 

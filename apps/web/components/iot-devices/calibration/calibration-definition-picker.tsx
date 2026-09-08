@@ -15,7 +15,6 @@ interface CalibrationDefinitionPickerProps {
   onSelect: (definitionId: string) => void;
 }
 
-/** Which procedure to run: the definitions published for this device's family. */
 export function CalibrationDefinitionPicker({
   definitions,
   isLoading,

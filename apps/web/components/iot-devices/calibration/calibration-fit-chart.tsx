@@ -15,7 +15,6 @@ interface CalibrationFitChartProps {
   intercept: number;
 }
 
-/** The captured points against the line the coefficients describe. */
 export function CalibrationFitChart({ points, slope, intercept }: CalibrationFitChartProps) {
   const { t } = useTranslation("iot");
 

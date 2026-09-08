@@ -1,14 +1,6 @@
 /**
- * How approved coefficients reach a device, per family.
- *
- * A calibration block names coefficients by the keys a definition's output
- * schema declares (`par.slope`, `par.intercept`); the firmware wants console
- * commands. This is the one place that knows the mapping, and the one place
- * that knows how each family confirms a write: MiniPAR writers echo the value
- * back, so verification is reading the echo.
- *
- * Structural types rather than the contract's: this package has no
- * dependencies, and the calibration contract mirrors these shapes by hand.
+ * How approved coefficients reach a device, per family: schema keys become console
+ * commands and each write is verified by the device's reply.
  */
 import type { SensorFamily } from "../core/families";
 import type { IDeviceDriver } from "../driver/driver-base";
@@ -16,7 +8,6 @@ import { MINIPAR_COMMANDS } from "../driver/minipar/commands";
 
 export type CoefficientValue = number | number[];
 
-/** Blocks as an approved calibration carries them: only computed ones. */
 export type AppliedCalibrationBlocks = Record<
   string,
   { coefficients: Record<string, CoefficientValue> }
@@ -30,9 +21,7 @@ export interface CoefficientWriteResult {
 export type CalibrationWriteResults = Record<string, CoefficientWriteResult>;
 
 export interface CoefficientWriter {
-  /** The console line for a value. */
   command: (value: number) => string;
-  /** Whether the device's reply confirms the value it was sent. */
   verify: (reply: unknown, value: number) => boolean;
 }
 
@@ -60,11 +49,7 @@ function echoWriter(command: string): CoefficientWriter {
   };
 }
 
-/**
- * Per-family writers, keyed by block then coefficient. A family absent here
- * cannot receive coefficients from the platform yet; Ambit joins once the
- * write-verify-restore loop over the boot dump is in place.
- */
+/** A family absent here cannot receive coefficients yet; Ambit joins once its readback loop exists. */
 export const CALIBRATION_WRITERS: Partial<Record<SensorFamily, FamilyCalibrationWriters>> = {
   minipar: {
     par: {
@@ -74,7 +59,6 @@ export const CALIBRATION_WRITERS: Partial<Record<SensorFamily, FamilyCalibration
   },
 };
 
-/** Whether the platform can write a block of this shape to this family. */
 export function canWriteCalibration(
   family: SensorFamily,
   blocks: AppliedCalibrationBlocks,
@@ -86,12 +70,7 @@ export function canWriteCalibration(
   );
 }
 
-/**
- * Write every coefficient of every block and report per block. A block is
- * verified only when each of its coefficients was confirmed; the first
- * failure is the block's error and the remaining coefficients of that block
- * are not attempted, so a half-written block is never reported as good.
- */
+/** A block is verified only when every coefficient was confirmed; the first failure stops the block. */
 export async function writeCalibrationBlocks(
   driver: IDeviceDriver,
   family: SensorFamily,

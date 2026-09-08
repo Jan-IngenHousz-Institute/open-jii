@@ -1,11 +1,7 @@
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-/**
- * Approve a computed run: its computed blocks become the device's active
- * calibration and the previous one is superseded. The route carries only the
- * run id, so every device-scoped calibration query is invalidated by prefix.
- */
+/** The route carries only the run id, so device-scoped calibration queries are invalidated by prefix. */
 export const useApproveCalibrationRun = () => {
   const queryClient = useQueryClient();
 

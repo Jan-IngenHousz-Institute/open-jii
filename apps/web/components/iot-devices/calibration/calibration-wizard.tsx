@@ -59,11 +59,7 @@ interface CalibrationWizardProps {
 }
 
 /** The interpreter never yields null cells in practice; the contract has no room for them. */
-/**
- * The device's own account of itself after the write, kept on the run beside
- * the state it was created with. A device that does not answer leaves it out
- * rather than failing a write that already succeeded.
- */
+/** A device that does not answer leaves postInfo out rather than failing a write that succeeded. */
 async function readPostWriteInfo(
   driver: IDeviceDriver,
 ): Promise<Record<string, unknown> | undefined> {
@@ -86,13 +82,7 @@ function toRunPayload(payload: CapturePayload): CalibrationRunPayload {
   return result;
 }
 
-/**
- * Bench-to-coefficient in one sitting: pick a procedure, plug the device in,
- * walk the procedure with the interpreter asking the operator what it cannot
- * do itself, submit the capture, review what the script computed against
- * what the device holds, approve, and write it back with per-block
- * confirmation. The platform never touches the hardware; this page does.
- */
+/** Bench to coefficient in one sitting; the interpreter asks the operator for what it cannot do itself. */
 export function CalibrationWizard({ device, family, onClose }: CalibrationWizardProps) {
   const { t } = useTranslation("iot");
 
@@ -121,13 +111,11 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   const connection = connections.connections.at(0);
   const isConnectedToFamily = connection?.family === family;
   const hasDefinition = definition.data !== undefined;
-  // The device package drives fewer families than the platform registers (no
-  // edge devices), so writing back is only offered where a driver exists.
+  // The device package drives fewer families than the platform registers, so writing back is offered only where a driver exists.
   const writableFamily = isSensorFamily(family) ? family : null;
   const stepIndex = STEP_ORDER.indexOf(step);
 
-  // Abandoning the wizard mid-run must not leave the interpreter awaiting a
-  // prompt. The port itself is closed by the connection hook's own unmount.
+  // Leaving mid-run must not leave the interpreter awaiting a prompt; the port closes with the connection hook.
   const cancelOperator = operator.cancel;
   useEffect(() => cancelOperator, [cancelOperator]);
 
@@ -146,9 +134,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
       const runPayload = toRunPayload(result.payload);
       setPayload(runPayload);
 
-      // MiniPAR reports two-part versions the contract does not admit yet; a
-      // version the contract would refuse is left out rather than failing
-      // the whole submission.
+      // A version the contract would refuse is left out rather than failing the submission.
       const reported = connection.identity.firmwareVersion;
       const firmwareVersion = zFirmwareVersion.safeParse(reported).success ? reported : undefined;
 
@@ -168,9 +154,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
     }
   }, [connection, createRun, definition.data, device.id, operator.port]);
 
-  // Entering the capture step starts the procedure once. A retry stays on the
-  // step, so it has to start the procedure itself rather than rely on the
-  // effect, which would not re-fire for an unchanged step.
+  // A retry stays on the step, so it starts the procedure itself; the effect would not re-fire for an unchanged step.
   const captureStartedRef = useRef(false);
   useEffect(() => {
     if (step !== "capture" || captureStartedRef.current) return;

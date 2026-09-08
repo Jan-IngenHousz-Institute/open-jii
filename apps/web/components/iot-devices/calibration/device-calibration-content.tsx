@@ -17,10 +17,6 @@ import { ActiveCalibrationCard } from "./active-calibration-card";
 import { CalibrationRunsList } from "./calibration-runs-list";
 import { CalibrationWizard } from "./calibration-wizard";
 
-/**
- * The device's calibration surface: what is in force, every bench session
- * on record, and the wizard that produces the next one.
- */
 export default function DeviceCalibrationContent() {
   const { t } = useTranslation("iot");
   const locale = useLocale();

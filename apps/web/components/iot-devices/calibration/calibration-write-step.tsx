@@ -20,11 +20,7 @@ interface CalibrationWriteStepProps {
   onFinish: () => void;
 }
 
-/**
- * Put the approved coefficients on the device and say, block by block,
- * whether the device confirmed them. Approval alone changes nothing on the
- * hardware; this is the step that does.
- */
+/** Approval alone changes nothing on the hardware; this step does. */
 export function CalibrationWriteStep({
   applied,
   canWrite,

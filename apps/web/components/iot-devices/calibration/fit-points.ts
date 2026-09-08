@@ -3,11 +3,8 @@ import type { CalibrationRunPayload } from "@repo/api/domains/iot/calibration/io
 import type { FitPoint } from "./calibration-fit-chart";
 
 /**
- * The points a fit chart plots, read off the captured series by convention:
- * the first two numeric columns of the first series, in the order the
- * procedure declared its reads. Every procedure so far reads the device
- * first and the reference second, so x is the device and y the reference.
- * Returns nothing for a series with fewer than two numeric columns.
+ * Read off the captured series by convention: the first two numeric columns of the
+ * first series, device first and reference second.
  */
 export function fitPointsFromPayload(payload: CalibrationRunPayload): FitPoint[] {
   const series = Object.values(payload).at(0);

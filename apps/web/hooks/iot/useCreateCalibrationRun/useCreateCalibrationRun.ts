@@ -1,11 +1,7 @@
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-/**
- * Submit a captured payload for computation. The backend invokes the sandbox
- * and answers with the finished run, computed or not, so the caller reviews
- * the response rather than polling.
- */
+/** The backend runs the sandbox synchronously and answers with the finished run; nothing polls. */
 export const useCreateCalibrationRun = () => {
   const queryClient = useQueryClient();
 

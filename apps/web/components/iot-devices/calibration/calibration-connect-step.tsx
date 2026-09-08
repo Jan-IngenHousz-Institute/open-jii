@@ -18,10 +18,7 @@ interface CalibrationConnectStepProps {
   onDisconnect: () => void;
 }
 
-/**
- * Bring the device under test onto the page over Web Serial. The platform
- * never reaches hardware itself; this browser session is the only bridge.
- */
+/** The platform never reaches hardware; this browser session is the only bridge. */
 export function CalibrationConnectStep({
   family,
   connection,

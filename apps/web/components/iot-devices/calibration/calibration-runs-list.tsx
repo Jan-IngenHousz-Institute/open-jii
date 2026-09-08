@@ -16,7 +16,6 @@ interface CalibrationRunsListProps {
   isError: boolean;
 }
 
-/** Every bench session recorded for the device, newest first. */
 export function CalibrationRunsList({ runs, isLoading, isError }: CalibrationRunsListProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();

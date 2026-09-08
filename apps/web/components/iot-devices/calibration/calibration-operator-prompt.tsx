@@ -21,11 +21,7 @@ const promptFormSchema = z.object({ answer: z.string() });
 
 type PromptFormValues = z.infer<typeof promptFormSchema>;
 
-/**
- * The procedure's question to the person at the bench: an instruction to
- * acknowledge, sometimes gated on typing a token, or a value the rig cannot
- * measure. One request at a time; the interpreter is waiting on this.
- */
+/** One request at a time; the interpreter is waiting on it. */
 export function CalibrationOperatorPrompt({ request }: { request: OperatorRequest }) {
   const { t } = useTranslation("iot");
   const form = useForm<PromptFormValues>({

@@ -21,14 +21,9 @@ const BLOCK_STATUS_TONE: Record<CalibrationBlockStatus, StatusTone> = {
 interface CalibrationBlockCardProps {
   name: string;
   block: CalibrationBlock;
-  /** The coefficients currently in force for this block, when known. */
   previous: Record<string, number | number[]> | undefined;
 }
 
-/**
- * One coefficient block of a run: what was computed, against what the device
- * holds now, with the quality record that justifies it.
- */
 export function CalibrationBlockCard({ name, block, previous }: CalibrationBlockCardProps) {
   const { t } = useTranslation("iot");
 
