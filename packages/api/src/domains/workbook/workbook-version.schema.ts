@@ -1,17 +1,18 @@
 import { z } from "zod";
 
+import { zMacroLanguage } from "../macro/macro.schema";
 import { zProtocolFamily } from "../protocol/protocol.schema";
 import { zWorkbookCellArray } from "./workbook-cells.schema";
 
-// `family` is captured at publish so the pinned snapshot renders fully without
-// re-fetching the live protocol row. Optional for versions published before it
-// was snapshotted.
+// `family` and macro `language` are captured at publish so the pinned snapshot
+// runs without the live row; the cell payload's language can go stale when the
+// macro row is edited elsewhere. Optional for versions published before that.
 export const zEntitySnapshots = z.object({
   protocols: z.record(
     z.string(),
     z.object({ code: z.unknown(), family: zProtocolFamily.optional() }),
   ),
-  macros: z.record(z.string(), z.object({ code: z.string() })),
+  macros: z.record(z.string(), z.object({ code: z.string(), language: zMacroLanguage.optional() })),
 });
 
 export const zWorkbookVersion = z.object({

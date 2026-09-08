@@ -113,6 +113,30 @@ describe("MacroCellComponent", () => {
     });
   });
 
+  it("writes the live macro language back into a stale cell payload", async () => {
+    const onUpdate = vi.fn();
+    renderMacroCell(
+      { onUpdate, cell: { ...cell, payload: { ...cell.payload, language: "javascript" } } },
+      { language: "python" },
+    );
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+    const updated = onUpdate.mock.lastCall?.[0] as MacroCell;
+    expect(updated.payload.language).toBe("python");
+  });
+
+  it("leaves a stale cell payload alone when rendering a pinned snapshot", async () => {
+    const onUpdate = vi.fn();
+    renderMacroCell({
+      onUpdate,
+      cell: { ...cell, payload: { ...cell.payload, language: "javascript" } },
+      snapshot: { code: btoa("print(1)") },
+    });
+
+    await waitFor(() => expect(screen.getByRole("textbox")).toHaveValue("print(1)"));
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
   it("shows read-only language label without update capability", async () => {
     renderMacroCell({}, { capabilities: readOnlyCapabilities });
 

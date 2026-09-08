@@ -166,6 +166,14 @@ export function MacroCellComponent({
     [macroId, saveMacro, cell, onUpdate],
   );
 
+  // The macro row's language can change outside this workbook (macro page,
+  // another workbook). Offline hosts run off the cell payload, so write the
+  // live value back instead of only displaying it.
+  useEffect(() => {
+    if (readOnly || useSnapshot || !macroLanguage || macroLanguage === language) return;
+    onUpdate({ ...cell, payload: { ...cell.payload, language: macroLanguage } });
+  }, [readOnly, useSnapshot, macroLanguage, language, cell, onUpdate]);
+
   const [langSelectOpen, setLangSelectOpen] = useState(false);
 
   // Track the latest cell so the async rename merges into current state, not a

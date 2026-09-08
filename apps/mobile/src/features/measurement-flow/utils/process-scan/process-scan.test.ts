@@ -263,6 +263,12 @@ describe("applyMacro: canonical once-per-measurement execution", () => {
     }
   });
 
+  it("rejects a language the device cannot run instead of evaluating it as JavaScript", async () => {
+    await expect(
+      applyMacro({ sample: [{ a: 1 }] }, { code: encode("# R comment"), language: "r" }),
+    ).rejects.toMatchObject({ name: "UnsupportedMacroLanguageError", language: "r" });
+  });
+
   it("fails an empty sample envelope once without invoking JavaScript", async () => {
     await expect(
       applyMacro({ sample: [] }, { code: jsRunnerCode, language: "javascript" }),
