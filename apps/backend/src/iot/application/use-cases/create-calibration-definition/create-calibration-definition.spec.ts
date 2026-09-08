@@ -107,6 +107,23 @@ describe("CreateCalibrationDefinitionUseCase", () => {
     expect(planted.error.statusCode).toBe(403);
   });
 
+  // A line lives in one organization; a version cannot move it, even when
+  // the author is a member of both.
+  it("refuses a version aimed at a different organization than the line's", async () => {
+    const homeOrg = await testApp.createOrganization("Photosynthesis Lab");
+    const otherOrg = await testApp.createOrganization("Field Station");
+    await testApp.addOrganizationMember(homeOrg, userId, "owner");
+    await testApp.addOrganizationMember(otherOrg, userId, "owner");
+
+    const first = await useCase.execute(body({ organizationId: homeOrg }), userId);
+    assertSuccess(first);
+
+    const moved = await useCase.execute(body({ organizationId: otherOrg }), userId);
+    assertFailure(moved);
+    expect(moved.error.statusCode).toBe(400);
+    expect(moved.error.message).toContain("different organization");
+  });
+
   it("lets a fellow organization member add a version", async () => {
     const organizationId = await testApp.createOrganization("Photosynthesis Lab");
     await testApp.addOrganizationMember(organizationId, userId, "owner");

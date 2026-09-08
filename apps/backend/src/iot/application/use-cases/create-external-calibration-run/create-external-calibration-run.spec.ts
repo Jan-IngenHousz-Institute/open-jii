@@ -101,6 +101,16 @@ describe("CreateExternalCalibrationRunUseCase", () => {
     expect(result.error.message).toContain("No submitted block produced coefficients");
   });
 
+  it("reports a missing definition or device as not found", async () => {
+    const noDefinition = await submit({ definitionId: crypto.randomUUID() });
+    assertFailure(noDefinition);
+    expect(noDefinition.error.statusCode).toBe(404);
+
+    const noDevice = await submit({ deviceId: crypto.randomUUID() });
+    assertFailure(noDevice);
+    expect(noDevice.error.statusCode).toBe(404);
+  });
+
   it("refuses a device whose family the definition does not target", async () => {
     const ambit = await testApp.createIotDevice({ createdBy: userId, deviceType: "ambit" });
     const result = await submit({ deviceId: ambit.id });
