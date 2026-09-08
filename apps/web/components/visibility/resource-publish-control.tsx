@@ -30,9 +30,8 @@ import {
 import { toast } from "@repo/ui/hooks/use-toast";
 
 /**
- * Experiments use their own settings card, and calibration definitions have no
- * page to host a control on yet, so exclude both from this route dispatch.
- * Deriving the type keeps a newly publishable resource a compile error.
+ * Experiments have their own settings card and definitions have no page to host a control on;
+ * deriving the type keeps a new publishable resource a compile error.
  */
 type PublishSelectResourceType = Exclude<
   PublishableResourceType,

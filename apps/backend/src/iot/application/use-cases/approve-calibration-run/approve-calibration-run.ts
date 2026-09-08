@@ -12,9 +12,8 @@ import { IotCalibrationDefinitionRepository } from "../../../core/repositories/i
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
 
 /**
- * The human gate: nothing a script produced takes effect until someone with
- * device manage rights approves it. Approval supersedes the previous active
- * calibration and creates the applied row in one transaction.
+ * Nothing a script produced takes effect until someone with device manage rights
+ * approves it; approval supersedes the active calibration in one transaction.
  */
 @Injectable()
 export class ApproveCalibrationRunUseCase {
@@ -48,8 +47,7 @@ export class ApproveCalibrationRunUseCase {
       return failure(AppError.badRequest("Only a computed run can be approved"));
     }
 
-    // Re-validate at the gate: intake checked these, but the definition's
-    // bounds are what a coefficient is about to be trusted against.
+    // Re-validated at the gate: the bounds are what a coefficient is about to be trusted against.
     const definition = await this.definitionRepository.findById(run.value.definitionId);
     if (definition.isFailure()) {
       return failure(definition.error);
@@ -68,8 +66,7 @@ export class ApproveCalibrationRunUseCase {
       return failure(AppError.badRequest("This run produced no coefficients to apply"));
     }
 
-    // Only computed blocks are applied; rejected and skipped ones stay on the
-    // run as the record of what this bench session could and could not do.
+    // Only computed blocks are applied; rejected and skipped ones stay on the run.
     const applied = appliedCalibrationBlocks(run.value.blocks);
 
     this.logger.log({

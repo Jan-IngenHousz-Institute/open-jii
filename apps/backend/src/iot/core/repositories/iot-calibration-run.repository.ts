@@ -102,9 +102,8 @@ export class IotCalibrationRunRepository {
   }
 
   /**
-   * Approve in one transaction: the previous active calibration is superseded
-   * and the new applied row inserted under the partial unique index, so two
-   * concurrent approvals cannot both leave an active row.
+   * One transaction: the previous active row is superseded and the new one inserted under
+   * the partial unique index, so two approvals cannot both leave an active row.
    */
   async approve(
     runId: string,

@@ -10,15 +10,8 @@ import { IotCalibrationRunRepository } from "../../../core/repositories/iot-cali
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 
 /**
- * A bench tool submits blocks it computed itself. The platform re-validates
- * them against the definition's schema and gates on intake, so an external run
- * reaches review with the same guarantees as a platform-computed one; the
- * sandbox is never invoked.
- *
- * The definition's `minFirmwareVersion` is deliberately not enforced here. It
- * guards capture, which happened outside the platform, and this is the path
- * historical bench runs are imported through: those legitimately predate a
- * minimum set later.
+ * A bench tool submits blocks it computed itself; they are re-validated against the
+ * definition so an external run reaches review with the same guarantees as a computed one.
  */
 @Injectable()
 export class CreateExternalCalibrationRunUseCase {

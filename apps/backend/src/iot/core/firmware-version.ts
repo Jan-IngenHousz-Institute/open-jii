@@ -1,14 +1,6 @@
 /**
- * Compare two dotted numeric firmware versions ("1.1.3", "1.03").
- *
- * Devices report only the numeric core, so a release's prerelease suffix is
- * not part of the comparison: release 1.1.3-rc1 is device-visible 1.1.3.
- * Families disagree on how many parts they report; a missing patch compares
- * as zero, so "1.03" and "1.03.0" are the same version.
- *
- * Returns a negative number when `a` precedes `b`, zero when equivalent, and a
- * positive number when `a` follows `b`. Null when either side is unparseable,
- * so callers decide what an unknown version means rather than assuming.
+ * Compare dotted numeric versions ("1.1.3", "1.03"). Devices report only the numeric
+ * core, so a release suffix is not compared; a missing patch is zero.
  */
 export function compareFirmwareVersions(a: string, b: string): number | null {
   const left = parseVersion(a);

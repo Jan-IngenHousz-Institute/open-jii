@@ -96,8 +96,7 @@ export class ListOrganizationResourcesUseCase {
       calibrationDefinitions,
       totals,
     ] = await Promise.all([
-      // Archived stay in: every other count of what an organization owns includes them,
-      // so dropping them here would let a group header promise a row the list cannot show.
+      // Archived stay in: every other ownership count includes them, so a group header cannot promise a row the list lacks.
       this.experimentRepository.findAll(userId, undefined, undefined, undefined, undefined, {
         organizationId,
         includeArchived: true,

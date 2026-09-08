@@ -19,9 +19,7 @@ export class DeleteCalibrationDefinitionUseCase {
 
     const result = await this.definitionRepository.delete(definitionId);
     if (result.isFailure()) {
-      // The runs FK is RESTRICT on purpose: runs are the audit trail of what
-      // produced a coefficient, so a used definition version cannot vanish.
-      // `tryCatch` already classified the constraint violation.
+      // The runs FK is RESTRICT: a used version cannot vanish. tryCatch classifies the violation.
       if (result.error.code === "REPOSITORY_REFERENCE") {
         return failure(
           AppError.badRequest("This definition version has runs and cannot be deleted"),
