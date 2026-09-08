@@ -23,7 +23,7 @@ import type {
 import { zFirmwareVersion } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import type { CapturePayload, ProcedureProgress } from "@repo/iot";
+import type { CapturePayload, IDeviceDriver, ProcedureProgress } from "@repo/iot";
 import {
   canWriteCalibration,
   isSensorFamily,
@@ -59,6 +59,23 @@ interface CalibrationWizardProps {
 }
 
 /** The interpreter never yields null cells in practice; the contract has no room for them. */
+/**
+ * The device's own account of itself after the write, kept on the run beside
+ * the state it was created with. A device that does not answer leaves it out
+ * rather than failing a write that already succeeded.
+ */
+async function readPostWriteInfo(
+  driver: IDeviceDriver,
+): Promise<Record<string, unknown> | undefined> {
+  if (!driver.getDeviceIdentity) return undefined;
+  try {
+    const identity = await driver.getDeviceIdentity();
+    return { ...identity.raw };
+  } catch {
+    return undefined;
+  }
+}
+
 function toRunPayload(payload: CapturePayload): CalibrationRunPayload {
   const result: CalibrationRunPayload = {};
   for (const [series, rows] of Object.entries(payload)) {
@@ -197,7 +214,8 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
         applied.blocks,
       );
       setWriteResults(results);
-      await reportWrite.mutateAsync({ calibrationId: applied.id, writeResults: results });
+      const postInfo = await readPostWriteInfo(connection.driver);
+      await reportWrite.mutateAsync({ calibrationId: applied.id, writeResults: results, postInfo });
     } catch (error) {
       setWriteError(
         error instanceof Error ? error.message : t("iot.calibration.write.reportFailed"),
