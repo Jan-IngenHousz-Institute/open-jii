@@ -107,6 +107,19 @@ describe("writeCalibrationBlocks", () => {
     expect(transport.sent).toEqual([]);
   });
 
+  it("reports a coefficient the family has no command for without touching the device", async () => {
+    const transport = echoingTransport();
+    driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(driver, "minipar", {
+      par: { coefficients: { gain: 1.5 } },
+    });
+
+    expect(results.par.verified).toBe(false);
+    expect(results.par.error).toMatch(/No writer for coefficient "par.gain"/);
+    expect(transport.sent).toEqual([]);
+  });
+
   it("reports every block of an unsupported family without touching the device", async () => {
     const transport = echoingTransport();
     driver.initialize(transport);

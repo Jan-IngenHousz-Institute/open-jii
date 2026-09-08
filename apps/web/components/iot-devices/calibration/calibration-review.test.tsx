@@ -78,6 +78,25 @@ describe("CalibrationReview", () => {
     expect(props.onReject).toHaveBeenCalledTimes(1);
   });
 
+  // A block can compute and still fail its own quality gates; the reviewer
+  // needs the gate's reasons in front of the approve button.
+  it("lists the quality reasons of a computed block that failed its gates", () => {
+    renderReview({
+      run: createCalibrationRun({
+        blocks: {
+          par: {
+            status: "computed",
+            coefficients: { slope: 0.96, intercept: -1.08 },
+            quality: { passed: false, reasons: ["R-squared must be at least 0.99"] },
+          },
+        },
+      }),
+    });
+
+    expect(screen.getByText("iot.calibration.review.failed")).toBeInTheDocument();
+    expect(screen.getByText("R-squared must be at least 0.99")).toBeInTheDocument();
+  });
+
   it("offers no decision on a run that did not compute", () => {
     renderReview({
       run: createCalibrationRun({

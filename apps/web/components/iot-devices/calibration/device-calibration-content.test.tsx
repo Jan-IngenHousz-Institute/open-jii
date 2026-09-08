@@ -46,6 +46,27 @@ describe("DeviceCalibrationContent", () => {
     expect(await screen.findByText("iot.calibration.status.approved")).toBeInTheDocument();
   });
 
+  it("shows a failed session's error and a load failure of the list", async () => {
+    mountDevice();
+    server.mount(contract.iot.getActiveDeviceCalibration, { body: null });
+    server.mount(contract.iot.listDeviceCalibrationRuns, {
+      body: [
+        createCalibrationRun({
+          status: "compute_failed",
+          errorMessage: "Coefficient 'par.slope' is above the allowed maximum",
+        }),
+      ],
+    });
+
+    const { unmount } = render(<DeviceCalibrationContent />);
+    expect(await screen.findByText(/above the allowed maximum/)).toBeInTheDocument();
+    unmount();
+
+    server.mount(contract.iot.listDeviceCalibrationRuns, { status: 500 });
+    render(<DeviceCalibrationContent />);
+    expect(await screen.findByText("iot.calibration.loadError")).toBeInTheDocument();
+  });
+
   it("opens the wizard from the call to action for a manager", async () => {
     mountDevice({ capabilities: createCapabilities({ canManage: true }) });
     server.mount(contract.iot.getActiveDeviceCalibration, { body: null });

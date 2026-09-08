@@ -61,4 +61,20 @@ describe("useCalibrationOperator", () => {
     await expect(answer).resolves.toBe(false);
     expect(result.current.pending).toBeNull();
   });
+
+  it("answers an open value request with nothing useful when cancelled", async () => {
+    const { result } = renderHook(() => useCalibrationOperator());
+
+    let answer: Promise<number | string> | undefined;
+    act(() => {
+      answer = result.current.port.readValue("Enter the reading", "number");
+    });
+
+    act(() => {
+      result.current.cancel();
+    });
+
+    await expect(answer).resolves.toBeNaN();
+    expect(result.current.pending).toBeNull();
+  });
 });

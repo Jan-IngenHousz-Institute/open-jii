@@ -41,6 +41,18 @@ describe("CalibrationWriteStep", () => {
     expect(screen.queryByRole("button", { name: "iot.calibration.write.action" })).toBeNull();
   });
 
+  it("lists only the blocks the results account for", () => {
+    renderStep({
+      applied: createDeviceCalibration({
+        blocks: { par: { coefficients: { slope: 0.96 } }, led: { coefficients: { act: 1 } } },
+      }),
+      results: { par: { verified: true } },
+    });
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByText("par")).toBeInTheDocument();
+  });
+
   it("closes once the results are on record", async () => {
     const props = renderStep({ results: { par: { verified: true } } });
 
