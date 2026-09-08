@@ -5,15 +5,12 @@ import { zVisibility } from "../../visibility/visibility.schema";
 import { zIotDevicePathParam } from "../iot.schema";
 import { zCaptureProcedure } from "./iot-calibration-procedure.schema";
 
-// Phones self-register and have no calibration surface; every physical family
-// (including generic, whose calibrations can be platform-side only) does.
+// Phones self-register and have no calibration surface.
 export const zCalibrationFamily = zSensorFamily.exclude(["mobile"]);
 
 const COEFFICIENT_NAME_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 const zCoefficientName = z.string().regex(COEFFICIENT_NAME_PATTERN);
 
-// What a block coefficient is allowed to be. Bounds are enforced by the
-// handler before a result exists, and again at approval time.
 const zNumberCoefficientSpec = z
   .object({
     type: z.literal("number"),
@@ -46,29 +43,18 @@ export const zCalibrationOutputSchema = z
   })
   .strict();
 
-/**
- * A firmware version as the device reports it. Families do not agree on
- * shape: Ambit reports three parts ("1.1.3"), MiniPAR two ("1.03"). A
- * missing patch compares as zero.
- */
+/** Families disagree on shape: Ambit "1.1.3", MiniPAR "1.03"; a missing patch compares as zero. */
 export const zFirmwareVersion = z.string().regex(/^\d+(\.\d+){1,2}$/);
 
 export const zCoefficientValue = z.union([z.number(), z.array(z.number().int())]);
 
 /**
- * What became of one block in a session. A bench run is routinely partial: a
- * reference instrument is absent, or an operator declines a gated measurement,
- * or a fit is attempted and fails its quality gates. Each of those is a
- * recorded outcome, not a failed run, and the blocks that did compute are
- * still applied.
+ * A bench run is routinely partial; each block records its own outcome so one
+ * absent reference or declined step does not fail the session.
  */
 export const zCalibrationBlockStatus = z.enum(["computed", "rejected", "skipped"]);
 
-/**
- * A block as the script reported it. `coefficients` are present exactly when
- * the block computed; `rejected` and `skipped` carry a reason instead, and
- * `rejected` keeps its QC record so a reviewer can see what failed.
- */
+/** Coefficients are present exactly when a block computed; a rejected block keeps its QC record. */
 export const zCalibrationBlock = z
   .object({
     status: zCalibrationBlockStatus,
@@ -93,11 +79,8 @@ export const zAppliedCalibrationBlocks = z.record(
   }),
 );
 
-// "computed", not "fit_ok": some calibrations (compass, on-device self-cal)
-// pass blocks through with no fitting at all. A run is computed when at least
-// one block produced coefficients, however many others were rejected or
-// skipped; compute_failed means none did (or the script itself failed), and
-// error is infrastructure.
+// "computed", not "fit_ok": some calibrations pass blocks through with no fitting.
+// A run is computed when any block produced coefficients.
 export const zCalibrationRunStatus = z.enum([
   "running",
   "computed",
@@ -109,8 +92,6 @@ export const zCalibrationRunStatus = z.enum([
 
 export const zCalibrationInputSource = z.enum(["bench_wizard", "external_bench"]);
 
-// --- Definitions ---
-
 export const zCalibrationDefinition = z.object({
   id: z.string().uuid(),
   family: zCalibrationFamily,
@@ -120,8 +101,7 @@ export const zCalibrationDefinition = z.object({
   captureProcedure: zCaptureProcedure,
   script: z.string(),
   outputSchema: zCalibrationOutputSchema,
-  // Refuses runs on devices below it: a procedure using commands the firmware
-  // does not know would otherwise produce numbers that look like data.
+  // Older firmware is refused: unknown commands would produce numbers that look like data.
   minFirmwareVersion: zFirmwareVersion.nullable(),
   organizationId: z.string().uuid().nullable(),
   visibility: zVisibility,
@@ -130,7 +110,6 @@ export const zCalibrationDefinition = z.object({
   updatedAt: z.string().datetime(),
 });
 
-// Lists stay shallow: the procedure and script are definition-detail payloads.
 export const zCalibrationDefinitionSummary = zCalibrationDefinition.omit({
   captureProcedure: true,
   script: true,
@@ -161,12 +140,7 @@ export const zListCalibrationDefinitionsQuery = z.object({
   family: zCalibrationFamily.optional(),
 });
 
-// --- Runs ---
-
-// Captured series rows, keyed by the procedure's series names. Cells hold what
-// instruments and operators produced: numbers, strings, arrays (spectral
-// channels, baseline vectors), or objects (a compound sweep setpoint in the
-// stimulus column).
+// Cells hold what instruments and operators produced: numbers, text, arrays, or a compound setpoint.
 const zSeriesCell = z.union([
   z.number(),
   z.string().max(4096),
@@ -182,11 +156,7 @@ export const zCalibrationRunPayload = z
     message: "At most 20 series per run",
   });
 
-/**
- * Free-form device state around a session (a boot dump, an identity reply).
- * Kept whole for the record, so the only guard is a size cap: a client could
- * otherwise post megabytes into a row that is read on every run listing.
- */
+/** Kept whole for the record; the cap stops a client posting megabytes into a row read on every listing. */
 const INFO_RECORD_MAX_BYTES = 16_384;
 const zInfoRecord = z
   .record(z.unknown())
@@ -216,11 +186,7 @@ export const zCalibrationRun = z.object({
 
 export const zCalibrationRunList = z.array(zCalibrationRun);
 
-/**
- * Run-level values the operator supplied that are not per-setpoint readings:
- * a reference lamp's certified output, an ambient temperature, a fixture id.
- * Reaches the script as `params`.
- */
+/** Run-level operator values (a lamp's certified output, a fixture id); the script sees them as params. */
 export const zCalibrationRunParams = z.record(
   z.string(),
   z.union([z.number(), z.string().max(512), z.boolean()]),
@@ -234,8 +200,7 @@ export const zCreateCalibrationRunBody = zIotDevicePathParam.extend({
   firmwareVersion: zFirmwareVersion.optional(),
 });
 
-// A bench tool submits blocks it computed itself; the platform
-// records the run without invoking the script. QC still applies at approval.
+// Blocks a bench tool computed itself: recorded without running the script; QC still applies at approval.
 export const zCreateExternalCalibrationRunBody = zIotDevicePathParam.extend({
   definitionId: z.string().uuid(),
   blocks: zCalibrationBlocks,
@@ -250,13 +215,9 @@ export const zCalibrationRunPathParam = z.object({
   runId: z.string().uuid(),
 });
 
-// --- Applied calibrations ---
-
 /**
- * What the client's write-back did to one block. Each coefficient group is
- * written and read back on its own, and a failed readback restores the
- * previous value, so one verdict per row could not describe a session where
- * one gain persisted and another rolled back.
+ * Per block: each coefficient is written and read back on its own and a failed
+ * readback restores the old value, so one verdict per row could not say which gain persisted.
  */
 export const zCalibrationWriteResult = z.object({
   verified: z.boolean(),
@@ -286,17 +247,13 @@ export const zDeviceCalibrationPathParam = z.object({
   calibrationId: z.string().uuid(),
 });
 
-// Addresses the specific applied row, not "the device's active calibration":
-// an approval landing between the write and this report must not get another
-// run's write recorded on it.
+// Addresses the applied row rather than the device's active calibration, so a concurrent
+// approval cannot get this write recorded on it.
 export const zReportDeviceCalibrationWriteBody = zDeviceCalibrationPathParam.extend({
   writeResults: zCalibrationWriteResults,
-  // Device state after the write, read over the same connection; the run's
-  // counterpart to the preInfo it was created with.
+  // Device state after the write; the counterpart of preInfo.
   postInfo: zInfoRecord.optional(),
 });
-
-// --- Inferred types ---
 
 export type CalibrationFamily = z.infer<typeof zCalibrationFamily>;
 export type CoefficientSpec = z.infer<typeof zCoefficientSpec>;
