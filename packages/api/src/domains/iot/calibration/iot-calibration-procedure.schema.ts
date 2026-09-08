@@ -57,6 +57,9 @@ export const zStimulus = z.union([zInstrumentStimulus, zOperatorStimulus]);
 // Sent to the device whole; checked here only by name against the procedure's declarations.
 const zMeasurementProtocol = z.record(z.unknown());
 const MAX_PROTOCOLS = 16;
+// Definitions are read on every bench session, so the map is bounded like the
+// script (1 MB) and the device info records (16 KB) are.
+const PROTOCOLS_MAX_BYTES = 65_536;
 
 const zInstrumentRead = z
   .object({
@@ -145,6 +148,9 @@ export const zCaptureProcedure = z
       .refine((protocols) => Object.keys(protocols).length <= MAX_PROTOCOLS, {
         message: `At most ${MAX_PROTOCOLS} protocols may be declared`,
       })
+      .refine((protocols) => JSON.stringify(protocols).length <= PROTOCOLS_MAX_BYTES, {
+        message: `Protocols must serialise to at most ${PROTOCOLS_MAX_BYTES} bytes`,
+      })
       .optional(),
     steps: z.array(zProcedureStep).min(1).max(64),
   })
@@ -227,6 +233,16 @@ export const zCaptureProcedure = z
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               message: `Protocol "${read.protocol}" is not declared in the procedure`,
+              path: ["steps", stepIndex, "read", readIndex, "protocol"],
+            });
+          }
+
+          // Bench instruments answer named readings, not protocols. Refused
+          // here so a definition cannot publish a step the bench would abort on.
+          if (read.protocol !== undefined && read.instrument !== DUT_ROLE) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Only the "${DUT_ROLE}" instrument can run a measurement protocol`,
               path: ["steps", stepIndex, "read", readIndex, "protocol"],
             });
           }
