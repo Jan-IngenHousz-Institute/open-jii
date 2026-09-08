@@ -55,7 +55,7 @@ export function getMacroColumns(
     },
     {
       header: t("macros.columns.language"),
-      className: "w-32",
+      className: "hidden w-32 sm:table-cell",
       cell: (macro) => (
         <StatusBadge tone={getMacroLanguageBadgeTone(macro.language)}>
           {getMacroLanguageLabel(macro.language)}
@@ -64,12 +64,12 @@ export function getMacroColumns(
     },
     {
       header: t("macros.columns.protocols"),
-      className: "hidden w-56 md:table-cell",
+      className: "hidden w-56 xl:table-cell",
       cell: (macro) => <CompatibleProtocolsCell macroId={macro.id} />,
     },
     {
       header: t("macros.columns.updated"),
-      className: "w-40",
+      className: "hidden w-40 lg:table-cell",
       cell: (macro) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
           {formatShortDate(macro.updatedAt, locale)}

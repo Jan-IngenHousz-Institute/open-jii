@@ -47,9 +47,9 @@ export function BatteryPanel({ monitoring }: BatteryPanelProps) {
   const change = latest - first;
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex gap-6">
+        <div className="flex flex-wrap gap-6">
           <Figure label={t("iot.devices.monitoring.batteryLatest")} value={latest.toFixed(2)} />
           <Figure
             label={t("iot.devices.monitoring.batteryChange")}

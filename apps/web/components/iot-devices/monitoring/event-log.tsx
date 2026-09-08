@@ -53,8 +53,8 @@ export function EventLog({ entries }: EventLogProps) {
   const pageEntries = entries.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
-    <div className="space-y-3">
-      <div className="max-h-96 overflow-auto rounded-lg border">
+    <div className="min-w-0 space-y-3">
+      <div className="max-h-96 max-w-full overflow-auto rounded-lg border">
         <Table>
           <TableHeader className="bg-background sticky top-0">
             <TableRow>

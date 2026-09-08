@@ -1,8 +1,14 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 
 import { server } from "./msw/server";
+
+// `useDebounce` puts a fixed 300ms in front of every search result, so a
+// `waitFor` on one spends a third of the 1000ms default before the query can
+// even start. That holds locally and blows the budget on a loaded CI runner.
+// Only failing assertions wait the full timeout; passing ones return at once.
+configure({ asyncUtilTimeout: 5000 });
 
 beforeAll(() => {
   server.listen({ onUnhandledRequest: "warn" });

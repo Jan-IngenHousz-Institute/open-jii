@@ -33,8 +33,8 @@ export function OverviewCard({
   children,
 }: OverviewCardProps) {
   return (
-    <Card className="shadow-xs flex flex-col rounded-xl transition-shadow hover:shadow-sm">
-      <CardHeader className="flex-row items-center gap-3 space-y-0">
+    <Card className="shadow-xs flex min-w-0 flex-col rounded-xl transition-shadow hover:shadow-sm">
+      <CardHeader className="min-w-0 flex-row items-center gap-3 space-y-0">
         <div
           className={cn(
             "bg-secondary text-primary flex size-9 shrink-0 items-center justify-center rounded-lg [&_svg]:size-4",
@@ -54,7 +54,7 @@ export function OverviewCard({
           </Link>
         )}
       </CardHeader>
-      <CardContent className="flex-1">{children}</CardContent>
+      <CardContent className="min-w-0 flex-1">{children}</CardContent>
     </Card>
   );
 }

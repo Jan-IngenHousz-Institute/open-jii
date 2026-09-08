@@ -45,6 +45,16 @@ describe("DeviceOverviewCards", () => {
     server.mount(contract.iot.listIotFirmwareReleases, { body: { releases: [] } });
   });
 
+  it("allows overview cards to shrink inside the phone grid", () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [boundExperiment] });
+
+    const { container } = render(<DeviceOverviewCards device={makeDevice()} />);
+
+    for (const card of container.querySelectorAll(".bg-card")) {
+      expect(card).toHaveClass("min-w-0");
+    }
+  });
+
   it("gives each card one distinct destination, none of them repeated", async () => {
     server.mount(contract.iot.listDeviceExperiments, { body: [boundExperiment] });
 

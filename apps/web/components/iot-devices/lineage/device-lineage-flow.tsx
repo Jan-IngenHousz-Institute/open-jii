@@ -79,7 +79,10 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
   };
 
   return (
-    <div className="h-135 w-full rounded-lg border" data-testid="lineage-flow">
+    <div
+      className="h-135 w-full min-w-0 overflow-hidden rounded-lg border"
+      data-testid="lineage-flow"
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}

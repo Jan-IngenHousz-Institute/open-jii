@@ -140,7 +140,7 @@ export function getWorkbookColumns(
     },
     {
       header: t("workbooks.columns.usedBy"),
-      className: "w-36",
+      className: "hidden w-36 sm:table-cell",
       cell: (workbook) => {
         const usedBy = workbook.experimentCount ?? 0;
         return usedBy > 0 ? (
@@ -156,7 +156,7 @@ export function getWorkbookColumns(
     },
     {
       header: t("workbooks.columns.user"),
-      className: "w-48",
+      className: "hidden w-48 xl:table-cell",
       cell: (workbook) => {
         const author = workbook.createdByName ?? `${workbook.createdBy.slice(0, 8)}…`;
         return (
@@ -178,7 +178,7 @@ export function getWorkbookColumns(
     },
     {
       header: t("workbooks.columns.updated"),
-      className: "w-40",
+      className: "hidden w-40 lg:table-cell",
       cell: (workbook) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
           {formatShortDate(workbook.updatedAt, locale)}

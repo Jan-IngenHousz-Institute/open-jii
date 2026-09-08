@@ -36,8 +36,8 @@ export function IotDeviceLayoutContent({
   );
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="flex w-full flex-col gap-6">
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex w-full min-w-0 flex-col gap-6">
         <Link
           href={`/${locale}/platform/devices`}
           className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-sm"
@@ -46,11 +46,20 @@ export function IotDeviceLayoutContent({
           {t("iot.devices.detail.back")}
         </Link>
 
-        <div className="flex items-center gap-3">
-          <h1 className="text-foreground text-2xl font-semibold">{displayName}</h1>
-          <IotDeviceStatusBadge status={device.status} />
-          <ConnectivityDot connectivity={device.connectivity} />
-          <div className="ml-auto">
+        <div className="flex min-w-0 flex-wrap items-start gap-3 lg:flex-nowrap lg:items-center">
+          <div className="flex min-w-0 flex-1 basis-full flex-col gap-2 xl:flex-row xl:items-center">
+            <h1 className="text-foreground min-w-0 break-words text-2xl font-semibold">
+              {displayName}
+            </h1>
+            <div
+              data-slot="device-status-summary"
+              className="flex w-full shrink-0 flex-wrap items-center gap-3 xl:w-auto"
+            >
+              <IotDeviceStatusBadge status={device.status} />
+              <ConnectivityDot connectivity={device.connectivity} />
+            </div>
+          </div>
+          <div className="ml-auto shrink-0">
             <DeviceHeaderActions device={device} />
           </div>
         </div>
