@@ -113,6 +113,13 @@ describe("RejectCalibrationRunUseCase", () => {
     expect(result.error.message).toContain("Only a computed run can be rejected");
   });
 
+  it("reports a missing run as not found", async () => {
+    const result = await useCase.execute(crypto.randomUUID(), userId);
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(404);
+  });
+
   it("refuses a caller without manage rights on the device", async () => {
     const outsider = await testApp.createTestUser({ name: "Otto Outsider" });
 

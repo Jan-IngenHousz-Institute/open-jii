@@ -61,6 +61,57 @@ describe("validateCalibrationBlocks", () => {
     expect(reasons.some((r) => r.includes("exactly 6 entries"))).toBe(true);
   });
 
+  it("flags a declared coefficient the block left out", () => {
+    const reasons = validateCalibrationBlocks(
+      {
+        par: { status: "computed", coefficients: {} },
+        baseline: { status: "computed", coefficients: { channels: [1, 2, 3, 4, 5, 6] } },
+      },
+      AMBIT_SCHEMA,
+    );
+    expect(reasons).toEqual(["Coefficient 'par.spec' is required but missing"]);
+  });
+
+  it("flags a number below the allowed minimum", () => {
+    const reasons = validateCalibrationBlocks(
+      {
+        par: { status: "computed", coefficients: { spec: 0.001 } },
+        baseline: { status: "computed", coefficients: { channels: [1, 2, 3, 4, 5, 6] } },
+      },
+      AMBIT_SCHEMA,
+    );
+    expect(reasons).toEqual(["Coefficient 'par.spec' is below the allowed minimum 0.05"]);
+  });
+
+  it("flags an integer array given as a scalar", () => {
+    const reasons = validateCalibrationBlocks(
+      {
+        par: { status: "computed", coefficients: { spec: 1.19 } },
+        baseline: { status: "computed", coefficients: { channels: 1021 } },
+      },
+      AMBIT_SCHEMA,
+    );
+    expect(reasons).toEqual(["Coefficient 'baseline.channels' must be an integer array"]);
+  });
+
+  it("flags each array entry that is fractional or out of bounds", () => {
+    const reasons = validateCalibrationBlocks(
+      {
+        par: { status: "computed", coefficients: { spec: 1.19 } },
+        baseline: {
+          status: "computed",
+          coefficients: { channels: [1.5, -1, 16_777_216, 4, 5, 6] },
+        },
+      },
+      AMBIT_SCHEMA,
+    );
+    expect(reasons).toEqual([
+      "Coefficient 'baseline.channels[0]' must be an integer",
+      "Coefficient 'baseline.channels[1]' is below the allowed minimum",
+      "Coefficient 'baseline.channels[2]' is above the allowed maximum",
+    ]);
+  });
+
   it("flags a failed QC record with its reasons", () => {
     const reasons = validateCalibrationBlocks(
       {
@@ -74,6 +125,17 @@ describe("validateCalibrationBlocks", () => {
       AMBIT_SCHEMA,
     );
     expect(reasons.some((r) => r.includes("QC gates failed: R-squared"))).toBe(true);
+  });
+
+  it("flags a failed QC record that reported no reasons", () => {
+    const reasons = validateCalibrationBlocks(
+      {
+        par: { status: "computed", coefficients: { spec: 1.19 }, quality: { passed: false } },
+        baseline: { status: "computed", coefficients: { channels: [1, 2, 3, 4, 5, 6] } },
+      },
+      AMBIT_SCHEMA,
+    );
+    expect(reasons).toEqual(["Block 'par' computed but its QC gates failed: no reasons reported"]);
   });
 
   // The bench session the all-or-nothing model rejected outright: one gain
@@ -106,6 +168,19 @@ describe("validateCalibrationBlocks", () => {
       expect(appliedCalibrationBlocks(partial)).toEqual({
         par: { coefficients: { spec: 1.19 }, quality: { passed: true } },
       });
+    });
+
+    // The fit record (points, residuals) is what the review chart draws, so an
+    // applied block carries it along with the coefficients.
+    it("keeps a computed block's fit record on the applied block", () => {
+      const applied = appliedCalibrationBlocks({
+        par: {
+          status: "computed",
+          coefficients: { spec: 1.19 },
+          fit: { r_squared: 0.998, points: [[402.1, 420]] },
+        },
+      });
+      expect(applied.par.fit).toEqual({ r_squared: 0.998, points: [[402.1, 420]] });
     });
 
     it("knows when a session produced nothing to apply", () => {
