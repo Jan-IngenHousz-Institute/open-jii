@@ -1,11 +1,6 @@
 /**
- * A PAR reference photodiode read through a MicroPython board's REPL.
- *
- * There is no device protocol: the board runs a script that defines
- * `getPAR()`, and the console is a Python prompt. Discovery enters raw REPL
- * with Ctrl-A, which every MicroPython board acknowledges with the same
- * banner, then Ctrl-B returns to the friendly prompt and Ctrl-D soft-reboots
- * so the board's own script is running again before the first read.
+ * A PAR photodiode read through a MicroPython REPL: no device protocol, the board's
+ * script defines getPAR() and the console is a Python prompt.
  */
 
 export const MICROPYTHON_COMMANDS = {
@@ -17,9 +12,5 @@ export const MICROPYTHON_COMMANDS = {
   GET_PAR: "getPAR()\r",
 } as const;
 
-/**
- * Substring of the raw-REPL banner. Weak by nature: any MicroPython board
- * answers Ctrl-A this way, so a rig with two such boards cannot tell them
- * apart by handshake alone.
- */
+/** Weak by nature: any MicroPython board answers Ctrl-A this way. */
 export const MICROPYTHON_IDENTITY_TOKEN = "raw REPL";

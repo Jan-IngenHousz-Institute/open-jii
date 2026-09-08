@@ -1,11 +1,4 @@
-/**
- * Which bench instruments the platform can drive, and how a procedure's
- * declared rig is matched to what is actually plugged in.
- *
- * A calibration procedure names auxiliary instruments by the reply their
- * identity query returns (`handshake: "KIPRIM"`). Discovery is therefore
- * "ask every candidate on this port who it is, and see whose token matches".
- */
+/** Matches a procedure's declared rig to what is plugged in, by identity reply. */
 import type { ITransportAdapter } from "../transport/interface";
 import type { Logger } from "../utils/logger/logger";
 import type { BenchInstrument } from "./interface";
@@ -16,21 +9,15 @@ import { MicroPythonParReference } from "./micropython-par/instrument";
 export type BenchInstrumentFactory = (logger?: Logger) => BenchInstrument;
 
 /**
- * Every bench instrument the platform knows how to drive, in probe order.
- * The supply is asked first: its `*IDN?` is harmless to a MicroPython prompt,
- * whereas Ctrl-A would drop a supply into whatever it makes of a control byte.
+ * Probe order matters: the supply's *IDN? is harmless to a MicroPython prompt, whereas
+ * Ctrl-A would drop a supply into whatever it makes of a control byte.
  */
 export const BENCH_INSTRUMENTS: readonly BenchInstrumentFactory[] = [
   (logger) => new KiprimDcSource(undefined, logger),
   (logger) => new MicroPythonParReference(undefined, logger),
 ];
 
-/**
- * Identify whatever is on a transport by asking each known instrument in turn.
- * Returns the initialized instrument, or null when nothing recognises the
- * reply, which a wizard reports as "unknown instrument on this port" rather
- * than guessing.
- */
+/** Ask each known instrument in turn; null means nothing recognised the reply. */
 export async function identifyBenchInstrument(
   transport: ITransportAdapter,
   logger?: Logger,
@@ -51,11 +38,7 @@ export async function identifyBenchInstrument(
   return null;
 }
 
-/**
- * The instrument a procedure's declared handshake refers to, without touching
- * hardware. Lets a definition editor tell an author that a handshake matches
- * nothing the platform can drive.
- */
+/** Resolve a declared handshake without touching hardware. */
 export function benchInstrumentForHandshake(handshake: string): BenchInstrument | null {
   for (const create of BENCH_INSTRUMENTS) {
     const instrument = create();

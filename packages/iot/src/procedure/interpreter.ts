@@ -312,11 +312,7 @@ function describeStep(step: ProcedureStep): string {
   }
 }
 
-/**
- * Expose a bench instrument to a procedure as the role it fills: a supply
- * applies setpoints, a reference reports readings, and a procedure's read
- * `command` is the reading's name rather than a wire string.
- */
+/** A supply applies setpoints, a reference reports readings; a read's `command` is the reading's name. */
 export function bindBenchInstrument(instrument: BenchInstrument): RigBinding {
   const binding: RigBinding = {};
 

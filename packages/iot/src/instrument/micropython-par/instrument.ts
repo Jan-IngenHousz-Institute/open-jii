@@ -1,9 +1,4 @@
-/**
- * PAR reference on a MicroPython board: the automated MiniPAR rig's anchor.
- *
- * Reads only. It replaces the operator typing a handheld meter value in the
- * manual procedure, and is the reason a bench instrument may report readings.
- */
+/** PAR reference on a MicroPython board: the automated rig's anchor, replacing the typed handheld reading. */
 import { DEFAULT_MAX_BUFFER_SIZE } from "../../driver/driver-base";
 import type { ITransportAdapter } from "../../transport/interface";
 import type { Logger } from "../../utils/logger/logger";
@@ -60,8 +55,7 @@ export class MicroPythonParReference implements BenchInstrument {
     await transport.send(MICROPYTHON_COMMANDS.ENTER_RAW);
     const banner = await this.awaitLines(1, this.identifyTimeoutMs);
 
-    // Leave raw mode whatever answered, so a board that is not our reference
-    // is not left in a state its own tooling will not expect.
+    // Leave raw mode whatever answered, so a foreign board is not left in a state its tooling does not expect.
     await transport.send(MICROPYTHON_COMMANDS.LEAVE_RAW_AND_REBOOT);
     return banner[0];
   }
