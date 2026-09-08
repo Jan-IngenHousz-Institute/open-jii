@@ -182,14 +182,25 @@ export class IotCalibrationRunRepository {
   async markWritten(
     calibrationId: string,
     writeResults: CalibrationWriteResults,
+    postInfo?: Record<string, unknown>,
   ): Promise<Result<DeviceCalibrationDto>> {
     return tryCatch(async () => {
-      const rows = await this.database
-        .update(deviceCalibrations)
-        .set({ writtenToDeviceAt: new Date(), writeResults })
-        .where(eq(deviceCalibrations.id, calibrationId))
-        .returning();
-      return this.parseCalibration(rows[0]);
+      return this.database.transaction(async (tx) => {
+        const rows = await tx
+          .update(deviceCalibrations)
+          .set({ writtenToDeviceAt: new Date(), writeResults })
+          .where(eq(deviceCalibrations.id, calibrationId))
+          .returning();
+        const applied = this.parseCalibration(rows[0]);
+
+        if (postInfo) {
+          await tx
+            .update(calibrationRuns)
+            .set({ postInfo })
+            .where(eq(calibrationRuns.id, applied.runId));
+        }
+        return applied;
+      });
     });
   }
 
