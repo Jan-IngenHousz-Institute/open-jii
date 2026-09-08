@@ -32,10 +32,8 @@ export class IotCalibrationDefinitionRepository {
   ) {}
 
   /**
-   * Create a definition, versioned by supersession: the same name gets the next
-   * version in the same transaction that reads the current one, so two
-   * concurrent creates collide on the (name, version) unique instead of both
-   * landing. Each version row is a full resource and seeds creator control.
+   * Versioned by supersession: the next version is assigned in the transaction that reads
+   * the current one, so concurrent creates collide on the (name, version) unique.
    */
   async create(
     dto: CreateCalibrationDefinitionDto,
@@ -70,7 +68,7 @@ export class IotCalibrationDefinitionRepository {
     });
   }
 
-  /** The newest version of a name, or null; the family guard reads this. */
+  /** The newest version of a name, or null. */
   async findLatestByName(name: string): Promise<Result<CalibrationDefinitionDto | null>> {
     return tryCatch(async () => {
       const results = await this.database
@@ -83,7 +81,6 @@ export class IotCalibrationDefinitionRepository {
     });
   }
 
-  /** Definitions the caller may read, newest first, optionally one family's. */
   async listAccessible(
     userId: string,
     options?: { family?: CalibrationDefinitionDto["family"]; organizationId?: string },

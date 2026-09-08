@@ -7,11 +7,7 @@ import { Result, failure, success, AppError } from "../../../../common/utils/fp-
 import type { DeviceCalibrationDto } from "../../../core/models/iot-calibration.model";
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
 
-/**
- * The wizard reports the NVS write it performed over its open connection,
- * addressed to the specific applied row so a concurrent approval cannot get
- * another run's write recorded on it.
- */
+/** Addressed to the applied row so a concurrent approval cannot get another run's write recorded on it. */
 @Injectable()
 export class ReportDeviceCalibrationWriteUseCase {
   private readonly logger = new Logger(ReportDeviceCalibrationWriteUseCase.name);
@@ -53,8 +49,7 @@ export class ReportDeviceCalibrationWriteUseCase {
       userId,
     });
 
-    // A write can only be reported against a block this calibration applied;
-    // anything else means the client wrote something nobody approved.
+    // Only blocks this calibration applied; anything else was written without approval.
     const unknown = Object.keys(writeResults).filter((name) => !(name in applied.blocks));
     if (unknown.length > 0) {
       return failure(

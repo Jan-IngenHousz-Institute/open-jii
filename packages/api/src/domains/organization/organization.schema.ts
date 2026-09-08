@@ -208,7 +208,6 @@ export const zOrganizationResource = z.discriminatedUnion("type", [
   }),
   zOrganizationResourceBase.extend({
     type: z.literal("calibration_definition"),
-    /** The device family the definition calibrates; badges like a protocol's. */
     family: zSensorFamily,
   }),
 ]);

@@ -47,8 +47,7 @@ export class AwsConfigService {
         macroSandboxRFunctionName: this.configService.getOrThrow<string>(
           "aws.lambda.macroSandboxRFunctionName",
         ),
-        // Empty until the calibration infra provisions it; the invoke path
-        // refuses with a clear error instead of failing boot.
+        // Empty until the calibration infra provisions it; the invoke path refuses instead of failing boot.
         calibrationSandboxFunctionName:
           this.configService.get<string>("aws.lambda.calibrationSandboxFunctionName") ?? "",
       },

@@ -28,8 +28,7 @@ export const createCalibrationDefinitionSchema = createInsertSchema(calibrationD
     outputSchema: zCalibrationOutputSchema,
   });
 
-// `family` narrows past the shared sensor enum: phones have no calibrations,
-// and the create path cannot produce a "mobile" row.
+// Narrower than the sensor enum: phones have no calibrations.
 export const selectCalibrationDefinitionSchema = createSelectSchema(calibrationDefinitions).extend({
   family: zCalibrationFamily,
   captureProcedure: zCaptureProcedure,
@@ -58,10 +57,8 @@ export type DeviceCalibrationDto = z.infer<typeof selectDeviceCalibrationSchema>
 export type CalibrationRunWithVersionDto = CalibrationRunDto & { definitionVersion: number };
 
 /**
- * The calibration sandbox handler's response contract. "computed" carries the
- * validated blocks; "compute_failed" is the script's fault (exception, missing
- * submit, schema or QC violation); "error" is a malformed event or handler
- * failure. Parsed, never trusted: the Lambda boundary is a system boundary.
+ * Sandbox response: "computed" carries validated blocks, "compute_failed" is the
+ * script's fault, "error" a malformed event or handler fault.
  */
 export const zCalibrationSandboxResponse = z.discriminatedUnion("status", [
   z.object({ status: z.literal("computed"), blocks: zCalibrationBlocks }),

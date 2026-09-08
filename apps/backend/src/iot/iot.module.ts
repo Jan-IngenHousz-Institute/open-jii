@@ -181,8 +181,7 @@ import { IotController } from "./presentation/iot.controller";
       useExisting: AwsAdapter,
     },
   ],
-  // For the organization showcase's device, device-group, and calibration-definition
-  // rows, all scoped by the shared read predicate.
+  // Exported for the organization showcase, scoped by the shared read predicate.
   exports: [IotDeviceRepository, IotDeviceGroupRepository, IotCalibrationDefinitionRepository],
 })
 export class IotModule {}

@@ -153,8 +153,7 @@ export class IotCalibrationController {
     );
   }
 
-  // "contribute": running a calibration adds data about the device without
-  // altering the device resource itself; writing coefficients stays "manage".
+  // "contribute": a run adds data about the device without altering it; writing coefficients stays "manage".
   @CanAccess({ resource: "device", action: "contribute", param: "deviceId" })
   @Implement(iotCalibrationContract.createCalibrationRun)
   createCalibrationRun(@Session() session: UserSession) {

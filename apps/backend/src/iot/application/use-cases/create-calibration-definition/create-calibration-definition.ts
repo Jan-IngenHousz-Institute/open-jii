@@ -28,8 +28,7 @@ export class CreateCalibrationDefinitionUseCase {
       userId,
     });
 
-    // A name is one definition's version line; it cannot change family or
-    // organization mid-line, or runs pinned to older versions become ambiguous.
+    // A name is one version line; it cannot change family or organization mid-line.
     const latest = await this.definitionRepository.findLatestByName(body.name);
     if (latest.isFailure()) {
       return failure(latest.error);
@@ -41,10 +40,8 @@ export class CreateCalibrationDefinitionUseCase {
         ),
       );
     }
-    // A new version joins an existing line, so it lands in the organization that
-    // already owns it. `@CanCreateInOrg` only vets an organizationId the body
-    // carries, so without this an outsider could plant a version inside another
-    // organization's line and hold creator control over it.
+    // A new version joins the line's owning organization. @CanCreateInOrg only vets an
+    // organizationId the body carries, so this stops an outsider planting a version in another's line.
     if (latest.value) {
       if (
         body.organizationId !== undefined &&

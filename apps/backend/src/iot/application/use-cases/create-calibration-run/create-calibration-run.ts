@@ -107,11 +107,7 @@ export class CreateCalibrationRunUseCase {
     return success(definition.value);
   }
 
-  /**
-   * The payload must carry every required series and nothing the procedure
-   * cannot produce. Optional steps may be absent: a bench missing a reference
-   * instrument still produces a useful run.
-   */
+  /** Every required series and nothing the procedure cannot produce; optional steps may be absent. */
   private checkSeriesCompleteness(
     definition: CalibrationDefinitionDto,
     payload: CreateCalibrationRunBody["payload"],
@@ -131,11 +127,7 @@ export class CreateCalibrationRunUseCase {
     return null;
   }
 
-  /**
-   * Refuse a device whose firmware predates what the procedure needs. Commands
-   * an older build does not know would answer with nothing usable, and the run
-   * would record numbers that look like data.
-   */
+  /** Older firmware answers unknown commands with nothing usable and records numbers that look like data. */
   private checkFirmware(
     definition: CalibrationDefinitionDto,
     reported: string | undefined,
@@ -198,9 +190,7 @@ export class CreateCalibrationRunUseCase {
 
     const response = parsed.data;
     if (response.status === "computed") {
-      // The sandbox validated every computed block. A session where every
-      // block was rejected or skipped produced no coefficient to apply, so it
-      // is recorded as a failure with the blocks kept for review.
+      // Every block rejected or skipped leaves nothing to apply: a failure, with the blocks kept for review.
       if (!hasComputedBlock(response.blocks)) {
         return this.runRepository.saveResult(runId, {
           status: "compute_failed",

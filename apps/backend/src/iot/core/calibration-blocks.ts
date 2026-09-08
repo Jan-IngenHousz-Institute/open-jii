@@ -6,14 +6,8 @@ import type {
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
 /**
- * Validate produced blocks against a definition's output schema. Only computed
- * blocks carry coefficients, so only they are checked against the specs;
- * rejected and skipped blocks are recorded outcomes, not violations.
- *
- * The TypeScript twin of the sandbox handler's gate, applied where the platform
- * cannot rely on the sandbox having run: external-bench intake and approval.
- *
- * Returns violation messages; empty means valid.
+ * Validate produced blocks against the output schema. Only computed blocks carry
+ * coefficients; rejected and skipped ones are recorded outcomes, not violations.
  */
 export function validateCalibrationBlocks(
   blocks: CalibrationBlocks,

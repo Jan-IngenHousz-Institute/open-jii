@@ -5,8 +5,7 @@ import { Result, failure, success, AppError } from "../../../../common/utils/fp-
 import type { CalibrationRunWithVersionDto } from "../../../core/models/iot-calibration.model";
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
 
-// Run routes carry the run id, not the device id, so the device authorization
-// happens here rather than in a @CanAccess decorator.
+// Run routes carry the run id, not the device id, so device authorization happens here.
 @Injectable()
 export class GetCalibrationRunUseCase {
   constructor(

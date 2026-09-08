@@ -254,9 +254,7 @@ export class AwsAdapter implements IotAwsPort, LambdaPort, CalibrationSandboxPor
     return this.awsLambdaService.invoke<TResponse>({ functionName, payload });
   }
 
-  /**
-   * Invoke the calibration sandbox Lambda synchronously.
-   */
+  /** Invoke the calibration sandbox Lambda synchronously. */
   async invokeCalibrationSandbox<TResponse = Record<string, unknown>>(
     payload: object,
   ): Promise<Result<InvokeLambdaResponse<TResponse>>> {
