@@ -63,6 +63,9 @@ const MANUAL_MINIPAR: CaptureProcedure = {
 
 const MULTISPEQ_COLORCAL: CaptureProcedure = {
   instruments: [{ role: "dut" }],
+  protocols: {
+    detector_scan: { pulses: [20], pulse_distance: [10000], detectors: [[1, 2, 3, 4]] },
+  },
   steps: [
     {
       kind: "sweep",
