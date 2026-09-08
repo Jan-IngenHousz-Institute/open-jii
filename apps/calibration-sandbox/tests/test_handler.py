@@ -266,6 +266,125 @@ class HandlerTest(unittest.TestCase):
         self.assertEqual(result["status"], "compute_failed")
         self.assertTrue(any("mark it rejected" in reason for reason in result["reasons"]))
 
+    def test_series_that_is_not_an_object_is_error(self):
+        result = handler(event(series="rows"), None)
+        self.assertEqual(result["status"], "error")
+        self.assertIn("'series'", result["error"])
+
+    def test_params_that_are_not_an_object_is_error(self):
+        result = handler(event(params=[1, 2]), None)
+        self.assertEqual(result["status"], "error")
+        self.assertIn("'params'", result["error"])
+
+    def test_series_entry_that_is_not_rows_is_error(self):
+        result = handler(event(series={"par_sweep": {"par_raw": 1.0}}), None)
+        self.assertEqual(result["status"], "error")
+        self.assertIn("array of rows", result["error"])
+
+    def test_submit_of_a_non_dict_is_compute_failed(self):
+        result = handler(event(script="submit([1, 2])"), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertIn("keyed by block name", result["error"])
+
+    def test_block_that_is_not_a_dict_fails_validation(self):
+        result = handler(event(script='submit({"par": 1.19})'), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("must be a dict" in reason for reason in result["reasons"]))
+
+    def test_block_with_unknown_key_fails_validation(self):
+        script = 'submit({"par": {"status": "computed", "coefficients": {"spec": 1.0}, "note": "x"}})'
+        result = handler(event(script=script), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("unknown key 'note'" in reason for reason in result["reasons"]))
+
+    def test_block_quality_that_is_not_a_dict_fails_validation(self):
+        script = 'submit({"par": {"status": "computed", "coefficients": {"spec": 1.0}, "quality": "ok"}})'
+        result = handler(event(script=script), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("quality must be a dict" in reason for reason in result["reasons"]))
+
+    def test_computed_block_without_coefficients_fails_validation(self):
+        result = handler(event(script='submit({"par": {"status": "computed"}})'), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("carries no coefficients" in reason for reason in result["reasons"]))
+
+    def test_coefficients_that_are_not_a_dict_fail_validation(self):
+        script = 'submit({"par": {"status": "computed", "coefficients": [1.0]}})'
+        result = handler(event(script=script), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("coefficients dict" in reason for reason in result["reasons"]))
+
+    def test_missing_required_coefficient_fails_validation(self):
+        script = 'submit({"par": {"status": "computed", "coefficients": {}}})'
+        result = handler(event(script=script), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("required but missing" in reason for reason in result["reasons"]))
+
+    def test_undeclared_coefficient_fails_validation(self):
+        script = 'submit({"par": {"status": "computed", "coefficients": {"spec": 1.0, "stray": 2.0}}})'
+        result = handler(event(script=script), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("'par.stray' is not declared" in reason for reason in result["reasons"]))
+
+    def test_unknown_spec_type_fails_validation(self):
+        schema = {"blocks": {"par": {"spec": {"type": "matrix"}}}}
+        script = 'submit({"par": {"status": "computed", "coefficients": {"spec": 1.0}}})'
+        result = handler(event(script=script, schema=schema), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("unknown spec type" in reason for reason in result["reasons"]))
+
+    def test_non_numeric_coefficient_fails_validation(self):
+        script = 'submit({"par": {"status": "computed", "coefficients": {"spec": "1.0"}}})'
+        result = handler(event(script=script), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("must be a number" in reason for reason in result["reasons"]))
+
+    def test_below_minimum_coefficient_fails_validation(self):
+        script = 'submit({"par": {"status": "computed", "coefficients": {"spec": 0.001}}})'
+        result = handler(event(script=script), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("minimum" in reason for reason in result["reasons"]))
+
+    def test_integer_array_given_a_scalar_fails_validation(self):
+        script = 'submit({"baseline": {"status": "computed", "coefficients": {"channels": 1021}}})'
+        schema = {"blocks": {"baseline": {"channels": {"type": "integer_array", "length": 6}}}}
+        result = handler(event(script=script, schema=schema, series={}), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("integer array" in reason for reason in result["reasons"]))
+
+    def test_each_integer_array_entry_is_checked(self):
+        script = (
+            'submit({"baseline": {"status": "computed", '
+            '"coefficients": {"channels": [1.5, -1, 16777216, 4, 5, 6]}}})'
+        )
+        schema = {
+            "blocks": {
+                "baseline": {
+                    "channels": {"type": "integer_array", "length": 6, "min": 0, "max": 16777215}
+                }
+            }
+        }
+        result = handler(event(script=script, schema=schema, series={}), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("[0]' must be an integer" in reason for reason in result["reasons"]))
+        self.assertTrue(any("[1]' is below" in reason for reason in result["reasons"]))
+        self.assertTrue(any("[2]' is above" in reason for reason in result["reasons"]))
+
+    # A script's fit record naturally holds numpy arrays and scalars; the record
+    # a reader gets back is plain JSON regardless.
+    def test_numpy_values_in_the_fit_record_serialize_as_plain_json(self):
+        script = (
+            "import numpy as np\n"
+            'submit({"par": {"status": "computed", "coefficients": {"spec": 1.0}, '
+            '"fit": {"points": np.array([1.0, 2.0]), "n": np.int64(3), "tags": {"a"}}}})'
+        )
+        result = handler(event(script=script), None)
+        self.assertEqual(result["status"], "computed", result)
+        fit = json.loads(json.dumps(result))["blocks"]["par"]["fit"]
+        self.assertEqual(fit["points"], [1.0, 2.0])
+        self.assertEqual(fit["n"], 3)
+        self.assertIsInstance(fit["tags"], str)
+
     def test_malformed_event_is_error(self):
         self.assertEqual(handler({}, None)["status"], "error")
         self.assertEqual(handler({"script": "submit({})"}, None)["status"], "error")
