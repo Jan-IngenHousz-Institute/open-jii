@@ -1,10 +1,4 @@
-/**
- * Kiprim DC source: the calibration lamp's power supply.
- *
- * Drives the PAR sweep in the Ambit factory procedure, stepping the lamp
- * through a current series while the device under test and a reference sensor
- * are read at each setpoint.
- */
+/** Kiprim DC source: the calibration lamp's supply, stepping current through the PAR sweep. */
 import { DEFAULT_MAX_BUFFER_SIZE } from "../../driver/driver-base";
 import type { ITransportAdapter } from "../../transport/interface";
 import type { Logger } from "../../utils/logger/logger";
@@ -14,7 +8,6 @@ import { findSetpoint } from "../interface";
 import { KIPRIM_COMMANDS, KIPRIM_IDENTITY_TOKEN, KIPRIM_LIMITS } from "./commands";
 
 export interface KiprimConfig {
-  /** How long to wait for the `*IDN?` reply. */
   identifyTimeoutMs?: number;
 }
 
@@ -45,8 +38,7 @@ export class KiprimDcSource implements BenchInstrument {
     this.rxBuffer = "";
     transport.onDataReceived((data) => {
       this.rxBuffer += data;
-      // A miswired port can stream indefinitely; the supply only ever owes us
-      // one short identity line, so an oversized buffer is noise, not a reply.
+      // A miswired port can stream indefinitely; the supply only owes one short line.
       if (this.rxBuffer.length > DEFAULT_MAX_BUFFER_SIZE) {
         this.log.error("Kiprim receive buffer exceeded max size, discarding data");
         this.rxBuffer = "";
