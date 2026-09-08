@@ -222,7 +222,7 @@ describe("<OrganizationResourceRows />", () => {
         }),
       );
 
-      // Seven types and no eighth, in GROUP_ORDER — a hand-written list could drift.
+      // Seven types and no eighth, in GROUP_ORDER; a hand-written list could drift.
       expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual([
         "organizations.resources.allTypes",
         "organizations.resources.types.experiment",
