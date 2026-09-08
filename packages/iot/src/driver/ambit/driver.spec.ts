@@ -368,6 +368,20 @@ describe("AmbitDriver sensor_id", () => {
       expect((await driver.getDeviceIdentity()).deviceId).toBe("A0:B1:C2:D3:E4:F5");
     });
 
+    it("leaves the device id unset when the dump carries no MAC line", async () => {
+      const transport = tableTransport({
+        "hello\n": HELLO_REPLY,
+        "reboot\n": "Calibration: Name:AmbitV004 Spec:1.1893\nFW: 1.1.3\n",
+      });
+      const driver = fastDriver();
+      await driver.initialize(transport);
+
+      const identity = await driver.getDeviceIdentityFromBootDump();
+
+      expect(identity.deviceId).toBeUndefined();
+      expect(identity.raw.firmwareVersion).toBe("1.1.3");
+    });
+
     // "The port died" and "the dump was truncated" need different handling at
     // the bench, so a failed command must not read as an empty device.
     it("throws when the reboot command itself fails", async () => {

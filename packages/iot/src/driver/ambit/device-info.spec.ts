@@ -73,6 +73,28 @@ describe("parseAmbitBootDump", () => {
     expect(info.metadata.z).toBe(1001);
   });
 
+  // Field firmware prints what it has; a value it cannot express numerically
+  // must not take the rest of the dump down with it.
+  it("falls back on malformed values without failing the dump", () => {
+    const info = parseAmbitBootDump(
+      [
+        "ADPD Found, chip version: ?",
+        "Metadata: lon:n/a alt:12",
+        "Calibration: Name:AmbitV004 Spec:abc",
+        "FW: MAC:A0:B1:C2:D3:E4:F5\tSize:big",
+        "FW: 1.1.3",
+      ].join("\n"),
+    );
+
+    expect(info.adpdChipVersion).toBeNull();
+    expect(info.metadata.lon).toBe("n/a");
+    expect(info.metadata.alt).toBe(12);
+    expect(info.lightSlope).toBe(0);
+    expect(info.firmwareSize).toBe(0);
+    expect(info.firmwareDate).toBe("");
+    expect(info.isValid).toBe(true);
+  });
+
   it("reads the MLX vector", () => {
     expect(parseAmbitBootDump(DUMP).mlxCalibration).toEqual([16384, 32768, 4096]);
   });
