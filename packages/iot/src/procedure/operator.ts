@@ -1,22 +1,13 @@
 import type { CaptureResult } from "./types";
 
-/**
- * How a procedure reaches the person at the bench.
- *
- * The interpreter never draws anything: a step that needs a fixture moved, a
- * lamp turned by hand, or a meter reading typed in goes through this port, and
- * the wizard, a mobile screen, or a test double supplies it.
- */
+/** How a procedure reaches the person at the bench; the interpreter never draws anything. */
 
 /**
- * Raised when a procedure stops before completing, carrying everything it did
- * capture. A bench session is long and its series are independent, so a rig
- * fault twenty minutes in must not discard the sweeps that already succeeded:
- * the operator can submit what completed, or retry only the rest.
+ * Raised when a procedure stops early, carrying everything it captured: a rig fault
+ * twenty minutes in must not discard the sweeps that already succeeded.
  */
 export class ProcedureAborted extends Error {
   constructor(
-    /** What actually went wrong: a declined step, a rig fault, a dead read. */
     readonly reason: Error,
     readonly partial: CaptureResult,
   ) {
@@ -42,11 +33,7 @@ export class ProcedureRigError extends Error {
 }
 
 export interface OperatorPort {
-  /**
-   * Show an instruction and wait. When `confirm` is set the operator must type
-   * that exact token, which is how a procedure gates a step that is unsafe or
-   * meaningless to perform unprepared. Returning false declines the step.
-   */
+  /** When `confirm` is set the operator must type that exact token; returning false declines the step. */
   acknowledge(prompt: string, confirm?: string): Promise<boolean>;
 
   /** Ask for a value the rig cannot measure, such as a handheld meter reading. */

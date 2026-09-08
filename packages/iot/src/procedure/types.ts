@@ -1,15 +1,8 @@
 /**
- * The shape of a calibration capture procedure, as this package executes it.
- *
- * Mirrors the contract's `zCaptureProcedure` structurally rather than importing
- * it: this package has no dependencies, and the API package deliberately does
- * not depend on it either (see `device-command.schema.ts` there for the same
- * rule in the other direction). The two definitions are kept in step by hand,
- * and `procedure-contract.spec.ts` parses the same fixtures the contract's own
- * spec does so a drift shows up as a failing test rather than at a bench.
+ * The capture procedure as this package executes it: a structural mirror of the
+ * contract's zCaptureProcedure, since this package has no dependencies. Shared fixtures guard the two.
  */
 
-/** The device under test. Its handshake comes from the family driver. */
 export const DUT_ROLE = "dut";
 
 /** Reserved column carrying the setpoint on every sweep row. */
@@ -89,7 +82,6 @@ export interface SweepStep {
 
 export type ProcedureStep = OperatorStep | SettleStep | ReadStep | SweepStep;
 
-/** A measurement protocol the device runs whole; its shape is the device's own. */
 export type MeasurementProtocol = Record<string, unknown>;
 
 export interface CaptureProcedure {
@@ -104,7 +96,6 @@ export type SeriesCell = number | string | boolean | number[] | Record<string, n
 
 export type SeriesRow = Record<string, SeriesCell | null>;
 
-/** Series keyed by name, in the shape a calibration run payload carries. */
 export type CapturePayload = Record<string, SeriesRow[]>;
 
 export interface SkippedSeries {
@@ -126,7 +117,6 @@ export function isInstrumentRead(read: ProcedureRead): read is InstrumentRead {
   return "instrument" in read;
 }
 
-/** Series a payload must carry: every read or sweep step not marked optional. */
 export function requiredSeriesNames(procedure: CaptureProcedure): string[] {
   return procedure.steps
     .filter(

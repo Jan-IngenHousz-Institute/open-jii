@@ -1,14 +1,6 @@
 /**
- * Executes a calibration capture procedure against a connected rig.
- *
- * The procedure is data, so this is the only place that knows how a declared
- * step becomes serial traffic. It produces the payload shape a calibration run
- * carries, and nothing else: fitting the readings is the sandbox's job, and
- * writing coefficients back is the wizard's.
- *
- * A rig is routinely partial. When an optional step's instrument is missing, or
- * the operator declines a gated step, its series is recorded as skipped and the
- * run continues; a required step in the same position aborts.
+ * Executes a capture procedure against a connected rig: the only place a declared step
+ * becomes serial traffic. Fitting is the sandbox's job and writing back the wizard's.
  */
 import type { BenchInstrument } from "../instrument/interface";
 import type { Logger } from "../utils/logger/logger";
@@ -30,11 +22,7 @@ import type {
   SweepStep,
 } from "./types";
 
-/**
- * Anything the interpreter can ask for a reading: a device driver satisfies
- * this. Deliberately not generic; a reading is narrowed by `toCell`, so a type
- * parameter here would only invite a cast at the call site.
- */
+/** Deliberately not generic: a reading is narrowed by toCell, so a type parameter would only invite a cast. */
 export interface ReadTarget {
   execute(
     command: string | object,
@@ -42,16 +30,11 @@ export interface ReadTarget {
   ): Promise<{ success: boolean; data?: unknown; error?: Error }>;
 }
 
-/** Anything that accepts a named scalar setpoint. */
 export interface SetpointTarget {
   applySetpoint(name: string, value: number): Promise<void>;
 }
 
-/**
- * What is actually plugged in, keyed by the role a procedure declares. A role
- * may read, apply setpoints, or both: the device under test does both, a
- * reference sensor only reads, a power supply only applies.
- */
+/** What is plugged in, by declared role; a role may read, apply setpoints, or both. */
 export interface RigBinding {
   read?: ReadTarget;
   setpoint?: SetpointTarget;
@@ -186,11 +169,7 @@ class ProcedureRunner {
     this.commit(step.series, rows);
   }
 
-  /**
-   * Apply the setpoint at `index`, by instrument or by asking the operator
-   * to. Read off the narrowed stimulus rather than passed in, so an
-   * instrument's value is a number by type and needs no runtime check.
-   */
+  /** Read off the narrowed stimulus so an instrument value is a number by type. */
   private async applyStimulus(step: SweepStep, index: number): Promise<boolean> {
     if (!isInstrumentStimulus(step.stimulus)) {
       const value = step.stimulus.values[index];
@@ -232,9 +211,8 @@ class ProcedureRunner {
       samples.push(await this.readOnce(target, read));
     }
 
-    // One sample stays scalar; a repeat yields the series so a script can
-    // average, or reject, on its own terms. A payload cell can hold a numeric
-    // series; anything else is kept whole as text, as a structured reply is.
+    // One sample stays scalar; a repeat yields the series. A cell holds a numeric
+    // series; anything else is kept whole as text.
     if (repeat === 1) return samples[0];
     return samples.every((sample): sample is number => typeof sample === "number")
       ? samples
@@ -265,7 +243,6 @@ class ProcedureRunner {
     return protocol;
   }
 
-  /** The first role a step needs that the rig has not bound for reading. */
   private missingRole(reads: ProcedureRead[]): string | undefined {
     for (const read of reads) {
       if (!isInstrumentRead(read)) continue;
@@ -318,8 +295,7 @@ function toCell(data: unknown): SeriesCell {
   if (Array.isArray(data) && data.every((entry) => typeof entry === "number")) {
     return data;
   }
-  // A structured reply (a PAR reading with channels, a protocol envelope) is
-  // kept whole: the script decides which field it needs.
+  // A structured reply is kept whole: the script picks the field it needs.
   return JSON.stringify(data);
 }
 
