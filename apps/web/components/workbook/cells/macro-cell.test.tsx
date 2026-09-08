@@ -125,6 +125,17 @@ describe("MacroCellComponent", () => {
     expect(updated.payload.language).toBe("python");
   });
 
+  it("renders a pinned snapshot with its pinned language, not the stale cell payload", async () => {
+    renderMacroCell({
+      cell: { ...cell, payload: { ...cell.payload, language: "javascript" } },
+      snapshot: { code: btoa("print(1)"), language: "python" },
+    });
+
+    await waitFor(() => expect(screen.getByRole("textbox")).toHaveValue("print(1)"));
+    expect(screen.getByText("Python")).toBeInTheDocument();
+    expect(screen.queryByText("JavaScript")).not.toBeInTheDocument();
+  });
+
   it("leaves a stale cell payload alone when rendering a pinned snapshot", async () => {
     const onUpdate = vi.fn();
     renderMacroCell({

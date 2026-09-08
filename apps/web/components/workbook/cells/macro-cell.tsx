@@ -47,7 +47,7 @@ interface MacroCellProps {
   readOnly?: boolean;
   // Immutable code pinned at publish time. When present the cell renders
   // exclusively from it and never fetches the live macro row.
-  snapshot?: { code: string };
+  snapshot?: { code: string; language?: MacroLanguage };
 }
 
 const languageLabels: Record<MacroLanguage, string> = {
@@ -77,7 +77,10 @@ export function MacroCellComponent({
   const macroName = macroData?.name;
   const rawCode = useSnapshot ? snapshot.code : (macroData?.code ?? null);
   const macroCode = rawCode ? decodeBase64(rawCode) : null;
-  const macroLanguage = macroData?.language;
+  // Live row in edit mode, pinned language in snapshot mode; the cell payload
+  // copy is only a fallback because it can go stale.
+  const macroLanguage = useSnapshot ? snapshot.language : macroData?.language;
+  const displayLanguage = macroLanguage ?? language;
   // Capability, not ownership: the detail payload already carries the
   // caller's `can(update)`, so an `admin`/"Can edit" grantee edits the macro
   // here exactly as they can on its own page.
@@ -307,7 +310,7 @@ export function MacroCellComponent({
           </Button>
           {canUpdateMacro ? (
             <Select
-              value={macroLanguage ?? language}
+              value={displayLanguage}
               onValueChange={(v) => handleLanguageChange(v as MacroLanguage)}
               open={langSelectOpen}
               onOpenChange={setLangSelectOpen}
@@ -327,7 +330,7 @@ export function MacroCellComponent({
             </Select>
           ) : (
             <span className="text-muted-foreground px-2 text-xs">
-              {languageLabels[macroLanguage ?? language]}
+              {languageLabels[displayLanguage]}
             </span>
           )}
           <Button
@@ -353,7 +356,7 @@ export function MacroCellComponent({
         <WorkbookCodeEditor
           value={localCode ?? macroCode ?? ""}
           onChange={isEditable ? setLocalCode : undefined}
-          language={macroLanguage ?? language}
+          language={displayLanguage}
           minHeight={isEditable ? "120px" : "80px"}
           maxHeight={isEditable ? "500px" : "400px"}
           readOnly={!isEditable}
