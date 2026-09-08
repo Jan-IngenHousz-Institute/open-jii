@@ -37,6 +37,31 @@ describe("KiprimDcSource", () => {
     expect(transport.send).toHaveBeenCalledWith("*IDN?\n");
   });
 
+  // A USB serial stack may hand the reply over before the caller is waiting,
+  // or in as many pieces as it likes; the line is what matters.
+  it("accepts a reply that was already buffered before the wait began", async () => {
+    const transport = createMockTransport();
+    vi.mocked(transport.send).mockImplementation(() => {
+      transport.simulateData(IDN_REPLY);
+      return Promise.resolve();
+    });
+    const instrument = await connected(transport);
+
+    await expect(instrument.identify()).resolves.toContain("DC310S");
+  });
+
+  it("assembles a reply that arrives in pieces", async () => {
+    const transport = createMockTransport();
+    vi.mocked(transport.send).mockImplementation(() => {
+      setTimeout(() => transport.simulateData("KIPRIM,DC3"), 0);
+      setTimeout(() => transport.simulateData("10S,25011669,FV:V5.2.0\n"), 5);
+      return Promise.resolve();
+    });
+    const instrument = await connected(transport);
+
+    await expect(instrument.identify()).resolves.toBe("KIPRIM,DC310S,25011669,FV:V5.2.0");
+  });
+
   it("rejects when nothing answers the identity query", async () => {
     const instrument = await connected(createMockTransport());
 
