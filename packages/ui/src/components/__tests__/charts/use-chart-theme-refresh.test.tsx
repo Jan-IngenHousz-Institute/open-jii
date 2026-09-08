@@ -1,10 +1,12 @@
 import "@testing-library/jest-dom";
-import { act, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import { expect, vi, afterEach } from "vitest";
 
 import { LineChart } from "../../charts/line-chart";
 import { useChartThemeRefresh } from "../../charts/use-chart-theme-refresh";
+import { ThemeProvider, ThemeToggle } from "../../theme";
 
 vi.mock("../../charts/plotly-chart", () => ({
   PlotlyChart: vi.fn(({ layout }) => (
@@ -34,11 +36,41 @@ function renderedLayout(): { colorway?: string[] } {
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals();
+  window.localStorage.clear();
   clearChartColors();
 });
 
 describe("useChartThemeRefresh", () => {
-  it("re-renders the subscriber when the dark class flips on <html>", async () => {
+  it("shares one root-class observer across every chart subscriber", () => {
+    const NativeMutationObserver = globalThis.MutationObserver;
+    const observerConstructed = vi.fn();
+    class CountingMutationObserver extends NativeMutationObserver {
+      constructor(callback: MutationCallback) {
+        super(callback);
+        observerConstructed();
+      }
+    }
+    vi.stubGlobal("MutationObserver", CountingMutationObserver);
+
+    function Probe() {
+      useChartThemeRefresh();
+      return null;
+    }
+
+    render(
+      <ThemeProvider attribute="class" defaultTheme="light">
+        <Probe />
+        <Probe />
+        <Probe />
+      </ThemeProvider>,
+    );
+
+    expect(observerConstructed).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-renders the subscriber when the effective provider theme changes", async () => {
+    const user = userEvent.setup();
     let renders = 0;
     function Probe() {
       renders += 1;
@@ -46,33 +78,36 @@ describe("useChartThemeRefresh", () => {
       return null;
     }
 
-    render(<Probe />);
+    render(
+      <ThemeProvider attribute="class" defaultTheme="light">
+        <ThemeToggle />
+        <Probe />
+      </ThemeProvider>,
+    );
     const before = renders;
 
-    await act(async () => {
-      document.documentElement.classList.add("dark");
-    });
+    await user.click(await screen.findByRole("button", { name: "Switch to dark mode" }));
 
     expect(renders).toBeGreaterThan(before);
   });
 
   it("re-resolves the chart colorway when the theme flips after render", async () => {
+    const user = userEvent.setup();
     setChartColors(LIGHT_COLORWAY);
 
     render(
-      <LineChart
-        data={[{ x: [1, 2, 3], y: [4, 5, 6], name: "series" }]}
-        config={{ title: "Theme test" }}
-      />,
+      <ThemeProvider attribute="class" defaultTheme="light">
+        <ThemeToggle />
+        <LineChart
+          data={[{ x: [1, 2, 3], y: [4, 5, 6], name: "series" }]}
+          config={{ title: "Theme test" }}
+        />
+      </ThemeProvider>,
     );
     expect(renderedLayout().colorway).toEqual(LIGHT_COLORWAY);
 
-    // A theme toggle only flips the class; nothing re-renders React from
-    // outside. The chart must pick up the new custom-property values itself.
-    await act(async () => {
-      setChartColors(DARK_COLORWAY);
-      document.documentElement.classList.add("dark");
-    });
+    setChartColors(DARK_COLORWAY);
+    await user.click(await screen.findByRole("button", { name: "Switch to dark mode" }));
 
     expect(renderedLayout().colorway).toEqual(DARK_COLORWAY);
   });
