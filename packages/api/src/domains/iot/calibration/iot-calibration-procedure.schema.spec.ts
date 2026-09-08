@@ -365,6 +365,34 @@ describe("zCaptureProcedure", () => {
       ]);
     });
 
+    // A bench reference answers named readings only, so a protocol aimed at one
+    // would abort the session at the bench rather than fail at publish time.
+    it("rejects a protocol read aimed at a bench instrument", () => {
+      const result = zCaptureProcedure.safeParse({
+        instruments: [{ role: "dut" }, { role: "par_ref", handshake: "Par_REF" }],
+        protocols: { detector_scan: { pulses: [20] } },
+        steps: [
+          {
+            kind: "read",
+            series: "colorcal",
+            read: [{ instrument: "par_ref", protocol: "detector_scan", as: "channels" }],
+          },
+        ],
+      });
+      expect(result.success).toBe(false);
+      expect(result.success ? "" : result.error.issues[0].message).toContain(
+        "can run a measurement protocol",
+      );
+    });
+
+    it("rejects a protocols map larger than the byte cap", () => {
+      const result = zCaptureProcedure.safeParse({
+        ...multispeqColorcalProcedure,
+        protocols: { detector_scan: { pulses: Array.from({ length: 40_000 }, () => 20) } },
+      });
+      expect(result.success).toBe(false);
+    });
+
     it("rejects a protocol keyed by something other than an identifier", () => {
       const result = zCaptureProcedure.safeParse({
         ...multispeqColorcalProcedure,
