@@ -20,6 +20,7 @@ import type {
   CaptureProcedure,
   CaptureResult,
   InstrumentRead,
+  MeasurementProtocol,
   ProcedureRead,
   ProcedureStep,
   ReadStep,
@@ -241,16 +242,27 @@ class ProcedureRunner {
   }
 
   private async readOnce(target: ReadTarget, read: InstrumentRead): Promise<SeriesCell> {
-    const command = read.command ?? read.protocol;
-    if (!command) {
-      throw new ProcedureRigError(`Read "${read.as}" names neither a command nor a protocol`);
-    }
+    const command = read.command ?? this.resolveProtocol(read);
 
     const result = await target.execute(command, { timeoutMs: read.timeoutMs });
     if (!result.success) {
       throw result.error ?? new Error(`Read "${read.as}" failed`);
     }
     return toCell(result.data);
+  }
+
+  /** A read names a protocol; the device gets the declared object, whole. */
+  private resolveProtocol(read: InstrumentRead): MeasurementProtocol {
+    if (read.protocol === undefined) {
+      throw new ProcedureRigError(`Read "${read.as}" names neither a command nor a protocol`);
+    }
+    const protocol = this.procedure.protocols?.[read.protocol];
+    if (!protocol) {
+      throw new ProcedureRigError(
+        `Read "${read.as}" names protocol "${read.protocol}", which the procedure does not declare`,
+      );
+    }
+    return protocol;
   }
 
   /** The first role a step needs that the rig has not bound for reading. */

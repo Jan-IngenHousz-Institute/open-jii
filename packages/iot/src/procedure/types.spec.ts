@@ -38,7 +38,7 @@ const AMBIT_FACTORY: CaptureProcedure = {
     {
       kind: "read",
       series: "adpd_baseline",
-      read: [{ instrument: "dut", command: "measure_baseline", as: "channels" }],
+      read: [{ instrument: "dut", command: "baseline,0", as: "channels" }],
     },
   ],
 };

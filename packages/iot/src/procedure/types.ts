@@ -89,8 +89,13 @@ export interface SweepStep {
 
 export type ProcedureStep = OperatorStep | SettleStep | ReadStep | SweepStep;
 
+/** A measurement protocol the device runs whole; its shape is the device's own. */
+export type MeasurementProtocol = Record<string, unknown>;
+
 export interface CaptureProcedure {
   instruments: RigInstrument[];
+  /** Declared once by name; an instrument read refers to one by that name. */
+  protocols?: Partial<Record<string, MeasurementProtocol>>;
   steps: ProcedureStep[];
 }
 

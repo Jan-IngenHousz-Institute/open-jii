@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { runCaptureProcedure } from "./interpreter";
+import { createMockTransport } from "../driver/testing/mock-transport";
+import { KIPRIM_COMMANDS } from "../instrument/kiprim/commands";
+import { KiprimDcSource } from "../instrument/kiprim/instrument";
+import { runCaptureProcedure, shutdownRig } from "./interpreter";
 import type { ProcedureContext, RigBinding } from "./interpreter";
 import { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./operator";
 import type { OperatorPort, ProcedureProgress } from "./operator";
@@ -38,7 +41,7 @@ const AMBIT_PROCEDURE: CaptureProcedure = {
       kind: "read",
       series: "adpd_baseline",
       optional: true,
-      read: [{ instrument: "dut", command: "measure_baseline", as: "channels" }],
+      read: [{ instrument: "dut", command: "baseline,0", as: "channels" }],
     },
   ],
 };
@@ -86,7 +89,7 @@ function fullRig() {
     dutSetpoint,
     rig: {
       dut: {
-        ...reader({ get_par: 148.2, measure_baseline: [1021, 987, 1103, 954, 1200, 1015] }),
+        ...reader({ get_par: 148.2, "baseline,0": [1021, 987, 1103, 954, 1200, 1015] }),
         setpoint: dutSetpoint.setpoint,
       },
       lamp,
@@ -155,6 +158,49 @@ describe("runCaptureProcedure", () => {
       expect(result.skipped).toEqual([
         { series: "led_sweep", reason: 'instrument "emit_ref" is not connected' },
       ]);
+    });
+
+    it("skips an optional read step whose instrument is absent", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }, { role: "par_ref", handshake: "Par_REF" }],
+        steps: [
+          {
+            kind: "read",
+            series: "reference_check",
+            optional: true,
+            read: [{ instrument: "par_ref", command: "par", as: "par_ref" }],
+          },
+        ],
+      };
+
+      const result = await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut: reader({ par_raw: 1 }) } }),
+      );
+
+      expect(result.payload).toEqual({});
+      expect(result.skipped).toEqual([
+        { series: "reference_check", reason: 'instrument "par_ref" is not connected' },
+      ]);
+    });
+
+    it("skips an optional sweep whose stimulus instrument is absent", async () => {
+      const { rig } = fullRig();
+      const withoutLamp = { dut: rig.dut, par_ref: rig.par_ref, emit_ref: rig.emit_ref };
+      const procedure: CaptureProcedure = {
+        ...AMBIT_PROCEDURE,
+        steps: AMBIT_PROCEDURE.steps.map((step) =>
+          step.kind === "sweep" && step.series === "par_sweep" ? { ...step, optional: true } : step,
+        ),
+      };
+
+      const result = await runCaptureProcedure(procedure, context({ rig: withoutLamp }));
+
+      expect(result.skipped).toContainEqual({
+        series: "par_sweep",
+        reason: 'instrument "lamp" is not connected',
+      });
+      expect(result.payload.par_sweep).toBeUndefined();
     });
 
     it("aborts when a required step's instrument is absent", async () => {
@@ -289,6 +335,88 @@ describe("runCaptureProcedure", () => {
       expect(port.acknowledge).toHaveBeenCalledWith("Insert the probe: sand, air_dry");
     });
 
+    it("skips an optional read step whose prompt the operator declines", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "read",
+            series: "compass",
+            optional: true,
+            prompt: "Rotate the device in a figure 8",
+            read: [{ instrument: "dut", command: "calibrate_compass", as: "result" }],
+          },
+        ],
+      };
+      const port = operator({ acknowledge: vi.fn(() => Promise.resolve(false)) });
+
+      const result = await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut: reader({ calibrate_compass: "ok" }) }, operator: port }),
+      );
+
+      expect(port.acknowledge).toHaveBeenCalledWith("Rotate the device in a figure 8");
+      expect(result.skipped).toEqual([
+        { series: "compass", reason: "operator declined: Rotate the device in a figure 8" },
+      ]);
+    });
+
+    it("skips an optional sweep when the operator declines a setpoint", async () => {
+      const manual: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "sweep",
+            series: "par_sweep",
+            optional: true,
+            stimulus: { operator: "Set the lamp to {value}", values: [100, 300] },
+            read: [{ instrument: "dut", command: "par_raw", as: "par_raw" }],
+          },
+        ],
+      };
+      const port = operator({ acknowledge: vi.fn(() => Promise.resolve(false)) });
+
+      const result = await runCaptureProcedure(
+        manual,
+        context({ rig: { dut: reader({ par_raw: 12 }) }, operator: port }),
+      );
+
+      expect(result.skipped).toEqual([
+        { series: "par_sweep", reason: "operator declined a setpoint in par_sweep" },
+      ]);
+    });
+
+    // `{value}` on a compound setpoint shows the whole thing; `{value.key}` on a
+    // scalar has no key to pick and shows the scalar.
+    it("interpolates the whole compound setpoint and a keyed scalar", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "sweep",
+            series: "first",
+            stimulus: { operator: "Prepare {value}", values: [{ medium: "sand" }] },
+            read: [{ instrument: "dut", command: "read_vwc", as: "vwc_raw" }],
+          },
+          {
+            kind: "sweep",
+            series: "second",
+            stimulus: { operator: "Set {value.level}", values: [300] },
+            read: [{ instrument: "dut", command: "read_vwc", as: "vwc_raw" }],
+          },
+        ],
+      };
+      const port = operator();
+
+      await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut: reader({ read_vwc: 0.03 }) }, operator: port }),
+      );
+
+      expect(port.acknowledge).toHaveBeenCalledWith('Prepare {"medium":"sand"}');
+      expect(port.acknowledge).toHaveBeenCalledWith("Set 300");
+    });
+
     it("records a value the rig cannot measure", async () => {
       const manual: CaptureProcedure = {
         instruments: [{ role: "dut" }],
@@ -403,6 +531,50 @@ describe("runCaptureProcedure", () => {
       expect(result.payload.names[0].sampled).toBe(JSON.stringify(["Par_REF", "Par_REF"]));
     });
 
+    // A protocol goes to the device whole, and its reply comes back whole.
+    it("sends a declared protocol object in place of a command", async () => {
+      const scan = { pulses: [20], detectors: [[1, 2]] };
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        protocols: { detector_scan: scan },
+        steps: [
+          {
+            kind: "read",
+            series: "colorcal",
+            read: [{ instrument: "dut", protocol: "detector_scan", as: "channels" }],
+          },
+        ],
+      };
+      const execute = vi.fn((_command: string | object) =>
+        Promise.resolve({ success: true, data: { channels: [415, 388] } }),
+      );
+
+      const result = await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut: { read: { execute } } } }),
+      );
+
+      expect(execute.mock.calls[0][0]).toBe(scan);
+      expect(result.payload.colorcal[0].channels).toBe(JSON.stringify({ channels: [415, 388] }));
+    });
+
+    it("aborts when a read names a protocol the procedure does not declare", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "read",
+            series: "colorcal",
+            read: [{ instrument: "dut", protocol: "detector_scan", as: "channels" }],
+          },
+        ],
+      };
+
+      await expect(
+        runCaptureProcedure(procedure, context({ rig: { dut: reader({}) } })),
+      ).rejects.toThrow(/does not declare/);
+    });
+
     it("aborts when a device read fails rather than recording a hole", async () => {
       const procedure: CaptureProcedure = {
         instruments: [{ role: "dut" }],
@@ -425,6 +597,55 @@ describe("runCaptureProcedure", () => {
       await expect(
         runCaptureProcedure(procedure, context({ rig: { dut: failing } })),
       ).rejects.toThrow(/device stopped answering/);
+    });
+  });
+
+  describe("settle steps", () => {
+    it("waits out a settle step and reports it", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          { kind: "settle", ms: 1500 },
+          {
+            kind: "read",
+            series: "par_sweep",
+            read: [{ instrument: "dut", command: "par_raw", as: "par_raw" }],
+          },
+        ],
+      };
+      const sleep = vi.fn((_ms: number) => Promise.resolve());
+      const events: ProcedureProgress[] = [];
+
+      await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut: reader({ par_raw: 1 }) }, sleep, onProgress: (e) => events.push(e) }),
+      );
+
+      expect(sleep).toHaveBeenCalledWith(1500);
+      expect(events).toContainEqual({
+        kind: "step",
+        index: 0,
+        total: 2,
+        description: "Settle 1500 ms",
+      });
+    });
+  });
+
+  describe("shutdownRig", () => {
+    // Leaving a lamp driven because a sibling instrument's port died is the
+    // one outcome a bench must never see.
+    it("returns every instrument to rest even when one fails", async () => {
+      const failing = createMockTransport();
+      vi.mocked(failing.send).mockRejectedValue(new Error("port closed"));
+      const healthy = createMockTransport();
+      const first = new KiprimDcSource();
+      const second = new KiprimDcSource();
+      await first.initialize(failing);
+      await second.initialize(healthy);
+
+      await shutdownRig([first, second]);
+
+      expect(healthy.send).toHaveBeenCalledWith(KIPRIM_COMMANDS.setCurrent(0));
     });
   });
 
