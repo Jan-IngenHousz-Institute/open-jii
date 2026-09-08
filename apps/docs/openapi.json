@@ -18064,6 +18064,17 @@
                         "minItems": 1,
                         "maxItems": 8
                       },
+                      "protocols": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      },
                       "steps": {
                         "type": "array",
                         "items": {
@@ -18577,6 +18588,17 @@
                           },
                           "minItems": 1,
                           "maxItems": 8
+                        },
+                        "protocols": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          }
                         },
                         "steps": {
                           "type": "array",
@@ -19148,6 +19170,17 @@
                           },
                           "minItems": 1,
                           "maxItems": 8
+                        },
+                        "protocols": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          }
                         },
                         "steps": {
                           "type": "array",
@@ -21623,6 +21656,10 @@
                         "verified"
                       ]
                     }
+                  },
+                  "postInfo": {
+                    "type": "object",
+                    "additionalProperties": {}
                   }
                 },
                 "required": [

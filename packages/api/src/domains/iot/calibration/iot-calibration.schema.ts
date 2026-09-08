@@ -291,6 +291,9 @@ export const zDeviceCalibrationPathParam = z.object({
 // run's write recorded on it.
 export const zReportDeviceCalibrationWriteBody = zDeviceCalibrationPathParam.extend({
   writeResults: zCalibrationWriteResults,
+  // Device state after the write, read over the same connection; the run's
+  // counterpart to the preInfo it was created with.
+  postInfo: zInfoRecord.optional(),
 });
 
 // --- Inferred types ---
@@ -313,4 +316,5 @@ export type CalibrationRunPayload = z.infer<typeof zCalibrationRunPayload>;
 export type CalibrationRun = z.infer<typeof zCalibrationRun>;
 export type CreateCalibrationRunBody = z.infer<typeof zCreateCalibrationRunBody>;
 export type CreateExternalCalibrationRunBody = z.infer<typeof zCreateExternalCalibrationRunBody>;
+export type ReportDeviceCalibrationWriteBody = z.infer<typeof zReportDeviceCalibrationWriteBody>;
 export type DeviceCalibration = z.infer<typeof zDeviceCalibration>;

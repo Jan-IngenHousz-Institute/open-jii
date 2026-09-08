@@ -60,9 +60,16 @@ const zOperatorStimulus = z
 
 export const zStimulus = z.union([zInstrumentStimulus, zOperatorStimulus]);
 
+// A measurement protocol the device runs whole, in place of a console command.
+// Its shape is the device's own (an Ambit run object, a MultispeQ protocol
+// element), so only its name is checked here: it must be declared once on the
+// procedure, where a read refers to it by that name.
+const zMeasurementProtocol = z.record(z.unknown());
+const MAX_PROTOCOLS = 16;
+
 // One value read at the current point: a device/instrument query (console
-// command or measurement protocol, exactly one of the two) or a value the
-// operator types in.
+// command or a declared measurement protocol, exactly one of the two) or a
+// value the operator types in.
 const zInstrumentRead = z
   .object({
     instrument: zIdentifier,
@@ -149,10 +156,17 @@ function isInstrumentStimulus(stimulus: Stimulus): stimulus is z.infer<typeof zI
 export const zCaptureProcedure = z
   .object({
     instruments: z.array(zRigInstrument).min(1).max(8),
+    protocols: z
+      .record(zIdentifier, zMeasurementProtocol)
+      .refine((protocols) => Object.keys(protocols).length <= MAX_PROTOCOLS, {
+        message: `At most ${MAX_PROTOCOLS} protocols may be declared`,
+      })
+      .optional(),
     steps: z.array(zProcedureStep).min(1).max(64),
   })
   .strict()
   .superRefine((procedure, ctx) => {
+    const protocols = new Set(Object.keys(procedure.protocols ?? {}));
     const roles = new Set<string>();
     procedure.instruments.forEach((instrument, index) => {
       if (roles.has(instrument.role)) {
@@ -224,6 +238,14 @@ export const zCaptureProcedure = z
             readIndex,
             "instrument",
           ]);
+
+          if (read.protocol !== undefined && !protocols.has(read.protocol)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Protocol "${read.protocol}" is not declared in the procedure`,
+              path: ["steps", stepIndex, "read", readIndex, "protocol"],
+            });
+          }
         }
       });
 
@@ -274,6 +296,7 @@ export function requiredProcedureSeriesNames(procedure: CaptureProcedure): strin
 }
 
 export type RigInstrument = z.infer<typeof zRigInstrument>;
+export type MeasurementProtocol = z.infer<typeof zMeasurementProtocol>;
 export type Stimulus = z.infer<typeof zStimulus>;
 export type ProcedureRead = z.infer<typeof zProcedureRead>;
 export type ProcedureStep = z.infer<typeof zProcedureStep>;

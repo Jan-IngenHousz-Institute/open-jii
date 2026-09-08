@@ -48,7 +48,7 @@ const ambitFactoryProcedure = {
     {
       kind: "read",
       series: "adpd_baseline",
-      read: [{ instrument: "dut", command: "measure_baseline", as: "channels" }],
+      read: [{ instrument: "dut", command: "baseline,0", as: "channels" }],
     },
   ],
 };
@@ -99,6 +99,9 @@ const automatedMiniparProcedure = {
 // read instead of a console command, operator-entered lot values.
 const multispeqColorcalProcedure = {
   instruments: [{ role: "dut" }],
+  protocols: {
+    detector_scan: { pulses: [20], pulse_distance: [10000], detectors: [[1, 2, 3, 4]] },
+  },
   steps: [
     {
       kind: "sweep",
@@ -343,6 +346,29 @@ describe("zCaptureProcedure", () => {
             ],
           },
         ],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects a read naming a protocol the procedure does not declare", () => {
+      const result = zCaptureProcedure.safeParse({
+        ...multispeqColorcalProcedure,
+        protocols: { other_scan: { pulses: [20] } },
+      });
+      expect(result.success).toBe(false);
+      expect(result.success ? [] : result.error.issues[0].path).toEqual([
+        "steps",
+        0,
+        "read",
+        0,
+        "protocol",
+      ]);
+    });
+
+    it("rejects a protocol keyed by something other than an identifier", () => {
+      const result = zCaptureProcedure.safeParse({
+        ...multispeqColorcalProcedure,
+        protocols: { "Detector Scan": { pulses: [20] } },
       });
       expect(result.success).toBe(false);
     });
