@@ -296,8 +296,7 @@ export class IotCalibrationController {
         if (!(await this.devicesEnabled(session))) this.disabled("reportDeviceCalibrationWrite");
 
         const result = await this.reportDeviceCalibrationWriteUseCase.execute(
-          input.calibrationId,
-          input.writeResults,
+          input,
           session.user.id,
         );
 

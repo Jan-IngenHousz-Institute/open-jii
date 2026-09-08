@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { CalibrationWriteResults } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+import type { ReportDeviceCalibrationWriteBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
@@ -22,10 +22,10 @@ export class ReportDeviceCalibrationWriteUseCase {
   ) {}
 
   async execute(
-    calibrationId: string,
-    writeResults: CalibrationWriteResults,
+    body: ReportDeviceCalibrationWriteBody,
     userId: string,
   ): Promise<Result<DeviceCalibrationDto>> {
+    const { calibrationId, writeResults, postInfo } = body;
     const calibration = await this.runRepository.findCalibrationById(calibrationId);
     if (calibration.isFailure()) {
       return failure(calibration.error);
@@ -64,7 +64,7 @@ export class ReportDeviceCalibrationWriteUseCase {
       );
     }
 
-    const updated = await this.runRepository.markWritten(calibrationId, writeResults);
+    const updated = await this.runRepository.markWritten(calibrationId, writeResults, postInfo);
     if (updated.isFailure()) {
       return failure(updated.error);
     }

@@ -79,7 +79,10 @@ describe("ReportDeviceCalibrationWriteUseCase", () => {
   });
 
   it("records a verified write against the applied row", async () => {
-    const result = await useCase.execute(calibrationId, { par: { verified: true } }, userId);
+    const result = await useCase.execute(
+      { calibrationId, writeResults: { par: { verified: true } } },
+      userId,
+    );
 
     assertSuccess(result);
     expect(result.value.writtenToDeviceAt).not.toBeNull();
@@ -90,8 +93,10 @@ describe("ReportDeviceCalibrationWriteUseCase", () => {
   // able to say a block was written and did not stick.
   it("records a failed write with its error", async () => {
     const result = await useCase.execute(
-      calibrationId,
-      { par: { verified: false, error: "readback was 1.0000, expected 1.1900" } },
+      {
+        calibrationId,
+        writeResults: { par: { verified: false, error: "readback was 1.0000, expected 1.1900" } },
+      },
       userId,
     );
 
@@ -100,8 +105,29 @@ describe("ReportDeviceCalibrationWriteUseCase", () => {
     expect(result.value.writeResults?.par.error).toContain("readback");
   });
 
+  // The device's state after the write belongs on the run beside the state it
+  // was created with, so a later reader sees both ends of the session.
+  it("stores the reported post-write device state on the run", async () => {
+    const result = await useCase.execute(
+      {
+        calibrationId,
+        writeResults: { par: { verified: true } },
+        postInfo: { helloReply: "MiniPAR 1.03 cal_par_slope=1.19" },
+      },
+      userId,
+    );
+
+    assertSuccess(result);
+    const run = await testApp.module.get(IotCalibrationRunRepository).findById(result.value.runId);
+    assertSuccess(run);
+    expect(run.value?.postInfo).toEqual({ helloReply: "MiniPAR 1.03 cal_par_slope=1.19" });
+  });
+
   it("refuses results naming a block this calibration did not apply", async () => {
-    const result = await useCase.execute(calibrationId, { led: { verified: true } }, userId);
+    const result = await useCase.execute(
+      { calibrationId, writeResults: { led: { verified: true } } },
+      userId,
+    );
 
     assertFailure(result);
     expect(result.error.message).toContain("did not apply");
@@ -109,14 +135,20 @@ describe("ReportDeviceCalibrationWriteUseCase", () => {
 
   it("refuses a caller without manage rights on the device", async () => {
     const outsider = await testApp.createTestUser({ name: "Otto Outsider" });
-    const result = await useCase.execute(calibrationId, { par: { verified: true } }, outsider);
+    const result = await useCase.execute(
+      { calibrationId, writeResults: { par: { verified: true } } },
+      outsider,
+    );
 
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
   });
 
   it("reports a missing calibration rather than failing opaquely", async () => {
-    const result = await useCase.execute(crypto.randomUUID(), { par: { verified: true } }, userId);
+    const result = await useCase.execute(
+      { calibrationId: crypto.randomUUID(), writeResults: { par: { verified: true } } },
+      userId,
+    );
 
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);

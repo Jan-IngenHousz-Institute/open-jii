@@ -182,11 +182,17 @@ describe("IotCalibrationRunRepository", () => {
     expect(approved.value.writtenToDeviceAt).toBeNull();
     expect(approved.value.writeResults).toBeNull();
 
-    const written = await repository.markWritten(approved.value.id, {
-      par: { verified: true },
-    });
+    const written = await repository.markWritten(
+      approved.value.id,
+      { par: { verified: true } },
+      { helloReply: "cal_par_slope=1.19" },
+    );
     assertSuccess(written);
     expect(written.value.writtenToDeviceAt).not.toBeNull();
     expect(written.value.writeResults).toEqual({ par: { verified: true } });
+
+    const stored = await repository.findById(run.id);
+    assertSuccess(stored);
+    expect(stored.value?.postInfo).toEqual({ helloReply: "cal_par_slope=1.19" });
   });
 });
