@@ -1,7 +1,5 @@
-"""Numerical quality gates for calibration fits.
-
-One set of gates for every definition, so two scripts that fit the same kind
-of curve cannot disagree about what passes.
+"""Numerical quality gates for calibration fits, shared so two scripts fitting the
+same curve cannot disagree about what passes.
 """
 
 from __future__ import annotations
@@ -18,9 +16,7 @@ MAX_MONOTONIC_REVERSAL = 0.02
 def assess_origin_fit(x_values, y_values, stimulus, *, coefficient_min, coefficient_max):
     """Fit ``y = coefficient * x`` and return a fail-closed QC record.
 
-    The stimulus is used only to put the sweep in physical order for the
-    monotonicity test. The coefficient used by the device is deliberately fit
-    through the origin; a free-intercept fit is retained as a diagnostic gate.
+    The stimulus only orders the sweep for the monotonicity test.
     """
     x = [float(value) for value in x_values]
     y = [float(value) for value in y_values]
@@ -135,9 +131,7 @@ def assess_linear_fit(
 ):
     """Fit ``y = slope * x + intercept`` and return a fail-closed QC record.
 
-    For devices that store an intercept alongside the gain. The stimulus, when
-    given, puts the points in physical order for the monotonicity test; a
-    manual procedure whose light levels are unordered may omit it.
+    The stimulus, when given, orders the points for the monotonicity test.
     """
     x = [float(value) for value in x_values]
     y = [float(value) for value in y_values]

@@ -1,14 +1,5 @@
-"""Calibration sandbox Lambda.
-
-Executes one calibration script per synchronous invoke. The event carries the
-script, the captured series, run parameters, and the definition's output
-schema. The script sees three injected names (inputs, params, submit) plus the
-image's package set; the handler validates what submit() produced against the
-output schema and the QC records before anything is returned.
-
-Response statuses: "computed" (validated blocks), "compute_failed" (the
-script's fault: exception, missing submit, schema or QC violation), "error"
-(malformed event or handler failure).
+"""Calibration sandbox Lambda: runs one calibration script per invoke against the
+captured series and validates what it submits against the output schema.
 """
 
 import math
@@ -87,12 +78,7 @@ def _execute(event):
 
 
 def _fill_unattempted(blocks, spec):
-    """Record a declared block the script never mentioned as skipped.
-
-    A bench missing a reference instrument produces no series for that block,
-    and requiring every script to enumerate each absence would be noise. The
-    record still says plainly what happened.
-    """
+    """Record a declared block the script never mentioned as skipped."""
     filled = dict(blocks)
     for name in spec:
         if name not in filled:
@@ -101,13 +87,7 @@ def _fill_unattempted(blocks, spec):
 
 
 def _validate_blocks(blocks, spec):
-    """Check every block's shape, and the coefficients of the computed ones.
-
-    A block is one of three outcomes: it computed (and carries coefficients),
-    it was attempted and rejected on quality, or it was never attempted. Only a
-    computed block is checked against the schema's coefficient specs; the other
-    two are recorded outcomes, not violations.
-    """
+    """Check every block's shape, and the coefficients of the computed ones."""
     reasons = []
     for name in blocks.keys() - spec.keys():
         reasons.append(f"Block '{name}' is not declared in the output schema")
