@@ -19,8 +19,7 @@ import {
 } from "./iot-calibration.schema";
 
 export const iotCalibrationContract = {
-  // Definitions: the versioned recipes. A new version of an existing
-  // (family, name) pair is created through the same create endpoint.
+  // A new version of an existing (family, name) pair goes through the same create endpoint.
   listCalibrationDefinitions: oc
     .route({ method: "GET", path: "/api/v1/calibration-definitions", successStatus: 200 })
     .input(zListCalibrationDefinitionsQuery)
@@ -46,8 +45,6 @@ export const iotCalibrationContract = {
     .input(zCalibrationDefinitionPathParam)
     .output(z.void()),
 
-  // Runs. The bench wizard submits the captured payload and the backend runs
-  // the script synchronously; a bench tool submits blocks it computed itself.
   createCalibrationRun: oc
     .route({
       method: "POST",
@@ -77,8 +74,7 @@ export const iotCalibrationContract = {
     .input(zCalibrationRunPathParam)
     .output(zCalibrationRun),
 
-  // Review. Approval supersedes the previous active calibration and creates
-  // the applied row; rejection is terminal and keeps the diagnostics.
+  // Approval supersedes the active calibration; rejection is terminal and keeps the diagnostics.
   approveCalibrationRun: oc
     .route({ method: "POST", path: "/api/v1/calibration-runs/{runId}/approve", successStatus: 201 })
     .input(zCalibrationRunPathParam)
@@ -88,7 +84,6 @@ export const iotCalibrationContract = {
     .input(zCalibrationRunPathParam)
     .output(zCalibrationRun),
 
-  // Applied calibrations.
   getActiveDeviceCalibration: oc
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}/calibration", successStatus: 200 })
     .input(zIotDevicePathParam)
@@ -97,8 +92,6 @@ export const iotCalibrationContract = {
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}/calibrations", successStatus: 200 })
     .input(zIotDevicePathParam)
     .output(zDeviceCalibrationList),
-  // The wizard reports the write-back it performed over the open connection,
-  // addressed to the applied row it wrote (returned by approve).
   reportDeviceCalibrationWrite: oc
     .route({
       method: "POST",

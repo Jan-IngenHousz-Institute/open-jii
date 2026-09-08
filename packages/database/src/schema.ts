@@ -925,8 +925,7 @@ export const calibrationInputSourceEnum = pgEnum("calibration_input_source", [
   "external_bench", // blocks computed by a bench tool and submitted
 ]);
 
-// "computed", not "fit_ok": some calibrations (compass, on-device self-cal)
-// pass blocks through with no fitting at all.
+// "computed", not "fit_ok": some calibrations pass blocks through with no fitting.
 export const calibrationRunStatusEnum = pgEnum("calibration_run_status", [
   "running", // script invoke in flight
   "computed", // blocks produced and schema-validated, awaiting review
@@ -936,10 +935,7 @@ export const calibrationRunStatusEnum = pgEnum("calibration_run_status", [
   "rejected", // reviewed and declined; terminal, diagnostics kept
 ]);
 
-// The versioned calibration recipe: capture procedure (rig steps the client
-// interprets), calibration script (executed by the runner Lambda), and output
-// schema (legal blocks and bounds). A new version is a new row; rows are never
-// rewritten, since runs pin the version that produced them.
+// Versioned recipe: a new version is a new row.
 export const calibrationDefinitions = pgTable(
   "calibration_definitions",
   {
@@ -951,8 +947,7 @@ export const calibrationDefinitions = pgTable(
     captureProcedure: jsonb("capture_procedure").notNull(),
     script: text("script").notNull(),
     outputSchema: jsonb("output_schema").notNull(),
-    // Runs on devices below this are refused: a procedure using commands the
-    // firmware does not know would produce numbers that look like data.
+    // Runs on older firmware are refused.
     minFirmwareVersion: varchar("min_firmware_version", { length: 32 }),
     organizationId: uuid("organization_id").references(() => organizations.id, {
       onDelete: "restrict",
@@ -971,10 +966,7 @@ export const calibrationDefinitions = pgTable(
   ],
 );
 
-// One execution of a definition against one device: the captured bench
-// payload, the produced blocks with their QC records, and the review outcome.
-// RESTRICT on the definition: runs are the audit trail of what produced a
-// coefficient, so a definition cannot vanish out from under them.
+// RESTRICT on the definition: runs are the audit trail of what produced a coefficient.
 export const calibrationRuns = pgTable(
   "calibration_runs",
   {
@@ -990,16 +982,10 @@ export const calibrationRuns = pgTable(
       .notNull(),
     inputSource: calibrationInputSourceEnum("input_source").notNull(),
     status: calibrationRunStatusEnum("status").default("running").notNull(),
-    // Captured series keyed by the procedure's series names; small payloads
-    // stay inline, oversized ones spill to S3.
     payload: jsonb("payload"),
     payloadS3Key: varchar("payload_s3_key", { length: 512 }),
-    // Operator-supplied run-level values, passed to the script as `params`.
     params: jsonb("params"),
-    // Every declared block with its outcome: computed (with coefficients),
-    // rejected (QC failed), or skipped (not attempted at this bench).
     blocks: jsonb("blocks"),
-    // Device info dumps around the session, for provenance and write-verify.
     preInfo: jsonb("pre_info"),
     postInfo: jsonb("post_info"),
     firmwareVersion: varchar("firmware_version", { length: 64 }),
@@ -1016,9 +1002,7 @@ export const calibrationRuns = pgTable(
   ],
 );
 
-// The applied truth: coefficients with a validity window. Approving a new run
-// supersedes the previous active row rather than mutating it; the enriched
-// layer joins readings to the row active at measurement time.
+// Approving supersedes the previous active row rather than mutating it; readings join to the row active at measurement time.
 export const deviceCalibrations = pgTable(
   "device_calibrations",
   {
@@ -1039,9 +1023,7 @@ export const deviceCalibrations = pgTable(
       .notNull(),
     supersededAt: timestamp("superseded_at"),
     writtenToDeviceAt: timestamp("written_to_device_at"),
-    // Per block: did the readback after reboot match what was written. One
-    // verdict per row could not describe a session where one gain persisted
-    // and another rolled back.
+    // Per block: one verdict per row could not say which gain persisted and which rolled back.
     writeResults: jsonb("write_results"),
     ...timestamps,
   },

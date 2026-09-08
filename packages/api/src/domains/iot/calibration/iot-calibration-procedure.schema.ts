@@ -10,8 +10,7 @@ const zIdentifier = z
 // Reserved column on every sweep series; carries the setpoint value per row.
 export const SWEEP_STIMULUS_COLUMN = "stimulus";
 
-// The device under test. Always present in a rig; its handshake comes from the
-// family driver, so the declaration carries no handshake of its own.
+// The device under test; its handshake comes from the family driver.
 export const DUT_ROLE = "dut";
 
 const zDutInstrument = z
@@ -20,8 +19,7 @@ const zDutInstrument = z
   })
   .strict();
 
-// Auxiliary bench instrument (lamp source, reference sensor), discovered over
-// serial by its identity handshake, e.g. "KIPRIM" or "Par_REF".
+// Discovered over serial by its identity handshake, e.g. "KIPRIM".
 const zAuxiliaryInstrument = z
   .object({
     role: zIdentifier,
@@ -31,18 +29,14 @@ const zAuxiliaryInstrument = z
 
 export const zRigInstrument = z.union([zDutInstrument, zAuxiliaryInstrument]);
 
-// A stimulus applied by an instrument (DC source current, the device's own LED
-// setting) or by the operator following a per-setpoint prompt. The prompt may
-// interpolate the setpoint via {value} (or {value.key} for object setpoints).
+// An operator prompt may interpolate the setpoint with {value} or {value.key}.
 const zSetpointValue = z.union([
   z.number().finite(),
   z.string().min(1).max(64),
   z.record(z.union([z.number().finite(), z.string().min(1).max(64)])),
 ]);
 
-// An instrument takes a number; labels and compound setpoints are for the
-// operator's hands. Refused here so a definition cannot publish a sweep the
-// bench would abort at its first setpoint.
+// Instruments take numbers; labels and compound setpoints are for the operator.
 const zInstrumentStimulus = z
   .object({
     instrument: zIdentifier,
@@ -60,16 +54,10 @@ const zOperatorStimulus = z
 
 export const zStimulus = z.union([zInstrumentStimulus, zOperatorStimulus]);
 
-// A measurement protocol the device runs whole, in place of a console command.
-// Its shape is the device's own (an Ambit run object, a MultispeQ protocol
-// element), so only its name is checked here: it must be declared once on the
-// procedure, where a read refers to it by that name.
+// Sent to the device whole; checked here only by name against the procedure's declarations.
 const zMeasurementProtocol = z.record(z.unknown());
 const MAX_PROTOCOLS = 16;
 
-// One value read at the current point: a device/instrument query (console
-// command or a declared measurement protocol, exactly one of the two) or a
-// value the operator types in.
 const zInstrumentRead = z
   .object({
     instrument: zIdentifier,
@@ -117,16 +105,12 @@ const zReadStep = z
     series: zIdentifier,
     prompt: z.string().min(1).max(1000).optional(),
     read: z.array(zProcedureRead).min(1).max(16),
-    // A step the bench may legitimately not perform: its instrument is absent,
-    // or the operator declines a gated measurement. Its series may then be
-    // missing from the run payload; a required step's may not.
+    // May legitimately not run (instrument absent, gated step declined); its series may then be missing.
     optional: z.boolean().optional(),
   })
   .strict();
 
-// For each setpoint: apply the stimulus, settle, take every read. Produces one
-// series row per setpoint with the reserved "stimulus" column plus one column
-// per read's `as` name.
+// One row per setpoint: the reserved stimulus column plus one column per read.
 const zSweepStep = z
   .object({
     kind: z.literal("sweep"),
@@ -281,9 +265,8 @@ export function procedureSeriesNames(procedure: CaptureProcedure): string[] {
 }
 
 /**
- * Series the run payload must carry. Optional steps are excluded: a bench
- * missing a reference instrument still produces a useful run, so their absence
- * is a skipped block rather than a rejected payload.
+ * Series the payload must carry; optional steps are excluded because a bench
+ * missing a reference still produces a useful run.
  */
 export function requiredProcedureSeriesNames(procedure: CaptureProcedure): string[] {
   const names: string[] = [];
