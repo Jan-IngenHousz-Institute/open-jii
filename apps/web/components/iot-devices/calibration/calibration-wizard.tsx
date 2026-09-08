@@ -58,7 +58,6 @@ interface CalibrationWizardProps {
   onClose: () => void;
 }
 
-/** The interpreter never yields null cells in practice; the contract has no room for them. */
 /** A device that does not answer leaves postInfo out rather than failing a write that succeeded. */
 async function readPostWriteInfo(
   driver: IDeviceDriver,
@@ -72,6 +71,7 @@ async function readPostWriteInfo(
   }
 }
 
+/** The interpreter never yields null cells in practice; the contract has no room for them. */
 function toRunPayload(payload: CapturePayload): CalibrationRunPayload {
   const result: CalibrationRunPayload = {};
   for (const [series, rows] of Object.entries(payload)) {
