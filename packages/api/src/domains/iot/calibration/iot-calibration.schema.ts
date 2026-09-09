@@ -54,13 +54,24 @@ export const zCoefficientValue = z.union([z.number(), z.array(z.number().int())]
  */
 export const zCalibrationBlockStatus = z.enum(["computed", "rejected", "skipped"]);
 
+/**
+ * A block's fit and quality records are free-form, and they land in a row that
+ * is read on every run listing, so they are bounded like the info records are.
+ */
+const BLOCK_RECORD_MAX_BYTES = 16_384;
+const zBlockRecord = z
+  .record(z.unknown())
+  .refine((record) => JSON.stringify(record).length <= BLOCK_RECORD_MAX_BYTES, {
+    message: `A block record must serialise to at most ${BLOCK_RECORD_MAX_BYTES} bytes`,
+  });
+
 /** Coefficients are present exactly when a block computed; a rejected block keeps its QC record. */
 export const zCalibrationBlock = z
   .object({
     status: zCalibrationBlockStatus,
     coefficients: z.record(zCoefficientName, zCoefficientValue).optional(),
-    fit: z.record(z.unknown()).optional(),
-    quality: z.record(z.unknown()).optional(),
+    fit: zBlockRecord.optional(),
+    quality: zBlockRecord.optional(),
     reason: z.string().max(2000).optional(),
   })
   .refine((block) => (block.status === "computed") === (block.coefficients !== undefined), {
@@ -74,8 +85,8 @@ export const zAppliedCalibrationBlocks = z.record(
   zCoefficientName,
   z.object({
     coefficients: z.record(zCoefficientName, zCoefficientValue),
-    fit: z.record(z.unknown()).optional(),
-    quality: z.record(z.unknown()).optional(),
+    fit: zBlockRecord.optional(),
+    quality: zBlockRecord.optional(),
   }),
 );
 
@@ -216,8 +227,9 @@ export const zCalibrationRunPathParam = z.object({
 });
 
 /**
- * Per block: each coefficient is written and read back on its own and a failed
- * readback restores the old value, so one verdict per row could not say which gain persisted.
+ * One verdict per block, not per run: a session can confirm one gain and fail
+ * another. Nothing is rolled back, so a block that failed part way through may
+ * have left earlier coefficients on the device; the error names the one that failed.
  */
 export const zCalibrationWriteResult = z.object({
   verified: z.boolean(),

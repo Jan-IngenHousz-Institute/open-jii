@@ -1023,7 +1023,8 @@ export const deviceCalibrations = pgTable(
       .notNull(),
     supersededAt: timestamp("superseded_at"),
     writtenToDeviceAt: timestamp("written_to_device_at"),
-    // Per block: one verdict per row could not say which gain persisted and which rolled back.
+    // One verdict per block: a session can confirm one gain and fail another,
+    // and a block that failed part way through stays partly written.
     writeResults: jsonb("write_results"),
     ...timestamps,
   },
