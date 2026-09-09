@@ -2,6 +2,7 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { useFonts } from "expo-font";
+import { ObserveRoot, useObserve } from "expo-observe";
 import {
   DarkTheme,
   DefaultTheme,
@@ -89,11 +90,13 @@ function RootLayoutNav({ onReadyChange }: { onReadyChange?: (ready: boolean) => 
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [retryKey, setRetryKey] = useState(0);
 
   return <MigrationWrapper key={retryKey} onRetry={() => setRetryKey((k) => k + 1)} />;
 }
+
+export default ObserveRoot.wrap(RootLayout);
 
 function MigrationWrapper({ onRetry }: { onRetry: () => void }) {
   const [loaded, error] = useFonts({
@@ -191,6 +194,7 @@ function GatedApp() {
   const { colorScheme } = useColorScheme();
   const [forceUpdateStatus, setForceUpdateStatus] = useState<ForceUpdateGateStatus>("checking");
   const [navigationReady, setNavigationReady] = useState(false);
+  const { markInteractive } = useObserve();
 
   // Theme the navigator container background so instant screen swaps (e.g.
   // logout) don't expose the default white React Navigation background; that
@@ -215,8 +219,10 @@ function GatedApp() {
   useEffect(() => {
     if (shouldHideSplash(true, true, true, initialUiReady, undefined)) {
       void SplashScreen.hideAsync();
+      // The gate is the last startup wait before the app accepts input.
+      markInteractive();
     }
-  }, [initialUiReady]);
+  }, [initialUiReady, markInteractive]);
 
   return (
     <NavigationThemeProvider value={navTheme}>

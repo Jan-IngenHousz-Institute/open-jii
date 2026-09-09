@@ -2,7 +2,9 @@
 
 FROM public.ecr.aws/lambda/python:3.12
 
-RUN pip install --no-cache-dir \
+RUN dnf --releasever=latest upgrade -y openssl-fips-provider-latest \
+    && dnf clean all \
+    && pip install --no-cache-dir \
     numpy==2.4.2 \
     pandas==3.0.1 \
     scipy==1.17.0 \
