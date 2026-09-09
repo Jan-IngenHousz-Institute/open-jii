@@ -169,6 +169,9 @@ return(list(change_from_baseline = current - baseline))
 Use the web workbook runner to test R macros because the mobile runner currently
 selects only JavaScript or Python.
 
+When you select a language in a workbook macro cell, the selection takes effect
+after saving succeeds. If saving fails, the cell keeps its previous language.
+
 The language is pinned into each published workbook version together with the
 macro code. If you change a macro's language after an experiment was published,
 publish the workbook again so the field app runs it with the new language.

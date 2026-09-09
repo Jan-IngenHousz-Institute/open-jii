@@ -93,6 +93,7 @@ export function MacroCellComponent({
   const forkedFrom = useSnapshot ? undefined : macroData?.forkedFrom;
 
   const { mutateAsync: saveMacro } = useMacroUpdate(macroId);
+  const { mutate: saveLanguage, isPending: isSavingLanguage } = useMacroUpdate(macroId);
   const { mutateAsync: forkMacro, isPending: isForking } = useMacroCreate();
   const onEntitySaved = useWorkbookEntitySaved();
 
@@ -161,31 +162,32 @@ export function MacroCellComponent({
 
   const handleLanguageChange = useCallback(
     (lang: MacroLanguage) => {
-      void saveMacro({ id: macroId, language: lang }).catch((err: unknown) => {
-        toast({ description: parseApiError(err)?.message, variant: "destructive" });
-      });
-      onUpdate({ ...cell, payload: { ...cell.payload, language: lang } });
+      saveLanguage(
+        { id: macroId, language: lang },
+        {
+          onSuccess: (saved) => {
+            const { cell: latest, onUpdate: updateLatest } = cellRef.current;
+            if (latest.payload.macroId !== macroId) return;
+            updateLatest({ ...latest, payload: { ...latest.payload, language: saved.language } });
+          },
+          onError: (err) => {
+            toast({ description: parseApiError(err)?.message, variant: "destructive" });
+          },
+        },
+      );
     },
-    [macroId, saveMacro, cell, onUpdate],
+    [macroId, saveLanguage],
   );
-
-  // The macro row's language can change outside this workbook (macro page,
-  // another workbook). Offline hosts run off the cell payload, so write the
-  // live value back instead of only displaying it.
-  useEffect(() => {
-    if (readOnly || useSnapshot || !macroLanguage || macroLanguage === language) return;
-    onUpdate({ ...cell, payload: { ...cell.payload, language: macroLanguage } });
-  }, [readOnly, useSnapshot, macroLanguage, language, cell, onUpdate]);
 
   const [langSelectOpen, setLangSelectOpen] = useState(false);
 
-  // Track the latest cell so the async rename merges into current state, not a
+  // Track the latest cell so async saves merge into current state, not a
   // stale snapshot from when the save began. Sync in a layout effect (not during
   // render) so a speculative render never leaks into the ref.
-  const cellRef = useRef(cell);
+  const cellRef = useRef({ cell, onUpdate });
   useLayoutEffect(() => {
-    cellRef.current = cell;
-  }, [cell]);
+    cellRef.current = { cell, onUpdate };
+  }, [cell, onUpdate]);
 
   // Rename the shared macro row and repoint the cell label at the new name.
   // Renaming a fork resolves the auto-generated "Copy of ..." name in place.
@@ -195,8 +197,8 @@ export function MacroCellComponent({
       setIsRenaming(true);
       try {
         const res = await saveMacro({ id: macroId, name: next });
-        const latest = cellRef.current;
-        onUpdate({ ...latest, payload: { ...latest.payload, name: res.name } });
+        const { cell: latest, onUpdate: updateLatest } = cellRef.current;
+        updateLatest({ ...latest, payload: { ...latest.payload, name: res.name } });
       } catch (err) {
         const parsed = parseApiError(err);
         toast({
@@ -211,7 +213,7 @@ export function MacroCellComponent({
         setIsRenaming(false);
       }
     },
-    [macroId, saveMacro, onUpdate, t],
+    [macroId, saveMacro, t],
   );
 
   const displayName = cell.payload.name ?? macroName ?? "Macro";
@@ -311,6 +313,7 @@ export function MacroCellComponent({
           {canUpdateMacro ? (
             <Select
               value={displayLanguage}
+              disabled={isSavingLanguage}
               onValueChange={(v) => handleLanguageChange(v as MacroLanguage)}
               open={langSelectOpen}
               onOpenChange={setLangSelectOpen}

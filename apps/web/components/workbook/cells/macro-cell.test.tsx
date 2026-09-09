@@ -6,8 +6,10 @@ import {
 } from "@/test/factories";
 import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor, userEvent } from "@/test/test-utils";
+import { render, screen, waitFor, userEvent, act } from "@/test/test-utils";
+import { QueryClient } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
+import { useState } from "react";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -24,10 +26,19 @@ vi.mock("@repo/ui/components/select", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
-    Select: ({ value, onValueChange }: { value: string; onValueChange: (val: string) => void }) => (
+    Select: ({
+      value,
+      onValueChange,
+      disabled,
+    }: {
+      value: string;
+      onValueChange: (val: string) => void;
+      disabled?: boolean;
+    }) => (
       <select
         data-testid="language-select"
         value={value}
+        disabled={disabled}
         onChange={(e) => {
           const result: unknown = onValueChange(e.target.value);
           if (result instanceof Promise) result.catch(() => undefined);
@@ -113,16 +124,15 @@ describe("MacroCellComponent", () => {
     });
   });
 
-  it("writes the live macro language back into a stale cell payload", async () => {
+  it("displays the live macro language without rewriting the cell payload", async () => {
     const onUpdate = vi.fn();
     renderMacroCell(
       { onUpdate, cell: { ...cell, payload: { ...cell.payload, language: "javascript" } } },
       { language: "python" },
     );
 
-    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
-    const updated = onUpdate.mock.lastCall?.[0] as MacroCell;
-    expect(updated.payload.language).toBe("python");
+    await waitFor(() => expect(screen.getByTestId("language-select")).toHaveValue("python"));
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 
   it("renders a pinned snapshot with its pinned language, not the stale cell payload", async () => {
@@ -258,7 +268,9 @@ describe("MacroCellComponent", () => {
   });
 
   it("persists a language change and updates the cell payload with update capability", async () => {
-    const updateSpy = server.mount(contract.macros.updateMacro, { body: baseMacro });
+    const updateSpy = server.mount(contract.macros.updateMacro, {
+      body: { ...baseMacro, language: "r" },
+    });
 
     const onUpdate = vi.fn();
     renderMacroCell({ onUpdate });
@@ -269,8 +281,139 @@ describe("MacroCellComponent", () => {
 
     await waitFor(() => expect(updateSpy.called).toBe(true));
     expect(updateSpy.body).toEqual({ language: "r" });
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
     const updated = onUpdate.mock.calls.at(-1)?.[0] as MacroCell | undefined;
     expect(updated?.payload.language).toBe("r");
+  });
+
+  it("updates a rerendering host only after saving the language and refreshing the live query", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    server.mount(contract.macros.getMacro, { body: baseMacro });
+    let releaseSave!: () => void;
+    const saveGate = new Promise<void>((resolve) => (releaseSave = resolve));
+    const updateSpy = server.mount(contract.macros.updateMacro, {
+      body: { ...baseMacro, language: "r" },
+      unblock: saveGate,
+    });
+    const onUpdate = vi.fn();
+    function Host() {
+      const [workbook, setWorkbook] = useState({ cell, otherCell: "Before" });
+      return (
+        <>
+          <output aria-label="Cell language">{workbook.cell.payload.language}</output>
+          <output aria-label="Other cell">{workbook.otherCell}</output>
+          <button onClick={() => setWorkbook({ ...workbook, otherCell: "After" })}>
+            Edit other cell
+          </button>
+          <MacroCellComponent
+            cell={workbook.cell}
+            onUpdate={(updated) => {
+              onUpdate(updated);
+              setWorkbook({ ...workbook, cell: updated });
+            }}
+            onDelete={vi.fn()}
+          />
+        </>
+      );
+    }
+    render(<Host />, { queryClient });
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByTestId("language-select"), "r");
+    await waitFor(() => expect(updateSpy.called).toBe(true));
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Cell language")).toHaveTextContent("python");
+    expect(screen.getByTestId("language-select")).toHaveValue("python");
+    expect(screen.getByTestId("language-select")).toBeDisabled();
+    await user.selectOptions(screen.getByTestId("language-select"), "javascript");
+    expect(updateSpy.callCount).toBe(1);
+    await user.click(screen.getByRole("button", { name: "Edit other cell" }));
+
+    let releaseRefresh!: () => void;
+    const refreshGate = new Promise<void>((resolve) => (releaseRefresh = resolve));
+    const refreshSpy = server.mount(contract.macros.getMacro, {
+      body: { ...baseMacro, language: "r" },
+      unblock: refreshGate,
+    });
+    releaseSave();
+    await waitFor(() => expect(refreshSpy.called).toBe(true));
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Cell language")).toHaveTextContent("python");
+    expect(screen.getByTestId("language-select")).toHaveValue("python");
+    releaseRefresh();
+    await waitFor(() => expect(screen.getByLabelText("Cell language")).toHaveTextContent("r"));
+    expect(screen.getByTestId("language-select")).toHaveValue("r");
+    expect(screen.getByTestId("language-select")).toBeEnabled();
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText("Other cell")).toHaveTextContent("After");
+
+    server.mount(contract.macros.getMacro, { body: { ...baseMacro, language: "javascript" } });
+    await act(() => queryClient.invalidateQueries());
+    await waitFor(() => expect(screen.getByTestId("language-select")).toHaveValue("javascript"));
+    expect(screen.getByLabelText("Cell language")).toHaveTextContent("r");
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the saved language after a rejected selection in a rerendering host", async () => {
+    server.mount(contract.macros.getMacro, { body: baseMacro });
+    server.mount(contract.macros.updateMacro, { status: 400 });
+    const { toast } = await import("@repo/ui/hooks/use-toast");
+    function Host() {
+      const [currentCell, setCell] = useState(cell);
+      return (
+        <>
+          <output aria-label="Cell language">{currentCell.payload.language}</output>
+          <MacroCellComponent cell={currentCell} onUpdate={setCell} onDelete={vi.fn()} />
+        </>
+      );
+    }
+    render(<Host />);
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByTestId("language-select"), "r");
+    await waitFor(() => expect(toast).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByLabelText("Cell language")).toHaveTextContent("python"));
+    expect(screen.getByTestId("language-select")).toHaveValue("python");
+    expect(screen.getByTestId("language-select")).toBeEnabled();
+  });
+
+  it("does not notify the host after the cell is deleted during a language save", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    server.mount(contract.macros.getMacro, { body: baseMacro });
+    let releaseSave!: () => void;
+    const saveGate = new Promise<void>((resolve) => (releaseSave = resolve));
+    const updateSpy = server.mount(contract.macros.updateMacro, {
+      body: { ...baseMacro, language: "r" },
+      unblock: saveGate,
+    });
+    const onUpdate = vi.fn();
+    function Host() {
+      const [currentCell, setCell] = useState<MacroCell | null>(cell);
+      return currentCell ? (
+        <MacroCellComponent
+          cell={currentCell}
+          onUpdate={(updated) => {
+            onUpdate(updated);
+            setCell(updated);
+          }}
+          onDelete={() => setCell(null)}
+        />
+      ) : (
+        <span>Cell deleted</span>
+      );
+    }
+    render(<Host />, { queryClient });
+    const user = userEvent.setup();
+    await user.selectOptions(await screen.findByTestId("language-select"), "r");
+    await waitFor(() => expect(updateSpy.called).toBe(true));
+    const deleteButton = screen
+      .getAllByRole("button")
+      .find((button) => button.querySelector('svg[class*="lucide-trash"]'));
+    if (!deleteButton) throw new Error("Delete cell button missing");
+    await user.click(deleteButton);
+    expect(screen.getByText("Cell deleted")).toBeInTheDocument();
+    releaseSave();
+    await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.getByText("Cell deleted")).toBeInTheDocument();
   });
 
   it("debounces and persists a code edit, then notifies the host (no silent loss)", async () => {
