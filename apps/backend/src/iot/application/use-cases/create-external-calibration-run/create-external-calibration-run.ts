@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import type { CreateExternalCalibrationRunBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { hasComputedBlock, validateCalibrationBlocks } from "../../../core/calibration-blocks";
 import type { CalibrationRunWithVersionDto } from "../../../core/models/iot-calibration.model";
@@ -21,6 +22,7 @@ export class CreateExternalCalibrationRunUseCase {
     private readonly definitionRepository: IotCalibrationDefinitionRepository,
     private readonly runRepository: IotCalibrationRunRepository,
     private readonly deviceRepository: IotDeviceRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
@@ -41,6 +43,17 @@ export class CreateExternalCalibrationRunUseCase {
     }
     if (!definition.value) {
       return failure(AppError.notFound("Calibration definition not found"));
+    }
+
+    // The route guard authorizes the device; the definition is named in the
+    // body, so recording against one the caller cannot read is refused here.
+    const readable = await this.authz.can(userId, {
+      resourceType: "calibration_definition",
+      resourceId: body.definitionId,
+      action: "read",
+    });
+    if (!readable.allow) {
+      return failure(AppError.forbidden("Recording a calibration requires read access to it"));
     }
 
     const device = await this.deviceRepository.findById(body.deviceId);

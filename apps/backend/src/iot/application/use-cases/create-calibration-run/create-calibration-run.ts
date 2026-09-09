@@ -6,6 +6,7 @@ import {
 } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import type { CreateCalibrationRunBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { hasComputedBlock } from "../../../core/calibration-blocks";
 import { compareFirmwareVersions } from "../../../core/firmware-version";
@@ -28,6 +29,7 @@ export class CreateCalibrationRunUseCase {
     private readonly definitionRepository: IotCalibrationDefinitionRepository,
     private readonly runRepository: IotCalibrationRunRepository,
     private readonly deviceRepository: IotDeviceRepository,
+    private readonly authz: AuthorizationService,
     @Inject(CALIBRATION_SANDBOX_PORT)
     private readonly sandboxPort: CalibrationSandboxPort,
   ) {}
@@ -44,7 +46,7 @@ export class CreateCalibrationRunUseCase {
       userId,
     });
 
-    const definition = await this.resolveDefinition(body.deviceId, body.definitionId);
+    const definition = await this.resolveDefinition(body.deviceId, body.definitionId, userId);
     if (definition.isFailure()) {
       return failure(definition.error);
     }
@@ -80,6 +82,7 @@ export class CreateCalibrationRunUseCase {
   private async resolveDefinition(
     deviceId: string,
     definitionId: string,
+    userId: string,
   ): Promise<Result<CalibrationDefinitionDto>> {
     const definition = await this.definitionRepository.findById(definitionId);
     if (definition.isFailure()) {
@@ -87,6 +90,17 @@ export class CreateCalibrationRunUseCase {
     }
     if (!definition.value) {
       return failure(AppError.notFound("Calibration definition not found"));
+    }
+
+    // The route guard authorizes the device; the definition is named in the
+    // body, so running one the caller cannot read is refused here.
+    const readable = await this.authz.can(userId, {
+      resourceType: "calibration_definition",
+      resourceId: definitionId,
+      action: "read",
+    });
+    if (!readable.allow) {
+      return failure(AppError.forbidden("Running a calibration requires read access to it"));
     }
 
     const device = await this.deviceRepository.findById(deviceId);

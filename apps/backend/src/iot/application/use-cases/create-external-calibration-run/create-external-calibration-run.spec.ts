@@ -1,4 +1,5 @@
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import { calibrationDefinitions, eq } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
@@ -99,6 +100,27 @@ describe("CreateExternalCalibrationRunUseCase", () => {
 
     assertFailure(result);
     expect(result.error.message).toContain("No submitted block produced coefficients");
+  });
+
+  // The route guard authorizes the device, not the definition named in the body.
+  it("refuses a submission against a definition the caller cannot read", async () => {
+    await testApp.database
+      .update(calibrationDefinitions)
+      .set({ visibility: "private" })
+      .where(eq(calibrationDefinitions.id, definitionId));
+    const outsider = await testApp.createTestUser({ name: "Otto Outsider" });
+
+    const result = await useCase.execute(
+      {
+        deviceId,
+        definitionId,
+        blocks: { par: { status: "computed", coefficients: { spec: 1.19 } } },
+      },
+      outsider,
+    );
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
   });
 
   it("reports a missing definition or device as not found", async () => {
