@@ -113,6 +113,37 @@ describe("zCalibrationBlocks", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // A script, or a bench posting its own blocks, could otherwise put megabytes
+  // into a row that every run listing reads.
+  it("rejects a fit record past the byte cap", () => {
+    const result = zCalibrationBlocks.safeParse({
+      par: {
+        status: "computed",
+        coefficients: { spec: 1.1893 },
+        fit: { points: Array.from({ length: 10_000 }, () => 1.234567) },
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("keeps a fit record a real bench session produces", () => {
+    const result = zCalibrationBlocks.safeParse({
+      par: {
+        status: "computed",
+        coefficients: { spec: 1.1893 },
+        fit: {
+          r_squared: 0.9987,
+          points: [
+            [402.12, 420],
+            [142.92, 150],
+          ],
+        },
+        quality: { passed: true, reasons: [] },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("zFirmwareVersion", () => {
