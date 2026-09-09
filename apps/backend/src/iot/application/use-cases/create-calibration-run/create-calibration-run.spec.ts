@@ -1,5 +1,7 @@
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import { calibrationDefinitions, eq } from "@repo/database";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import {
   AppError,
   assertFailure,
@@ -59,6 +61,7 @@ describe("CreateCalibrationRunUseCase", () => {
       definitionRepository,
       testApp.module.get(IotCalibrationRunRepository),
       testApp.module.get(IotDeviceRepository),
+      testApp.module.get(AuthorizationService),
       {
         invokeCalibrationSandbox: (payload: object) => {
           sentEvent = payload;
@@ -145,6 +148,31 @@ describe("CreateCalibrationRunUseCase", () => {
     const result = await run({ payload: { ...PAYLOAD, stray: [{ x: 1 }] } });
     assertFailure(result);
     expect(result.error.message).toContain("does not produce");
+  });
+
+  // The route guard authorizes the device, not the definition named in the body,
+  // so an unreadable definition must be refused by the use case itself.
+  it("refuses to run a definition the caller cannot read", async () => {
+    await testApp.database
+      .update(calibrationDefinitions)
+      .set({ visibility: "private" })
+      .where(eq(calibrationDefinitions.id, definitionId));
+    const outsider = await testApp.createTestUser({ name: "Otto Outsider" });
+
+    const result = await useCase.execute({ deviceId, definitionId, payload: PAYLOAD }, outsider);
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
+    expect(sentEvent).toBeNull();
+  });
+
+  it("runs a public definition for someone outside its organization", async () => {
+    const outsider = await testApp.createTestUser({ name: "Vera Visitor" });
+
+    const result = await useCase.execute({ deviceId, definitionId, payload: PAYLOAD }, outsider);
+
+    assertSuccess(result);
+    expect(result.value.status).toBe("computed");
   });
 
   it("reports a missing definition or device as not found", async () => {
