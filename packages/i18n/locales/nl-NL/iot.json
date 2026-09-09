@@ -804,6 +804,7 @@
         "writing": "Schrijven…",
         "verified": "geschreven en bevestigd",
         "failed": "niet bevestigd",
+        "partial": "Een niet bevestigd blok kan het apparaat gedeeltelijk hebben bereikt. Voer deze kalibratie opnieuw uit voordat u op het apparaat vertrouwt.",
         "unsupported": "Het platform kan voor deze apparaatfamilie nog geen coëfficiënten schrijven. De kalibratie is alleen in het record goedgekeurd.",
         "skip": "Afronden zonder te schrijven",
         "reportFailed": "Het apparaat is beschreven, maar het resultaat kon niet worden vastgelegd."

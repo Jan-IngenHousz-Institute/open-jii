@@ -34,6 +34,9 @@ export function CalibrationWriteStep({
 
   const isWritten = results !== null;
   const blockNames = Object.keys(applied.blocks);
+  // Nothing is rolled back, so an unconfirmed block can have reached the device
+  // in part. The operator has to know before the unit goes back into service.
+  const hasUnconfirmedBlock = Object.values(results ?? {}).some((result) => !result.verified);
 
   function renderResult(block: string) {
     const result = results?.[block];
@@ -80,6 +83,11 @@ export function CalibrationWriteStep({
         </Alert>
       )}
       {isWritten && <ul className="space-y-1">{blockNames.map(renderResult)}</ul>}
+      {hasUnconfirmedBlock && (
+        <Alert variant="destructive">
+          <AlertDescription>{t("iot.calibration.write.partial")}</AlertDescription>
+        </Alert>
+      )}
       <div className="flex gap-2">
         {!isWritten && (
           <Button type="button" onClick={onWrite} disabled={isWriting}>

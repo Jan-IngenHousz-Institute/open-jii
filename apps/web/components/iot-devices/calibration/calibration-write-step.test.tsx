@@ -41,6 +41,19 @@ describe("CalibrationWriteStep", () => {
     expect(screen.queryByRole("button", { name: "iot.calibration.write.action" })).toBeNull();
   });
 
+  // Nothing is rolled back, so an unconfirmed block may be half on the device.
+  it("warns that an unconfirmed block may be partly written", () => {
+    renderStep({ results: { par: { verified: false, error: "readback disagreed" } } });
+
+    expect(screen.getByText("iot.calibration.write.partial")).toBeInTheDocument();
+  });
+
+  it("says nothing about partial writes when every block was confirmed", () => {
+    renderStep({ results: { par: { verified: true } } });
+
+    expect(screen.queryByText("iot.calibration.write.partial")).toBeNull();
+  });
+
   it("lists only the blocks the results account for", () => {
     renderStep({
       applied: createDeviceCalibration({

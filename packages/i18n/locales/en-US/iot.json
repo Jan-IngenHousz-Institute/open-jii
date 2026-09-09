@@ -804,6 +804,7 @@
         "writing": "Writing…",
         "verified": "written and confirmed",
         "failed": "not confirmed",
+        "partial": "A block that was not confirmed may have reached the device in part. Run this calibration again before trusting the device.",
         "unsupported": "The platform cannot write coefficients to this device family yet. The calibration is approved on record only.",
         "skip": "Finish without writing",
         "reportFailed": "The device was written but the result could not be recorded."

@@ -804,6 +804,7 @@
         "writing": "Wird geschrieben…",
         "verified": "geschrieben und bestätigt",
         "failed": "nicht bestätigt",
+        "partial": "Ein nicht bestätigter Block kann das Gerät teilweise erreicht haben. Führen Sie diese Kalibrierung erneut aus, bevor Sie dem Gerät vertrauen.",
         "unsupported": "Die Plattform kann für diese Gerätefamilie noch keine Koeffizienten schreiben. Die Kalibrierung ist nur im Datensatz freigegeben.",
         "skip": "Ohne Schreiben abschließen",
         "reportFailed": "Das Gerät wurde beschrieben, das Ergebnis konnte aber nicht gespeichert werden."
