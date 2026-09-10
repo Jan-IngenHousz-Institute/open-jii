@@ -44,6 +44,10 @@ export function MetricTrendCard({
     showGrid: true,
     backgroundColor: "rgba(0,0,0,0)",
     xAxisType: detectAxisType(days.map((day) => day.date)),
+    // Plotly's own date ticks carry the year on a second line, which lands on
+    // the footer under a chart this short.
+    xAxisTickFormat: "%b %-d",
+    bargap: 0.15,
     locale,
   };
 
@@ -71,7 +75,7 @@ export function MetricTrendCard({
         />
       </CardContent>
       {footer === undefined ? null : (
-        <CardFooter className="text-muted-foreground text-sm">{footer}</CardFooter>
+        <CardFooter className="text-muted-foreground mt-auto text-sm">{footer}</CardFooter>
       )}
     </Card>
   );

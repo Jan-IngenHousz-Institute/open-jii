@@ -8,6 +8,7 @@ import { useTranslation } from "@repo/i18n";
 
 import { MetricStatCard } from "./metric-stat-card";
 import { MetricTrendCard } from "./metric-trend-card";
+import { MetricsBandSkeleton } from "./metrics-band-skeleton";
 
 interface ResourceMetricsSummaryProps {
   kind: ResourceKind;
@@ -20,8 +21,13 @@ interface ResourceMetricsSummaryProps {
 export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
   const { t } = useTranslation("publicMetrics");
   const locale = useLocale();
-  const { data } = useResourceMetrics(kind);
+  const { data, isPending } = useResourceMetrics(kind);
 
+  if (isPending) {
+    return <MetricsBandSkeleton cards={4} className="sm:grid-cols-2 xl:grid-cols-4" />;
+  }
+
+  // A workspace with nothing recorded states nothing, rather than a row of zeros.
   if (data === undefined || data.activeCount === 0) {
     return null;
   }

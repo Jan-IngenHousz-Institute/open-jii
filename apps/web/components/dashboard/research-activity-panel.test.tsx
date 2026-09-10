@@ -85,6 +85,18 @@ describe("ResearchActivityPanel", () => {
     expect(screen.queryByText("dashboard.activity.communityLabel")).not.toBeInTheDocument();
   });
 
+  it("holds the band's shape while the figures are still loading", async () => {
+    server.mount(contract.metrics.getScopedMetrics, { body: mine, delay: "infinite" });
+    server.mount(contract.metrics.getPublicMetrics, { body: platform });
+
+    const { container } = render(<ResearchActivityPanel locale="en-US" />);
+
+    await waitFor(() => {
+      expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText("60.1K")).not.toBeInTheDocument();
+  });
+
   it("renders nothing without a scoped snapshot", async () => {
     server.mount(contract.metrics.getScopedMetrics, {
       body: { scope: "mine", scoped: null, baseline: null, computedAt: null },

@@ -90,7 +90,7 @@ export function MetricStatCard({
         {change === null ? null : <CardAction>{renderChange(change)}</CardAction>}
       </CardHeader>
       {hasFooter ? (
-        <CardFooter className="flex-col items-start gap-0.5 text-sm">
+        <CardFooter className="mt-auto flex-col items-start gap-0.5 text-sm">
           {note === undefined ? null : renderNote(note)}
           {context === undefined ? null : <div className="text-muted-foreground">{context}</div>}
         </CardFooter>

@@ -2,6 +2,7 @@
 
 import { MetricStatCard } from "@/components/metrics/metric-stat-card";
 import { MetricTrendCard } from "@/components/metrics/metric-trend-card";
+import { MetricsBandSkeleton } from "@/components/metrics/metrics-band-skeleton";
 import { useMyScopedMetrics } from "@/hooks/metrics/useMyScopedMetrics/useMyScopedMetrics";
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
 
@@ -18,8 +19,12 @@ interface ResearchActivityPanelProps {
  */
 export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   const { t } = useTranslation("publicMetrics");
-  const { data: mine } = useMyScopedMetrics();
+  const { data: mine, isPending } = useMyScopedMetrics();
   const { data: platform } = usePublicMetrics();
+
+  if (isPending) {
+    return <MetricsBandSkeleton cards={4} className="sm:grid-cols-2 xl:grid-cols-4" />;
+  }
 
   const scoped = mine?.scoped ?? null;
   if (scoped === null) {

@@ -89,12 +89,12 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           available width. The dashboards carousel reports the sum of its slides as
           its min-content, so enough dashboards pushed the details panel off-screen. */}
       <div className="min-w-0 flex-1 space-y-10 lg:order-1">
-        <ExperimentActivityPulse experimentId={id} />
         <ExperimentDescription
           experimentId={id}
           description={experiment.description ?? ""}
           hasAccess={hasAccess}
         />
+        <ExperimentActivityPulse experimentId={id} />
         <ExperimentLinkedWorkbook
           workbookId={experiment.workbookId}
           workbookVersionId={experiment.workbookVersionId}

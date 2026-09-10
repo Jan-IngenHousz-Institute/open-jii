@@ -80,6 +80,17 @@ describe("ExperimentActivityPulse", () => {
     expect(screen.queryByText("experiment.measurements")).not.toBeInTheDocument();
   });
 
+  it("holds the band's shape while the figures are still loading", async () => {
+    server.mount(contract.metrics.getScopedMetrics, { body: response, delay: "infinite" });
+
+    const { container } = render(<ExperimentActivityPulse experimentId="e1" />);
+
+    await waitFor(() => {
+      expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText("1.2K")).not.toBeInTheDocument();
+  });
+
   it("renders nothing while the warehouse has no snapshot", async () => {
     server.mount(contract.metrics.getScopedMetrics, {
       body: { scope: "experiment", scoped: null, baseline: null, computedAt: null },

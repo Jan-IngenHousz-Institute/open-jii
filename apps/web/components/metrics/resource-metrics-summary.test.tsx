@@ -67,6 +67,18 @@ describe("ResourceMetricsSummary", () => {
     expect(screen.queryByText(/%$/)).not.toBeInTheDocument();
   });
 
+  it("holds the band's shape while the figures are still loading", async () => {
+    server.mount(contract.metrics.getResourceMetrics, { body: metrics, delay: "infinite" });
+
+    const { container } = render(<ResourceMetricsSummary kind="protocol" />);
+
+    // Four card-shaped placeholders, so the page does not reflow on arrival.
+    await waitFor(() => {
+      expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText("5.9K")).not.toBeInTheDocument();
+  });
+
   it("renders nothing when no resource has recorded anything", async () => {
     server.mount(contract.metrics.getResourceMetrics, {
       body: { ...metrics, totalMeasurements: 0, activeCount: 0, activeDays: 0, peak: null },

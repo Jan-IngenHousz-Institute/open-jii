@@ -2,6 +2,7 @@
 
 import { MetricStatCard } from "~/components/metrics/metric-stat-card";
 import { MetricTrendCard } from "~/components/metrics/metric-trend-card";
+import { MetricsBandSkeleton } from "~/components/metrics/metrics-band-skeleton";
 import { useExperimentMetrics } from "~/hooks/metrics/useExperimentMetrics/useExperimentMetrics";
 import { useLocale } from "~/hooks/useLocale";
 
@@ -19,7 +20,16 @@ interface ExperimentActivityPulseProps {
 export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPulseProps) {
   const { t } = useTranslation("publicMetrics");
   const locale = useLocale();
-  const { data } = useExperimentMetrics(experimentId);
+  const { data, isPending } = useExperimentMetrics(experimentId);
+
+  if (isPending) {
+    return (
+      <section className="space-y-3">
+        <h2 className="font-bold">{t("experiment.title")}</h2>
+        <MetricsBandSkeleton cards={3} className="sm:grid-cols-2 lg:grid-cols-3" />
+      </section>
+    );
+  }
 
   const scoped = data?.scoped ?? null;
   if (scoped === null) {

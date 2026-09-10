@@ -1,0 +1,37 @@
+import { Card, CardFooter, CardHeader } from "@repo/ui/components/card";
+import { Skeleton } from "@repo/ui/components/skeleton";
+import { cn } from "@repo/ui/lib/utils";
+
+interface MetricsBandSkeletonProps {
+  /** How many cards the band will hold once it loads. */
+  cards: number;
+  className?: string;
+}
+
+/**
+ * The band's own shape while it loads, so the page does not reflow when the
+ * figures arrive. Same card geometry as the real thing.
+ */
+export function MetricsBandSkeleton({ cards, className }: MetricsBandSkeletonProps) {
+  const renderCard = (index: number) => (
+    <Card
+      key={index}
+      className="@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs gap-3 py-4"
+    >
+      <CardHeader className="gap-2">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-8 w-24" />
+      </CardHeader>
+      <CardFooter className="mt-auto flex-col items-start gap-1.5">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="h-4 w-24" />
+      </CardFooter>
+    </Card>
+  );
+
+  return (
+    <section aria-hidden className={cn("grid gap-4", className)}>
+      {Array.from({ length: cards }, (_, index) => renderCard(index))}
+    </section>
+  );
+}
