@@ -92,6 +92,8 @@ export function MacroCellComponent({
   // Lineage: this macro is itself a fork of another one.
   const forkedFrom = useSnapshot ? undefined : macroData?.forkedFrom;
 
+  // Separate mutation state keeps code saves and renames from disabling the
+  // language selector; only its own request should lock it.
   const { mutateAsync: saveMacro } = useMacroUpdate(macroId);
   const { mutate: saveLanguage, isPending: isSavingLanguage } = useMacroUpdate(macroId);
   const { mutateAsync: forkMacro, isPending: isForking } = useMacroCreate();

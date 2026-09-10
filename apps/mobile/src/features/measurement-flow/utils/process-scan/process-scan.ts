@@ -101,10 +101,9 @@ export async function applyMacro(
   const macroInput: MacroInput =
     typeof macro === "string" ? { code: macro, language: "javascript" } : macro;
   const code = atob(macroInput.code);
-  // `||`, not `??`: resolvers hand over "" when the language is unknown, and ""
-  // must fall back to javascript rather than execute as-is.
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-  const language = (macroInput.language || "javascript").toLowerCase();
+  // Bare code strings are the legacy JavaScript API above. Structured inputs
+  // must identify their runtime; an empty value must not guess JavaScript.
+  const language = macroInput.language?.toLowerCase() ?? "";
 
   log.debug("apply", { language, source: normalized.source, code_bytes: code.length });
 

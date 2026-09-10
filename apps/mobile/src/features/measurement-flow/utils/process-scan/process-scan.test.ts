@@ -269,6 +269,22 @@ describe("applyMacro: canonical once-per-measurement execution", () => {
     ).rejects.toMatchObject({ name: "UnsupportedMacroLanguageError", language: "r" });
   });
 
+  it.each([
+    ["missing", undefined],
+    ["empty", ""],
+  ])("rejects a %s structured language instead of guessing JavaScript", async (_case, language) => {
+    await expect(
+      applyMacro({ sample: [{ a: 1 }] }, { code: jsRunnerCode, language }),
+    ).rejects.toMatchObject({ name: "UnsupportedMacroLanguageError", language: "" });
+    expect((globalThis as Record<string, unknown>).__mobileMacroRunnerCalls).toBe(0);
+  });
+
+  it("keeps bare legacy macro code on the JavaScript runtime", async () => {
+    const outputs = await applyMacro({ sample: [{ a: 1 }] }, jsRunnerCode);
+
+    expect(outputs).toEqual([{ received: { a: 1 } }]);
+  });
+
   it("fails an empty sample envelope once without invoking JavaScript", async () => {
     await expect(
       applyMacro({ sample: [] }, { code: jsRunnerCode, language: "javascript" }),
