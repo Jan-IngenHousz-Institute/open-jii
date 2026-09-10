@@ -91,9 +91,12 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
       />
       {community === null ? null : renderCommunity(community.measurements30d)}
       <MetricTrendCard
-        label={window}
+        label={t("dailyAverage")}
+        value={compact.format(Math.round(scoped.measurements30d / windowDays))}
+        title={number.format(Math.round(scoped.measurements30d / windowDays))}
         seriesName={t("dashboard.activity.trend")}
         days={scoped.activity}
+        peakDate={peak?.date ?? null}
         locale={locale}
         footer={t("activeDays", { active: scoped.activeDays, total: windowDays })}
         className="sm:col-span-2 xl:col-span-1"

@@ -52,13 +52,6 @@ export interface PlotlyChartConfig extends Partial<Config> {
   showModeBar?: boolean;
   modeBarStyle?: "default" | "minimal" | "transparent";
 
-  /**
-   * d3-time-format string for the x tick labels, e.g. "%b %-d". Plotly's own
-   * date ticks append the year on a second line, which collides with anything
-   * sitting under a short chart.
-   */
-  xAxisTickFormat?: string;
-
   // Axis configuration
   xAxisType?: "linear" | "log" | "date" | "category" | "multicategory";
   yAxisType?: "linear" | "log" | "date" | "category" | "multicategory";

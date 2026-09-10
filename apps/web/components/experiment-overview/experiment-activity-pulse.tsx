@@ -105,9 +105,12 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
         />
         {hasContributors ? renderContributors() : null}
         <MetricTrendCard
-          label={window}
+          label={t("dailyAverage")}
+          value={compact.format(Math.round(scoped.measurements30d / windowDays))}
+          title={number.format(Math.round(scoped.measurements30d / windowDays))}
           seriesName={t("experiment.trend")}
           days={scoped.activity}
+          peakDate={peak?.date ?? null}
           locale={locale}
           footer={t("activeDays", { active: scoped.activeDays, total: windowDays })}
           className={hasContributors ? "sm:col-span-2 lg:col-span-1" : "sm:col-span-2"}

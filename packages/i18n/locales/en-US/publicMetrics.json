@@ -98,5 +98,6 @@
   "window": "Last {{days}} days",
   "peak": "Peak {{value}} on {{date}}",
   "activeDays": "Recorded on {{active}} of {{total}} days",
-  "previousWindow": "{{value}} in the previous {{days}} days"
+  "previousWindow": "{{value}} in the previous {{days}} days",
+  "dailyAverage": "Daily average"
 }

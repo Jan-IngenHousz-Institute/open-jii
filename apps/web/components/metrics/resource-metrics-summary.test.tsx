@@ -43,6 +43,9 @@ describe("ResourceMetricsSummary", () => {
     expect(screen.getByText("resourceMetrics.protocol.active")).toBeInTheDocument();
     expect(screen.getByText("resourceMetrics.ofVisible")).toBeInTheDocument();
     expect(screen.getByText("Leaf photosynthesis")).toBeInTheDocument();
+    // 5,900 over a 30-day window, stated as its own figure rather than as a
+    // chart with no number.
+    expect(screen.getByText("197")).toBeInTheDocument();
     expect(screen.getByText("peak")).toBeInTheDocument();
   });
 

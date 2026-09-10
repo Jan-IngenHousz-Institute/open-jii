@@ -7,31 +7,42 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
+  CardTitle,
 } from "@repo/ui/components/card";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import { detectAxisType } from "@repo/ui/components/charts/utils";
 import { cn } from "@repo/ui/lib/utils";
 
+const QUIET_BAR_OPACITY = 0.45;
+
 interface MetricTrendCardProps {
   label: string;
+  value: string;
+  /** The full figure behind an abbreviated `value`, shown on hover. */
+  title?: string;
   seriesName: string;
   days: MetricsWindowDay[];
+  /** The day to pick out of the strip, if the window had a standout one. */
+  peakDate?: string | null;
   locale: string;
   footer?: string;
   className?: string;
 }
 
 /**
- * The window's shape, as one bar per day. Daily counts are discrete, and a
- * filled area over a steady series draws a solid block that says nothing,
- * while bars stay readable whatever the shape. A display chart: hover reads a
- * day, drag would zoom or select.
+ * A figure of the window, with the days it came from underneath. One bar per
+ * day: daily counts are discrete, and a filled area over a steady series draws
+ * a solid block that says nothing. Axes are left off at this size, where a
+ * tick label is unreadable and hover carries the values anyway.
  */
 export function MetricTrendCard({
   label,
+  value,
+  title,
   seriesName,
   days,
+  peakDate = null,
   locale,
   footer,
   className,
@@ -41,15 +52,17 @@ export function MetricTrendCard({
     showModeBar: false,
     dragMode: false,
     scrollZoom: false,
-    showGrid: true,
+    showGrid: false,
+    sparkline: true,
+    bargap: 0.15,
     backgroundColor: "rgba(0,0,0,0)",
     xAxisType: detectAxisType(days.map((day) => day.date)),
-    // Plotly's own date ticks carry the year on a second line, which lands on
-    // the footer under a chart this short.
-    xAxisTickFormat: "%b %-d",
-    bargap: 0.15,
     locale,
   };
+
+  // The busiest day carries the emphasis so the strip states something rather
+  // than drawing thirty equal bars.
+  const opacity = days.map((day) => (day.date === peakDate ? 1 : QUIET_BAR_OPACITY));
 
   return (
     <Card
@@ -60,18 +73,25 @@ export function MetricTrendCard({
     >
       <CardHeader>
         <CardDescription>{label}</CardDescription>
+        <CardTitle
+          title={title}
+          className="line-clamp-1 min-w-0 text-2xl font-semibold tabular-nums"
+        >
+          {value}
+        </CardTitle>
       </CardHeader>
-      <CardContent className="px-2">
+      <CardContent className="px-4">
         <BarChart
           data={[
             {
               x: days.map((day) => day.date),
               y: days.map((day) => day.measurements),
               name: seriesName,
+              marker: { opacity },
             },
           ]}
           config={config}
-          className="h-20 w-full"
+          className="h-12 w-full"
         />
       </CardContent>
       {footer === undefined ? null : (

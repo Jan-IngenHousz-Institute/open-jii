@@ -98,5 +98,6 @@
   "window": "Letzte {{days}} Tage",
   "peak": "Spitze {{value}} am {{date}}",
   "activeDays": "Erfasst an {{active}} von {{total}} Tagen",
-  "previousWindow": "{{value}} in den vorherigen {{days}} Tagen"
+  "previousWindow": "{{value}} in den vorherigen {{days}} Tagen",
+  "dailyAverage": "Tagesdurchschnitt"
 }

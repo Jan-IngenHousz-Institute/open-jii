@@ -239,18 +239,6 @@ describe("utils", () => {
       expect(layout.margin).toMatchObject({ l: 0, r: 0, t: 2, b: 2 });
     });
 
-    it("takes an explicit x tick format so date ticks cannot wrap onto a second line", () => {
-      const layout = createBaseLayout({ ...baseConfig, xAxisTickFormat: "%b %-d" });
-
-      expect(layout.xaxis?.tickformat).toBe("%b %-d");
-    });
-
-    it("leaves the tick format to plotly when none is given", () => {
-      const layout = createBaseLayout(baseConfig);
-
-      expect(layout.xaxis?.tickformat).toBeUndefined();
-    });
-
     it("sets title when provided", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,

@@ -98,5 +98,6 @@
   "window": "Laatste {{days}} dagen",
   "peak": "Piek {{value}} op {{date}}",
   "activeDays": "Vastgelegd op {{active}} van {{total}} dagen",
-  "previousWindow": "{{value}} in de vorige {{days}} dagen"
+  "previousWindow": "{{value}} in de vorige {{days}} dagen",
+  "dailyAverage": "Daggemiddelde"
 }

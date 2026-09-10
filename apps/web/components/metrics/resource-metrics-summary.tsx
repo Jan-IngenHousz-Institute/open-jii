@@ -93,9 +93,12 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
       />
       {busiest === null ? null : renderBusiest(busiest.name, busiest.measurements)}
       <MetricTrendCard
-        label={window}
+        label={t("dailyAverage")}
+        value={compact.format(Math.round(data.totalMeasurements / data.windowDays))}
+        title={number.format(Math.round(data.totalMeasurements / data.windowDays))}
         seriesName={t("resourceMetrics.series")}
         days={data.days}
+        peakDate={peak?.date ?? null}
         locale={locale}
         footer={t("activeDays", { active: data.activeDays, total: data.windowDays })}
         className={busiest === null ? "sm:col-span-2" : "sm:col-span-2 xl:col-span-1"}
