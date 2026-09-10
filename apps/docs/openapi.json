@@ -19863,6 +19863,34 @@
                                 ]
                               }
                             },
+                            "previousMeasurements": {
+                              "type": "number"
+                            },
+                            "activeDays": {
+                              "type": "number"
+                            },
+                            "peak": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "date": {
+                                      "type": "string"
+                                    },
+                                    "measurements": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "date",
+                                    "measurements"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "lastActivityDate": {
                               "anyOf": [
                                 {
@@ -19879,6 +19907,9 @@
                             "activeExperiments30d",
                             "contributors30d",
                             "activity",
+                            "previousMeasurements",
+                            "activeDays",
+                            "peak",
                             "lastActivityDate"
                           ]
                         },
@@ -19974,13 +20005,41 @@
                     "totalMeasurements": {
                       "type": "number"
                     },
+                    "previousMeasurements": {
+                      "type": "number"
+                    },
                     "activeCount": {
                       "type": "number"
                     },
-                    "windowDays": {
+                    "visibleCount": {
                       "type": "number"
                     },
-                    "computedAt": {
+                    "activeDays": {
+                      "type": "number"
+                    },
+                    "peak": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "date": {
+                              "type": "string"
+                            },
+                            "measurements": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "date",
+                            "measurements"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "lastActivityDate": {
                       "anyOf": [
                         {
                           "type": "string"
@@ -19989,14 +20048,40 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string"
+                          },
+                          "measurements": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "measurements"
+                        ]
+                      }
+                    },
+                    "windowDays": {
+                      "type": "number"
                     }
                   },
                   "required": [
                     "kind",
                     "totalMeasurements",
+                    "previousMeasurements",
                     "activeCount",
-                    "windowDays",
-                    "computedAt"
+                    "visibleCount",
+                    "activeDays",
+                    "peak",
+                    "lastActivityDate",
+                    "days",
+                    "windowDays"
                   ]
                 }
               }
