@@ -75,7 +75,7 @@ export function MetricStatCard({
   return (
     <Card
       className={cn(
-        "@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs",
+        "@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs gap-3 py-4",
         className,
       )}
     >
@@ -83,14 +83,14 @@ export function MetricStatCard({
         <CardDescription>{label}</CardDescription>
         <CardTitle
           title={title}
-          className="@[250px]/card:text-3xl line-clamp-1 min-w-0 text-2xl font-semibold tabular-nums"
+          className="line-clamp-1 min-w-0 text-2xl font-semibold tabular-nums"
         >
           {value}
         </CardTitle>
         {change === null ? null : <CardAction>{renderChange(change)}</CardAction>}
       </CardHeader>
       {hasFooter ? (
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+        <CardFooter className="flex-col items-start gap-0.5 text-sm">
           {note === undefined ? null : renderNote(note)}
           {context === undefined ? null : <div className="text-muted-foreground">{context}</div>}
         </CardFooter>

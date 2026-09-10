@@ -50,7 +50,7 @@ export function MetricTrendCard({
   return (
     <Card
       className={cn(
-        "@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs",
+        "@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs gap-3 py-4",
         className,
       )}
     >
@@ -67,7 +67,7 @@ export function MetricTrendCard({
             },
           ]}
           config={config}
-          className="h-24 w-full"
+          className="h-20 w-full"
         />
       </CardContent>
       {footer === undefined ? null : (
