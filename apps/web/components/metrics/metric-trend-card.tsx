@@ -67,11 +67,11 @@ export function MetricTrendCard({
   return (
     <Card
       className={cn(
-        "@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs gap-3 py-4",
+        "@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs gap-2 py-3",
         className,
       )}
     >
-      <CardHeader>
+      <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
         <CardTitle
           title={title}
@@ -91,11 +91,11 @@ export function MetricTrendCard({
             },
           ]}
           config={config}
-          className="h-12 w-full"
+          className="h-10 w-full"
         />
       </CardContent>
       {footer === undefined ? null : (
-        <CardFooter className="text-muted-foreground mt-auto text-sm">{footer}</CardFooter>
+        <CardFooter className="text-muted-foreground mt-auto text-xs">{footer}</CardFooter>
       )}
     </Card>
   );

@@ -16,15 +16,15 @@ export function MetricsBandSkeleton({ cards, className }: MetricsBandSkeletonPro
   const renderCard = (index: number) => (
     <Card
       key={index}
-      className="@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs gap-3 py-4"
+      className="@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs gap-2 py-3"
     >
-      <CardHeader className="gap-2">
+      <CardHeader className="gap-1">
         <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-7 w-24" />
       </CardHeader>
-      <CardFooter className="mt-auto flex-col items-start gap-1.5">
-        <Skeleton className="h-4 w-36" />
-        <Skeleton className="h-4 w-24" />
+      <CardFooter className="mt-auto flex-col items-start gap-1">
+        <Skeleton className="h-3 w-36" />
+        <Skeleton className="h-3 w-24" />
       </CardFooter>
     </Card>
   );
