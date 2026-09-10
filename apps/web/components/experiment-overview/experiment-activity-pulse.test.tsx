@@ -43,7 +43,7 @@ describe("ExperimentActivityPulse", () => {
     expect(await screen.findByText("1.2K")).toBeInTheDocument();
     expect(screen.getByText("experiment.measurements")).toBeInTheDocument();
     expect(screen.getByText("+22%")).toBeInTheDocument();
-    expect(screen.getByText("experiment.peak")).toBeInTheDocument();
+    expect(screen.getByText("peak")).toBeInTheDocument();
   });
 
   it("states the days it collected on when no contributor is attributed", async () => {

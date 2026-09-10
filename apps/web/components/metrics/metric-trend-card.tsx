@@ -1,7 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 import type { MetricsWindowDay } from "@repo/api/domains/metrics/metrics.schema";
 import {
   Card,
@@ -20,7 +18,7 @@ interface MetricTrendCardProps {
   seriesName: string;
   days: MetricsWindowDay[];
   locale: string;
-  footer?: ReactNode;
+  footer?: string;
   className?: string;
 }
 
@@ -49,11 +47,14 @@ export function MetricTrendCard({
   };
 
   return (
-    <Card className={cn("gap-3 py-5", className)}>
-      <CardHeader className="gap-1">
-        <CardDescription className="text-xs font-medium uppercase tracking-wide">
-          {label}
-        </CardDescription>
+    <Card
+      className={cn(
+        "@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs",
+        className,
+      )}
+    >
+      <CardHeader>
+        <CardDescription>{label}</CardDescription>
       </CardHeader>
       <CardContent className="px-3">
         <AreaChart
@@ -67,11 +68,11 @@ export function MetricTrendCard({
             },
           ]}
           config={config}
-          className="h-12 w-full"
+          className="h-14 w-full"
         />
       </CardContent>
       {footer === undefined ? null : (
-        <CardFooter className="text-muted-foreground text-xs">{footer}</CardFooter>
+        <CardFooter className="text-muted-foreground text-sm">{footer}</CardFooter>
       )}
     </Card>
   );

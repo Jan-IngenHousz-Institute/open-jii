@@ -53,9 +53,7 @@
       "contributors_one": "{{count}} Mitwirkender",
       "contributors_other": "{{count}} Mitwirkende",
       "communityLabel": "Community",
-      "communityFooter": "Plattformweit, dieselben {{days}} Tage",
-      "peak": "Spitze {{value}} am {{date}}",
-      "window": "Letzte {{days}} Tage",
+      "communityNote": "Auf der gesamten Plattform",
       "trend": "Tägliche Messungen"
     }
   },
@@ -63,22 +61,17 @@
     "title": "Aktivität",
     "measurements": "Messungen",
     "contributors": "Mitwirkende",
-    "contributorsFooter": "Erfassung in den letzten {{days}} Tagen",
+    "contributorsNote_one": "{{count}} Person erfasst Daten",
+    "contributorsNote_other": "{{count}} Personen erfassen Daten",
     "collectionDays": "Messtage",
     "daysOf": "{{active}} / {{total}}",
     "lastRecorded": "Zuletzt erfasst am {{date}}",
-    "peak": "Spitze {{value}} am {{date}}",
-    "window": "Letzte {{days}} Tage",
     "quiet": "Keine Messungen hier in den letzten 30 Tagen",
     "trend": "Tägliche Messungen"
   },
   "resourceMetrics": {
     "strip": "Tägliche Messungen über {{days}} Tage",
-    "trend": "Letzte {{days}} Tage",
     "series": "Tägliche Messungen",
-    "peak": "Spitze {{value}} am {{date}}",
-    "window": "Letzte {{days}} Tage",
-    "activeDays": "Erfasst an {{active}} von {{total}} Tagen",
     "ofVisible_one": "von {{count}} für dich sichtbar",
     "ofVisible_other": "von {{count}} für dich sichtbar",
     "experiment": {
@@ -97,5 +90,10 @@
       "measurements": "Messungen",
       "active": "Sammelnde Arbeitsmappen"
     }
-  }
+  },
+  "window": "Letzte {{days}} Tage",
+  "trendUp": "Steigend in diesem Zeitraum",
+  "trendDown": "Fallend in diesem Zeitraum",
+  "peak": "Spitze {{value}} am {{date}}",
+  "activeDays": "Erfasst an {{active}} von {{total}} Tagen"
 }

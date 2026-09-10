@@ -32,6 +32,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 
   const windowDays = scoped.activity.length;
+  const window = t("window", { days: windowDays });
   const community = platform?.community ?? null;
 
   // A percentage against nothing is not a comparison, so a first window shows none.
@@ -41,13 +42,6 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
       : null;
 
   const peak = scoped.peak;
-  const measurementsFooter =
-    peak === null
-      ? t("dashboard.activity.window", { days: windowDays })
-      : t("dashboard.activity.peak", {
-          value: compact.format(peak.measurements),
-          date: day.format(new Date(`${peak.date}T00:00:00Z`)),
-        });
 
   const renderCommunity = (measurements30d: number) => (
     <MetricStatCard
@@ -55,7 +49,8 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
       label={t("dashboard.activity.communityLabel")}
       value={compact.format(measurements30d)}
       title={number.format(measurements30d)}
-      footer={t("dashboard.activity.communityFooter", { days: windowDays })}
+      note={t("dashboard.activity.communityNote")}
+      context={window}
     />
   );
 
@@ -63,28 +58,38 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <MetricStatCard
         locale={locale}
-        label={t("dashboard.activity.label", { days: windowDays })}
+        label={t("dashboard.activity.label")}
         value={compact.format(scoped.measurements30d)}
         title={number.format(scoped.measurements30d)}
         change={change}
-        footer={measurementsFooter}
+        note={
+          change === null
+            ? undefined
+            : t(change >= 0 ? "trendUp" : "trendDown", { days: windowDays })
+        }
+        context={
+          peak === null
+            ? window
+            : t("peak", {
+                value: compact.format(peak.measurements),
+                date: day.format(new Date(`${peak.date}T00:00:00Z`)),
+              })
+        }
       />
       <MetricStatCard
         locale={locale}
         label={t("dashboard.activity.experimentsLabel")}
         value={number.format(scoped.activeExperiments30d)}
-        footer={t("dashboard.activity.contributors", { count: scoped.contributors30d })}
+        note={t("dashboard.activity.contributors", { count: scoped.contributors30d })}
+        context={window}
       />
       {community === null ? null : renderCommunity(community.measurements30d)}
       <MetricTrendCard
-        label={t("resourceMetrics.trend", { days: windowDays })}
+        label={window}
         seriesName={t("dashboard.activity.trend")}
         days={scoped.activity}
         locale={locale}
-        footer={t("resourceMetrics.activeDays", {
-          active: scoped.activeDays,
-          total: windowDays,
-        })}
+        footer={t("activeDays", { active: scoped.activeDays, total: windowDays })}
         className="sm:col-span-2 xl:col-span-1"
       />
     </section>

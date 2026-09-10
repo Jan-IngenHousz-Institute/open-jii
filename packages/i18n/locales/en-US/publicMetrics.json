@@ -53,9 +53,7 @@
       "contributors_one": "{{count}} contributor",
       "contributors_other": "{{count}} contributors",
       "communityLabel": "Community",
-      "communityFooter": "Across the platform, same {{days}} days",
-      "peak": "Peak {{value}} on {{date}}",
-      "window": "Last {{days}} days",
+      "communityNote": "Across the whole platform",
       "trend": "Daily measurements"
     }
   },
@@ -63,22 +61,17 @@
     "title": "Activity",
     "measurements": "Measurements",
     "contributors": "Contributors",
-    "contributorsFooter": "Recording in the last {{days}} days",
+    "contributorsNote_one": "{{count}} person recording",
+    "contributorsNote_other": "{{count}} people recording",
     "collectionDays": "Collection days",
     "daysOf": "{{active}} / {{total}}",
     "lastRecorded": "Last recorded {{date}}",
-    "peak": "Peak {{value}} on {{date}}",
-    "window": "Last {{days}} days",
     "quiet": "No measurements recorded here in the last 30 days",
     "trend": "Daily measurements"
   },
   "resourceMetrics": {
     "strip": "Daily measurements over {{days}} days",
-    "trend": "Last {{days}} days",
     "series": "Daily measurements",
-    "peak": "Peak {{value}} on {{date}}",
-    "window": "Last {{days}} days",
-    "activeDays": "Recorded on {{active}} of {{total}} days",
     "ofVisible_one": "of {{count}} you can access",
     "ofVisible_other": "of {{count}} you can access",
     "experiment": {
@@ -97,5 +90,10 @@
       "measurements": "Measurements",
       "active": "Workbooks collecting"
     }
-  }
+  },
+  "window": "Last {{days}} days",
+  "trendUp": "Trending up this period",
+  "trendDown": "Trending down this period",
+  "peak": "Peak {{value}} on {{date}}",
+  "activeDays": "Recorded on {{active}} of {{total}} days"
 }

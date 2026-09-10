@@ -41,7 +41,7 @@ describe("ResourceMetricsSummary", () => {
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("resourceMetrics.protocol.active")).toBeInTheDocument();
     expect(screen.getByText("resourceMetrics.ofVisible")).toBeInTheDocument();
-    expect(screen.getByText("resourceMetrics.peak")).toBeInTheDocument();
+    expect(screen.getByText("peak")).toBeInTheDocument();
   });
 
   it("compares the window with the one before it", async () => {

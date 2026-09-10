@@ -1,7 +1,6 @@
 "use client";
 
 import { TrendingDown, TrendingUp } from "lucide-react";
-import type { ReactNode } from "react";
 
 import { Badge } from "@repo/ui/components/badge";
 import {
@@ -22,13 +21,16 @@ interface MetricStatCardProps {
   title?: string;
   /** Share of change against the window before, as a fraction. Null hides the badge. */
   change?: number | null;
-  footer?: ReactNode;
+  /** Leading footer line: what the figure says. */
+  note?: string;
+  /** Trailing footer line: what it is measured over. */
+  context?: string;
   className?: string;
 }
 
 /**
  * One figure of a metrics band. A period-over-period badge sits with the
- * number and the qualifier sits under it, so the card reads top to bottom
+ * number and the qualifiers sit under it, so the card reads top to bottom
  * without the reader hunting for what the figure is measured against.
  */
 export function MetricStatCard({
@@ -37,9 +39,12 @@ export function MetricStatCard({
   locale,
   title,
   change = null,
-  footer,
+  note,
+  context,
   className,
 }: MetricStatCardProps) {
+  const hasFooter = note !== undefined || context !== undefined;
+
   const renderChange = (fraction: number) => {
     const Icon = fraction >= 0 ? TrendingUp : TrendingDown;
     const percent = new Intl.NumberFormat(locale, {
@@ -49,30 +54,47 @@ export function MetricStatCard({
     }).format(fraction);
 
     return (
-      <Badge variant="outline" className="gap-1 tabular-nums">
-        <Icon aria-hidden className="size-3" />
+      <Badge variant="outline" className="tabular-nums">
+        <Icon aria-hidden />
         {percent}
       </Badge>
     );
   };
 
+  const renderNote = (text: string) => (
+    <div className="line-clamp-1 flex gap-2 font-medium">
+      {text}
+      {change === null ? null : change >= 0 ? (
+        <TrendingUp aria-hidden className="size-4" />
+      ) : (
+        <TrendingDown aria-hidden className="size-4" />
+      )}
+    </div>
+  );
+
   return (
-    <Card className={cn("@container/card gap-3 py-5", className)}>
-      <CardHeader className="gap-1">
-        <CardDescription className="text-xs font-medium uppercase tracking-wide">
-          {label}
-        </CardDescription>
+    <Card
+      className={cn(
+        "@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs",
+        className,
+      )}
+    >
+      <CardHeader>
+        <CardDescription>{label}</CardDescription>
         <CardTitle
           title={title}
-          className="@[220px]/card:text-3xl text-2xl font-semibold tabular-nums"
+          className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums"
         >
           {value}
         </CardTitle>
         {change === null ? null : <CardAction>{renderChange(change)}</CardAction>}
       </CardHeader>
-      {footer === undefined ? null : (
-        <CardFooter className="text-muted-foreground text-xs">{footer}</CardFooter>
-      )}
+      {hasFooter ? (
+        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+          {note === undefined ? null : renderNote(note)}
+          {context === undefined ? null : <div className="text-muted-foreground">{context}</div>}
+        </CardFooter>
+      ) : null}
     </Card>
   );
 }

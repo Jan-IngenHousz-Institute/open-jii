@@ -31,6 +31,8 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
   // The warehouse groups by UTC day, so the label has to read it back as one.
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 
+  const windowDays = scoped.activity.length;
+  const window = t("window", { days: windowDays });
   const isCollecting = scoped.measurements30d > 0;
 
   // A percentage against nothing is not a comparison, so a first window shows none.
@@ -40,13 +42,6 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
       : null;
 
   const peak = scoped.peak;
-  const measurementsFooter =
-    peak === null
-      ? t("experiment.window", { days: scoped.activity.length })
-      : t("experiment.peak", {
-          value: compact.format(peak.measurements),
-          date: day.format(new Date(`${peak.date}T00:00:00Z`)),
-        });
 
   // Device-published rows carry no contributor, so the card states the days it
   // collected on rather than reporting that nobody took the measurements.
@@ -57,7 +52,8 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
       locale={locale}
       label={t("experiment.contributors")}
       value={number.format(scoped.contributors30d)}
-      footer={t("experiment.contributorsFooter", { days: scoped.activity.length })}
+      note={t("experiment.contributorsNote", { count: scoped.contributors30d })}
+      context={window}
     />
   );
 
@@ -65,17 +61,15 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
     <MetricStatCard
       locale={locale}
       label={t("experiment.collectionDays")}
-      value={t("experiment.daysOf", {
-        active: scoped.activeDays,
-        total: scoped.activity.length,
-      })}
-      footer={
+      value={t("experiment.daysOf", { active: scoped.activeDays, total: windowDays })}
+      note={
         scoped.lastActivityDate === null
           ? undefined
           : t("experiment.lastRecorded", {
               date: day.format(new Date(`${scoped.lastActivityDate}T00:00:00Z`)),
             })
       }
+      context={window}
     />
   );
 
@@ -98,18 +92,27 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
           value={compact.format(scoped.measurements30d)}
           title={number.format(scoped.measurements30d)}
           change={change}
-          footer={measurementsFooter}
+          note={
+            change === null
+              ? undefined
+              : t(change >= 0 ? "trendUp" : "trendDown", { days: windowDays })
+          }
+          context={
+            peak === null
+              ? window
+              : t("peak", {
+                  value: compact.format(peak.measurements),
+                  date: day.format(new Date(`${peak.date}T00:00:00Z`)),
+                })
+          }
         />
         {hasContributors ? renderContributors() : renderDays()}
         <MetricTrendCard
-          label={t("resourceMetrics.trend", { days: scoped.activity.length })}
+          label={window}
           seriesName={t("experiment.trend")}
           days={scoped.activity}
           locale={locale}
-          footer={t("resourceMetrics.activeDays", {
-            active: scoped.activeDays,
-            total: scoped.activity.length,
-          })}
+          footer={t("activeDays", { active: scoped.activeDays, total: windowDays })}
           className="sm:col-span-2 lg:col-span-1"
         />
       </div>

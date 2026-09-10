@@ -31,7 +31,8 @@ describe("MetricStatCard", () => {
         locale="en-US"
         label="Protocols in use"
         value="13"
-        footer="of 27 you can access"
+        note="of 27 you can access"
+        context="Last 30 days"
       />,
     );
 

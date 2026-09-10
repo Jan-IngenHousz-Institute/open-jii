@@ -37,14 +37,8 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
       ? (data.totalMeasurements - data.previousMeasurements) / data.previousMeasurements
       : null;
 
+  const window = t("window", { days: data.windowDays });
   const peak = data.peak;
-  const measurementsFooter =
-    peak === null
-      ? t("resourceMetrics.window", { days: data.windowDays })
-      : t("resourceMetrics.peak", {
-          value: compact.format(peak.measurements),
-          date: day.format(new Date(`${peak.date}T00:00:00Z`)),
-        });
 
   return (
     <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -54,23 +48,33 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
         value={compact.format(data.totalMeasurements)}
         title={number.format(data.totalMeasurements)}
         change={change}
-        footer={measurementsFooter}
+        note={
+          change === null
+            ? undefined
+            : t(change >= 0 ? "trendUp" : "trendDown", { days: data.windowDays })
+        }
+        context={
+          peak === null
+            ? window
+            : t("peak", {
+                value: compact.format(peak.measurements),
+                date: day.format(new Date(`${peak.date}T00:00:00Z`)),
+              })
+        }
       />
       <MetricStatCard
         locale={locale}
         label={t(`resourceMetrics.${kind}.active`)}
         value={number.format(data.activeCount)}
-        footer={t("resourceMetrics.ofVisible", { count: data.visibleCount })}
+        note={t("resourceMetrics.ofVisible", { count: data.visibleCount })}
+        context={window}
       />
       <MetricTrendCard
-        label={t("resourceMetrics.trend", { days: data.windowDays })}
+        label={window}
         seriesName={t("resourceMetrics.series")}
         days={data.days}
         locale={locale}
-        footer={t("resourceMetrics.activeDays", {
-          active: data.activeDays,
-          total: data.windowDays,
-        })}
+        footer={t("activeDays", { active: data.activeDays, total: data.windowDays })}
         className="sm:col-span-2 lg:col-span-1"
       />
     </section>
