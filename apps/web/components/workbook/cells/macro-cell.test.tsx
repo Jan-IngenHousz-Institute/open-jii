@@ -463,7 +463,9 @@ describe("MacroCellComponent", () => {
   });
 
   it("surfaces a destructive toast when a language change fails to persist", async () => {
-    server.mount(contract.macros.updateMacro, { status: 400 });
+    server.use(
+      http.put(`${API_URL}/api/v1/macros/:id`, () => HttpResponse.json({}, { status: 500 })),
+    );
     const { toast } = await import("@repo/ui/hooks/use-toast");
 
     renderMacroCell();
@@ -475,7 +477,7 @@ describe("MacroCellComponent", () => {
     await waitFor(
       () => {
         expect(toast).toHaveBeenCalledWith({
-          description: expect.any(String) as unknown,
+          description: "cells.languageSaveFailed",
           variant: "destructive",
         });
       },
@@ -543,6 +545,43 @@ describe("MacroCellComponent", () => {
       // The rename must preserve the concurrent language switch, not revert it.
       expect(updated.payload.language).toBe("r");
       expect(updated.payload.name).toBe("Renamed Macro");
+    });
+
+    it("ignores a rename result after the cell switches to a different macro", async () => {
+      server.mount(contract.macros.getMacro, { body: baseMacro });
+      let releaseSave!: () => void;
+      const saveGate = new Promise<void>((resolve) => (releaseSave = resolve));
+      const updateSpy = server.mount(contract.macros.updateMacro, {
+        body: createMacro({ id: "macro-1", name: "Renamed Macro" }),
+        unblock: saveGate,
+      });
+      const onUpdate = vi.fn();
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <MacroCellComponent cell={cell} onUpdate={onUpdate} onDelete={vi.fn()} />,
+      );
+
+      await user.click(await screen.findByLabelText("cells.rename"));
+      const input = screen.getByLabelText("cells.rename");
+      await user.clear(input);
+      await user.type(input, "Renamed Macro");
+      await user.click(screen.getByLabelText("cells.renameSave"));
+      await waitFor(() => expect(updateSpy.called).toBe(true));
+
+      rerender(
+        <MacroCellComponent
+          cell={{
+            ...cell,
+            payload: { ...cell.payload, macroId: "macro-2", name: "Replacement Macro" },
+          }}
+          onUpdate={onUpdate}
+          onDelete={vi.fn()}
+        />,
+      );
+      releaseSave();
+
+      await waitFor(() => expect(screen.getByLabelText("cells.rename")).toBeInTheDocument());
+      expect(onUpdate).not.toHaveBeenCalled();
     });
 
     it("shows the conflict toast and keeps the editor open on a duplicate name", async () => {

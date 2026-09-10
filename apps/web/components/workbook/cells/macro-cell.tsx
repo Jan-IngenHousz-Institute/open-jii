@@ -171,12 +171,15 @@ export function MacroCellComponent({
             updateLatest({ ...latest, payload: { ...latest.payload, language: saved.language } });
           },
           onError: (err) => {
-            toast({ description: parseApiError(err)?.message, variant: "destructive" });
+            toast({
+              description: parseApiError(err)?.message ?? t("cells.languageSaveFailed"),
+              variant: "destructive",
+            });
           },
         },
       );
     },
-    [macroId, saveLanguage],
+    [macroId, saveLanguage, t],
   );
 
   const [langSelectOpen, setLangSelectOpen] = useState(false);
@@ -198,6 +201,7 @@ export function MacroCellComponent({
       try {
         const res = await saveMacro({ id: macroId, name: next });
         const { cell: latest, onUpdate: updateLatest } = cellRef.current;
+        if (latest.payload.macroId !== macroId) return;
         updateLatest({ ...latest, payload: { ...latest.payload, name: res.name } });
       } catch (err) {
         const parsed = parseApiError(err);
