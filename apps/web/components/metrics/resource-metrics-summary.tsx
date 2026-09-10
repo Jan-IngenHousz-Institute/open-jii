@@ -51,7 +51,10 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
         note={
           change === null
             ? undefined
-            : t(change >= 0 ? "trendUp" : "trendDown", { days: data.windowDays })
+            : t("previousWindow", {
+                value: compact.format(data.previousMeasurements),
+                days: data.windowDays,
+              })
         }
         context={
           peak === null
@@ -67,7 +70,6 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
         label={t(`resourceMetrics.${kind}.active`)}
         value={number.format(data.activeCount)}
         note={t("resourceMetrics.ofVisible", { count: data.visibleCount })}
-        context={window}
       />
       <MetricTrendCard
         label={window}

@@ -50,6 +50,8 @@ describe("ResourceMetricsSummary", () => {
     render(<ResourceMetricsSummary kind="protocol" />);
 
     expect(await screen.findByText("+48%")).toBeInTheDocument();
+    // The base the badge is computed from, so the reader can check it.
+    expect(screen.getByText("previousWindow")).toBeInTheDocument();
   });
 
   it("claims no change against a window that recorded nothing", async () => {

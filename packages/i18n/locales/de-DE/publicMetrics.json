@@ -53,7 +53,6 @@
       "contributors_one": "{{count}} Mitwirkender",
       "contributors_other": "{{count}} Mitwirkende",
       "communityLabel": "Community",
-      "communityNote": "Auf der gesamten Plattform",
       "trend": "Tägliche Messungen"
     }
   },
@@ -92,8 +91,7 @@
     }
   },
   "window": "Letzte {{days}} Tage",
-  "trendUp": "Steigend in diesem Zeitraum",
-  "trendDown": "Fallend in diesem Zeitraum",
   "peak": "Spitze {{value}} am {{date}}",
-  "activeDays": "Erfasst an {{active}} von {{total}} Tagen"
+  "activeDays": "Erfasst an {{active}} von {{total}} Tagen",
+  "previousWindow": "{{value}} in den vorherigen {{days}} Tagen"
 }

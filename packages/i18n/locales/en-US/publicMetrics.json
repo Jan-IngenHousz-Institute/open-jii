@@ -53,7 +53,6 @@
       "contributors_one": "{{count}} contributor",
       "contributors_other": "{{count}} contributors",
       "communityLabel": "Community",
-      "communityNote": "Across the whole platform",
       "trend": "Daily measurements"
     }
   },
@@ -92,8 +91,7 @@
     }
   },
   "window": "Last {{days}} days",
-  "trendUp": "Trending up this period",
-  "trendDown": "Trending down this period",
   "peak": "Peak {{value}} on {{date}}",
-  "activeDays": "Recorded on {{active}} of {{total}} days"
+  "activeDays": "Recorded on {{active}} of {{total}} days",
+  "previousWindow": "{{value}} in the previous {{days}} days"
 }

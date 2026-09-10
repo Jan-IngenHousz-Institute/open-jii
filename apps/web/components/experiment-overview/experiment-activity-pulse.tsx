@@ -53,7 +53,6 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
       label={t("experiment.contributors")}
       value={number.format(scoped.contributors30d)}
       note={t("experiment.contributorsNote", { count: scoped.contributors30d })}
-      context={window}
     />
   );
 
@@ -69,7 +68,6 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
               date: day.format(new Date(`${scoped.lastActivityDate}T00:00:00Z`)),
             })
       }
-      context={window}
     />
   );
 
@@ -95,7 +93,10 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
           note={
             change === null
               ? undefined
-              : t(change >= 0 ? "trendUp" : "trendDown", { days: windowDays })
+              : t("previousWindow", {
+                  value: compact.format(scoped.previousMeasurements),
+                  days: windowDays,
+                })
           }
           context={
             peak === null

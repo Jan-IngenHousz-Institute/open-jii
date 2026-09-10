@@ -49,8 +49,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
       label={t("dashboard.activity.communityLabel")}
       value={compact.format(measurements30d)}
       title={number.format(measurements30d)}
-      note={t("dashboard.activity.communityNote")}
-      context={window}
+      note={window}
     />
   );
 
@@ -65,7 +64,10 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
         note={
           change === null
             ? undefined
-            : t(change >= 0 ? "trendUp" : "trendDown", { days: windowDays })
+            : t("previousWindow", {
+                value: compact.format(scoped.previousMeasurements),
+                days: windowDays,
+              })
         }
         context={
           peak === null
@@ -81,7 +83,6 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
         label={t("dashboard.activity.experimentsLabel")}
         value={number.format(scoped.activeExperiments30d)}
         note={t("dashboard.activity.contributors", { count: scoped.contributors30d })}
-        context={window}
       />
       {community === null ? null : renderCommunity(community.measurements30d)}
       <MetricTrendCard
