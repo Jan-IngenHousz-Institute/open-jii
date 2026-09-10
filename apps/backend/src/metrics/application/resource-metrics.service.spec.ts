@@ -1,3 +1,5 @@
+import { workbookVersions } from "@repo/database";
+
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
@@ -147,5 +149,60 @@ describe("ResourceMetricsService", () => {
     const series = await service.seriesFor("protocol", [visibleProtocolId]);
 
     expect(series.size).toBe(0);
+  });
+  it("reads experiment activity from the scoped rows it already has", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Collecting experiment",
+      userId: ownerId,
+    });
+    vi.spyOn(adapter, "getScopedDailyActivity").mockResolvedValue(
+      success([{ date: YESTERDAY, experimentId: experiment.id, measurements: 5 }]),
+    );
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("experiment"));
+
+    const series = await service.seriesFor("experiment", [experiment.id]);
+
+    expect(series.get(experiment.id)?.measurements).toBe(5);
+  });
+
+  it("folds a workbook version's rows onto the workbook that owns them", async () => {
+    const workbook = await testApp.createWorkbook({ name: "Collecting", createdBy: ownerId });
+    const [version] = await testApp.database
+      .insert(workbookVersions)
+      .values({
+        workbookId: workbook.id,
+        version: 1,
+        cells: [],
+        metadata: {},
+        entitySnapshots: { protocols: {}, macros: {} },
+        createdBy: ownerId,
+      })
+      .returning();
+
+    vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+      success([
+        {
+          date: YESTERDAY,
+          resourceType: "workbook_version",
+          resourceId: version.id,
+          measurements: 7,
+        },
+      ]),
+    );
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("workbook"));
+
+    const series = await service.seriesFor("workbook", [workbook.id]);
+
+    expect(series.get(workbook.id)?.measurements).toBe(7);
+  });
+
+  it("asks for nothing when the caller passed no ids", async () => {
+    const series = await service.seriesFor("protocol", []);
+    const totals = await service.totalsFor("protocol", []);
+
+    expect(series.size).toBe(0);
+    expect(totals.measurements).toBe(0);
   });
 });

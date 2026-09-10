@@ -2811,6 +2811,27 @@ describe("DatabricksAdapter", () => {
       expect(hourly.value).toEqual([{ hourLocal: 12, measurements: 300 }]);
     });
 
+    it("returns per-resource daily activity and drops rows missing an essential", async () => {
+      mockToken();
+      mockSqlResponse(
+        ["date", "resource_type", "resource_id", "measurements"],
+        [
+          ["2026-08-14", "protocol", "p1", "10"],
+          ["2026-08-15", "protocol", "p1", "12"],
+          ["2026-08-15", "protocol", null, "12"],
+          ["2026-08-15", "protocol", "p2", "not-a-number"],
+        ],
+      );
+
+      const result = await databricksAdapter.getResourceDailyActivity("protocol", 30);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { date: "2026-08-14", resourceType: "protocol", resourceId: "p1", measurements: 10 },
+        { date: "2026-08-15", resourceType: "protocol", resourceId: "p1", measurements: 12 },
+      ]);
+    });
+
     it("returns daily activity ascending with volume", async () => {
       mockToken();
       mockSqlResponse(

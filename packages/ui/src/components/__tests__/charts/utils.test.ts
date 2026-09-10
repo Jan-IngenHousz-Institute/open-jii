@@ -231,6 +231,14 @@ describe("utils", () => {
       expect(layout.yaxis?.gridcolor).toBe("rgba(255,255,255,0.1)");
     });
 
+    it("hides both axes and drops the margins for a sparkline", () => {
+      const layout = createBaseLayout({ ...baseConfig, sparkline: true });
+
+      expect(layout.xaxis?.visible).toBe(false);
+      expect(layout.yaxis?.visible).toBe(false);
+      expect(layout.margin).toMatchObject({ l: 0, r: 0, t: 2, b: 2 });
+    });
+
     it("sets title when provided", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
