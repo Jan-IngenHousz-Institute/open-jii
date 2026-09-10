@@ -1,12 +1,11 @@
 "use client";
 
+import { MetricStatCard } from "~/components/metrics/metric-stat-card";
+import { MetricTrendCard } from "~/components/metrics/metric-trend-card";
 import { useExperimentMetrics } from "~/hooks/metrics/useExperimentMetrics/useExperimentMetrics";
 import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
-import { AreaChart } from "@repo/ui/components/charts/area-chart";
-import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
-import { detectAxisType } from "@repo/ui/components/charts/utils";
 
 interface ExperimentActivityPulseProps {
   experimentId: string;
@@ -27,64 +26,93 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
     return null;
   }
 
-  const format = (value: number) => new Intl.NumberFormat(locale).format(value);
-  const days = scoped.activity;
+  const number = new Intl.NumberFormat(locale);
+  const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
+  // The warehouse groups by UTC day, so the label has to read it back as one.
+  const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
+
   const isCollecting = scoped.measurements30d > 0;
 
-  // Device-published rows carry no contributor, so the clause is dropped rather
-  // than reporting that nobody took the measurements.
+  // A percentage against nothing is not a comparison, so a first window shows none.
+  const change =
+    scoped.previousMeasurements > 0
+      ? (scoped.measurements30d - scoped.previousMeasurements) / scoped.previousMeasurements
+      : null;
+
+  const peak = scoped.peak;
+  const measurementsFooter =
+    peak === null
+      ? t("experiment.window", { days: scoped.activity.length })
+      : t("experiment.peak", {
+          value: compact.format(peak.measurements),
+          date: day.format(new Date(`${peak.date}T00:00:00Z`)),
+        });
+
+  // Device-published rows carry no contributor, so the card states the days it
+  // collected on rather than reporting that nobody took the measurements.
   const hasContributors = scoped.contributors30d > 0;
 
-  const chartConfig: PlotlyChartConfig = {
-    showLegend: false,
-    showModeBar: false,
-    // A display chart: hover reads values, drag would zoom or select.
-    dragMode: false,
-    scrollZoom: false,
-    showGrid: false,
-    // A trend indicator beside text: the shape is the message.
-    sparkline: true,
-    backgroundColor: "rgba(0,0,0,0)",
-    xAxisType: detectAxisType(days.map((day) => day.date)),
-    locale,
-  };
+  const renderContributors = () => (
+    <MetricStatCard
+      locale={locale}
+      label={t("experiment.contributors")}
+      value={number.format(scoped.contributors30d)}
+      footer={t("experiment.contributorsFooter", { days: scoped.activity.length })}
+    />
+  );
 
-  const renderTrend = () => (
-    <AreaChart
-      data={[
-        {
-          x: days.map((day) => day.date),
-          y: days.map((day) => day.measurements),
-          name: t("experiment.trend"),
-          fill: "tozeroy",
-          mode: "lines",
-        },
-      ]}
-      config={chartConfig}
-      className="h-10 w-full sm:w-48 lg:w-64"
+  const renderDays = () => (
+    <MetricStatCard
+      locale={locale}
+      label={t("experiment.collectionDays")}
+      value={t("experiment.daysOf", {
+        active: scoped.activeDays,
+        total: scoped.activity.length,
+      })}
+      footer={
+        scoped.lastActivityDate === null
+          ? undefined
+          : t("experiment.lastRecorded", {
+              date: day.format(new Date(`${scoped.lastActivityDate}T00:00:00Z`)),
+            })
+      }
     />
   );
 
   if (!isCollecting) {
-    return <p className="text-muted-foreground text-sm">{t("experiment.quiet")}</p>;
+    return (
+      <section className="space-y-3">
+        <h2 className="font-bold">{t("experiment.title")}</h2>
+        <p className="text-muted-foreground text-sm">{t("experiment.quiet")}</p>
+      </section>
+    );
   }
 
   return (
-    <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-      <div className="flex flex-col gap-0.5">
-        <div className="flex items-baseline gap-2">
-          <span className="text-foreground text-xl font-semibold tabular-nums">
-            {format(scoped.measurements30d)}
-          </span>
-          <span className="text-muted-foreground text-sm">{t("experiment.measurements")}</span>
-        </div>
-        {hasContributors ? (
-          <span className="text-muted-foreground text-xs">
-            {t("experiment.byContributors", { count: scoped.contributors30d })}
-          </span>
-        ) : null}
+    <section className="space-y-3">
+      <h2 className="font-bold">{t("experiment.title")}</h2>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <MetricStatCard
+          locale={locale}
+          label={t("experiment.measurements")}
+          value={compact.format(scoped.measurements30d)}
+          title={number.format(scoped.measurements30d)}
+          change={change}
+          footer={measurementsFooter}
+        />
+        {hasContributors ? renderContributors() : renderDays()}
+        <MetricTrendCard
+          label={t("resourceMetrics.trend", { days: scoped.activity.length })}
+          seriesName={t("experiment.trend")}
+          days={scoped.activity}
+          locale={locale}
+          footer={t("resourceMetrics.activeDays", {
+            active: scoped.activeDays,
+            total: scoped.activity.length,
+          })}
+          className="sm:col-span-2 lg:col-span-1"
+        />
       </div>
-      {days.length > 1 ? renderTrend() : null}
     </section>
   );
 }

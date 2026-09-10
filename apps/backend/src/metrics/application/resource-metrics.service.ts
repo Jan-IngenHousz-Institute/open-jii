@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import type { ResourceKind } from "@repo/api/domains/metrics/metrics.schema";
+import type { MetricsWindowDay, ResourceKind } from "@repo/api/domains/metrics/metrics.schema";
 
 import { CACHE_PORT, CachePort } from "../core/ports/cache.port";
 import { METRICS_DATABRICKS_PORT } from "../core/ports/databricks.port";
@@ -8,6 +8,10 @@ import type { DatabricksPort, ResourceDailyRow } from "../core/ports/databricks.
 import { MetricsRepository } from "../core/repositories/metrics.repository";
 
 export const RESOURCE_METRICS_WINDOW_DAYS = 30;
+
+// Two windows in one read: the header states the current one against the one
+// before it, and both consumers share the cached rows.
+const LOADED_DAYS = RESOURCE_METRICS_WINDOW_DAYS * 2;
 
 /** The warehouse keys workbook activity by the version that produced it. */
 const WAREHOUSE_TYPE: Record<ResourceKind, string> = {
@@ -21,7 +25,18 @@ export const resourceMetricsCacheKey = (kind: ResourceKind) => `resource-metrics
 
 export interface ResourceSeries {
   measurements: number;
-  days: { date: string; measurements: number }[];
+  days: MetricsWindowDay[];
+}
+
+/** The window's totals and its shape, across a set of resources. */
+export interface ResourceTotals {
+  measurements: number;
+  previousMeasurements: number;
+  activeCount: number;
+  activeDays: number;
+  peak: MetricsWindowDay | null;
+  lastActivityDate: string | null;
+  days: MetricsWindowDay[];
 }
 
 /**
@@ -72,11 +87,10 @@ export class ResourceMetricsService {
 
     // Every resource spans the same window: a sparkline is read by its shape,
     // and a series that skipped silent days would draw a different length.
-    const window = this.windowDates();
     const series = new Map<string, ResourceSeries>();
 
     for (const [id, days] of byResource) {
-      const dense = window.map((date) => ({ date, measurements: days.get(date) ?? 0 }));
+      const dense = this.densify(days);
       series.set(id, {
         measurements: dense.reduce((sum, day) => sum + day.measurements, 0),
         days: dense,
@@ -86,46 +100,77 @@ export class ResourceMetricsService {
     return series;
   }
 
-  /** Totals across the resources of this kind the caller may read. */
-  async totalsFor(
-    kind: ResourceKind,
-    visibleIds: string[],
-  ): Promise<{ measurements: number; activeCount: number }> {
+  /** The window's shape across the resources of this kind the caller may read. */
+  async totalsFor(kind: ResourceKind, visibleIds: string[]): Promise<ResourceTotals> {
     if (visibleIds.length === 0) {
-      return { measurements: 0, activeCount: 0 };
+      return this.emptyTotals();
     }
 
     const rows = await this.cachePort.tryCache(resourceMetricsCacheKey(kind), () =>
       this.loadRows(kind),
     );
     if (rows === null) {
-      return { measurements: 0, activeCount: 0 };
+      return this.emptyTotals();
     }
 
     const attributed = await this.attributeToResources(kind, rows, visibleIds);
     const visible = new Set(visibleIds);
+    const previousDates = new Set(this.windowDates(1));
+
+    const byDate = new Map<string, number>();
     const active = new Set<string>();
-    let measurements = 0;
+    let previousMeasurements = 0;
 
     for (const row of attributed) {
       if (!visible.has(row.resourceId)) {
         continue;
       }
+
+      if (previousDates.has(row.date)) {
+        previousMeasurements += row.measurements;
+        continue;
+      }
+
       active.add(row.resourceId);
-      measurements += row.measurements;
+      byDate.set(row.date, (byDate.get(row.date) ?? 0) + row.measurements);
     }
 
-    return { measurements, activeCount: active.size };
+    return this.totals(this.densify(byDate), previousMeasurements, active.size);
+  }
+
+  private emptyTotals(): ResourceTotals {
+    return this.totals(this.densify(new Map()), 0, 0);
+  }
+
+  /** What the series says beyond its total: how often, how high, how recently. */
+  private totals(
+    days: MetricsWindowDay[],
+    previousMeasurements: number,
+    activeCount: number,
+  ): ResourceTotals {
+    const active = days.filter((day) => day.measurements > 0);
+
+    const peak = active.reduce<MetricsWindowDay | null>(
+      (best, day) => (best === null || day.measurements > best.measurements ? day : best),
+      null,
+    );
+
+    return {
+      measurements: days.reduce((sum, day) => sum + day.measurements, 0),
+      previousMeasurements,
+      activeCount,
+      activeDays: active.length,
+      peak,
+      lastActivityDate: active.length > 0 ? active[active.length - 1].date : null,
+      days,
+    };
   }
 
   private async loadRows(kind: ResourceKind): Promise<ResourceDailyRow[] | null> {
     const rows =
       kind === "experiment"
         ? await this.experimentRows()
-        : await this.databricksPort.getResourceDailyActivity(
-            WAREHOUSE_TYPE[kind],
-            RESOURCE_METRICS_WINDOW_DAYS,
-          );
+        : await this.databricksPort.getResourceDailyActivity(WAREHOUSE_TYPE[kind], LOADED_DAYS);
 
     if (rows.isFailure()) {
       this.logger.warn({
@@ -141,7 +186,7 @@ export class ResourceMetricsService {
 
   /** Experiments predate the per-resource table and keep their own. */
   private async experimentRows() {
-    const scoped = await this.databricksPort.getScopedDailyActivity(RESOURCE_METRICS_WINDOW_DAYS);
+    const scoped = await this.databricksPort.getScopedDailyActivity(LOADED_DAYS);
     if (scoped.isFailure()) {
       return scoped;
     }
@@ -153,6 +198,24 @@ export class ResourceMetricsService {
         resourceId: row.experimentId,
         measurements: row.measurements,
       })),
+    );
+  }
+
+  /** A silent day carries a zero rather than being absent from the series. */
+  private densify(totals: Map<string, number>): MetricsWindowDay[] {
+    return this.windowDates().map((date) => ({
+      date,
+      measurements: totals.get(date) ?? 0,
+    }));
+  }
+
+  /** Day keys oldest first; offset 1 is the window immediately before the current one. */
+  private windowDates(offset = 0): string[] {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const end = Date.now() - offset * RESOURCE_METRICS_WINDOW_DAYS * dayMs;
+
+    return Array.from({ length: RESOURCE_METRICS_WINDOW_DAYS }, (_, index) =>
+      new Date(end - (RESOURCE_METRICS_WINDOW_DAYS - 1 - index) * dayMs).toISOString().slice(0, 10),
     );
   }
 
@@ -180,16 +243,5 @@ export class ResourceMetricsService {
     }
 
     return owned;
-  }
-
-  private windowDates(): string[] {
-    const today = new Date();
-    const dayMs = 24 * 60 * 60 * 1000;
-
-    return Array.from({ length: RESOURCE_METRICS_WINDOW_DAYS }, (_, offset) =>
-      new Date(today.getTime() - (RESOURCE_METRICS_WINDOW_DAYS - 1 - offset) * dayMs)
-        .toISOString()
-        .slice(0, 10),
-    );
   }
 }

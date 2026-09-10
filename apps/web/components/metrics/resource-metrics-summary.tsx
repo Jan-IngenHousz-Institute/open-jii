@@ -5,15 +5,12 @@ import { useLocale } from "~/hooks/useLocale";
 
 import type { ResourceKind } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
-import { Card } from "@repo/ui/components/card";
+
+import { MetricStatCard } from "./metric-stat-card";
+import { MetricTrendCard } from "./metric-trend-card";
 
 interface ResourceMetricsSummaryProps {
   kind: ResourceKind;
-}
-
-interface Stat {
-  key: string;
-  value: string;
 }
 
 /**
@@ -29,25 +26,53 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
     return null;
   }
 
-  const format = (value: number) => new Intl.NumberFormat(locale).format(value);
-  const compact = (value: number) =>
-    new Intl.NumberFormat(locale, { notation: "compact" }).format(value);
+  const number = new Intl.NumberFormat(locale);
+  const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
+  // The warehouse groups by UTC day, so the label has to read it back as one.
+  const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 
-  const stats: Stat[] = [
-    { key: "active", value: format(data.activeCount) },
-    { key: "measurements", value: compact(data.totalMeasurements) },
-  ];
+  // A percentage against nothing is not a comparison, so a first window shows none.
+  const change =
+    data.previousMeasurements > 0
+      ? (data.totalMeasurements - data.previousMeasurements) / data.previousMeasurements
+      : null;
 
-  const renderStat = (stat: Stat) => (
-    <div key={stat.key} className="flex flex-col">
-      <span className="text-foreground text-xl font-semibold tabular-nums">{stat.value}</span>
-      <span className="text-muted-foreground text-xs">
-        {t(`resourceMetrics.${kind}.${stat.key}`, { days: data.windowDays })}
-      </span>
-    </div>
-  );
+  const peak = data.peak;
+  const measurementsFooter =
+    peak === null
+      ? t("resourceMetrics.window", { days: data.windowDays })
+      : t("resourceMetrics.peak", {
+          value: compact.format(peak.measurements),
+          date: day.format(new Date(`${peak.date}T00:00:00Z`)),
+        });
 
   return (
-    <Card className="flex flex-row flex-wrap gap-x-10 gap-y-3 p-5">{stats.map(renderStat)}</Card>
+    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <MetricStatCard
+        locale={locale}
+        label={t(`resourceMetrics.${kind}.measurements`)}
+        value={compact.format(data.totalMeasurements)}
+        title={number.format(data.totalMeasurements)}
+        change={change}
+        footer={measurementsFooter}
+      />
+      <MetricStatCard
+        locale={locale}
+        label={t(`resourceMetrics.${kind}.active`)}
+        value={number.format(data.activeCount)}
+        footer={t("resourceMetrics.ofVisible", { count: data.visibleCount })}
+      />
+      <MetricTrendCard
+        label={t("resourceMetrics.trend", { days: data.windowDays })}
+        seriesName={t("resourceMetrics.series")}
+        days={data.days}
+        locale={locale}
+        footer={t("resourceMetrics.activeDays", {
+          active: data.activeDays,
+          total: data.windowDays,
+        })}
+        className="sm:col-span-2 lg:col-span-1"
+      />
+    </section>
   );
 }

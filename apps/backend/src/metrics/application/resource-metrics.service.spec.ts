@@ -11,6 +11,7 @@ const daysAgo = (offset: number) =>
 
 const YESTERDAY = daysAgo(1);
 const TWO_DAYS_AGO = daysAgo(2);
+const LAST_WINDOW = daysAgo(40);
 
 describe("ResourceMetricsService", () => {
   const testApp = TestHarness.App;
@@ -67,6 +68,12 @@ describe("ResourceMetricsService", () => {
           resourceId: privateProtocolId,
           measurements: 999,
         },
+        {
+          date: LAST_WINDOW,
+          resourceType: "protocol",
+          resourceId: visibleProtocolId,
+          measurements: 250,
+        },
       ]),
     );
 
@@ -94,6 +101,36 @@ describe("ResourceMetricsService", () => {
       { date: TWO_DAYS_AGO, measurements: 40 },
       { date: YESTERDAY, measurements: 62 },
     ]);
+  });
+
+  it("states the window against the one before it", async () => {
+    const totals = await service.totalsFor("protocol", [visibleProtocolId]);
+
+    expect(totals.measurements).toBe(102);
+    expect(totals.previousMeasurements).toBe(250);
+    expect(totals.activeCount).toBe(1);
+    expect(totals.activeDays).toBe(2);
+    expect(totals.peak).toEqual({ date: YESTERDAY, measurements: 62 });
+    expect(totals.lastActivityDate).toBe(YESTERDAY);
+    expect(totals.days).toHaveLength(30);
+  });
+
+  it("counts only the resources the caller may read", async () => {
+    const totals = await service.totalsFor("protocol", [visibleProtocolId]);
+
+    expect(totals.measurements).toBe(102);
+  });
+
+  it("reports an empty window when the warehouse is unavailable", async () => {
+    vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
+
+    const totals = await service.totalsFor("protocol", [visibleProtocolId]);
+
+    expect(totals.measurements).toBe(0);
+    expect(totals.peak).toBeNull();
+    expect(totals.days).toHaveLength(30);
   });
 
   it("returns nothing for a resource the caller did not ask about", async () => {

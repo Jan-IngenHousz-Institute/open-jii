@@ -17,6 +17,10 @@ import { MetricsRepository } from "../../../core/repositories/metrics.repository
 
 const WINDOW_DAYS = 30;
 
+// Two windows in one read: every scoped figure is stated against the window
+// before it, and the inputs are shared across all scopes anyway.
+const LOADED_DAYS = WINDOW_DAYS * 2;
+
 /**
  * One shared key: the warehouse inputs are scope-independent, so per-caller
  * keys would multiply identical platform-wide reads and accumulate without
@@ -123,7 +127,7 @@ export class GetScopedMetricsUseCase {
 
   private async loadInputs(): Promise<ScopedInputs | null> {
     const [scopedDaily, contributorPairs, windows] = await Promise.all([
-      this.databricksPort.getScopedDailyActivity(WINDOW_DAYS),
+      this.databricksPort.getScopedDailyActivity(LOADED_DAYS),
       this.databricksPort.getContributorPairs(),
       this.databricksPort.getActivityWindows(),
     ]);
@@ -153,18 +157,38 @@ export class GetScopedMetricsUseCase {
     scopeIds: Set<string>,
     inputs: ScopedInputs,
   ): ScopedMetricsResponse {
-    const rows = inputs.daily.filter((row) => scopeIds.has(row.experimentId));
+    const previousDates = new Set(this.windowDates(1));
 
     const byDate = new Map<string, number>();
-    for (const row of rows) {
+    const activeExperiments = new Set<string>();
+    let previousMeasurements = 0;
+
+    for (const row of inputs.daily) {
+      if (!scopeIds.has(row.experimentId)) {
+        continue;
+      }
+
+      if (previousDates.has(row.date)) {
+        previousMeasurements += row.measurements;
+        continue;
+      }
+
+      activeExperiments.add(row.experimentId);
       byDate.set(row.date, (byDate.get(row.date) ?? 0) + row.measurements);
     }
-    const activity = Array.from(byDate.entries())
-      .map(([date, measurements]) => ({ date, measurements }))
-      .sort((a, b) => a.date.localeCompare(b.date));
 
-    const measurements30d = rows.reduce((sum, row) => sum + row.measurements, 0);
-    const activeExperiments = new Set(rows.map((row) => row.experimentId));
+    // The window is drawn dense: a sparkline is read by its shape, and a series
+    // that skipped silent days would draw a different length.
+    const activity = this.windowDates().map((date) => ({
+      date,
+      measurements: byDate.get(date) ?? 0,
+    }));
+    const activeDays = activity.filter((day) => day.measurements > 0);
+
+    const peak = activeDays.reduce<{ date: string; measurements: number } | null>(
+      (best, day) => (best === null || day.measurements > best.measurements ? day : best),
+      null,
+    );
 
     const contributors = new Set(
       inputs.contributorPairs
@@ -172,16 +196,17 @@ export class GetScopedMetricsUseCase {
         .map((pair) => pair.userId),
     ).size;
 
-    const lastDate = activity.length > 0 ? activity[activity.length - 1].date : null;
-
     return {
       scope,
       scoped: {
-        measurements30d,
+        measurements30d: activity.reduce((sum, day) => sum + day.measurements, 0),
         activeExperiments30d: activeExperiments.size,
         contributors30d: contributors,
         activity,
-        lastActivityDate: lastDate,
+        previousMeasurements,
+        activeDays: activeDays.length,
+        peak,
+        lastActivityDate: activeDays.length > 0 ? activeDays[activeDays.length - 1].date : null,
       },
       baseline: {
         measurements30d: inputs.windows.measurements30d,
@@ -189,5 +214,15 @@ export class GetScopedMetricsUseCase {
       },
       computedAt: inputs.windows.computedAt,
     };
+  }
+
+  /** Day keys oldest first; offset 1 is the window immediately before the current one. */
+  private windowDates(offset = 0): string[] {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const end = Date.now() - offset * WINDOW_DAYS * dayMs;
+
+    return Array.from({ length: WINDOW_DAYS }, (_, index) =>
+      new Date(end - (WINDOW_DAYS - 1 - index) * dayMs).toISOString().slice(0, 10),
+    );
   }
 }

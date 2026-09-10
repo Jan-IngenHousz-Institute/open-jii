@@ -48,39 +48,54 @@
     "milestone": "The community recorded measurement {{ordinal}} on {{date}}.",
     "dismiss": "Dismiss",
     "activity": {
-      "label": "Your experiments, last 30 days",
-      "experiments_one": "active experiment",
-      "experiments_other": "active experiments",
-      "contributors_one": "contributor",
-      "contributors_other": "contributors",
-      "context": "Across the community, {{measurements}} measurements over the same period.",
+      "label": "Your measurements",
+      "experimentsLabel": "Active experiments",
+      "contributors_one": "{{count}} contributor",
+      "contributors_other": "{{count}} contributors",
+      "communityLabel": "Community",
+      "communityFooter": "Across the platform, same {{days}} days",
+      "peak": "Peak {{value}} on {{date}}",
+      "window": "Last {{days}} days",
       "trend": "Daily measurements"
     }
   },
   "experiment": {
-    "measurements": "measurements in the last 30 days",
-    "byContributors_one": "recorded by {{count}} contributor",
-    "byContributors_other": "recorded by {{count}} contributors",
+    "title": "Activity",
+    "measurements": "Measurements",
+    "contributors": "Contributors",
+    "contributorsFooter": "Recording in the last {{days}} days",
+    "collectionDays": "Collection days",
+    "daysOf": "{{active}} / {{total}}",
+    "lastRecorded": "Last recorded {{date}}",
+    "peak": "Peak {{value}} on {{date}}",
+    "window": "Last {{days}} days",
     "quiet": "No measurements recorded here in the last 30 days",
     "trend": "Daily measurements"
   },
   "resourceMetrics": {
     "strip": "Daily measurements over {{days}} days",
+    "trend": "Last {{days}} days",
+    "series": "Daily measurements",
+    "peak": "Peak {{value}} on {{date}}",
+    "window": "Last {{days}} days",
+    "activeDays": "Recorded on {{active}} of {{total}} days",
+    "ofVisible_one": "of {{count}} you can access",
+    "ofVisible_other": "of {{count}} you can access",
     "experiment": {
-      "active": "experiments with data",
-      "measurements": "measurements, {{days}} days"
+      "measurements": "Measurements",
+      "active": "Experiments with data"
     },
     "protocol": {
-      "active": "protocols in use",
-      "measurements": "measurements, {{days}} days"
+      "measurements": "Measurements",
+      "active": "Protocols in use"
     },
     "macro": {
-      "active": "macros run",
-      "measurements": "analyses, {{days}} days"
+      "measurements": "Analyses",
+      "active": "Macros run"
     },
     "workbook": {
-      "active": "workbooks collecting",
-      "measurements": "measurements, {{days}} days"
+      "measurements": "Measurements",
+      "active": "Workbooks collecting"
     }
   }
 }

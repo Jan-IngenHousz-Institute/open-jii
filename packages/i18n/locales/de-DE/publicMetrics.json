@@ -48,39 +48,54 @@
     "milestone": "Die Community erfasste Messung {{ordinal}} am {{date}}.",
     "dismiss": "Schließen",
     "activity": {
-      "label": "Deine Experimente, letzte 30 Tage",
-      "experiments_one": "aktives Experiment",
-      "experiments_other": "aktive Experimente",
-      "contributors_one": "Mitwirkender",
-      "contributors_other": "Mitwirkende",
-      "context": "Community-weit {{measurements}} Messungen im selben Zeitraum.",
+      "label": "Deine Messungen",
+      "experimentsLabel": "Aktive Experimente",
+      "contributors_one": "{{count}} Mitwirkender",
+      "contributors_other": "{{count}} Mitwirkende",
+      "communityLabel": "Community",
+      "communityFooter": "Plattformweit, dieselben {{days}} Tage",
+      "peak": "Spitze {{value}} am {{date}}",
+      "window": "Letzte {{days}} Tage",
       "trend": "Tägliche Messungen"
     }
   },
   "experiment": {
-    "measurements": "Messungen in den letzten 30 Tagen",
-    "byContributors_one": "erfasst von {{count}} Mitwirkendem",
-    "byContributors_other": "erfasst von {{count}} Mitwirkenden",
+    "title": "Aktivität",
+    "measurements": "Messungen",
+    "contributors": "Mitwirkende",
+    "contributorsFooter": "Erfassung in den letzten {{days}} Tagen",
+    "collectionDays": "Messtage",
+    "daysOf": "{{active}} / {{total}}",
+    "lastRecorded": "Zuletzt erfasst am {{date}}",
+    "peak": "Spitze {{value}} am {{date}}",
+    "window": "Letzte {{days}} Tage",
     "quiet": "Keine Messungen hier in den letzten 30 Tagen",
     "trend": "Tägliche Messungen"
   },
   "resourceMetrics": {
     "strip": "Tägliche Messungen über {{days}} Tage",
+    "trend": "Letzte {{days}} Tage",
+    "series": "Tägliche Messungen",
+    "peak": "Spitze {{value}} am {{date}}",
+    "window": "Letzte {{days}} Tage",
+    "activeDays": "Erfasst an {{active}} von {{total}} Tagen",
+    "ofVisible_one": "von {{count}} für dich sichtbar",
+    "ofVisible_other": "von {{count}} für dich sichtbar",
     "experiment": {
-      "active": "Experimente mit Daten",
-      "measurements": "Messungen, {{days}} Tage"
+      "measurements": "Messungen",
+      "active": "Experimente mit Daten"
     },
     "protocol": {
-      "active": "genutzte Protokolle",
-      "measurements": "Messungen, {{days}} Tage"
+      "measurements": "Messungen",
+      "active": "Genutzte Protokolle"
     },
     "macro": {
-      "active": "ausgeführte Makros",
-      "measurements": "Analysen, {{days}} Tage"
+      "measurements": "Analysen",
+      "active": "Ausgeführte Makros"
     },
     "workbook": {
-      "active": "sammelnde Arbeitsmappen",
-      "measurements": "Messungen, {{days}} Tage"
+      "measurements": "Messungen",
+      "active": "Sammelnde Arbeitsmappen"
     }
   }
 }

@@ -1,25 +1,18 @@
 "use client";
 
+import { MetricStatCard } from "@/components/metrics/metric-stat-card";
+import { MetricTrendCard } from "@/components/metrics/metric-trend-card";
 import { useMyScopedMetrics } from "@/hooks/metrics/useMyScopedMetrics/useMyScopedMetrics";
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
 
 import { useTranslation } from "@repo/i18n";
-import { Card } from "@repo/ui/components/card";
-import { AreaChart } from "@repo/ui/components/charts/area-chart";
-import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
-import { detectAxisType } from "@repo/ui/components/charts/utils";
 
 interface ResearchActivityPanelProps {
   locale: string;
 }
 
-interface Figure {
-  key: string;
-  value: number;
-}
-
 /**
- * The reader's own 30 days, with the community underneath as context rather
+ * The reader's own 30 days, with the community beside it as context rather
  * than as the headline. A trend beats a counter: the shape is what says
  * whether the work is moving.
  */
@@ -33,85 +26,67 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
     return null;
   }
 
-  const format = (value: number) => new Intl.NumberFormat(locale).format(value);
-  const compact = (value: number) =>
-    new Intl.NumberFormat(locale, { notation: "compact" }).format(value);
+  const number = new Intl.NumberFormat(locale);
+  const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
+  // The warehouse groups by UTC day, so the label has to read it back as one.
+  const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 
-  const days = scoped.activity;
-  const hasTrend = days.length > 1;
+  const windowDays = scoped.activity.length;
   const community = platform?.community ?? null;
 
-  const figures: Figure[] = [
-    { key: "experiments", value: scoped.activeExperiments30d },
-    ...(scoped.contributors30d > 0 ? [{ key: "contributors", value: scoped.contributors30d }] : []),
-  ];
+  // A percentage against nothing is not a comparison, so a first window shows none.
+  const change =
+    scoped.previousMeasurements > 0
+      ? (scoped.measurements30d - scoped.previousMeasurements) / scoped.previousMeasurements
+      : null;
 
-  const chartConfig: PlotlyChartConfig = {
-    showLegend: false,
-    showModeBar: false,
-    // A display chart: hover reads values, drag would zoom or select.
-    dragMode: false,
-    scrollZoom: false,
-    showGrid: false,
-    // A trend indicator beside text: the shape is the message.
-    sparkline: true,
-    backgroundColor: "rgba(0,0,0,0)",
-    xAxisType: detectAxisType(days.map((day) => day.date)),
-    locale,
-  };
+  const peak = scoped.peak;
+  const measurementsFooter =
+    peak === null
+      ? t("dashboard.activity.window", { days: windowDays })
+      : t("dashboard.activity.peak", {
+          value: compact.format(peak.measurements),
+          date: day.format(new Date(`${peak.date}T00:00:00Z`)),
+        });
 
-  const renderFigure = (figure: Figure) => (
-    <div key={figure.key} className="flex items-baseline gap-1.5">
-      <span className="text-foreground text-sm font-semibold tabular-nums">
-        {format(figure.value)}
-      </span>
-      <span className="text-muted-foreground text-xs">
-        {t(`dashboard.activity.${figure.key}`, { count: figure.value })}
-      </span>
-    </div>
-  );
-
-  const renderTrend = () => (
-    <AreaChart
-      data={[
-        {
-          x: days.map((day) => day.date),
-          y: days.map((day) => day.measurements),
-          name: t("dashboard.activity.trend"),
-          fill: "tozeroy",
-          mode: "lines",
-        },
-      ]}
-      config={chartConfig}
-      className="h-16 w-full"
+  const renderCommunity = (measurements30d: number) => (
+    <MetricStatCard
+      locale={locale}
+      label={t("dashboard.activity.communityLabel")}
+      value={compact.format(measurements30d)}
+      title={number.format(measurements30d)}
+      footer={t("dashboard.activity.communityFooter", { days: windowDays })}
     />
   );
 
   return (
-    <Card className="flex flex-col gap-4 p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            {t("dashboard.activity.label")}
-          </span>
-          <span className="text-foreground text-2xl font-bold tabular-nums sm:text-3xl">
-            {format(scoped.measurements30d)}
-          </span>
-          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            {figures.map(renderFigure)}
-          </div>
-        </div>
-
-        {community ? (
-          <p className="text-muted-foreground max-w-xs text-xs sm:text-right">
-            {t("dashboard.activity.context", {
-              measurements: compact(community.measurements30d),
-            })}
-          </p>
-        ) : null}
-      </div>
-
-      {hasTrend ? renderTrend() : null}
-    </Card>
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <MetricStatCard
+        locale={locale}
+        label={t("dashboard.activity.label", { days: windowDays })}
+        value={compact.format(scoped.measurements30d)}
+        title={number.format(scoped.measurements30d)}
+        change={change}
+        footer={measurementsFooter}
+      />
+      <MetricStatCard
+        locale={locale}
+        label={t("dashboard.activity.experimentsLabel")}
+        value={number.format(scoped.activeExperiments30d)}
+        footer={t("dashboard.activity.contributors", { count: scoped.contributors30d })}
+      />
+      {community === null ? null : renderCommunity(community.measurements30d)}
+      <MetricTrendCard
+        label={t("resourceMetrics.trend", { days: windowDays })}
+        seriesName={t("dashboard.activity.trend")}
+        days={scoped.activity}
+        locale={locale}
+        footer={t("resourceMetrics.activeDays", {
+          active: scoped.activeDays,
+          total: windowDays,
+        })}
+        className="sm:col-span-2 xl:col-span-1"
+      />
+    </section>
   );
 }

@@ -81,6 +81,9 @@ export const zPublicMetricsResponse = z.object({
   computedAt: z.string().nullable(),
 });
 
+/** A single day's total inside an activity window. */
+export const zMetricsWindowDay = z.object({ date: z.string(), measurements: z.number() });
+
 export const zMetricsScope = z.enum(["organization", "mine", "experiment"]);
 
 /**
@@ -94,11 +97,19 @@ export const zScopedMetricsQuery = z.object({
   experimentId: z.string().uuid().optional(),
 });
 
+/**
+ * `activity` spans the whole window, silent days included, so a series is read
+ * by its shape. `previousMeasurements` covers the window immediately before it,
+ * which is what makes the headline figure mean something.
+ */
 export const zScopedActivity = z.object({
   measurements30d: z.number(),
   activeExperiments30d: z.number(),
   contributors30d: z.number(),
-  activity: z.array(z.object({ date: z.string(), measurements: z.number() })),
+  activity: z.array(zMetricsWindowDay),
+  previousMeasurements: z.number(),
+  activeDays: z.number(),
+  peak: zMetricsWindowDay.nullable(),
   lastActivityDate: z.string().nullable(),
 });
 
@@ -128,20 +139,28 @@ export const zResourceMetricsQuery = z.object({
 /** A resource's daily measurements, carried on the row it belongs to. */
 export const zResourceSeries = z.object({
   measurements: z.number(),
-  days: z.array(z.object({ date: z.string(), measurements: z.number() })),
+  days: z.array(zMetricsWindowDay),
 });
 
 /**
- * What a list page's header states: totals over every resource of this kind the
- * caller may read. The per-row series ride on the rows themselves, so this
- * response stays the same size whatever the workspace holds.
+ * What a list page's header states: the window's totals and shape across every
+ * resource of this kind the caller may read. The per-row series ride on the
+ * rows themselves, so this response stays the same size whatever the workspace
+ * holds. `activeCount` counts the resources that recorded something and
+ * `visibleCount` those the caller may read at all, which is the comparison the
+ * header makes.
  */
 export const zResourceMetricsResponse = z.object({
   kind: zResourceKind,
   totalMeasurements: z.number(),
+  previousMeasurements: z.number(),
   activeCount: z.number(),
+  visibleCount: z.number(),
+  activeDays: z.number(),
+  peak: zMetricsWindowDay.nullable(),
+  lastActivityDate: z.string().nullable(),
+  days: z.array(zMetricsWindowDay),
   windowDays: z.number(),
-  computedAt: z.string().nullable(),
 });
 
 export type MetricsHero = z.infer<typeof zMetricsHero>;
@@ -153,8 +172,10 @@ export type MetricsFamily = z.infer<typeof zMetricsFamily>;
 export type MetricsParameter = z.infer<typeof zMetricsParameter>;
 export type MetricsCaption = z.infer<typeof zMetricsCaption>;
 export type PublicMetricsResponse = z.infer<typeof zPublicMetricsResponse>;
+export type MetricsWindowDay = z.infer<typeof zMetricsWindowDay>;
 export type MetricsScope = z.infer<typeof zMetricsScope>;
 export type ScopedMetricsQuery = z.infer<typeof zScopedMetricsQuery>;
+export type ScopedActivity = z.infer<typeof zScopedActivity>;
 export type ScopedMetricsResponse = z.infer<typeof zScopedMetricsResponse>;
 export type ResourceKind = z.infer<typeof zResourceKind>;
 export type ResourceSeries = z.infer<typeof zResourceSeries>;

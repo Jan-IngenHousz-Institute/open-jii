@@ -48,39 +48,54 @@
     "milestone": "De community registreerde meting {{ordinal}} op {{date}}.",
     "dismiss": "Sluiten",
     "activity": {
-      "label": "Jouw experimenten, laatste 30 dagen",
-      "experiments_one": "actief experiment",
-      "experiments_other": "actieve experimenten",
-      "contributors_one": "bijdrager",
-      "contributors_other": "bijdragers",
-      "context": "Community-breed {{measurements}} metingen in dezelfde periode.",
+      "label": "Jouw metingen",
+      "experimentsLabel": "Actieve experimenten",
+      "contributors_one": "{{count}} bijdrager",
+      "contributors_other": "{{count}} bijdragers",
+      "communityLabel": "Community",
+      "communityFooter": "Platformbreed, dezelfde {{days}} dagen",
+      "peak": "Piek {{value}} op {{date}}",
+      "window": "Laatste {{days}} dagen",
       "trend": "Dagelijkse metingen"
     }
   },
   "experiment": {
-    "measurements": "metingen in de afgelopen 30 dagen",
-    "byContributors_one": "vastgelegd door {{count}} bijdrager",
-    "byContributors_other": "vastgelegd door {{count}} bijdragers",
+    "title": "Activiteit",
+    "measurements": "Metingen",
+    "contributors": "Bijdragers",
+    "contributorsFooter": "Vastgelegd in de afgelopen {{days}} dagen",
+    "collectionDays": "Meetdagen",
+    "daysOf": "{{active}} / {{total}}",
+    "lastRecorded": "Laatst vastgelegd op {{date}}",
+    "peak": "Piek {{value}} op {{date}}",
+    "window": "Laatste {{days}} dagen",
     "quiet": "Geen metingen hier in de afgelopen 30 dagen",
     "trend": "Dagelijkse metingen"
   },
   "resourceMetrics": {
     "strip": "Dagelijkse metingen over {{days}} dagen",
+    "trend": "Laatste {{days}} dagen",
+    "series": "Dagelijkse metingen",
+    "peak": "Piek {{value}} op {{date}}",
+    "window": "Laatste {{days}} dagen",
+    "activeDays": "Vastgelegd op {{active}} van {{total}} dagen",
+    "ofVisible_one": "van {{count}} die je kunt zien",
+    "ofVisible_other": "van {{count}} die je kunt zien",
     "experiment": {
-      "active": "experimenten met data",
-      "measurements": "metingen, {{days}} dagen"
+      "measurements": "Metingen",
+      "active": "Experimenten met data"
     },
     "protocol": {
-      "active": "gebruikte protocollen",
-      "measurements": "metingen, {{days}} dagen"
+      "measurements": "Metingen",
+      "active": "Gebruikte protocollen"
     },
     "macro": {
-      "active": "uitgevoerde macro's",
-      "measurements": "analyses, {{days}} dagen"
+      "measurements": "Analyses",
+      "active": "Uitgevoerde macro's"
     },
     "workbook": {
-      "active": "verzamelende werkboeken",
-      "measurements": "metingen, {{days}} dagen"
+      "measurements": "Metingen",
+      "active": "Verzamelende werkboeken"
     }
   }
 }

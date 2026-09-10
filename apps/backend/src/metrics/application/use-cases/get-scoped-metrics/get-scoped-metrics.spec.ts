@@ -12,6 +12,11 @@ import type { CachePort } from "../../../core/ports/cache.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
 import { GetScopedMetricsUseCase, SCOPED_INPUTS_CACHE_KEY } from "./get-scoped-metrics";
 
+// The window slides, so fixtures are anchored to today rather than to dates
+// that would drift out of range.
+const dayAt = (offset: number) =>
+  new Date(Date.now() - offset * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
 const windows = {
   measurements24h: 140,
   measurements30d: 4_000,
@@ -58,9 +63,11 @@ describe("GetScopedMetricsUseCase", () => {
     vi.spyOn(adapter, "getActivityWindows").mockResolvedValue(success(windows));
     vi.spyOn(adapter, "getScopedDailyActivity").mockResolvedValue(
       success([
-        { date: "2026-08-27", experimentId: orgExperimentId, measurements: 700 },
-        { date: "2026-08-28", experimentId: orgExperimentId, measurements: 300 },
-        { date: "2026-08-28", experimentId: "someone-elses-experiment", measurements: 999 },
+        { date: dayAt(2), experimentId: orgExperimentId, measurements: 700 },
+        { date: dayAt(1), experimentId: orgExperimentId, measurements: 300 },
+        { date: dayAt(1), experimentId: "someone-elses-experiment", measurements: 999 },
+        // The window before this one, which the response reports separately.
+        { date: dayAt(40), experimentId: orgExperimentId, measurements: 250 },
       ]),
     );
     vi.spyOn(adapter, "getContributorPairs").mockResolvedValue(
@@ -87,12 +94,22 @@ describe("GetScopedMetricsUseCase", () => {
     expect(result.value.scoped?.measurements30d).toBe(1_000);
     expect(result.value.scoped?.activeExperiments30d).toBe(1);
     expect(result.value.scoped?.contributors30d).toBe(2);
-    expect(result.value.scoped?.activity).toEqual([
-      { date: "2026-08-27", measurements: 700 },
-      { date: "2026-08-28", measurements: 300 },
-    ]);
-    expect(result.value.scoped?.lastActivityDate).toBe("2026-08-28");
+    expect(result.value.scoped?.previousMeasurements).toBe(250);
+    expect(result.value.scoped?.activeDays).toBe(2);
+    expect(result.value.scoped?.peak).toEqual({ date: dayAt(2), measurements: 700 });
+    expect(result.value.scoped?.lastActivityDate).toBe(dayAt(1));
     expect(result.value.baseline?.measurements30d).toBe(4_000);
+  });
+
+  it("draws the window dense so a silent day is a zero rather than a gap", async () => {
+    const result = await useCase.execute("organization", userId, organizationId);
+
+    assertSuccess(result);
+    expect(result.value.scoped?.activity).toHaveLength(30);
+    expect(result.value.scoped?.activity.filter((day) => day.measurements > 0)).toEqual([
+      { date: dayAt(2), measurements: 700 },
+      { date: dayAt(1), measurements: 300 },
+    ]);
   });
 
   it("degrades to empty slots, uncached, when a warehouse read fails", async () => {
@@ -128,8 +145,8 @@ describe("GetScopedMetricsUseCase", () => {
     });
     vi.spyOn(adapter, "getScopedDailyActivity").mockResolvedValue(
       success([
-        { date: "2026-08-28", experimentId: orgExperimentId, measurements: 300 },
-        { date: "2026-08-28", experimentId: joined.id, measurements: 42 },
+        { date: dayAt(1), experimentId: orgExperimentId, measurements: 300 },
+        { date: dayAt(1), experimentId: joined.id, measurements: 42 },
       ]),
     );
 
@@ -210,7 +227,9 @@ describe("GetScopedMetricsUseCase", () => {
 
     assertSuccess(result);
     expect(result.value.scoped?.measurements30d).toBe(0);
-    expect(result.value.scoped?.activity).toEqual([]);
+    expect(result.value.scoped?.activity.every((day) => day.measurements === 0)).toBe(true);
+    expect(result.value.scoped?.activeDays).toBe(0);
+    expect(result.value.scoped?.peak).toBeNull();
     expect(result.value.scoped?.lastActivityDate).toBeNull();
   });
 });

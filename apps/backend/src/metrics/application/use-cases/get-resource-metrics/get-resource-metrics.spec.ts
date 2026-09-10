@@ -94,6 +94,15 @@ describe("GetResourceMetricsUseCase", () => {
     expect(result.value.windowDays).toBe(30);
   });
 
+  it("counts every readable resource so the header can state a share", async () => {
+    const result = await useCase.execute("protocol", ownerId);
+
+    assertSuccess(result);
+    // One protocol recorded; the reader can see more than that.
+    expect(result.value.visibleCount).toBeGreaterThanOrEqual(result.value.activeCount);
+    expect(result.value.days).toHaveLength(30);
+  });
+
   it("reports nothing when the warehouse is unavailable", async () => {
     vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
       failure(AppError.internal("warehouse down")),

@@ -9,9 +9,17 @@ import { useResourceMetrics } from "./useResourceMetrics";
 const totals = (kind: "protocol" | "macro") => ({
   kind,
   totalMeasurements: 60,
+  previousMeasurements: 40,
   activeCount: 1,
+  visibleCount: 4,
+  activeDays: 2,
+  peak: { date: "2026-08-28", measurements: 40 },
+  lastActivityDate: "2026-08-28",
+  days: [
+    { date: "2026-08-27", measurements: 20 },
+    { date: "2026-08-28", measurements: 40 },
+  ],
   windowDays: 30,
-  computedAt: null,
 });
 
 describe("useResourceMetrics", () => {

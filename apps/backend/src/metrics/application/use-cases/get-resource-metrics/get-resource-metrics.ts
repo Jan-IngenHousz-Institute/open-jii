@@ -14,8 +14,8 @@ import {
 } from "../../resource-metrics.service";
 
 /**
- * What a list page's header states: how much of this kind is collecting, and
- * how much it recorded, across everything the caller may read. The per-row
+ * What a list page's header states: how much of this kind is collecting, how
+ * much it recorded, and how that compares with the window before. The per-row
  * series ride on the rows themselves.
  */
 @Injectable()
@@ -36,9 +36,14 @@ export class GetResourceMetricsUseCase {
     return success({
       kind,
       totalMeasurements: totals.measurements,
+      previousMeasurements: totals.previousMeasurements,
       activeCount: totals.activeCount,
+      visibleCount: visible.value.length,
+      activeDays: totals.activeDays,
+      peak: totals.peak,
+      lastActivityDate: totals.lastActivityDate,
+      days: totals.days,
       windowDays: RESOURCE_METRICS_WINDOW_DAYS,
-      computedAt: null,
     });
   }
 
