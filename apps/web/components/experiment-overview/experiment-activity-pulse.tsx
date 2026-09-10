@@ -43,9 +43,10 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
 
   const peak = scoped.peak;
 
-  // Device-published rows carry no contributor, so the card states the days it
-  // collected on rather than reporting that nobody took the measurements.
+  // Device-published rows carry no contributor, so the slot states when the
+  // data last arrived rather than reporting that nobody took the measurements.
   const hasContributors = scoped.contributors30d > 0;
+  const lastRecorded = scoped.lastActivityDate;
 
   const renderContributors = () => (
     <MetricStatCard
@@ -56,18 +57,12 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
     />
   );
 
-  const renderDays = () => (
+  const renderLastRecorded = (date: string) => (
     <MetricStatCard
       locale={locale}
-      label={t("experiment.collectionDays")}
-      value={t("experiment.daysOf", { active: scoped.activeDays, total: windowDays })}
-      note={
-        scoped.lastActivityDate === null
-          ? undefined
-          : t("experiment.lastRecorded", {
-              date: day.format(new Date(`${scoped.lastActivityDate}T00:00:00Z`)),
-            })
-      }
+      label={t("experiment.lastRecorded")}
+      value={day.format(new Date(`${date}T00:00:00Z`))}
+      note={t("experiment.lastRecordedNote")}
     />
   );
 
@@ -107,7 +102,8 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
                 })
           }
         />
-        {hasContributors ? renderContributors() : renderDays()}
+        {hasContributors ? renderContributors() : null}
+        {!hasContributors && lastRecorded !== null ? renderLastRecorded(lastRecorded) : null}
         <MetricTrendCard
           label={window}
           seriesName={t("experiment.trend")}

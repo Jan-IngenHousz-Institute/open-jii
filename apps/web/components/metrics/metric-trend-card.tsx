@@ -8,7 +8,7 @@ import {
   CardFooter,
   CardHeader,
 } from "@repo/ui/components/card";
-import { AreaChart } from "@repo/ui/components/charts/area-chart";
+import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import { detectAxisType } from "@repo/ui/components/charts/utils";
 import { cn } from "@repo/ui/lib/utils";
@@ -23,8 +23,10 @@ interface MetricTrendCardProps {
 }
 
 /**
- * The window's shape as a card in the same band as the figures. A display
- * chart: hover reads a day, drag would zoom or select.
+ * The window's shape, as one bar per day. Daily counts are discrete, and a
+ * filled area over a steady series draws a solid block that says nothing,
+ * while bars stay readable whatever the shape. A display chart: hover reads a
+ * day, drag would zoom or select.
  */
 export function MetricTrendCard({
   label,
@@ -39,8 +41,7 @@ export function MetricTrendCard({
     showModeBar: false,
     dragMode: false,
     scrollZoom: false,
-    showGrid: false,
-    sparkline: true,
+    showGrid: true,
     backgroundColor: "rgba(0,0,0,0)",
     xAxisType: detectAxisType(days.map((day) => day.date)),
     locale,
@@ -56,19 +57,17 @@ export function MetricTrendCard({
       <CardHeader>
         <CardDescription>{label}</CardDescription>
       </CardHeader>
-      <CardContent className="px-3">
-        <AreaChart
+      <CardContent className="px-2">
+        <BarChart
           data={[
             {
               x: days.map((day) => day.date),
               y: days.map((day) => day.measurements),
               name: seriesName,
-              fill: "tozeroy",
-              mode: "lines",
             },
           ]}
           config={config}
-          className="h-14 w-full"
+          className="h-24 w-full"
         />
       </CardContent>
       {footer === undefined ? null : (

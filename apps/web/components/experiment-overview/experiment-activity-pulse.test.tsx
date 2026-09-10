@@ -46,14 +46,14 @@ describe("ExperimentActivityPulse", () => {
     expect(screen.getByText("peak")).toBeInTheDocument();
   });
 
-  it("states the days it collected on when no contributor is attributed", async () => {
+  it("states when data last arrived if no contributor is attributed", async () => {
     server.mount(contract.metrics.getScopedMetrics, {
-      body: { ...response, scoped: { ...response.scoped, contributors30d: 0, activeDays: 22 } },
+      body: { ...response, scoped: { ...response.scoped, contributors30d: 0 } },
     });
 
     render(<ExperimentActivityPulse experimentId="e1" />);
 
-    expect(await screen.findByText("experiment.collectionDays")).toBeInTheDocument();
+    expect(await screen.findByText("experiment.lastRecorded")).toBeInTheDocument();
     expect(screen.queryByText("experiment.contributors")).not.toBeInTheDocument();
   });
 

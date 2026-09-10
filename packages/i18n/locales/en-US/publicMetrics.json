@@ -62,11 +62,10 @@
     "contributors": "Contributors",
     "contributorsNote_one": "{{count}} person recording",
     "contributorsNote_other": "{{count}} people recording",
-    "collectionDays": "Collection days",
-    "daysOf": "{{active}} / {{total}}",
-    "lastRecorded": "Last recorded {{date}}",
+    "lastRecorded": "Last recorded",
     "quiet": "No measurements recorded here in the last 30 days",
-    "trend": "Daily measurements"
+    "trend": "Daily measurements",
+    "lastRecordedNote": "Most recent measurement"
   },
   "resourceMetrics": {
     "strip": "Daily measurements over {{days}} days",

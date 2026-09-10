@@ -62,11 +62,10 @@
     "contributors": "Bijdragers",
     "contributorsNote_one": "{{count}} persoon legt vast",
     "contributorsNote_other": "{{count}} personen leggen vast",
-    "collectionDays": "Meetdagen",
-    "daysOf": "{{active}} / {{total}}",
-    "lastRecorded": "Laatst vastgelegd op {{date}}",
+    "lastRecorded": "Laatst vastgelegd",
     "quiet": "Geen metingen hier in de afgelopen 30 dagen",
-    "trend": "Dagelijkse metingen"
+    "trend": "Dagelijkse metingen",
+    "lastRecordedNote": "Meest recente meting"
   },
   "resourceMetrics": {
     "strip": "Dagelijkse metingen over {{days}} dagen",
