@@ -74,20 +74,26 @@
     "ofVisible_other": "von {{count}} für dich sichtbar",
     "experiment": {
       "measurements": "Messungen",
-      "active": "Experimente mit Daten"
+      "active": "Experimente mit Daten",
+      "busiest": "Aktivstes Experiment"
     },
     "protocol": {
       "measurements": "Messungen",
-      "active": "Genutzte Protokolle"
+      "active": "Genutzte Protokolle",
+      "busiest": "Meistgenutztes Protokoll"
     },
     "macro": {
       "measurements": "Analysen",
-      "active": "Ausgeführte Makros"
+      "active": "Ausgeführte Makros",
+      "busiest": "Meistgenutztes Makro"
     },
     "workbook": {
       "measurements": "Messungen",
-      "active": "Sammelnde Arbeitsmappen"
-    }
+      "active": "Sammelnde Arbeitsmappen",
+      "busiest": "Aktivste Arbeitsmappe"
+    },
+    "busiestNote": "{{value}} Messungen",
+    "busiestShare": "von insgesamt {{value}}"
   },
   "window": "Letzte {{days}} Tage",
   "peak": "Spitze {{value}} am {{date}}",

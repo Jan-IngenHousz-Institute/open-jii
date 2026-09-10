@@ -43,10 +43,10 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
 
   const peak = scoped.peak;
 
-  // Device-published rows carry no contributor, so the slot states when the
-  // data last arrived rather than reporting that nobody took the measurements.
+  // Device-published rows carry no contributor. The slot is dropped rather
+  // than filled with a recency claim: the figures lag the pipeline by up to a
+  // refresh, which a reader who just took a measurement would catch.
   const hasContributors = scoped.contributors30d > 0;
-  const lastRecorded = scoped.lastActivityDate;
 
   const renderContributors = () => (
     <MetricStatCard
@@ -54,15 +54,6 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
       label={t("experiment.contributors")}
       value={number.format(scoped.contributors30d)}
       note={t("experiment.contributorsNote", { count: scoped.contributors30d })}
-    />
-  );
-
-  const renderLastRecorded = (date: string) => (
-    <MetricStatCard
-      locale={locale}
-      label={t("experiment.lastRecorded")}
-      value={day.format(new Date(`${date}T00:00:00Z`))}
-      note={t("experiment.lastRecordedNote")}
     />
   );
 
@@ -103,14 +94,13 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
           }
         />
         {hasContributors ? renderContributors() : null}
-        {!hasContributors && lastRecorded !== null ? renderLastRecorded(lastRecorded) : null}
         <MetricTrendCard
           label={window}
           seriesName={t("experiment.trend")}
           days={scoped.activity}
           locale={locale}
           footer={t("activeDays", { active: scoped.activeDays, total: windowDays })}
-          className="sm:col-span-2 lg:col-span-1"
+          className={hasContributors ? "sm:col-span-2 lg:col-span-1" : "sm:col-span-2"}
         />
       </div>
     </section>

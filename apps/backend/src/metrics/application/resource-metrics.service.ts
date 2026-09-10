@@ -36,6 +36,8 @@ export interface ResourceTotals {
   activeDays: number;
   peak: MetricsWindowDay | null;
   lastActivityDate: string | null;
+  /** The id that recorded most this window; the name is Postgres's to supply. */
+  busiest: { id: string; measurements: number } | null;
   days: MetricsWindowDay[];
 }
 
@@ -118,7 +120,7 @@ export class ResourceMetricsService {
     const previousDates = new Set(this.windowDates(1));
 
     const byDate = new Map<string, number>();
-    const active = new Set<string>();
+    const byResource = new Map<string, number>();
     let previousMeasurements = 0;
 
     for (const row of attributed) {
@@ -131,24 +133,33 @@ export class ResourceMetricsService {
         continue;
       }
 
-      active.add(row.resourceId);
+      byResource.set(row.resourceId, (byResource.get(row.resourceId) ?? 0) + row.measurements);
       byDate.set(row.date, (byDate.get(row.date) ?? 0) + row.measurements);
     }
 
-    return this.totals(this.densify(byDate), previousMeasurements, active.size);
+    return this.totals(this.densify(byDate), previousMeasurements, byResource);
   }
 
   private emptyTotals(): ResourceTotals {
-    return this.totals(this.densify(new Map()), 0, 0);
+    return this.totals(this.densify(new Map()), 0, new Map());
   }
 
   /** What the series says beyond its total: how often, how high, how recently. */
   private totals(
     days: MetricsWindowDay[],
     previousMeasurements: number,
-    activeCount: number,
+    byResource: Map<string, number>,
   ): ResourceTotals {
     const active = days.filter((day) => day.measurements > 0);
+
+    const busiest = Array.from(byResource.entries()).reduce<{
+      id: string;
+      measurements: number;
+    } | null>(
+      (best, [id, measurements]) =>
+        best === null || measurements > best.measurements ? { id, measurements } : best,
+      null,
+    );
 
     const peak = active.reduce<MetricsWindowDay | null>(
       (best, day) => (best === null || day.measurements > best.measurements ? day : best),
@@ -158,10 +169,11 @@ export class ResourceMetricsService {
     return {
       measurements: days.reduce((sum, day) => sum + day.measurements, 0),
       previousMeasurements,
-      activeCount,
+      activeCount: byResource.size,
       activeDays: active.length,
       peak,
       lastActivityDate: active.length > 0 ? active[active.length - 1].date : null,
+      busiest,
       days,
     };
   }

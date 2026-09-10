@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import type {
+  BusiestResource,
   ResourceKind,
   ResourceMetricsResponse,
 } from "@repo/api/domains/metrics/metrics.schema";
@@ -32,6 +33,7 @@ export class GetResourceMetricsUseCase {
     }
 
     const totals = await this.resourceMetrics.totalsFor(kind, visible.value);
+    const busiest = await this.nameBusiest(kind, totals.busiest);
 
     return success({
       kind,
@@ -42,9 +44,30 @@ export class GetResourceMetricsUseCase {
       activeDays: totals.activeDays,
       peak: totals.peak,
       lastActivityDate: totals.lastActivityDate,
+      busiest,
       days: totals.days,
       windowDays: RESOURCE_METRICS_WINDOW_DAYS,
     });
+  }
+
+  /**
+   * The busiest resource is only worth stating if it can be named: a row whose
+   * resource has since been deleted would otherwise surface as a bare id.
+   */
+  private async nameBusiest(
+    kind: ResourceKind,
+    busiest: { id: string; measurements: number } | null,
+  ): Promise<BusiestResource | null> {
+    if (busiest === null) {
+      return null;
+    }
+
+    const name = await this.metricsRepository.getResourceName(kind, busiest.id);
+    if (name.isFailure() || name.value === null) {
+      return null;
+    }
+
+    return { id: busiest.id, name: name.value, measurements: busiest.measurements };
   }
 
   /** The same predicate each list page filters with, so the header agrees with the rows. */

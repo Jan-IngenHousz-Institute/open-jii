@@ -74,20 +74,26 @@
     "ofVisible_other": "van {{count}} die je kunt zien",
     "experiment": {
       "measurements": "Metingen",
-      "active": "Experimenten met data"
+      "active": "Experimenten met data",
+      "busiest": "Actiefste experiment"
     },
     "protocol": {
       "measurements": "Metingen",
-      "active": "Gebruikte protocollen"
+      "active": "Gebruikte protocollen",
+      "busiest": "Meest gebruikte protocol"
     },
     "macro": {
       "measurements": "Analyses",
-      "active": "Uitgevoerde macro's"
+      "active": "Uitgevoerde macro's",
+      "busiest": "Meest gebruikte macro"
     },
     "workbook": {
       "measurements": "Metingen",
-      "active": "Verzamelende werkboeken"
-    }
+      "active": "Verzamelende werkboeken",
+      "busiest": "Actiefste werkboek"
+    },
+    "busiestNote": "{{value}} metingen",
+    "busiestShare": "van {{value}} in totaal"
   },
   "window": "Laatste {{days}} dagen",
   "peak": "Piek {{value}} op {{date}}",

@@ -233,4 +233,19 @@ describe("MetricsRepository", () => {
     assertSuccess(result);
     expect(result.value.size).toBe(0);
   });
+  it("names a resource so the busiest one can be stated, and nothing for a stranger", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Leaf photosynthesis",
+      createdBy: userId,
+      visibility: "public",
+    });
+
+    const found = await repository.getResourceName("protocol", protocol.id);
+    const missing = await repository.getResourceName("macro", protocol.id);
+
+    assertSuccess(found);
+    assertSuccess(missing);
+    expect(found.value).toBe("Leaf photosynthesis");
+    expect(missing.value).toBeNull();
+  });
 });

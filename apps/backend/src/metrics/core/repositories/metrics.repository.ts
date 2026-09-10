@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
+import type { ResourceKind } from "@repo/api/domains/metrics/metrics.schema";
 import {
   and,
   count,
@@ -22,6 +23,14 @@ import type { DatabaseInstance } from "@repo/database";
 import { tryCatch } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+
+/** Every listed kind names itself the same way: an id and a name column. */
+const RESOURCE_TABLES = {
+  experiment: experiments,
+  protocol: protocols,
+  macro: macros,
+  workbook: workbooks,
+};
 
 export interface ExperimentOrganizationRow {
   experimentId: string;
@@ -143,6 +152,22 @@ export class MetricsRepository {
         .where(inArray(workbookVersions.workbookId, workbookIds));
 
       return new Map(rows.map((row) => [row.versionId, row.workbookId]));
+    });
+  }
+
+  /**
+   * The display name of one resource. The warehouse keys activity by id, so
+   * only Postgres can say what the busiest one is called.
+   */
+  async getResourceName(kind: ResourceKind, id: string): Promise<Result<string | null>> {
+    return tryCatch(async () => {
+      const table = RESOURCE_TABLES[kind];
+      const rows = await this.database
+        .select({ name: table.name })
+        .from(table)
+        .where(eq(table.id, id));
+
+      return rows[0]?.name ?? null;
     });
   }
 

@@ -74,20 +74,26 @@
     "ofVisible_other": "of {{count}} you can access",
     "experiment": {
       "measurements": "Measurements",
-      "active": "Experiments with data"
+      "active": "Experiments with data",
+      "busiest": "Busiest experiment"
     },
     "protocol": {
       "measurements": "Measurements",
-      "active": "Protocols in use"
+      "active": "Protocols in use",
+      "busiest": "Busiest protocol"
     },
     "macro": {
       "measurements": "Analyses",
-      "active": "Macros run"
+      "active": "Macros run",
+      "busiest": "Busiest macro"
     },
     "workbook": {
       "measurements": "Measurements",
-      "active": "Workbooks collecting"
-    }
+      "active": "Workbooks collecting",
+      "busiest": "Busiest workbook"
+    },
+    "busiestNote": "{{value}} measurements",
+    "busiestShare": "of {{value}} in total"
   },
   "window": "Last {{days}} days",
   "peak": "Peak {{value}} on {{date}}",

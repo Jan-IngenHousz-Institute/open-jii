@@ -114,6 +114,7 @@ describe("ResourceMetricsService", () => {
     expect(totals.activeDays).toBe(2);
     expect(totals.peak).toEqual({ date: YESTERDAY, measurements: 62 });
     expect(totals.lastActivityDate).toBe(YESTERDAY);
+    expect(totals.busiest).toEqual({ id: visibleProtocolId, measurements: 102 });
     expect(totals.days).toHaveLength(30);
   });
 
@@ -132,6 +133,7 @@ describe("ResourceMetricsService", () => {
 
     expect(totals.measurements).toBe(0);
     expect(totals.peak).toBeNull();
+    expect(totals.busiest).toBeNull();
     expect(totals.days).toHaveLength(30);
   });
 

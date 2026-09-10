@@ -39,9 +39,23 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
 
   const window = t("window", { days: data.windowDays });
   const peak = data.peak;
+  const busiest = data.busiest;
+
+  const renderBusiest = (name: string, measurements: number) => (
+    <MetricStatCard
+      locale={locale}
+      label={t(`resourceMetrics.${kind}.busiest`)}
+      value={name}
+      title={name}
+      note={t("resourceMetrics.busiestNote", { value: compact.format(measurements) })}
+      context={t("resourceMetrics.busiestShare", {
+        value: compact.format(data.totalMeasurements),
+      })}
+    />
+  );
 
   return (
-    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <MetricStatCard
         locale={locale}
         label={t(`resourceMetrics.${kind}.measurements`)}
@@ -71,13 +85,14 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
         value={number.format(data.activeCount)}
         note={t("resourceMetrics.ofVisible", { count: data.visibleCount })}
       />
+      {busiest === null ? null : renderBusiest(busiest.name, busiest.measurements)}
       <MetricTrendCard
         label={window}
         seriesName={t("resourceMetrics.series")}
         days={data.days}
         locale={locale}
         footer={t("activeDays", { active: data.activeDays, total: data.windowDays })}
-        className="sm:col-span-2 lg:col-span-1"
+        className={busiest === null ? "sm:col-span-2" : "sm:col-span-2 xl:col-span-1"}
       />
     </section>
   );

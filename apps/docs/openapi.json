@@ -20049,6 +20049,32 @@
                         }
                       ]
                     },
+                    "busiest": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "measurements": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "measurements"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "days": {
                       "type": "array",
                       "items": {
@@ -20080,6 +20106,7 @@
                     "activeDays",
                     "peak",
                     "lastActivityDate",
+                    "busiest",
                     "days",
                     "windowDays"
                   ]

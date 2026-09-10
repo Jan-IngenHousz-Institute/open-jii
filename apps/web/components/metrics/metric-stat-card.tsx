@@ -83,7 +83,7 @@ export function MetricStatCard({
         <CardDescription>{label}</CardDescription>
         <CardTitle
           title={title}
-          className="@[250px]/card:text-3xl text-2xl font-semibold tabular-nums"
+          className="@[250px]/card:text-3xl line-clamp-1 min-w-0 text-2xl font-semibold tabular-nums"
         >
           {value}
         </CardTitle>

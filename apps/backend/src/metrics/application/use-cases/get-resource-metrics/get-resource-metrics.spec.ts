@@ -103,6 +103,14 @@ describe("GetResourceMetricsUseCase", () => {
     expect(result.value.days).toHaveLength(30);
   });
 
+  it("names the resource that recorded most, so the header can point at it", async () => {
+    const result = await useCase.execute("protocol", ownerId);
+
+    assertSuccess(result);
+    expect(result.value.busiest?.name).toBe("Public protocol");
+    expect(result.value.busiest?.measurements).toBe(102);
+  });
+
   it("reports nothing when the warehouse is unavailable", async () => {
     vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
       failure(AppError.internal("warehouse down")),

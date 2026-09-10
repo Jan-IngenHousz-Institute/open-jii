@@ -142,6 +142,13 @@ export const zResourceSeries = z.object({
   days: z.array(zMetricsWindowDay),
 });
 
+/** The single resource of its kind that recorded the most this window. */
+export const zBusiestResource = z.object({
+  id: z.string(),
+  name: z.string(),
+  measurements: z.number(),
+});
+
 /**
  * What a list page's header states: the window's totals and shape across every
  * resource of this kind the caller may read. The per-row series ride on the
@@ -159,6 +166,7 @@ export const zResourceMetricsResponse = z.object({
   activeDays: z.number(),
   peak: zMetricsWindowDay.nullable(),
   lastActivityDate: z.string().nullable(),
+  busiest: zBusiestResource.nullable(),
   days: z.array(zMetricsWindowDay),
   windowDays: z.number(),
 });
@@ -179,5 +187,6 @@ export type ScopedActivity = z.infer<typeof zScopedActivity>;
 export type ScopedMetricsResponse = z.infer<typeof zScopedMetricsResponse>;
 export type ResourceKind = z.infer<typeof zResourceKind>;
 export type ResourceSeries = z.infer<typeof zResourceSeries>;
+export type BusiestResource = z.infer<typeof zBusiestResource>;
 export type ResourceMetricsQuery = z.infer<typeof zResourceMetricsQuery>;
 export type ResourceMetricsResponse = z.infer<typeof zResourceMetricsResponse>;

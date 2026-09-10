@@ -27,6 +27,7 @@ const metrics = {
   activeDays: WINDOW_DAYS,
   peak: { date: dayAt(9), measurements: 3_000 },
   lastActivityDate: dayAt(0),
+  busiest: { id: "p1", name: "Leaf photosynthesis", measurements: 3_000 },
   days,
   windowDays: WINDOW_DAYS,
 };
@@ -41,6 +42,7 @@ describe("ResourceMetricsSummary", () => {
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("resourceMetrics.protocol.active")).toBeInTheDocument();
     expect(screen.getByText("resourceMetrics.ofVisible")).toBeInTheDocument();
+    expect(screen.getByText("Leaf photosynthesis")).toBeInTheDocument();
     expect(screen.getByText("peak")).toBeInTheDocument();
   });
 

@@ -15,6 +15,7 @@ const totals = (kind: "protocol" | "macro") => ({
   activeDays: 2,
   peak: { date: "2026-08-28", measurements: 40 },
   lastActivityDate: "2026-08-28",
+  busiest: { id: "r1", name: "Busiest resource", measurements: 40 },
   days: [
     { date: "2026-08-27", measurements: 20 },
     { date: "2026-08-28", measurements: 40 },
