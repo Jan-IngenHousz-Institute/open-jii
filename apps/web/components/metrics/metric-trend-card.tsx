@@ -11,10 +11,11 @@ import {
 } from "@repo/ui/components/card";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
-import { detectAxisType } from "@repo/ui/components/charts/utils";
+import { detectAxisType, resolveChartColorway } from "@repo/ui/components/charts/utils";
 import { cn } from "@repo/ui/lib/utils";
 
 const QUIET_BAR_OPACITY = 0.45;
+const TRACK_OPACITY = 0.08;
 
 interface MetricTrendCardProps {
   label: string;
@@ -64,6 +65,15 @@ export function MetricTrendCard({
   // than drawing thirty equal bars.
   const opacity = days.map((day) => (day.date === peakDate ? 1 : QUIET_BAR_OPACITY));
 
+  const dates = days.map((day) => day.date);
+  const measurements = days.map((day) => day.measurements);
+
+  // A day with nothing draws no bar, so a sparse window would read as an empty
+  // card. Every day gets a faint full-height slot behind the data instead: the
+  // strip then shows how much of the window was quiet.
+  const trackHeight = Math.max(...measurements, 0) || 1;
+  const seriesColor = resolveChartColorway()?.[0];
+
   return (
     <Card
       className={cn(
@@ -82,11 +92,22 @@ export function MetricTrendCard({
       </CardHeader>
       <CardContent className="px-4">
         <BarChart
+          barmode="overlay"
           data={[
             {
-              x: days.map((day) => day.date),
-              y: days.map((day) => day.measurements),
+              x: dates,
+              y: dates.map(() => trackHeight),
               name: seriesName,
+              color: seriesColor,
+              marker: { opacity: TRACK_OPACITY },
+              hoverinfo: "skip",
+              showlegend: false,
+            },
+            {
+              x: dates,
+              y: measurements,
+              name: seriesName,
+              color: seriesColor,
               marker: { opacity },
             },
           ]}
