@@ -11,26 +11,51 @@ describe("MetricStatCard", () => {
         label="Measurements"
         value="9.5M"
         title="9,469,959"
-        change={0.184}
+        comparison={{ current: 9_469_959, previous: 8_000_000 }}
       />,
     );
 
     expect(screen.getByText("+18%")).toBeInTheDocument();
-    expect(screen.getByText("9.5M")).toHaveAttribute("title", "9,469,959");
+    // The abbreviation is what shows; the exact figure is on hover.
+    expect(screen.getByTitle("9,469,959")).toHaveTextContent("9.5M");
   });
 
   it("signs a fall", () => {
-    render(<MetricStatCard locale="en-US" label="Measurements" value="120" change={-0.32} />);
+    render(
+      <MetricStatCard
+        locale="en-US"
+        label="Measurements"
+        value="120"
+        comparison={{ current: 120, previous: 176 }}
+      />,
+    );
 
     expect(screen.getByText("-32%")).toBeInTheDocument();
   });
 
-  it("shows no badge when there is nothing to compare against", () => {
+  it("drops the badge when the base is too small for a percentage to mean anything", () => {
+    render(
+      <MetricStatCard
+        locale="en-US"
+        label="Measurements"
+        value="18K"
+        comparison={{ current: 18_000, previous: 9 }}
+        note="9 in the previous 30 days"
+      />,
+    );
+
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+    // The reader still gets the comparison, as the two figures themselves.
+    expect(screen.getByText("9 in the previous 30 days")).toBeInTheDocument();
+  });
+
+  it("shows no badge when nothing was recorded to compare against", () => {
     render(
       <MetricStatCard
         locale="en-US"
         label="Protocols in use"
         value="13"
+        comparison={{ current: 13, previous: 0 }}
         note="of 27 you can access"
         context="Last 30 days"
       />,

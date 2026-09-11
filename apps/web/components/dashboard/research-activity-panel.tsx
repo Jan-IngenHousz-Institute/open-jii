@@ -40,12 +40,6 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   const window = t("window", { days: windowDays });
   const community = platform?.community ?? null;
 
-  // A percentage against nothing is not a comparison, so a first window shows none.
-  const change =
-    scoped.previousMeasurements > 0
-      ? (scoped.measurements30d - scoped.previousMeasurements) / scoped.previousMeasurements
-      : null;
-
   const peak = scoped.peak;
 
   const renderCommunity = (measurements30d: number) => (
@@ -54,7 +48,8 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
       label={t("dashboard.activity.communityLabel")}
       value={compact.format(measurements30d)}
       title={number.format(measurements30d)}
-      note={window}
+      note={t("dashboard.activity.communityNote")}
+      context={window}
     />
   );
 
@@ -65,15 +60,11 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
         label={t("dashboard.activity.label")}
         value={compact.format(scoped.measurements30d)}
         title={number.format(scoped.measurements30d)}
-        change={change}
-        note={
-          change === null
-            ? undefined
-            : t("previousWindow", {
-                value: compact.format(scoped.previousMeasurements),
-                days: windowDays,
-              })
-        }
+        comparison={{ current: scoped.measurements30d, previous: scoped.previousMeasurements }}
+        note={t("previousWindow", {
+          value: compact.format(scoped.previousMeasurements),
+          days: windowDays,
+        })}
         context={
           peak === null
             ? window
@@ -88,6 +79,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
         label={t("dashboard.activity.experimentsLabel")}
         value={number.format(scoped.activeExperiments30d)}
         note={t("dashboard.activity.contributors", { count: scoped.contributors30d })}
+        context={window}
       />
       {community === null ? null : renderCommunity(community.measurements30d)}
       <MetricTrendCard

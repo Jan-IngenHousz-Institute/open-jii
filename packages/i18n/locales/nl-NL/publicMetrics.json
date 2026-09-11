@@ -53,7 +53,8 @@
       "contributors_one": "{{count}} bijdrager",
       "contributors_other": "{{count}} bijdragers",
       "communityLabel": "Community",
-      "trend": "Dagelijkse metingen"
+      "trend": "Dagelijkse metingen",
+      "communityNote": "Op het hele platform"
     }
   },
   "experiment": {
@@ -92,8 +93,7 @@
       "active": "Verzamelende werkboeken",
       "busiest": "Actiefste werkboek"
     },
-    "busiestNote": "{{value}} metingen",
-    "busiestShare": "van {{value}} in totaal"
+    "busiestNote": "{{value}} van {{total}} metingen"
   },
   "window": "Laatste {{days}} dagen",
   "peak": "Piek {{value}} op {{date}}",

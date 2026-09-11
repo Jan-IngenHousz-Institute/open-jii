@@ -10,6 +10,14 @@ import { MetricStatCard } from "./metric-stat-card";
 import { MetricTrendCard } from "./metric-trend-card";
 import { MetricsBandSkeleton } from "./metrics-band-skeleton";
 
+/** Where a kind's detail pages live, for the busiest card's link. */
+const RESOURCE_SECTIONS: Record<ResourceKind, string> = {
+  experiment: "experiments",
+  protocol: "protocols",
+  macro: "macros",
+  workbook: "workbooks",
+};
+
 interface ResourceMetricsSummaryProps {
   kind: ResourceKind;
 }
@@ -37,26 +45,22 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
   // The warehouse groups by UTC day, so the label has to read it back as one.
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 
-  // A percentage against nothing is not a comparison, so a first window shows none.
-  const change =
-    data.previousMeasurements > 0
-      ? (data.totalMeasurements - data.previousMeasurements) / data.previousMeasurements
-      : null;
-
   const window = t("window", { days: data.windowDays });
   const peak = data.peak;
   const busiest = data.busiest;
 
-  const renderBusiest = (name: string, measurements: number) => (
+  const renderBusiest = (id: string, name: string, measurements: number) => (
     <MetricStatCard
       locale={locale}
       label={t(`resourceMetrics.${kind}.busiest`)}
       value={name}
       title={name}
-      note={t("resourceMetrics.busiestNote", { value: compact.format(measurements) })}
-      context={t("resourceMetrics.busiestShare", {
-        value: compact.format(data.totalMeasurements),
+      href={`/${locale}/platform/${RESOURCE_SECTIONS[kind]}/${id}`}
+      note={t("resourceMetrics.busiestNote", {
+        value: compact.format(measurements),
+        total: compact.format(data.totalMeasurements),
       })}
+      context={window}
     />
   );
 
@@ -67,15 +71,11 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
         label={t(`resourceMetrics.${kind}.measurements`)}
         value={compact.format(data.totalMeasurements)}
         title={number.format(data.totalMeasurements)}
-        change={change}
-        note={
-          change === null
-            ? undefined
-            : t("previousWindow", {
-                value: compact.format(data.previousMeasurements),
-                days: data.windowDays,
-              })
-        }
+        comparison={{ current: data.totalMeasurements, previous: data.previousMeasurements }}
+        note={t("previousWindow", {
+          value: compact.format(data.previousMeasurements),
+          days: data.windowDays,
+        })}
         context={
           peak === null
             ? window
@@ -90,8 +90,9 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
         label={t(`resourceMetrics.${kind}.active`)}
         value={number.format(data.activeCount)}
         note={t("resourceMetrics.ofVisible", { count: data.visibleCount })}
+        context={window}
       />
-      {busiest === null ? null : renderBusiest(busiest.name, busiest.measurements)}
+      {busiest === null ? null : renderBusiest(busiest.id, busiest.name, busiest.measurements)}
       <MetricTrendCard
         label={t("dailyAverage")}
         value={compact.format(Math.round(data.totalMeasurements / data.windowDays))}

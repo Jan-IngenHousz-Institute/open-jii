@@ -53,7 +53,8 @@
       "contributors_one": "{{count}} contributor",
       "contributors_other": "{{count}} contributors",
       "communityLabel": "Community",
-      "trend": "Daily measurements"
+      "trend": "Daily measurements",
+      "communityNote": "Across the whole platform"
     }
   },
   "experiment": {
@@ -92,8 +93,7 @@
       "active": "Workbooks collecting",
       "busiest": "Busiest workbook"
     },
-    "busiestNote": "{{value}} measurements",
-    "busiestShare": "of {{value}} in total"
+    "busiestNote": "{{value}} of {{total}} measurements"
   },
   "window": "Last {{days}} days",
   "peak": "Peak {{value}} on {{date}}",

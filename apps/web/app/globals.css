@@ -331,6 +331,22 @@
   }
 }
 
+/* A name too long for its card scrolls itself into view on hover. The row
+   holds two copies and a spacer either side, so -50% lands exactly on the
+   second copy and the loop has no seam. */
+@theme {
+  --animate-marquee: marquee 9s linear infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 /* A utility, not a --color-* mapping: a gradient has no single value. */
 @utility bg-canvas {
   background-image: linear-gradient(270.03deg, var(--canvas-from) 0%, var(--canvas-to) 100%);

@@ -1,6 +1,7 @@
 "use client";
 
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowUpRight, TrendingDown, TrendingUp } from "lucide-react";
+import Link from "next/link";
 
 import { Badge } from "@repo/ui/components/badge";
 import {
@@ -13,14 +14,36 @@ import {
 } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
 
+import { MarqueeText } from "./marquee-text";
+
+/**
+ * Past ten-fold, a percentage stops being a comparison and starts being a
+ * headline: "+199,789%" against a base of nine says nothing the two figures
+ * do not say better. The footer states both, so the badge simply drops.
+ */
+const MAX_DISPLAYED_CHANGE = 10;
+
+/** The share of change, or null when it would not be worth reading. */
+function displayableChange(comparison?: { current: number; previous: number }): number | null {
+  if (comparison === undefined || comparison.previous <= 0) {
+    return null;
+  }
+
+  const change = (comparison.current - comparison.previous) / comparison.previous;
+  return Math.abs(change) > MAX_DISPLAYED_CHANGE ? null : change;
+}
+
 interface MetricStatCardProps {
   label: string;
   value: string;
   locale: string;
   /** The full figure behind an abbreviated `value`, shown on hover. */
   title?: string;
-  /** Share of change against the window before, as a fraction. Null hides the badge. */
-  change?: number | null;
+  /** This window against the one before it. The badge is dropped when a
+   * percentage would say less than the two figures themselves. */
+  comparison?: { current: number; previous: number };
+  /** Where the figure names a resource the reader can open. */
+  href?: string;
   /** Leading footer line: what the figure says. */
   note?: string;
   /** Trailing footer line: what it is measured over. */
@@ -38,12 +61,14 @@ export function MetricStatCard({
   value,
   locale,
   title,
-  change = null,
+  comparison,
+  href,
   note,
   context,
   className,
 }: MetricStatCardProps) {
   const hasFooter = note !== undefined || context !== undefined;
+  const change = displayableChange(comparison);
 
   const renderChange = (fraction: number) => {
     const Icon = fraction >= 0 ? TrendingUp : TrendingDown;
@@ -61,6 +86,15 @@ export function MetricStatCard({
     );
   };
 
+  const renderValue = () => <MarqueeText text={value} />;
+
+  const renderLinkedValue = (target: string) => (
+    <Link href={target} className="hover:text-primary flex items-center gap-1.5 transition-colors">
+      {renderValue()}
+      <ArrowUpRight aria-hidden className="size-5 shrink-0 opacity-60" />
+    </Link>
+  );
+
   const renderNote = (text: string) => (
     <div className="line-clamp-1 flex gap-2 font-medium">
       {text}
@@ -76,11 +110,8 @@ export function MetricStatCard({
     <Card className={cn("@container/card gap-2 py-3", className)}>
       <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
-        <CardTitle
-          title={title}
-          className="line-clamp-1 min-w-0 text-2xl font-semibold tabular-nums"
-        >
-          {value}
+        <CardTitle title={title} className="min-w-0 text-2xl font-semibold tabular-nums">
+          {href === undefined ? renderValue() : renderLinkedValue(href)}
         </CardTitle>
         {change === null ? null : <CardAction>{renderChange(change)}</CardAction>}
       </CardHeader>

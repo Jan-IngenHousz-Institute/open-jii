@@ -53,7 +53,8 @@
       "contributors_one": "{{count}} Mitwirkender",
       "contributors_other": "{{count}} Mitwirkende",
       "communityLabel": "Community",
-      "trend": "Tägliche Messungen"
+      "trend": "Tägliche Messungen",
+      "communityNote": "Auf der gesamten Plattform"
     }
   },
   "experiment": {
@@ -92,8 +93,7 @@
       "active": "Sammelnde Arbeitsmappen",
       "busiest": "Aktivste Arbeitsmappe"
     },
-    "busiestNote": "{{value}} Messungen",
-    "busiestShare": "von insgesamt {{value}}"
+    "busiestNote": "{{value}} von {{total}} Messungen"
   },
   "window": "Letzte {{days}} Tage",
   "peak": "Spitze {{value}} am {{date}}",

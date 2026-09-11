@@ -45,12 +45,6 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
   const window = t("window", { days: windowDays });
   const isCollecting = scoped.measurements30d > 0;
 
-  // A percentage against nothing is not a comparison, so a first window shows none.
-  const change =
-    scoped.previousMeasurements > 0
-      ? (scoped.measurements30d - scoped.previousMeasurements) / scoped.previousMeasurements
-      : null;
-
   const peak = scoped.peak;
 
   // Device-published rows carry no contributor. The slot is dropped rather
@@ -64,6 +58,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
       label={t("experiment.contributors")}
       value={number.format(scoped.contributors30d)}
       note={t("experiment.contributorsNote", { count: scoped.contributors30d })}
+      context={window}
     />
   );
 
@@ -85,15 +80,14 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
           label={t("experiment.measurements")}
           value={compact.format(scoped.measurements30d)}
           title={number.format(scoped.measurements30d)}
-          change={change}
-          note={
-            change === null
-              ? undefined
-              : t("previousWindow", {
-                  value: compact.format(scoped.previousMeasurements),
-                  days: windowDays,
-                })
-          }
+          comparison={{
+            current: scoped.measurements30d,
+            previous: scoped.previousMeasurements,
+          }}
+          note={t("previousWindow", {
+            value: compact.format(scoped.previousMeasurements),
+            days: windowDays,
+          })}
           context={
             peak === null
               ? window
