@@ -6,6 +6,7 @@ import React, { useMemo } from "react";
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
@@ -73,6 +74,7 @@ export function ContourPlot({
   fillMode = "none",
 }: ContourPlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("contour", renderer);
 
@@ -156,7 +158,15 @@ export function ContourPlot({
     [data, plotType],
   );
 
-  const layout = useMemo(() => createBaseLayout(config, sizing), [config, sizing]);
+  const layout = useMemo(
+    () => createBaseLayout(config, sizing),
+    // themeVersion is a cache key, not a value: createBaseLayout resolves
+    // --border, --foreground, --card and --popover internally, so without it
+    // this memo outlives a theme toggle and the contour keeps the old palette.
+    // The remount below does not cover it; this memo lives in the parent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config, sizing, themeVersion],
+  );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   // When the configuration genuinely changes, `config` identity flips
@@ -165,7 +175,10 @@ export function ContourPlot({
   // remount, driven by a key that hashes the full config snapshot. One
   // frame of flicker per intentional change, no crash. Sizing-tier flips
   // remount for the same reason.
-  const remountKey = useMemo(() => JSON.stringify({ config, sizing }), [config, sizing]);
+  const remountKey = useMemo(
+    () => JSON.stringify({ config, sizing, themeVersion }),
+    [config, sizing, themeVersion],
+  );
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
@@ -196,6 +209,7 @@ export function OverlayContour({
   error,
 }: OverlayContourProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const contourType = getPlotType("contour", renderer);
 
@@ -237,12 +251,23 @@ export function OverlayContour({
 
   const allData = useMemo(() => [...baseData, ...contourPlotData], [baseData, contourPlotData]);
 
-  const layout = useMemo(() => createBaseLayout(config, sizing), [config, sizing]);
+  const layout = useMemo(
+    () => createBaseLayout(config, sizing),
+    // themeVersion is a cache key, not a value: createBaseLayout resolves
+    // --border, --foreground, --card and --popover internally, so without it
+    // this memo outlives a theme toggle and the contour keeps the old palette.
+    // The remount below does not cover it; this memo lives in the parent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config, sizing, themeVersion],
+  );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   // Same remount guard as ContourPlot: config/sizing changes must remount
   // rather than let react-plotly call Plotly.react on contour traces.
-  const remountKey = useMemo(() => JSON.stringify({ config, sizing }), [config, sizing]);
+  const remountKey = useMemo(
+    () => JSON.stringify({ config, sizing, themeVersion }),
+    [config, sizing, themeVersion],
+  );
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

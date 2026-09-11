@@ -3,19 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 
 import type { PlotlyChartConfig } from "../../charts/types";
 import {
-  detectWebGLSupport,
-  getRenderer,
-  validateDimensions,
-  getPlotType,
-  createBaseLayout,
-  createSubplotLayout,
-  create3DLayout,
-  createPlotlyConfig,
-  detectAxisType,
-  refineAxisType,
-  extendLayoutForFacets,
-  defaultFacetColumns,
   applyReferenceLines,
+  create3DLayout,
+  createBaseLayout,
+  createPlotlyConfig,
+  createSubplotLayout,
+  defaultFacetColumns,
+  detectAxisType,
+  detectWebGLSupport,
+  extendLayoutForFacets,
+  getPlotType,
+  getRenderer,
+  invalidateThemeTokenCache,
+  refineAxisType,
+  validateDimensions,
 } from "../../charts/utils";
 import type { ReferenceLineSpec } from "../../charts/utils";
 
@@ -49,6 +50,10 @@ Object.defineProperty(document, "createElement", {
 describe("utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // These tests set theme tokens on the root directly. The cache that serves
+    // them is cleared by the observer in use-chart-theme-refresh, which only
+    // runs while a chart is mounted, so clear it here instead.
+    invalidateThemeTokenCache();
   });
 
   afterEach(() => {

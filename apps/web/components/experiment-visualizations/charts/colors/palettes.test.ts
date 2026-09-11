@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { invalidateThemeTokenCache } from "@repo/ui/components/charts/utils";
 
 import {
   CATEGORY_PALETTE,
@@ -25,6 +27,13 @@ describe("getDefaultSeriesColor", () => {
 });
 
 describe("getSuggestedSeriesColor", () => {
+  // Resolved tokens are cached until the root's class or style changes, and the
+  // observer that clears the cache only runs while a chart is mounted. These
+  // tests move the document directly, so they stand in for it.
+  beforeEach(() => {
+    invalidateThemeTokenCache();
+  });
+
   it("prefers the theme's first chart slot", () => {
     const root = document.documentElement;
     root.style.setProperty("--chart-1", "oklch(0.5551 0.0516 190.6334)");

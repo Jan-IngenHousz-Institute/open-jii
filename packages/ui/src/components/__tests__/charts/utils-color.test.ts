@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { chartGridColor, labToHex, oklchToHex } from "../../charts/utils";
+import {
+  chartGridColor,
+  invalidateThemeTokenCache,
+  labToHex,
+  oklchToHex,
+} from "../../charts/utils";
 
 /**
  * jsdom applies no stylesheet, so `readThemeColor` finds nothing and every call
@@ -71,6 +76,13 @@ describe("oklchToHex", () => {
  * nothing else exercises the real chain.
  */
 describe("chartGridColor", () => {
+  // Resolved tokens are cached until the root's class or style changes, and the
+  // observer that clears the cache only runs while a chart is mounted. These
+  // tests move the document directly, so they stand in for it.
+  beforeEach(() => {
+    invalidateThemeTokenCache();
+  });
+
   it("resolves --border when the document carries a theme", () => {
     const root = document.documentElement;
     root.style.setProperty("--border", BORDER_TOKEN);
@@ -83,6 +95,19 @@ describe("chartGridColor", () => {
 
   it("falls back to a literal when no theme is readable", () => {
     // The server-render and jsdom path: getComputedStyle finds nothing.
+    expect(chartGridColor()).toBe("#E6E6E6");
+  });
+
+  it("serves a repeated read from cache rather than re-reading the document", () => {
+    // The point of the cache: on a theme toggle every chart re-renders at once,
+    // and this was nine forced style reads per chart.
+    const root = document.documentElement;
+    root.style.setProperty("--border", BORDER_TOKEN);
+    expect(chartGridColor()).toBe(BORDER_HEX);
+    root.style.removeProperty("--border");
+
+    expect(chartGridColor()).toBe(BORDER_HEX);
+    invalidateThemeTokenCache();
     expect(chartGridColor()).toBe("#E6E6E6");
   });
 });

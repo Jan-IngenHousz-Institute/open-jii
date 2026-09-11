@@ -130,6 +130,10 @@ class WebGLContextManager {
   }
 }
 
+// Only has to differ from the last one; Plotly compares it, it does not read it.
+let dataRevisionCounter = 0;
+const nextDataRevision = () => (dataRevisionCounter += 1);
+
 // Safe dimension validation
 const validateDimensions = (layout: Partial<Layout>): SafeDimensions => {
   if (!layout) return {}; // Don't set default dimensions, let Plotly handle responsive sizing
@@ -268,6 +272,16 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return validatePlotlyData(data);
     }, [data]);
 
+    // `Plotly.react` runs in "immutable" mode whenever `layout.datarevision` is
+    // undefined, and there it treats a new-but-identical `x`/`y` array as
+    // changed data: `flags.calc` is set and the whole chart is recalculated and
+    // replotted. Every caller rebuilds its trace array each render, so that was
+    // the path for a resize, a keystroke or any parent re-render. Counting the
+    // data's identity instead means a rebuild that produced the same arrays no
+    // longer forces the recalc, and one that produced different arrays still
+    // does.
+    const dataRevision = React.useMemo(() => (data ? nextDataRevision() : 0), [data]);
+
     // Stable boolean drives the context-management effect. Memoizing a
     // primitive (vs `useCallback`) means the effect only re-runs when
     // WebGL relevance flips; the previous shape caused release/reacquire
@@ -321,7 +335,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
 
     // Validate and prepare layout
     const safeLayout = React.useMemo(() => {
-      if (!layout) return { autosize: true };
+      if (!layout) return { autosize: true, datarevision: dataRevision };
 
       // If layout has autosize enabled and no explicit dimensions, respect that
       if (layout.autosize && !layout.width && !layout.height) {
@@ -329,6 +343,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         return {
           ...layoutWithoutDimensions,
           autosize: true,
+          datarevision: dataRevision,
         };
       }
 
@@ -340,6 +355,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         width,
         height,
         autosize: false, // Disable autosize when using explicit dimensions
+        datarevision: dataRevision,
       };
 
       // Remove any undefined properties from layout
@@ -350,7 +366,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       });
 
       return validatedLayout;
-    }, [layout]);
+    }, [layout, dataRevision]);
 
     // Prepare safe config
     const safeConfig = React.useMemo(() => {
