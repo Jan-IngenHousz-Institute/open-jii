@@ -85,7 +85,7 @@ export function MetricTrendCard({
           {value}
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4">
+      <CardContent>
         <BarChart
           barmode="overlay"
           data={[
