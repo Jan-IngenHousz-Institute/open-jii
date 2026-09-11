@@ -166,4 +166,18 @@ describe("WorkspaceInspector", () => {
     // Line's style panel includes the line-style fields heading.
     expect(screen.getByText("workspace.style.display")).toBeInTheDocument();
   });
+  it("draws the active tab as an underline, not a box", () => {
+    // TabsTrigger's base carries `border border-transparent`, and tailwind-merge
+    // does not drop it for a later `border-b-2`: the border-width conflict table
+    // is one-directional. Without border-x-0/border-t-0 the side-agnostic
+    // `data-[state=active]:border-primary` paints a rectangle.
+    renderInspector({ selectedTableName: "readings" });
+
+    const active = screen.getByRole("tab", { name: /workspace\.inspector\.tabs\.data/ });
+    expect(active).toHaveClass("border-b-2", "border-x-0", "border-t-0");
+    expect(active).toHaveClass("data-[state=active]:border-primary");
+    // flex-1 on the base silently defeats the list's justify-start.
+    expect(active).toHaveClass("flex-none");
+    expect(active).not.toHaveClass("rounded-md");
+  });
 });
