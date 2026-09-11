@@ -23,6 +23,14 @@ const validEntry = {
   connectivity: { connected: true, lastSeenAt: null },
   lastDataAt: "2026-01-02T00:00:00.000Z",
   recentData: { measurementCount: 12, lastDataAt: "2026-01-02T00:00:00.000Z" },
+  reported: {
+    deviceName: "shed-logger",
+    firmware: "ambyte-2",
+    version: "2.4.1",
+    battery: 4.18,
+    totalMeasurements: 42,
+    lastReportedAt: "2026-01-02T00:00:00.000Z",
+  },
   canView: true,
 };
 
@@ -46,9 +54,19 @@ describe("zExperimentDeviceEntry", () => {
         connectivity: null,
         lastDataAt: null,
         recentData: null,
+        reported: null,
         canView: false,
       }).success,
     ).toBe(true);
+  });
+
+  it("rejects reported facts with a negative total", () => {
+    expect(
+      zExperimentDeviceEntry.safeParse({
+        ...validEntry,
+        reported: { ...validEntry.reported, totalMeasurements: -1 },
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects an unknown device type or status", () => {
