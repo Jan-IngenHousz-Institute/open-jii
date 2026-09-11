@@ -2,6 +2,8 @@ import { Card, CardFooter, CardHeader } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { cn } from "@repo/ui/lib/utils";
 
+import { metricsBandGrid } from "./metrics-band-grid";
+
 interface MetricsBandSkeletonProps {
   cards: number;
   className?: string;
@@ -23,7 +25,9 @@ export function MetricsBandSkeleton({ cards, className }: MetricsBandSkeletonPro
   );
 
   return (
-    <section aria-hidden className={cn("grid gap-4", className)}>
+    // The caller passes the whole grid, gaps included, so this cannot drift
+    // from the band it stands in for.
+    <section aria-hidden className={cn(metricsBandGrid, className)}>
       {Array.from({ length: cards }, (_, index) => renderCard(index))}
     </section>
   );

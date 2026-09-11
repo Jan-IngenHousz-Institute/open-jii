@@ -226,6 +226,13 @@ export const Map = ({
   fitBoundsOnMapLoad = true,
 }: MapProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(sidebarCollapsed);
+  // The prop seeds the state once, and a caller that derives it from the
+  // viewport has nothing to seed with: useIsMobile is false on the first render
+  // and flips in an effect. Without this, "start collapsed on a phone" cannot
+  // be expressed at all.
+  useEffect(() => {
+    setIsSidebarCollapsed(sidebarCollapsed);
+  }, [sidebarCollapsed]);
   const [selectedLocation, setSelectedLocation] = useState<LocationPoint | undefined>();
   const [mapCenter, setMapCenter] = useState<[number, number]>(center);
   const [mapZoom, setMapZoom] = useState(zoom);
@@ -404,7 +411,11 @@ export const Map = ({
         <div
           className={cn(
             "absolute bottom-2 left-2 z-[900] flex flex-col transition-all duration-300 ease-in-out",
-            isSidebarCollapsed ? "w-auto min-w-32" : "max-h-96 w-80",
+            // Expanded, the 320x384 panel is wider than the 310px map it floats
+            // over on a phone and covers almost all of its height.
+            isSidebarCollapsed
+              ? "w-auto min-w-32"
+              : "max-h-48 w-[calc(100%-1rem)] sm:max-h-96 sm:w-80",
           )}
         >
           <div

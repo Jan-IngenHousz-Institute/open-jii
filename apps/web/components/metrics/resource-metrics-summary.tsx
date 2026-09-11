@@ -8,6 +8,11 @@ import { useTranslation } from "@repo/i18n";
 
 import { MetricStatCard } from "./metric-stat-card";
 import { MetricTrendCard } from "./metric-trend-card";
+import {
+  metricsBandGrid,
+  metricsBandTrendSpan,
+  metricsBandTrendSpanWide,
+} from "./metrics-band-grid";
 import { MetricsBandSkeleton } from "./metrics-band-skeleton";
 
 const RESOURCE_SECTIONS: Record<ResourceKind, string> = {
@@ -28,7 +33,7 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
   const { data, isPending } = useResourceMetrics(kind);
 
   if (isPending) {
-    return <MetricsBandSkeleton cards={4} className="sm:grid-cols-2 xl:grid-cols-4" />;
+    return <MetricsBandSkeleton cards={4} className={metricsBandGrid} />;
   }
 
   // A workspace with nothing recorded states nothing, rather than a row of zeros.
@@ -64,7 +69,7 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
   );
 
   return (
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className={metricsBandGrid}>
       <MetricStatCard
         locale={locale}
         label={t(`resourceMetrics.${kind}.measurements`)}
@@ -101,7 +106,7 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
         peakDate={peak?.date ?? null}
         locale={locale}
         footer={t("activeDays", { active: data.activeDays, total: data.windowDays })}
-        className={busiest === null ? "sm:col-span-2" : "sm:col-span-2 xl:col-span-1"}
+        className={busiest === null ? metricsBandTrendSpanWide : metricsBandTrendSpan}
       />
     </section>
   );

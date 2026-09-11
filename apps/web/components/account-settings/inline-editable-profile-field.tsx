@@ -130,7 +130,10 @@ export function InlineEditableProfileField({
     <Button
       type="button"
       variant="ghost"
-      className="hover:border-primary/10 hover:bg-muted group flex h-auto w-full items-start justify-between gap-4 rounded-md border border-transparent px-3 py-3 text-left font-normal"
+      // whitespace-normal: this is a field row rather than a control, and
+      // buttonVariants' base whitespace-nowrap meant the break-words below it
+      // could never act. A long image URL ran straight past the card edge.
+      className="hover:border-primary/10 hover:bg-muted group flex h-auto w-full items-start justify-between gap-4 whitespace-normal rounded-md border border-transparent px-3 py-3 text-left font-normal"
       onClick={startEditing}
     >
       <span className="min-w-0 flex-1 space-y-1">

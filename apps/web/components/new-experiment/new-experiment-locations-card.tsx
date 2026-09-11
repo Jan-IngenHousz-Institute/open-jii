@@ -7,6 +7,7 @@ import type { UseFormReturn } from "react-hook-form";
 import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 import type { LocationPoint } from "@repo/ui/components/map";
+import { useIsMobile } from "@repo/ui/hooks/use-mobile";
 
 import { useLocationGeocode } from "../../hooks/locations/useLocationGeocode";
 import { useLocationSearch } from "../../hooks/locations/useLocationSearch";
@@ -19,6 +20,7 @@ interface NewExperimentLocationsCardProps {
 
 export function NewExperimentLocationsCard({ form }: NewExperimentLocationsCardProps) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingLocation, setPendingLocation] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -130,7 +132,9 @@ export function NewExperimentLocationsCard({ form }: NewExperimentLocationsCardP
         showLocationSearch={true}
         showDistances={false}
         sidebarTitle={t("newExperiment.locationsListTitle")}
-        sidebarCollapsed={false}
+        // On a phone the panel covers the map it is a legend for, so the map
+        // comes first and the list opens on demand.
+        sidebarCollapsed={isMobile}
         useClustering={true}
         showZoomControl={true}
         showScale={true}

@@ -50,25 +50,33 @@ export function DashboardBanner({
           )}
         </p>
       </div>
-      <div className="flex w-full flex-col gap-4 lg:w-auto lg:flex-row">
+      {/* Side by side once there is room for both labels, which is ~26rem;
+          stacked below that. Not an `sm:` breakpoint: the two buttons are
+          nowrap and do not both fit at 640px beside an open sidebar, which is
+          what dashboard-banner.test.tsx pins. */}
+      <div className="min-[26rem]:flex-row min-[26rem]:gap-3 flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:gap-4">
         {secondaryButtonLabel && secondaryButtonHref && (
           <Link
             href={secondaryButtonHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full lg:w-auto"
+            className="min-[26rem]:flex-1 w-full lg:w-auto lg:flex-none"
           >
             <Button
               variant="secondary"
-              className="h-11 w-full whitespace-nowrap rounded-lg px-4 text-[0.9375rem] font-semibold leading-[1.25rem] shadow-none lg:w-auto"
+              className="h-10 w-full whitespace-nowrap rounded-lg px-4 text-[0.9375rem] font-semibold leading-[1.25rem] shadow-none lg:h-11 lg:w-auto"
             >
               {secondaryButtonLabel}
             </Button>
           </Link>
         )}
         {buttonLabel && buttonHref && (
-          <Link href={buttonHref} locale={locale} className="w-full lg:w-auto">
-            <Button className="h-11 w-full whitespace-nowrap rounded-lg px-4 text-[0.9375rem] font-semibold leading-[1.25rem] shadow-none lg:w-auto">
+          <Link
+            href={buttonHref}
+            locale={locale}
+            className="min-[26rem]:flex-1 w-full lg:w-auto lg:flex-none"
+          >
+            <Button className="h-10 w-full whitespace-nowrap rounded-lg px-4 text-[0.9375rem] font-semibold leading-[1.25rem] shadow-none lg:h-11 lg:w-auto">
               {buttonLabel}
             </Button>
           </Link>

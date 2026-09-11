@@ -161,71 +161,81 @@ function PersonRow({
   const isTeam = collaborator.granteeType === "team";
 
   return (
-    <div role="listitem" className="flex items-center gap-3 px-3 py-2.5">
-      {isOrganization || isTeam ? (
-        <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
-          {isTeam ? (
-            <Users className="text-muted-foreground h-4 w-4" />
-          ) : (
-            <Building2 className="text-muted-foreground h-4 w-4" />
-          )}
-        </div>
-      ) : (
-        <UserAvatar
-          avatarUrl={collaborator.grantee.avatarUrl}
-          firstName={firstName}
-          lastName={lastName}
-          className="h-9 w-9"
-        />
-      )}
+    // Stacked below sm. The avatar plus a 130px role select plus an icon button
+    // are ~174px of shrink-0, which left the name column ~100px on a phone: the
+    // name truncated to nothing and an "Outside Collaborator" badge painted over
+    // the select. `sm:contents` returns the identity block to the row above sm
+    // without a second wrapper, the shape monitoring/data-by-experiment uses.
+    <div
+      role="listitem"
+      className="flex min-w-0 flex-col items-start gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3"
+    >
+      <div className="flex w-full min-w-0 items-center gap-3 sm:contents">
+        {isOrganization || isTeam ? (
+          <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
+            {isTeam ? (
+              <Users className="text-muted-foreground h-4 w-4" />
+            ) : (
+              <Building2 className="text-muted-foreground h-4 w-4" />
+            )}
+          </div>
+        ) : (
+          <UserAvatar
+            avatarUrl={collaborator.grantee.avatarUrl}
+            firstName={firstName}
+            lastName={lastName}
+            className="h-9 w-9"
+          />
+        )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex min-w-0 items-center gap-2">
-          <h4 className="text-foreground truncate text-sm font-medium" title={displayName}>
-            {displayName}
-          </h4>
-          {isSelf && (
-            <span className="text-muted-foreground shrink-0 text-xs">{t("sharing.you")}</span>
-          )}
-          {/* A team belongs to the owning organization by construction, so it is
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <h4 className="text-foreground truncate text-sm font-medium" title={displayName}>
+              {displayName}
+            </h4>
+            {isSelf && (
+              <span className="text-muted-foreground shrink-0 text-xs">{t("sharing.you")}</span>
+            )}
+            {/* A team belongs to the owning organization by construction, so it is
               never an outside collaborator — the badge says what it is instead. */}
-          {isTeam && (
-            <Badge variant="outline" className="shrink-0 text-xs font-normal">
-              {t("sharing.granteeTypeTeam")}
-            </Badge>
-          )}
-          {/*
+            {isTeam && (
+              <Badge variant="outline" className="shrink-0 text-xs font-normal">
+                {t("sharing.granteeTypeTeam")}
+              </Badge>
+            )}
+            {/*
             Informational only — capability comes from the role. Never shown for a
             team: "outside collaborator" means the grantee is not in the owning
             organization, which a team cannot be, so the badge could only ever
             mislead here. Suppressed rather than trusted, because the flag arrives
             computed and a wrong `true` would otherwise be rendered as fact.
           */}
-          {collaborator.kind === "grant" && !isTeam && collaborator.isOutsideCollaborator && (
-            <Badge variant="outline" className="shrink-0 text-xs font-normal">
-              {t("sharing.outsideCollaborator")}
-            </Badge>
-          )}
-          {/* Access from two sources at once: this names the other one, so the row
+            {collaborator.kind === "grant" && !isTeam && collaborator.isOutsideCollaborator && (
+              <Badge variant="outline" className="shrink-0 text-xs font-normal">
+                {t("sharing.outsideCollaborator")}
+              </Badge>
+            )}
+            {/* Access from two sources at once: this names the other one, so the row
               is not read as the whole story of what this person can reach. */}
-          {collaborator.kind === "grant" && collaborator.owningOrganization && (
-            <Badge variant="outline" className="shrink-0 text-xs font-normal">
-              {t(ORG_ROLE_BADGE[collaborator.owningOrganization.role])}
-            </Badge>
-          )}
+            {collaborator.kind === "grant" && collaborator.owningOrganization && (
+              <Badge variant="outline" className="shrink-0 text-xs font-normal">
+                {t(ORG_ROLE_BADGE[collaborator.owningOrganization.role])}
+              </Badge>
+            )}
+          </div>
+          <span className="text-muted-foreground truncate text-xs">
+            {isTeam
+              ? // The head count is the one thing a team row carries that a name does
+                // not: it is how many people this single grant actually admits.
+                t("sharing.teamMemberCount", { count: collaborator.grantee.memberCount ?? 0 })
+              : isOrganization
+                ? t("sharing.granteeTypeOrganization")
+                : collaborator.grantee.email}
+          </span>
         </div>
-        <span className="text-muted-foreground truncate text-xs">
-          {isTeam
-            ? // The head count is the one thing a team row carries that a name does
-              // not: it is how many people this single grant actually admits.
-              t("sharing.teamMemberCount", { count: collaborator.grantee.memberCount ?? 0 })
-            : isOrganization
-              ? t("sharing.granteeTypeOrganization")
-              : collaborator.grantee.email}
-        </span>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex w-full shrink-0 items-center justify-end gap-1 sm:w-auto">
         {collaborator.kind === "owner" ? (
           <OwnerControls
             row={collaborator}

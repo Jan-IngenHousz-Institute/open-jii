@@ -330,6 +330,14 @@ function SortableCellGroup({
   );
 }
 
+/** A root custom property in px, or 0 when it is unset. */
+function readPixels(name: string): number {
+  if (typeof document === "undefined") return 0;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function WorkbookEditor({
   cells,
   onCellsChange,
@@ -500,9 +508,11 @@ export function WorkbookEditor({
     const handleScroll = () => {
       const el = headerRef.current;
       if (!el) return;
-      // 64px matches top-16 on the sticky header.
+      // Matches the sticky offset in workbook-header.tsx: the shell header is
+      // h-12, plus whatever banner/inset offset is in play.
       const rect = el.getBoundingClientRect();
-      setIsSticky(rect.top <= 64);
+      const stickyTop = 48 + readPixels("--banner-offset") + readPixels("--sidebar-inset-offset");
+      setIsSticky(rect.top <= stickyTop);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();

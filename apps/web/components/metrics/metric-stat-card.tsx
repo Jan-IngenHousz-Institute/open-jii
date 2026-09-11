@@ -99,12 +99,20 @@ export function MetricStatCard({
         >
           {href === undefined ? value : renderLinkedValue(href)}
         </CardTitle>
-        {change === null ? null : <CardAction>{renderChange(change)}</CardAction>}
+        {/* The note below already prints a trend arrow, so in a half-width card
+            the badge is a second reading of the same thing in the space the
+            figure needs. Container query, not a breakpoint: what matters is how
+            wide this card ended up, not how wide the window is. */}
+        {change === null ? null : (
+          <CardAction className="@[10rem]/card:block hidden">{renderChange(change)}</CardAction>
+        )}
       </CardHeader>
       {hasFooter ? (
         <CardFooter className="mt-auto flex-col items-start gap-0.5 text-xs">
           {note === undefined ? null : renderNote(note)}
-          {context === undefined ? null : <div className="text-muted-foreground">{context}</div>}
+          {context === undefined ? null : (
+            <div className="text-muted-foreground @[10rem]/card:block hidden">{context}</div>
+          )}
         </CardFooter>
       ) : null}
     </Card>

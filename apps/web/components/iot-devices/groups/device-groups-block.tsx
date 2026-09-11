@@ -123,9 +123,9 @@ export function DeviceGroupsBlock() {
           <p className="text-muted-foreground text-sm">{t("iot.groups.sectionHint")}</p>
         </div>
         {groups.length > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {groups.length > VISIBLE_GROUPS && (
-              <div className="relative">
+              <div className="relative w-full md:w-auto">
                 <Search
                   className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
                   aria-hidden
@@ -136,7 +136,7 @@ export function DeviceGroupsBlock() {
                     setSearch(event.target.value);
                   }}
                   placeholder={t("iot.groups.searchPlaceholder")}
-                  className="w-56 pl-9"
+                  className="w-full pl-9 md:w-56"
                 />
               </div>
             )}

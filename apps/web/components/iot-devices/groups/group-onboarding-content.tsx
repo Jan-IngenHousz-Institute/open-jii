@@ -232,7 +232,11 @@ export function GroupOnboardingContent() {
         description={t("iot.groups.onboarding.description")}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+      {/* An explicit track at the base tier too: with only the implicit `auto`
+          track the items keep `min-width: auto`, so one wide child widens the
+          whole page and the rail, the switch row and the button all read as
+          shifted. */}
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-6">
           <Card className="shadow-none">
             <CardHeader>

@@ -93,107 +93,113 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
   const { canManage, canTransfer } = workbook.capabilities;
 
   return (
-    <div className="border-border flex flex-wrap items-start gap-x-6 gap-y-6 border-b pb-8 sm:gap-x-10">
-      <div className="flex flex-col gap-1">
-        <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
-          {tCommon("common.created")}
-        </span>
-        <span className="text-muted-foreground text-sm leading-[21px]">
-          {formatDate(workbook.createdAt)}
-        </span>
-      </div>
-      <div className="flex flex-col gap-1">
-        <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
-          {tCommon("common.updated")}
-        </span>
-        <span className="text-muted-foreground text-sm leading-[21px]">
-          {formatDate(workbook.updatedAt)}
-        </span>
-      </div>
-      <div className="flex flex-col gap-1">
-        <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
-          {tCommon("common.createdBy")}
-        </span>
-        <span className="text-muted-foreground text-sm leading-[21px]">
-          {workbook.createdByName ?? "-"}
-        </span>
-      </div>
-      <OwningOrganizationField
-        resourceType="workbook"
-        resourceId={id}
-        organizationId={workbook.organizationId}
-        organizationName={workbook.organizationName}
-        canTransfer={canTransfer}
-        layout="meta"
-      />
-      <div className="flex flex-col gap-1">
-        <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
-          {t("workbooks.version")}
-        </span>
-        {isLoadingVersions ? (
-          <Skeleton className="h-[21px] w-10" />
-        ) : isVersionsError ? (
-          // Don't claim "Draft" when the version state is simply unknown.
-          <span className="text-muted-foreground text-sm leading-[21px]">-</span>
-        ) : latestVersion != null ? (
-          <WorkbookVersionBadge currentVersion={latestVersion} showUpgrade={false} />
-        ) : (
-          <span className="text-muted-foreground text-sm leading-[21px]">
-            {t("workbooks.draftVersion")}
-          </span>
-        )}
-      </div>
-      {workbook.forkedFrom ? (
+    // A grid, not flex-wrap: seven unlike fields packed by whatever fit, so the
+    // dates landed ragged and org/version/visibility spilled into an uneven
+    // second row. Fixed columns give it a shape at every width, and the desktop
+    // row returns at xl.
+    <div className="border-border flex flex-col gap-6 border-b pb-8">
+      <div className="grid grid-cols-2 items-start gap-x-6 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:flex xl:flex-wrap xl:gap-x-10">
         <div className="flex flex-col gap-1">
           <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
-            {t("workbooks.forkedFrom")}
+            {tCommon("common.created")}
           </span>
-          <Link
-            href={`/platform/workbooks/${workbook.forkedFrom}`}
-            className="text-primary hover:text-primary text-sm leading-[21px] underline underline-offset-2"
-          >
-            {tCommon("common.viewOriginal")}
-          </Link>
+          <span className="text-muted-foreground text-sm leading-[21px]">
+            {formatDate(workbook.createdAt)}
+          </span>
         </div>
-      ) : null}
-
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-col gap-1">
           <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
-            {tCommon("resourceVisibility.statusLabel")}
+            {tCommon("common.updated")}
           </span>
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {/* The copy is the icon's accessible name too, so it is readable
-                    without hovering. */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground"
-                  aria-label={publishHelpText}
-                >
-                  <Info className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs leading-snug">
-                {publishHelpText}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <span className="text-muted-foreground text-sm leading-[21px]">
+            {formatDate(workbook.updatedAt)}
+          </span>
         </div>
-        <span className="text-muted-foreground text-sm leading-[21px]">
-          {isPublic
-            ? tCommon("resourceVisibility.publicStatus")
-            : tCommon("resourceVisibility.privateStatus")}
-        </span>
+        <div className="flex flex-col gap-1">
+          <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
+            {tCommon("common.createdBy")}
+          </span>
+          <span className="text-muted-foreground text-sm leading-[21px]">
+            {workbook.createdByName ?? "-"}
+          </span>
+        </div>
+        <OwningOrganizationField
+          resourceType="workbook"
+          resourceId={id}
+          organizationId={workbook.organizationId}
+          organizationName={workbook.organizationName}
+          canTransfer={canTransfer}
+          layout="meta"
+        />
+        <div className="flex flex-col gap-1">
+          <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
+            {t("workbooks.version")}
+          </span>
+          {isLoadingVersions ? (
+            <Skeleton className="h-[21px] w-10" />
+          ) : isVersionsError ? (
+            // Don't claim "Draft" when the version state is simply unknown.
+            <span className="text-muted-foreground text-sm leading-[21px]">-</span>
+          ) : latestVersion != null ? (
+            <WorkbookVersionBadge currentVersion={latestVersion} showUpgrade={false} />
+          ) : (
+            <span className="text-muted-foreground text-sm leading-[21px]">
+              {t("workbooks.draftVersion")}
+            </span>
+          )}
+        </div>
+        {workbook.forkedFrom ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
+              {t("workbooks.forkedFrom")}
+            </span>
+            <Link
+              href={`/platform/workbooks/${workbook.forkedFrom}`}
+              className="text-primary hover:text-primary text-sm leading-[21px] underline underline-offset-2"
+            >
+              {tCommon("common.viewOriginal")}
+            </Link>
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
+              {tCommon("resourceVisibility.statusLabel")}
+            </span>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {/* The copy is the icon's accessible name too, so it is readable
+                    without hovering. */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-muted-foreground"
+                    aria-label={publishHelpText}
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs leading-snug">
+                  {publishHelpText}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <span className="text-muted-foreground text-sm leading-[21px]">
+            {isPublic
+              ? tCommon("resourceVisibility.publicStatus")
+              : tCommon("resourceVisibility.privateStatus")}
+          </span>
+        </div>
       </div>
 
-      {/* Narrow screens give the actions a line of their own and let them share
-          its full width; from `sm` up they shrink to their labels and sit at the
-          end of the row. */}
-      <div className="flex w-full items-center gap-2 self-center sm:ml-auto sm:w-auto">
+      {/* Its own row: these are actions on the workbook, not facts about it.
+          Full width on a phone, shrunk to their labels and right-aligned once
+          there is room. */}
+      <div className="flex w-full items-center gap-2 sm:w-auto sm:self-end">
         {/* Nothing left to offer once public, so the action goes rather than
             lingering as an inert control. */}
         {canManage && !isPublic && (
